@@ -2,7 +2,9 @@
 
 **Migration Date:** 2025-12-07
 **Source:** /Volumes/M-Drive/Coding/MainAvanues (branch: WebAvanue-Develop)
-**Target:** /Volumes/M-Drive/Coding/NewAvanues/Avanues/Web/
+**Target:**
+- Android app: `/Volumes/M-Drive/Coding/NewAvanues/android/apps/webavanue/`
+- KMP modules: `/Volumes/M-Drive/Coding/NewAvanues/Modules/WebAvanue/`
 **Status:** ✅ COMPLETE - All builds successful
 
 ---
@@ -14,7 +16,7 @@
 | Source .kt files | 398 |
 | Migrated .kt files | 398 |
 | Modules migrated | 3 |
-| Build status | ✅ Debug + Release SUCCESS |
+| Build status | ✅ Debug SUCCESS |
 
 ---
 
@@ -22,9 +24,9 @@
 
 | Module | Path |
 |--------|------|
-| WebAvanue Android App | `Avanues/Web/Android/apps/webavanue/` |
-| WebAvanue Universal (KMP) | `Avanues/Web/common/webavanue/universal/` |
-| WebAvanue CoreData | `Avanues/Web/common/webavanue/coredata/` |
+| WebAvanue Android App | `android/apps/webavanue/app/` |
+| WebAvanue Universal (KMP) | `Modules/WebAvanue/universal/` |
+| WebAvanue CoreData | `Modules/WebAvanue/coredata/` |
 
 ---
 
@@ -48,12 +50,17 @@ Note: The source MainAvanues repo had empty voiceos folders (0 .kt files) so no 
 # Create branch
 git checkout -b WebAvanue-Development
 
-# Git subtree import
+# Initial git subtree import (to temporary location)
 git subtree add --prefix=Avanues/Web /Volumes/M-Drive/Coding/MainAvanues WebAvanue-Develop --squash
 
+# Restructure to correct monorepo pattern
+rm -rf Avanues/Web
+cp -r /Volumes/M-Drive/Coding/MainAvanues/Android/apps/webavanue android/apps/
+cp -r /Volumes/M-Drive/Coding/MainAvanues/common/webavanue Modules/WebAvanue
+
 # Build verification
-cd Avanues/Web
-./gradlew assembleDebug assembleRelease
+cd android/apps/webavanue
+./gradlew assembleDebug
 ```
 
 ---
@@ -62,11 +69,21 @@ cd Avanues/Web
 
 | Source (MainAvanues) | Destination (NewAvanues) |
 |---------------------|--------------------------|
-| `Android/apps/webavanue/` | `Avanues/Web/Android/apps/webavanue/` |
-| `common/webavanue/` | `Avanues/Web/common/webavanue/` |
-| `gradle/` | `Avanues/Web/gradle/` |
-| `build.gradle.kts` | `Avanues/Web/build.gradle.kts` |
-| `settings.gradle.kts` | `Avanues/Web/settings.gradle.kts` |
+| `Android/apps/webavanue/` | `android/apps/webavanue/app/` |
+| `common/webavanue/universal/` | `Modules/WebAvanue/universal/` |
+| `common/webavanue/coredata/` | `Modules/WebAvanue/coredata/` |
+
+---
+
+## Gradle Configuration Changes
+
+| File | Change |
+|------|--------|
+| `android/apps/webavanue/settings.gradle.kts` | Created - includes modules from `Modules/WebAvanue/` |
+| `android/apps/webavanue/build.gradle.kts` | Created - Kotlin 2.0.21 + Compose 1.7.0 plugins |
+| `android/apps/webavanue/app/build.gradle.kts` | Updated dependency paths to `:Modules:WebAvanue:*` |
+| `Modules/WebAvanue/universal/build.gradle.kts` | Fixed plugin syntax, updated coredata dependency path |
+| `Modules/WebAvanue/coredata/build.gradle.kts` | Fixed plugin syntax for Kotlin 2.0 |
 
 ---
 
@@ -74,12 +91,13 @@ cd Avanues/Web
 
 ```bash
 # Verify file count
-cd /Volumes/M-Drive/Coding/NewAvanues/Avanues/Web
-find . -name "*.kt" -not -path "*/build/*" | wc -l
+cd /Volumes/M-Drive/Coding/NewAvanues
+find android/apps/webavanue Modules/WebAvanue -name "*.kt" -not -path "*/build/*" | wc -l
 # Expected: 398
 
 # Build
-./gradlew assembleDebug assembleRelease
+cd android/apps/webavanue
+./gradlew assembleDebug
 
 # List modules
 ./gradlew projects
@@ -89,11 +107,13 @@ find . -name "*.kt" -not -path "*/build/*" | wc -l
 
 ## Notes
 
-1. **Case Sensitivity:** Source repo uses `Android/` (PascalCase) instead of Gradle convention `android/` (lowercase). Preserved as-is for compatibility.
+1. **Monorepo Pattern:** Follows same structure as VoiceOS migration - Android app in `android/apps/`, KMP modules in `Modules/`.
 
-2. **Self-contained Gradle:** WebAvanue has its own Gradle wrapper and settings, independent from VoiceOS.
+2. **Self-contained Gradle:** WebAvanue has its own Gradle wrapper and settings in `android/apps/webavanue/`, independent from VoiceOS.
 
-3. **KMP Structure:** Uses Kotlin Multiplatform with common code in `common/webavanue/universal/`.
+3. **KMP Structure:** Uses Kotlin Multiplatform with shared code in `Modules/WebAvanue/universal/`.
+
+4. **Kotlin 2.0:** Updated to Kotlin 2.0.21 with Compose Multiplatform 1.7.0.
 
 ---
 
@@ -106,3 +126,4 @@ find . -name "*.kt" -not -path "*/build/*" | wc -l
 
 **Author:** Claude (IDEACODE v10.3)
 **Created:** 2025-12-07
+**Updated:** 2025-12-07 (Restructured to correct monorepo pattern)

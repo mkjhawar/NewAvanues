@@ -20,19 +20,25 @@
 
 ```
 NewAvanues/
-├── android/apps/VoiceOS/       # VoiceOS Android app + Gradle root ✅
-│   ├── app/                    # Main app module
-│   ├── tests/                  # Test modules
-│   └── vivoka/                 # Vivoka SDK AAR files
-├── Modules/VoiceOS/            # VoiceOS product-specific modules ✅
-│   ├── apps/                   # VoiceOSCore, VoiceCursor, VoiceUI, etc.
-│   ├── libraries/              # SpeechRecognition, PluginSystem, UniversalIPC, etc.
-│   ├── managers/               # CommandManager, VoiceDataManager, etc.
-│   └── core/                   # KMP core utilities (result, hash, database, etc.)
+├── android/apps/
+│   ├── VoiceOS/                # VoiceOS Android app + Gradle root ✅
+│   │   ├── app/                # Main app module
+│   │   ├── tests/              # Test modules
+│   │   └── vivoka/             # Vivoka SDK AAR files
+│   └── webavanue/              # WebAvanue Android app + Gradle root ✅
+│       └── app/                # Android app module
+├── Modules/
+│   ├── VoiceOS/                # VoiceOS product-specific modules ✅
+│   │   ├── apps/               # VoiceOSCore, VoiceCursor, VoiceUI, etc.
+│   │   ├── libraries/          # SpeechRecognition, PluginSystem, UniversalIPC, etc.
+│   │   ├── managers/           # CommandManager, VoiceDataManager, etc.
+│   │   └── core/               # KMP core utilities (result, hash, database, etc.)
+│   └── WebAvanue/              # WebAvanue KMP modules ✅
+│       ├── universal/          # 95% shared KMP code
+│       └── coredata/           # Data layer with SQLDelight
 ├── Common/                     # Cross-product shared code
 │   └── ThirdParty/             # Shared third-party code (Vosk) ✅
-├── Avanues/                    # Brand folder for all Avanues products
-│   ├── Web/                    # WebAvanue (from MainAvanues repo) ✅
+├── Avanues/                    # Brand folder for other Avanues products
 │   └── AVA/                    # AVA Assistant (from AVA repo) 🔄
 └── Docs/
     ├── VoiceOS/                # VoiceOS documentation ✅
@@ -60,8 +66,8 @@ Product-specific code goes in `Modules/{Product}/`.
 ### MainAvanues (WebAvanue) - Complete ✅
 - **Repo name:** MainAvanues
 - **Project name:** WebAvanue
-- **Destination:** `Avanues/Web/`
-- Phase 1: Git subtree import (398 .kt files)
+- **Destination:** `android/apps/webavanue/`, `Modules/WebAvanue/`
+- Phase 1: Copy files to monorepo structure (9 .kt app files + 389 .kt module files)
 - Branch: `WebAvanue-Development`
 - Docs: See `WebAvanue/MIGRATION-COMPLETE.md`
 - **Build Status:** ✅ assembleDebug + assembleRelease SUCCESS
