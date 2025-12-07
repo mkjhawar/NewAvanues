@@ -183,6 +183,44 @@ ls -la Modules/VoiceOS/core/  # Should have 11 modules + 2 docs
 
 ## Enforcement Rules for Future Migrations
 
+### CRITICAL: 100% File Migration Rule
+
+**ALL source files MUST be migrated from original repository, including:**
+
+| Category | Include | Exclude |
+|----------|---------|---------|
+| Source Code | *.kt, *.java, *.swift, *.ts, *.js | None |
+| Resources | *.xml, *.json, *.png, *.jpg, *.svg | None |
+| Build Config | *.gradle.kts, *.gradle, *.properties | None |
+| SDK/Libraries | *.aar, *.jar, *.so, *.dylib | None |
+| Models | *.bin, *.model, *.tflite | None |
+| Config | AndroidManifest.xml, Info.plist | None |
+| Build Artifacts | - | build/, .gradle/, *.class, *.dex |
+| IDE | - | .idea/, *.iml |
+| Docs (optional) | docs/ if needed | docs/archive/, contextsave/ |
+
+**Verification Steps:**
+```bash
+# Count source files (exclude build artifacts)
+find {source} -type f -name "*.kt" -not -path "*/build/*" | wc -l
+find {target} -type f -name "*.kt" -not -path "*/build/*" | wc -l
+
+# Verify proprietary SDKs copied
+ls {target}/vivoka/  # AAR files
+ls {target}/models/  # ML models
+
+# Diff check (after path normalization)
+diff <(find {source} -name "*.kt" | sed 's|.*/||' | sort) \
+     <(find {target} -name "*.kt" | sed 's|.*/||' | sort)
+```
+
+**Proprietary Files:**
+- Copy ALL .aar, .jar, .so files (not typically in git)
+- Copy ALL ML models, voice models, configuration files
+- These may be gitignored in source - copy manually from disk
+
+---
+
 ### Pre-Migration Checklist
 
 Before importing ANY new project (WebAvanue, AvaConnect, AVA, Avanues):
