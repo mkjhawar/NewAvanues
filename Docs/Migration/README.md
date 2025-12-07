@@ -20,19 +20,27 @@
 
 ```
 NewAvanues/
+├── android/apps/VoiceOS/       # VoiceOS Android app + Gradle root ✅
+│   ├── app/                    # Main app module
+│   ├── tests/                  # Test modules
+│   └── vivoka/                 # Vivoka SDK AAR files
+├── Modules/VoiceOS/            # VoiceOS product-specific modules ✅
+│   ├── apps/                   # VoiceOSCore, VoiceCursor, VoiceUI, etc.
+│   ├── libraries/              # SpeechRecognition, PluginSystem, UniversalIPC, etc.
+│   ├── managers/               # CommandManager, VoiceDataManager, etc.
+│   └── core/                   # KMP core utilities (result, hash, database, etc.)
+├── Common/                     # Cross-product shared code
+│   └── ThirdParty/             # Shared third-party code (Vosk) ✅
 ├── Avanues/                    # Brand folder for all Avanues products
-│   ├── Web/                   # WebAvanue (from MainAvanues repo)
-│   ├── AVA/                   # AVA Assistant (from AVA repo)
-│   └── [Other]/               # From Avanues repo
-├── android/apps/VoiceOS/      # VoiceOS Android app ✅
-├── Modules/VoiceOS/           # VoiceOS feature modules ✅
-├── Common/
-│   ├── Libraries/VoiceOS/     # VoiceOS KMP libraries ✅
-│   └── ThirdParty/            # Shared third-party code ✅
+│   ├── Web/                    # WebAvanue (from MainAvanues repo) 🔄
+│   └── AVA/                    # AVA Assistant (from AVA repo) 🔄
 └── Docs/
-    ├── VoiceOS/               # VoiceOS documentation ✅
-    └── Migration/             # Migration tracking
+    ├── VoiceOS/                # VoiceOS documentation ✅
+    └── Migration/              # Migration tracking ✅
 ```
+
+**Note:** `Common/` is for cross-PRODUCT shared code (used by VoiceOS, WebAvanue, AVA).
+Product-specific code goes in `Modules/{Product}/`.
 
 ---
 
@@ -40,11 +48,13 @@ NewAvanues/
 
 ### VoiceOS - Complete ✅
 - **Repo:** VoiceOS
-- **Destination:** `android/apps/VoiceOS/`, `Modules/VoiceOS/`, `Common/Libraries/VoiceOS/`
+- **Destination:** `android/apps/VoiceOS/`, `Modules/VoiceOS/`
 - Phase 1: Git subtree import (502 files)
 - Phase 2: Gradle restructure (1815+ files, 33 modules)
-- Branch: `voiceos-dev`
-- Docs: 5 files in VoiceOS/
+- Phase 3: Structure fixes (UniversalIPC KMP, Vivoka SDK, leakcanary reflection)
+- Branch: `Development`
+- Docs: See `VoiceOS-Migration-Issues-Fixes.md`
+- **Build Status:** ✅ assembleDebug + assembleRelease SUCCESS
 - **Special:** Do NOT migrate /voiceos files from other repos (would duplicate)
 
 ### MainAvanues (WebAvanue) - Next (Changed Order)
@@ -106,4 +116,4 @@ Each repo folder contains:
 
 ---
 
-Updated: 2025-12-06 | IDEACODE v10.3
+Updated: 2025-12-07 | IDEACODE v10.3.1
