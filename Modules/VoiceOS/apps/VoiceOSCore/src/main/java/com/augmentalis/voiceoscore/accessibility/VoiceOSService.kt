@@ -268,12 +268,14 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 
         // FIX (2025-12-04): Add LeakCanary memory monitoring for VoiceOSService
         // This will detect memory leaks in LearnApp components (ProgressOverlay, etc.)
+        // Using reflection to avoid compile-time dependency on debug-only library
         if (com.augmentalis.voiceoscore.BuildConfig.DEBUG) {
             try {
-                leakcanary.AppWatcher.objectWatcher.watch(
-                    this,
-                    "VoiceOSService should be destroyed when service stops"
-                )
+                val appWatcherClass = Class.forName("leakcanary.AppWatcher")
+                val objectWatcherField = appWatcherClass.getDeclaredField("objectWatcher")
+                val objectWatcher = objectWatcherField.get(null)
+                val watchMethod = objectWatcher.javaClass.getMethod("watch", Any::class.java, String::class.java)
+                watchMethod.invoke(objectWatcher, this, "VoiceOSService should be destroyed when service stops")
                 Log.d(TAG, "✓ LeakCanary monitoring enabled for VoiceOSService")
             } catch (e: Exception) {
                 Log.w(TAG, "LeakCanary not available (this is OK for release builds): ${e.message}")

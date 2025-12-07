@@ -12,6 +12,7 @@
 
 package com.augmentalis.voiceoscore.learnapp.elements
 
+import android.content.Context
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationBehavior
 import io.mockk.every
@@ -41,10 +42,12 @@ import org.junit.Test
 class ElementClassifierExplorationBehaviorTest {
 
     private lateinit var classifier: ElementClassifier
+    private lateinit var mockContext: Context
 
     @Before
     fun setup() {
-        classifier = ElementClassifier()
+        mockContext = mockk(relaxed = true)
+        classifier = ElementClassifier(mockContext)
     }
 
     // ========================================================================

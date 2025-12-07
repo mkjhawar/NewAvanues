@@ -123,11 +123,11 @@ class BlockedStateDetectionTest {
 
         // Given: Email input field
         whenever(mockNodeInfo.inputType).thenReturn(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
-        whenever(mockNodeInfo.hint).thenReturn("Email")
+        whenever(mockNodeInfo.hintText).thenReturn("Email")
         whenever(mockNodeInfo.className).thenReturn("android.widget.EditText")
 
         println("Input type: EMAIL_ADDRESS")
-        println("Hint: ${mockNodeInfo.hint}")
+        println("Hint: ${mockNodeInfo.hintText}")
 
         // When: Check for email input
         val isEmailInput = mockNodeInfo.inputType == android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
@@ -286,21 +286,21 @@ class BlockedStateDetectionTest {
 
         // Given: Username field
         val usernameField = org.mockito.Mockito.mock(AccessibilityNodeInfo::class.java)
-        whenever(usernameField.hint).thenReturn("Username or email")
+        whenever(usernameField.hintText).thenReturn("Username or email")
         whenever(usernameField.className).thenReturn("android.widget.EditText")
 
         // Given: Password field
         val passwordField = org.mockito.Mockito.mock(AccessibilityNodeInfo::class.java)
         whenever(passwordField.inputType).thenReturn(android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD)
-        whenever(passwordField.hint).thenReturn("Password")
+        whenever(passwordField.hintText).thenReturn("Password")
         whenever(passwordField.className).thenReturn("android.widget.EditText")
 
-        println("Username hint: ${usernameField.hint}")
-        println("Password hint: ${passwordField.hint}")
+        println("Username hint: ${usernameField.hintText}")
+        println("Password hint: ${passwordField.hintText}")
 
         // When: Check for login fields
-        val hasUsernameHint = usernameField.hint?.toString()?.lowercase()?.contains("username") == true ||
-                             usernameField.hint?.toString()?.lowercase()?.contains("email") == true
+        val hasUsernameHint = usernameField.hintText?.toString()?.lowercase()?.contains("username") == true ||
+                             usernameField.hintText?.toString()?.lowercase()?.contains("email") == true
         val hasPasswordField = passwordField.inputType == android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
 
         // Then: Should detect login screen

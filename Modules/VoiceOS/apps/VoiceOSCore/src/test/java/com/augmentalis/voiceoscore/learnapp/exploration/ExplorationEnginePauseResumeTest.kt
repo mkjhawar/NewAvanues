@@ -83,8 +83,8 @@ class ExplorationEnginePauseResumeTest {
         mockAccessibilityService = MockAccessibilityService()
 
         // Setup database (in-memory for testing)
-        val driverFactory = TestDatabaseDriverFactory(mockContext)
-        databaseManager = VoiceOSDatabaseManager.getInstance(driverFactory)
+        val driverFactory = TestDatabaseDriverFactory()
+        databaseManager = VoiceOSDatabaseManager.getTestInstance(driverFactory.createDriver())
 
         // Setup alias manager
         aliasManager = UuidAliasManager(databaseManager.uuids)
