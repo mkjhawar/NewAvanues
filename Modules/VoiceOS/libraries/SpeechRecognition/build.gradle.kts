@@ -185,10 +185,10 @@ dependencies {
     // implementation(project(":Vosk"))
     
     // VoiceDataManager - Centralized entity and repository management
-    // implementation(project(":modules:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight
+    // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight
     
     // DeviceManager - For AccessibilityManager and device capabilities
-    implementation(project(":modules:libraries:DeviceManager"))
+    implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))
     
     // Vivoka VSDK - Moved to app level (apps/SpeechRecognition)
     // Library modules cannot include local AAR files directly

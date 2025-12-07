@@ -74,10 +74,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     
     // VOS4 Modules
-    implementation(project(":modules:libraries:SpeechRecognition"))
-    implementation(project(":modules:libraries:VoiceUIElements"))
-    // implementation(project(":modules:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight
-    implementation(project(":modules:managers:LocalizationManager"))
+    implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))
+    implementation(project(":Modules:VoiceOS:libraries:VoiceUIElements"))
+    // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight
+    implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))
     
     // Testing
     testImplementation("junit:junit:4.13.2")

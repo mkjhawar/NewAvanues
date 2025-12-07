@@ -61,7 +61,7 @@ android {
 
 dependencies {
     // SQLDelight KMP Database (replaces Room)
-    implementation(project(":libraries:core:database"))
+    implementation(project(":Common:Libraries:VoiceOS:core:database"))
 
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")

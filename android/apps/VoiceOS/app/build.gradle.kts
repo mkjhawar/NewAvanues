@@ -76,28 +76,28 @@ android {
 
 dependencies {
     // Core Database (SQLDelight) - using api() to ensure KSP can resolve types
-    api(project(":libraries:core:database"))  // SQLDelight database for VoiceOS
+    api(project(":Common:Libraries:VoiceOS:core:database"))  // SQLDelight database for VoiceOS
 
     // Standalone Apps
-    implementation(project(":modules:apps:VoiceUI"))
+    implementation(project(":Modules:VoiceOS:apps:VoiceUI"))
 
     // Input Method Libraries
-    // implementation(project(":modules:libraries:VoiceKeyboard"))  // DISABLED: Depends on VoiceDataManager
+    // implementation(project(":Modules:VoiceOS:libraries:VoiceKeyboard"))  // DISABLED: Depends on VoiceDataManager
 
     // System Managers
-    implementation(project(":modules:managers:CommandManager"))  // RE-ENABLED: Agent Swarm Task 2.1
-    // implementation(project(":modules:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight database
-    implementation(project(":modules:managers:LocalizationManager"))
-    implementation(project(":modules:managers:LicenseManager"))
+    implementation(project(":Modules:VoiceOS:managers:CommandManager"))  // RE-ENABLED: Agent Swarm Task 2.1
+    // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight database
+    implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))
+    implementation(project(":Modules:VoiceOS:managers:LicenseManager"))
 
     // Shared Libraries
-    implementation(project(":modules:apps:VoiceOSCore"))  // RE-ENABLED: Room→SQLDelight migration complete
-    implementation(project(":modules:apps:VoiceCursor"))
-    implementation(project(":modules:libraries:VoiceUIElements"))
-    implementation(project(":modules:libraries:DeviceManager"))
-    implementation(project(":modules:libraries:SpeechRecognition"))  // LearningSystem stubbed
-    implementation(project(":modules:libraries:UUIDCreator"))
-    implementation(project(":modules:libraries:VoiceOsLogging"))  // Phase 3: Timber replacement
+    implementation(project(":Modules:VoiceOS:apps:VoiceOSCore"))  // RE-ENABLED: Room→SQLDelight migration complete
+    implementation(project(":Modules:VoiceOS:apps:VoiceCursor"))
+    implementation(project(":Modules:VoiceOS:libraries:VoiceUIElements"))
+    implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))
+    implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))  // LearningSystem stubbed
+    implementation(project(":Modules:VoiceOS:libraries:UUIDCreator"))
+    implementation(project(":Modules:VoiceOS:libraries:VoiceOsLogging"))  // Phase 3: Timber replacement
     
     // Android core
     implementation("androidx.core:core-ktx:1.12.0")

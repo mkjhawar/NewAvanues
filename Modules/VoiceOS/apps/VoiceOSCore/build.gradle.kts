@@ -159,17 +159,17 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
 
     // VoiceOS KMP Libraries (project dependencies)
-    implementation(project(":libraries:core:result"))         // Type-safe error handling (KMP)
-    implementation(project(":libraries:core:hash"))           // SHA-256 hashing utilities (KMP)
-    implementation(project(":libraries:core:constants"))      // Centralized configuration values (KMP)
-    implementation(project(":libraries:core:validation"))     // Input validation and sanitization (KMP)
-    implementation(project(":libraries:core:exceptions"))     // Exception hierarchy (KMP)
-    implementation(project(":libraries:core:command-models")) // Command data structures (KMP)
-    implementation(project(":libraries:core:accessibility-types")) // Accessibility enums and states (KMP - project dependency)
-    implementation(project(":libraries:core:voiceos-logging"))     // PII-safe logging infrastructure (KMP - project dependency)
-    implementation(project(":libraries:core:text-utils"))          // Text manipulation and sanitization (KMP - project dependency)
-    implementation(project(":libraries:core:json-utils"))          // JSON manipulation utilities (KMP - project dependency)
-    implementation(project(":libraries:core:database"))            // SQLDelight KMP database (KMP - project dependency) - Phase 3: Migration complete
+    implementation(project(":Common:Libraries:VoiceOS:core:result"))         // Type-safe error handling (KMP)
+    implementation(project(":Common:Libraries:VoiceOS:core:hash"))           // SHA-256 hashing utilities (KMP)
+    implementation(project(":Common:Libraries:VoiceOS:core:constants"))      // Centralized configuration values (KMP)
+    implementation(project(":Common:Libraries:VoiceOS:core:validation"))     // Input validation and sanitization (KMP)
+    implementation(project(":Common:Libraries:VoiceOS:core:exceptions"))     // Exception hierarchy (KMP)
+    implementation(project(":Common:Libraries:VoiceOS:core:command-models")) // Command data structures (KMP)
+    implementation(project(":Common:Libraries:VoiceOS:core:accessibility-types")) // Accessibility enums and states (KMP - project dependency)
+    implementation(project(":Common:Libraries:VoiceOS:core:voiceos-logging"))     // PII-safe logging infrastructure (KMP - project dependency)
+    implementation(project(":Common:Libraries:VoiceOS:core:text-utils"))          // Text manipulation and sanitization (KMP - project dependency)
+    implementation(project(":Common:Libraries:VoiceOS:core:json-utils"))          // JSON manipulation utilities (KMP - project dependency)
+    implementation(project(":Common:Libraries:VoiceOS:core:database"))            // SQLDelight KMP database (KMP - project dependency) - Phase 3: Migration complete
 
     // Lifecycle components
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
@@ -228,16 +228,16 @@ dependencies {
     // Local modules (when available)
     // implementation(project(":libraries:DeviceManager"))
     // NOTE: Apps cannot depend on other app modules - use AIDL for cross-app communication
-    implementation(project(":modules:libraries:SpeechRecognition"))  // LearningSystem stubbed
-    implementation(project(":modules:managers:HUDManager"))  // For gaze tracking and HUD functionality
-    implementation(project(":modules:managers:CommandManager"))  // RE-ENABLED: Agent Swarm Task 2.1 - CommandManager restoration
-    // implementation(project(":modules:managers:VoiceDataManager"))  // Unified database for coordination - DISABLED: Depends on SQLDelight
-    implementation(project(":modules:apps:VoiceCursor"))
-    implementation(project(":modules:libraries:UUIDCreator"))
+    implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))  // LearningSystem stubbed
+    implementation(project(":Modules:VoiceOS:managers:HUDManager"))  // For gaze tracking and HUD functionality
+    implementation(project(":Modules:VoiceOS:managers:CommandManager"))  // RE-ENABLED: Agent Swarm Task 2.1 - CommandManager restoration
+    // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // Unified database for coordination - DISABLED: Depends on SQLDelight
+    implementation(project(":Modules:VoiceOS:apps:VoiceCursor"))
+    implementation(project(":Modules:VoiceOS:libraries:UUIDCreator"))
 
     // LearnApp dependencies merged (2025-11-24)
-    implementation(project(":modules:libraries:DeviceManager"))      // From LearnApp
-    implementation(project(":modules:libraries:VoiceUIElements"))    // From LearnApp
+    implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))      // From LearnApp
+    implementation(project(":Modules:VoiceOS:libraries:VoiceUIElements"))    // From LearnApp
 
     // Vivoka VSDK
     compileOnly(files("${rootDir}/vivoka/vsdk-6.0.0.aar"))
