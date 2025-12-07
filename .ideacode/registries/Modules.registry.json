@@ -1,0 +1,165 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-12-03",
+  "schema": {
+    "id": "PascalCase",
+    "name": "PascalCase",
+    "type": "app|module|package",
+    "profile": "android-app|ios-app|desktop-app|kmp-library|feature-module",
+    "platforms": ["android", "ios", "macos", "windows", "linux", "web"],
+    "path": "relative/from/root (lowercase for Gradle paths, PascalCase for others)",
+    "status": "active|development|planned|deprecated"
+  },
+  "modules": [
+    {
+      "id": "VoiceOS-Android",
+      "name": "VoiceOS",
+      "type": "app",
+      "profile": "android-app",
+      "platforms": ["android"],
+      "path": "android/voiceos",
+      "status": "planned",
+      "description": "VoiceOS accessibility service Android app"
+    },
+    {
+      "id": "VoiceOS-iOS",
+      "name": "VoiceOS",
+      "type": "app",
+      "profile": "ios-app",
+      "platforms": ["ios"],
+      "path": "ios/voiceos",
+      "status": "planned",
+      "description": "VoiceOS iOS app"
+    },
+    {
+      "id": "VoiceOS-Desktop",
+      "name": "VoiceOS",
+      "type": "app",
+      "profile": "desktop-app",
+      "platforms": ["macos", "windows", "linux"],
+      "path": "desktop/voiceos",
+      "status": "planned",
+      "description": "VoiceOS desktop app"
+    },
+    {
+      "id": "AVA-Android",
+      "name": "AVA",
+      "type": "app",
+      "profile": "android-app",
+      "platforms": ["android"],
+      "path": "android/ava",
+      "status": "planned",
+      "description": "AVA AI voice assistant Android app"
+    },
+    {
+      "id": "AVA-iOS",
+      "name": "AVA",
+      "type": "app",
+      "profile": "ios-app",
+      "platforms": ["ios"],
+      "path": "ios/ava",
+      "status": "planned",
+      "description": "AVA AI voice assistant iOS app"
+    },
+    {
+      "id": "AVA-Desktop",
+      "name": "AVA",
+      "type": "app",
+      "profile": "desktop-app",
+      "platforms": ["macos", "windows", "linux"],
+      "path": "desktop/ava",
+      "status": "planned",
+      "description": "AVA AI voice assistant desktop app"
+    },
+    {
+      "id": "Avanues-Android",
+      "name": "Avanues",
+      "type": "app",
+      "profile": "android-app",
+      "platforms": ["android"],
+      "path": "android/avanues",
+      "status": "planned",
+      "description": "Avanues Android app"
+    },
+    {
+      "id": "AvaConnect-Android",
+      "name": "AvaConnect",
+      "type": "app",
+      "profile": "android-app",
+      "platforms": ["android"],
+      "path": "android/avaconnect",
+      "status": "planned",
+      "description": "AvaConnect Android app"
+    },
+    {
+      "id": "Database",
+      "name": "Database",
+      "type": "package",
+      "profile": "kmp-library",
+      "platforms": ["android", "ios", "macos", "windows", "linux"],
+      "path": "Common/Database",
+      "status": "planned",
+      "description": "Unified database layer (SQLDelight)"
+    },
+    {
+      "id": "Voice",
+      "name": "Voice",
+      "type": "package",
+      "profile": "kmp-library",
+      "platforms": ["android", "ios"],
+      "path": "Common/Voice",
+      "status": "planned",
+      "description": "Voice recognition and processing"
+    },
+    {
+      "id": "NLU",
+      "name": "NLU",
+      "type": "package",
+      "profile": "kmp-library",
+      "platforms": ["android", "ios", "macos", "windows", "linux"],
+      "path": "Common/NLU",
+      "status": "planned",
+      "description": "Natural Language Understanding engine"
+    },
+    {
+      "id": "UI",
+      "name": "UI",
+      "type": "package",
+      "profile": "kmp-library",
+      "platforms": ["android", "ios", "macos", "windows", "linux", "web"],
+      "path": "Common/UI",
+      "status": "planned",
+      "description": "MagicUI cross-platform components"
+    },
+    {
+      "id": "Utils",
+      "name": "Utils",
+      "type": "package",
+      "profile": "kmp-library",
+      "platforms": ["android", "ios", "macos", "windows", "linux"],
+      "path": "Common/Utils",
+      "status": "planned",
+      "description": "Shared utilities (logging, UUID, etc.)"
+    },
+    {
+      "id": "WebAvanue",
+      "name": "WebAvanue",
+      "type": "module",
+      "profile": "feature-module",
+      "platforms": ["android", "ios", "macos", "windows", "linux"],
+      "path": "Modules/WebAvanue",
+      "status": "planned",
+      "description": "WebAvanue browser feature module"
+    },
+    {
+      "id": "AvaConnect",
+      "name": "AvaConnect",
+      "type": "module",
+      "profile": "feature-module",
+      "platforms": ["android", "web"],
+      "path": "Modules/AvaConnect",
+      "status": "planned",
+      "description": "AvaConnect connectivity feature module"
+    }
+  ]
+}
