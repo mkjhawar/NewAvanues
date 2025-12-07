@@ -38,3 +38,9 @@ xcuserdata/
 # Keep structure folders
 !.ideacode/
 !.claude/
+
+# AVA Migration - Exclude large model files (>100MB)
+android/apps/AVA/external-models/**/*.bin
+android/apps/AVA/external-models/**/*.gguf
+android/apps/AVA/external-models/**/*.AON
+android/apps/AVA/external-models/**/*.safetensors
