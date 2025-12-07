@@ -1,0 +1,12 @@
+/.gradle/
+/.idea/
+/android/apps/webavanue/build/
+.gradle/
+**/build/
+# macOS system files
+.DS_Store
+**/.DS_Store
+
+# Backup files
+*.backup
+*.v85backup

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAvanue Layout - Option A (Dropdown Menus)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .device-selector {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .device-selector button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            border: 2px solid #2196f3;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .device-selector button.active {
+            background: #2196f3;
+            color: white;
+        }
+
+        .phone-frame {
+            margin: 0 auto;
+            background: #000;
+            border-radius: 36px;
+            padding: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .phone-frame.portrait {
+            width: 375px;
+            height: 667px;
+        }
+
+        .phone-frame.landscape {
+            width: 667px;
+            height: 375px;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 24px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.1), transparent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 12px;
+            font-size: 12px;
+            color: #333;
+        }
+
+        /* Unified Address Bar */
+        .address-bar {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .landscape .address-bar {
+            flex-direction: row;
+            align-items: center;
+            padding: 6px 12px;
+        }
+
+        .address-bar-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .landscape .address-bar-top {
+            flex: 1;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 4px;
+        }
+
+        .nav-button {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: rgba(0,0,0,0.05);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .nav-button:hover {
+            background: rgba(0,0,0,0.1);
+        }
+
+        .url-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 20px;
+            background: rgba(0,0,0,0.03);
+            font-size: 14px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .action-button {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 20px;
+            border-radius: 8px;
+        }
+
+        .action-button:hover {
+            background: rgba(0,0,0,0.05);
+        }
+
+        /* Tab Counter Badge */
+        .tab-counter-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(33, 150, 243, 0.1);
+            border-radius: 16px;
+            cursor: pointer;
+            position: relative;
+            font-size: 14px;
+            color: #2196f3;
+            font-weight: 500;
+        }
+
+        .landscape .tab-counter-badge {
+            margin: 0 8px;
+        }
+
+        .tab-counter-badge:hover {
+            background: rgba(33, 150, 243, 0.2);
+        }
+
+        .tab-counter-badge .count {
+            font-weight: 600;
+        }
+
+        /* Dropdown Menus */
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 360px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            margin-top: 8px;
+            z-index: 1000;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .dropdown-menu.active {
+            display: block;
+            animation: slideDown 0.2s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        .dropdown-header {
+            padding: 16px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            color: #666;
+        }
+
+        .dropdown-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(0,0,0,0.03);
+        }
+
+        .dropdown-item.active {
+            background: rgba(33, 150, 243, 0.1);
+            border-left: 3px solid #2196f3;
+        }
+
+        .tab-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .tab-title {
+            font-weight: 500;
+            font-size: 14px;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tab-url {
+            font-size: 12px;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .close-button {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: rgba(0,0,0,0.05);
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+            margin-left: 8px;
+        }
+
+        .close-button:hover {
+            background: rgba(244, 67, 54, 0.1);
+            color: #f44336;
+        }
+
+        .new-tab-button {
+            padding: 12px 16px;
+            background: rgba(33, 150, 243, 0.1);
+            color: #2196f3;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .new-tab-button:hover {
+            background: rgba(33, 150, 243, 0.2);
+        }
+
+        /* WebView */
+        .webview {
+            flex: 1;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 18px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .webview::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            opacity: 0.1;
+        }
+
+        .webview-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        /* Bottom Toolbar */
+        .bottom-toolbar {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(0,0,0,0.1);
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+        }
+
+        .landscape .bottom-toolbar {
+            display: none;
+        }
+
+        .toolbar-button {
+            width: 48px;
+            height: 48px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 24px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toolbar-button:hover {
+            background: rgba(0,0,0,0.05);
+        }
+
+        /* Nav Bar Padding */
+        .nav-bar-padding {
+            height: 24px;
+            background: white;
+        }
+
+        /* Stats */
+        .stats {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .stats h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-around;
+            margin: 10px 0;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2196f3;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .comparison {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .comparison.positive {
+            background: #4caf50;
+            color: white;
+        }
+
+        /* Overlay for dropdown backdrop */
+        .dropdown-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 999;
+            display: none;
+        }
+
+        .dropdown-overlay.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>🎨 WebAvanue Layout - Option A: Dropdown Menus</h1>
+
+        <div class="info">
+            <strong>✨ Key Features:</strong>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li>Removed redundant tab bar (saves 44dp)</li>
+                <li>Clickable "Tabs:3 🔽" badge opens dropdown list</li>
+                <li>Clickable "☆" opens favorites dropdown</li>
+                <li>Auto-scrolls to active tab in dropdown (no manual scroll needed!)</li>
+                <li>Responsive: Portrait uses 2-line header, Landscape uses 1-line</li>
+                <li>Bottom toolbar hidden in landscape to maximize space</li>
+            </ul>
+        </div>
+
+        <div class="device-selector">
+            <button class="active" onclick="setOrientation('portrait')">📱 Portrait</button>
+            <button onclick="setOrientation('landscape')">📱 Landscape</button>
+        </div>
+
+        <div class="phone-frame portrait" id="phoneFrame">
+            <div class="screen">
+                <!-- Status Bar -->
+                <div class="status-bar">
+                    <span>9:41</span>
+                    <span>📶 🔋</span>
+                </div>
+
+                <!-- Unified Address Bar -->
+                <div class="address-bar">
+                    <div class="address-bar-top">
+                        <div class="nav-buttons">
+                            <button class="nav-button" title="Back">←</button>
+                            <button class="nav-button" title="Forward">→</button>
+                        </div>
+                        <input type="text" class="url-input" value="example.com" readonly>
+                        <div class="action-buttons">
+                            <button class="action-button" title="Favorites" onclick="toggleDropdown('favorites')">☆</button>
+                            <button class="action-button" title="Menu">≡</button>
+                        </div>
+                    </div>
+
+                    <!-- Second row: Tab counter + Desktop mode -->
+                    <div class="tab-counter-badge" onclick="toggleDropdown('tabs')">
+                        <span>Tabs: <span class="count">3</span></span>
+                        <span>🔽</span>
+                        <span style="margin-left: 8px; opacity: 0.6;">Desktop</span>
+
+                        <!-- Tabs Dropdown -->
+                        <div class="dropdown-menu" id="tabsDropdown">
+                            <div class="dropdown-header">OPEN TABS</div>
+                            <div class="dropdown-item active">
+                                <div class="tab-info">
+                                    <div class="tab-title">● Google Search</div>
+                                    <div class="tab-url">google.com</div>
+                                </div>
+                                <button class="close-button" onclick="event.stopPropagation()">×</button>
+                            </div>
+                            <div class="dropdown-item">
+                                <div class="tab-info">
+                                    <div class="tab-title">GitHub</div>
+                                    <div class="tab-url">github.com</div>
+                                </div>
+                                <button class="close-button" onclick="event.stopPropagation()">×</button>
+                            </div>
+                            <div class="dropdown-item">
+                                <div class="tab-info">
+                                    <div class="tab-title">Reddit</div>
+                                    <div class="tab-url">reddit.com</div>
+                                </div>
+                                <button class="close-button" onclick="event.stopPropagation()">×</button>
+                            </div>
+                            <div class="new-tab-button">+ New Tab</div>
+                        </div>
+                    </div>
+
+                    <!-- Favorites Dropdown -->
+                    <div class="dropdown-menu" id="favoritesDropdown" style="position: absolute; top: 70px; right: 12px; left: auto; transform: none;">
+                        <div class="dropdown-header">FAVORITES</div>
+                        <div class="dropdown-item">
+                            <div class="tab-info">
+                                <div class="tab-title">☆ Google</div>
+                                <div class="tab-url">google.com</div>
+                            </div>
+                        </div>
+                        <div class="dropdown-item">
+                            <div class="tab-info">
+                                <div class="tab-title">☆ GitHub</div>
+                                <div class="tab-url">github.com</div>
+                            </div>
+                        </div>
+                        <div class="dropdown-item">
+                            <div class="tab-info">
+                                <div class="tab-title">☆ Reddit</div>
+                                <div class="tab-url">reddit.com</div>
+                            </div>
+                        </div>
+                        <div class="new-tab-button">+ Add Current Page</div>
+                        <div class="new-tab-button" style="border-radius: 0;">Manage Favorites →</div>
+                    </div>
+                </div>
+
+                <!-- WebView Content -->
+                <div class="webview">
+                    <div class="webview-content">
+                        <div style="font-size: 48px; margin-bottom: 16px;">🌐</div>
+                        <div>WebView Content Area</div>
+                        <div style="font-size: 14px; margin-top: 8px; color: #ccc;">Much more space available!</div>
+                    </div>
+                </div>
+
+                <!-- Bottom Toolbar (Portrait only) -->
+                <div class="bottom-toolbar">
+                    <button class="toolbar-button" title="Voice Command">🎤</button>
+                    <button class="toolbar-button" title="Reload">⟳</button>
+                    <button class="toolbar-button" title="Clipboard">📋</button>
+                </div>
+
+                <!-- Nav Bar Padding -->
+                <div class="nav-bar-padding"></div>
+            </div>
+        </div>
+
+        <!-- Dropdown Overlay -->
+        <div class="dropdown-overlay" id="dropdownOverlay" onclick="closeAllDropdowns()"></div>
+
+        <!-- Stats -->
+        <div class="stats">
+            <h3>📊 Space Optimization</h3>
+            <div class="stat-row">
+                <div class="stat">
+                    <div class="stat-value" id="uiOverhead">104dp</div>
+                    <div class="stat-label">UI Overhead</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="webviewSpace">75%</div>
+                    <div class="stat-label">WebView Space</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="improvement">+50%</div>
+                    <div class="stat-label">Improvement</div>
+                </div>
+            </div>
+            <div style="margin-top: 15px; padding: 12px; background: #f5f5f5; border-radius: 8px;">
+                <strong>vs Current:</strong> <span class="comparison positive">-68dp UI</span>
+                <span class="comparison positive">+25% WebView</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setOrientation(orientation) {
+            const frame = document.getElementById('phoneFrame');
+            const buttons = document.querySelectorAll('.device-selector button');
+
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (orientation === 'portrait') {
+                frame.className = 'phone-frame portrait';
+                document.getElementById('uiOverhead').textContent = '104dp';
+                document.getElementById('webviewSpace').textContent = '75%';
+                document.getElementById('improvement').textContent = '+50%';
+            } else {
+                frame.className = 'phone-frame landscape';
+                document.getElementById('uiOverhead').textContent = '52dp';
+                document.getElementById('webviewSpace').textContent = '88%';
+                document.getElementById('improvement').textContent = '+120%';
+            }
+
+            closeAllDropdowns();
+        }
+
+        function toggleDropdown(type) {
+            const tabsDropdown = document.getElementById('tabsDropdown');
+            const favoritesDropdown = document.getElementById('favoritesDropdown');
+            const overlay = document.getElementById('dropdownOverlay');
+
+            if (type === 'tabs') {
+                const isActive = tabsDropdown.classList.contains('active');
+                closeAllDropdowns();
+                if (!isActive) {
+                    tabsDropdown.classList.add('active');
+                    overlay.classList.add('active');
+                }
+            } else if (type === 'favorites') {
+                const isActive = favoritesDropdown.classList.contains('active');
+                closeAllDropdowns();
+                if (!isActive) {
+                    favoritesDropdown.classList.add('active');
+                    overlay.classList.add('active');
+                }
+            }
+        }
+
+        function closeAllDropdowns() {
+            document.getElementById('tabsDropdown').classList.remove('active');
+            document.getElementById('favoritesDropdown').classList.remove('active');
+            document.getElementById('dropdownOverlay').classList.remove('active');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>visionOS 2.0 Theme (Production)</title>
+    <style>
+        /* visionOS 2.0 Theme System - Production Optimized */
+        :root {
+            /* visionOS Color Palette */
+            --vos-primary: #007aff;
+            --vos-secondary: #5ac8fa;
+            --vos-accent: #af52de;
+
+            /* Adaptive backgrounds - optimized for OLED */
+            --vos-bg-base: #000000;
+            --vos-bg-elevated: rgba(28, 28, 30, 0.64);
+            --vos-bg-grouped: rgba(28, 28, 30, 0.48);
+
+            /* Glass materials - using backdrop-filter */
+            --vos-glass-thin: rgba(242, 242, 247, 0.04);
+            --vos-glass-regular: rgba(242, 242, 247, 0.06);
+            --vos-glass-thick: rgba(242, 242, 247, 0.08);
+            --vos-glass-chrome: rgba(242, 242, 247, 0.12);
+
+            /* Vibrancy layers */
+            --vos-vibrancy-blur: 40px;
+            --vos-vibrancy-blur-heavy: 60px;
+            --vos-vibrancy-saturation: 180%;
+
+            /* Spatial depth - Z-axis layers */
+            --vos-depth-behind: translateZ(-8px);
+            --vos-depth-base: translateZ(0);
+            --vos-depth-raised: translateZ(4px);
+            --vos-depth-elevated: translateZ(8px);
+            --vos-depth-floating: translateZ(16px);
+
+            /* Shadows - optimized for performance */
+            --vos-shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.2);
+            --vos-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.24);
+            --vos-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.28);
+            --vos-shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.32);
+
+            /* Glow effects - use sparingly */
+            --vos-glow-primary: 0 0 24px rgba(0, 122, 255, 0.4);
+            --vos-glow-accent: 0 0 24px rgba(175, 82, 222, 0.4);
+
+            /* Motion - spring physics */
+            --vos-spring: cubic-bezier(0.16, 1, 0.3, 1);
+            --vos-ease-in-out: cubic-bezier(0.42, 0, 0.58, 1);
+            --vos-duration-instant: 150ms;
+            --vos-duration-quick: 250ms;
+            --vos-duration-smooth: 400ms;
+
+            /* Typography */
+            --vos-font-system: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+
+            /* Borders - subtle separators */
+            --vos-border-subtle: 0.5px solid rgba(255, 255, 255, 0.1);
+            --vos-border-regular: 1px solid rgba(255, 255, 255, 0.15);
+            --vos-border-prominent: 1px solid rgba(255, 255, 255, 0.2);
+
+            /* Radii - visionOS uses prominent curves */
+            --vos-radius-sm: 10px;
+            --vos-radius-md: 16px;
+            --vos-radius-lg: 22px;
+            --vos-radius-xl: 32px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--vos-font-system);
+            background: var(--vos-bg-base);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            position: relative;
+            /* Force GPU compositing */
+            transform: translate3d(0, 0, 0);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Ambient light effect */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 30% 40%, rgba(0, 122, 255, 0.08), transparent 60%),
+                        radial-gradient(circle at 70% 60%, rgba(175, 82, 222, 0.06), transparent 60%);
+            pointer-events: none;
+            animation: ambient 20s ease-in-out infinite;
+        }
+
+        @keyframes ambient {
+            0%, 100% { opacity: 0.5; transform: translate(0, 0); }
+            50% { opacity: 0.8; transform: translate(5%, 5%); }
+        }
+
+        .phone {
+            width: 390px;
+            height: 844px;
+            background: #1a1a1a;
+            border-radius: 50px;
+            padding: 12px;
+            box-shadow: var(--vos-shadow-xl);
+            transition: all var(--vos-duration-smooth) var(--vos-spring);
+            position: relative;
+            /* GPU optimization */
+            will-change: transform;
+            transform: translate3d(0, 0, 0);
+        }
+
+        body.landscape .phone {
+            width: 844px;
+            height: 390px;
+        }
+
+        .notch {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 160px;
+            height: 30px;
+            background: #1a1a1a;
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+            transition: all var(--vos-duration-smooth) var(--vos-spring);
+        }
+
+        body.landscape .notch {
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 160px;
+            border-radius: 0 20px 20px 0;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--vos-bg-base);
+            border-radius: 38px;
+            overflow: hidden;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            /* Perspective for 3D depth */
+            perspective: 1000px;
+        }
+
+        /* visionOS Glass Material */
+        .vos-glass {
+            background: var(--vos-glass-regular);
+            backdrop-filter: blur(var(--vos-vibrancy-blur)) saturate(var(--vos-vibrancy-saturation));
+            -webkit-backdrop-filter: blur(var(--vos-vibrancy-blur)) saturate(var(--vos-vibrancy-saturation));
+            border: var(--vos-border-subtle);
+            box-shadow: var(--vos-shadow-md),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: all var(--vos-duration-quick) var(--vos-ease-in-out);
+            /* GPU layer */
+            will-change: transform, opacity;
+            transform: translateZ(0);
+        }
+
+        .vos-glass-chrome {
+            background: var(--vos-glass-chrome);
+            backdrop-filter: blur(var(--vos-vibrancy-blur-heavy)) saturate(200%);
+            -webkit-backdrop-filter: blur(var(--vos-vibrancy-blur-heavy)) saturate(200%);
+            border: var(--vos-border-regular);
+            box-shadow: var(--vos-shadow-lg),
+                        inset 0 2px 0 rgba(255, 255, 255, 0.15),
+                        var(--vos-glow-primary);
+        }
+
+        .nav-cluster {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            /* Spatial depth */
+            transform: var(--vos-depth-elevated);
+            transform-style: preserve-3d;
+        }
+
+        .nav-pod {
+            display: flex;
+            gap: 4px;
+            padding: 6px;
+            border-radius: var(--vos-radius-md);
+            /* Prevent reflow */
+            contain: layout style paint;
+        }
+
+        .btn {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--vos-radius-sm);
+            border: none;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 20px;
+            cursor: pointer;
+            transition: all var(--vos-duration-instant) var(--vos-spring);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            /* Optimize animations */
+            will-change: transform, opacity;
+        }
+
+        /* Hover state - vibrancy increase */
+        .btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: rgba(255, 255, 255, 0);
+            transition: background var(--vos-duration-instant);
+        }
+
+        .btn:hover::before {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn:active::before {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .btn.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .address-bar {
+            flex: 1;
+            padding: 8px 16px;
+            border-radius: var(--vos-radius-xl);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 56px;
+            /* Spatial hierarchy */
+            transform: var(--vos-depth-elevated);
+        }
+
+        .url-box {
+            flex: 1;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.24);
+            border: var(--vos-border-subtle);
+            border-radius: var(--vos-radius-md);
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .url-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 15px;
+            outline: none;
+            font-weight: 400;
+        }
+
+        .url-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--vos-radius-sm);
+            border: none;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            transition: all var(--vos-duration-instant);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .icon-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: rgba(255, 255, 255, 0);
+            transition: background var(--vos-duration-instant);
+        }
+
+        .icon-btn:hover::before {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .badge {
+            min-width: 28px;
+            height: 28px;
+            padding: 0 8px;
+            border-radius: calc(var(--vos-radius-sm) - 2px);
+            background: var(--vos-primary);
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--vos-shadow-sm);
+        }
+
+        .webview {
+            flex: 1;
+            border-radius: var(--vos-radius-lg);
+            background: rgba(28, 28, 30, 0.32);
+            backdrop-filter: blur(20px);
+            border: var(--vos-border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.4);
+            /* Depth layer */
+            transform: var(--vos-depth-base);
+        }
+
+        /* Landscape mode */
+        body.landscape .screen {
+            padding: 12px 20px;
+            gap: 8px;
+        }
+
+        body.landscape .address-bar {
+            order: 3;
+        }
+
+        body.landscape .nav-pod:first-child {
+            order: 1;
+        }
+
+        body.landscape .nav-pod:last-child {
+            order: 2;
+        }
+
+        .fixed-btn {
+            position: fixed;
+            bottom: 20px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--vos-radius-md);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            background: rgba(242, 242, 247, 0.06);
+            backdrop-filter: blur(40px);
+            border: var(--vos-border-subtle);
+            color: rgba(255, 255, 255, 0.9);
+            transition: all var(--vos-duration-quick) var(--vos-spring);
+            box-shadow: var(--vos-shadow-md);
+            /* GPU layer */
+            will-change: transform;
+        }
+
+        .fixed-btn:hover {
+            transform: translateY(-2px) translateZ(4px);
+            background: rgba(242, 242, 247, 0.08);
+            box-shadow: var(--vos-shadow-lg);
+        }
+
+        .orient-btn {
+            left: 20px;
+        }
+
+        .orient-label {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone">
+        <div class="orient-label" id="orientLabel">PORTRAIT MODE</div>
+        <div class="notch"></div>
+        <div class="screen">
+            <div class="nav-cluster">
+                <div class="nav-pod vos-glass">
+                    <button class="btn disabled">◀</button>
+                    <button class="btn disabled">▶</button>
+                    <button class="btn">↻</button>
+                </div>
+                <div class="address-bar vos-glass-chrome">
+                    <div class="url-box">
+                        <span style="opacity: 0.6;">🔒</span>
+                        <input class="url-input" type="text" value="https://example.com" placeholder="Enter URL...">
+                        <button class="icon-btn" style="color: #FFD60A;">★</button>
+                    </div>
+                    <div class="badge">3</div>
+                </div>
+                <div class="nav-pod vos-glass">
+                    <button class="btn">☰</button>
+                </div>
+            </div>
+            <div class="webview">
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; opacity: 0.3; margin-bottom: 12px;">✨</div>
+                    <div>visionOS 2.0</div>
+                    <div style="font-size: 13px; margin-top: 8px; opacity: 0.5;">
+                        Spatial depth • Spring physics • GPU optimized
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="fixed-btn orient-btn" onclick="toggleOrientation()">
+        <span id="orientText">Switch to Landscape</span>
+    </button>
+
+    <script>
+        function toggleOrientation() {
+            const body = document.body;
+            const text = document.getElementById('orientText');
+            const label = document.getElementById('orientLabel');
+
+            if (body.classList.contains('landscape')) {
+                body.classList.remove('landscape');
+                text.textContent = 'Switch to Landscape';
+                label.textContent = 'PORTRAIT MODE';
+            } else {
+                body.classList.add('landscape');
+                text.textContent = 'Switch to Portrait';
+                label.textContent = 'LANDSCAPE MODE';
+            }
+        }
+    </script>
+</body>
+</html>

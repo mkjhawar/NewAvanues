@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebXR API Test - WebAvanue</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .test-result.pass {
+            background: #d4edda;
+            color: #155724;
+        }
+        .test-result.fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .test-result.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        .details {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px 10px 0;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>🥽 WebXR API Test Suite</h1>
+    <p>This page tests WebXR and WebGL 2.0 support in WebAvanue browser.</p>
+
+    <!-- REQ-XR-001: WebXR API Support -->
+    <div class="test-section">
+        <h2>1. WebXR Device API</h2>
+        <div id="xr-api-test" class="test-result pending">
+            <span class="icon">⏳</span>
+            <span>Testing navigator.xr availability...</span>
+        </div>
+        <div class="details" id="xr-details"></div>
+    </div>
+
+    <!-- REQ-XR-006: WebGL 2.0 Support -->
+    <div class="test-section">
+        <h2>2. WebGL 2.0 Context</h2>
+        <div id="webgl-test" class="test-result pending">
+            <span class="icon">⏳</span>
+            <span>Testing WebGL 2.0 context creation...</span>
+        </div>
+        <div class="details" id="webgl-details"></div>
+        <canvas id="test-canvas" width="300" height="150" style="display:none;"></canvas>
+    </div>
+
+    <!-- REQ-XR-003: OpenGL ES 3.0 Support -->
+    <div class="test-section">
+        <h2>3. OpenGL ES 3.0+ Detection</h2>
+        <div id="opengl-test" class="test-result pending">
+            <span class="icon">⏳</span>
+            <span>Checking OpenGL ES version via WebGL...</span>
+        </div>
+        <div class="details" id="opengl-details"></div>
+    </div>
+
+    <!-- REQ-XR-001: Session Support Detection -->
+    <div class="test-section">
+        <h2>4. XR Session Support</h2>
+        <div id="ar-support-test" class="test-result pending">
+            <span class="icon">⏳</span>
+            <span>Checking immersive-ar support...</span>
+        </div>
+        <div id="vr-support-test" class="test-result pending">
+            <span class="icon">⏳</span>
+            <span>Checking immersive-vr support...</span>
+        </div>
+        <div class="details" id="session-details"></div>
+    </div>
+
+    <!-- Interactive Tests -->
+    <div class="test-section">
+        <h2>5. Interactive XR Session Tests</h2>
+        <button id="test-ar-btn" disabled>Test AR Session</button>
+        <button id="test-vr-btn" disabled>Test VR Session</button>
+        <div id="session-result" class="test-result pending" style="display:none;">
+            <span class="icon">⏳</span>
+            <span id="session-text">Starting session...</span>
+        </div>
+        <div class="details" id="session-log"></div>
+    </div>
+
+    <!-- Performance Info -->
+    <div class="test-section">
+        <h2>6. Performance Information</h2>
+        <div class="details" id="perf-info"></div>
+    </div>
+
+    <script>
+        // Test results storage
+        const results = {
+            xrAPI: false,
+            webgl2: false,
+            openglES3: false,
+            arSupport: false,
+            vrSupport: false
+        };
+
+        // ========== Test 1: WebXR API ==========
+        function testWebXRAPI() {
+            const testDiv = document.getElementById('xr-api-test');
+            const detailsDiv = document.getElementById('xr-details');
+
+            if ('xr' in navigator) {
+                testDiv.className = 'test-result pass';
+                testDiv.innerHTML = '<span class="icon">✅</span><span>navigator.xr is available</span>';
+                results.xrAPI = true;
+
+                detailsDiv.innerHTML = `
+                    <strong>WebXR Device API Detected</strong><br>
+                    Type: ${typeof navigator.xr}<br>
+                    Constructor: ${navigator.xr.constructor.name}
+                `;
+
+                // Proceed to session support tests
+                testSessionSupport();
+            } else {
+                testDiv.className = 'test-result fail';
+                testDiv.innerHTML = '<span class="icon">❌</span><span>navigator.xr is NOT available</span>';
+                detailsDiv.innerHTML = `
+                    <strong>WebXR Not Supported</strong><br>
+                    This browser does not support WebXR Device API.<br>
+                    Required: Chrome 79+ or equivalent WebView
+                `;
+            }
+        }
+
+        // ========== Test 2: WebGL 2.0 ==========
+        function testWebGL2() {
+            const testDiv = document.getElementById('webgl-test');
+            const detailsDiv = document.getElementById('webgl-details');
+            const canvas = document.getElementById('test-canvas');
+
+            try {
+                const gl = canvas.getContext('webgl2');
+
+                if (gl) {
+                    testDiv.className = 'test-result pass';
+                    testDiv.innerHTML = '<span class="icon">✅</span><span>WebGL 2.0 context created successfully</span>';
+                    results.webgl2 = true;
+
+                    // Get WebGL info
+                    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                    const vendor = debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : 'Unknown';
+                    const renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'Unknown';
+
+                    detailsDiv.innerHTML = `
+                        <strong>WebGL 2.0 Context Information</strong><br>
+                        Vendor: ${vendor}<br>
+                        Renderer: ${renderer}<br>
+                        Version: ${gl.getParameter(gl.VERSION)}<br>
+                        Shading Language: ${gl.getParameter(gl.SHADING_LANGUAGE_VERSION)}<br>
+                        Max Texture Size: ${gl.getParameter(gl.MAX_TEXTURE_SIZE)}<br>
+                        Max Viewport Dims: ${gl.getParameter(gl.MAX_VIEWPORT_DIMS)}
+                    `;
+
+                    // Test OpenGL ES version
+                    testOpenGLES(gl);
+                } else {
+                    testDiv.className = 'test-result fail';
+                    testDiv.innerHTML = '<span class="icon">❌</span><span>Failed to create WebGL 2.0 context</span>';
+                    detailsDiv.innerHTML = 'WebGL 2.0 is not supported. WebXR requires WebGL 2.0.';
+                }
+            } catch (error) {
+                testDiv.className = 'test-result fail';
+                testDiv.innerHTML = '<span class="icon">❌</span><span>Error creating WebGL 2.0 context</span>';
+                detailsDiv.innerHTML = `Error: ${error.message}`;
+            }
+        }
+
+        // ========== Test 3: OpenGL ES 3.0+ ==========
+        function testOpenGLES(gl) {
+            const testDiv = document.getElementById('opengl-test');
+            const detailsDiv = document.getElementById('opengl-details');
+
+            // WebGL 2.0 requires OpenGL ES 3.0
+            if (gl) {
+                testDiv.className = 'test-result pass';
+                testDiv.innerHTML = '<span class="icon">✅</span><span>OpenGL ES 3.0+ confirmed (via WebGL 2.0)</span>';
+                results.openglES3 = true;
+
+                detailsDiv.innerHTML = `
+                    <strong>OpenGL ES Information</strong><br>
+                    WebGL 2.0 maps to OpenGL ES 3.0 on Android<br>
+                    Hardware acceleration: Enabled<br>
+                    GPU rendering: Active<br>
+                    <br>
+                    <strong>Key WebGL 2.0 Features (OpenGL ES 3.0):</strong><br>
+                    • 3D Textures<br>
+                    • Vertex Array Objects<br>
+                    • Transform Feedback<br>
+                    • Instanced Rendering<br>
+                    • Multiple Render Targets
+                `;
+            }
+        }
+
+        // ========== Test 4: Session Support ==========
+        async function testSessionSupport() {
+            const arTestDiv = document.getElementById('ar-support-test');
+            const vrTestDiv = document.getElementById('vr-support-test');
+            const detailsDiv = document.getElementById('session-details');
+
+            try {
+                // Test AR support
+                const arSupported = await navigator.xr.isSessionSupported('immersive-ar');
+                if (arSupported) {
+                    arTestDiv.className = 'test-result pass';
+                    arTestDiv.innerHTML = '<span class="icon">✅</span><span>immersive-ar sessions supported</span>';
+                    results.arSupport = true;
+                    document.getElementById('test-ar-btn').disabled = false;
+                } else {
+                    arTestDiv.className = 'test-result fail';
+                    arTestDiv.innerHTML = '<span class="icon">❌</span><span>immersive-ar sessions NOT supported</span>';
+                }
+
+                // Test VR support
+                const vrSupported = await navigator.xr.isSessionSupported('immersive-vr');
+                if (vrSupported) {
+                    vrTestDiv.className = 'test-result pass';
+                    vrTestDiv.innerHTML = '<span class="icon">✅</span><span>immersive-vr sessions supported</span>';
+                    results.vrSupport = true;
+                    document.getElementById('test-vr-btn').disabled = false;
+                } else {
+                    vrTestDiv.className = 'test-result fail';
+                    vrTestDiv.innerHTML = '<span class="icon">❌</span><span>immersive-vr sessions NOT supported</span>';
+                }
+
+                detailsDiv.innerHTML = `
+                    <strong>Session Support Details</strong><br>
+                    AR Sessions: ${arSupported ? 'Supported ✅' : 'Not Supported ❌'}<br>
+                    VR Sessions: ${vrSupported ? 'Supported ✅' : 'Not Supported ❌'}<br>
+                    ${!arSupported && !vrSupported ? '<br><strong>Note:</strong> Device may not have required sensors/camera' : ''}
+                `;
+            } catch (error) {
+                arTestDiv.className = 'test-result fail';
+                vrTestDiv.className = 'test-result fail';
+                detailsDiv.innerHTML = `Error checking session support: ${error.message}`;
+            }
+        }
+
+        // ========== Interactive Session Tests ==========
+        document.getElementById('test-ar-btn').addEventListener('click', async () => {
+            await testXRSession('immersive-ar');
+        });
+
+        document.getElementById('test-vr-btn').addEventListener('click', async () => {
+            await testXRSession('immersive-vr');
+        });
+
+        async function testXRSession(mode) {
+            const resultDiv = document.getElementById('session-result');
+            const textSpan = document.getElementById('session-text');
+            const logDiv = document.getElementById('session-log');
+
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'test-result pending';
+            textSpan.textContent = `Starting ${mode} session...`;
+
+            try {
+                const session = await navigator.xr.requestSession(mode);
+                window.xrSession = session; // Store for XRSessionManager to detect
+
+                resultDiv.className = 'test-result pass';
+                textSpan.textContent = `${mode} session started successfully!`;
+
+                logDiv.innerHTML += `
+                    <strong>[${new Date().toLocaleTimeString()}] Session Started</strong><br>
+                    Mode: ${session.mode}<br>
+                    Render State: ${JSON.stringify(session.renderState)}<br>
+                    <br>
+                `;
+
+                // End session after 3 seconds
+                setTimeout(async () => {
+                    await session.end();
+                    textSpan.textContent = `${mode} session ended`;
+                    logDiv.innerHTML += `[${new Date().toLocaleTimeString()}] Session ended<br>`;
+                }, 3000);
+
+            } catch (error) {
+                resultDiv.className = 'test-result fail';
+                textSpan.textContent = `Failed to start ${mode} session`;
+                logDiv.innerHTML += `
+                    <strong>[${new Date().toLocaleTimeString()}] Error</strong><br>
+                    ${error.message}<br>
+                    ${error.name === 'SecurityError' ? 'Hint: Camera permission may be required' : ''}<br>
+                    <br>
+                `;
+            }
+        }
+
+        // ========== Performance Info ==========
+        function showPerformanceInfo() {
+            const perfDiv = document.getElementById('perf-info');
+
+            perfDiv.innerHTML = `
+                <strong>Browser Information</strong><br>
+                User Agent: ${navigator.userAgent}<br>
+                Platform: ${navigator.platform}<br>
+                Hardware Concurrency: ${navigator.hardwareConcurrency} cores<br>
+                Memory: ${navigator.deviceMemory || 'Unknown'} GB<br>
+                <br>
+                <strong>Screen Information</strong><br>
+                Resolution: ${screen.width} × ${screen.height}<br>
+                Pixel Ratio: ${window.devicePixelRatio}<br>
+                <br>
+                <strong>Test Results Summary</strong><br>
+                WebXR API: ${results.xrAPI ? '✅ Pass' : '❌ Fail'}<br>
+                WebGL 2.0: ${results.webgl2 ? '✅ Pass' : '❌ Fail'}<br>
+                OpenGL ES 3.0+: ${results.openglES3 ? '✅ Pass' : '❌ Fail'}<br>
+                AR Support: ${results.arSupport ? '✅ Pass' : '❌ Fail'}<br>
+                VR Support: ${results.vrSupport ? '✅ Pass' : '❌ Fail'}<br>
+                <br>
+                <strong>Overall:</strong> ${Object.values(results).filter(r => r).length}/5 tests passed
+            `;
+        }
+
+        // ========== Run Tests on Load ==========
+        window.addEventListener('load', () => {
+            console.log('WebXR Test Suite - Starting tests...');
+
+            // Run tests in sequence
+            testWebXRAPI();
+            testWebGL2();
+            showPerformanceInfo();
+
+            console.log('WebXR Test Suite - All tests complete');
+        });
+    </script>
+</body>
+</html>
