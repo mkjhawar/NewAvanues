@@ -1,0 +1,30 @@
+{
+  "version": "1.0",
+  "locale": "es-ES",
+  "strings": [
+    ["welcome_message", "Bienvenido a VoiceOS"],
+    ["settings_title", "Configuración"],
+    ["cursor_enabled", "Cursor de voz activado"],
+    ["cursor_disabled", "Cursor de voz desactivado"],
+    ["help_tooltip", "Di 'ayuda' para ver los comandos disponibles"],
+    ["command_not_found", "Comando no reconocido. Di 'ayuda' para ver los comandos disponibles."],
+    ["listening", "Escuchando..."],
+    ["processing", "Procesando comando..."],
+    ["command_executed", "Comando ejecutado correctamente"],
+    ["command_failed", "Error al ejecutar el comando"],
+    ["microphone_unavailable", "Micrófono no disponible"],
+    ["permission_required", "Se requiere permiso de micrófono"],
+    ["spatial_mode_enabled", "Modo espacial activado"],
+    ["spatial_mode_disabled", "Modo espacial desactivado"],
+    ["overlay_mode_number", "Modo de superposición numérica"],
+    ["overlay_mode_dot", "Modo de superposición de puntos"],
+    ["overlay_mode_dot_number", "Modo de punto con número"],
+    ["element_named", "Elemento nombrado correctamente"],
+    ["element_name_prompt", "¿Cómo te gustaría llamar a este elemento?"],
+    ["size_locked", "Tamaño bloqueado"],
+    ["shape_created", "Forma creada"],
+    ["locale_changed", "Idioma cambiado a español"],
+    ["offline_mode", "Modo sin conexión activado"],
+    ["online_mode", "Modo en línea activado"]
+  ]
+}

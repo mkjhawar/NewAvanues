@@ -1,0 +1,74 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "menu-commands.vos",
+    "category": "menu",
+    "display_name": "Menu Navigation",
+    "description": "Voice commands for menu navigation",
+    "command_count": 3
+  },
+  "locale": "de-DE",
+  "commands": [
+    {
+      "action": "MENU",
+      "cmd": "Menü",
+      "syn": [
+        "öffnen Menü",
+        "main Menü",
+        "Menü options",
+        "zeigen Menü",
+        "Menü list",
+        "navigation Menü",
+        "options Menü",
+        "Menü bar",
+        "Menü Bildschirm",
+        "Menü page",
+        "display Menü",
+        "bring hoch Menü",
+        "access Menü",
+        "Menü bitte"
+      ]
+    },
+    {
+      "action": "BACK",
+      "cmd": "zurück",
+      "syn": [
+        "gehen zurück",
+        "return",
+        "vorherige",
+        "zurück button",
+        "navigieren zurück",
+        "gehen vorherige",
+        "zurück page",
+        "vorherige page",
+        "letzte page",
+        "return vorherige",
+        "step zurück",
+        "move zurück",
+        "gehen backwards",
+        "navigieren backwards"
+      ]
+    },
+    {
+      "action": "RETURN_TO_DASHBOARD",
+      "cmd": "return to dashboard",
+      "syn": [
+        "return to setup",
+        "gehen to dashboard",
+        "dashboard",
+        "main dashboard",
+        "control panel",
+        "Startseite dashboard",
+        "setup Bildschirm",
+        "main Bildschirm",
+        "control Bildschirm",
+        "setup dashboard",
+        "gehen to setup",
+        "return to main",
+        "main control",
+        "primary dashboard"
+      ]
+    }
+  ]
+}

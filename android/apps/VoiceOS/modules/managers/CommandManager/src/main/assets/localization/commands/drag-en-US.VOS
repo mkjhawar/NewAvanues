@@ -1,0 +1,79 @@
+{
+  "version": "1.0",
+  "locale": "en-US",
+  "fallback": "en-US",
+  "updated": "2025-11-14",
+  "author": "VOS4 Team",
+  "metadata": {
+    "category": "drag",
+    "display_name": "Drag Actions",
+    "description": "Voice commands for drag and drop operations",
+    "source_file": "drag-commands.vos",
+    "schema": "4-element: [id, primary, synonyms, description]"
+  },
+  "commands": [
+    [
+      "drag_up_down",
+      "drag up",
+      [
+        "drag down",
+        "drag vertical",
+        "move up down",
+        "vertical drag",
+        "up down drag",
+        "pull up",
+        "pull down",
+        "move vertical",
+        "slide up down",
+        "vertical move",
+        "drag it up",
+        "drag it down",
+        "move it up and down",
+        "vertical movement"
+      ],
+      "Drag Up (Drag & Drop)"
+    ],
+    [
+      "drag_start",
+      "drag start",
+      [
+        "start drag",
+        "begin drag",
+        "commence drag",
+        "initiate drag",
+        "start dragging",
+        "begin dragging",
+        "start moving",
+        "begin moving",
+        "start pulling",
+        "begin pulling",
+        "start the drag",
+        "begin the drag",
+        "commence dragging",
+        "initiate dragging"
+      ],
+      "Drag Start (Drag & Drop)"
+    ],
+    [
+      "drag_stop",
+      "drag stop",
+      [
+        "stop drag",
+        "end drag",
+        "finish drag",
+        "cease drag",
+        "stop dragging",
+        "end dragging",
+        "stop moving",
+        "finish moving",
+        "stop pulling",
+        "end pulling",
+        "stop the drag",
+        "end the drag",
+        "cease dragging",
+        "finish dragging"
+      ],
+      "Drag Stop (Drag & Drop)"
+    ]
+  ]
+}

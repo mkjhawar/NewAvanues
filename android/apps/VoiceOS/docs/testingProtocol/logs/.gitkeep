@@ -1,0 +1,5 @@
+# Test execution logs directory
+
+This directory stores all test run logs.
+
+Logs are named: Test-Run-[YYMMDD-HHMM].md

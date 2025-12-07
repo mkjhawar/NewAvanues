@@ -1,0 +1,63 @@
+-- ScreenState.sq - SQLDelight schema for screen states
+-- Part of LearnApp module migration from Room to SQLDelight
+-- Author: Agent 1 (LearnApp Migration Specialist)
+-- Date: 2025-11-27
+
+CREATE TABLE IF NOT EXISTS screen_states (
+    screen_hash TEXT NOT NULL PRIMARY KEY,
+    package_name TEXT NOT NULL,
+    activity_name TEXT NOT NULL,
+    fingerprint TEXT NOT NULL,
+    element_count INTEGER NOT NULL DEFAULT 0,
+    discovered_at INTEGER NOT NULL,
+    FOREIGN KEY (package_name) REFERENCES learned_apps(package_name) ON DELETE CASCADE
+);
+
+-- Index for faster queries by package
+CREATE INDEX IF NOT EXISTS idx_screen_states_package
+ON screen_states(package_name);
+
+-- Index for faster queries by activity
+CREATE INDEX IF NOT EXISTS idx_screen_states_activity
+ON screen_states(activity_name);
+
+-- Index for faster queries by discovered time
+CREATE INDEX IF NOT EXISTS idx_screen_states_discovered
+ON screen_states(discovered_at DESC);
+
+-- Queries
+
+-- Insert screen state (replace on conflict)
+insertScreenState:
+INSERT OR REPLACE INTO screen_states (
+    screen_hash, package_name, activity_name, fingerprint,
+    element_count, discovered_at
+) VALUES (?, ?, ?, ?, ?, ?);
+
+-- Get screen state by hash
+getScreenState:
+SELECT * FROM screen_states WHERE screen_hash = ?;
+
+-- Get screen states for package
+getScreenStatesForPackage:
+SELECT * FROM screen_states
+WHERE package_name = ?
+ORDER BY discovered_at ASC;
+
+-- Get screen states by activity
+getScreenStatesByActivity:
+SELECT * FROM screen_states
+WHERE package_name = ? AND activity_name = ?
+ORDER BY discovered_at ASC;
+
+-- Delete screen states for package
+deleteScreenStatesForPackage:
+DELETE FROM screen_states WHERE package_name = ?;
+
+-- Count screens for package
+getTotalScreensForPackage:
+SELECT COUNT(*) FROM screen_states WHERE package_name = ?;
+
+-- Count all screens
+count:
+SELECT COUNT(*) FROM screen_states;

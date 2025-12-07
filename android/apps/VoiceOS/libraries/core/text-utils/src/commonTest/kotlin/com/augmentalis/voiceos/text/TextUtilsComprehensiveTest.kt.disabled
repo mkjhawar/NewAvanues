@@ -1,0 +1,416 @@
+/**
+ * TextUtilsComprehensiveTest.kt - Comprehensive tests for text utilities
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ * Author: Manoj Jhawar
+ * Created: 2025-11-17
+ */
+package com.augmentalis.voiceos.text
+
+import kotlin.test.*
+
+/**
+ * Comprehensive test suite for TextSanitizers
+ */
+class TextSanitizersComprehensiveTest {
+
+    @Test
+    fun testSanitizeHtml_RemovesScriptTags() {
+        val inputs = listOf(
+            "<script>alert('XSS')</script>Hello",
+            "Hello<script type='text/javascript'>evil()</script>World",
+            "<SCRIPT>alert('XSS')</SCRIPT>Test",
+            "<script src='evil.js'></script>Content"
+        )
+
+        for (input in inputs) {
+            val result = TextSanitizers.sanitizeHtml(input)
+            assertFalse(result.contains("<script", ignoreCase = true))
+            assertFalse(result.contains("</script", ignoreCase = true))
+        }
+    }
+
+    @Test
+    fun testSanitizeHtml_RemovesEventHandlers() {
+        val inputs = listOf(
+            "<div onclick='alert(1)'>Click me</div>",
+            "<img src='x' onerror='alert(1)'>",
+            "<body onload='evil()'>Content</body>",
+            "<a href='#' onmouseover='steal()'>Link</a>",
+            "<input onchange='hack()' value='test'>",
+            "<button ondblclick='bad()'>Button</button>"
+        )
+
+        for (input in inputs) {
+            val result = TextSanitizers.sanitizeHtml(input)
+            assertFalse(result.contains(Regex("on\\w+\\s*=", RegexOption.IGNORE_CASE)))
+        }
+    }
+
+    @Test
+    fun testSanitizeHtml_RemovesIframes() {
+        val inputs = listOf(
+            "<iframe src='evil.com'></iframe>",
+            "Content<IFRAME src='bad.html'></IFRAME>",
+            "<iframe width='0' height='0' src='tracker.html'></iframe>"
+        )
+
+        for (input in inputs) {
+            val result = TextSanitizers.sanitizeHtml(input)
+            assertFalse(result.contains("<iframe", ignoreCase = true))
+            assertFalse(result.contains("</iframe", ignoreCase = true))
+        }
+    }
+
+    @Test
+    fun testSanitizeHtml_PreserveSafeContent() {
+        val safeInputs = listOf(
+            "<p>This is a paragraph</p>",
+            "<div class='container'>Content</div>",
+            "<a href='https://example.com'>Link</a>",
+            "<img src='image.jpg' alt='Description'>",
+            "<h1>Title</h1><p>Body</p>"
+        )
+
+        for (input in safeInputs) {
+            val result = TextSanitizers.sanitizeHtml(input)
+            // Should preserve basic HTML structure
+            assertTrue(result.contains("<"))
+            assertTrue(result.contains(">"))
+        }
+    }
+
+    @Test
+    fun testSanitizeXPath_RemovesScriptTags() {
+        val input = "//div[@id='test']<script>alert('XSS')</script>"
+        val result = TextSanitizers.sanitizeXPath(input)
+        assertFalse(result.contains("<script", ignoreCase = true))
+        assertTrue(result.contains("//div[@id='test']"))
+    }
+
+    @Test
+    fun testSanitizeXPath_RemovesEventHandlers() {
+        val input = "//button[@onclick='alert(1)']"
+        val result = TextSanitizers.sanitizeXPath(input)
+        assertFalse(result.contains("onclick", ignoreCase = true))
+    }
+
+    @Test
+    fun testSanitizeXPath_PreservesValidXPath() {
+        val validPaths = listOf(
+            "//div[@class='container']",
+            "//*[@id='element-id']",
+            "//button[contains(text(), 'Submit')]",
+            "//input[@type='text' and @name='username']",
+            "/html/body/div[1]/p[2]"
+        )
+
+        for (xpath in validPaths) {
+            val result = TextSanitizers.sanitizeXPath(xpath)
+            // Should preserve the basic structure
+            assertTrue(result.contains("//") || result.contains("/"))
+        }
+    }
+
+    @Test
+    fun testSanitizeForLog_RemovesNewlines() {
+        val input = "Line 1\nLine 2\rLine 3\r\nLine 4"
+        val result = TextSanitizers.sanitizeForLog(input)
+        assertFalse(result.contains('\n'))
+        assertFalse(result.contains('\r'))
+        assertTrue(result.contains("Line 1 Line 2 Line 3 Line 4"))
+    }
+
+    @Test
+    fun testSanitizeForLog_TruncatesLongText() {
+        val longText = "a".repeat(1500)
+        val result = TextSanitizers.sanitizeForLog(longText)
+        assertTrue(result.length <= 1000 + 3) // +3 for "..."
+        assertTrue(result.endsWith("...") || result.length <= 1000)
+    }
+
+    @Test
+    fun testEscapeForJavaScript_BasicEscaping() {
+        assertEquals("\\\"", TextSanitizers.escapeForJavaScript("\""))
+        assertEquals("\\'", TextSanitizers.escapeForJavaScript("'"))
+        assertEquals("\\\\", TextSanitizers.escapeForJavaScript("\\"))
+        assertEquals("\\n", TextSanitizers.escapeForJavaScript("\n"))
+        assertEquals("\\r", TextSanitizers.escapeForJavaScript("\r"))
+        assertEquals("\\t", TextSanitizers.escapeForJavaScript("\t"))
+    }
+
+    @Test
+    fun testEscapeForJavaScript_ComplexString() {
+        val input = "Hello \"World\"\nLine 2\t'End'"
+        val expected = "Hello \\\"World\\\"\\nLine 2\\t\\'End\\'"
+        assertEquals(expected, TextSanitizers.escapeForJavaScript(input))
+    }
+
+    @Test
+    fun testIsJavaScriptSafe_SafeStrings() {
+        assertTrue(TextSanitizers.isJavaScriptSafe("Hello World"))
+        assertTrue(TextSanitizers.isJavaScriptSafe("test123"))
+        assertTrue(TextSanitizers.isJavaScriptSafe("user@example.com"))
+        assertTrue(TextSanitizers.isJavaScriptSafe("dash-underscore_dot."))
+    }
+
+    @Test
+    fun testIsJavaScriptSafe_UnsafeStrings() {
+        assertFalse(TextSanitizers.isJavaScriptSafe("<script>"))
+        assertFalse(TextSanitizers.isJavaScriptSafe("';alert(1);//"))
+        assertFalse(TextSanitizers.isJavaScriptSafe("\" onload=\""))
+        assertFalse(TextSanitizers.isJavaScriptSafe("javascript:"))
+    }
+
+    @Test
+    fun testSanitizeHtml_EmptyAndNull() {
+        assertEquals("", TextSanitizers.sanitizeHtml(""))
+        // Spaces should be preserved
+        assertEquals("   ", TextSanitizers.sanitizeHtml("   "))
+    }
+}
+
+/**
+ * Comprehensive test suite for TextUtils
+ */
+class TextUtilsComprehensiveTest {
+
+    @Test
+    fun testTruncate_BasicTruncation() {
+        val text = "This is a long text that needs to be truncated"
+        val result = TextUtils.truncate(text, 20)
+        assertTrue(result.length <= 23) // 20 + "..."
+        assertTrue(result.endsWith("...") || result.length <= 20)
+    }
+
+    @Test
+    fun testTruncate_ShortText() {
+        val text = "Short"
+        val result = TextUtils.truncate(text, 10)
+        assertEquals("Short", result) // Should not add ellipsis
+    }
+
+    @Test
+    fun testTruncate_ExactLength() {
+        val text = "Exactly10!"
+        val result = TextUtils.truncate(text, 10)
+        assertEquals("Exactly10!", result) // Should not add ellipsis
+    }
+
+    @Test
+    fun testTruncate_CustomSuffix() {
+        val text = "This is a long text"
+        val result = TextUtils.truncate(text, 10, "…")
+        assertTrue(result.endsWith("…"))
+        assertTrue(result.length <= 11) // 10 + 1 char suffix
+    }
+
+    @Test
+    fun testTruncate_EmptyText() {
+        assertEquals("", TextUtils.truncate("", 10))
+        assertEquals("", TextUtils.truncate("", 10, "..."))
+    }
+
+    @Test
+    fun testCapitalizeWords_BasicCases() {
+        assertEquals("Hello World", TextUtils.capitalizeWords("hello world"))
+        assertEquals("The Quick Brown Fox", TextUtils.capitalizeWords("the quick brown fox"))
+        assertEquals("Already Capitalized", TextUtils.capitalizeWords("Already Capitalized"))
+    }
+
+    @Test
+    fun testCapitalizeWords_SingleWord() {
+        assertEquals("Hello", TextUtils.capitalizeWords("hello"))
+        assertEquals("World", TextUtils.capitalizeWords("WORLD"))
+    }
+
+    @Test
+    fun testCapitalizeWords_EmptyString() {
+        assertEquals("", TextUtils.capitalizeWords(""))
+    }
+
+    @Test
+    fun testNormalizeWhitespace_ExtraSpaces() {
+        assertEquals("Hello World", TextUtils.normalizeWhitespace("Hello    World"))
+        assertEquals("One Two Three", TextUtils.normalizeWhitespace("One  Two   Three"))
+    }
+
+    @Test
+    fun testNormalizeWhitespace_LeadingTrailing() {
+        assertEquals("Trimmed", TextUtils.normalizeWhitespace("  Trimmed  "))
+        assertEquals("Test String", TextUtils.normalizeWhitespace("   Test   String   "))
+    }
+
+    @Test
+    fun testNormalizeWhitespace_NewlinesTabs() {
+        assertEquals("Hello World", TextUtils.normalizeWhitespace("Hello\n\t\r\nWorld"))
+    }
+
+    @Test
+    fun testIsAlphanumeric_Valid() {
+        assertTrue(TextUtils.isAlphanumeric("Hello123"))
+        assertTrue(TextUtils.isAlphanumeric("Test456"))
+        assertTrue(TextUtils.isAlphanumeric("OnlyLetters"))
+        assertTrue(TextUtils.isAlphanumeric("12345"))
+    }
+
+    @Test
+    fun testIsAlphanumeric_Invalid() {
+        assertFalse(TextUtils.isAlphanumeric("Hello World"))
+        assertFalse(TextUtils.isAlphanumeric("test@example"))
+        assertFalse(TextUtils.isAlphanumeric("under_score"))
+        assertFalse(TextUtils.isAlphanumeric("dash-es"))
+    }
+
+    @Test
+    fun testExtractNumbers_BasicCases() {
+        assertEquals(listOf(123, 456), TextUtils.extractNumbers("abc123def456ghi"))
+        assertEquals(listOf(42), TextUtils.extractNumbers("The answer is 42"))
+        assertEquals(listOf(2025, 11, 17), TextUtils.extractNumbers("Date: 2025-11-17"))
+    }
+
+    @Test
+    fun testExtractNumbers_NoNumbers() {
+        assertEquals(emptyList(), TextUtils.extractNumbers("No numbers here"))
+        assertEquals(emptyList(), TextUtils.extractNumbers(""))
+    }
+
+    @Test
+    fun testExtractNumbers_OnlyNumbers() {
+        assertEquals(listOf(12345), TextUtils.extractNumbers("12345"))
+        assertEquals(listOf(1, 2, 3, 4, 5), TextUtils.extractNumbers("1 2 3 4 5"))
+    }
+
+    @Test
+    fun testWordCount_BasicCases() {
+        assertEquals(3, TextUtils.wordCount("Hello World Test"))
+        assertEquals(1, TextUtils.wordCount("Hello"))
+        assertEquals(0, TextUtils.wordCount(""))
+        assertEquals(0, TextUtils.wordCount("   "))
+    }
+
+    @Test
+    fun testWordCount_ExtraSpaces() {
+        assertEquals(3, TextUtils.wordCount("Hello    World    Test"))
+        assertEquals(2, TextUtils.wordCount("  Leading  Trailing  "))
+    }
+
+    @Test
+    fun testReplaceAll_BasicReplacement() {
+        val text = "Hello World, Hello Universe"
+        val replacements = mapOf("Hello" to "Hi", "World" to "Earth")
+        val result = text.replaceAll(replacements)
+        assertEquals("Hi Earth, Hi Universe", result)
+    }
+
+    @Test
+    fun testReplaceAll_MultipleReplacements() {
+        val text = "foo bar baz"
+        val replacements = mapOf(
+            "foo" to "1",
+            "bar" to "2",
+            "baz" to "3"
+        )
+        val result = text.replaceAll(replacements)
+        assertEquals("1 2 3", result)
+    }
+
+    @Test
+    fun testIsValidEmail_ValidEmails() {
+        assertTrue("test@example.com".isValidEmail())
+        assertTrue("user.name@company.org".isValidEmail())
+        assertTrue("admin+tag@sub.domain.co.uk".isValidEmail())
+    }
+
+    @Test
+    fun testIsValidEmail_InvalidEmails() {
+        assertFalse("notanemail".isValidEmail())
+        assertFalse("@example.com".isValidEmail())
+        assertFalse("user@".isValidEmail())
+        assertFalse("user @example.com".isValidEmail())
+    }
+
+    @Test
+    fun testIsValidPhone_ValidPhones() {
+        assertTrue("555-123-4567".isValidPhone())
+        assertTrue("(555) 123-4567".isValidPhone())
+        assertTrue("+1-555-123-4567".isValidPhone())
+        assertTrue("5551234567".isValidPhone())
+    }
+
+    @Test
+    fun testIsValidPhone_InvalidPhones() {
+        assertFalse("123".isValidPhone())
+        assertFalse("not a phone".isValidPhone())
+        assertFalse("555-CALL-NOW".isValidPhone())
+    }
+}
+
+/**
+ * Integration tests for text utilities
+ */
+class TextUtilsIntegrationTest {
+
+    @Test
+    fun testSanitizeThenEscape() {
+        val maliciousInput = "<script>alert('XSS')</script>Hello \"World\""
+
+        // First sanitize HTML
+        val sanitized = TextSanitizers.sanitizeHtml(maliciousInput)
+        assertFalse(sanitized.contains("<script"))
+
+        // Then escape for JavaScript
+        val escaped = TextSanitizers.escapeForJavaScript(sanitized)
+        assertTrue(escaped.contains("\\\""))
+    }
+
+    @Test
+    fun testTruncateNormalizedText() {
+        val messyText = "This   is  a   very    messy    text   "
+
+        // First normalize whitespace
+        val normalized = TextUtils.normalizeWhitespace(messyText)
+        assertEquals("This is a very messy text", normalized)
+
+        // Then truncate
+        val truncated = TextUtils.truncate(normalized, 15)
+        assertTrue(truncated.length <= 18) // 15 + "..."
+    }
+
+    @Test
+    fun testExtractAndValidate() {
+        val text = "Contact: john@example.com or call 555-123-4567"
+
+        // Extract email
+        val emailPattern = Regex("[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}")
+        val email = emailPattern.find(text)?.value
+        assertNotNull(email)
+        assertTrue(email!!.isValidEmail())
+
+        // Extract phone
+        val phonePattern = Regex("\\d{3}-\\d{3}-\\d{4}")
+        val phone = phonePattern.find(text)?.value
+        assertNotNull(phone)
+    }
+
+    @Test
+    fun testComplexSanitization() {
+        val complexInput = """
+            <div onclick='steal()'>
+                <script>alert('XSS')</script>
+                <p>Normal content</p>
+                <iframe src='evil.com'></iframe>
+            </div>
+        """.trimIndent()
+
+        val result = TextSanitizers.sanitizeHtml(complexInput)
+
+        // Should remove all dangerous elements
+        assertFalse(result.contains("<script", ignoreCase = true))
+        assertFalse(result.contains("<iframe", ignoreCase = true))
+        assertFalse(result.contains("onclick", ignoreCase = true))
+
+        // But preserve safe content
+        assertTrue(result.contains("Normal content"))
+    }
+}

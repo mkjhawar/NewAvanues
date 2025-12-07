@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AndroidManifest.xml - VoiceAccessibility Module Configuration
+  
+  Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+  Author: Manoj Jhawar
+  Created: 2025-01-27
+  
+  Declares the VoiceAccessibility service and required permissions.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Accessibility Service Permission -->
+    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE" />
+    
+    <!-- System Overlay Permission for Cursor -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    
+    <!-- Settings Modification -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    
+    <!-- Audio Control -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    
+    <!-- Network State (for app commands) -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
+    <!-- Foreground Service Permissions (for VoiceOnSentry) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
+    <!-- Package Query (Android 11+) -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:label="@string/app_name"
+        android:icon="@android:drawable/ic_menu_preferences"
+        android:theme="@style/Theme.VoiceAccessibility"
+        android:supportsRtl="true">
+
+        <!-- Main Activity (App Launcher) -->
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.VoiceAccessibility"
+            android:label="@string/app_name"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait">
+            
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        
+        <!-- Settings Activity -->
+        <activity
+            android:name=".ui.AccessibilitySettings"
+            android:exported="false"
+            android:theme="@style/Theme.VoiceAccessibility"
+            android:label="Accessibility Settings"
+            android:parentActivityName=".ui.MainActivity">
+            
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.MainActivity" />
+        </activity>
+
+        <!-- VoiceOS Service (Main Accessibility Service) -->
+        <service
+            android:name="com.augmentalis.voiceos.accessibility.VoiceOSService"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:label="@string/service_name"
+            android:description="@string/service_description">
+            
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            
+            <!-- Service configuration -->
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+        
+        <!-- VoiceOnSentry (Lightweight Foreground Service for Microphone) -->
+        <service
+            android:name="com.augmentalis.voiceos.accessibility.VoiceOnSentry"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone"
+            android:stopWithTask="true"
+            android:label="VoiceOS Microphone Service"
+            android:description="@string/microphone_service_description" />
+        
+        <!-- Legacy Service (for compatibility - can be removed later) -->
+        <service
+            android:name=".service.VoiceAccessibilityService"
+            android:enabled="false"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:label="@string/service_name_legacy"
+            android:description="@string/service_description_legacy">
+            
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+    </application>
+
+</manifest>

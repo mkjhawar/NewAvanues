@@ -1,0 +1,556 @@
+package com.augmentalis.magiccode.plugins.security
+
+import com.augmentalis.magiccode.plugins.core.Permission
+import com.augmentalis.magiccode.plugins.core.GrantStatus
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.Serializable
+
+/**
+ * Permission record for persistence.
+ *
+ * Represents the complete state and history of a single permission
+ * grant for a plugin. Stored in persistence layer and used for
+ * auditing and permission management.
+ *
+ * ## Audit Trail
+ * Tracks timestamps and request count for security auditing:
+ * - When was permission first granted?
+ * - When was it denied?
+ * - How many times has plugin requested this permission?
+ *
+ * @property permission The permission type (e.g., Permission.CAMERA)
+ * @property status Current grant status (GRANTED, DENIED, or REVOKED)
+ * @property grantedAt Timestamp in milliseconds when permission was granted
+ *                     (null if never granted or currently revoked)
+ * @property deniedAt Timestamp in milliseconds when permission was denied
+ *                    (null if never denied)
+ * @property dontAskAgain Whether user selected "Don't ask again" when denying.
+ *                        If true, UI should not prompt for this permission again.
+ * @property askedCount Number of times this permission has been requested.
+ *                      Useful for detecting excessive permission requests.
+ *
+ * @see PermissionPersistence
+ */
+@Serializable
+data class PermissionRecord(
+    val permission: Permission,
+    val status: GrantStatus,
+    val grantedAt: Long? = null,
+    val deniedAt: Long? = null,
+    val dontAskAgain: Boolean = false,
+    val askedCount: Int = 0
+)
+
+/**
+ * Plugin permission state.
+ *
+ * Aggregates all permission records for a single plugin, providing
+ * a complete snapshot of the plugin's permission grants and history.
+ *
+ * ## Usage
+ * Used by persistence layer to store and retrieve all permissions
+ * for a plugin as a single unit. Facilitates bulk operations like
+ * exporting permission settings or auditing plugin access.
+ *
+ * @property pluginId Unique plugin identifier (e.g., "com.example.plugin")
+ * @property pluginName Human-readable plugin name (for display in audit logs)
+ * @property permissions Map of each permission to its detailed record
+ * @property lastUpdated Timestamp in milliseconds of last permission change.
+ *                       Used for cache invalidation and audit ordering.
+ *
+ * @see PermissionRecord
+ * @see PermissionPersistence
+ */
+@Serializable
+data class PluginPermissionState(
+    val pluginId: String,
+    val pluginName: String,
+    val permissions: Map<Permission, PermissionRecord>,
+    val lastUpdated: Long
+)
+
+/**
+ * Permission persistence manager with caching.
+ *
+ * Manages persistent storage of permission decisions using a platform-specific
+ * [PermissionStorage] backend. Implements an in-memory cache layer for fast
+ * access to frequently queried permission states.
+ *
+ * ## Architecture
+ * - **Storage Layer**: Platform-specific persistence (SharedPreferences, files, etc.)
+ * - **Cache Layer**: In-memory map for fast lookups
+ * - **Synchronization**: Mutex-protected for thread safety
+ *
+ * ## Thread Safety
+ * All public methods are thread-safe using internal mutex synchronization.
+ * All methods are suspending functions to avoid blocking during I/O.
+ *
+ * ## Persistence Format
+ * Permission states are serialized using kotlinx.serialization and stored
+ * via the [PermissionStorage] interface. The exact format depends on the
+ * platform implementation (JSON for JVM, SharedPreferences for Android, etc.).
+ *
+ * ## Cache Coherency
+ * The cache is write-through: all modifications update both cache and storage.
+ * The cache is lazily populated on first access and can be pre-loaded via
+ * [PermissionManager.initialize].
+ *
+ * ## Audit Support
+ * Tracks permission request history including:
+ * - Grant/deny timestamps
+ * - Number of times each permission was requested
+ * - "Don't ask again" preferences
+ *
+ * ## Usage Example
+ * ```kotlin
+ * val storage = PermissionStorageFactory.create()
+ * val persistence = PermissionPersistence(storage)
+ *
+ * // Save permission decision
+ * persistence.savePermission(
+ *     pluginId = "com.example.plugin",
+ *     pluginName = "Example Plugin",
+ *     permission = Permission.CAMERA,
+ *     granted = true
+ * )
+ *
+ * // Query permission
+ * val hasCamera = persistence.isPermissionGranted("com.example.plugin", Permission.CAMERA)
+ * ```
+ *
+ * @property storage Platform-specific storage backend for persisting permission data
+ *
+ * @see PermissionStorage
+ * @see PermissionManager
+ */
+class PermissionPersistence(
+    private val storage: PermissionStorage
+) {
+    private val mutex = Mutex()
+    private val cache = mutableMapOf<String, PluginPermissionState>()
+
+    companion object {
+        private const val TAG = "PermissionPersistence"
+    }
+
+    /**
+     * Save a single permission decision.
+     *
+     * Stores a permission grant or denial for a plugin, updating both
+     * in-memory cache and persistent storage. Automatically tracks
+     * timestamps and increments the request counter.
+     *
+     * ## Audit Trail
+     * - Increments `askedCount` for the permission
+     * - Sets `grantedAt` timestamp if granted
+     * - Sets `deniedAt` timestamp if denied
+     * - Preserves previous timestamps from opposite state
+     *
+     * @param pluginId Unique plugin identifier
+     * @param pluginName Human-readable plugin name (for display/audit)
+     * @param permission Permission type to save decision for
+     * @param granted `true` if permission granted, `false` if denied
+     * @param dontAskAgain `true` if user selected "Don't ask again" (typically with denial)
+     *
+     * @see savePermissions
+     */
+    suspend fun savePermission(
+        pluginId: String,
+        pluginName: String,
+        permission: Permission,
+        granted: Boolean,
+        dontAskAgain: Boolean = false
+    ) {
+        mutex.withLock {
+            val currentState = cache.getOrPut(pluginId) {
+                storage.load(pluginId) ?: PluginPermissionState(
+                    pluginId = pluginId,
+                    pluginName = pluginName,
+                    permissions = emptyMap(),
+                    lastUpdated = currentTimeMillis()
+                )
+            }
+
+            val existingRecord = currentState.permissions[permission]
+            val newRecord = PermissionRecord(
+                permission = permission,
+                status = if (granted) GrantStatus.GRANTED else GrantStatus.DENIED,
+                grantedAt = if (granted) currentTimeMillis() else existingRecord?.grantedAt,
+                deniedAt = if (!granted) currentTimeMillis() else existingRecord?.deniedAt,
+                dontAskAgain = dontAskAgain,
+                askedCount = (existingRecord?.askedCount ?: 0) + 1
+            )
+
+            val updatedState = currentState.copy(
+                permissions = currentState.permissions + (permission to newRecord),
+                lastUpdated = currentTimeMillis()
+            )
+
+            cache[pluginId] = updatedState
+            storage.save(updatedState)
+        }
+    }
+
+    /**
+     * Save multiple permission decisions at once.
+     *
+     * Batch operation for storing multiple permission decisions from
+     * a single permission request dialog. More efficient than multiple
+     * [savePermission] calls as it performs a single storage write.
+     *
+     * ## Behavior
+     * - Processes all granted permissions, setting GRANTED status and timestamps
+     * - Processes all denied permissions, setting DENIED status and timestamps
+     * - Handles "Don't ask again" flag for denied permissions
+     * - Increments `askedCount` for all permissions in the result
+     * - Writes to storage once after processing all permissions
+     *
+     * @param pluginId Unique plugin identifier
+     * @param pluginName Human-readable plugin name
+     * @param result Permission result from UI dialog containing grants and denials
+     *
+     * @see savePermission
+     */
+    suspend fun savePermissions(
+        pluginId: String,
+        pluginName: String,
+        result: PermissionResult
+    ) {
+        mutex.withLock {
+            val currentState = cache.getOrPut(pluginId) {
+                storage.load(pluginId) ?: PluginPermissionState(
+                    pluginId = pluginId,
+                    pluginName = pluginName,
+                    permissions = emptyMap(),
+                    lastUpdated = currentTimeMillis()
+                )
+            }
+
+            val updatedPermissions = currentState.permissions.toMutableMap()
+            val now = currentTimeMillis()
+
+            // Process granted permissions
+            result.granted.forEach { permission ->
+                val existing = updatedPermissions[permission]
+                updatedPermissions[permission] = PermissionRecord(
+                    permission = permission,
+                    status = GrantStatus.GRANTED,
+                    grantedAt = now,
+                    deniedAt = existing?.deniedAt,
+                    dontAskAgain = permission in result.dontAskAgain,
+                    askedCount = (existing?.askedCount ?: 0) + 1
+                )
+            }
+
+            // Process denied permissions
+            result.denied.forEach { permission ->
+                val existing = updatedPermissions[permission]
+                updatedPermissions[permission] = PermissionRecord(
+                    permission = permission,
+                    status = GrantStatus.DENIED,
+                    grantedAt = existing?.grantedAt,
+                    deniedAt = now,
+                    dontAskAgain = permission in result.dontAskAgain,
+                    askedCount = (existing?.askedCount ?: 0) + 1
+                )
+            }
+
+            val updatedState = currentState.copy(
+                pluginName = pluginName, // Update name in case it changed
+                permissions = updatedPermissions,
+                lastUpdated = now
+            )
+
+            cache[pluginId] = updatedState
+            storage.save(updatedState)
+        }
+    }
+
+    /**
+     * Get the complete permission state for a plugin.
+     *
+     * Returns all permission records for the specified plugin,
+     * including grant status, timestamps, and request history.
+     *
+     * ## Cache Behavior
+     * First checks in-memory cache, then loads from storage if needed.
+     *
+     * @param pluginId Plugin identifier
+     * @return [PluginPermissionState] containing all permission records,
+     *         or `null` if plugin has no recorded permissions
+     *
+     * @see isPermissionGranted
+     * @see getGrantedPermissions
+     */
+    suspend fun getPermissionState(pluginId: String): PluginPermissionState? {
+        return mutex.withLock {
+            cache.getOrPut(pluginId) {
+                storage.load(pluginId) ?: return null
+            }
+        }
+    }
+
+    /**
+     * Check if specific permission is granted.
+     *
+     * @param pluginId Plugin identifier
+     * @param permission Permission to check
+     * @return true if granted, false otherwise
+     */
+    suspend fun isPermissionGranted(pluginId: String, permission: Permission): Boolean {
+        return mutex.withLock {
+            val state = cache.getOrPut(pluginId) {
+                storage.load(pluginId) ?: return false
+            }
+            state.permissions[permission]?.status == GrantStatus.GRANTED
+        }
+    }
+
+    /**
+     * Check if user selected "don't ask again" for a permission.
+     *
+     * @param pluginId Plugin identifier
+     * @param permission Permission to check
+     * @return true if "don't ask again" is set
+     */
+    suspend fun isDontAskAgain(pluginId: String, permission: Permission): Boolean {
+        return mutex.withLock {
+            val state = cache.getOrPut(pluginId) {
+                storage.load(pluginId) ?: return false
+            }
+            state.permissions[permission]?.dontAskAgain ?: false
+        }
+    }
+
+    /**
+     * Get all granted permissions for a plugin.
+     *
+     * @param pluginId Plugin identifier
+     * @return Set of granted permissions
+     */
+    suspend fun getGrantedPermissions(pluginId: String): Set<Permission> {
+        return mutex.withLock {
+            val state = cache.getOrPut(pluginId) {
+                storage.load(pluginId) ?: return emptySet()
+            }
+            state.permissions.filter { it.value.status == GrantStatus.GRANTED }
+                .keys
+        }
+    }
+
+    /**
+     * Get all denied permissions for a plugin.
+     *
+     * @param pluginId Plugin identifier
+     * @return Set of denied permissions
+     */
+    suspend fun getDeniedPermissions(pluginId: String): Set<Permission> {
+        return mutex.withLock {
+            val state = cache.getOrPut(pluginId) {
+                storage.load(pluginId) ?: return emptySet()
+            }
+            state.permissions.filter { it.value.status == GrantStatus.DENIED }
+                .keys
+        }
+    }
+
+    /**
+     * Revoke a permission (change status to REVOKED).
+     *
+     * @param pluginId Plugin identifier
+     * @param permission Permission to revoke
+     */
+    suspend fun revokePermission(pluginId: String, permission: Permission) {
+        mutex.withLock {
+            val state = cache[pluginId] ?: storage.load(pluginId) ?: return
+            val record = state.permissions[permission] ?: return
+
+            val updatedRecord = record.copy(
+                status = GrantStatus.REVOKED,
+                grantedAt = null
+            )
+
+            val updatedState = state.copy(
+                permissions = state.permissions + (permission to updatedRecord),
+                lastUpdated = currentTimeMillis()
+            )
+
+            cache[pluginId] = updatedState
+            storage.save(updatedState)
+        }
+    }
+
+    /**
+     * Revoke all permissions for a plugin.
+     *
+     * @param pluginId Plugin identifier
+     */
+    suspend fun revokeAllPermissions(pluginId: String) {
+        mutex.withLock {
+            val state = cache[pluginId] ?: storage.load(pluginId) ?: return
+
+            val updatedPermissions = state.permissions.mapValues { (_, record) ->
+                record.copy(
+                    status = GrantStatus.REVOKED,
+                    grantedAt = null
+                )
+            }
+
+            val updatedState = state.copy(
+                permissions = updatedPermissions,
+                lastUpdated = currentTimeMillis()
+            )
+
+            cache[pluginId] = updatedState
+            storage.save(updatedState)
+        }
+    }
+
+    /**
+     * Clear permission state for a plugin (complete removal).
+     *
+     * @param pluginId Plugin identifier
+     */
+    suspend fun clearPermissions(pluginId: String) {
+        mutex.withLock {
+            cache.remove(pluginId)
+            storage.delete(pluginId)
+        }
+    }
+
+    /**
+     * Get all plugins with permission records.
+     *
+     * @return Map of plugin ID to permission state
+     */
+    suspend fun getAllPermissionStates(): Map<String, PluginPermissionState> {
+        return mutex.withLock {
+            storage.loadAll()
+        }
+    }
+
+    /**
+     * Get current timestamp in milliseconds.
+     * Platform-specific implementations may override for testing.
+     */
+    protected open fun currentTimeMillis(): Long {
+        return System.currentTimeMillis()
+    }
+}
+
+/**
+ * Platform-specific permission storage interface.
+ *
+ * Defines the contract for persistent storage of plugin permission states.
+ * Each platform provides an implementation using appropriate storage mechanisms.
+ *
+ * ## Platform Implementations
+ * - **Android**: SharedPreferences (lightweight) or Room database (full audit support)
+ * - **JVM**: JSON files in user home directory (e.g., `~/.magiccode/permissions/`)
+ * - **iOS**: UserDefaults (lightweight) or CoreData (full audit support)
+ * - **Web**: LocalStorage or IndexedDB
+ *
+ * ## Data Format
+ * Implementations should use kotlinx.serialization to serialize
+ * [PluginPermissionState] objects. The format may be JSON, binary,
+ * or platform-specific (e.g., SharedPreferences key-value pairs).
+ *
+ * ## Thread Safety
+ * All methods are suspending and may perform I/O. Implementations must
+ * ensure thread-safe access to underlying storage (e.g., using
+ * appropriate dispatchers or locks).
+ *
+ * ## Error Handling
+ * Methods should not throw exceptions for normal conditions (e.g.,
+ * plugin not found). Return `null` or empty collections instead.
+ * Implementations may throw exceptions for I/O errors.
+ *
+ * @see PermissionPersistence
+ * @see PermissionStorageFactory
+ */
+interface PermissionStorage {
+    /**
+     * Save permission state for a plugin.
+     *
+     * Persists the complete permission state for a plugin. If state
+     * already exists for this plugin, it is replaced.
+     *
+     * @param state Permission state to save
+     * @throws IOException if storage operation fails
+     */
+    suspend fun save(state: PluginPermissionState)
+
+    /**
+     * Load permission state for a plugin.
+     *
+     * Retrieves the stored permission state for the specified plugin.
+     *
+     * @param pluginId Plugin identifier to load state for
+     * @return Permission state if found, `null` if plugin has no stored state
+     * @throws IOException if storage operation fails
+     */
+    suspend fun load(pluginId: String): PluginPermissionState?
+
+    /**
+     * Delete permission state for a plugin.
+     *
+     * Removes all stored permission data for the specified plugin.
+     * Does nothing if plugin has no stored state.
+     *
+     * @param pluginId Plugin identifier to delete state for
+     * @throws IOException if storage operation fails
+     */
+    suspend fun delete(pluginId: String)
+
+    /**
+     * Load all permission states for all plugins.
+     *
+     * Retrieves the complete permission database, returning states
+     * for all plugins that have permission records.
+     *
+     * ## Performance Note
+     * This operation may be expensive for large permission databases.
+     * Use judiciously, typically only during app initialization.
+     *
+     * @return Map of plugin ID to permission state for all plugins
+     * @throws IOException if storage operation fails
+     */
+    suspend fun loadAll(): Map<String, PluginPermissionState>
+}
+
+/**
+ * Factory for creating platform-specific PermissionStorage instances.
+ *
+ * Provides platform-appropriate implementations of [PermissionStorage]
+ * using the expect/actual pattern. Each platform configures its preferred
+ * storage mechanism.
+ *
+ * ## Platform Requirements
+ * - **Android**: May require `Context` parameter for accessing SharedPreferences
+ * - **JVM**: May require `File` parameter for storage directory location
+ * - **iOS**: Typically uses UserDefaults (no parameters needed)
+ * - **Web**: May require storage quota or database name
+ *
+ * ## Usage Example
+ * ```kotlin
+ * val storage = PermissionStorageFactory.create()
+ * val persistence = PermissionPersistence(storage)
+ * ```
+ *
+ * @see PermissionStorage
+ * @see PermissionPersistence
+ */
+expect object PermissionStorageFactory {
+    /**
+     * Create a PermissionStorage instance for the current platform.
+     *
+     * Returns a platform-specific implementation configured with
+     * appropriate default settings for the runtime environment.
+     *
+     * @return Platform-specific PermissionStorage instance
+     *
+     * @see PermissionStorage
+     */
+    fun create(): PermissionStorage
+}

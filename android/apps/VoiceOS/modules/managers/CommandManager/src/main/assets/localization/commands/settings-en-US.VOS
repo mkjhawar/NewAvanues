@@ -1,0 +1,142 @@
+{
+  "version": "1.0",
+  "locale": "en-US",
+  "fallback": "en-US",
+  "updated": "2025-11-14",
+  "author": "VOS4 Team",
+  "metadata": {
+    "category": "settings",
+    "display_name": "Settings",
+    "description": "Voice commands for quick access to settings screens",
+    "source_file": "settings-commands.vos",
+    "schema": "4-element: [id, primary, synonyms, description]"
+  },
+  "commands": [
+    [
+      "open_connection",
+      "open connections",
+      [
+        "connections",
+        "network settings",
+        "connectivity",
+        "connection settings",
+        "network options",
+        "wireless settings",
+        "internet settings",
+        "network menu",
+        "connection menu",
+        "connectivity settings",
+        "network configuration",
+        "wireless configuration",
+        "internet configuration",
+        "connection options"
+      ],
+      "Open Connections (Settings)"
+    ],
+    [
+      "open_sound",
+      "open sound",
+      [
+        "sound settings",
+        "audio settings",
+        "volume settings",
+        "sound options",
+        "audio options",
+        "sound menu",
+        "audio menu",
+        "sound preferences",
+        "audio preferences",
+        "sound control",
+        "audio control",
+        "volume control",
+        "sound configuration",
+        "audio configuration"
+      ],
+      "Open Sound (Settings)"
+    ],
+    [
+      "open_display",
+      "open display",
+      [
+        "display settings",
+        "screen settings",
+        "display options",
+        "screen options",
+        "display menu",
+        "screen menu",
+        "display preferences",
+        "screen preferences",
+        "visual settings",
+        "display control",
+        "screen control",
+        "display configuration",
+        "screen configuration",
+        "brightness settings"
+      ],
+      "Open Display (Settings)"
+    ],
+    [
+      "open_security",
+      "open security",
+      [
+        "security settings",
+        "privacy settings",
+        "security options",
+        "privacy options",
+        "security menu",
+        "privacy menu",
+        "security preferences",
+        "privacy preferences",
+        "protection settings",
+        "safety settings",
+        "security control",
+        "privacy control",
+        "security configuration",
+        "privacy configuration"
+      ],
+      "Open Security (Settings)"
+    ],
+    [
+      "open_about",
+      "open about",
+      [
+        "about device",
+        "device info",
+        "system info",
+        "about phone",
+        "device information",
+        "system information",
+        "about system",
+        "phone info",
+        "about menu",
+        "device details",
+        "system details",
+        "phone details",
+        "device specifications",
+        "system specifications"
+      ],
+      "Open About (Settings)"
+    ],
+    [
+      "open_settings",
+      "open settings",
+      [
+        "settings",
+        "preferences",
+        "configuration",
+        "options",
+        "system settings",
+        "device settings",
+        "setup",
+        "control panel",
+        "settings menu",
+        "preferences menu",
+        "open preferences",
+        "open configuration",
+        "open options",
+        "show settings"
+      ],
+      "Open Settings (Settings)"
+    ]
+  ]
+}

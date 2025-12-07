@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "locale": "en-US",
+  "strings": [
+    ["welcome_message", "Welcome to VoiceOS"],
+    ["settings_title", "Settings"],
+    ["cursor_enabled", "Voice cursor enabled"],
+    ["cursor_disabled", "Voice cursor disabled"],
+    ["help_tooltip", "Say 'help' for available commands"],
+    ["command_not_recognized", "Command not recognized"],
+    ["listening", "Listening..."],
+    ["processing", "Processing command"],
+    ["command_executed", "Command executed successfully"],
+    ["error_occurred", "An error occurred"],
+    ["permission_required", "Permission required"],
+    ["accessibility_service_disabled", "Accessibility service is disabled"],
+    ["enable_accessibility", "Enable accessibility service"],
+    ["voice_recognition_unavailable", "Voice recognition unavailable"],
+    ["microphone_permission_denied", "Microphone permission denied"]
+  ]
+}

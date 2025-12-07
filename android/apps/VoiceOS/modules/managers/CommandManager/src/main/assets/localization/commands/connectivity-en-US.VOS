@@ -1,0 +1,100 @@
+{
+  "version": "1.0",
+  "locale": "en-US",
+  "fallback": "en-US",
+  "updated": "2025-11-14",
+  "author": "VOS4 Team",
+  "metadata": {
+    "category": "connectivity",
+    "display_name": "Network Connectivity",
+    "description": "Voice commands for managing network connections",
+    "source_file": "connectivity-commands.vos",
+    "schema": "4-element: [id, primary, synonyms, description]"
+  },
+  "commands": [
+    [
+      "turn_on_bluetooth",
+      "turn on bluetooth",
+      [
+        "bluetooth on",
+        "enable bluetooth",
+        "bluetooth enable",
+        "start bluetooth",
+        "activate bluetooth",
+        "bluetooth start",
+        "bluetooth active",
+        "switch on bluetooth",
+        "bluetooth switch on",
+        "open bluetooth",
+        "turn on bluetooth please",
+        "enable bluetooth please",
+        "bluetooth on now",
+        "activate bluetooth please"
+      ],
+      "Turn On Bluetooth (Network Connectivity)"
+    ],
+    [
+      "turn_off_bluetooth",
+      "turn off bluetooth",
+      [
+        "bluetooth off",
+        "disable bluetooth",
+        "bluetooth disable",
+        "stop bluetooth",
+        "deactivate bluetooth",
+        "bluetooth stop",
+        "bluetooth inactive",
+        "switch off bluetooth",
+        "bluetooth switch off",
+        "close bluetooth",
+        "turn off bluetooth please",
+        "disable bluetooth please",
+        "bluetooth off now",
+        "deactivate bluetooth please"
+      ],
+      "Turn Off Bluetooth (Network Connectivity)"
+    ],
+    [
+      "turn_on_wifi",
+      "turn on wifi",
+      [
+        "wifi on",
+        "enable wifi",
+        "wifi enable",
+        "start wifi",
+        "activate wifi",
+        "wifi start",
+        "wifi active",
+        "switch on wifi",
+        "wifi switch on",
+        "open wifi",
+        "turn on wifi please",
+        "enable wifi please",
+        "wifi on now",
+        "activate wifi please"
+      ],
+      "Turn On Wifi (Network Connectivity)"
+    ],
+    [
+      "turn_off_wifi",
+      "turn off wifi",
+      [
+        "wifi off",
+        "disable wifi",
+        "wifi disable",
+        "stop wifi",
+        "deactivate wifi",
+        "wifi stop",
+        "wifi inactive",
+        "switch off wifi",
+        "wifi switch off",
+        "close wifi",
+        "turn off wifi please",
+        "disable wifi please",
+        "wifi off now",
+        "deactivate wifi please"
+      ],
+      "Turn Off Wifi (Network Connectivity)"
+    ]
+  ]
+}
