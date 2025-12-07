@@ -118,7 +118,7 @@ project(":Modules:VoiceOS:libraries:DeviceManager").projectDir = file("../../../
 project(":Modules:VoiceOS:libraries:SpeechRecognition").projectDir = file("../../../Modules/VoiceOS/libraries/SpeechRecognition")
 project(":Modules:VoiceOS:libraries:VoiceOsLogging").projectDir = file("../../../Modules/VoiceOS/libraries/VoiceOsLogging")
 project(":Modules:VoiceOS:libraries:PluginSystem").projectDir = file("../../../Modules/VoiceOS/libraries/PluginSystem")
-project(":Modules:VoiceOS:libraries:UniversalIPC").projectDir = file("../../../Modules/VoiceOS/libraries:UniversalIPC")
+project(":Modules:VoiceOS:libraries:UniversalIPC").projectDir = file("../../../Modules/VoiceOS/libraries/UniversalIPC")
 
 project(":Modules:VoiceOS:core:result").projectDir = file("../../../Modules/VoiceOS/core/result")
 project(":Modules:VoiceOS:core:hash").projectDir = file("../../../Modules/VoiceOS/core/hash")
