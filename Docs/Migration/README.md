@@ -18,25 +18,31 @@
 
 ---
 
-## Migration Order
+## Migration Order & Requirements
 
 1. **VoiceOS** - Complete ✅
    - Phase 1: Git subtree import (502 files)
    - Phase 2: Gradle restructure (1815+ files, 33 modules)
    - Branch: `voiceos-dev`
    - Docs: 5 files in VoiceOS/
+   - **Special:** Do NOT migrate /voiceos files from other repos (would duplicate)
 
 2. **AVA** - Next
-   - Exclude: /external-models (manual migration later)
-   - Git ignore: Files >100MB
+   - **EXCLUDE:** /external-models initially (18GB, 10+ files >100MB)
+   - **MOVE:** external-models AFTER migration (not copy)
+   - **Git ignore:** Files >100MB before moving external-models
    - Branch: `ava-dev`
+   - **Note:** User will manually migrate external-models later
 
 3. **Avanues** - After AVA
    - Standard migration process
+   - **Special:** Do NOT migrate /voiceos files from this repo
 
 4. **MainAvanues** - Final
-   - Special handling as WebAvanue module
+   - **Actual name:** WebAvanue module
+   - Special handling as web application
    - Update build.gradle for web app structure
+   - **Special:** Do NOT migrate /voiceos files from this repo
 
 ---
 
@@ -61,6 +67,10 @@ Each repo folder contains:
 3. **Document Everything:** Comprehensive tracking per repo
 4. **Test Continuously:** Gradle sync after each phase
 5. **Clean Structure:** Follow FOLDER-REGISTRY.md
+6. **Rename All Docs:** All .md files follow IDEACODE convention (except CLAUDE.md)
+7. **Consolidate Files:** Move to proper folder structure per registry
+8. **Update Registries:** FILE-REGISTRY.md and FOLDER-REGISTRY.md after each migration
+9. **No Duplication:** Do NOT migrate /voiceos folders from AVA/Avanues/MainAvanues repos
 
 ---
 
