@@ -1,0 +1,94 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "connectivity-commands.vos",
+    "category": "connectivity",
+    "display_name": "Network Connectivity",
+    "description": "Voice commands for managing network connections",
+    "command_count": 4
+  },
+  "locale": "fr-FR",
+  "commands": [
+    {
+      "action": "TURN_ON_BLUETOOTH",
+      "cmd": "turn on Bluetooth",
+      "syn": [
+        "Bluetooth on",
+        "activer Bluetooth",
+        "Bluetooth activer",
+        "démarrer Bluetooth",
+        "activate Bluetooth",
+        "Bluetooth démarrer",
+        "Bluetooth active",
+        "switch on Bluetooth",
+        "Bluetooth switch on",
+        "ouvrir Bluetooth",
+        "turn on Bluetooth s'il vous plaît",
+        "activer Bluetooth s'il vous plaît",
+        "Bluetooth on maintenant",
+        "activate Bluetooth s'il vous plaît"
+      ]
+    },
+    {
+      "action": "TURN_OFF_BLUETOOTH",
+      "cmd": "turn off Bluetooth",
+      "syn": [
+        "Bluetooth off",
+        "désactiver Bluetooth",
+        "Bluetooth désactiver",
+        "arrêter Bluetooth",
+        "deactivate Bluetooth",
+        "Bluetooth arrêter",
+        "Bluetooth inactive",
+        "switch off Bluetooth",
+        "Bluetooth switch off",
+        "fermer Bluetooth",
+        "turn off Bluetooth s'il vous plaît",
+        "désactiver Bluetooth s'il vous plaît",
+        "Bluetooth off maintenant",
+        "deactivate Bluetooth s'il vous plaît"
+      ]
+    },
+    {
+      "action": "TURN_ON_WIFI",
+      "cmd": "turn on WiFi",
+      "syn": [
+        "WiFi on",
+        "activer WiFi",
+        "WiFi activer",
+        "démarrer WiFi",
+        "activate WiFi",
+        "WiFi démarrer",
+        "WiFi active",
+        "switch on WiFi",
+        "WiFi switch on",
+        "ouvrir WiFi",
+        "turn on WiFi s'il vous plaît",
+        "activer WiFi s'il vous plaît",
+        "WiFi on maintenant",
+        "activate WiFi s'il vous plaît"
+      ]
+    },
+    {
+      "action": "TURN_OFF_WIFI",
+      "cmd": "turn off WiFi",
+      "syn": [
+        "WiFi off",
+        "désactiver WiFi",
+        "WiFi désactiver",
+        "arrêter WiFi",
+        "deactivate WiFi",
+        "WiFi arrêter",
+        "WiFi inactive",
+        "switch off WiFi",
+        "WiFi switch off",
+        "fermer WiFi",
+        "turn off WiFi s'il vous plaît",
+        "désactiver WiFi s'il vous plaît",
+        "WiFi off maintenant",
+        "deactivate WiFi s'il vous plaît"
+      ]
+    }
+  ]
+}

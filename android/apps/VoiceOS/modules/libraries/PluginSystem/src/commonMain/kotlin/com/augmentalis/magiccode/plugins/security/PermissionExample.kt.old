@@ -1,0 +1,344 @@
+package com.augmentalis.magiccode.plugins.security
+
+import com.augmentalis.magiccode.plugins.core.Permission
+
+/**
+ * Comprehensive examples demonstrating permission framework usage.
+ *
+ * This file contains real-world examples showing how to integrate
+ * the permission system into various plugin scenarios:
+ * - Initial permission requests during plugin installation
+ * - Runtime permission requests for on-demand features
+ * - Permission enforcement before sensitive operations
+ * - Rationale dialogs for user education
+ * - Permission management in settings UI
+ * - Batch permission operations
+ * - Conditional feature enabling
+ *
+ * ## Code Organization
+ * Each function demonstrates a specific permission pattern with
+ * detailed comments explaining the approach and best practices.
+ *
+ * ## Security Best Practices Demonstrated
+ * - Always provide clear rationales for permission requests
+ * - Request permissions just-in-time, not all at once
+ * - Handle partial permission grants gracefully
+ * - Use enforcePermission() to guard sensitive operations
+ * - Check permissions before attempting restricted actions
+ *
+ * @see PermissionManager
+ * @see PermissionUIHandler
+ * @see PermissionPersistence
+ */
+
+/**
+ * Example 1: Requesting permissions during plugin initialization.
+ *
+ * Demonstrates the proper way to request permissions when a plugin
+ * is first installed or initialized. This is the most common permission
+ * request pattern.
+ *
+ * ## Best Practices Shown
+ * - Define all required permissions upfront
+ * - Provide clear rationales explaining each permission
+ * - Handle both full and partial grants
+ * - Log results for debugging
+ * - Query individual permission states on partial denial
+ *
+ * ## When to Use
+ * Call during plugin installation, first launch, or initialization.
+ */
+suspend fun requestPluginPermissionsExample(
+    permissionManager: PermissionManager,
+    pluginId: String,
+    pluginName: String
+) {
+    // Define required permissions
+    val requiredPermissions = setOf(
+        Permission.NETWORK,
+        Permission.STORAGE_READ
+    )
+
+    // Define rationales explaining why each permission is needed
+    val rationales = mapOf(
+        Permission.NETWORK to "Required to sync your data with the cloud and check for updates",
+        Permission.STORAGE_READ to "Needed to import your existing documents and settings"
+    )
+
+    // Request permissions with rationales
+    val allGranted = permissionManager.requestPermissions(
+        pluginId = pluginId,
+        pluginName = pluginName,
+        permissions = requiredPermissions,
+        rationales = rationales
+    )
+
+    if (allGranted) {
+        println("✓ All permissions granted for $pluginName")
+    } else {
+        println("✗ Some permissions denied for $pluginName")
+
+        // Check which permissions were granted
+        val granted = permissionManager.getGrantedPermissions(pluginId)
+        val denied = permissionManager.getDeniedPermissions(pluginId)
+
+        println("Granted: $granted")
+        println("Denied: $denied")
+
+        // Handle partial grants - maybe disable features requiring denied permissions
+    }
+}
+
+/**
+ * Example 2: Requesting a single permission at runtime
+ */
+suspend fun requestRuntimePermissionExample(
+    permissionManager: PermissionManager,
+    pluginId: String,
+    pluginName: String
+) {
+    // Check if camera permission is already granted
+    if (permissionManager.hasPermission(pluginId, Permission.CAMERA)) {
+        println("Camera permission already granted")
+        return
+    }
+
+    // Request camera permission with rationale
+    val granted = permissionManager.requestPermissions(
+        pluginId = pluginId,
+        pluginName = pluginName,
+        permissions = setOf(Permission.CAMERA),
+        rationales = mapOf(
+            Permission.CAMERA to "Needed to scan QR codes and capture photos for your documents"
+        )
+    )
+
+    if (granted) {
+        // Use camera
+        println("Camera permission granted, proceeding with camera access")
+    } else {
+        // Show alternative or disable feature
+        println("Camera permission denied, disabling QR code scanning")
+    }
+}
+
+/**
+ * Example 3: Enforcing permissions (throws if not granted)
+ */
+suspend fun enforcePermissionExample(
+    permissionManager: PermissionManager,
+    pluginId: String
+) {
+    try {
+        // This will throw PermissionDeniedException if not granted
+        permissionManager.enforcePermission(pluginId, Permission.NETWORK)
+
+        // Permission is granted, proceed with network operation
+        println("Network access authorized")
+        // ... perform network operation ...
+
+    } catch (e: com.augmentalis.magiccode.plugins.core.PermissionDeniedException) {
+        println("Network permission denied: ${e.message}")
+        // Handle denial - show error message, disable feature, etc.
+    }
+}
+
+/**
+ * Example 4: Showing rationale before requesting permission
+ */
+suspend fun showRationaleExample(
+    permissionManager: PermissionManager,
+    pluginId: String,
+    pluginName: String
+) {
+    // Show rationale dialog
+    val userWantsToGrant = permissionManager.showRationale(
+        pluginId = pluginId,
+        pluginName = pluginName,
+        permission = Permission.LOCATION,
+        rationale = "Location access allows us to provide you with location-based features " +
+                "such as nearby events, local weather, and travel recommendations. " +
+                "Your location data is never shared with third parties."
+    )
+
+    if (userWantsToGrant) {
+        // User clicked "Grant" in rationale dialog, now request the permission
+        permissionManager.requestPermissions(
+            pluginId = pluginId,
+            pluginName = pluginName,
+            permissions = setOf(Permission.LOCATION)
+        )
+    }
+}
+
+/**
+ * Example 5: Managing permissions in settings UI
+ */
+suspend fun managePermissionsExample(
+    permissionManager: PermissionManager,
+    pluginId: String,
+    pluginName: String
+) {
+    // Show permission settings dialog
+    val changed = permissionManager.showPermissionSettings(
+        pluginId = pluginId,
+        pluginName = pluginName
+    )
+
+    if (changed) {
+        println("Permission settings updated for $pluginName")
+
+        // Get updated permissions
+        val granted = permissionManager.getGrantedPermissions(pluginId)
+        println("Currently granted permissions: $granted")
+
+        // React to changes - maybe disable features if permissions were revoked
+    }
+}
+
+/**
+ * Example 6: Revoking permissions
+ */
+suspend fun revokePermissionsExample(
+    permissionManager: PermissionManager,
+    pluginId: String
+) {
+    // Revoke specific permission
+    permissionManager.revokePermission(pluginId, Permission.MICROPHONE)
+    println("Microphone permission revoked")
+
+    // Or revoke all permissions
+    permissionManager.revokeAllPermissions(pluginId)
+    println("All permissions revoked")
+}
+
+/**
+ * Example 7: Handling permission requests from plugin manifest
+ */
+suspend fun handleManifestPermissionsExample(
+    permissionManager: PermissionManager,
+    manifestPermissions: List<String>,
+    manifestRationales: Map<String, String>,
+    pluginId: String,
+    pluginName: String
+) {
+    // Parse permission strings to Permission enum
+    val permissions = manifestPermissions.mapNotNull { permString ->
+        try {
+            Permission.valueOf(permString)
+        } catch (e: IllegalArgumentException) {
+            println("Warning: Unknown permission in manifest: $permString")
+            null
+        }
+    }.toSet()
+
+    // Parse rationales
+    val rationales = manifestRationales.mapNotNull { (permString, rationale) ->
+        try {
+            Permission.valueOf(permString) to rationale
+        } catch (e: IllegalArgumentException) {
+            println("Warning: Unknown permission in rationale: $permString")
+            null
+        }
+    }.toMap()
+
+    // Request all permissions from manifest
+    val granted = permissionManager.requestPermissions(
+        pluginId = pluginId,
+        pluginName = pluginName,
+        permissions = permissions,
+        rationales = rationales
+    )
+
+    if (!granted) {
+        println("Warning: Not all manifest permissions were granted")
+        println("Plugin may have limited functionality")
+    }
+}
+
+/**
+ * Example 8: Batch permission checks
+ */
+suspend fun batchPermissionCheckExample(
+    permissionManager: PermissionManager,
+    pluginId: String
+) {
+    val granted = permissionManager.getGrantedPermissions(pluginId)
+    val denied = permissionManager.getDeniedPermissions(pluginId)
+
+    println("=== Permission Status for $pluginId ===")
+    println("Granted (${granted.size}): $granted")
+    println("Denied (${denied.size}): $denied")
+
+    // Check specific permission
+    val hasNetwork = Permission.NETWORK in granted
+    val hasStorage = Permission.STORAGE_READ in granted || Permission.STORAGE_WRITE in granted
+
+    if (hasNetwork && hasStorage) {
+        println("Plugin has all required permissions for sync feature")
+    } else {
+        println("Plugin missing permissions for sync feature")
+    }
+}
+
+/**
+ * Example 9: Conditional feature enabling based on permissions
+ */
+suspend fun conditionalFeaturesExample(
+    permissionManager: PermissionManager,
+    pluginId: String
+) {
+    // Define feature requirements
+    data class Feature(
+        val name: String,
+        val requiredPermissions: Set<Permission>
+    )
+
+    val features = listOf(
+        Feature("Cloud Sync", setOf(Permission.NETWORK)),
+        Feature("Local Backup", setOf(Permission.STORAGE_WRITE)),
+        Feature("Import Documents", setOf(Permission.STORAGE_READ)),
+        Feature("Voice Commands", setOf(Permission.MICROPHONE)),
+        Feature("Location Services", setOf(Permission.LOCATION))
+    )
+
+    val granted = permissionManager.getGrantedPermissions(pluginId)
+
+    println("=== Available Features ===")
+    features.forEach { feature ->
+        val isAvailable = feature.requiredPermissions.all { it in granted }
+        val status = if (isAvailable) "✓ Available" else "✗ Unavailable"
+        println("${feature.name}: $status")
+    }
+}
+
+/**
+ * Example 10: Permission initialization on app startup
+ */
+suspend fun initializePermissionSystemExample(
+    uiHandler: PermissionUIHandler,
+    storage: PermissionStorage
+) {
+    // Create persistence layer
+    val persistence = PermissionPersistence(storage)
+
+    // Create permission manager
+    val permissionManager = PermissionManager(
+        uiHandler = uiHandler,
+        persistence = persistence
+    )
+
+    // Initialize - load persisted permissions into cache
+    permissionManager.initialize()
+
+    println("Permission system initialized")
+
+    // Load all plugin permission states
+    val allStates = persistence.getAllPermissionStates()
+    println("Loaded permission states for ${allStates.size} plugins")
+
+    allStates.forEach { (pluginId, state) ->
+        val grantedCount = state.permissions.count { it.value.status == com.augmentalis.magiccode.plugins.core.GrantStatus.GRANTED }
+        println("  $pluginId: $grantedCount permissions granted")
+    }
+}

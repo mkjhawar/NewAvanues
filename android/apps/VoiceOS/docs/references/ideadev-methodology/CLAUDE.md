@@ -1,0 +1,311 @@
+# Codev Project Instructions for AI Agents
+
+## Project Context
+
+**THIS IS THE CODEV SOURCE REPOSITORY - WE ARE SELF-HOSTED**
+
+This project IS Codev itself, and we use our own methodology for development. All new features and improvements to Codev should follow the IDEA protocol defined in `codev/protocols/idea/protocol.md`.
+
+## Quick Start
+
+You are working in the Codev project itself, with multiple development protocols available:
+
+**Available Protocols**:
+- **IDEA**: Multi-phase development with consultation - `codev/protocols/idea/protocol.md`
+- **IDEA-SOLO**: Single-agent variant - `codev/protocols/idea-solo/protocol.md`
+- **TICK**: Fast autonomous implementation - `codev/protocols/tick/protocol.md`
+
+Key locations:
+- Protocol details: `codev/protocols/` (Choose appropriate protocol)
+- Specifications go in: `codev/specs/`
+- Plans go in: `codev/plans/`
+- Reviews go in: `codev/reviews/`
+
+## Protocol Selection Guide
+
+### Use TICK for:
+- Small features (< 300 lines of code)
+- Well-defined tasks with clear requirements
+- Bug fixes with known solutions
+- Simple configuration changes
+- Utility function additions
+- Tasks needing fast iteration
+
+### Use IDEA for:
+- New protocols or protocol variants
+- Major changes to existing protocols
+- New example projects
+- Significant changes to installation process
+- Complex features requiring multiple phases
+- Architecture changes
+- System design decisions
+
+### Skip formal protocols for:
+- README typos or minor documentation fixes
+- Small bug fixes in templates
+- Dependency updates
+
+## Core Workflow
+
+1. **When asked to build NEW FEATURES FOR CODEV**: Start with the Specification phase
+2. **Create exactly THREE documents per feature**: spec, plan, and lessons (all with same filename)
+3. **Follow the SP(IDE)R phases**: Specify → Plan → (Implement → Defend → Evaluate) → Review
+4. **Use multi-agent consultation by default** unless user says "without consultation"
+
+### CRITICAL CONSULTATION CHECKPOINTS (DO NOT SKIP):
+- After writing implementation code → STOP → Consult GPT-5 and Gemini Pro
+- After writing tests → STOP → Consult GPT-5 and Gemini Pro
+- ONLY THEN present results to user for evaluation
+
+## Directory Structure
+```
+project-root/
+├── codev/
+│   ├── protocols/           # Development protocols
+│   │   ├── idea/         # Multi-phase development with consultation
+│   │   ├── idea-solo/    # Single-agent IDEA variant
+│   │   └── tick/           # Fast autonomous implementation
+│   ├── specs/              # Feature specifications (WHAT to build)
+│   ├── plans/              # Implementation plans (HOW to build)
+│   ├── reviews/            # Reviews and lessons learned from each feature
+│   └── resources/          # Reference materials
+│       └── arch.md         # Architecture documentation (maintained by agent)
+├── .claude/
+│   └── agents/             # AI agent definitions
+│       ├── idea-protocol-updater.md
+│       ├── architecture-documenter.md
+│       └── codev-updater.md
+├── CLAUDE.md              # This file
+└── [project code]
+```
+
+## File Naming Convention
+
+Use sequential numbering with descriptive names:
+- Specification: `codev/specs/0001-feature-name.md`
+- Plan: `codev/plans/0001-feature-name.md`
+- Review: `codev/reviews/0001-feature-name.md`
+
+**Note**: Sequential numbering is shared across all protocols (IDEA, IDEA-SOLO, TICK)
+
+## Multi-Agent Consultation
+
+**DEFAULT BEHAVIOR**: Consultation is ENABLED by default with:
+- **Gemini 2.5 Pro** (gemini-2.5-pro) for deep analysis
+- **GPT-5** (gpt-5) for additional perspective
+
+To disable: User must explicitly say "without multi-agent consultation"
+
+**Consultation Checkpoints**:
+1. **Specification Phase**: After draft and after human review
+2. **Planning Phase**: After plan creation and after human review
+3. **Implementation Phase**: After code implementation
+4. **Defend Phase**: After test creation
+5. **Evaluation Phase**: After evaluation completion
+6. **Review Phase**: After review document
+
+## Idea Protocol Updater Agent
+
+The `idea-protocol-updater` agent helps evolve the IDEA protocol by analyzing implementations in other repositories and identifying improvements to incorporate back into the main protocol.
+
+**When to use**:
+- Periodic review of IDEA implementations in other repositories
+- When notified of significant IDEA improvements in external projects
+- To check if a specific repository has protocol enhancements worth adopting
+
+**How to invoke**:
+```bash
+# Ask Claude to check a specific repository
+"Check the ansari-project/webapp repo for any IDEA improvements we should adopt"
+
+# Or for periodic reviews
+"It's been a month since we last checked for IDEA improvements in other repos"
+```
+
+**What the agent does**:
+1. Analyzes remote GitHub repositories implementing IDEA
+2. Compares their protocol.md with our canonical version
+3. Reviews their lessons learned and review documents
+4. Classifies improvements as Universal, Domain-specific, Experimental, or Anti-pattern
+5. Recommends specific protocol updates with justification
+
+**Agent location**: `.claude/agents/idea-protocol-updater.md`
+
+## Architecture Documenter Agent
+
+The `architecture-documenter` agent maintains comprehensive architecture documentation (`codev/resources/arch.md`) that serves as the definitive reference for understanding the project's structure, components, and design decisions.
+
+**When to use**:
+- After significant implementation milestones
+- When new features are completed or modules added
+- During code reviews to capture architectural patterns
+- When specifications introduce new architectural components
+- Periodically during active development for up-to-date documentation
+
+**How it's used**:
+- Automatically invoked at the end of TICK protocol reviews
+- Can be manually invoked for architecture updates
+- Maintains directory structure, utilities, design patterns, and integration points
+
+**What the agent does**:
+1. Reviews specs, plans, and reviews for architectural information
+2. Scans the actual implementation to verify documented structure
+3. Maintains comprehensive `arch.md` with:
+   - Complete directory structure
+   - All utility functions and helpers
+   - Key architectural patterns
+   - Component relationships
+   - Technology stack details
+4. Ensures documentation matches actual codebase state
+
+**Agent location**: `.claude/agents/architecture-documenter.md`
+
+## Codev Updater Agent
+
+The `codev-updater` agent keeps your Codev installation current with the latest improvements from the main repository while preserving your project work.
+
+**When to use**:
+- Periodic framework updates (monthly recommended)
+- When new protocols are released (like TICK)
+- When agents receive improvements or bug fixes
+- When protocol templates are enhanced
+- To check for available updates
+
+**How to invoke**:
+```bash
+# Update to latest version
+"Please update my codev framework to the latest version"
+
+# Check for available updates
+"Are there any updates available for codev?"
+```
+
+**What the agent does**:
+1. Checks current installation and identifies installed components
+2. Fetches latest version from the main codev repository
+3. **Creates backups** of current installation
+4. Updates protocols, agents, and templates
+5. **Preserves all user work** (specs, plans, reviews)
+6. Provides update report and rollback instructions
+
+**Safety features**:
+- Always creates timestamped backups before updating
+- Never modifies user's specs, plans, or reviews
+- Preserves CLAUDE.md customizations
+- Provides clear rollback instructions if needed
+- Verifies successful update before completing
+
+**Agent location**: `.claude/agents/codev-updater.md`
+
+## Git Workflow
+
+### 🚨 ABSOLUTE PROHIBITION: NEVER USE `git add -A` or `git add .` 🚨
+
+**THIS IS A CRITICAL SECURITY REQUIREMENT - NO EXCEPTIONS**
+
+**BANNED COMMANDS (NEVER USE THESE)**:
+```bash
+git add -A        # ❌ ABSOLUTELY FORBIDDEN
+git add .         # ❌ ABSOLUTELY FORBIDDEN
+git add --all     # ❌ ABSOLUTELY FORBIDDEN
+```
+
+**WHY THIS IS CRITICAL**:
+- Can expose API keys, secrets, and credentials
+- May commit large data files or sensitive personal configs
+- Could reveal private information in temporary files
+- Has caused security incidents in the past
+
+**MANDATORY APPROACH - ALWAYS ADD FILES EXPLICITLY**:
+```bash
+# ✅ CORRECT - Always specify exact files
+git add codev/specs/0001-feature.md
+git add src/components/TodoList.tsx
+git add tests/helpers/common.bash
+
+# ✅ CORRECT - Can use specific patterns if careful
+git add codev/specs/*.md
+git add tests/*.bats
+```
+
+**BEFORE EVERY COMMIT**:
+1. Run `git status` to see what will be added
+2. Add each file or directory EXPLICITLY by name
+3. Never use shortcuts that could add unexpected files
+4. If you catch yourself typing `git add -A` or `git add .`, STOP immediately
+
+### Commit Messages
+```
+[Spec 0001] Initial specification draft
+[Spec 0001] Specification with multi-agent review
+[Spec 0001][Phase: user-auth] feat: Add password hashing
+```
+
+### Branch Naming
+```
+idea/0001-feature-name/phase-name
+```
+
+## Consultation Guidelines
+
+When the user requests "Consult" or "consultation" (including variations like "ultrathink and consult"), this specifically means:
+- Use Gemini 2.5 Pro (gemini-2.5-pro) for deep analysis
+- Use GPT-5 (gpt-5) for additional perspective
+- Both models should be consulted unless explicitly specified otherwise
+
+## Important Notes
+
+1. **ALWAYS check `codev/protocols/idea/protocol.md`** for detailed phase instructions
+2. **Use provided templates** from `codev/protocols/idea/templates/`
+3. **Document all deviations** from the plan with reasoning
+4. **Create atomic commits** for each phase completion
+5. **Maintain >90% test coverage** where possible
+
+## Lessons Learned from Test Infrastructure (Spec 0001)
+
+### Critical Requirements
+
+1. **Multi-Agent Consultation is MANDATORY**:
+   - MUST consult GPT-5 AND Gemini Pro after implementation
+   - MUST get FINAL approval from ALL experts on FIXED versions
+   - Consultation happens BEFORE presenting to user, not after
+   - Skipping consultation leads to rework and missed issues
+
+2. **Test Environment Isolation**:
+   - **NEVER touch real $HOME directories** in tests
+   - Always use XDG sandboxing: `export XDG_CONFIG_HOME="$TEST_PROJECT/.xdg"`
+   - Tests must be hermetic - no side effects on user environment
+   - Use failing shims instead of removing from PATH
+
+3. **Strong Assertions**:
+   - Never use `|| true` patterns that mask failures
+   - Avoid `assert true` - be specific about expectations
+   - Create control tests to verify default behavior
+   - Prefer behavior testing over implementation testing
+
+4. **Platform Compatibility**:
+   - Test on both macOS and Linux
+   - Handle stat command differences
+   - Use portable shell constructs
+   - Gracefully handle missing dependencies
+
+5. **Review Phase Requirements**:
+   - Update ALL documentation (README, CLAUDE.md, specs, plans)
+   - Review for systematic issues across the project
+   - Update protocol documents based on lessons learned
+   - Create comprehensive lessons learned document
+
+## For Detailed Instructions
+
+**READ THE FULL PROTOCOL**: `codev/protocols/idea/protocol.md`
+
+This contains:
+- Detailed phase descriptions
+- Required evidence for each phase
+- Expert consultation requirements
+- Templates and examples
+- Best practices
+
+---
+
+*Remember: Context drives code. When in doubt, write more documentation rather than less.*
