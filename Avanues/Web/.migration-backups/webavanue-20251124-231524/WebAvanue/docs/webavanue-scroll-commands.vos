@@ -1,0 +1,49 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "webavanue-scroll-commands.vos",
+    "category": "webavanue-scroll",
+    "display_name": "WebAvanue Scrolling",
+    "description": "WebAvanue advanced scrolling commands with freeze and directional control",
+    "command_count": 7
+  },
+  "locale": "en-US",
+  "commands": [
+    {
+      "action": "SCROLL_UP",
+      "cmd": "scroll up",
+      "syn": ["page up", "scroll page up", "move up", "go up", "scroll upward", "scroll upwards", "scroll a bit up", "up a bit"]
+    },
+    {
+      "action": "SCROLL_DOWN",
+      "cmd": "scroll down",
+      "syn": ["page down", "scroll page down", "move down", "go down", "scroll downward", "scroll downwards", "scroll a bit down", "down a bit"]
+    },
+    {
+      "action": "SCROLL_LEFT",
+      "cmd": "scroll left",
+      "syn": ["page left", "move left", "go left", "scroll to left", "leftward", "left", "scroll a bit left"]
+    },
+    {
+      "action": "SCROLL_RIGHT",
+      "cmd": "scroll right",
+      "syn": ["page right", "move right", "go right", "scroll to right", "rightward", "right", "scroll a bit right"]
+    },
+    {
+      "action": "SCROLL_TO_TOP",
+      "cmd": "top of page",
+      "syn": ["scroll to top", "scroll up all the way", "jump to top", "page top", "go to top", "scroll to beginning", "top please", "page beginning", "start of page", "first line", "scroll all the way up", "jump to start", "page start", "top of the page"]
+    },
+    {
+      "action": "SCROLL_TO_BOTTOM",
+      "cmd": "bottom of page",
+      "syn": ["scroll to bottom", "scroll down all the way", "jump to bottom", "page bottom", "go to bottom", "scroll to end", "bottom please", "page end", "end of page", "last line", "scroll all the way down", "jump to end", "page finish", "bottom of the page"]
+    },
+    {
+      "action": "TOGGLE_FREEZE_SCROLLING",
+      "cmd": "freeze page",
+      "syn": ["unfreeze page", "lock scroll", "unlock scroll", "disable scrolling", "enable scrolling", "freeze scrolling", "stop scroll", "lock page", "unlock page", "hold page", "release page", "freeze content", "lock it up", "page lock", "page unlock"]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+    SECURITY FIX: Restricted FileProvider paths (CWE-426)
+    Previously had path="/" which exposed entire storage.
+    Now restricted to app-specific directories only.
+    -->
+
+    <!-- Downloads directory - app-specific only -->
+    <files-path name="downloads" path="downloads/" />
+
+    <!-- Cache directory - app-specific only -->
+    <cache-path name="cache" path="cache/" />
+
+    <!-- External app files - restricted to Downloads subdirectory -->
+    <external-files-path name="external_downloads" path="Download/" />
+
+    <!-- REMOVED: Root path exposure vulnerabilities
+    <external-path name="external" path="/" />
+    <external-files-path name="external_files" path="/" />
+    <external-cache-path name="external_cache" path="/" />
+    -->
+</paths>
