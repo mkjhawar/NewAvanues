@@ -11,38 +11,70 @@
 | Folder | Purpose | Status |
 |--------|---------|--------|
 | VoiceOS/ | VoiceOS repo migration tracking | ✅ Phase 2 Complete |
+| WebAvanue/ | MainAvanues repo (WebAvanue project) migration tracking | 🔄 Next |
 | AVA/ | AVA repo migration tracking | 🔄 Pending |
 | Avanues/ | Avanues repo migration tracking | 🔄 Pending |
-| MainAvanues/ | MainAvanues (WebAvanue) migration tracking | 🔄 Pending |
 | Overview/ | Cross-repo migration guides & strategy | 📝 Reference |
+
+## NewAvanues Monorepo Structure
+
+```
+NewAvanues/
+├── Avanues/                    # Brand folder for all Avanues products
+│   ├── Web/                   # WebAvanue (from MainAvanues repo)
+│   ├── AVA/                   # AVA Assistant (from AVA repo)
+│   └── [Other]/               # From Avanues repo
+├── android/apps/VoiceOS/      # VoiceOS Android app ✅
+├── Modules/VoiceOS/           # VoiceOS feature modules ✅
+├── Common/
+│   ├── Libraries/VoiceOS/     # VoiceOS KMP libraries ✅
+│   └── ThirdParty/            # Shared third-party code ✅
+└── Docs/
+    ├── VoiceOS/               # VoiceOS documentation ✅
+    └── Migration/             # Migration tracking
+```
 
 ---
 
 ## Migration Order & Requirements
 
-1. **VoiceOS** - Complete ✅
-   - Phase 1: Git subtree import (502 files)
-   - Phase 2: Gradle restructure (1815+ files, 33 modules)
-   - Branch: `voiceos-dev`
-   - Docs: 5 files in VoiceOS/
-   - **Special:** Do NOT migrate /voiceos files from other repos (would duplicate)
+### VoiceOS - Complete ✅
+- **Repo:** VoiceOS
+- **Destination:** `android/apps/VoiceOS/`, `Modules/VoiceOS/`, `Common/Libraries/VoiceOS/`
+- Phase 1: Git subtree import (502 files)
+- Phase 2: Gradle restructure (1815+ files, 33 modules)
+- Branch: `voiceos-dev`
+- Docs: 5 files in VoiceOS/
+- **Special:** Do NOT migrate /voiceos files from other repos (would duplicate)
 
-2. **AVA** - Next
-   - **EXCLUDE:** /external-models initially (18GB, 10+ files >100MB)
-   - **MOVE:** external-models AFTER migration (not copy)
-   - **Git ignore:** Files >100MB before moving external-models
-   - Branch: `ava-dev`
-   - **Note:** User will manually migrate external-models later
+### MainAvanues (WebAvanue) - Next (Changed Order)
+- **Repo name:** MainAvanues
+- **Project name:** WebAvanue
+- **Destination:** `Avanues/Web/`
+- Modules: android/apps/webavanue, common/webavanue/*
+- KMP web application with Android/iOS/Desktop targets
+- **Branding:** Under `Avanues/` folder for brand consistency
+- **Special:** Do NOT migrate /voiceos files from this repo
+- **Config updates:** Update all IDEACODE config references to new path
 
-3. **Avanues** - After AVA
-   - Standard migration process
-   - **Special:** Do NOT migrate /voiceos files from this repo
+### AVA - After WebAvanue
+- **Repo name:** AVA
+- **Project name:** AVA
+- **Destination:** `Avanues/AVA/`
+- **EXCLUDE:** /external-models initially (18GB, 10+ files >100MB)
+- **MOVE:** external-models AFTER migration (not copy)
+- **Git ignore:** Files >100MB before moving external-models
+- **Note:** User will manually migrate external-models later
+- **Branding:** Under `Avanues/` folder for brand consistency
+- **Special:** Do NOT migrate /voiceos files from this repo
 
-4. **MainAvanues** - Final
-   - **Actual name:** WebAvanue module
-   - Special handling as web application
-   - Update build.gradle for web app structure
-   - **Special:** Do NOT migrate /voiceos files from this repo
+### Avanues - Final
+- **Repo name:** Avanues
+- **Project name:** TBD (need clarification)
+- **Destination:** `Avanues/?/`
+- Standard migration process
+- **Branding:** Under `Avanues/` folder for brand consistency
+- **Special:** Do NOT migrate /voiceos files from this repo
 
 ---
 
