@@ -1,0 +1,92 @@
+-- AppConsentHistory.sq - SQLDelight schema for tracking user consent decisions
+-- Part of LearnApp UX improvements (Phase 2)
+-- Tracks consent dialog responses including Skip button for just-in-time learning
+-- Date: 2025-11-28
+
+CREATE TABLE IF NOT EXISTS app_consent_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    package_name TEXT NOT NULL,
+    user_choice TEXT NOT NULL,  -- APPROVED, DECLINED, DONT_ASK_AGAIN, SKIPPED
+    timestamp INTEGER NOT NULL,
+    FOREIGN KEY (package_name) REFERENCES learned_apps(package_name) ON DELETE CASCADE
+);
+
+-- Index for faster queries by package name
+CREATE INDEX IF NOT EXISTS idx_consent_package
+ON app_consent_history(package_name);
+
+-- Index for faster queries by timestamp
+CREATE INDEX IF NOT EXISTS idx_consent_timestamp
+ON app_consent_history(timestamp DESC);
+
+-- Index for faster queries by user choice
+CREATE INDEX IF NOT EXISTS idx_consent_choice
+ON app_consent_history(user_choice);
+
+-- Queries
+
+-- Insert consent record
+insertConsentRecord:
+INSERT INTO app_consent_history (package_name, user_choice, timestamp)
+VALUES (?, ?, ?);
+
+-- Get all consent records for a package
+getConsentHistory:
+SELECT * FROM app_consent_history
+WHERE package_name = ?
+ORDER BY timestamp DESC;
+
+-- Get latest consent record for a package
+getLatestConsent:
+SELECT * FROM app_consent_history
+WHERE package_name = ?
+ORDER BY timestamp DESC
+LIMIT 1;
+
+-- Get all apps where user clicked "Don't Ask Again"
+getDontAskAgainApps:
+SELECT DISTINCT ach.package_name FROM app_consent_history ach
+WHERE ach.user_choice = 'DONT_ASK_AGAIN'
+AND ach.package_name NOT IN (
+    SELECT ach2.package_name FROM app_consent_history ach2
+    WHERE ach2.user_choice != 'DONT_ASK_AGAIN'
+    AND ach2.timestamp > (
+        SELECT MAX(ach3.timestamp) FROM app_consent_history ach3
+        WHERE ach3.package_name = ach2.package_name
+        AND ach3.user_choice = 'DONT_ASK_AGAIN'
+    )
+);
+
+-- Get all apps in just-in-time mode (user clicked Skip)
+getSkippedApps:
+SELECT DISTINCT package_name FROM app_consent_history
+WHERE user_choice = 'SKIPPED'
+ORDER BY timestamp DESC;
+
+-- Check if package has "Don't Ask Again" consent
+hasDontAskAgain:
+SELECT COUNT(*) FROM app_consent_history
+WHERE package_name = ?
+AND user_choice = 'DONT_ASK_AGAIN'
+AND timestamp = (
+    SELECT MAX(timestamp) FROM app_consent_history
+    WHERE package_name = ?
+);
+
+-- Delete consent history for a package
+deleteConsentHistory:
+DELETE FROM app_consent_history WHERE package_name = ?;
+
+-- Delete all consent history
+deleteAllConsentHistory:
+DELETE FROM app_consent_history;
+
+-- Count consent records
+count:
+SELECT COUNT(*) FROM app_consent_history;
+
+-- Get consent statistics by choice
+getConsentStats:
+SELECT user_choice, COUNT(*) AS count
+FROM app_consent_history
+GROUP BY user_choice;

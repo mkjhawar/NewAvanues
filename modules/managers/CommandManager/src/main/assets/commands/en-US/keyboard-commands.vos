@@ -1,0 +1,59 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "keyboard-commands.vos",
+    "category": "keyboard",
+    "display_name": "Keyboard Control",
+    "description": "Voice commands for on-screen keyboard control",
+    "command_count": 9
+  },
+  "locale": "en-US",
+  "commands": [
+    {
+      "action": "HIDE_KEYBOARD",
+      "cmd": "hide keyboard",
+      "syn": ["keyboard hide", "close keyboard", "dismiss keyboard", "keyboard away", "remove keyboard", "keyboard down", "keyboard off", "keyboard invisible", "minimize keyboard", "keyboard gone", "put keyboard away", "close down keyboard", "get rid of keyboard", "keyboard out of the way"]
+    },
+    {
+      "action": "DISMISS_KEYBOARD",
+      "cmd": "dismiss keyboard",
+      "syn": ["hide keyboard", "close keyboard", "keyboard dismiss", "keyboard away", "remove keyboard", "send keyboard away", "keyboard gone", "keyboard invisible", "put away keyboard", "close down keyboard", "get rid of keyboard", "keyboard off", "minimize keyboard", "keyboard out of sight"]
+    },
+    {
+      "action": "OPEN_KEYBOARD",
+      "cmd": "open keyboard",
+      "syn": ["show keyboard", "keyboard open", "display keyboard", "keyboard up", "keyboard visible", "bring keyboard", "keyboard on", "activate keyboard", "keyboard appear", "call keyboard", "summon keyboard", "bring up keyboard", "get keyboard", "keyboard please"]
+    },
+    {
+      "action": "CLOSE_KEYBOARD",
+      "cmd": "close keyboard",
+      "syn": ["hide keyboard", "keyboard close", "dismiss keyboard", "keyboard down", "keyboard off", "remove keyboard", "keyboard away", "keyboard invisible", "keyboard gone", "send keyboard away", "put keyboard away", "close down keyboard", "get rid of keyboard", "minimize keyboard"]
+    },
+    {
+      "action": "CHANGE_KEYBOARD",
+      "cmd": "change keyboard",
+      "syn": ["switch keyboard", "keyboard change", "different keyboard", "other keyboard", "new keyboard", "swap keyboard", "alternate keyboard", "modify keyboard", "keyboard mode", "keyboard type", "change the keyboard", "switch to different keyboard", "use different keyboard", "another keyboard"]
+    },
+    {
+      "action": "SWITCH_KEYBOARD",
+      "cmd": "switch keyboard",
+      "syn": ["change keyboard", "keyboard switch", "different keyboard", "other keyboard", "alternate keyboard", "swap keyboard", "new keyboard", "modify keyboard", "keyboard mode", "keyboard type", "switch to different keyboard", "change to another keyboard", "use different keyboard", "another keyboard please"]
+    },
+    {
+      "action": "KEYBOARD_MODE_CHANGE",
+      "cmd": "keyboard mode change",
+      "syn": ["change keyboard mode", "keyboard mode switch", "switch keyboard mode", "different keyboard mode", "new keyboard mode", "keyboard setting change", "input mode change", "typing mode change", "keyboard style change", "keyboard configuration change", "keyboard mode adjustment", "keyboard setup change", "input method change", "typing style change"]
+    },
+    {
+      "action": "KEYBOARD_CHANGE",
+      "cmd": "keyboard change",
+      "syn": ["change keyboard", "switch keyboard", "keyboard switch", "different keyboard", "new keyboard", "swap keyboard", "other keyboard", "alternate keyboard", "modify keyboard", "keyboard mode", "keyboard type", "keyboard adjustment", "keyboard modification", "keyboard alteration"]
+    },
+    {
+      "action": "KEYBOARD_MODE",
+      "cmd": "keyboard mode",
+      "syn": ["change keyboard mode", "keyboard mode change", "switch keyboard mode", "keyboard type", "input mode", "keyboard setting", "keyboard configuration", "keyboard option", "keyboard style", "keyboard format", "typing mode", "input method", "keyboard preference", "keyboard layout"]
+    }
+  ]
+}

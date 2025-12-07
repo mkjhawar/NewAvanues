@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- GPU and Hardware Acceleration -->
+    <uses-feature android:glEsVersion="0x00030000" android:required="false" />
+    <uses-feature android:name="android.hardware.vulkan.version" android:required="false" />
+    
+    <!-- Voice and Audio -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    
+    <!-- GPU Compute -->
+    <uses-permission android:name="android.permission.USE_NATIVE_COMPUTE" />
+    
+</manifest>

@@ -1,0 +1,194 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "keyboard-commands.vos",
+    "category": "keyboard",
+    "display_name": "Keyboard Control",
+    "description": "Voice commands for on-screen keyboard control",
+    "command_count": 9
+  },
+  "locale": "es-ES",
+  "commands": [
+    {
+      "action": "HIDE_KEYBOARD",
+      "cmd": "ocultar teclado",
+      "syn": [
+        "teclado ocultar",
+        "cerrar teclado",
+        "dismiss teclado",
+        "teclado away",
+        "remove teclado",
+        "teclado abajo",
+        "teclado off",
+        "teclado invisible",
+        "minimize teclado",
+        "teclado gone",
+        "put teclado away",
+        "cerrar abajo teclado",
+        "get rid of teclado",
+        "teclado out of the way"
+      ]
+    },
+    {
+      "action": "DISMISS_KEYBOARD",
+      "cmd": "dismiss teclado",
+      "syn": [
+        "ocultar teclado",
+        "cerrar teclado",
+        "teclado dismiss",
+        "teclado away",
+        "remove teclado",
+        "send teclado away",
+        "teclado gone",
+        "teclado invisible",
+        "put away teclado",
+        "cerrar abajo teclado",
+        "get rid of teclado",
+        "teclado off",
+        "minimize teclado",
+        "teclado out of sight"
+      ]
+    },
+    {
+      "action": "OPEN_KEYBOARD",
+      "cmd": "abrir teclado",
+      "syn": [
+        "mostrar teclado",
+        "teclado abrir",
+        "display teclado",
+        "teclado arriba",
+        "teclado visible",
+        "bring teclado",
+        "teclado on",
+        "activate teclado",
+        "teclado appear",
+        "call teclado",
+        "summon teclado",
+        "bring arriba teclado",
+        "get teclado",
+        "teclado por favor"
+      ]
+    },
+    {
+      "action": "CLOSE_KEYBOARD",
+      "cmd": "cerrar teclado",
+      "syn": [
+        "ocultar teclado",
+        "teclado cerrar",
+        "dismiss teclado",
+        "teclado abajo",
+        "teclado off",
+        "remove teclado",
+        "teclado away",
+        "teclado invisible",
+        "teclado gone",
+        "send teclado away",
+        "put teclado away",
+        "cerrar abajo teclado",
+        "get rid of teclado",
+        "minimize teclado"
+      ]
+    },
+    {
+      "action": "CHANGE_KEYBOARD",
+      "cmd": "change teclado",
+      "syn": [
+        "switch teclado",
+        "teclado change",
+        "different teclado",
+        "other teclado",
+        "new teclado",
+        "swap teclado",
+        "alternate teclado",
+        "modify teclado",
+        "teclado mode",
+        "teclado type",
+        "change the teclado",
+        "switch to different teclado",
+        "use different teclado",
+        "another teclado"
+      ]
+    },
+    {
+      "action": "SWITCH_KEYBOARD",
+      "cmd": "switch teclado",
+      "syn": [
+        "change teclado",
+        "teclado switch",
+        "different teclado",
+        "other teclado",
+        "alternate teclado",
+        "swap teclado",
+        "new teclado",
+        "modify teclado",
+        "teclado mode",
+        "teclado type",
+        "switch to different teclado",
+        "change to another teclado",
+        "use different teclado",
+        "another teclado por favor"
+      ]
+    },
+    {
+      "action": "KEYBOARD_MODE_CHANGE",
+      "cmd": "teclado mode change",
+      "syn": [
+        "change teclado mode",
+        "teclado mode switch",
+        "switch teclado mode",
+        "different teclado mode",
+        "new teclado mode",
+        "teclado setting change",
+        "input mode change",
+        "typing mode change",
+        "teclado style change",
+        "teclado configuration change",
+        "teclado mode adjustment",
+        "teclado setup change",
+        "input method change",
+        "typing style change"
+      ]
+    },
+    {
+      "action": "KEYBOARD_CHANGE",
+      "cmd": "teclado change",
+      "syn": [
+        "change teclado",
+        "switch teclado",
+        "teclado switch",
+        "different teclado",
+        "new teclado",
+        "swap teclado",
+        "other teclado",
+        "alternate teclado",
+        "modify teclado",
+        "teclado mode",
+        "teclado type",
+        "teclado adjustment",
+        "teclado modification",
+        "teclado alteration"
+      ]
+    },
+    {
+      "action": "KEYBOARD_MODE",
+      "cmd": "teclado mode",
+      "syn": [
+        "change teclado mode",
+        "teclado mode change",
+        "switch teclado mode",
+        "teclado type",
+        "input mode",
+        "teclado setting",
+        "teclado configuration",
+        "teclado option",
+        "teclado style",
+        "teclado format",
+        "typing mode",
+        "input method",
+        "teclado preference",
+        "teclado layout"
+      ]
+    }
+  ]
+}

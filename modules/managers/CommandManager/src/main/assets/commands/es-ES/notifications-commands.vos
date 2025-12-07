@@ -1,0 +1,54 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "notifications-commands.vos",
+    "category": "notifications",
+    "display_name": "Notifications",
+    "description": "Voice commands for managing system notifications",
+    "command_count": 2
+  },
+  "locale": "es-ES",
+  "commands": [
+    {
+      "action": "SHOW_NOTIFICATIONS",
+      "cmd": "mostrar notificación",
+      "syn": [
+        "notificación",
+        "display notifications",
+        "abrir notifications",
+        "notifications visible",
+        "reveal notifications",
+        "mostrar notifications",
+        "display messages",
+        "mostrar messages",
+        "abrir messages",
+        "view alerts",
+        "mostrar alerts",
+        "notifications ahora",
+        "mostrar notifs",
+        "display notifs"
+      ]
+    },
+    {
+      "action": "HIDE_NOTIFICATIONS",
+      "cmd": "ocultar notificación",
+      "syn": [
+        "ocultar notifications",
+        "cerrar notifications",
+        "dismiss notifications",
+        "notifications hidden",
+        "conceal notifications",
+        "clear notifications",
+        "remove notifications",
+        "cerrar messages",
+        "ocultar messages",
+        "dismiss alerts",
+        "notifications away",
+        "ocultar notifs",
+        "cerrar notifs",
+        "get rid of notifications"
+      ]
+    }
+  ]
+}

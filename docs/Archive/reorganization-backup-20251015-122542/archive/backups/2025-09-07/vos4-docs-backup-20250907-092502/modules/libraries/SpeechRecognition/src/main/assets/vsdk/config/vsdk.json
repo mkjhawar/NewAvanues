@@ -1,0 +1,54 @@
+{
+  "version": "2.0",
+  "csdk": {
+    "asr": {
+      "models": {
+        "FreeSpeech": {
+          "acmod": "am_enu_vocon_car_202312090302.dat",
+          "extra_models": {
+            "LM1": "lm-w3wM_eng-USA_vocon_car_restricted_202309222045.dat",
+            "LM2": "lm-shadowdomain_eng-USA_vocon_car_restricted_202309222045.dat",
+            "LM3": "lm-assistantmessaging_eng-USA_vocon_car_restricted_202312151610.dat",
+            "LM4": "lm-guarded_eng-USA_vocon_car_restricted_202403201810.dat"
+          },
+          "file": "ctx-primary_eng-USA_vocon_car_202403201810.fcf",
+          "type": "free-speech"
+        },
+        "asreng-US": {
+          "acmod": "am_enu_vocon_car_202312090302.dat",
+          "file": "asreng-US.fcf",
+          "lexicon": {
+            "clc": "clc_enu_cfg3_v14_8_000000.dat"
+          },
+          "slots": {
+            "itemName": {
+              "slot": "ASRENG-US#itemName"
+            }
+          },
+          "type": "dynamic"
+        }
+      },
+      "recognizers": {
+        "rec": {
+          "acmods": [
+            "am_enu_vocon_car_202312090302.dat"
+          ]
+        }
+      }
+    },
+    "paths": {
+      "acmod": "asr/acmod",
+      "asr": "asr/asr",
+      "audio_based_classifier_model": "asr/abc",
+      "clc": "asr/clc",
+      "clc_ruleset": "asr/clc",
+      "confusion_dictionary": "asr/dictionaries",
+      "data_root": "../data/csdk",
+      "dictionary": "asr/dictionaries",
+      "language_model": "asr/lm",
+      "search": "asr/ctx",
+      "sem3": "asr/ctx",
+      "users": "asr/users"
+    }
+  }
+}

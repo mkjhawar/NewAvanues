@@ -1,0 +1,194 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "keyboard-commands.vos",
+    "category": "keyboard",
+    "display_name": "Keyboard Control",
+    "description": "Voice commands for on-screen keyboard control",
+    "command_count": 9
+  },
+  "locale": "de-DE",
+  "commands": [
+    {
+      "action": "HIDE_KEYBOARD",
+      "cmd": "verstecken Tastatur",
+      "syn": [
+        "Tastatur verstecken",
+        "schließen Tastatur",
+        "dismiss Tastatur",
+        "Tastatur away",
+        "remove Tastatur",
+        "Tastatur runter",
+        "Tastatur off",
+        "Tastatur invisible",
+        "minimize Tastatur",
+        "Tastatur gone",
+        "put Tastatur away",
+        "schließen runter Tastatur",
+        "get rid of Tastatur",
+        "Tastatur out of the way"
+      ]
+    },
+    {
+      "action": "DISMISS_KEYBOARD",
+      "cmd": "dismiss Tastatur",
+      "syn": [
+        "verstecken Tastatur",
+        "schließen Tastatur",
+        "Tastatur dismiss",
+        "Tastatur away",
+        "remove Tastatur",
+        "send Tastatur away",
+        "Tastatur gone",
+        "Tastatur invisible",
+        "put away Tastatur",
+        "schließen runter Tastatur",
+        "get rid of Tastatur",
+        "Tastatur off",
+        "minimize Tastatur",
+        "Tastatur out of sight"
+      ]
+    },
+    {
+      "action": "OPEN_KEYBOARD",
+      "cmd": "öffnen Tastatur",
+      "syn": [
+        "zeigen Tastatur",
+        "Tastatur öffnen",
+        "display Tastatur",
+        "Tastatur hoch",
+        "Tastatur visible",
+        "bring Tastatur",
+        "Tastatur on",
+        "activate Tastatur",
+        "Tastatur appear",
+        "call Tastatur",
+        "summon Tastatur",
+        "bring hoch Tastatur",
+        "get Tastatur",
+        "Tastatur bitte"
+      ]
+    },
+    {
+      "action": "CLOSE_KEYBOARD",
+      "cmd": "schließen Tastatur",
+      "syn": [
+        "verstecken Tastatur",
+        "Tastatur schließen",
+        "dismiss Tastatur",
+        "Tastatur runter",
+        "Tastatur off",
+        "remove Tastatur",
+        "Tastatur away",
+        "Tastatur invisible",
+        "Tastatur gone",
+        "send Tastatur away",
+        "put Tastatur away",
+        "schließen runter Tastatur",
+        "get rid of Tastatur",
+        "minimize Tastatur"
+      ]
+    },
+    {
+      "action": "CHANGE_KEYBOARD",
+      "cmd": "change Tastatur",
+      "syn": [
+        "switch Tastatur",
+        "Tastatur change",
+        "different Tastatur",
+        "other Tastatur",
+        "new Tastatur",
+        "swap Tastatur",
+        "alternate Tastatur",
+        "modify Tastatur",
+        "Tastatur mode",
+        "Tastatur type",
+        "change the Tastatur",
+        "switch to different Tastatur",
+        "use different Tastatur",
+        "another Tastatur"
+      ]
+    },
+    {
+      "action": "SWITCH_KEYBOARD",
+      "cmd": "switch Tastatur",
+      "syn": [
+        "change Tastatur",
+        "Tastatur switch",
+        "different Tastatur",
+        "other Tastatur",
+        "alternate Tastatur",
+        "swap Tastatur",
+        "new Tastatur",
+        "modify Tastatur",
+        "Tastatur mode",
+        "Tastatur type",
+        "switch to different Tastatur",
+        "change to another Tastatur",
+        "use different Tastatur",
+        "another Tastatur bitte"
+      ]
+    },
+    {
+      "action": "KEYBOARD_MODE_CHANGE",
+      "cmd": "Tastatur mode change",
+      "syn": [
+        "change Tastatur mode",
+        "Tastatur mode switch",
+        "switch Tastatur mode",
+        "different Tastatur mode",
+        "new Tastatur mode",
+        "Tastatur setting change",
+        "input mode change",
+        "typing mode change",
+        "Tastatur style change",
+        "Tastatur configuration change",
+        "Tastatur mode adjustment",
+        "Tastatur setup change",
+        "input method change",
+        "typing style change"
+      ]
+    },
+    {
+      "action": "KEYBOARD_CHANGE",
+      "cmd": "Tastatur change",
+      "syn": [
+        "change Tastatur",
+        "switch Tastatur",
+        "Tastatur switch",
+        "different Tastatur",
+        "new Tastatur",
+        "swap Tastatur",
+        "other Tastatur",
+        "alternate Tastatur",
+        "modify Tastatur",
+        "Tastatur mode",
+        "Tastatur type",
+        "Tastatur adjustment",
+        "Tastatur modification",
+        "Tastatur alteration"
+      ]
+    },
+    {
+      "action": "KEYBOARD_MODE",
+      "cmd": "Tastatur mode",
+      "syn": [
+        "change Tastatur mode",
+        "Tastatur mode change",
+        "switch Tastatur mode",
+        "Tastatur type",
+        "input mode",
+        "Tastatur setting",
+        "Tastatur configuration",
+        "Tastatur option",
+        "Tastatur style",
+        "Tastatur format",
+        "typing mode",
+        "input method",
+        "Tastatur preference",
+        "Tastatur layout"
+      ]
+    }
+  ]
+}

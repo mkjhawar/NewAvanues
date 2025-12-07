@@ -1,0 +1,335 @@
+/**
+ * GazeTracker.kt
+ * Path: /CodeImport/HUDManager/src/main/java/com/augmentalis/hudmanager/spatial/GazeTracker.kt
+ * 
+ * Created: 2025-01-23
+ * Author: VOS4 Development Team
+ * Version: 1.0.0
+ * 
+ * Purpose: Eye tracking and gaze detection for voice-gaze fusion
+ * Follows VOS4 direct implementation with zero overhead
+ */
+
+package com.augmentalis.hudmanager.spatial
+
+import android.content.Context
+import androidx.camera.core.*
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.State
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.FaceDetection
+import com.google.mlkit.vision.face.FaceDetector
+import com.google.mlkit.vision.face.FaceDetectorOptions
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import kotlin.math.*
+
+/**
+ * Gaze tracking system for "this/that" voice commands
+ * Integrates with DeviceManager IMU for head-relative gaze
+ */
+class GazeTracker(
+    private val context: Context
+) {
+    
+    // Gaze state management
+    private val _currentGaze = mutableStateOf<GazeTarget?>(null)
+    val currentGaze: State<GazeTarget?> = _currentGaze
+    
+    private val _isTracking = mutableStateOf(false)
+    val isTracking: State<Boolean> = _isTracking
+    
+    // ML Kit face detection
+    private var faceDetector: FaceDetector? = null
+    private var cameraProvider: ProcessCameraProvider? = null
+    private var imageAnalysis: ImageAnalysis? = null
+    private var cameraExecutor: ExecutorService? = null
+    
+    // Coroutine management
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    
+    // Gaze calibration data (learned from user behavior)
+    private var calibrationOffsetX = 0f
+    private var calibrationOffsetY = 0f
+    private var gazeAccuracy = 0.85f
+    
+    /**
+     * Initialize gaze tracking system
+     */
+    fun initialize(): Boolean {
+        return try {
+            // Configure ML Kit face detector for eye tracking
+            val options = FaceDetectorOptions.Builder()
+                .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+                .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
+                .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
+                .setMinFaceSize(0.1f)
+                .enableTracking()
+                .build()
+                
+            faceDetector = FaceDetection.getClient(options)
+            cameraExecutor = Executors.newSingleThreadExecutor()
+            
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+    
+    /**
+     * Start gaze tracking
+     */
+    suspend fun startTracking() {
+        if (_isTracking.value) return
+        
+        try {
+            _isTracking.value = true
+            
+            // Initialize camera for eye tracking
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+            cameraProvider = cameraProviderFuture.get()
+            
+            // Setup image analysis for face/eye detection
+            setupImageAnalysis()
+            
+            // Start continuous gaze detection
+            startGazeDetection()
+            
+        } catch (e: Exception) {
+            _isTracking.value = false
+        }
+    }
+    
+    /**
+     * Stop gaze tracking
+     */
+    fun stopTracking() {
+        _isTracking.value = false
+        cameraProvider?.unbindAll()
+        _currentGaze.value = null
+    }
+    
+    /**
+     * Get current gaze target
+     */
+    suspend fun getCurrentTarget(): GazeTarget? {
+        return _currentGaze.value
+    }
+    
+    /**
+     * Get gaze intersection with UI elements
+     */
+    suspend fun getGazeIntersection(uiElements: List<UIElement>): UIElement? {
+        val gazeTarget = _currentGaze.value ?: return null
+        
+        return uiElements.firstOrNull { element ->
+            isGazeIntersecting(gazeTarget, element)
+        }
+    }
+    
+    private fun setupImageAnalysis() {
+        imageAnalysis = ImageAnalysis.Builder()
+            .setTargetResolution(android.util.Size(640, 480))
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+            
+        imageAnalysis?.setAnalyzer(cameraExecutor!!) { imageProxy ->
+            processImageForGaze(imageProxy)
+        }
+        
+        // Bind to camera
+        val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
+        cameraProvider?.bindToLifecycle(
+            context as androidx.lifecycle.LifecycleOwner,
+            cameraSelector,
+            imageAnalysis
+        )
+    }
+    
+    private fun processImageForGaze(imageProxy: ImageProxy) {
+        val mediaImage = imageProxy.image
+        if (mediaImage != null) {
+            val image = InputImage.fromMediaImage(
+                mediaImage, 
+                imageProxy.imageInfo.rotationDegrees
+            )
+            
+            faceDetector?.process(image)
+                ?.addOnSuccessListener { faces ->
+                    faces.firstOrNull()?.let { face ->
+                        calculateGazeFromFace(face)
+                    }
+                }
+                ?.addOnCompleteListener {
+                    imageProxy.close()
+                }
+        } else {
+            imageProxy.close()
+        }
+    }
+    
+    private fun calculateGazeFromFace(face: com.google.mlkit.vision.face.Face) {
+        // Extract eye landmarks for gaze calculation
+        val leftEye = face.getLandmark(com.google.mlkit.vision.face.FaceLandmark.LEFT_EYE)
+        val rightEye = face.getLandmark(com.google.mlkit.vision.face.FaceLandmark.RIGHT_EYE)
+        
+        if (leftEye != null && rightEye != null) {
+            // Calculate gaze direction from eye positions
+            val gazeX = calculateHorizontalGaze(leftEye, rightEye, face)
+            val gazeY = calculateVerticalGaze(leftEye, rightEye, face)
+            
+            // Apply calibration offsets
+            val calibratedX = gazeX + calibrationOffsetX
+            val calibratedY = gazeY + calibrationOffsetY
+            
+            // Update current gaze target
+            _currentGaze.value = GazeTarget(
+                x = calibratedX,
+                y = calibratedY,
+                confidence = gazeAccuracy,
+                timestamp = System.currentTimeMillis()
+            )
+        }
+    }
+    
+    private fun calculateHorizontalGaze(
+        leftEye: com.google.mlkit.vision.face.FaceLandmark,
+        rightEye: com.google.mlkit.vision.face.FaceLandmark,
+        face: com.google.mlkit.vision.face.Face
+    ): Float {
+        // Use head pose and eye positions to calculate horizontal gaze
+        val headYaw = face.headEulerAngleY
+        val eyeCenterX = (leftEye.position.x + rightEye.position.x) / 2f
+        
+        // Normalize to -1.0 to 1.0 range
+        return (headYaw + eyeCenterX) / 180f
+    }
+    
+    private fun calculateVerticalGaze(
+        leftEye: com.google.mlkit.vision.face.FaceLandmark,
+        rightEye: com.google.mlkit.vision.face.FaceLandmark,
+        face: com.google.mlkit.vision.face.Face
+    ): Float {
+        // Use head pitch and eye positions to calculate vertical gaze
+        val headPitch = face.headEulerAngleX
+        val eyeCenterY = (leftEye.position.y + rightEye.position.y) / 2f
+        
+        // Normalize to -1.0 to 1.0 range
+        return (headPitch + eyeCenterY) / 180f
+    }
+    
+    private suspend fun startGazeDetection() {
+        scope.launch {
+            while (_isTracking.value) {
+                // Continuous gaze tracking at 30fps
+                delay(33)
+                
+                // Update gaze target confidence based on stability
+                _currentGaze.value?.let { gaze ->
+                    updateGazeStability(gaze)
+                }
+            }
+        }
+    }
+    
+    private fun updateGazeStability(gaze: GazeTarget) {
+        // Implement gaze stability filtering
+        val ageMs = System.currentTimeMillis() - gaze.timestamp
+        val stability = when {
+            ageMs < 100 -> 1.0f
+            ageMs < 500 -> 0.8f
+            ageMs < 1000 -> 0.6f
+            else -> 0.3f
+        }
+        
+        _currentGaze.value = gaze.copy(confidence = gaze.confidence * stability)
+    }
+    
+    private fun isGazeIntersecting(gaze: GazeTarget, element: UIElement): Boolean {
+        // Check if gaze point intersects with UI element bounds
+        val tolerance = 0.1f // 10% tolerance for natural gaze variance
+        
+        return gaze.x >= (element.bounds.left - tolerance) &&
+               gaze.x <= (element.bounds.right + tolerance) &&
+               gaze.y >= (element.bounds.top - tolerance) &&
+               gaze.y <= (element.bounds.bottom + tolerance)
+    }
+    
+    /**
+     * Calibrate gaze tracking based on user feedback
+     */
+    fun calibrateGaze(actualTarget: UIElement, gazeTarget: GazeTarget) {
+        // Learn from user corrections to improve accuracy
+        val errorX = actualTarget.center.x - gazeTarget.x
+        val errorY = actualTarget.center.y - gazeTarget.y
+        
+        // Update calibration with weighted average
+        calibrationOffsetX = (calibrationOffsetX * 0.9f) + (errorX * 0.1f)
+        calibrationOffsetY = (calibrationOffsetY * 0.9f) + (errorY * 0.1f)
+        
+        // Update accuracy estimate
+        val error = sqrt(errorX * errorX + errorY * errorY)
+        gazeAccuracy = (gazeAccuracy * 0.95f) + ((1.0f - error) * 0.05f)
+    }
+    
+    /**
+     * Cleanup resources
+     */
+    fun dispose() {
+        stopTracking()
+        scope.cancel()
+        faceDetector?.close()
+        cameraExecutor?.shutdown()
+    }
+}
+
+/**
+ * Current gaze target in 2D screen space
+ */
+data class GazeTarget(
+    val x: Float,           // Horizontal position (-1.0 to 1.0)
+    val y: Float,           // Vertical position (-1.0 to 1.0)  
+    val confidence: Float,  // Accuracy confidence (0.0 to 1.0)
+    val timestamp: Long     // When this gaze was detected
+)
+
+/**
+ * UI element for gaze intersection testing
+ */
+data class UIElement(
+    val id: String,
+    val bounds: ElementBounds,
+    val center: Point2D,
+    val type: UIElementType
+)
+
+/**
+ * UI element bounds in normalized coordinates
+ */
+data class ElementBounds(
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float
+)
+
+/**
+ * 2D point in normalized coordinates
+ */
+data class Point2D(
+    val x: Float,
+    val y: Float
+)
+
+enum class UIElementType {
+    BUTTON,
+    TEXT,
+    INPUT_FIELD,
+    LINK,
+    IMAGE,
+    MENU_ITEM,
+    UNKNOWN
+}

@@ -1,0 +1,360 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "5a1d93a06bcefdffc8466507b98e6974",
+    "entities": [
+      {
+        "tableName": "learned_apps",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`package_name` TEXT NOT NULL, `app_name` TEXT NOT NULL, `version_code` INTEGER NOT NULL, `version_name` TEXT NOT NULL, `first_learned_at` INTEGER NOT NULL, `last_updated_at` INTEGER NOT NULL, `total_screens` INTEGER NOT NULL, `total_elements` INTEGER NOT NULL, `app_hash` TEXT NOT NULL, `exploration_status` TEXT NOT NULL, PRIMARY KEY(`package_name`))",
+        "fields": [
+          {
+            "fieldPath": "packageName",
+            "columnName": "package_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appName",
+            "columnName": "app_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "versionCode",
+            "columnName": "version_code",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "versionName",
+            "columnName": "version_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "firstLearnedAt",
+            "columnName": "first_learned_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastUpdatedAt",
+            "columnName": "last_updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalScreens",
+            "columnName": "total_screens",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalElements",
+            "columnName": "total_elements",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appHash",
+            "columnName": "app_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "explorationStatus",
+            "columnName": "exploration_status",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "package_name"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "exploration_sessions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`session_id` TEXT NOT NULL, `package_name` TEXT NOT NULL, `started_at` INTEGER NOT NULL, `completed_at` INTEGER, `duration_ms` INTEGER, `screens_explored` INTEGER NOT NULL, `elements_discovered` INTEGER NOT NULL, `status` TEXT NOT NULL, PRIMARY KEY(`session_id`), FOREIGN KEY(`package_name`) REFERENCES `learned_apps`(`package_name`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "sessionId",
+            "columnName": "session_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "packageName",
+            "columnName": "package_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedAt",
+            "columnName": "started_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "completedAt",
+            "columnName": "completed_at",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "durationMs",
+            "columnName": "duration_ms",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "screensExplored",
+            "columnName": "screens_explored",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "elementsDiscovered",
+            "columnName": "elements_discovered",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "session_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_exploration_sessions_package_name",
+            "unique": false,
+            "columnNames": [
+              "package_name"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exploration_sessions_package_name` ON `${TABLE_NAME}` (`package_name`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "learned_apps",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "package_name"
+            ],
+            "referencedColumns": [
+              "package_name"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "navigation_edges",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`edge_id` TEXT NOT NULL, `package_name` TEXT NOT NULL, `session_id` TEXT NOT NULL, `from_screen_hash` TEXT NOT NULL, `clicked_element_uuid` TEXT NOT NULL, `to_screen_hash` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, PRIMARY KEY(`edge_id`), FOREIGN KEY(`package_name`) REFERENCES `learned_apps`(`package_name`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`session_id`) REFERENCES `exploration_sessions`(`session_id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "edgeId",
+            "columnName": "edge_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "packageName",
+            "columnName": "package_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionId",
+            "columnName": "session_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fromScreenHash",
+            "columnName": "from_screen_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "clickedElementUuid",
+            "columnName": "clicked_element_uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "toScreenHash",
+            "columnName": "to_screen_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "edge_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_navigation_edges_from_screen_hash",
+            "unique": false,
+            "columnNames": [
+              "from_screen_hash"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_navigation_edges_from_screen_hash` ON `${TABLE_NAME}` (`from_screen_hash`)"
+          },
+          {
+            "name": "index_navigation_edges_to_screen_hash",
+            "unique": false,
+            "columnNames": [
+              "to_screen_hash"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_navigation_edges_to_screen_hash` ON `${TABLE_NAME}` (`to_screen_hash`)"
+          },
+          {
+            "name": "index_navigation_edges_package_name",
+            "unique": false,
+            "columnNames": [
+              "package_name"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_navigation_edges_package_name` ON `${TABLE_NAME}` (`package_name`)"
+          },
+          {
+            "name": "index_navigation_edges_session_id",
+            "unique": false,
+            "columnNames": [
+              "session_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_navigation_edges_session_id` ON `${TABLE_NAME}` (`session_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "learned_apps",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "package_name"
+            ],
+            "referencedColumns": [
+              "package_name"
+            ]
+          },
+          {
+            "table": "exploration_sessions",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "session_id"
+            ],
+            "referencedColumns": [
+              "session_id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "screen_states",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`screen_hash` TEXT NOT NULL, `package_name` TEXT NOT NULL, `activity_name` TEXT, `fingerprint` TEXT NOT NULL, `element_count` INTEGER NOT NULL, `discovered_at` INTEGER NOT NULL, PRIMARY KEY(`screen_hash`), FOREIGN KEY(`package_name`) REFERENCES `learned_apps`(`package_name`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "screenHash",
+            "columnName": "screen_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "packageName",
+            "columnName": "package_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activityName",
+            "columnName": "activity_name",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "fingerprint",
+            "columnName": "fingerprint",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "elementCount",
+            "columnName": "element_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "discoveredAt",
+            "columnName": "discovered_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "screen_hash"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_screen_states_package_name",
+            "unique": false,
+            "columnNames": [
+              "package_name"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_screen_states_package_name` ON `${TABLE_NAME}` (`package_name`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "learned_apps",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "package_name"
+            ],
+            "referencedColumns": [
+              "package_name"
+            ]
+          }
+        ]
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5a1d93a06bcefdffc8466507b98e6974')"
+    ]
+  }
+}

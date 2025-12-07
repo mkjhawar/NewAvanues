@@ -1,0 +1,208 @@
+/**
+ * CrashlyticsTree.kt - Firebase Crashlytics Tree for Timber
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ * Author: Claude Code (Anthropic)
+ * Created: 2025-10-23 16:41:59 PDT
+ * Part of: VOS4 Phase 3 - Conciseness Refactoring
+ *
+ * Purpose:
+ * Custom Timber.Tree that forwards logs to Firebase Crashlytics for crash
+ * reporting and analytics. Replaces VoiceOsLogger's Firebase integration.
+ *
+ * Features:
+ * - Automatic crash reporting with log context
+ * - Non-fatal exception logging
+ * - Custom key-value metadata
+ * - User ID tracking
+ * - Log level filtering (WARN and ERROR only by default)
+ *
+ * Usage:
+ * ```kotlin
+ * val crashlyticsTree = CrashlyticsTree()
+ * Timber.plant(crashlyticsTree)
+ * Timber.e(exception, "Critical error occurred")
+ *
+ * // Set user context
+ * crashlyticsTree.setUserId("user123")
+ * crashlyticsTree.setCustomKey("feature_enabled", true)
+ * ```
+ */
+package com.augmentalis.logging
+
+import android.util.Log
+import com.google.firebase.crashlytics.FirebaseCrashlytics
+import timber.log.Timber
+
+/**
+ * Crashlytics Logging Tree - Forwards logs to Firebase Crashlytics
+ *
+ * Log Behavior:
+ * - WARN and ERROR levels: Logged to Crashlytics breadcrumbs
+ * - ERROR with exception: Logged as non-fatal exception
+ * - Breadcrumbs: Last 64KB of logs attached to crash reports
+ *
+ * Privacy:
+ * - Only logs WARN and ERROR by default (no debug info)
+ * - No PII logged (user responsibility to sanitize messages)
+ * - User can opt-out via Firebase settings
+ *
+ * @param minLogLevel Minimum log level to send (default: Log.WARN)
+ * @param enableNonFatalExceptions Enable non-fatal exception logging (default: true)
+ */
+class CrashlyticsTree(
+    private val minLogLevel: Int = Log.WARN,
+    private val enableNonFatalExceptions: Boolean = true
+) : Timber.Tree() {
+
+    private val crashlytics = FirebaseCrashlytics.getInstance()
+
+    /**
+     * Log message to Crashlytics
+     *
+     * Logs warnings and errors to Crashlytics as breadcrumbs.
+     * Exceptions are reported as non-fatal crashes.
+     *
+     * @param priority Log level (Log.DEBUG, Log.INFO, etc.)
+     * @param tag Log tag (usually class name)
+     * @param message Log message (already formatted)
+     * @param t Optional throwable for errors
+     */
+    override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
+        // Filter by minimum log level
+        if (priority < minLogLevel) return
+
+        // Build log message with tag
+        val logMessage = if (tag != null) {
+            "[$tag] $message"
+        } else {
+            message
+        }
+
+        // Log to Crashlytics
+        crashlytics.log(logMessage)
+
+        // Report non-fatal exceptions
+        if (enableNonFatalExceptions && t != null && priority >= Log.ERROR) {
+            crashlytics.recordException(t)
+        }
+    }
+
+    /**
+     * Set user identifier for crash reports
+     *
+     * Associates crashes with a specific user. Useful for tracking
+     * crash patterns by user segment.
+     *
+     * **Privacy:** Ensure user ID doesn't contain PII if not permitted.
+     *
+     * @param userId Unique user identifier (max 1024 chars)
+     */
+    fun setUserId(userId: String) {
+        crashlytics.setUserId(userId)
+    }
+
+    /**
+     * Set custom key-value metadata
+     *
+     * Adds custom metadata to crash reports. Useful for tracking
+     * app state, feature flags, or configuration.
+     *
+     * @param key Metadata key (max 128 chars)
+     * @param value Metadata value (String)
+     */
+    fun setCustomKey(key: String, value: String) {
+        crashlytics.setCustomKey(key, value)
+    }
+
+    /**
+     * Set custom key-value metadata (Boolean)
+     *
+     * @param key Metadata key (max 128 chars)
+     * @param value Metadata value (Boolean)
+     */
+    fun setCustomKey(key: String, value: Boolean) {
+        crashlytics.setCustomKey(key, value)
+    }
+
+    /**
+     * Set custom key-value metadata (Int)
+     *
+     * @param key Metadata key (max 128 chars)
+     * @param value Metadata value (Int)
+     */
+    fun setCustomKey(key: String, value: Int) {
+        crashlytics.setCustomKey(key, value)
+    }
+
+    /**
+     * Set custom key-value metadata (Long)
+     *
+     * @param key Metadata key (max 128 chars)
+     * @param value Metadata value (Long)
+     */
+    fun setCustomKey(key: String, value: Long) {
+        crashlytics.setCustomKey(key, value)
+    }
+
+    /**
+     * Set custom key-value metadata (Float)
+     *
+     * @param key Metadata key (max 128 chars)
+     * @param value Metadata value (Float)
+     */
+    fun setCustomKey(key: String, value: Float) {
+        crashlytics.setCustomKey(key, value)
+    }
+
+    /**
+     * Set custom key-value metadata (Double)
+     *
+     * @param key Metadata key (max 128 chars)
+     * @param value Metadata value (Double)
+     */
+    fun setCustomKey(key: String, value: Double) {
+        crashlytics.setCustomKey(key, value)
+    }
+
+    /**
+     * Enable or disable crash collection
+     *
+     * Allows runtime control of Crashlytics data collection.
+     * Useful for respecting user privacy preferences.
+     *
+     * @param enabled true to enable, false to disable
+     */
+    fun setCrashlyticsCollectionEnabled(enabled: Boolean) {
+        crashlytics.setCrashlyticsCollectionEnabled(enabled)
+    }
+
+    /**
+     * Force send unsent crash reports
+     *
+     * Immediately sends any cached crash reports to Firebase.
+     * Normally crashes are sent on next app launch.
+     */
+    fun sendUnsentReports() {
+        crashlytics.sendUnsentReports()
+    }
+
+    /**
+     * Delete unsent crash reports
+     *
+     * Deletes any cached crash reports without sending them.
+     * Useful for respecting user opt-out.
+     */
+    fun deleteUnsentReports() {
+        crashlytics.deleteUnsentReports()
+    }
+
+    /**
+     * Check if crash reporter did crash on previous execution
+     *
+     * @return true if the previous app session ended in a crash
+     */
+    fun didCrashOnPreviousExecution(): Boolean {
+        return crashlytics.didCrashOnPreviousExecution()
+    }
+}

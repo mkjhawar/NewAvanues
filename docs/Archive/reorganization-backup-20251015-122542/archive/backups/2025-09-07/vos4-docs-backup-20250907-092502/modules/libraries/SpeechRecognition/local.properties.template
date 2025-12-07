@@ -1,0 +1,11 @@
+# Local configuration file for SpeechRecognition module
+# Copy this file to local.properties and update paths
+
+# Android SDK location (required)
+sdk.dir=/Users/YOUR_USERNAME/Library/Android/sdk
+
+# Android NDK location (optional, for native builds)
+# ndk.dir=/Users/YOUR_USERNAME/Library/Android/sdk/ndk/25.1.8937393
+
+# Vivoka SDK license key (if required)
+# vivoka.license.key=YOUR_LICENSE_KEY

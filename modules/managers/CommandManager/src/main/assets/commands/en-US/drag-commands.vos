@@ -1,0 +1,29 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "drag-commands.vos",
+    "category": "drag",
+    "display_name": "Drag Actions",
+    "description": "Voice commands for drag and drop operations",
+    "command_count": 3
+  },
+  "locale": "en-US",
+  "commands": [
+    {
+      "action": "DRAG_UP_DOWN",
+      "cmd": "drag up",
+      "syn": ["drag down", "drag vertical", "move up down", "vertical drag", "up down drag", "pull up", "pull down", "move vertical", "slide up down", "vertical move", "drag it up", "drag it down", "move it up and down", "vertical movement"]
+    },
+    {
+      "action": "DRAG_START",
+      "cmd": "drag start",
+      "syn": ["start drag", "begin drag", "commence drag", "initiate drag", "start dragging", "begin dragging", "start moving", "begin moving", "start pulling", "begin pulling", "start the drag", "begin the drag", "commence dragging", "initiate dragging"]
+    },
+    {
+      "action": "DRAG_STOP",
+      "cmd": "drag stop",
+      "syn": ["stop drag", "end drag", "finish drag", "cease drag", "stop dragging", "end dragging", "stop moving", "finish moving", "stop pulling", "end pulling", "stop the drag", "end the drag", "cease dragging", "finish dragging"]
+    }
+  ]
+}
