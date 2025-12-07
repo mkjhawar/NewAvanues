@@ -1,0 +1,194 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "navigation-commands.vos",
+    "category": "navigation",
+    "display_name": "Navigation",
+    "description": "Voice commands for navigating the system and apps",
+    "command_count": 9
+  },
+  "locale": "es-ES",
+  "commands": [
+    {
+      "action": "NAVIGATE_HOME",
+      "cmd": "navegar inicio",
+      "syn": [
+        "ir inicio",
+        "return inicio",
+        "inicio pantalla",
+        "main pantalla",
+        "abrir app drawer",
+        "inicio page",
+        "main page",
+        "ir to inicio",
+        "atrás to inicio",
+        "inicio button",
+        "navegar to inicio",
+        "return to inicio",
+        "ir atrás inicio",
+        "take me inicio"
+      ]
+    },
+    {
+      "action": "OPEN_RECENT_APPS",
+      "cmd": "abrir reciente apps",
+      "syn": [
+        "reciente apps",
+        "reciente applications",
+        "app switcher",
+        "task switcher",
+        "reciente programs",
+        "reciente tasks",
+        "app history",
+        "abrir reciente",
+        "switch apps",
+        "reciente list",
+        "reciente applications por favor",
+        "mostrar reciente apps",
+        "display reciente apps",
+        "view reciente apps"
+      ]
+    },
+    {
+      "action": "OPEN_SETTINGS",
+      "cmd": "abrir configuración",
+      "syn": [
+        "configuración",
+        "preferences",
+        "configuration",
+        "options",
+        "system configuración",
+        "device configuración",
+        "setup",
+        "control panel",
+        "configuración menú",
+        "preferences menú",
+        "abrir preferences",
+        "abrir configuration",
+        "abrir options",
+        "mostrar configuración"
+      ]
+    },
+    {
+      "action": "OPEN_CONNECTION",
+      "cmd": "abrir connections",
+      "syn": [
+        "connections",
+        "network configuración",
+        "connectivity",
+        "connection configuración",
+        "network options",
+        "wireless configuración",
+        "internet configuración",
+        "network menú",
+        "connection menú",
+        "connectivity configuración",
+        "network configuration",
+        "wireless configuration",
+        "internet configuration",
+        "connection options"
+      ]
+    },
+    {
+      "action": "OPEN_SOUND",
+      "cmd": "abrir sound",
+      "syn": [
+        "sound configuración",
+        "audio configuración",
+        "volumen configuración",
+        "sound options",
+        "audio options",
+        "sound menú",
+        "audio menú",
+        "sound preferences",
+        "audio preferences",
+        "sound control",
+        "audio control",
+        "volumen control",
+        "sound configuration",
+        "audio configuration"
+      ]
+    },
+    {
+      "action": "OPEN_DISPLAY",
+      "cmd": "abrir display",
+      "syn": [
+        "display configuración",
+        "pantalla configuración",
+        "display options",
+        "pantalla options",
+        "display menú",
+        "pantalla menú",
+        "display preferences",
+        "pantalla preferences",
+        "visual configuración",
+        "display control",
+        "pantalla control",
+        "display configuration",
+        "pantalla configuration",
+        "brillo configuración"
+      ]
+    },
+    {
+      "action": "OPEN_SECURITY",
+      "cmd": "abrir security",
+      "syn": [
+        "security configuración",
+        "privacy configuración",
+        "security options",
+        "privacy options",
+        "security menú",
+        "privacy menú",
+        "security preferences",
+        "privacy preferences",
+        "protection configuración",
+        "safety configuración",
+        "security control",
+        "privacy control",
+        "security configuration",
+        "privacy configuration"
+      ]
+    },
+    {
+      "action": "OPEN_ABOUT",
+      "cmd": "abrir about",
+      "syn": [
+        "about device",
+        "device info",
+        "system info",
+        "about phone",
+        "device information",
+        "system information",
+        "about system",
+        "phone info",
+        "about menú",
+        "device details",
+        "system details",
+        "phone details",
+        "device specifications",
+        "system specifications"
+      ]
+    },
+    {
+      "action": "GO_BACK",
+      "cmd": "navegar atrás",
+      "syn": [
+        "ir atrás",
+        "return",
+        "anterior page",
+        "atrás",
+        "atrás button",
+        "ir anterior",
+        "navegar anterior",
+        "atrás page",
+        "anterior",
+        "último page",
+        "return to anterior",
+        "ir to anterior",
+        "step atrás",
+        "move atrás"
+      ]
+    }
+  ]
+}

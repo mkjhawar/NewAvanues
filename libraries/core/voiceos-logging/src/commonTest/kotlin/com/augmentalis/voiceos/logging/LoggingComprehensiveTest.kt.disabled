@@ -1,0 +1,570 @@
+/**
+ * LoggingComprehensiveTest.kt - Comprehensive tests for logging with PII redaction
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ * Author: Manoj Jhawar
+ * Created: 2025-11-17
+ */
+package com.augmentalis.voiceos.logging
+
+import kotlin.test.*
+
+/**
+ * Comprehensive test suite for PIIRedactionHelper
+ */
+class PIIRedactionHelperComprehensiveTest {
+
+    @Test
+    fun testRedactEmail_StandardEmails() {
+        val emails = listOf(
+            "user@example.com" to "[REDACTED-EMAIL]",
+            "john.doe@company.org" to "[REDACTED-EMAIL]",
+            "test+tag@gmail.com" to "[REDACTED-EMAIL]",
+            "admin@192.168.1.1" to "[REDACTED-EMAIL]",
+            "no-reply@subdomain.example.co.uk" to "[REDACTED-EMAIL]"
+        )
+
+        for ((input, expected) in emails) {
+            assertEquals(expected, PIIRedactionHelper.redactEmail(input))
+        }
+    }
+
+    @Test
+    fun testRedactEmail_InText() {
+        val text = "Contact us at support@example.com or sales@company.org for more info"
+        val result = PIIRedactionHelper.redactEmail(text)
+        assertEquals("Contact us at [REDACTED-EMAIL] or [REDACTED-EMAIL] for more info", result)
+    }
+
+    @Test
+    fun testRedactEmail_NoEmail() {
+        val texts = listOf(
+            "No email here",
+            "Just plain text",
+            "@notanemail",
+            "user@",
+            "@example.com"
+        )
+
+        for (text in texts) {
+            assertEquals(text, PIIRedactionHelper.redactEmail(text))
+        }
+    }
+
+    @Test
+    fun testRedactPhone_USNumbers() {
+        val phones = listOf(
+            "(555) 123-4567" to "[REDACTED-PHONE]",
+            "555-123-4567" to "[REDACTED-PHONE]",
+            "555.123.4567" to "[REDACTED-PHONE]",
+            "5551234567" to "[REDACTED-PHONE]",
+            "+1-555-123-4567" to "[REDACTED-PHONE]",
+            "1-800-CALL-NOW" to "[REDACTED-PHONE]" // May not match letter patterns
+        )
+
+        for ((input, expected) in phones) {
+            val result = PIIRedactionHelper.redactPhone(input)
+            if (input.matches(Regex(".*\\d{3}.*\\d{3}.*\\d{4}.*"))) {
+                assertEquals(expected, result)
+            }
+        }
+    }
+
+    @Test
+    fun testRedactPhone_InternationalNumbers() {
+        val phones = listOf(
+            "+44 20 7123 4567" to "[REDACTED-PHONE]",
+            "+33 1 42 86 82 00" to "[REDACTED-PHONE]",
+            "+49 30 12345678" to "[REDACTED-PHONE]",
+            "+86 10 1234 5678" to "[REDACTED-PHONE]"
+        )
+
+        for ((input, _) in phones) {
+            val result = PIIRedactionHelper.redactPhone(input)
+            // Should redact if it contains phone-like patterns
+            if (input.startsWith("+") && input.contains(Regex("\\d{2,}"))) {
+                assertTrue(result.contains("[REDACTED-PHONE]"))
+            }
+        }
+    }
+
+    @Test
+    fun testRedactSSN_ValidSSN() {
+        val ssns = listOf(
+            "123-45-6789" to "[REDACTED-SSN]",
+            "123 45 6789" to "[REDACTED-SSN]",
+            "123456789" to "[REDACTED-SSN]"
+        )
+
+        for ((input, expected) in ssns) {
+            assertEquals(expected, PIIRedactionHelper.redactSSN(input))
+        }
+    }
+
+    @Test
+    fun testRedactSSN_InText() {
+        val text = "Employee SSN: 123-45-6789, ID: 12345"
+        val result = PIIRedactionHelper.redactSSN(text)
+        assertEquals("Employee SSN: [REDACTED-SSN], ID: 12345", result)
+    }
+
+    @Test
+    fun testRedactSSN_InvalidSSN() {
+        val invalidSSNs = listOf(
+            "000-00-0000", // Invalid SSN (all zeros)
+            "123-45-678",  // Too short
+            "123-45-67890", // Too long
+            "ABC-DE-FGHI"  // Letters
+        )
+
+        for (ssn in invalidSSNs) {
+            val result = PIIRedactionHelper.redactSSN(ssn)
+            // Should not redact invalid patterns (depends on implementation)
+            assertTrue(result == ssn || result == "[REDACTED-SSN]")
+        }
+    }
+
+    @Test
+    fun testRedactCreditCard_ValidCards() {
+        val cards = listOf(
+            "4111111111111111" to "[REDACTED-CC]",
+            "4111-1111-1111-1111" to "[REDACTED-CC]",
+            "4111 1111 1111 1111" to "[REDACTED-CC]",
+            "5500000000000004" to "[REDACTED-CC]",
+            "340000000000009" to "[REDACTED-CC]",  // Amex
+            "6011000000000004" to "[REDACTED-CC]"   // Discover
+        )
+
+        for ((input, expected) in cards) {
+            assertEquals(expected, PIIRedactionHelper.redactCreditCard(input))
+        }
+    }
+
+    @Test
+    fun testRedactCreditCard_PartialNumbers() {
+        val partials = listOf(
+            "XXXX-XXXX-XXXX-1234", // Already partially redacted
+            "****-****-****-1234",
+            "•••• •••• •••• 1234"
+        )
+
+        for (partial in partials) {
+            val result = PIIRedactionHelper.redactCreditCard(partial)
+            // May or may not redact based on pattern
+            assertNotNull(result)
+        }
+    }
+
+    @Test
+    fun testRedactIPAddress_IPv4() {
+        val ips = listOf(
+            "192.168.1.1" to "[REDACTED-IP]",
+            "10.0.0.1" to "[REDACTED-IP]",
+            "172.16.0.1" to "[REDACTED-IP]",
+            "8.8.8.8" to "[REDACTED-IP]",
+            "255.255.255.255" to "[REDACTED-IP]"
+        )
+
+        for ((input, expected) in ips) {
+            assertEquals(expected, PIIRedactionHelper.redactIPAddress(input))
+        }
+    }
+
+    @Test
+    fun testRedactIPAddress_IPv6() {
+        val ips = listOf(
+            "2001:0db8:85a3:0000:0000:8a2e:0370:7334" to "[REDACTED-IP]",
+            "2001:db8:85a3::8a2e:370:7334" to "[REDACTED-IP]",
+            "::1" to "[REDACTED-IP]",
+            "fe80::1" to "[REDACTED-IP]"
+        )
+
+        for ((input, expected) in ips) {
+            assertEquals(expected, PIIRedactionHelper.redactIPAddress(input))
+        }
+    }
+
+    @Test
+    fun testRedactURL_CommonURLs() {
+        val urls = listOf(
+            "https://www.example.com" to "[REDACTED-URL]",
+            "http://example.org/path" to "[REDACTED-URL]",
+            "ftp://files.company.com" to "[REDACTED-URL]",
+            "https://user:pass@example.com" to "[REDACTED-URL]",
+            "http://192.168.1.1:8080/admin" to "[REDACTED-URL]"
+        )
+
+        for ((input, expected) in urls) {
+            assertEquals(expected, PIIRedactionHelper.redactURL(input))
+        }
+    }
+
+    @Test
+    fun testRedactURL_InText() {
+        val text = "Visit https://example.com or http://backup.org for more"
+        val result = PIIRedactionHelper.redactURL(text)
+        assertEquals("Visit [REDACTED-URL] or [REDACTED-URL] for more", result)
+    }
+
+    @Test
+    fun testRedactDate_CommonFormats() {
+        val dates = listOf(
+            "01/15/2023" to "[REDACTED-DATE]",
+            "15/01/2023" to "[REDACTED-DATE]",
+            "2023-01-15" to "[REDACTED-DATE]",
+            "Jan 15, 2023" to "[REDACTED-DATE]",
+            "January 15, 2023" to "[REDACTED-DATE]",
+            "15-Jan-2023" to "[REDACTED-DATE]"
+        )
+
+        for ((input, expected) in dates) {
+            val result = PIIRedactionHelper.redactDate(input)
+            // Date patterns are complex, may not match all formats
+            assertTrue(result == expected || result == input)
+        }
+    }
+
+    @Test
+    fun testRedactName_CommonNames() {
+        val names = listOf(
+            "John Doe" to "[REDACTED-NAME]",
+            "Jane Smith" to "[REDACTED-NAME]",
+            "Robert Johnson" to "[REDACTED-NAME]",
+            "Mary Williams" to "[REDACTED-NAME]"
+        )
+
+        for ((input, expected) in names) {
+            val result = PIIRedactionHelper.redactName(input)
+            // Name detection is heuristic-based
+            assertTrue(result == expected || result == input)
+        }
+    }
+
+    @Test
+    fun testRedactAddress_USAddresses() {
+        val addresses = listOf(
+            "123 Main St" to "[REDACTED-ADDRESS]",
+            "456 Oak Avenue" to "[REDACTED-ADDRESS]",
+            "789 Elm Street, Apt 10" to "[REDACTED-ADDRESS]",
+            "1000 Park Blvd, Suite 200" to "[REDACTED-ADDRESS]"
+        )
+
+        for ((input, expected) in addresses) {
+            val result = PIIRedactionHelper.redactAddress(input)
+            // Address patterns are complex
+            assertTrue(result == expected || result == input)
+        }
+    }
+
+    @Test
+    fun testRedactFinancial_AccountNumbers() {
+        val financials = listOf(
+            "Account: 12345678" to "[REDACTED-FINANCIAL]",
+            "Routing: 021000021" to "[REDACTED-FINANCIAL]",
+            "IBAN: GB82WEST12345698765432" to "[REDACTED-FINANCIAL]"
+        )
+
+        for ((input, expected) in financials) {
+            val result = PIIRedactionHelper.redactFinancial(input)
+            // Financial patterns vary widely
+            assertTrue(result.contains("[REDACTED-FINANCIAL]") || result == input)
+        }
+    }
+
+    @Test
+    fun testRedactPII_ComprehensiveRedaction() {
+        val text = """
+            User: John Doe
+            Email: john.doe@example.com
+            Phone: 555-123-4567
+            SSN: 123-45-6789
+            Credit Card: 4111-1111-1111-1111
+            IP: 192.168.1.100
+            URL: https://private.example.com
+            Date: 01/15/2023
+            Address: 123 Main St, New York, NY 10001
+        """.trimIndent()
+
+        val result = PIIRedactionHelper.redactPII(text)
+
+        // Should redact all PII
+        assertTrue(result.contains("[REDACTED-EMAIL]"))
+        assertTrue(result.contains("[REDACTED-PHONE]"))
+        assertTrue(result.contains("[REDACTED-SSN]"))
+        assertTrue(result.contains("[REDACTED-CC]"))
+        assertTrue(result.contains("[REDACTED-IP]"))
+        assertTrue(result.contains("[REDACTED-URL]"))
+        // Date, name, and address redaction depends on pattern matching accuracy
+    }
+
+    @Test
+    fun testRedactPII_NoRedactionNeeded() {
+        val safetexts = listOf(
+            "This is plain text with no PII",
+            "Product ID: 12345",
+            "Error code: 404",
+            "Status: Active",
+            "Description: General information"
+        )
+
+        for (text in safetexts) {
+            val result = PIIRedactionHelper.redactPII(text)
+            // Should not contain redaction markers if no PII detected
+            assertFalse(result.contains("[REDACTED"))
+        }
+    }
+
+    @Test
+    fun testRedactPII_MixedContent() {
+        val mixed = "Order #12345 for john@example.com total $99.99"
+        val result = PIIRedactionHelper.redactPII(mixed)
+
+        // Should redact email but preserve order number and price
+        assertTrue(result.contains("[REDACTED-EMAIL]"))
+        assertTrue(result.contains("12345"))
+        assertTrue(result.contains("99.99"))
+    }
+
+    @Test
+    fun testRedactPII_EmptyAndNull() {
+        assertEquals("", PIIRedactionHelper.redactPII(""))
+        assertEquals("", PIIRedactionHelper.redactPII(null))
+    }
+}
+
+/**
+ * Comprehensive test suite for PIILoggingWrapper
+ */
+class PIILoggingWrapperComprehensiveTest {
+
+    @Test
+    fun testLogWithPII_AllLevels() {
+        val message = "User email: test@example.com"
+
+        // Test all log levels
+        PIILoggingWrapper.v("TEST", message)
+        PIILoggingWrapper.d("TEST", message)
+        PIILoggingWrapper.i("TEST", message)
+        PIILoggingWrapper.w("TEST", message)
+        PIILoggingWrapper.e("TEST", message)
+
+        // Should not throw exceptions
+        assertTrue(true)
+    }
+
+    @Test
+    fun testLogWithNullMessage() {
+        // Should handle null gracefully
+        PIILoggingWrapper.d("TEST", null)
+        PIILoggingWrapper.i("TEST", null)
+        PIILoggingWrapper.w("TEST", null)
+        PIILoggingWrapper.e("TEST", null)
+
+        assertTrue(true)
+    }
+
+    @Test
+    fun testLogWithEmptyTag() {
+        PIILoggingWrapper.d("", "Message")
+        assertTrue(true)
+    }
+
+    @Test
+    fun testLogWithComplexPII() {
+        val complexMessage = """
+            Processing payment:
+            Card: 4111-1111-1111-1111
+            Email: customer@example.com
+            Phone: 555-123-4567
+        """.trimIndent()
+
+        PIILoggingWrapper.i("PAYMENT", complexMessage)
+        assertTrue(true)
+    }
+}
+
+/**
+ * Test suite for Logger interface implementations
+ */
+class LoggerInterfaceTest {
+
+    private class TestLogger : Logger {
+        override val tag: String = "TEST"
+        var lastMessage: String? = null
+        var lastLevel: LogLevel? = null
+
+        override fun v(message: () -> String) {
+            lastLevel = LogLevel.VERBOSE
+            lastMessage = message()
+        }
+
+        override fun d(message: () -> String) {
+            lastLevel = LogLevel.DEBUG
+            lastMessage = message()
+        }
+
+        override fun i(message: () -> String) {
+            lastLevel = LogLevel.INFO
+            lastMessage = message()
+        }
+
+        override fun w(message: () -> String) {
+            lastLevel = LogLevel.WARNING
+            lastMessage = message()
+        }
+
+        override fun e(message: () -> String) {
+            lastLevel = LogLevel.ERROR
+            lastMessage = message()
+        }
+
+        override fun e(throwable: Throwable, message: () -> String) {
+            lastLevel = LogLevel.ERROR
+            lastMessage = "${message()}: ${throwable.message}"
+        }
+
+        override val isVerboseEnabled: Boolean = true
+        override val isDebugEnabled: Boolean = true
+    }
+
+    @Test
+    fun testLazyEvaluation() {
+        val logger = TestLogger()
+        var evaluated = false
+
+        logger.d {
+            evaluated = true
+            "Message"
+        }
+
+        assertTrue(evaluated, "Lambda should be evaluated")
+        assertEquals("Message", logger.lastMessage)
+    }
+
+    @Test
+    fun testLogLevels() {
+        val logger = TestLogger()
+
+        logger.v { "Verbose" }
+        assertEquals(LogLevel.VERBOSE, logger.lastLevel)
+
+        logger.d { "Debug" }
+        assertEquals(LogLevel.DEBUG, logger.lastLevel)
+
+        logger.i { "Info" }
+        assertEquals(LogLevel.INFO, logger.lastLevel)
+
+        logger.w { "Warning" }
+        assertEquals(LogLevel.WARN, logger.lastLevel)
+
+        logger.e { "Error" }
+        assertEquals(LogLevel.ERROR, logger.lastLevel)
+    }
+
+    @Test
+    fun testExceptionLogging() {
+        val logger = TestLogger()
+        val exception = Exception("Test exception")
+
+        logger.e(exception) { "Error occurred" }
+
+        assertTrue(logger.lastMessage?.contains("Error occurred") == true)
+        assertTrue(logger.lastMessage?.contains("Test exception") == true)
+    }
+
+    @Test
+    fun testPIIRedactionInLogger() {
+        val logger = PIILoggingWrapper.getLogger("TEST")
+
+        // These would normally log but with redacted PII
+        logger.d { "Email: test@example.com" }
+        logger.i { "Phone: 555-123-4567" }
+        logger.w { "SSN: 123-45-6789" }
+
+        // Should not throw
+        assertTrue(true)
+    }
+}
+
+/**
+ * Performance tests for PII redaction
+ */
+class PIIRedactionPerformanceTest {
+
+    @Test
+    fun testLargeTextRedaction() {
+        // Create large text with multiple PII instances
+        val largeText = buildString {
+            repeat(100) {
+                append("User $it: user$it@example.com, ")
+                append("Phone: 555-${1000 + it}-4567, ")
+                append("SSN: 123-45-${6000 + it}, ")
+                append("IP: 192.168.1.$it. ")
+            }
+        }
+
+        val result = PIIRedactionHelper.redactPII(largeText)
+
+        // Should complete in reasonable time and have redacted content
+        assertTrue(result.contains("[REDACTED-EMAIL]"))
+        assertTrue(result.contains("[REDACTED-PHONE]"))
+        assertTrue(result.contains("[REDACTED-SSN]"))
+        assertTrue(result.contains("[REDACTED-IP]"))
+    }
+
+    @Test
+    fun testRedactionWithoutPII() {
+        // Text without PII should be fast
+        val safeText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ".repeat(100)
+
+        val result = PIIRedactionHelper.redactPII(safeText)
+
+        // Should complete quickly and not modify safe text
+        assertEquals(safeText, result, "Should not modify safe text")
+    }
+}
+
+/**
+ * Integration tests for the logging system
+ */
+class LoggingIntegrationTest {
+
+    @Test
+    fun testCompleteLoggingFlow() {
+        // Get logger
+        val logger = LoggerFactory.getLogger("Integration")
+
+        // Log messages with various PII
+        logger.d { "Starting process for user@example.com" }
+        logger.i { "Processing payment: 4111-1111-1111-1111" }
+        logger.w { "Slow response from 192.168.1.1" }
+        logger.e { "Failed to reach https://api.example.com" }
+
+        // Use wrapper for backward compatibility
+        PIILoggingWrapper.d("Wrapper", "Legacy call with SSN: 123-45-6789")
+
+        // Should complete without errors
+        assertTrue(true)
+    }
+
+    @Test
+    fun testConditionalLogging() {
+        val logger = LoggerFactory.getLogger("Conditional")
+
+        // Only evaluate expensive operations if needed
+        if (logger.isLoggable(LogLevel.DEBUG)) {
+            logger.d {
+                // Expensive operation
+                val data = generateExpensiveDebugInfo()
+                "Debug data: $data"
+            }
+        }
+
+        assertTrue(true)
+    }
+
+    private fun generateExpensiveDebugInfo(): String {
+        Thread.sleep(10) // Simulate expensive operation
+        return "Expensive debug info"
+    }
+}

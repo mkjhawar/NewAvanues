@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  slide_up.xml - Slide up animation for command bar
+  Path: modules/apps/VoiceOSCore/src/main/res/anim/slide_up.xml
+
+  Material Motion compliant slide up animation.
+  Used when showing the command bar from bottom of screen.
+
+  Duration: 200ms
+  Interpolator: Decelerate (easing out)
+
+  Author: VOS4 Development Team
+  Created: 2025-12-06
+-->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="200"
+    android:interpolator="@android:anim/decelerate_interpolator">
+
+    <!-- Slide from below screen to final position -->
+    <translate
+        android:fromYDelta="100%p"
+        android:toYDelta="0%p" />
+
+    <!-- Fade in for smooth appearance -->
+    <alpha
+        android:fromAlpha="0.0"
+        android:toAlpha="1.0" />
+
+</set>

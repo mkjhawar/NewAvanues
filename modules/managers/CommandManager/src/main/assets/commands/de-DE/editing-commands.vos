@@ -1,0 +1,74 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "editing-commands.vos",
+    "category": "editing",
+    "display_name": "Text Editing",
+    "description": "Voice commands for text editing operations",
+    "command_count": 3
+  },
+  "locale": "de-DE",
+  "commands": [
+    {
+      "action": "BACKSPACE",
+      "cmd": "backspace",
+      "syn": [
+        "delete",
+        "erase",
+        "remove character",
+        "delete character",
+        "zurück delete",
+        "delete zurück",
+        "remove letter",
+        "erase letter",
+        "delete vorherige",
+        "remove vorherige",
+        "backspace key",
+        "delete key",
+        "rub out",
+        "wipe out"
+      ]
+    },
+    {
+      "action": "CLEAR_TEXT",
+      "cmd": "clear text",
+      "syn": [
+        "delete alles",
+        "erase alles",
+        "remove alles text",
+        "clear alles",
+        "delete everything",
+        "erase everything",
+        "text clear",
+        "alles delete",
+        "remove everything",
+        "clean text",
+        "wipe text",
+        "clear everything",
+        "delete alles text",
+        "wipe everything"
+      ]
+    },
+    {
+      "action": "ENTER",
+      "cmd": "enter",
+      "syn": [
+        "return",
+        "new line",
+        "line break",
+        "nächste line",
+        "gehen",
+        "submit",
+        "confirm",
+        "okay",
+        "done",
+        "send",
+        "enter key",
+        "return key",
+        "drücken enter",
+        "hit enter"
+      ]
+    }
+  ]
+}

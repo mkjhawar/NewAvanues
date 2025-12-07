@@ -1,0 +1,74 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "system-commands.vos",
+    "category": "system",
+    "display_name": "System Control",
+    "description": "Voice commands for system-level control",
+    "command_count": 3
+  },
+  "locale": "es-ES",
+  "commands": [
+    {
+      "action": "SHUT_DOWN",
+      "cmd": "shut abajo device",
+      "syn": [
+        "power off",
+        "turn off device",
+        "shutdown",
+        "power abajo",
+        "desactivar",
+        "shut abajo",
+        "device off",
+        "power off device",
+        "switch off",
+        "cerrar device",
+        "turn off phone",
+        "switch off phone",
+        "power abajo phone",
+        "shut abajo phone"
+      ]
+    },
+    {
+      "action": "REBOOT",
+      "cmd": "reboot device",
+      "syn": [
+        "restart device",
+        "restart",
+        "reboot",
+        "device restart",
+        "reset device",
+        "power cycle",
+        "restart system",
+        "reboot system",
+        "device reboot",
+        "system restart",
+        "restart phone",
+        "reboot phone",
+        "reset phone",
+        "power cycle phone"
+      ]
+    },
+    {
+      "action": "TURN_OFF_DISPLAY",
+      "cmd": "turn off display",
+      "syn": [
+        "pantalla off",
+        "display off",
+        "turn off pantalla",
+        "black pantalla",
+        "pantalla sleep",
+        "display sleep",
+        "pantalla dark",
+        "turn pantalla off",
+        "pantalla blank",
+        "display blank",
+        "switch off pantalla",
+        "switch off display",
+        "pantalla standby",
+        "display standby"
+      ]
+    }
+  ]
+}

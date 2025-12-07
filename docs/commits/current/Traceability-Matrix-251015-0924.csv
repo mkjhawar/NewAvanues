@@ -1,0 +1,73 @@
+Category,Original Element,Line,Type,New Component,Refactored Element,Status,Notes
+Companion Object,getInstance(),98,Method,StateManagerImpl,getService(),✅,Service instance management
+Companion Object,isServiceRunning(),101,Method,StateManagerImpl,isServiceReady,✅,Service state check
+Companion Object,executeCommand(),104-123,Method,CommandOrchestratorImpl,executeGlobalAction(),✅,Global action execution
+Service State,isServiceReady,127,Property,StateManagerImpl,isServiceReady,✅,Service ready flag
+Service State,serviceScope,128,Property,StateManagerImpl,serviceScope,✅,Main coroutine scope
+Service State,coroutineScopeCommands,129,Property,CommandOrchestratorImpl,commandScope,✅,Command processing scope
+Service State,isVoiceInitialized,132,Property,SpeechManagerImpl,isInitialized,✅,Voice engine state
+Service State,lastCommandLoaded,133,Property,CommandOrchestratorImpl,lastVocabularyUpdate,✅,Vocabulary sync timestamp
+Service State,isCommandProcessing,134,Property,CommandOrchestratorImpl,isProcessing,✅,Command processing lock
+Service State,foregroundServiceActive,137,Property,StateManagerImpl,foregroundServiceActive,✅,Foreground service flag
+Service State,appInBackground,138,Property,StateManagerImpl,appInBackground,✅,App lifecycle state
+Service State,voiceSessionActive,139,Property,StateManagerImpl,voiceSessionActive,✅,Voice session state
+Configuration,config,142,Property,StateManagerImpl,config,✅,Service configuration
+Cache,nodeCache,144,Property,UIScrapingServiceImpl,elementCache,✅,UI element cache
+Cache,commandCache,145,Property,CommandOrchestratorImpl,commandVocabulary,✅,Command vocabulary
+Cache,staticCommandCache,146,Property,CommandOrchestratorImpl,staticCommands,✅,Static command list
+Cache,appsCommand,148,Property,CommandOrchestratorImpl,installedApps,✅,Installed apps map
+Cache,allRegisteredCommands,148,Property,CommandOrchestratorImpl,registeredCommands,✅,All registered commands
+Dependencies,speechEngineManager,156,Property,SpeechManagerImpl,speechEngineManager,✅,Hilt injection preserved
+Dependencies,installedAppsManager,159,Property,CommandOrchestratorImpl,installedAppsManager,✅,Hilt injection preserved
+Dependencies,uiScrapingEngine,162,Property,UIScrapingServiceImpl,scrapingEngine,✅,Lazy initialization preserved
+Event Tracking,eventCounts,169,Property,EventRouterImpl,eventMetrics,✅,Event metrics tracking
+Dependencies,actionCoordinator,179,Property,CommandOrchestratorImpl,actionCoordinator,✅,Lazy initialization preserved
+Integration,voiceCursorInitialized,186,Property,StateManagerImpl,cursorState.isInitialized,✅,Cursor API state
+Integration,learnAppIntegration,189,Property,StateManagerImpl,learnAppState,✅,LearnApp integration state
+Integration,scrapingDatabase,192,Property,DatabaseManagerImpl,appScrapingDb,✅,Database instance
+Integration,scrapingIntegration,195,Property,UIScrapingServiceImpl,scrapingIntegration,✅,Scraping integration
+Integration,voiceCommandProcessor,198,Property,CommandOrchestratorImpl,voiceCommandProcessor,✅,Command processor
+Integration,webCommandCoordinator,201,Property,CommandOrchestratorImpl,webCoordinator,✅,Web command coordinator
+Integration,eventDebouncer,208,Property,EventRouterImpl,debouncer,✅,Event debouncing
+Phase 1,commandManagerInstance,211,Property,CommandOrchestratorImpl,commandManager,✅,CommandManager instance
+Phase 1,serviceMonitor,212,Property,ServiceMonitorImpl,(itself),✅,ServiceMonitor component
+Phase 1,fallbackModeEnabled,213,Property,CommandOrchestratorImpl,fallbackModeEnabled,✅,Fallback mode flag
+Lifecycle,onCreate(),215-227,Method,StateManagerImpl,initialize(),✅,Android lifecycle
+Lifecycle,onServiceConnected(),229-254,Method,StateManagerImpl,onServiceConnected(),✅,Android lifecycle
+Configuration,configureServiceInfo(),449-471,Method,StateManagerImpl,configureAccessibilityService(),✅,AccessibilityService config
+App Observation,observeInstalledApps(),473-487,Method,CommandOrchestratorImpl,observeInstalledApps(),✅,App list observation
+Lifecycle Observer,onStart(),490-495,Method,StateManagerImpl,onAppForeground(),✅,App foreground event
+Lifecycle Observer,onStop(),497-502,Method,StateManagerImpl,onAppBackground(),✅,App background event
+Initialization,initializeComponents(),507-559,Method,StateManagerImpl,initializeAllComponents(),✅,Component initialization
+Event Handling,onAccessibilityEvent(),562-693,Method,EventRouterImpl,routeEvent(),✅,Main event handler
+Command Registration,registerVoiceCmd(),695-721,Method,CommandOrchestratorImpl,startVocabularySync(),✅,Vocabulary sync loop
+Event Helper,isRedundantWindowChange(),726-729,Method,EventRouterImpl,isRedundantEvent(),✅,Event filtering
+Initialization,initializeVoiceRecognition(),731-755,Method,SpeechManagerImpl,initialize(),✅,Speech engine init
+Initialization,initializeVoiceCursor(),760-773,Method,StateManagerImpl,initializeCursor(),✅,Cursor API init
+Initialization,initializeLearnAppIntegration(),782-815,Method,StateManagerImpl,initializeLearnApp(),✅,LearnApp init
+Cursor,showCursor(),820-827,Method,StateManagerImpl,showCursor(),✅,Cursor visibility
+Cursor,getCursorPosition(),829-836,Method,StateManagerImpl,getCursorPosition(),✅,Cursor position
+Cursor,isCursorVisible(),838-845,Method,StateManagerImpl,isCursorVisible(),✅,Cursor state check
+Cursor,hideCursor(),850-857,Method,StateManagerImpl,hideCursor(),✅,Cursor visibility
+Cursor,toggleCursor(),862-869,Method,StateManagerImpl,toggleCursor(),✅,Cursor toggle
+Cursor,centerCursor(),874-881,Method,StateManagerImpl,centerCursor(),✅,Cursor positioning
+Cursor,clickCursor(),886-893,Method,StateManagerImpl,clickCursor(),✅,Cursor click
+Foreground Service,evaluateForegroundServiceNeed(),899-922,Method,StateManagerImpl,evaluateForegroundService(),✅,Service evaluation
+Foreground Service,startForegroundServiceHelper(),927-947,Method,StateManagerImpl,startForegroundService(),✅,Service start
+Foreground Service,stopForegroundServiceHelper(),952-966,Method,StateManagerImpl,stopForegroundService(),✅,Service stop
+Command Handling,handleVoiceCommand(),973-1011,Method,CommandOrchestratorImpl,executeCommand(),✅,Main command handler
+Command Handling,handleRegularCommand(),1016-1066,Method,CommandOrchestratorImpl,executeRegularCommand(),✅,Regular command flow
+Command Context,createCommandContext(),1074-1092,Method,CommandOrchestratorImpl,buildCommandContext(),✅,Context creation
+Tier Execution,executeTier2Command(),1098-1126,Method,CommandOrchestratorImpl,executeTier2(),✅,Tier 2 execution
+Tier Execution,executeTier3Command(),1132-1143,Method,CommandOrchestratorImpl,executeTier3(),✅,Tier 3 execution
+Fallback,enableFallbackMode(),1149-1152,Method,CommandOrchestratorImpl,enableFallbackMode(),✅,Fallback mode
+Gesture,performClick(),1158-1172,Method,CommandOrchestratorImpl,performClickAt(),✅,Gesture execution
+Legacy Execute,executeCommand(),1182-1217,Method,CommandOrchestratorImpl,executeCommand() (overloaded),✅,Legacy method merged
+Performance,logPerformanceMetrics(),1222-1253,Method,ServiceMonitorImpl,collectMetrics(),✅,Metrics collection
+Lifecycle,onInterrupt(),1255-1257,Method,StateManagerImpl,pause(),✅,Android lifecycle
+Lifecycle,onDestroy(),1259-1375,Method,StateManagerImpl,cleanup(),✅,Android lifecycle
+Utility,getAppCommands(),1377,Method,CommandOrchestratorImpl,getInstalledAppCommands(),✅,App command accessor
+Utility,getCenterOffset(),1379-1384,Method,StateManagerImpl,getCenterOffset(),✅,Display metrics
+CommandManager Init,initializeCommandManager(),260-290,Method,CommandOrchestratorImpl,initializeCommandManager(),✅,Phase 1 initialization
+Database Registration,registerDatabaseCommands(),305-436,Method,DatabaseManagerImpl + CommandOrchestratorImpl,loadAndRegisterCommands(),✅,Split by SRP
+Callback,onNewCommandsGenerated(),442-447,Method,CommandOrchestratorImpl,onCommandsUpdated(),✅,Command update callback
