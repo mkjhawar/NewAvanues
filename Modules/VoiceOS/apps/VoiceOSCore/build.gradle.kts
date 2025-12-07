@@ -159,17 +159,17 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
 
     // VoiceOS KMP Libraries (project dependencies)
-    implementation(project(":Common:Libraries:VoiceOS:core:result"))         // Type-safe error handling (KMP)
-    implementation(project(":Common:Libraries:VoiceOS:core:hash"))           // SHA-256 hashing utilities (KMP)
-    implementation(project(":Common:Libraries:VoiceOS:core:constants"))      // Centralized configuration values (KMP)
-    implementation(project(":Common:Libraries:VoiceOS:core:validation"))     // Input validation and sanitization (KMP)
-    implementation(project(":Common:Libraries:VoiceOS:core:exceptions"))     // Exception hierarchy (KMP)
-    implementation(project(":Common:Libraries:VoiceOS:core:command-models")) // Command data structures (KMP)
-    implementation(project(":Common:Libraries:VoiceOS:core:accessibility-types")) // Accessibility enums and states (KMP - project dependency)
-    implementation(project(":Common:Libraries:VoiceOS:core:voiceos-logging"))     // PII-safe logging infrastructure (KMP - project dependency)
-    implementation(project(":Common:Libraries:VoiceOS:core:text-utils"))          // Text manipulation and sanitization (KMP - project dependency)
-    implementation(project(":Common:Libraries:VoiceOS:core:json-utils"))          // JSON manipulation utilities (KMP - project dependency)
-    implementation(project(":Common:Libraries:VoiceOS:core:database"))            // SQLDelight KMP database (KMP - project dependency) - Phase 3: Migration complete
+    implementation(project(":Modules:VoiceOS:core:result"))         // Type-safe error handling (KMP)
+    implementation(project(":Modules:VoiceOS:core:hash"))           // SHA-256 hashing utilities (KMP)
+    implementation(project(":Modules:VoiceOS:core:constants"))      // Centralized configuration values (KMP)
+    implementation(project(":Modules:VoiceOS:core:validation"))     // Input validation and sanitization (KMP)
+    implementation(project(":Modules:VoiceOS:core:exceptions"))     // Exception hierarchy (KMP)
+    implementation(project(":Modules:VoiceOS:core:command-models")) // Command data structures (KMP)
+    implementation(project(":Modules:VoiceOS:core:accessibility-types")) // Accessibility enums and states (KMP - project dependency)
+    implementation(project(":Modules:VoiceOS:core:voiceos-logging"))     // PII-safe logging infrastructure (KMP - project dependency)
+    implementation(project(":Modules:VoiceOS:core:text-utils"))          // Text manipulation and sanitization (KMP - project dependency)
+    implementation(project(":Modules:VoiceOS:core:json-utils"))          // JSON manipulation utilities (KMP - project dependency)
+    implementation(project(":Modules:VoiceOS:core:database"))            // SQLDelight KMP database (KMP - project dependency) - Phase 3: Migration complete
 
     // Lifecycle components
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")

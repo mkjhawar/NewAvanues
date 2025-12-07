@@ -76,7 +76,7 @@ android {
 
 dependencies {
     // Core Database (SQLDelight) - using api() to ensure KSP can resolve types
-    api(project(":Common:Libraries:VoiceOS:core:database"))  // SQLDelight database for VoiceOS
+    api(project(":Modules:VoiceOS:core:database"))  // SQLDelight database for VoiceOS
 
     // Standalone Apps
     implementation(project(":Modules:VoiceOS:apps:VoiceUI"))
