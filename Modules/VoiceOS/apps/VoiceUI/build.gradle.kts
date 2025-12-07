@@ -81,8 +81,8 @@ dependencies {
     implementation("androidx.compose.runtime:runtime-livedata")
     
     // VOS4 Dependencies
-    implementation(project(":modules:managers:LocalizationManager"))
-    implementation(project(":modules:libraries:UUIDCreator"))
+    implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))
+    implementation(project(":Modules:VoiceOS:libraries:UUIDCreator"))
 
     // Performance Monitoring
     implementation("androidx.metrics:metrics-performance:1.0.0-alpha04")

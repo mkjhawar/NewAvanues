@@ -63,10 +63,10 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.8.2")
     
     // VOS4 Dependencies
-    implementation(project(":modules:libraries:DeviceManager"))
-    implementation(project(":modules:libraries:VoiceUIElements"))
-    implementation(project(":modules:libraries:SpeechRecognition"))  // LearningSystem stubbed
-    implementation(project(":modules:managers:LicenseManager"))
+    implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))
+    implementation(project(":Modules:VoiceOS:libraries:VoiceUIElements"))
+    implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))  // LearningSystem stubbed
+    implementation(project(":Modules:VoiceOS:managers:LicenseManager"))
     
     // Material Design
     implementation("com.google.android.material:material:1.11.0")

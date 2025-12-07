@@ -46,7 +46,7 @@ android {
 
 dependencies {
     // SQLDelight KMP Database (migrated from Room)
-    implementation(project(":libraries:core:database"))
+    implementation(project(":Common:Libraries:VoiceOS:core:database"))
 
     // Android
     implementation("androidx.core:core-ktx:1.12.0")

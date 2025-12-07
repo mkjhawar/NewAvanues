@@ -54,13 +54,13 @@ android {
 
 dependencies {
     // Internal modules
-    implementation(project(":modules:libraries:SpeechRecognition"))  // LearningSystem stubbed
-    implementation(project(":modules:apps:VoiceCursor"))
-    implementation(project(":modules:libraries:UniversalIPC"))  // Universal IPC Protocol
+    implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))  // LearningSystem stubbed
+    implementation(project(":Modules:VoiceOS:apps:VoiceCursor"))
+    implementation(project(":Modules:VoiceOS:libraries:UniversalIPC"))  // Universal IPC Protocol
 
     // KMP Libraries (project dependencies)
-    implementation(project(":libraries:core:command-models"))
-    implementation(project(":libraries:core:database"))  // SQLDelight database
+    implementation(project(":Common:Libraries:VoiceOS:core:command-models"))
+    implementation(project(":Common:Libraries:VoiceOS:core:database"))  // SQLDelight database
 
     // Android
     implementation("androidx.core:core-ktx:1.12.0")

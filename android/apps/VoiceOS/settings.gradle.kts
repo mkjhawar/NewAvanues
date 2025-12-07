@@ -52,49 +52,84 @@ rootProject.name = "VoiceOS"
 // Main application (test harness)
 include(":app")
 
-// Standalone Apps
-include(":modules:apps:VoiceOSCore")  // RE-ENABLED for Agent Swarm migration
-include(":modules:apps:VoiceUI")  // Voice UI with Magic components
-include(":modules:apps:VoiceCursor")
-include(":modules:apps:VoiceRecognition")  // Voice Recognition test app with VoiceCursor UI
-include(":modules:apps:VoiceOSIPCTest")  // IPC test client (Phase 3f)
+// Standalone Apps (Moved to monorepo Modules/)
+include(":Modules:VoiceOS:apps:VoiceOSCore")  // RE-ENABLED for Agent Swarm migration
+include(":Modules:VoiceOS:apps:VoiceUI")  // Voice UI with Magic components
+include(":Modules:VoiceOS:apps:VoiceCursor")
+include(":Modules:VoiceOS:apps:VoiceRecognition")  // Voice Recognition test app with VoiceCursor UI
+include(":Modules:VoiceOS:apps:VoiceOSIPCTest")  // IPC test client (Phase 3f)
 
-// System Managers
-include(":modules:managers:CommandManager")  // RE-ENABLED: Agent Swarm Task 2.1 - CommandManager restoration
-include(":modules:managers:VoiceDataManager")  // Migrated to SQLDelight (Phase 4 complete)
-include(":modules:managers:LocalizationManager")
-include(":modules:managers:LicenseManager")
-include(":modules:managers:HUDManager")
+// System Managers (Moved to monorepo Modules/)
+include(":Modules:VoiceOS:managers:CommandManager")  // RE-ENABLED: Agent Swarm Task 2.1 - CommandManager restoration
+include(":Modules:VoiceOS:managers:VoiceDataManager")  // Migrated to SQLDelight (Phase 4 complete)
+include(":Modules:VoiceOS:managers:LocalizationManager")
+include(":Modules:VoiceOS:managers:LicenseManager")
+include(":Modules:VoiceOS:managers:HUDManager")
 
-// Shared Libraries
+// Shared Libraries (Moved to monorepo Modules/)
 // MagicUI and MagicElements moved to /Coding/magicui-deprecated (2025-10-23)
-include(":modules:libraries:VoiceUIElements")
-include(":modules:libraries:UUIDCreator")
-include(":modules:libraries:DeviceManager")  // Device management library
-include(":modules:libraries:SpeechRecognition")  // Unified speech recognition module (LearningSystem stubbed)
-// include(":modules:libraries:VoiceKeyboard")  // DISABLED: Depends on VoiceDataManager (Phase 4)
-include(":modules:libraries:VoiceOsLogging")  // Timber-based logging with custom Trees
-include(":modules:libraries:PluginSystem")  // MagicCode plugin infrastructure (KMP support)
-include(":modules:libraries:UniversalIPC")  // Universal IPC Protocol encoder/decoder
+include(":Modules:VoiceOS:libraries:VoiceUIElements")
+include(":Modules:VoiceOS:libraries:UUIDCreator")
+include(":Modules:VoiceOS:libraries:DeviceManager")  // Device management library
+include(":Modules:VoiceOS:libraries:SpeechRecognition")  // Unified speech recognition module (LearningSystem stubbed)
+// include(":Modules:VoiceOS:libraries:VoiceKeyboard")  // DISABLED: Depends on VoiceDataManager (Phase 4)
+include(":Modules:VoiceOS:libraries:VoiceOsLogging")  // Timber-based logging with custom Trees
+include(":Modules:VoiceOS:libraries:PluginSystem")  // MagicCode plugin infrastructure (KMP support)
+include(":Modules:VoiceOS:libraries:UniversalIPC")  // Universal IPC Protocol encoder/decoder
 
-// Kotlin Multiplatform Libraries (Extracted from VoiceOSCore)
-include(":libraries:core:result")         // VoiceOSResult monad - Type-safe error handling
-include(":libraries:core:hash")           // HashUtils - SHA-256 hashing utilities
-include(":libraries:core:constants")      // VoiceOSConstants - Centralized configuration values
-include(":libraries:core:validation")     // SqlEscapeUtils - Input validation and sanitization
-include(":libraries:core:exceptions")     // VoiceOSException - Exception hierarchy
-include(":libraries:core:command-models") // CommandModels - Command data structures
-include(":libraries:core:accessibility-types") // AccessibilityTypes - Accessibility enums and states
-include(":libraries:core:voiceos-logging")    // VoiceOS Logging - PII-safe logging infrastructure
-include(":libraries:core:text-utils")         // Text manipulation and sanitization utilities
-include(":libraries:core:json-utils")          // JSON manipulation utilities
-include(":libraries:core:database")            // SQLDelight KMP database (VoiceDataManager migration)
+// Kotlin Multiplatform Libraries (Moved to monorepo Common/)
+include(":Common:Libraries:VoiceOS:core:result")         // VoiceOSResult monad - Type-safe error handling
+include(":Common:Libraries:VoiceOS:core:hash")           // HashUtils - SHA-256 hashing utilities
+include(":Common:Libraries:VoiceOS:core:constants")      // VoiceOSConstants - Centralized configuration values
+include(":Common:Libraries:VoiceOS:core:validation")     // SqlEscapeUtils - Input validation and sanitization
+include(":Common:Libraries:VoiceOS:core:exceptions")     // VoiceOSException - Exception hierarchy
+include(":Common:Libraries:VoiceOS:core:command-models") // CommandModels - Command data structures
+include(":Common:Libraries:VoiceOS:core:accessibility-types") // AccessibilityTypes - Accessibility enums and states
+include(":Common:Libraries:VoiceOS:core:voiceos-logging")    // VoiceOS Logging - PII-safe logging infrastructure
+include(":Common:Libraries:VoiceOS:core:text-utils")         // Text manipulation and sanitization utilities
+include(":Common:Libraries:VoiceOS:core:json-utils")          // JSON manipulation utilities
+include(":Common:Libraries:VoiceOS:core:database")            // SQLDelight KMP database (VoiceDataManager migration)
 
 // Code Import - Temporary modules for testing
 // include(":CodeImport:SR6-Hybrid")  // DISABLED - Using unified :libraries:SpeechRecognition instead
 // include(":CodeImport:VoiceOSAccessibility")  // DISABLED - Using apps:VoiceOSCore instead
-include(":Vosk")  // Vosk model
+include(":Common:ThirdParty:Vosk")  // Vosk model (Moved to monorepo Common/)
 
 // Test Modules
 include(":tests:voiceoscore-unit-tests")  // Pure JVM unit tests for VoiceOSCore
 // include(":tests:automated-tests")  // DISABLED: Depends on VoiceOSCore (Phase 1 Quick Fix)
+
+// Project directory mappings (monorepo structure)
+project(":Modules:VoiceOS:apps:VoiceOSCore").projectDir = file("../../../Modules/VoiceOS/apps/VoiceOSCore")
+project(":Modules:VoiceOS:apps:VoiceUI").projectDir = file("../../../Modules/VoiceOS/apps/VoiceUI")
+project(":Modules:VoiceOS:apps:VoiceCursor").projectDir = file("../../../Modules/VoiceOS/apps/VoiceCursor")
+project(":Modules:VoiceOS:apps:VoiceRecognition").projectDir = file("../../../Modules/VoiceOS/apps/VoiceRecognition")
+project(":Modules:VoiceOS:apps:VoiceOSIPCTest").projectDir = file("../../../Modules/VoiceOS/apps/VoiceOSIPCTest")
+
+project(":Modules:VoiceOS:managers:CommandManager").projectDir = file("../../../Modules/VoiceOS/managers/CommandManager")
+project(":Modules:VoiceOS:managers:VoiceDataManager").projectDir = file("../../../Modules/VoiceOS/managers/VoiceDataManager")
+project(":Modules:VoiceOS:managers:LocalizationManager").projectDir = file("../../../Modules/VoiceOS/managers/LocalizationManager")
+project(":Modules:VoiceOS:managers:LicenseManager").projectDir = file("../../../Modules/VoiceOS/managers/LicenseManager")
+project(":Modules:VoiceOS:managers:HUDManager").projectDir = file("../../../Modules/VoiceOS/managers/HUDManager")
+
+project(":Modules:VoiceOS:libraries:VoiceUIElements").projectDir = file("../../../Modules/VoiceOS/libraries/VoiceUIElements")
+project(":Modules:VoiceOS:libraries:UUIDCreator").projectDir = file("../../../Modules/VoiceOS/libraries/UUIDCreator")
+project(":Modules:VoiceOS:libraries:DeviceManager").projectDir = file("../../../Modules/VoiceOS/libraries/DeviceManager")
+project(":Modules:VoiceOS:libraries:SpeechRecognition").projectDir = file("../../../Modules/VoiceOS/libraries/SpeechRecognition")
+project(":Modules:VoiceOS:libraries:VoiceOsLogging").projectDir = file("../../../Modules/VoiceOS/libraries/VoiceOsLogging")
+project(":Modules:VoiceOS:libraries:PluginSystem").projectDir = file("../../../Modules/VoiceOS/libraries/PluginSystem")
+project(":Modules:VoiceOS:libraries:UniversalIPC").projectDir = file("../../../Modules/VoiceOS/libraries:UniversalIPC")
+
+project(":Common:Libraries:VoiceOS:core:result").projectDir = file("../../../Common/Libraries/VoiceOS/core/result")
+project(":Common:Libraries:VoiceOS:core:hash").projectDir = file("../../../Common/Libraries/VoiceOS/core/hash")
+project(":Common:Libraries:VoiceOS:core:constants").projectDir = file("../../../Common/Libraries/VoiceOS/core/constants")
+project(":Common:Libraries:VoiceOS:core:validation").projectDir = file("../../../Common/Libraries/VoiceOS/core/validation")
+project(":Common:Libraries:VoiceOS:core:exceptions").projectDir = file("../../../Common/Libraries/VoiceOS/core/exceptions")
+project(":Common:Libraries:VoiceOS:core:command-models").projectDir = file("../../../Common/Libraries/VoiceOS/core/command-models")
+project(":Common:Libraries:VoiceOS:core:accessibility-types").projectDir = file("../../../Common/Libraries/VoiceOS/core/accessibility-types")
+project(":Common:Libraries:VoiceOS:core:voiceos-logging").projectDir = file("../../../Common/Libraries/VoiceOS/core/voiceos-logging")
+project(":Common:Libraries:VoiceOS:core:text-utils").projectDir = file("../../../Common/Libraries/VoiceOS/core/text-utils")
+project(":Common:Libraries:VoiceOS:core:json-utils").projectDir = file("../../../Common/Libraries/VoiceOS/core/json-utils")
+project(":Common:Libraries:VoiceOS:core:database").projectDir = file("../../../Common/Libraries/VoiceOS/core/database")
+
+project(":Common:ThirdParty:Vosk").projectDir = file("../../../Common/ThirdParty/Vosk")
