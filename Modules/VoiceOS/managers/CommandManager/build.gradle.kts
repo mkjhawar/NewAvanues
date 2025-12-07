@@ -59,8 +59,8 @@ dependencies {
     implementation(project(":Modules:VoiceOS:libraries:UniversalIPC"))  // Universal IPC Protocol
 
     // KMP Libraries (project dependencies)
-    implementation(project(":Common:Libraries:VoiceOS:core:command-models"))
-    implementation(project(":Common:Libraries:VoiceOS:core:database"))  // SQLDelight database
+    implementation(project(":Modules:VoiceOS:core:command-models"))
+    implementation(project(":Modules:VoiceOS:core:database"))  // SQLDelight database
 
     // Android
     implementation("androidx.core:core-ktx:1.12.0")

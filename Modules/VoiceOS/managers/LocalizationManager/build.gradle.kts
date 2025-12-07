@@ -62,7 +62,7 @@ android {
 
 dependencies {
     // SQLDelight Database (KMP-ready)
-    implementation(project(":Common:Libraries:VoiceOS:core:database"))
+    implementation(project(":Modules:VoiceOS:core:database"))
 
     // Android
     implementation("androidx.core:core-ktx:1.12.0")

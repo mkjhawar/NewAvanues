@@ -78,17 +78,17 @@ include(":Modules:VoiceOS:libraries:PluginSystem")  // MagicCode plugin infrastr
 include(":Modules:VoiceOS:libraries:UniversalIPC")  // Universal IPC Protocol encoder/decoder
 
 // Kotlin Multiplatform Libraries (Moved to monorepo Common/)
-include(":Common:Libraries:VoiceOS:core:result")         // VoiceOSResult monad - Type-safe error handling
-include(":Common:Libraries:VoiceOS:core:hash")           // HashUtils - SHA-256 hashing utilities
-include(":Common:Libraries:VoiceOS:core:constants")      // VoiceOSConstants - Centralized configuration values
-include(":Common:Libraries:VoiceOS:core:validation")     // SqlEscapeUtils - Input validation and sanitization
-include(":Common:Libraries:VoiceOS:core:exceptions")     // VoiceOSException - Exception hierarchy
-include(":Common:Libraries:VoiceOS:core:command-models") // CommandModels - Command data structures
-include(":Common:Libraries:VoiceOS:core:accessibility-types") // AccessibilityTypes - Accessibility enums and states
-include(":Common:Libraries:VoiceOS:core:voiceos-logging")    // VoiceOS Logging - PII-safe logging infrastructure
-include(":Common:Libraries:VoiceOS:core:text-utils")         // Text manipulation and sanitization utilities
-include(":Common:Libraries:VoiceOS:core:json-utils")          // JSON manipulation utilities
-include(":Common:Libraries:VoiceOS:core:database")            // SQLDelight KMP database (VoiceDataManager migration)
+include(":Modules:VoiceOS:core:result")         // VoiceOSResult monad - Type-safe error handling
+include(":Modules:VoiceOS:core:hash")           // HashUtils - SHA-256 hashing utilities
+include(":Modules:VoiceOS:core:constants")      // VoiceOSConstants - Centralized configuration values
+include(":Modules:VoiceOS:core:validation")     // SqlEscapeUtils - Input validation and sanitization
+include(":Modules:VoiceOS:core:exceptions")     // VoiceOSException - Exception hierarchy
+include(":Modules:VoiceOS:core:command-models") // CommandModels - Command data structures
+include(":Modules:VoiceOS:core:accessibility-types") // AccessibilityTypes - Accessibility enums and states
+include(":Modules:VoiceOS:core:voiceos-logging")    // VoiceOS Logging - PII-safe logging infrastructure
+include(":Modules:VoiceOS:core:text-utils")         // Text manipulation and sanitization utilities
+include(":Modules:VoiceOS:core:json-utils")          // JSON manipulation utilities
+include(":Modules:VoiceOS:core:database")            // SQLDelight KMP database (VoiceDataManager migration)
 
 // Code Import - Temporary modules for testing
 // include(":CodeImport:SR6-Hybrid")  // DISABLED - Using unified :libraries:SpeechRecognition instead
@@ -120,16 +120,16 @@ project(":Modules:VoiceOS:libraries:VoiceOsLogging").projectDir = file("../../..
 project(":Modules:VoiceOS:libraries:PluginSystem").projectDir = file("../../../Modules/VoiceOS/libraries/PluginSystem")
 project(":Modules:VoiceOS:libraries:UniversalIPC").projectDir = file("../../../Modules/VoiceOS/libraries:UniversalIPC")
 
-project(":Common:Libraries:VoiceOS:core:result").projectDir = file("../../../Common/Libraries/VoiceOS/core/result")
-project(":Common:Libraries:VoiceOS:core:hash").projectDir = file("../../../Common/Libraries/VoiceOS/core/hash")
-project(":Common:Libraries:VoiceOS:core:constants").projectDir = file("../../../Common/Libraries/VoiceOS/core/constants")
-project(":Common:Libraries:VoiceOS:core:validation").projectDir = file("../../../Common/Libraries/VoiceOS/core/validation")
-project(":Common:Libraries:VoiceOS:core:exceptions").projectDir = file("../../../Common/Libraries/VoiceOS/core/exceptions")
-project(":Common:Libraries:VoiceOS:core:command-models").projectDir = file("../../../Common/Libraries/VoiceOS/core/command-models")
-project(":Common:Libraries:VoiceOS:core:accessibility-types").projectDir = file("../../../Common/Libraries/VoiceOS/core/accessibility-types")
-project(":Common:Libraries:VoiceOS:core:voiceos-logging").projectDir = file("../../../Common/Libraries/VoiceOS/core/voiceos-logging")
-project(":Common:Libraries:VoiceOS:core:text-utils").projectDir = file("../../../Common/Libraries/VoiceOS/core/text-utils")
-project(":Common:Libraries:VoiceOS:core:json-utils").projectDir = file("../../../Common/Libraries/VoiceOS/core/json-utils")
-project(":Common:Libraries:VoiceOS:core:database").projectDir = file("../../../Common/Libraries/VoiceOS/core/database")
+project(":Modules:VoiceOS:core:result").projectDir = file("../../../Modules/VoiceOS/core/result")
+project(":Modules:VoiceOS:core:hash").projectDir = file("../../../Modules/VoiceOS/core/hash")
+project(":Modules:VoiceOS:core:constants").projectDir = file("../../../Modules/VoiceOS/core/constants")
+project(":Modules:VoiceOS:core:validation").projectDir = file("../../../Modules/VoiceOS/core/validation")
+project(":Modules:VoiceOS:core:exceptions").projectDir = file("../../../Modules/VoiceOS/core/exceptions")
+project(":Modules:VoiceOS:core:command-models").projectDir = file("../../../Modules/VoiceOS/core/command-models")
+project(":Modules:VoiceOS:core:accessibility-types").projectDir = file("../../../Modules/VoiceOS/core/accessibility-types")
+project(":Modules:VoiceOS:core:voiceos-logging").projectDir = file("../../../Modules/VoiceOS/core/voiceos-logging")
+project(":Modules:VoiceOS:core:text-utils").projectDir = file("../../../Modules/VoiceOS/core/text-utils")
+project(":Modules:VoiceOS:core:json-utils").projectDir = file("../../../Modules/VoiceOS/core/json-utils")
+project(":Modules:VoiceOS:core:database").projectDir = file("../../../Modules/VoiceOS/core/database")
 
 project(":Common:ThirdParty:Vosk").projectDir = file("../../../Common/ThirdParty/Vosk")
