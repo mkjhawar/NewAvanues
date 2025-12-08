@@ -460,6 +460,16 @@ class ExplorationEngine(
         val explorationStack = java.util.Stack<ExplorationFrame>()
         val visitedScreens = mutableSetOf<String>()
 
+        // FIX (2025-12-07): Track navigation paths to prevent re-entry loops
+        val navigationPaths = mutableMapOf<String, Int>()
+        val maxPathRevisits = 2
+
+        // FIX (2025-12-07): Track element->destination for loop prevention
+        val elementToDestinationScreen = mutableMapOf<String, String>()
+
+        // FIX (2025-12-07): Track already-registered elements to prevent re-scraping
+        val registeredElementUuids = mutableSetOf<String>()
+
         // Initialize checklist tracking
         checklistManager.startChecklist(packageName)
 
@@ -563,10 +573,13 @@ class ExplorationEngine(
 
             // VOS-HYBRID-CLITE (2025-12-04): Use fresh-scrape exploration for this screen
             // This replaces the element-by-element loop with stale node refreshing
+            // FIX (2025-12-07): Pass visitedScreens and elementToDestination for loop prevention
             val clickedOnScreen = exploreScreenWithFreshScrape(
                 frame = currentFrame,
                 packageName = packageName,
-                clickedIds = clickedStableIds
+                clickedIds = clickedStableIds,
+                visitedScreens = visitedScreens,
+                elementToDestination = elementToDestinationScreen
             )
 
             if (developerSettings.isVerboseLoggingEnabled()) {
@@ -713,9 +726,20 @@ class ExplorationEngine(
                     postExploreRoot, packageName, currentFrame.depth + 1
                 )
 
-                if (postExploreState.hash != currentFrame.screenHash &&
-                    postExploreState.hash !in visitedScreens &&
-                    currentFrame.depth + 1 <= maxDepth) {
+                // FIX (2025-12-07): Track navigation path for loop prevention
+                val navPathKey = "${currentFrame.screenHash.take(8)}->${postExploreState.hash.take(8)}"
+                val pathVisitCount = navigationPaths.getOrDefault(navPathKey, 0)
+
+                val shouldExploreScreen = postExploreState.hash != currentFrame.screenHash &&
+                    (postExploreState.hash !in visitedScreens || pathVisitCount < maxPathRevisits) &&
+                    currentFrame.depth + 1 <= maxDepth
+
+                if (shouldExploreScreen) {
+                    navigationPaths[navPathKey] = pathVisitCount + 1
+                    if (pathVisitCount > 0) {
+                        android.util.Log.i("ExplorationEngine-PathTrack",
+                            "🔄 Re-visiting path $navPathKey (visit #${pathVisitCount + 1}/$maxPathRevisits)")
+                    }
 
                     // New screen discovered - push onto stack
                     val newExploration = screenExplorer.exploreScreen(
@@ -1008,22 +1032,40 @@ class ExplorationEngine(
      * @param frame Current exploration frame
      * @param packageName Target app package name
      * @param clickedIds Set to track clicked element stableIds (modified in place)
+     * @param visitedScreens Set of fully-explored screen hashes
+     * @param elementToDestination Map of element→destination screen for loop prevention
      * @return Number of elements successfully clicked
      */
     private suspend fun exploreScreenWithFreshScrape(
         frame: ExplorationFrame,
         packageName: String,
-        clickedIds: MutableSet<String>
+        clickedIds: MutableSet<String>,
+        visitedScreens: Set<String> = emptySet(),
+        elementToDestination: MutableMap<String, String> = mutableMapOf()
     ): Int {
         var clickCount = 0
         var consecutiveFailures = 0
         val maxConsecutiveFailures = developerSettings.getMaxConsecutiveClickFailures()
         val screenStartHash = frame.screenHash
 
+        // FIX (2025-12-07): Cap clicks to prevent over-clicking loops (260%+ issue)
+        val registeredProgress = clickTracker.getScreenProgress(screenStartHash)
+        val maxClicksForScreen = if (registeredProgress != null) {
+            registeredProgress.totalClickableElements + 2
+        } else {
+            frame.elements.size + 2
+        }
+
         android.util.Log.i("ExplorationEngine-HybridCLite",
-            "🔄 Starting fresh-scrape exploration for screen ${screenStartHash.take(8)}...")
+            "🔄 Starting fresh-scrape exploration for screen ${screenStartHash.take(8)}... (max clicks: $maxClicksForScreen)")
 
         while (consecutiveFailures < maxConsecutiveFailures) {
+            // FIX (2025-12-07): Check click cap
+            if (clickCount >= maxClicksForScreen) {
+                android.util.Log.i("ExplorationEngine-HybridCLite",
+                    "🛑 Click cap reached ($clickCount/$maxClicksForScreen) - preventing over-click loop")
+                break
+            }
             // Step 1: Fresh scrape - get current screen elements
             val rootNode = accessibilityService.rootInActiveWindow
             if (rootNode == null) {
@@ -1051,9 +1093,19 @@ class ExplorationEngine(
             // Step 2: Filter out clicked elements and sort by stability
             // FIX (2025-12-05): Sort dangerous buttons last to minimize early navigation
             // FIX (2025-12-05): SKIP critical dangerous elements entirely (exit, power off, etc.)
+            // FIX (2025-12-07): Skip elements that lead to already-visited screens
             val unclickedElements = freshExploration.safeClickableElements
                 .filter { it.stableId() !in clickedIds }
                 .filter { !isCriticalDangerousElement(it) }  // NEVER click critical elements
+                .filter { element ->
+                    val elementKey = "${screenStartHash}:${element.stableId()}"
+                    val destScreen = elementToDestination[elementKey]
+                    if (destScreen != null && destScreen in visitedScreens) {
+                        android.util.Log.i("ExplorationEngine-HybridCLite",
+                            "🔄 Skipping '${element.text.ifEmpty { element.contentDescription }}' - leads to visited ${destScreen.take(8)}...")
+                        false
+                    } else true
+                }
                 .sortedWith(compareBy<com.augmentalis.voiceoscore.learnapp.models.ElementInfo> {
                     // Dangerous elements go last (higher = later)
                     if (isDangerousElement(it)) 1 else 0
@@ -1138,8 +1190,12 @@ class ExplorationEngine(
                         postClickRoot, packageName, frame.depth
                     )
                     if (postClickState.hash != screenStartHash) {
+                        // FIX (2025-12-07): Record element→destination for loop prevention
+                        val elementKey = "${screenStartHash}:${stableId}"
+                        elementToDestination[elementKey] = postClickState.hash
+
                         android.util.Log.i("ExplorationEngine-HybridCLite",
-                            "📍 Screen changed from ${screenStartHash.take(8)}... to ${postClickState.hash.take(8)}...")
+                            "📍 Screen changed from ${screenStartHash.take(8)}... to ${postClickState.hash.take(8)}... (mapped)")
                         // Screen navigation detected - let caller handle it
                         break
                     }
