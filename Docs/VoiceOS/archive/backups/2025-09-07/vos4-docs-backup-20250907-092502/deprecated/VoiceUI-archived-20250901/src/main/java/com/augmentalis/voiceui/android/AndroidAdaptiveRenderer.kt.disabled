@@ -1,0 +1,588 @@
+/**
+ * AndroidAdaptiveRenderer.kt - Android-specific adaptive rendering integration
+ * 
+ * Integrates Android themes with the adaptive rendering pipeline, ensuring
+ * themes work seamlessly across all Android device types and screen sizes.
+ */
+
+package com.augmentalis.voiceui.android
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import com.augmentalis.voiceui.adaptive.*
+import com.augmentalis.voiceui.theming.*
+import com.augmentalis.voiceui.theming.ThemeIntegrationPipeline
+import android.content.res.Configuration
+import android.util.Log
+
+/**
+ * ANDROID ADAPTIVE RENDERER
+ * 
+ * Renders VoiceUI elements with Android-specific optimizations:
+ * - Screen size adaptation (phone, tablet, foldable)
+ * - Orientation handling
+ * - Android-specific UI conventions
+ * - Material Design guidelines
+ * - Accessibility integration
+ */
+class AndroidAdaptiveRenderer(
+    private val themeSystem: AndroidThemeSystem,
+    private val themePersistence: ThemePersistence,
+    private val fontManager: FontManager
+) {
+    
+    companion object {
+        private const val TAG = "AndroidAdaptiveRenderer"
+        
+        // Screen breakpoints (Material Design)
+        private const val COMPACT_WIDTH_DP = 600
+        private const val MEDIUM_WIDTH_DP = 840
+        private const val EXPANDED_WIDTH_DP = 1200
+        
+        private const val COMPACT_HEIGHT_DP = 480
+        private const val MEDIUM_HEIGHT_DP = 900
+        private const val EXPANDED_HEIGHT_DP = 1200
+    }
+    
+    /**
+     * Render VoiceUI screen with Android adaptation
+     */
+    @Composable
+    fun RenderAdaptiveScreen(
+        name: String,
+        theme: AndroidTheme,
+        elements: List<VoiceUIElement>,
+        deviceProfile: AndroidDeviceProfile = detectDeviceProfile(),
+        content: @Composable () -> Unit
+    ) {
+        
+        // Create adapted elements
+        val adaptedElements = remember(theme, elements, deviceProfile) {
+            adaptElementsForAndroid(elements, theme, deviceProfile)
+        }
+        
+        // Apply responsive layout
+        ResponsiveAndroidLayout(
+            deviceProfile = deviceProfile,
+            theme = theme
+        ) {
+            // Render content with adapted elements
+            content()
+        }
+    }
+    
+    /**
+     * Adapt elements specifically for Android
+     */
+    private fun adaptElementsForAndroid(
+        elements: List<VoiceUIElement>,
+        theme: AndroidTheme,
+        device: AndroidDeviceProfile
+    ): List<VoiceUIElement> {
+        
+        Log.d(TAG, "Adapting ${elements.size} elements for ${device.formFactor}")
+        
+        return elements.map { element ->
+            when (device.formFactor) {
+                AndroidFormFactor.PHONE -> adaptForPhone(element, theme, device)
+                AndroidFormFactor.TABLET -> adaptForTablet(element, theme, device)
+                AndroidFormFactor.FOLDABLE -> adaptForFoldable(element, theme, device)
+                AndroidFormFactor.TV -> adaptForTV(element, theme, device)
+                AndroidFormFactor.WATCH -> adaptForWatch(element, theme, device)
+                AndroidFormFactor.AUTO -> adaptForAuto(element, theme, device)
+            }
+        }
+    }
+    
+    /**
+     * Adapt element for phone
+     */
+    private fun adaptForPhone(
+        element: VoiceUIElement,
+        theme: AndroidTheme,
+        device: AndroidDeviceProfile
+    ): VoiceUIElement {
+        
+        return element.copy(
+            styling = element.styling.copy(
+                // Touch targets (Material Design: 48dp minimum)
+                minHeight = maxOf(element.styling.minHeight, 48f),
+                minWidth = maxOf(element.styling.minWidth, 48f),
+                
+                // Font sizes optimized for phone
+                fontSize = when (element.type) {
+                    ElementType.HEADING -> minOf(element.styling.fontSize, 32f)
+                    ElementType.SUBHEADING -> minOf(element.styling.fontSize, 24f)
+                    ElementType.BODY -> minOf(element.styling.fontSize, 16f)
+                    ElementType.CAPTION -> minOf(element.styling.fontSize, 12f)
+                    else -> element.styling.fontSize
+                },
+                
+                // Spacing optimized for compact screen
+                padding = element.styling.padding * 0.9f,
+                margin = element.styling.margin * 0.8f,
+                
+                // Colors adapted for phone screens
+                backgroundColor = if (device.isHighContrast) {
+                    element.styling.backgroundColor
+                } else {
+                    element.styling.backgroundColor.copy(alpha = 0.95f)
+                }
+            ),
+            
+            // Phone-specific interactions
+            interactions = element.interactions.copy(
+                supportsTouchGestures = true,
+                supportsSwipeGestures = true,
+                supportsVoiceActivation = true,
+                gestureThreshold = 16f // 16dp gesture threshold
+            ),
+            
+            // Animation optimized for phone performance
+            animation = element.animation.copy(
+                duration = if (device.isLowEndDevice) {
+                    element.animation.duration / 2 // Faster on low-end devices
+                } else {
+                    element.animation.duration
+                }
+            )
+        )
+    }
+    
+    /**
+     * Adapt element for tablet
+     */
+    private fun adaptForTablet(
+        element: VoiceUIElement,
+        theme: AndroidTheme,
+        device: AndroidDeviceProfile
+    ): VoiceUIElement {
+        
+        return element.copy(
+            styling = element.styling.copy(
+                // Larger touch targets for tablets
+                minHeight = maxOf(element.styling.minHeight, 56f),
+                minWidth = maxOf(element.styling.minWidth, 56f),
+                
+                // Font sizes scaled up for tablet
+                fontSize = when (element.type) {
+                    ElementType.HEADING -> element.styling.fontSize * 1.2f
+                    ElementType.SUBHEADING -> element.styling.fontSize * 1.1f
+                    ElementType.BODY -> element.styling.fontSize * 1.0f
+                    else -> element.styling.fontSize
+                },
+                
+                // More generous spacing on tablets
+                padding = element.styling.padding * 1.3f,
+                margin = element.styling.margin * 1.2f,
+                
+                // Enhanced shadows for depth on larger screens
+                shadow = element.styling.shadow?.let { shadow ->
+                    ShadowStyle(
+                        offsetX = shadow.offsetX * 1.2f,
+                        offsetY = shadow.offsetY * 1.2f,
+                        blurRadius = shadow.blurRadius * 1.3f,
+                        spreadRadius = shadow.spreadRadius * 1.1f
+                    )
+                }
+            ),
+            
+            // Tablet-specific interactions
+            interactions = element.interactions.copy(
+                supportsTouchGestures = true,
+                supportsMultiTouch = true,
+                supportsStylusInput = true,
+                supportsKeyboardShortcuts = true
+            )
+        )
+    }
+    
+    /**
+     * Adapt element for foldable devices
+     */
+    private fun adaptForFoldable(
+        element: VoiceUIElement,
+        theme: AndroidTheme,
+        device: AndroidDeviceProfile
+    ): VoiceUIElement {
+        
+        return element.copy(
+            styling = element.styling.copy(
+                // Adaptive sizing based on fold state
+                minHeight = when (device.foldState) {
+                    FoldState.FOLDED -> maxOf(element.styling.minHeight, 48f)
+                    FoldState.UNFOLDED -> maxOf(element.styling.minHeight, 56f)
+                    FoldState.HALF_FOLDED -> maxOf(element.styling.minHeight, 52f)
+                    else -> element.styling.minHeight
+                },
+                
+                // Font size adaptation
+                fontSize = when (device.foldState) {
+                    FoldState.FOLDED -> element.styling.fontSize * 0.9f
+                    FoldState.UNFOLDED -> element.styling.fontSize * 1.1f
+                    else -> element.styling.fontSize
+                },
+                
+                // Spacing adjustments
+                padding = when (device.foldState) {
+                    FoldState.FOLDED -> element.styling.padding * 0.8f
+                    FoldState.UNFOLDED -> element.styling.padding * 1.2f
+                    else -> element.styling.padding
+                }
+            ),
+            
+            // Foldable-specific interactions
+            interactions = element.interactions.copy(
+                supportsFoldAwareness = true,
+                supportsMultiWindowMode = true,
+                adaptToFoldState = true
+            )
+        )
+    }
+    
+    /**
+     * Adapt element for Android TV
+     */
+    private fun adaptForTV(
+        element: VoiceUIElement,
+        theme: AndroidTheme,
+        device: AndroidDeviceProfile
+    ): VoiceUIElement {
+        
+        return element.copy(
+            styling = element.styling.copy(
+                // Large touch targets for 10-foot UI
+                minHeight = maxOf(element.styling.minHeight, 80f),
+                minWidth = maxOf(element.styling.minWidth, 120f),
+                
+                // Large fonts for TV viewing distance
+                fontSize = element.styling.fontSize * 1.5f,
+                
+                // Generous spacing for TV
+                padding = element.styling.padding * 2f,
+                margin = element.styling.margin * 1.5f,
+                
+                // Clear focus indicators
+                focusedBorderWidth = 4f,
+                focusedBorderColor = theme.theme.colors.primary,
+                
+                // High contrast for TV screens
+                backgroundColor = element.styling.backgroundColor,
+                foregroundColor = element.styling.foregroundColor
+            ),
+            
+            // TV-specific interactions
+            interactions = element.interactions.copy(
+                supportsDPadNavigation = true,
+                supportsRemoteControl = true,
+                supportsVoiceControl = true,
+                focusable = true,
+                supportsTouchGestures = false // No touch on TV
+            )
+        )
+    }
+    
+    /**
+     * Adapt element for Wear OS
+     */
+    private fun adaptForWatch(
+        element: VoiceUIElement,
+        theme: AndroidTheme,
+        device: AndroidDeviceProfile
+    ): VoiceUIElement {
+        
+        return element.copy(
+            styling = element.styling.copy(
+                // Compact sizing for small screens
+                minHeight = minOf(element.styling.minHeight, 40f),
+                minWidth = minOf(element.styling.minWidth, 40f),
+                
+                // Small fonts for watch
+                fontSize = minOf(element.styling.fontSize, 14f),
+                
+                // Minimal spacing
+                padding = element.styling.padding * 0.5f,
+                margin = element.styling.margin * 0.3f,
+                
+                // High contrast for outdoor viewing
+                backgroundColor = element.styling.backgroundColor,
+                foregroundColor = Color.White
+            ),
+            
+            // Watch-specific interactions
+            interactions = element.interactions.copy(
+                supportsDigitalCrown = true,
+                supportsSwipeGestures = true,
+                supportsTouchGestures = true,
+                supportsVoiceActivation = true,
+                gestureThreshold = 8f // Smaller threshold for watch
+            )
+        )
+    }
+    
+    /**
+     * Adapt element for Android Auto
+     */
+    private fun adaptForAuto(
+        element: VoiceUIElement,
+        theme: AndroidTheme,
+        device: AndroidDeviceProfile
+    ): VoiceUIElement {
+        
+        return element.copy(
+            styling = element.styling.copy(
+                // Large, easily touchable elements for driving
+                minHeight = maxOf(element.styling.minHeight, 64f),
+                minWidth = maxOf(element.styling.minWidth, 100f),
+                
+                // Large, readable fonts
+                fontSize = element.styling.fontSize * 1.3f,
+                fontWeight = "Bold", // Bold for readability
+                
+                // High contrast for various lighting
+                backgroundColor = Color.White,
+                foregroundColor = Color.Black,
+                
+                // Simple shapes for safety
+                borderRadius = 8f
+            ),
+            
+            // Auto-specific interactions
+            interactions = element.interactions.copy(
+                supportsVoiceControl = true,
+                supportsSteeringWheelControls = true,
+                supportsTouchGestures = true,
+                requiresMinimalDistraction = true,
+                autoReadAloud = true
+            )
+        )
+    }
+    
+    /**
+     * Detect Android device profile
+     */
+    @Composable
+    private fun detectDeviceProfile(): AndroidDeviceProfile {
+        val configuration = LocalConfiguration.current
+        val density = LocalDensity.current
+        
+        return with(density) {
+            val widthDp = configuration.screenWidthDp
+            val heightDp = configuration.screenHeightDp
+            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            
+            val formFactor = when {
+                configuration.uiMode and Configuration.UI_MODE_TYPE_MASK == 
+                Configuration.UI_MODE_TYPE_TELEVISION -> AndroidFormFactor.TV
+                
+                configuration.uiMode and Configuration.UI_MODE_TYPE_MASK == 
+                Configuration.UI_MODE_TYPE_WATCH -> AndroidFormFactor.WATCH
+                
+                configuration.uiMode and Configuration.UI_MODE_TYPE_MASK == 
+                Configuration.UI_MODE_TYPE_CAR -> AndroidFormFactor.AUTO
+                
+                widthDp >= EXPANDED_WIDTH_DP -> AndroidFormFactor.TABLET
+                widthDp >= MEDIUM_WIDTH_DP -> AndroidFormFactor.TABLET
+                
+                else -> AndroidFormFactor.PHONE
+            }
+            
+            AndroidDeviceProfile(
+                formFactor = formFactor,
+                widthDp = widthDp,
+                heightDp = heightDp,
+                isLandscape = isLandscape,
+                density = density.density,
+                isHighContrast = false, // Would detect from accessibility settings
+                isLowEndDevice = false,  // Would detect from device capabilities
+                foldState = FoldState.UNKNOWN // Would detect from foldable APIs
+            )
+        }
+    }
+}
+
+/**
+ * Responsive Android Layout
+ */
+@Composable
+private fun ResponsiveAndroidLayout(
+    deviceProfile: AndroidDeviceProfile,
+    theme: AndroidTheme,
+    content: @Composable () -> Unit
+) {
+    when (deviceProfile.formFactor) {
+        AndroidFormFactor.PHONE -> {
+            PhoneLayout(deviceProfile, theme, content)
+        }
+        AndroidFormFactor.TABLET -> {
+            TabletLayout(deviceProfile, theme, content)
+        }
+        AndroidFormFactor.FOLDABLE -> {
+            FoldableLayout(deviceProfile, theme, content)
+        }
+        AndroidFormFactor.TV -> {
+            TVLayout(deviceProfile, theme, content)
+        }
+        AndroidFormFactor.WATCH -> {
+            WatchLayout(deviceProfile, theme, content)
+        }
+        AndroidFormFactor.AUTO -> {
+            AutoLayout(deviceProfile, theme, content)
+        }
+    }
+}
+
+@Composable
+private fun PhoneLayout(
+    deviceProfile: AndroidDeviceProfile,
+    theme: AndroidTheme,
+    content: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun TabletLayout(
+    deviceProfile: AndroidDeviceProfile,
+    theme: AndroidTheme,
+    content: @Composable () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+    ) {
+        if (deviceProfile.isLandscape) {
+            // Two-pane layout for landscape tablets
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            ) {
+                content()
+            }
+        } else {
+            // Single pane for portrait tablets
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun FoldableLayout(
+    deviceProfile: AndroidDeviceProfile,
+    theme: AndroidTheme,
+    content: @Composable () -> Unit
+) {
+    when (deviceProfile.foldState) {
+        FoldState.FOLDED -> PhoneLayout(deviceProfile, theme, content)
+        FoldState.UNFOLDED -> TabletLayout(deviceProfile, theme, content)
+        FoldState.HALF_FOLDED -> {
+            // Special layout for half-folded state
+            Column(modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.weight(1f)) {
+                    content()
+                }
+                // Bottom half could show additional content or controls
+            }
+        }
+        else -> PhoneLayout(deviceProfile, theme, content)
+    }
+}
+
+@Composable
+private fun TVLayout(
+    deviceProfile: AndroidDeviceProfile,
+    theme: AndroidTheme,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(48.dp) // Large padding for TV
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun WatchLayout(
+    deviceProfile: AndroidDeviceProfile,
+    theme: AndroidTheme,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(8.dp) // Minimal padding for watch
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun AutoLayout(
+    deviceProfile: AndroidDeviceProfile,
+    theme: AndroidTheme,
+    content: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp) // Large padding for car safety
+    ) {
+        content()
+    }
+}
+
+/**
+ * Android device profile
+ */
+data class AndroidDeviceProfile(
+    val formFactor: AndroidFormFactor,
+    val widthDp: Int,
+    val heightDp: Int,
+    val isLandscape: Boolean,
+    val density: Float,
+    val isHighContrast: Boolean,
+    val isLowEndDevice: Boolean,
+    val foldState: FoldState = FoldState.UNKNOWN
+)
+
+/**
+ * Android form factors
+ */
+enum class AndroidFormFactor {
+    PHONE,
+    TABLET,
+    FOLDABLE,
+    TV,
+    WATCH,
+    AUTO
+}
+
+/**
+ * Foldable states
+ */
+enum class FoldState {
+    UNKNOWN,
+    FOLDED,
+    UNFOLDED,
+    HALF_FOLDED
+}

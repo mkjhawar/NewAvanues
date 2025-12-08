@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Permissions -->
+    <!-- Accessibility Service Permission - NOT needed for apps that contain the service -->
+    <!-- BIND_ACCESSIBILITY_SERVICE is only for the system to bind to our service -->
+    
+    <!-- Overlay Permission for floating UI -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    
+    <!-- Microphone for voice commands -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    
+    <!-- Internet for model downloads (optional) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
+    <!-- Wake lock to keep service running -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    
+    <!-- Foreground service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    
+    <!-- Boot completed to start on boot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    
+    <!-- Vibration for feedback -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:name=".VoiceOS"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme.Transparent"
+        android:largeHeap="false"
+        android:hardwareAccelerated="true"
+        tools:targetApi="34"
+        tools:replace="android:icon,android:theme,android:label,android:allowBackup">
+        
+        <!-- Main Activity - VOS4 Entry Point -->
+        <activity
+            android:name=".ui.activities.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/AppTheme.Transparent">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Settings Hub -->
+        <activity
+            android:name=".ui.activities.SettingsActivity"
+            android:label="VoiceOS Settings"
+            android:exported="true"
+            android:theme="@style/AppTheme.Transparent" />
+
+        <!-- Onboarding Wizard -->
+        <activity
+            android:name=".ui.activities.OnboardingActivity"
+            android:label="VoiceOS Setup Wizard"
+            android:exported="true"
+            android:theme="@style/AppTheme.Transparent" />
+
+        <!-- Accessibility Setup -->
+        <activity
+            android:name=".ui.activities.AccessibilitySetupActivity"
+            android:label="VoiceOS Accessibility Setup"
+            android:exported="true"
+            android:theme="@style/AppTheme.Transparent" />
+
+        <!-- Module Configuration -->
+        <activity
+            android:name=".ui.activities.ModuleConfigActivity"
+            android:label="VoiceOS Module Configuration"
+            android:exported="true"
+            android:theme="@style/AppTheme.Transparent" />
+
+        <!-- Voice Training -->
+        <activity
+            android:name=".ui.activities.VoiceTrainingActivity"
+            android:label="VoiceOS Voice Training"
+            android:exported="true"
+            android:theme="@style/AppTheme.Transparent" />
+
+        <!-- System Diagnostics -->
+        <activity
+            android:name=".ui.activities.DiagnosticsActivity"
+            android:label="VoiceOS Diagnostics"
+            android:exported="true"
+            android:theme="@style/AppTheme.Transparent" />
+
+        <!-- Help Center -->
+        <activity
+            android:name=".ui.activities.HelpActivity"
+            android:label="VoiceOS Help"
+            android:exported="true"
+            android:theme="@style/AppTheme.Transparent" />
+
+        <!-- VoiceOS Accessibility Service -->
+        <!-- Service must be declared in main app manifest, not in library module -->
+        <service
+            android:name="com.augmentalis.voiceaccessibility.service.VoiceAccessibilityService"
+            android:label="@string/accessibility_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true"
+            tools:replace="android:label">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- Settings Activity for Accessibility Service -->
+        <activity
+            android:name="com.augmentalis.voiceaccessibility.ui.AccessibilitySettingsActivity"
+            android:label="VoiceOS Accessibility Settings"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault.Settings">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.PREFERENCE" />
+            </intent-filter>
+        </activity>
+
+        <!-- VoiceKeyboard Input Method Service -->
+        <!-- Service must be declared in main app manifest, not in library module -->
+        <service
+            android:name="com.augmentalis.voicekeyboard.service.VoiceKeyboardService"
+            android:label="@string/voice_keyboard_name"
+            android:permission="android.permission.BIND_INPUT_METHOD"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/voice_keyboard_method" />
+        </service>
+
+        <!-- VoiceKeyboard Settings Activity -->
+        <activity
+            android:name="com.augmentalis.voicekeyboard.preferences.KeyboardSettingsActivity"
+            android:label="@string/voice_keyboard_settings"
+            android:exported="false"
+            android:theme="@style/AppTheme.Settings">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+
+        <!-- VoiceKeyboard Broadcast Receivers -->
+        <receiver
+            android:name="com.augmentalis.voicekeyboard.service.KeyboardBroadcastReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.augmentalis.action.voice_key_code" />
+                <action android:name="com.augmentalis.action.voice_key_command" />
+                <action android:name="com.augmentalis.action.close" />
+                <action android:name="com.augmentalis.action.switch_keyboard" />
+                <action android:name="com.augmentalis.action.open_keyboard" />
+                <action android:name="com.augmentalis.action.free_speech" />
+                <action android:name="com.augmentalis.action.launch_dictation" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+</manifest>
+
+<!-- End of File -->
