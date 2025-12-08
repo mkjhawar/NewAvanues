@@ -182,6 +182,8 @@ enum class OverlayDisplayMode {
     BY_SCREEN,
     /** Show only clicked items */
     CLICKED_ONLY,
+    /** Show only un-clicked items (discovered but not clicked) */
+    UNCLICKED_ONLY,
     /** Show only blocked items */
     BLOCKED_ONLY,
     /** Show summary statistics */

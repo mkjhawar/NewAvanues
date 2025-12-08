@@ -25,6 +25,9 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -36,6 +39,11 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Debug overlay view showing scrollable list of exploration items
@@ -45,6 +53,13 @@ class DebugOverlayView(
     context: Context,
     private val tracker: ExplorationItemTracker
 ) : FrameLayout(context) {
+
+    companion object {
+        private const val TAG = "DebugOverlayView"
+    }
+
+    // Main thread handler for thread-safe UI updates
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     // UI Components
     private var headerView: LinearLayout? = null
@@ -155,6 +170,17 @@ class DebugOverlayView(
             }
             addView(title)
 
+            // Save Report button
+            val saveText = TextView(context).apply {
+                text = "💾"
+                setTextColor(Color.WHITE)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                setPadding(dpToPx(6), 0, dpToPx(6), 0)
+                setOnClickListener { saveReport() }
+                contentDescription = "Save Report"
+            }
+            addView(saveText)
+
             // Collapse button
             collapseButton = ImageButton(context).apply {
                 setBackgroundColor(Color.TRANSPARENT)
@@ -168,7 +194,7 @@ class DebugOverlayView(
                 text = "▼"
                 setTextColor(Color.WHITE)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-                setPadding(dpToPx(8), 0, dpToPx(8), 0)
+                setPadding(dpToPx(6), 0, dpToPx(6), 0)
                 setOnClickListener { toggleCollapse() }
             }
             addView(collapseText)
@@ -199,11 +225,12 @@ class DebugOverlayView(
             setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
         }
 
-        // Filter buttons
+        // Filter buttons - includes Un-clicked to see what hasn't been clicked yet
         val filters = listOf(
             "All" to OverlayDisplayMode.ALL_ITEMS,
             "Screens" to OverlayDisplayMode.BY_SCREEN,
             "Clicked" to OverlayDisplayMode.CLICKED_ONLY,
+            "Un-clicked" to OverlayDisplayMode.UNCLICKED_ONLY,
             "Blocked" to OverlayDisplayMode.BLOCKED_ONLY,
             "Stats" to OverlayDisplayMode.SUMMARY
         )
@@ -238,6 +265,7 @@ class DebugOverlayView(
             OverlayDisplayMode.ALL_ITEMS,
             OverlayDisplayMode.BY_SCREEN,
             OverlayDisplayMode.CLICKED_ONLY,
+            OverlayDisplayMode.UNCLICKED_ONLY,
             OverlayDisplayMode.BLOCKED_ONLY,
             OverlayDisplayMode.SUMMARY
         )
@@ -299,22 +327,40 @@ class DebugOverlayView(
 
     /**
      * Refresh displayed items based on current filter
+     * Thread-safe: Always runs on main thread
      */
     fun refreshItems() {
-        // Update summary
-        val summary = tracker.getSummary()
-        summaryText?.text = "📊 ${summary.clickedItems}/${summary.totalItems - summary.blockedItems} clicked | " +
-                "${summary.blockedItems} blocked | ${summary.totalScreens} screens | ${summary.completionPercent}%"
+        // Ensure we're on the main thread
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            mainHandler.post { refreshItemsInternal() }
+        } else {
+            refreshItemsInternal()
+        }
+    }
 
-        // Clear and rebuild items
-        itemsContainer?.removeAllViews()
+    /**
+     * Internal refresh - must be called on main thread
+     */
+    private fun refreshItemsInternal() {
+        try {
+            // Update summary
+            val summary = tracker.getSummary()
+            summaryText?.text = "📊 ${summary.clickedItems}/${summary.totalItems - summary.blockedItems} clicked | " +
+                    "${summary.blockedItems} blocked | ${summary.totalScreens} screens | ${summary.completionPercent}%"
 
-        when (currentFilter) {
-            OverlayDisplayMode.ALL_ITEMS -> showAllItems()
-            OverlayDisplayMode.BY_SCREEN -> showByScreen()
-            OverlayDisplayMode.CLICKED_ONLY -> showFilteredItems(ItemStatus.CLICKED)
-            OverlayDisplayMode.BLOCKED_ONLY -> showFilteredItems(ItemStatus.BLOCKED)
-            OverlayDisplayMode.SUMMARY -> showSummary()
+            // Clear and rebuild items
+            itemsContainer?.removeAllViews()
+
+            when (currentFilter) {
+                OverlayDisplayMode.ALL_ITEMS -> showAllItems()
+                OverlayDisplayMode.BY_SCREEN -> showByScreen()
+                OverlayDisplayMode.CLICKED_ONLY -> showFilteredItems(ItemStatus.CLICKED)
+                OverlayDisplayMode.UNCLICKED_ONLY -> showFilteredItems(ItemStatus.DISCOVERED)
+                OverlayDisplayMode.BLOCKED_ONLY -> showFilteredItems(ItemStatus.BLOCKED)
+                OverlayDisplayMode.SUMMARY -> showSummary()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error refreshing items", e)
         }
     }
 
@@ -354,11 +400,21 @@ class DebugOverlayView(
             val statusName = when (status) {
                 ItemStatus.CLICKED -> "clicked"
                 ItemStatus.BLOCKED -> "blocked"
+                ItemStatus.DISCOVERED -> "un-clicked"
                 else -> "matching"
             }
             addEmptyMessage("No $statusName items")
             return
         }
+
+        // Add count header
+        val headerText = when (status) {
+            ItemStatus.CLICKED -> "✅ ${items.size} Clicked Items"
+            ItemStatus.BLOCKED -> "🚫 ${items.size} Blocked Items"
+            ItemStatus.DISCOVERED -> "⚪ ${items.size} Un-clicked Items"
+            else -> "${items.size} Items"
+        }
+        addSectionHeader(headerText)
 
         items.forEach { item ->
             addItemRow(item, showScreen = true)
@@ -553,6 +609,54 @@ class DebugOverlayView(
             dp.toFloat(),
             context.resources.displayMetrics
         ).toInt()
+    }
+
+    /**
+     * Save exploration report to file
+     * Creates a markdown report in the app's external files directory
+     */
+    private fun saveReport() {
+        try {
+            // Generate markdown report from tracker
+            val report = tracker.exportToMarkdown()
+
+            // Create timestamp for filename
+            val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
+            val filename = "exploration-report-$timestamp.md"
+
+            // Save to app-specific external files directory (no permission needed)
+            val externalDir = context.getExternalFilesDir(null)
+            if (externalDir == null) {
+                Log.e(TAG, "External files directory not available")
+                showToast("Error: Storage not available")
+                return
+            }
+
+            // Create reports subdirectory
+            val reportsDir = File(externalDir, "reports")
+            if (!reportsDir.exists()) {
+                reportsDir.mkdirs()
+            }
+
+            val file = File(reportsDir, filename)
+            file.writeText(report)
+
+            Log.i(TAG, "📄 Report saved: ${file.absolutePath}")
+            showToast("Report saved: $filename")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save report", e)
+            showToast("Failed to save: ${e.message}")
+        }
+    }
+
+    /**
+     * Show toast message - thread-safe
+     */
+    private fun showToast(message: String) {
+        mainHandler.post {
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        }
     }
 
     /**

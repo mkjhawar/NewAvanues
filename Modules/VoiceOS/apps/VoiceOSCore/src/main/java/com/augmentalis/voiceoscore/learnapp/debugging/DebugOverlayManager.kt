@@ -249,10 +249,14 @@ class DebugOverlayManager(
 
     /**
      * Clear all tracking data (for new exploration session)
+     * Thread-safe: UI updates are posted to main thread
      */
     fun reset() {
         tracker.clear()
-        overlayView?.refreshItems()
+        // Ensure UI update happens on main thread
+        mainHandler.post {
+            overlayView?.refreshItems()
+        }
         Log.i(TAG, "🔄 Debug overlay state reset")
     }
 

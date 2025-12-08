@@ -131,17 +131,35 @@ class ExplorationItemTracker {
      */
     fun markBlocked(stableId: String, screenHash: String, reason: String) {
         val itemKey = "${screenHash}:${stableId}"
-        items[itemKey]?.let { item ->
-            items[itemKey] = item.copy(status = ItemStatus.BLOCKED, blockReason = reason)
 
-            // Update screen stats
-            screens[screenHash]?.let { screen ->
-                screen.blockedCount = items.values.count { it.screenHash == screenHash && it.status == ItemStatus.BLOCKED }
-            }
-
-            Log.i(TAG, "🚫 Blocked: ${item.shortName()} - $reason")
-            notifyListeners()
+        // Get existing item or create a placeholder for blocked item
+        val existingItem = items[itemKey]
+        if (existingItem != null) {
+            items[itemKey] = existingItem.copy(status = ItemStatus.BLOCKED, blockReason = reason)
+            Log.i(TAG, "🚫 Blocked: ${existingItem.shortName()} - $reason")
+        } else {
+            // Item not yet registered - create placeholder with blocked status
+            val blockedItem = ExplorationItem(
+                id = itemKey,
+                vuid = null,
+                displayName = "Blocked: $stableId",
+                className = "Unknown",
+                resourceId = null,
+                screenHash = screenHash,
+                screenName = screens[screenHash]?.activityName ?: "Unknown",
+                status = ItemStatus.BLOCKED,
+                blockReason = reason
+            )
+            items[itemKey] = blockedItem
+            Log.i(TAG, "🚫 Blocked (new): $stableId - $reason")
         }
+
+        // Update screen stats
+        screens[screenHash]?.let { screen ->
+            screen.blockedCount = items.values.count { it.screenHash == screenHash && it.status == ItemStatus.BLOCKED }
+        }
+
+        notifyListeners()
     }
 
     /**
