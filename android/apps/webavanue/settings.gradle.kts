@@ -22,9 +22,9 @@ rootProject.name = "WebAvanue"
 // Android App
 include(":app")
 
-// WebAvanue Modules (in Modules/WebAvanue/)
-include(":Modules:WebAvanue:universal")
-project(":Modules:WebAvanue:universal").projectDir = file("../../../Modules/WebAvanue/universal")
+// WebAvanue Modules (from Modules/WebAvanue/)
+include(":universal")
+project(":universal").projectDir = file("../../../Modules/WebAvanue/universal")
 
-include(":Modules:WebAvanue:coredata")
-project(":Modules:WebAvanue:coredata").projectDir = file("../../../Modules/WebAvanue/coredata")
+include(":coredata")
+project(":coredata").projectDir = file("../../../Modules/WebAvanue/coredata")

@@ -13,10 +13,9 @@ plugins {
 kotlin {
     // Android Target (Phase 1)
     androidTarget {
-        compilations.all {
-            compilerOptions.configure {
-                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-            }
+        @OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
@@ -45,8 +44,8 @@ kotlin {
         // Common Main - 95% shared code
         val commonMain by getting {
             dependencies {
-                // BrowserCoreData - Shared data layer with LRU caching (monorepo path)
-                implementation(project(":Modules:WebAvanue:coredata"))
+                // BrowserCoreData - Shared data layer with LRU caching
+                implementation(project(":coredata"))
 
                 // Kotlin
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")

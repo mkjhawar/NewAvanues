@@ -59,9 +59,9 @@ android {
 }
 
 dependencies {
-    // Project modules (monorepo paths)
-    implementation(project(":Modules:WebAvanue:universal"))
-    implementation(project(":Modules:WebAvanue:coredata"))
+    // Project modules
+    implementation(project(":universal"))
+    implementation(project(":coredata"))
 
     // Voyager Navigation (KMP-compatible)
     implementation("cafe.adriel.voyager:voyager-navigator:1.0.0")
