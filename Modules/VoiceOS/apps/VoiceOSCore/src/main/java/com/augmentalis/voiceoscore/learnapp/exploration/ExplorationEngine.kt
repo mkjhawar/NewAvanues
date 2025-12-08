@@ -1134,10 +1134,22 @@ class ExplorationEngine(
         val maxConsecutiveFailures = developerSettings.getMaxConsecutiveClickFailures()
         val screenStartHash = frame.screenHash
 
+        // FIX (2025-12-07): Added per-screen exploration timeout to prevent infinite loops
+        // on screens with dynamic/loading content (Teams channels, social feeds)
+        val screenExplorationTimeout = 120_000L  // 2 minutes max per screen
+        val screenStartTime = System.currentTimeMillis()
+
         android.util.Log.i("ExplorationEngine-HybridCLite",
             "🔄 Starting fresh-scrape exploration for screen ${screenStartHash.take(8)}...")
 
         while (consecutiveFailures < maxConsecutiveFailures) {
+            // Check per-screen timeout
+            if (System.currentTimeMillis() - screenStartTime > screenExplorationTimeout) {
+                android.util.Log.w("ExplorationEngine-HybridCLite",
+                    "⏰ Per-screen exploration timeout (${screenExplorationTimeout/1000}s) reached on ${screenStartHash.take(8)}... " +
+                    "- clicked $clickCount elements before timeout")
+                break
+            }
             // Step 1: Fresh scrape - get current screen elements
             val rootNode = accessibilityService.rootInActiveWindow
             if (rootNode == null) {
@@ -1153,8 +1165,20 @@ class ExplorationEngine(
                 break
             }
 
-            // Fresh exploration
-            val freshExploration = screenExplorer.exploreScreen(rootNode, packageName, frame.depth)
+            // Fresh exploration (with timeout protection for scrollable containers)
+            // FIX (2025-12-07): Wrap exploreScreen in timeout to prevent hangs on infinite scrollables
+            val freshExploration = kotlinx.coroutines.withTimeoutOrNull(45_000L) {
+                screenExplorer.exploreScreen(rootNode, packageName, frame.depth)
+            }
+
+            if (freshExploration == null) {
+                android.util.Log.w("ExplorationEngine-HybridCLite",
+                    "⏰ Fresh scrape timeout (45s) - screen has complex scrollables. Continuing with visible elements only.")
+                consecutiveFailures++
+                delay(developerSettings.getScrollDelayMs())
+                continue
+            }
+
             if (freshExploration !is ScreenExplorationResult.Success) {
                 android.util.Log.w("ExplorationEngine-HybridCLite", "Fresh scrape failed")
                 consecutiveFailures++
