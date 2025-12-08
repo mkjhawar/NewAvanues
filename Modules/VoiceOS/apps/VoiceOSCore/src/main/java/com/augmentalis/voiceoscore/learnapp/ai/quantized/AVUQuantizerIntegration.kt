@@ -337,7 +337,7 @@ class AVUQuantizerIntegration(
 
         for (element in scrollableElements) {
             val className = element.className.lowercase()
-            val resourceId = element.viewIdResourceName?.lowercase() ?: ""
+            val resourceId = element.resourceId.lowercase()
 
             when {
                 className.contains("horizontalscroll") ||

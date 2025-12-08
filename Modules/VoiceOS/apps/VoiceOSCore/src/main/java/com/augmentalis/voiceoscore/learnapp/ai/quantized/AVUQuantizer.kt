@@ -18,6 +18,7 @@ package com.augmentalis.voiceoscore.learnapp.ai.quantized
 import android.graphics.Rect
 import android.util.Log
 import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
+import com.augmentalis.voiceoscore.learnapp.models.ExplorationBehavior
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
@@ -243,15 +244,19 @@ class AVUQuantizer(
      * Quantize a single element
      */
     private fun quantizeElement(element: ElementInfo, screenHash: String): QuantizedElement? {
+        // Check actionability using ElementInfo properties
+        val isLongClickable = element.explorationBehavior == ExplorationBehavior.LONG_CLICKABLE
+        val isEditable = element.isEditText()
+
         // Skip non-actionable elements
-        if (!element.isClickable && !element.isLongClickable &&
-            !element.isEditable && !element.isScrollable) {
+        if (!element.isClickable && !isLongClickable &&
+            !isEditable && !element.isScrollable) {
             return null
         }
 
         // Get label (prefer text, then contentDescription, then resourceId)
         val label = normalizeLabel(
-            element.text ?: element.contentDescription ?: element.viewIdResourceName ?: ""
+            element.text.ifEmpty { element.contentDescription.ifEmpty { element.resourceId } }
         )
 
         // Skip elements without usable label
@@ -265,19 +270,19 @@ class AVUQuantizer(
         // Encode actions
         val actions = QuantizedElement.encodeActions(
             clickable = element.isClickable,
-            longClickable = element.isLongClickable,
-            editable = element.isEditable,
+            longClickable = isLongClickable,
+            editable = isEditable,
             scrollable = element.isScrollable
         )
 
         // Calculate importance
         val importance = calculateImportance(element, semanticType, label)
 
-        // Calculate quadrant
-        val quadrant = calculateQuadrant(element.bounds)
+        // Calculate quadrant - bounds is already a Rect
+        val quadrant = calculateQuadrantFromRect(element.bounds)
 
         return QuantizedElement(
-            elementId = (element.stableId ?: element.hashCode().toString()).take(8),
+            elementId = element.stableId().take(8),
             label = label.take(30), // Truncate for compactness
             semanticType = semanticType,
             actions = actions,
@@ -291,7 +296,7 @@ class AVUQuantizer(
      */
     private fun detectScreenType(activityName: String?, elements: List<ElementInfo>): ScreenType {
         val activityLower = activityName?.lowercase() ?: ""
-        val labels = elements.mapNotNull { it.text ?: it.contentDescription }.map { it.lowercase() }
+        val labels = elements.mapNotNull { it.text.ifEmpty { it.contentDescription }.ifEmpty { null } }.map { it.lowercase() }
 
         return when {
             // Login/Auth screens
@@ -312,8 +317,8 @@ class AVUQuantizer(
 
             // Search screens
             activityLower.contains("search") ||
-            elements.any { it.isEditable && (it.contentDescription?.contains("search", true) == true ||
-                    it.viewIdResourceName?.contains("search", true) == true) } ->
+            elements.any { it.isEditText() && (it.contentDescription.contains("search", true) ||
+                    it.resourceId.contains("search", true)) } ->
                 ScreenType.SEARCH
 
             // Compose/Create screens
@@ -325,8 +330,8 @@ class AVUQuantizer(
             // Chat screens
             activityLower.contains("chat") || activityLower.contains("message") ||
             activityLower.contains("conversation") ||
-            elements.any { it.isEditable && (it.contentDescription?.contains("message", true) == true ||
-                    it.viewIdResourceName?.contains("input", true) == true) } ->
+            elements.any { it.isEditText() && (it.contentDescription.contains("message", true) ||
+                    it.resourceId.contains("input", true)) } ->
                 ScreenType.CHAT
 
             // Media player screens
@@ -341,7 +346,7 @@ class AVUQuantizer(
 
             // Detail screens (fewer clickables, more text)
             elements.count { it.isClickable } < 8 &&
-            elements.count { !it.text.isNullOrBlank() } > elements.count { it.isClickable } ->
+            elements.count { it.text.isNotBlank() } > elements.count { it.isClickable } ->
                 ScreenType.DETAIL
 
             // Home/Main screen (first screen, many navigation elements)
@@ -351,8 +356,8 @@ class AVUQuantizer(
 
             // Navigation screens (many tab-like elements)
             elements.count {
-                it.viewIdResourceName?.contains("tab", true) == true ||
-                it.viewIdResourceName?.contains("nav", true) == true
+                it.resourceId.contains("tab", true) ||
+                it.resourceId.contains("nav", true)
             } > 3 -> ScreenType.NAVIGATION
 
             // Dialog screens (small element count, modal-like)
@@ -360,7 +365,7 @@ class AVUQuantizer(
                 ScreenType.DIALOG
 
             // Form screens (multiple input fields)
-            elements.count { it.isEditable } > 3 ->
+            elements.count { it.isEditText() } > 3 ->
                 ScreenType.FORM
 
             else -> ScreenType.UNKNOWN
@@ -376,7 +381,7 @@ class AVUQuantizer(
         screenType: ScreenType
     ): String {
         val activityLower = activityName?.lowercase() ?: ""
-        val labels = elements.mapNotNull { it.text ?: it.contentDescription }
+        val labels = elements.mapNotNull { it.text.ifEmpty { it.contentDescription }.ifEmpty { null } }
             .map { it.lowercase() }
             .filter { it.length > 2 }
 
@@ -421,8 +426,9 @@ class AVUQuantizer(
      */
     private fun detectSemanticType(element: ElementInfo, label: String): SemanticElementType {
         val className = element.className.lowercase()
-        val resourceId = element.viewIdResourceName?.lowercase() ?: ""
+        val resourceId = element.resourceId.lowercase()
         val labelLower = label.lowercase()
+        val isEditable = element.isEditText()
 
         return when {
             // Navigation elements
@@ -442,13 +448,13 @@ class AVUQuantizer(
                 SemanticElementType.NAV_LINK
 
             // Input elements
-            element.isEditable && resourceId.contains("search") ->
+            isEditable && resourceId.contains("search") ->
                 SemanticElementType.INP_SEARCH
 
-            element.isEditable && (resourceId.contains("password") || labelLower.contains("password")) ->
+            isEditable && (resourceId.contains("password") || labelLower.contains("password")) ->
                 SemanticElementType.INP_PASSWORD
 
-            element.isEditable -> SemanticElementType.INP_TEXT
+            isEditable -> SemanticElementType.INP_TEXT
 
             className.contains("checkbox") -> SemanticElementType.INP_CHECKBOX
             className.contains("radio") -> SemanticElementType.INP_RADIO
@@ -519,7 +525,7 @@ class AVUQuantizer(
         if (element.isClickable) score += WEIGHT_CLICKABLE
 
         // Visible text increases importance
-        if (!element.text.isNullOrBlank()) score += WEIGHT_VISIBLE_TEXT
+        if (element.text.isNotBlank()) score += WEIGHT_VISIBLE_TEXT
 
         // Primary actions are highly important
         if (semanticType == SemanticElementType.ACT_PRIMARY ||
@@ -534,17 +540,16 @@ class AVUQuantizer(
         }
 
         // Top-positioned elements (header area) are more important
-        element.bounds?.let { bounds ->
-            val rect = parseBounds(bounds)
-            if (rect != null && rect.top < screenHeight / 4) {
-                score += WEIGHT_TOP_POSITION
-            }
+        // bounds is already a Rect
+        val rect = element.bounds
+        if (rect.top < screenHeight / 4) {
+            score += WEIGHT_TOP_POSITION
+        }
 
-            // Larger elements are more important
-            val area = rect?.width()?.times(rect.height()) ?: 0
-            if (area > (screenWidth * screenHeight) / 20) {
-                score += WEIGHT_LARGE_SIZE
-            }
+        // Larger elements are more important
+        val area = rect.width() * rect.height()
+        if (area > (screenWidth * screenHeight) / 20) {
+            score += WEIGHT_LARGE_SIZE
         }
 
         // Boost for common important labels
@@ -569,6 +574,27 @@ class AVUQuantizer(
 
         val rect = parseBounds(bounds) ?: return 5
 
+        val centerX = rect.centerX()
+        val centerY = rect.centerY()
+
+        val colWidth = screenWidth / GRID_COLS
+        val rowHeight = screenHeight / GRID_ROWS
+
+        val col = (centerX / colWidth).coerceIn(0, GRID_COLS - 1)
+        val row = (centerY / rowHeight).coerceIn(0, GRID_ROWS - 1)
+
+        return row * GRID_COLS + col + 1
+    }
+
+    /**
+     * Calculate quadrant from Rect directly (1-9 grid position)
+     *
+     * Grid layout:
+     * 1 | 2 | 3
+     * 4 | 5 | 6
+     * 7 | 8 | 9
+     */
+    private fun calculateQuadrantFromRect(rect: Rect): Int {
         val centerX = rect.centerX()
         val centerY = rect.centerY()
 
