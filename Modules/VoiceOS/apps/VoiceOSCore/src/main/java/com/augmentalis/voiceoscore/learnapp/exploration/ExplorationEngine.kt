@@ -62,6 +62,48 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
+ * Debug callback interface for screen exploration events
+ *
+ * Provides real-time updates about screen exploration progress,
+ * including element discovery and navigation tracking.
+ *
+ * @since 2025-12-08 (Debug Overlay Feature)
+ */
+interface ExplorationDebugCallback {
+    /**
+     * Called when a screen is explored and elements are discovered
+     *
+     * @param elements List of discovered elements on current screen
+     * @param screenHash Unique hash of the current screen state
+     * @param activityName Current activity name
+     * @param packageName Target app package
+     * @param parentScreenHash Hash of the screen we navigated from (null if root)
+     */
+    fun onScreenExplored(
+        elements: List<com.augmentalis.voiceoscore.learnapp.models.ElementInfo>,
+        screenHash: String,
+        activityName: String,
+        packageName: String,
+        parentScreenHash: String?
+    )
+
+    /**
+     * Called when an element click causes navigation to a new screen
+     *
+     * @param elementKey Identifier for the clicked element (VUID or stableId)
+     * @param destinationScreenHash Hash of the screen navigated to
+     */
+    fun onElementNavigated(elementKey: String, destinationScreenHash: String)
+
+    /**
+     * Called when exploration progress is updated
+     *
+     * @param progress Current progress percentage (0-100)
+     */
+    fun onProgressUpdated(progress: Int)
+}
+
+/**
  * Exploration Engine
  *
  * Main engine orchestrating DFS exploration of entire app.
@@ -313,6 +355,27 @@ class ExplorationEngine(
      * Cleared at start of each new exploration.
      */
     private val clickedStableIds = mutableSetOf<String>()
+
+    /**
+     * Debug callback for real-time exploration events
+     *
+     * Set via [setDebugCallback] to receive notifications about screen
+     * exploration, element discovery, and navigation events. Used by
+     * debug overlay to visualize exploration progress.
+     *
+     * @since 2025-12-08 (Debug Overlay Feature)
+     */
+    private var debugCallback: ExplorationDebugCallback? = null
+
+    /**
+     * Set the debug callback for exploration events
+     *
+     * @param callback Callback to receive debug events (null to disable)
+     */
+    fun setDebugCallback(callback: ExplorationDebugCallback?) {
+        debugCallback = callback
+        android.util.Log.d("ExplorationEngine", "📊 Debug callback ${if (callback != null) "enabled" else "disabled"}")
+    }
 
     /**
      * Start exploration
@@ -1289,6 +1352,15 @@ class ExplorationEngine(
                 continue
             }
 
+            // DEBUG (2025-12-08): Fire debug callback with screen elements
+            debugCallback?.onScreenExplored(
+                elements = freshExploration.safeClickableElements,
+                screenHash = screenStartHash,
+                activityName = frame.screenState.activityName ?: "Unknown",
+                packageName = packageName,
+                parentScreenHash = frame.parentScreenHash
+            )
+
             // Step 2: Filter out clicked elements and sort by stability
             // FIX (2025-12-05): Sort dangerous buttons last to minimize early navigation
             // FIX (2025-12-05): SKIP critical dangerous elements entirely (exit, power off, etc.)
@@ -1397,6 +1469,9 @@ class ExplorationEngine(
                         // FIX (2025-12-07): Record element→destination mapping for loop prevention
                         val elementKey = "${screenStartHash}:${stableId}"
                         elementToDestination[elementKey] = postClickState.hash
+
+                        // DEBUG (2025-12-08): Fire navigation callback for debug overlay
+                        debugCallback?.onElementNavigated(elementKey, postClickState.hash)
 
                         android.util.Log.i("ExplorationEngine-HybridCLite",
                             "📍 Screen changed from ${screenStartHash.take(8)}... to ${postClickState.hash.take(8)}... (mapped: $elementKey)")
@@ -3181,6 +3256,13 @@ class ExplorationEngine(
             packageName = packageName,
             progress = progress
         )
+
+        // DEBUG (2025-12-08): Fire progress callback for debug overlay
+        val progressPercent = if (progress.estimatedTotalScreens > 0) {
+            ((progress.screensExplored.toFloat() / progress.estimatedTotalScreens) * 100).toInt()
+                .coerceIn(0, 100)
+        } else 0
+        debugCallback?.onProgressUpdated(progressPercent)
     }
 
     /**

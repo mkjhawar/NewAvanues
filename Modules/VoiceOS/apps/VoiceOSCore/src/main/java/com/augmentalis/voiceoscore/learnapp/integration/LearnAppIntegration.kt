@@ -25,8 +25,10 @@ import com.augmentalis.voiceoscore.learnapp.database.repository.SessionCreationR
 import com.augmentalis.voiceoscore.learnapp.detection.AppLaunchDetector
 import com.augmentalis.voiceoscore.learnapp.detection.LearnedAppTracker
 import com.augmentalis.voiceoscore.learnapp.exploration.DFSExplorationStrategy
+import com.augmentalis.voiceoscore.learnapp.exploration.ExplorationDebugCallback
 import com.augmentalis.voiceoscore.learnapp.exploration.ExplorationEngine
 import com.augmentalis.voiceoscore.learnapp.exploration.ExplorationStrategy
+import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationState
 import com.augmentalis.voiceoscore.learnapp.overlays.LoginPromptAction
 import com.augmentalis.voiceoscore.learnapp.overlays.LoginPromptConfig
@@ -560,12 +562,18 @@ class LearnAppIntegration private constructor(
                         onResumeClick = { explorationEngine.resumeExploration() },
                         onStopClick = { explorationEngine.stopExploration() }
                     )
+
+                    // DEBUG (2025-12-08): Set up debug callback to wire overlay to exploration engine
+                    setupDebugOverlayCallback()
                 }
 
                 if (floatingProgressWidget?.isShowing() != true) {
                     // Show widget for first time
                     floatingProgressWidget?.show()
                     Log.i(TAG, "🚀 Started learning ${state.packageName} - Floating widget shown")
+
+                    // DEBUG (2025-12-08): Show debug overlay by default when exploration starts
+                    floatingProgressWidget?.enableDebugOverlay()
 
                     // Show toast notification
                     scope.launch {
@@ -610,6 +618,9 @@ class LearnAppIntegration private constructor(
             }
 
             is ExplorationState.Completed -> {
+                // DEBUG (2025-12-08): Clear debug callback and overlay
+                clearDebugOverlayCallback()
+
                 // Dismiss floating widget
                 floatingProgressWidget?.dismiss()
 
@@ -653,6 +664,9 @@ class LearnAppIntegration private constructor(
             }
 
             is ExplorationState.Failed -> {
+                // DEBUG (2025-12-08): Clear debug callback and overlay
+                clearDebugOverlayCallback()
+
                 // Dismiss floating widget
                 floatingProgressWidget?.dismiss()
 
@@ -700,6 +714,75 @@ class LearnAppIntegration private constructor(
      */
     fun getExplorationState(): StateFlow<ExplorationState> {
         return explorationEngine.explorationState
+    }
+
+    // ========== Debug Overlay Methods ==========
+
+    /**
+     * Set up debug overlay callback to wire FloatingProgressWidget's debug overlay
+     * to the ExplorationEngine's screen and element events.
+     *
+     * This enables real-time visualization of:
+     * - Elements discovered on each screen (with VUID, learning source)
+     * - Navigation links (which elements lead to which screens)
+     * - Exploration progress updates
+     *
+     * @since 2025-12-08 (Debug Overlay Feature)
+     */
+    private fun setupDebugOverlayCallback() {
+        val widget = floatingProgressWidget ?: return
+
+        // Create callback that forwards events to the debug overlay manager
+        val callback = object : ExplorationDebugCallback {
+            override fun onScreenExplored(
+                elements: List<ElementInfo>,
+                screenHash: String,
+                activityName: String,
+                packageName: String,
+                parentScreenHash: String?
+            ) {
+                // Get debug overlay manager from widget and update it
+                if (widget.isDebugOverlayEnabled()) {
+                    val debugManager = widget.getDebugOverlayManager()
+                    debugManager.updateElements(
+                        elements = elements,
+                        screenHash = screenHash,
+                        activityName = activityName,
+                        packageName = packageName,
+                        parentScreenHash = parentScreenHash
+                    )
+                    Log.d(TAG, "📊 Debug overlay updated: ${elements.size} elements on $activityName")
+                }
+            }
+
+            override fun onElementNavigated(elementKey: String, destinationScreenHash: String) {
+                // Record navigation link in debug overlay
+                if (widget.isDebugOverlayEnabled()) {
+                    val debugManager = widget.getDebugOverlayManager()
+                    debugManager.recordNavigation(elementKey, destinationScreenHash)
+                }
+            }
+
+            override fun onProgressUpdated(progress: Int) {
+                // Update progress in debug overlay
+                if (widget.isDebugOverlayEnabled()) {
+                    val debugManager = widget.getDebugOverlayManager()
+                    debugManager.updateProgress(progress)
+                }
+            }
+        }
+
+        // Set callback on exploration engine
+        explorationEngine.setDebugCallback(callback)
+        Log.i(TAG, "📊 Debug overlay callback configured")
+    }
+
+    /**
+     * Clear debug callback when exploration completes
+     */
+    private fun clearDebugOverlayCallback() {
+        explorationEngine.setDebugCallback(null)
+        floatingProgressWidget?.getDebugOverlayManager()?.reset()
     }
 
     // ========== App Management Methods ==========

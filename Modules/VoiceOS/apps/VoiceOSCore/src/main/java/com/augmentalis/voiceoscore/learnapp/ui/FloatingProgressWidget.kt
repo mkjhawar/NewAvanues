@@ -26,13 +26,14 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.util.Log
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import com.augmentalis.voiceoscore.R
+import com.augmentalis.voiceoscore.learnapp.debugging.DebugOverlayManager
+import com.augmentalis.voiceoscore.learnapp.debugging.DebugVerbosity
+import com.augmentalis.voiceoscore.utils.MaterialThemeHelper
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.textview.MaterialTextView
 import kotlinx.coroutines.CoroutineScope
@@ -95,7 +96,13 @@ class FloatingProgressWidget(
     private var statsText: MaterialTextView? = null
     private var pauseButton: MaterialButton? = null
     private var stopButton: MaterialButton? = null
+    private var debugButton: MaterialButton? = null
+    private var verbosityButton: MaterialButton? = null
     private var dragHandle: View? = null
+
+    // Debug overlay manager
+    private var debugOverlayManager: DebugOverlayManager? = null
+    private var isDebugOverlayEnabled = true  // Default ON during exploration
 
     // Drag state
     private var initialX = 0
@@ -269,6 +276,8 @@ class FloatingProgressWidget(
             withContext(Dispatchers.Main) {
                 try {
                     dismiss()
+                    debugOverlayManager?.dispose()
+                    debugOverlayManager = null
                     widgetView = null
                     layoutParams = null
                     progressIndicator = null
@@ -277,6 +286,8 @@ class FloatingProgressWidget(
                     statsText = null
                     pauseButton = null
                     stopButton = null
+                    debugButton = null
+                    verbosityButton = null
                     dragHandle = null
                 } catch (e: Exception) {
                     Log.e(TAG, "Error during cleanup", e)
@@ -285,14 +296,92 @@ class FloatingProgressWidget(
         }
     }
 
+    // ========== Debug Overlay Methods ==========
+
+    /**
+     * Get or create the debug overlay manager
+     */
+    fun getDebugOverlayManager(): DebugOverlayManager {
+        if (debugOverlayManager == null) {
+            debugOverlayManager = DebugOverlayManager(context, windowManager)
+        }
+        return debugOverlayManager!!
+    }
+
+    /**
+     * Toggle debug overlay visibility
+     */
+    private fun toggleDebugOverlay() {
+        isDebugOverlayEnabled = !isDebugOverlayEnabled
+
+        val manager = getDebugOverlayManager()
+        if (isDebugOverlayEnabled) {
+            manager.show()
+            debugButton?.setIconResource(R.drawable.ic_visibility)
+            debugButton?.setBackgroundTintList(
+                android.content.res.ColorStateList.valueOf(0x4D2196F3)
+            )
+            Log.i(TAG, "Debug overlay enabled")
+        } else {
+            manager.hide()
+            debugButton?.setIconResource(R.drawable.ic_visibility_off)
+            debugButton?.setBackgroundTintList(
+                android.content.res.ColorStateList.valueOf(0x4D757575)
+            )
+            Log.i(TAG, "Debug overlay disabled")
+        }
+    }
+
+    /**
+     * Cycle through verbosity levels
+     */
+    private fun cycleVerbosity() {
+        val manager = getDebugOverlayManager()
+        manager.cycleVerbosity()
+
+        // Update button appearance based on verbosity
+        val verbosity = manager.verbosity
+        val tintColor = when (verbosity) {
+            DebugVerbosity.MINIMAL -> 0x4D9E9E9E.toInt()   // Gray
+            DebugVerbosity.STANDARD -> 0x4D9C27B0.toInt() // Purple
+            DebugVerbosity.VERBOSE -> 0x4DFF5722.toInt()  // Orange
+        }
+        verbosityButton?.setBackgroundTintList(
+            android.content.res.ColorStateList.valueOf(tintColor)
+        )
+
+        Log.i(TAG, "Verbosity changed to: $verbosity")
+    }
+
+    /**
+     * Check if debug overlay is enabled
+     */
+    fun isDebugOverlayEnabled(): Boolean = isDebugOverlayEnabled
+
+    /**
+     * Enable debug overlay and show it
+     */
+    fun enableDebugOverlay() {
+        if (!isDebugOverlayEnabled) {
+            toggleDebugOverlay()
+        }
+    }
+
+    /**
+     * Disable debug overlay and hide it
+     */
+    fun disableDebugOverlay() {
+        if (isDebugOverlayEnabled) {
+            toggleDebugOverlay()
+        }
+    }
+
     // ========== Private Methods ==========
 
     @SuppressLint("ClickableViewAccessibility")
     private fun createWidget() {
-        widgetView = LayoutInflater.from(context).inflate(
-            R.layout.floating_progress_widget,
-            null
-        )
+        // Use MaterialThemeHelper to inflate Material3 views in AccessibilityService context
+        widgetView = MaterialThemeHelper.inflateOverlay(context, R.layout.floating_progress_widget)
 
         widgetView?.let { view ->
             // Get UI element references
@@ -315,6 +404,18 @@ class FloatingProgressWidget(
 
             stopButton?.setOnClickListener {
                 onStopClick()
+            }
+
+            // Debug overlay toggle button
+            debugButton = view.findViewById(R.id.floating_debug_button)
+            debugButton?.setOnClickListener {
+                toggleDebugOverlay()
+            }
+
+            // Verbosity toggle button
+            verbosityButton = view.findViewById(R.id.floating_verbosity_button)
+            verbosityButton?.setOnClickListener {
+                cycleVerbosity()
             }
 
             // Set up drag on entire widget
