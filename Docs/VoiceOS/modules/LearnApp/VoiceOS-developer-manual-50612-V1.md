@@ -916,6 +916,60 @@ private val clickedStableIds = mutableSetOf<String>()
 
 ---
 
+## Cumulative VUID Tracking (2025-12-08) CRITICAL FIX
+
+### Problem
+
+When exploring apps with intent relaunches (e.g., app exits and is relaunched via intent), the learning completion showed 10% when visual observation showed 50-75% of screens explored.
+
+**Root Cause:** The P2 Fix (2025-12-07) called `clickTracker.clear()` on intent relaunch to prevent "inflated totalElements". However, this destroyed all exploration progress:
+- 50 screens explored but only 12 tracked in final stats
+- 37 screens lost across 2 intent relaunches (15 + 22 screens)
+- 496 elements lost (189 + 307 elements)
+
+### Solution: Hybrid Cumulative Tracking
+
+Added class-level cumulative tracking sets that survive intent relaunches:
+
+```kotlin
+/**
+ * FIX (2025-12-08): Global cumulative tracking - NEVER cleared during exploration
+ * These track ALL exploration progress regardless of intent relaunches
+ * Used for final completion percentage calculation
+ */
+private val cumulativeDiscoveredVuids = mutableSetOf<String>()  // All discovered element VUIDs
+private val cumulativeClickedVuids = mutableSetOf<String>()      // All clicked element VUIDs
+```
+
+**Lifecycle:**
+1. Cleared at START of new exploration session (`startExploration()`)
+2. Never cleared during exploration (survives intent relaunches)
+3. Populated whenever elements are registered/clicked
+4. Used for final completion % calculation
+
+**Relationship with clickTracker:**
+| Tracker | Purpose | Cleared On |
+|---------|---------|------------|
+| clickTracker | Per-screen fresh-scrape logic | Intent relaunch |
+| cumulativeVuids | Final completion % | New exploration session |
+
+### Log Messages
+
+```
+// CUMULATIVE stats (accurate - use this!)
+📊 Final Stats (CUMULATIVE): 450/600 VUIDs clicked (75% completeness)
+
+// clickTracker stats (for comparison - may be lower due to intent relaunches)
+📊 Final Stats (clickTracker): 149/149 elements clicked (100% completeness per session)
+```
+
+### Commit
+
+**Hash:** `43f0c480`
+**Message:** fix(learnapp): add cumulative VUID tracking for accurate completion percentage
+
+---
+
 ## Critical Fixes (2025-11-30)
 
 ### P0 Concurrency Fixes (Deep Analysis)
@@ -5002,6 +5056,17 @@ val notification = NotificationCompat.Builder(context, CHANNEL_ID)
   - Expected impact: Apps requiring permissions/login reach 95%+ completeness (up from 10-24%)
   - Commit: 2c5e9a1e
   - Files: 6 modified, 16 created (22 files total, 3861 insertions)
+
+- **1.9.0** (2025-12-08): Cumulative VUID tracking fix (CRITICAL)
+  - Fixed 10% completion when 50-75% of screens explored
+  - Root cause: `clickTracker.clear()` on intent relaunch destroyed exploration progress
+  - Added class-level cumulative tracking sets: `cumulativeDiscoveredVuids`, `cumulativeClickedVuids`
+  - These survive intent relaunches but clear at start of new exploration session
+  - clickTracker still used for per-screen fresh-scrape element selection
+  - Final completion % now uses cumulative stats (not clickTracker stats)
+  - Log messages to watch: "Final Stats (CUMULATIVE)" vs "Final Stats (clickTracker)"
+  - Commit: 43f0c480
+  - Files: ExplorationEngine.kt (79 insertions, 25 deletions)
 
 ---
 
