@@ -99,10 +99,18 @@ class FloatingProgressWidget(
     private var debugButton: MaterialButton? = null
     private var verbosityButton: MaterialButton? = null
     private var dragHandle: View? = null
+    private var sizeDecreaseButton: MaterialButton? = null
+    private var sizeIncreaseButton: MaterialButton? = null
+    private var sizeLabel: MaterialTextView? = null
 
     // Debug overlay manager
     private var debugOverlayManager: DebugOverlayManager? = null
     private var isDebugOverlayEnabled = true  // Default ON during exploration
+
+    // Size state: S=0.7, M=1.0, L=1.3, XL=1.6
+    private val sizeScales = floatArrayOf(0.7f, 1.0f, 1.3f, 1.6f)
+    private val sizeNames = arrayOf("S", "M", "L", "XL")
+    private var currentSizeIndex = 1 // Default: M (1.0x)
 
     // Drag state
     private var initialX = 0
@@ -261,6 +269,9 @@ class FloatingProgressWidget(
                     debugButton = null
                     verbosityButton = null
                     dragHandle = null
+                    sizeDecreaseButton = null
+                    sizeIncreaseButton = null
+                    sizeLabel = null
                 } catch (e: Exception) {
                     Log.e(TAG, "Error during cleanup", e)
                 }
@@ -390,12 +401,71 @@ class FloatingProgressWidget(
                 cycleVerbosity()
             }
 
+            // Size control buttons
+            sizeDecreaseButton = view.findViewById(R.id.floating_size_decrease_button)
+            sizeIncreaseButton = view.findViewById(R.id.floating_size_increase_button)
+            sizeLabel = view.findViewById(R.id.floating_size_label)
+
+            sizeDecreaseButton?.setOnClickListener {
+                decreaseSize()
+            }
+            sizeIncreaseButton?.setOnClickListener {
+                increaseSize()
+            }
+
+            // Update initial size label
+            updateSizeLabel()
+
             // Set up drag on entire widget
             view.setOnTouchListener(DragTouchListener())
 
             // Also allow drag via drag handle specifically
             dragHandle?.setOnTouchListener(DragTouchListener())
         }
+    }
+
+    /**
+     * Increase widget size (up to XL)
+     */
+    private fun increaseSize() {
+        if (currentSizeIndex < sizeScales.size - 1) {
+            currentSizeIndex++
+            applyScale()
+            updateSizeLabel()
+            Log.i(TAG, "Widget size increased to ${sizeNames[currentSizeIndex]}")
+        }
+    }
+
+    /**
+     * Decrease widget size (down to S)
+     */
+    private fun decreaseSize() {
+        if (currentSizeIndex > 0) {
+            currentSizeIndex--
+            applyScale()
+            updateSizeLabel()
+            Log.i(TAG, "Widget size decreased to ${sizeNames[currentSizeIndex]}")
+        }
+    }
+
+    /**
+     * Apply current scale to widget
+     */
+    private fun applyScale() {
+        widgetView?.let { view ->
+            val scale = sizeScales[currentSizeIndex]
+            view.scaleX = scale
+            view.scaleY = scale
+            view.pivotX = view.width / 2f
+            view.pivotY = 0f // Scale from top
+        }
+    }
+
+    /**
+     * Update size label text
+     */
+    private fun updateSizeLabel() {
+        sizeLabel?.text = "Size: ${sizeNames[currentSizeIndex]}"
     }
 
     private fun createLayoutParams(): WindowManager.LayoutParams {
