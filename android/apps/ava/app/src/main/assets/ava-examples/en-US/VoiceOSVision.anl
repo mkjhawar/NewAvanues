@@ -1,0 +1,27 @@
+# Avanues Universal Format v1.0
+# Type: VOS - Vision
+# Extension: .anl
+# Project: VoiceOS
+---
+schema: avu-1.0
+version: 1.0.0
+locale: en-US
+project: ava
+metadata:
+  file: VoiceOSVision.anl
+  category: voiceos_vision
+  name: VoiceOS Vision
+  description: Screen understanding
+  priority: 2
+  count: 2
+---
+VCM:screen_describe:what is on my screen
+VCM:screen_describe:describe screen
+VCM:screen_describe:read this screen
+VCM:screen_describe:tell me what is on the screen
+VCM:screen_describe:analyze screen
+
+VCM:screen_find:where is the {element}
+VCM:screen_find:find {element} button
+VCM:screen_find:show me {element}
+VCM:screen_find:locate {element}

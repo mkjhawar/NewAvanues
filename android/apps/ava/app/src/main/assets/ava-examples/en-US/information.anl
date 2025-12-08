@@ -1,0 +1,73 @@
+# Avanues Universal Format v2.0
+# Type: AVA - Voice Intent Examples
+# Extension: .anl
+# Project: AVA (AI Voice Assistant)
+---
+schema: avu-1.0
+version: 1.0.0
+locale: en-US
+project: ava
+metadata:
+  file: information.anl
+  category: information
+  name: Information Queries
+  description: Weather, time, news, and general information
+  priority: 1
+  count: 2
+---
+INFO:check_weather:what's the weather
+INFO:check_weather:weather forecast
+INFO:check_weather:will it rain
+INFO:check_weather:is it going to snow
+INFO:check_weather:temperature outside
+INFO:check_weather:how's the weather
+INFO:check_weather:weather today
+INFO:check_weather:weather tomorrow
+INFO:check_weather:check forecast
+INFO:check_weather:rain forecast
+INFO:check_weather:snow forecast
+
+INFO:show_time:what time is it
+INFO:show_time:tell me the time
+INFO:show_time:current time
+INFO:show_time:what's the time
+INFO:show_time:show clock
+INFO:show_time:display time
+INFO:show_time:time please
+INFO:show_time:what time
+
+INFO:search_web:search for
+INFO:search_web:look up
+INFO:search_web:google
+INFO:search_web:find information about
+INFO:search_web:what is
+INFO:search_web:who is
+INFO:search_web:where is
+INFO:search_web:when did
+INFO:search_web:how to
+INFO:search_web:how do you
+INFO:search_web:how does
+INFO:search_web:how many
+INFO:search_web:how much
+INFO:search_web:tell me about
+INFO:search_web:information about
+INFO:search_web:search the web
+INFO:search_web:web search
+INFO:search_web:search online
+INFO:search_web:look it up
+INFO:search_web:find out about
+INFO:search_web:search internet
+INFO:search_web:can you search
+INFO:search_web:please search
+INFO:search_web:I want to know about
+INFO:search_web:explain
+INFO:search_web:define
+INFO:search_web:what are
+INFO:search_web:why is
+INFO:search_web:why does
+INFO:search_web:why do
+---
+synonyms:
+  check: [show, display, tell, what's, get]
+  weather: [forecast, temperature, conditions]
+  search: [look up, find, google, lookup, search for]
