@@ -8,9 +8,9 @@
  */
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.sqldelight)
+    id("org.jetbrains.kotlin.multiplatform")
+    id("com.android.library")
+    id("app.cash.sqldelight") version "2.0.2"
 }
 
 kotlin {
@@ -30,20 +30,20 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(libs.kotlinx.coroutines.core)
-                implementation(libs.kotlinx.serialization.json)
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
             }
         }
         val commonTest by getting {
             dependencies {
-                implementation(libs.kotlin.test)
-                implementation(libs.kotlinx.coroutines.test)
+                implementation(kotlin("test"))
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
             }
         }
         val androidMain by getting {
             dependencies {
-                implementation(libs.sqldelight.android.driver)
-                implementation(libs.kotlinx.coroutines.android)
+                implementation("app.cash.sqldelight:android-driver:2.0.2")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
             }
         }
     }

@@ -840,13 +840,12 @@ class DynamicBrowserAction(
     ): CommandResult {
         val rootNode = accessibilityService?.rootInActiveWindow
 
-        return when (action) {
+        val result = when (action) {
             "forward" -> {
                 // Browser forward - use global action or find forward button
                 accessibilityService?.let {
-                    // Try to find and click forward button
-                    val forwardButton = rootNode?.findAccessibilityNodeInfosByContentDescription("Forward")?.firstOrNull()
-                        ?: rootNode?.findAccessibilityNodeInfosByContentDescription("Navigate forward")?.firstOrNull()
+                    // Try to find and click forward button by text
+                    val forwardButton = rootNode?.findAccessibilityNodeInfosByText("Forward")?.firstOrNull()
                     if (forwardButton != null) {
                         forwardButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                         forwardButton.recycle()
@@ -858,24 +857,19 @@ class DynamicBrowserAction(
                 } ?: createErrorResult(command, ErrorCode.MODULE_NOT_AVAILABLE, "Accessibility service required")
             }
             "refresh", "reload" -> {
-                val refreshButton = rootNode?.findAccessibilityNodeInfosByContentDescription("Refresh")?.firstOrNull()
-                    ?: rootNode?.findAccessibilityNodeInfosByContentDescription("Reload")?.firstOrNull()
+                val refreshButton = rootNode?.findAccessibilityNodeInfosByText("Refresh")?.firstOrNull()
+                    ?: rootNode?.findAccessibilityNodeInfosByText("Reload")?.firstOrNull()
                 if (refreshButton != null) {
                     refreshButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                     refreshButton.recycle()
                     createSuccessResult(command, "Page refreshed")
                 } else {
-                    // Try to find reload button by text
-                    rootNode?.findAccessibilityNodeInfosByText("Refresh")?.firstOrNull()?.let {
-                        it.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                        it.recycle()
-                        createSuccessResult(command, "Page refreshed")
-                    } ?: createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Refresh button not found")
+                    createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Refresh button not found")
                 }
             }
             "new_tab" -> {
                 // Look for new tab button or "+" button
-                val newTabButton = rootNode?.findAccessibilityNodeInfosByContentDescription("New tab")?.firstOrNull()
+                val newTabButton = rootNode?.findAccessibilityNodeInfosByText("New tab")?.firstOrNull()
                     ?: rootNode?.findAccessibilityNodeInfosByText("+")?.firstOrNull()
                 if (newTabButton != null) {
                     newTabButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
@@ -887,7 +881,8 @@ class DynamicBrowserAction(
             }
             "close_tab" -> {
                 // Look for close tab button (X)
-                val closeButton = rootNode?.findAccessibilityNodeInfosByContentDescription("Close tab")?.firstOrNull()
+                val closeButton = rootNode?.findAccessibilityNodeInfosByText("Close tab")?.firstOrNull()
+                    ?: rootNode?.findAccessibilityNodeInfosByText("Close")?.firstOrNull()
                 if (closeButton != null) {
                     closeButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                     closeButton.recycle()
@@ -897,7 +892,7 @@ class DynamicBrowserAction(
                 }
             }
             "stop" -> {
-                val stopButton = rootNode?.findAccessibilityNodeInfosByContentDescription("Stop")?.firstOrNull()
+                val stopButton = rootNode?.findAccessibilityNodeInfosByText("Stop")?.firstOrNull()
                 if (stopButton != null) {
                     stopButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                     stopButton.recycle()
@@ -907,8 +902,8 @@ class DynamicBrowserAction(
                 }
             }
             "bookmark" -> {
-                val bookmarkButton = rootNode?.findAccessibilityNodeInfosByContentDescription("Bookmark")?.firstOrNull()
-                    ?: rootNode?.findAccessibilityNodeInfosByContentDescription("Add bookmark")?.firstOrNull()
+                val bookmarkButton = rootNode?.findAccessibilityNodeInfosByText("Bookmark")?.firstOrNull()
+                    ?: rootNode?.findAccessibilityNodeInfosByText("Add bookmark")?.firstOrNull()
                 if (bookmarkButton != null) {
                     bookmarkButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                     bookmarkButton.recycle()
@@ -918,9 +913,9 @@ class DynamicBrowserAction(
                 }
             }
             else -> createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Unknown browser action: $action")
-        }.also {
-            rootNode?.recycle()
         }
+        rootNode?.recycle()
+        return result
     }
 }
 
@@ -1097,39 +1092,40 @@ class DynamicOverlayAction(
         accessibilityService: AccessibilityService?,
         context: Context
     ): CommandResult {
-        val intent = Intent().apply {
-            setPackage(context.packageName)
-            when {
-                action.contains("hide_help") || (action.contains("hide") && action.contains("help")) -> {
-                    setAction("com.augmentalis.voiceos.TOGGLE_HELP")
-                    putExtra("show", false)
-                }
-                action.contains("show_help") || (action.contains("show") && action.contains("help")) -> {
-                    setAction("com.augmentalis.voiceos.TOGGLE_HELP")
-                    putExtra("show", true)
-                }
-                action.contains("hide_command") || (action.contains("hide") && action.contains("command")) -> {
-                    setAction("com.augmentalis.voiceos.TOGGLE_COMMANDS")
-                    putExtra("show", false)
-                }
-                action.contains("show_command") || (action.contains("show") && action.contains("command")) -> {
-                    setAction("com.augmentalis.voiceos.TOGGLE_COMMANDS")
-                    putExtra("show", true)
-                }
-                action.contains("toggle") && action.contains("help") -> {
-                    setAction("com.augmentalis.voiceos.TOGGLE_HELP")
-                    putExtra("toggle", true)
-                }
-                action.contains("toggle") && action.contains("command") -> {
-                    setAction("com.augmentalis.voiceos.TOGGLE_COMMANDS")
-                    putExtra("toggle", true)
-                }
-                else -> {
-                    setAction("com.augmentalis.voiceos.OVERLAY_ACTION")
-                    putExtra("action", action)
-                }
+        val intent = Intent()
+        intent.setPackage(context.packageName)
+
+        when {
+            action.contains("hide_help") || (action.contains("hide") && action.contains("help")) -> {
+                intent.action = "com.augmentalis.voiceos.TOGGLE_HELP"
+                intent.putExtra("show", false)
+            }
+            action.contains("show_help") || (action.contains("show") && action.contains("help")) -> {
+                intent.action = "com.augmentalis.voiceos.TOGGLE_HELP"
+                intent.putExtra("show", true)
+            }
+            action.contains("hide_command") || (action.contains("hide") && action.contains("command")) -> {
+                intent.action = "com.augmentalis.voiceos.TOGGLE_COMMANDS"
+                intent.putExtra("show", false)
+            }
+            action.contains("show_command") || (action.contains("show") && action.contains("command")) -> {
+                intent.action = "com.augmentalis.voiceos.TOGGLE_COMMANDS"
+                intent.putExtra("show", true)
+            }
+            action.contains("toggle") && action.contains("help") -> {
+                intent.action = "com.augmentalis.voiceos.TOGGLE_HELP"
+                intent.putExtra("toggle", true)
+            }
+            action.contains("toggle") && action.contains("command") -> {
+                intent.action = "com.augmentalis.voiceos.TOGGLE_COMMANDS"
+                intent.putExtra("toggle", true)
+            }
+            else -> {
+                intent.action = "com.augmentalis.voiceos.OVERLAY_ACTION"
+                intent.putExtra("action", this.action)
             }
         }
+
         context.sendBroadcast(intent)
         return createSuccessResult(command, successMessage)
     }
@@ -1316,9 +1312,10 @@ class DynamicPositionAction(
                     val rect = android.graphics.Rect()
                     focusedNode.getBoundsInScreen(rect)
 
-                    // Scroll to center the element if it supports scrolling
+                    // Scroll to center the element if it supports scrolling (API 23+)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        focusedNode.performAction(AccessibilityNodeInfo.ACTION_SHOW_ON_SCREEN)
+                        // ACTION_SHOW_ON_SCREEN is available in AccessibilityNodeInfo.AccessibilityAction
+                        focusedNode.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
                     }
                     focusedNode.recycle()
                     rootNode.recycle()
