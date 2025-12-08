@@ -191,11 +191,19 @@ class ScreenExplorer(
      *
      * Includes offscreen elements via scrolling.
      *
+     * FIX (2025-12-07): Added timeout protection for scrollable containers
+     * - Limits scroll collection to 10 seconds per container
+     * - Prevents infinite loops on dynamic/loading content (Teams, social feeds)
+     * - Total collection timeout: 30 seconds for all containers
+     *
      * @param rootNode Root node
      * @return Collection result with elements and scrollable container count
      */
     private suspend fun collectAllElements(rootNode: AccessibilityNodeInfo): CollectionResult {
         val allElements = mutableSetOf<ElementInfo>()
+        val totalStartTime = System.currentTimeMillis()
+        val totalTimeout = 30_000L  // 30 seconds total for all scrollables
+        val perContainerTimeout = 10_000L  // 10 seconds per scrollable container
 
         // 1. Collect visible elements
         val visibleElements = collectVisibleElements(rootNode)
@@ -205,13 +213,41 @@ class ScreenExplorer(
         val scrollables = scrollDetector.findScrollableContainers(rootNode)
         val scrollableCount = scrollables.size
 
-        // 3. Scroll each container and collect offscreen elements
-        for (scrollable in scrollables) {
+        if (scrollableCount > 0 && developerSettings.isVerboseLoggingEnabled()) {
+            android.util.Log.d("ScreenExplorer",
+                "📜 Found $scrollableCount scrollable container(s) - collecting with timeout protection")
+        }
+
+        // 3. Scroll each container and collect offscreen elements (with timeout)
+        for ((index, scrollable) in scrollables.withIndex()) {
+            // Check total timeout
+            if (System.currentTimeMillis() - totalStartTime > totalTimeout) {
+                android.util.Log.w("ScreenExplorer",
+                    "⏰ Total collection timeout (${totalTimeout/1000}s) reached after ${index}/${scrollableCount} containers")
+                break
+            }
+
             try {
-                val scrolledElements = scrollExecutor.scrollAndCollectAll(scrollable)
-                allElements.addAll(scrolledElements)
+                // Wrap scroll collection in per-container timeout
+                val scrolledElements = kotlinx.coroutines.withTimeoutOrNull(perContainerTimeout) {
+                    scrollExecutor.scrollAndCollectAll(scrollable)
+                }
+
+                if (scrolledElements != null) {
+                    allElements.addAll(scrolledElements)
+                    if (developerSettings.isVerboseLoggingEnabled()) {
+                        android.util.Log.d("ScreenExplorer",
+                            "📜 Container ${index + 1}/${scrollableCount}: collected ${scrolledElements.size} elements")
+                    }
+                } else {
+                    android.util.Log.w("ScreenExplorer",
+                        "⏰ Scroll timeout (${perContainerTimeout/1000}s) on container ${index + 1}/${scrollableCount} " +
+                        "- likely infinite/dynamic content. Skipping.")
+                }
             } catch (e: Exception) {
                 // Handle scrolling errors gracefully
+                android.util.Log.w("ScreenExplorer",
+                    "⚠️ Scroll error on container ${index + 1}: ${e.message}")
                 // Continue with other scrollables
             }
         }

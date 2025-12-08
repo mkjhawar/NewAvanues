@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  floating_progress_widget.xml - Draggable Floating Progress Widget
+  Path: modules/apps/VoiceOSCore/src/main/res/layout/floating_progress_widget.xml
+
+  Floating, draggable, semi-transparent progress widget for LearnApp exploration.
+  Can be moved anywhere on screen to avoid blocking content.
+
+  Features:
+  - Semi-transparent background (75% opacity)
+  - Draggable via drag handle
+  - Circular progress indicator
+  - Status text
+  - Pause/Resume button
+  - STOP button (interrupts exploration)
+
+  Design Specs:
+  - Width: 180dp (compact)
+  - Corner radius: 16dp
+  - Background: 75% transparent
+  - Elevation: 16dp (floats above all content)
+
+  Author: VOS4 Development Team
+  Created: 2025-12-07
+-->
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/floating_widget_root"
+    android:layout_width="180dp"
+    android:layout_height="wrap_content"
+    app:cardElevation="16dp"
+    app:cardCornerRadius="16dp"
+    app:cardBackgroundColor="#BF1C1C1E"
+    android:alpha="0.92">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- Drag Handle (touch to move) -->
+        <View
+            android:id="@+id/drag_handle"
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/learnapp_drag_handle_bg" />
+
+        <!-- Progress Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Circular Progress -->
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/floating_progress_indicator"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:indeterminate="false"
+                app:indicatorSize="36dp"
+                app:trackThickness="3dp"
+                app:indicatorColor="#00C853"
+                app:trackColor="#4D00C853"
+                tools:progress="45" />
+
+            <!-- Progress Percentage -->
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/floating_progress_percent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="45%"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                tools:text="45%" />
+
+        </LinearLayout>
+
+        <!-- Status Text -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/floating_status_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Learning..."
+            android:textColor="#B0FFFFFF"
+            android:textSize="12sp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            tools:text="Learning Instagram..." />
+
+        <!-- Screens/Elements Count -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/floating_stats_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="0 screens"
+            android:textColor="#80FFFFFF"
+            android:textSize="10sp"
+            tools:text="12 screens, 145 elements" />
+
+        <!-- Button Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <!-- Pause/Resume Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/floating_pause_button"
+                style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginEnd="8dp"
+                app:icon="@drawable/ic_pause"
+                app:iconSize="20dp"
+                app:iconTint="#FFFFFF"
+                app:backgroundTint="#4D00C853"
+                android:contentDescription="Pause learning" />
+
+            <!-- STOP Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/floating_stop_button"
+                style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                app:icon="@drawable/ic_stop"
+                app:iconSize="20dp"
+                app:iconTint="#FFFFFF"
+                app:backgroundTint="#4DFF5252"
+                android:contentDescription="Stop learning" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

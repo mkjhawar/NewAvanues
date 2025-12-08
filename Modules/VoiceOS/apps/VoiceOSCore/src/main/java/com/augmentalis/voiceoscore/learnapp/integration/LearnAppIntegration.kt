@@ -35,7 +35,7 @@ import com.augmentalis.voiceoscore.learnapp.jit.JustInTimeLearner
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppPreferences
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 import com.augmentalis.voiceoscore.learnapp.ui.ConsentDialogManager
-import com.augmentalis.voiceoscore.learnapp.ui.ProgressOverlayManager
+import com.augmentalis.voiceoscore.learnapp.ui.FloatingProgressWidget
 import com.augmentalis.voiceoscore.scraping.AccessibilityScrapingIntegration
 import com.augmentalis.uuidcreator.UUIDCreator
 import com.augmentalis.uuidcreator.alias.UuidAliasManager
@@ -126,7 +126,7 @@ class LearnAppIntegration private constructor(
     private val learnedAppTracker: LearnedAppTracker
     private val appLaunchDetector: AppLaunchDetector
     private val consentDialogManager: ConsentDialogManager
-    private val progressOverlayManager: ProgressOverlayManager
+    private var floatingProgressWidget: FloatingProgressWidget? = null
     private val explorationEngine: ExplorationEngine
     private val scrapingIntegration: AccessibilityScrapingIntegration
     private val justInTimeLearner: JustInTimeLearner
@@ -184,7 +184,7 @@ class LearnAppIntegration private constructor(
         learnedAppTracker = LearnedAppTracker(context)
         appLaunchDetector = AppLaunchDetector(context, learnedAppTracker)
         consentDialogManager = ConsentDialogManager(accessibilityService, learnedAppTracker)
-        progressOverlayManager = ProgressOverlayManager(accessibilityService)
+        // FloatingProgressWidget initialized lazily when exploration starts
 
         // Initialize exploration engine
         // Phase 3 (2025-12-04): Pass LearnAppCore for voice command generation
@@ -200,8 +200,7 @@ class LearnAppIntegration private constructor(
             learnAppCore = learnAppCore  // Phase 3: Enable voice command generation
         )
 
-        // Phase 3: Wire explorationEngine to progressOverlayManager for pause/resume control
-        progressOverlayManager.explorationEngine = explorationEngine
+        // FloatingProgressWidget is initialized when exploration starts (lazy init)
 
         // Initialize scraping integration for potential future use
         scrapingIntegration = AccessibilityScrapingIntegration(context, accessibilityService)
@@ -506,8 +505,8 @@ class LearnAppIntegration private constructor(
                                 "Failed to create session for $packageName: ${result.reason}", result.cause
                             )
 
-                            // Hide progress overlay
-                            progressOverlayManager.hideProgressOverlay()
+                            // Dismiss floating widget
+                            floatingProgressWidget?.dismiss()
 
                             // Show error notification
                             showToastNotification(
@@ -521,8 +520,8 @@ class LearnAppIntegration private constructor(
                 // FIX: Handle timeout explicitly
                 Log.e("LearnAppIntegration", "Exploration initialization timed out for $packageName", e)
 
-                // Hide progress overlay
-                progressOverlayManager.hideProgressOverlay()
+                // Dismiss floating widget
+                floatingProgressWidget?.dismiss()
 
                 // Show timeout notification
                 showToastNotification(
@@ -543,19 +542,30 @@ class LearnAppIntegration private constructor(
     private fun handleExplorationStateChange(state: ExplorationState) {
         when (state) {
             is ExplorationState.Idle -> {
-                // Dismiss command bar
-                progressOverlayManager.dismissCommandBar()
+                // Dismiss floating widget
+                floatingProgressWidget?.dismiss()
             }
 
             is ExplorationState.Running -> {
-                // FIX (2025-12-06): Show/update command bar instead of full-screen overlay
+                // FIX (2025-12-07): Use new FloatingProgressWidget (draggable, transparent)
                 val progress = calculateProgress(state)
-                val message = "Exploring: ${state.progress.appName} (${state.progress.screensExplored} screens)"
+                val statusMsg = "Learning ${state.progress.appName}..."
+                val statsMsg = "${state.progress.screensExplored} screens, ${state.progress.elementsDiscovered} elements"
 
-                if (!progressOverlayManager.isCommandBarShowing()) {
-                    // Show command bar for first time
-                    progressOverlayManager.showCommandBar(state.packageName, progress)
-                    Log.i(TAG, "🚀 Started learning ${state.packageName} - Command bar shown")
+                // Create widget if needed (lazy init)
+                if (floatingProgressWidget == null) {
+                    floatingProgressWidget = FloatingProgressWidget(
+                        context = accessibilityService,
+                        onPauseClick = { explorationEngine.pauseExploration() },
+                        onResumeClick = { explorationEngine.resumeExploration() },
+                        onStopClick = { explorationEngine.stopExploration() }
+                    )
+                }
+
+                if (floatingProgressWidget?.isShowing() != true) {
+                    // Show widget for first time
+                    floatingProgressWidget?.show()
+                    Log.i(TAG, "🚀 Started learning ${state.packageName} - Floating widget shown")
 
                     // Show toast notification
                     scope.launch {
@@ -563,30 +573,33 @@ class LearnAppIntegration private constructor(
                             Toast.makeText(context, "🚀 Started learning ${state.progress.appName}", Toast.LENGTH_SHORT).show()
                         }
                     }
-                } else {
-                    // Update existing command bar
-                    progressOverlayManager.updateProgress(progress, message)
                 }
+
+                // Update progress
+                floatingProgressWidget?.updateProgress(progress, statusMsg, statsMsg)
             }
 
             is ExplorationState.PausedForLogin -> {
                 // Show login prompt overlay
                 showLoginPromptOverlay(state.packageName, state.progress.appName)
+                // Update widget to show paused state
+                floatingProgressWidget?.updatePauseState(true)
             }
 
             is ExplorationState.PausedByUser -> {
-                // Update command bar to show paused state
+                // Update widget to show paused state
                 val progress = calculateProgress(state)
-                progressOverlayManager.updateProgress(
+                floatingProgressWidget?.updateProgress(
                     progress,
-                    "⏸️ Paused by user - Tap Resume to continue"
+                    "Paused by user",
+                    "Tap Resume to continue"
                 )
-                progressOverlayManager.updatePauseState(true)
+                floatingProgressWidget?.updatePauseState(true)
             }
 
             is ExplorationState.Completed -> {
-                // Dismiss command bar
-                progressOverlayManager.dismissCommandBar()
+                // Dismiss floating widget
+                floatingProgressWidget?.dismiss()
 
                 // Hide login prompt overlay if showing
                 hideLoginPromptOverlay()
@@ -612,10 +625,10 @@ class LearnAppIntegration private constructor(
                     // FIX (2025-12-06): Enhanced completion notification with completeness
                     val completeness = state.stats.completeness
                     val message = if (completeness >= 95) {
-                        "✅ Learning complete! (${completeness.toInt()}%)\n" +
+                        "Learning complete! (${completeness.toInt()}%)\n" +
                         "${state.stats.totalScreens} screens, ${state.stats.totalElements} elements"
                     } else {
-                        "⚠️ Partial learning (${completeness.toInt()}%)\n" +
+                        "Partial learning (${completeness.toInt()}%)\n" +
                         "Some screens may have been blocked"
                     }
 
@@ -624,18 +637,12 @@ class LearnAppIntegration private constructor(
                         title = "Learning Complete",
                         message = message
                     )
-
-                    // TODO (v1.9): Show background notification when NotificationManager is implemented
-                    // progressOverlayManager.notificationManager?.showBackgroundNotification(
-                    //     state.packageName,
-                    //     completeness.toInt()
-                    // )
                 }
             }
 
             is ExplorationState.Failed -> {
-                // Dismiss command bar
-                progressOverlayManager.dismissCommandBar()
+                // Dismiss floating widget
+                floatingProgressWidget?.dismiss()
 
                 // Hide login prompt overlay if showing
                 hideLoginPromptOverlay()
@@ -1013,10 +1020,11 @@ class LearnAppIntegration private constructor(
     /**
      * Cleanup (call in onDestroy)
      * FIX (2025-11-30): Added scope.cancel() to prevent coroutine leaks
-     * FIX (2025-12-04): Enhanced cleanup to fix ProgressOverlay memory leak
+     * FIX (2025-12-04): Enhanced cleanup to fix overlay memory leak
+     * FIX (2025-12-07): Updated to use FloatingProgressWidget instead of ProgressOverlayManager
      *
      * Root cause: Memory leak chain:
-     *   VoiceOSService → learnAppIntegration → progressOverlayManager → progressOverlay → rootView (168.4 KB retained)
+     *   VoiceOSService → learnAppIntegration → floatingProgressWidget → widgetView (retained)
      *
      * Solution:
      *   1. Cancel coroutines first to stop any pending operations
@@ -1025,7 +1033,7 @@ class LearnAppIntegration private constructor(
      *
      * Leak verification:
      *   - LeakCanary should show zero leaks after this cleanup
-     *   - Memory profiler should show ProgressOverlay GC'd
+     *   - Memory profiler should show FloatingProgressWidget GC'd
      */
     fun cleanup() {
         if (developerSettings.isVerboseLoggingEnabled()) {
@@ -1060,13 +1068,14 @@ class LearnAppIntegration private constructor(
                 Log.d(TAG, "✓ Consent dialog manager cleaned up")
             }
 
-            // 4. CRITICAL: Cleanup progress overlay manager (fixes memory leak)
+            // 4. CRITICAL: Cleanup floating progress widget (fixes memory leak)
             if (developerSettings.isVerboseLoggingEnabled()) {
-                Log.d(TAG, "Cleaning up progress overlay manager...")
+                Log.d(TAG, "Cleaning up floating progress widget...")
             }
-            progressOverlayManager.cleanup()
+            floatingProgressWidget?.cleanup()
+            floatingProgressWidget = null
             if (developerSettings.isVerboseLoggingEnabled()) {
-                Log.d(TAG, "✓ Progress overlay manager cleaned up (leak chain broken)")
+                Log.d(TAG, "✓ Floating progress widget cleaned up (leak chain broken)")
             }
 
             // 5. Cleanup just-in-time learner

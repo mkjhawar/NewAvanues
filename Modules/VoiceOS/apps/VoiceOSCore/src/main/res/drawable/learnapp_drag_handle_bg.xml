@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  learnapp_drag_handle_bg.xml - Drag Handle Background
+  Visual indicator for draggable floating widget
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#4DFFFFFF" />
+    <corners android:radius="2dp" />
+</shape>
