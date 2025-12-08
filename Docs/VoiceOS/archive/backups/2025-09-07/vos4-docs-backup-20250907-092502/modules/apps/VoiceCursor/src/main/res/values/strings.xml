@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Name -->
+    <string name="app_name">VoiceCursor</string>
+    <string name="module_name">VoiceCursor</string>
+    
+    <!-- Service -->
+    <string name="cursor_service_name">VoiceCursor Overlay</string>
+    <string name="cursor_service_description">Provides virtual cursor overlay for hands-free navigation</string>
+    <string name="cursor_notification_title">VoiceCursor Active</string>
+    <string name="cursor_notification_text">Cursor overlay is running</string>
+    
+    <!-- Actions -->
+    <string name="action_click">Click</string>
+    <string name="action_double_click">Double Click</string>
+    <string name="action_long_press">Long Press</string>
+    <string name="action_drag">Drag</string>
+    <string name="action_scroll">Scroll</string>
+    <string name="action_center">Center</string>
+    <string name="action_hide">Hide</string>
+    <string name="action_show">Show</string>
+    <string name="action_toggle_type">Toggle Type</string>
+    <string name="action_toggle_coordinates">Toggle Coordinates</string>
+    
+    <!-- Menu -->
+    <string name="cursor_menu_title">Cursor Actions</string>
+    
+    <!-- Settings -->
+    <string name="settings_title">VoiceCursor Settings</string>
+    <string name="settings_enable">Enable Cursor</string>
+    <string name="settings_cursor_type">Cursor Type</string>
+    <string name="settings_cursor_size">Cursor Size</string>
+    <string name="settings_cursor_speed">Cursor Speed</string>
+    <string name="settings_cursor_color">Cursor Color</string>
+    <string name="settings_gaze_click">Gaze Click</string>
+    <string name="settings_gaze_delay">Gaze Delay</string>
+    
+    <!-- Cursor Types -->
+    <string name="cursor_type_normal">Normal</string>
+    <string name="cursor_type_hand">Hand</string>
+    <string name="cursor_type_crosshair">Crosshair</string>
+    
+    <!-- Colors -->
+    <string name="color_blue">Blue</string>
+    <string name="color_teal">Teal</string>
+    <string name="color_purple">Purple</string>
+    <string name="color_green">Green</string>
+    <string name="color_red">Red</string>
+    <string name="color_orange">Orange</string>
+    
+    <!-- Sizes -->
+    <string name="size_small">Small</string>
+    <string name="size_medium">Medium</string>
+    <string name="size_large">Large</string>
+    <string name="size_extra_large">Extra Large</string>
+    
+    <!-- Voice Commands -->
+    <string name="voice_command_cursor_up">cursor up</string>
+    <string name="voice_command_cursor_down">cursor down</string>
+    <string name="voice_command_cursor_left">cursor left</string>
+    <string name="voice_command_cursor_right">cursor right</string>
+    <string name="voice_command_cursor_click">cursor click</string>
+    <string name="voice_command_cursor_center">cursor center</string>
+    <string name="voice_command_cursor_hide">cursor hide</string>
+    <string name="voice_command_cursor_show">cursor show</string>
+    
+    <!-- Accessibility -->
+    <string name="accessibility_cursor_overlay">Virtual cursor for hands-free navigation</string>
+    <string name="accessibility_cursor_menu">Cursor action menu</string>
+    <string name="accessibility_service_description">Provides virtual cursor functionality for hands-free device navigation using head movements</string>
+    
+    <!-- Permissions -->
+    <string name="permission_overlay_title">Overlay Permission Required</string>
+    <string name="permission_overlay_message">VoiceCursor needs permission to display overlay windows for the cursor</string>
+    <string name="permission_accessibility_title">Accessibility Permission Required</string>
+    <string name="permission_accessibility_message">VoiceCursor needs accessibility permission to perform clicks and gestures</string>
+    
+    <!-- Errors -->
+    <string name="error_permission_denied">Permission denied. VoiceCursor cannot function without required permissions.</string>
+    <string name="error_service_start_failed">Failed to start cursor service</string>
+    <string name="error_imu_unavailable">Motion sensors unavailable on this device</string>
+    
+    <!-- Status -->
+    <string name="status_enabled">Enabled</string>
+    <string name="status_disabled">Disabled</string>
+    <string name="status_calibrating">Calibrating…</string>
+    <string name="status_ready">Ready</string>
+</resources>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Name -->
+    <string name="app_name">VoiceOS</string>
+    
+    <!-- Settings -->
+    <string name="settings_title">VoiceOS Settings</string>
+    
+    <!-- Permissions -->
+    <string name="permission_overlay_title">Overlay Permission Required</string>
+    <string name="permission_overlay_message">VoiceOS needs overlay permission to show voice feedback. Please grant this permission in settings.</string>
+    <string name="permission_microphone_title">Microphone Permission Required</string>
+    <string name="permission_microphone_message">VoiceOS needs microphone access to recognize voice commands.</string>
+    <string name="permission_accessibility_title">Accessibility Service Required</string>
+    <string name="permission_accessibility_message">Please enable VoiceOS accessibility service in settings to use voice control.</string>
+    
+    <!-- Commands -->
+    <string name="command_go_back">Go back</string>
+    <string name="command_go_home">Go home</string>
+    <string name="command_recent_apps">Recent apps</string>
+    <string name="command_notifications">Notifications</string>
+    <string name="command_click">Click</string>
+    <string name="command_scroll_up">Scroll up</string>
+    <string name="command_scroll_down">Scroll down</string>
+    
+    <!-- Feedback -->
+    <string name="listening">Listening…</string>
+    <string name="processing">Processing…</string>
+    <string name="command_executed">Command executed</string>
+    <string name="command_failed">Command failed</string>
+    <string name="wake_word_detected">Voice activated</string>
+    
+    <!-- Errors -->
+    <string name="error_no_permission">Permission denied</string>
+    <string name="error_service_not_running">Service not running</string>
+    <string name="error_recognition_failed">Recognition failed</string>
+    <string name="error_command_not_found">Command not recognized</string>
+    
+    <!-- Settings Items -->
+    <string name="setting_wake_word">Wake word</string>
+    <string name="setting_wake_word_summary">Say "Hey Voice" to activate</string>
+    <string name="setting_language">Language</string>
+    <string name="setting_language_summary">English (US)</string>
+    <string name="setting_feedback">Voice feedback</string>
+    <string name="setting_feedback_summary">Speak responses</string>
+    <string name="setting_overlay">Show overlay</string>
+    <string name="setting_overlay_summary">Show floating button</string>
+    
+    <!-- Actions -->
+    <string name="action_grant_permission">Grant Permission</string>
+    <string name="action_open_settings">Open Settings</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_cancel">Cancel</string>
+    
+    <!-- Accessibility Service Strings -->
+    <string name="accessibility_service_description">VoiceOS Accessibility Service enables voice control of your device. It can interact with all apps and UI elements to provide hands-free navigation and control.</string>
+    <string name="accessibility_service_label">VoiceOS Accessibility</string>
+    <string name="service_description_legacy">Legacy VoiceOS accessibility service for backward compatibility. Provides voice-controlled device interaction and hands-free navigation.</string>
+    
+    <!-- VoiceKeyboard Service Strings -->
+    <string name="voice_keyboard_name">VOS4 Voice Keyboard</string>
+    <string name="voice_keyboard_settings">Voice Keyboard Settings</string>
+    
+    <!-- VoiceKeyboard Language Subtypes -->
+    <string name="subtype_en_US">English (US)</string>
+    <string name="subtype_es_ES">Spanish (Spain)</string>
+    <string name="subtype_fr_FR">French (France)</string>
+    <string name="subtype_de_DE">German (Germany)</string>
+    <string name="subtype_it_IT">Italian (Italy)</string>
+    <string name="subtype_pt_BR">Portuguese (Brazil)</string>
+    <string name="subtype_ja_JP">Japanese</string>
+    <string name="subtype_ko_KR">Korean</string>
+    <string name="subtype_zh_CN">Chinese (Simplified)</string>
+</resources>
+
+<!-- End of File -->
