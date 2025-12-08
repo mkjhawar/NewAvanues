@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AVA - Responsive Multi-Screen Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 1.8em;
+        }
+
+        .back-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .control-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-label {
+            color: #666;
+            font-weight: 600;
+            min-width: 100px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .btn-secondary.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .orientation-toggle {
+            display: flex;
+            background: #f0f0f0;
+            border-radius: 8px;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .orientation-toggle button {
+            padding: 8px 16px;
+            background: transparent;
+            border-radius: 6px;
+        }
+
+        .orientation-toggle button.active {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .device-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .device-frame {
+            margin: 0 auto;
+            background: #000;
+            border-radius: 40px;
+            padding: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        /* Portrait dimensions */
+        .device-frame.portrait.size-mobile {
+            width: 375px;
+            height: 667px;
+        }
+
+        .device-frame.portrait.size-tablet {
+            width: 720px;
+            height: 1024px;
+        }
+
+        .device-frame.portrait.size-large {
+            width: 800px;
+            height: 1280px;
+        }
+
+        /* Landscape dimensions */
+        .device-frame.landscape.size-mobile {
+            width: 667px;
+            height: 375px;
+        }
+
+        .device-frame.landscape.size-tablet {
+            width: 1024px;
+            height: 720px;
+        }
+
+        .device-frame.landscape.size-large {
+            width: 1280px;
+            height: 800px;
+        }
+
+        .device-screen {
+            width: 100%;
+            height: 100%;
+            background: #1a1a1a;
+            border-radius: 30px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative; /* For overlay positioning */
+        }
+
+        .status-bar {
+            height: 24px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 12px;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .top-bar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .top-bar h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Landscape layout */
+        .device-frame.landscape .content-area {
+            flex-direction: row;
+            gap: 16px;
+        }
+
+        .device-frame.landscape .chat-column,
+        .device-frame.landscape .teach-column {
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* Chat bubbles */
+        .chat-message {
+            padding: 12px 16px;
+            border-radius: 16px;
+            max-width: 80%;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .ai-message {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+            align-self: flex-start;
+        }
+
+        .teaching-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .teaching-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .teaching-card h3 {
+            color: #03DAC6;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .teaching-card p {
+            color: #a0a0a0;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .bottom-nav {
+            height: 60px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #808080;
+            font-size: 11px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+
+        .nav-item.active {
+            color: #03DAC6;
+        }
+
+        .nav-item:hover {
+            color: #ffffff;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .metrics-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .metric-card {
+            background: #f5f5f7;
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            color: #333;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 1400px) {
+            .device-frame.landscape.size-large {
+                transform: scale(0.8);
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .device-frame.landscape.size-tablet {
+                transform: scale(0.9);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .device-frame {
+                transform: scale(0.8) !important;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .device-frame {
+                transform: scale(0.6) !important;
+            }
+
+            .header h1 {
+                font-size: 1.4em;
+            }
+
+            .control-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        /* AVA Overlay Demo Styles */
+        /* Floating Bubble */
+        .floating-bubble {
+            position: absolute;
+            top: 200px;
+            right: 16px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .floating-bubble:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+        }
+
+        .floating-bubble:active {
+            transform: scale(0.95);
+        }
+
+        /* Chat Overlay */
+        .chat-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(28, 28, 30, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+            transform: translateY(100%);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 999;
+        }
+
+        .chat-overlay.visible {
+            transform: translateY(0);
+        }
+
+        /* Compact Header */
+        .overlay-compact-header {
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .overlay-compact-header.no-border {
+            border-bottom: none;
+        }
+
+        .overlay-ava-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .overlay-ava-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .overlay-ava-text h4 {
+            color: #ffffff;
+            font-size: 16px;
+            margin: 0 0 4px 0;
+        }
+
+        .overlay-ava-text p {
+            color: #a0a0a0;
+            font-size: 12px;
+            margin: 0;
+        }
+
+        .overlay-controls {
+            display: flex;
+            gap: 4px;
+        }
+
+        .overlay-control-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            color: #a0a0a0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .overlay-control-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .overlay-control-btn.close {
+            color: #ef4444;
+        }
+
+        .overlay-control-btn.close:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Opacity Slider */
+        .overlay-opacity-slider {
+            padding: 0 16px 16px 16px;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .overlay-opacity-slider.visible {
+            max-height: 100px;
+            padding: 16px;
+        }
+
+        .opacity-slider-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .opacity-slider-row span {
+            color: #a0a0a0;
+            font-size: 14px;
+        }
+
+        .opacity-value {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .opacity-slider-input {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .opacity-slider-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+        }
+
+        .opacity-slider-input::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Expanded Content */
+        .overlay-expanded-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .overlay-expanded-content.visible {
+            max-height: 400px;
+        }
+
+        .overlay-chat-area {
+            height: 280px;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .overlay-chat-placeholder {
+            text-align: center;
+        }
+
+        .overlay-chat-placeholder .icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .overlay-chat-placeholder h3 {
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+
+        .overlay-chat-placeholder p {
+            color: #a0a0a0;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .overlay-chat-placeholder .highlight {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .overlay-input-area {
+            padding: 16px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .overlay-input-field {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            padding: 12px 16px;
+            color: #ffffff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .overlay-input-field::placeholder {
+            color: #666;
+        }
+
+        .overlay-send-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .overlay-send-btn:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📱 AVA - Responsive Multi-Screen Demo</h1>
+        <a href="index.html" class="back-link">← Back to Suite</a>
+    </div>
+
+    <div class="controls">
+        <div class="control-row">
+            <span class="control-label">Screen Size:</span>
+            <button class="btn-secondary active" onclick="changeSize('mobile')">📱 Mobile (375x667)</button>
+            <button class="btn-secondary" onclick="changeSize('tablet')">📱 Tablet (720x1024)</button>
+            <button class="btn-secondary" onclick="changeSize('large')">🖥️ Large (800x1280)</button>
+        </div>
+
+        <div class="control-row">
+            <span class="control-label">Orientation:</span>
+            <div class="orientation-toggle">
+                <button class="active" onclick="setOrientation('portrait')">📱 Portrait</button>
+                <button onclick="setOrientation('landscape')">📱 Landscape</button>
+            </div>
+        </div>
+
+        <div class="control-row">
+            <span class="control-label">View:</span>
+            <button class="btn-secondary active" onclick="switchView('chat')">💬 Chat</button>
+            <button class="btn-secondary" onclick="switchView('teach')">🎓 Teach</button>
+            <button class="btn-secondary" onclick="switchView('settings')">⚙️ Settings</button>
+        </div>
+
+        <div class="control-row">
+            <span class="control-label">Overlay Demo:</span>
+            <button class="btn-primary" onclick="toggleOverlayDemo()">Toggle Overlay</button>
+            <button class="btn-secondary" onclick="expandOverlayDemo()">Expand</button>
+            <button class="btn-secondary" onclick="compactOverlayDemo()">Compact</button>
+            <button class="btn-secondary" onclick="toggleOpacitySlider()">Opacity</button>
+        </div>
+    </div>
+
+    <div class="device-container">
+        <div class="device-frame portrait size-mobile" id="deviceFrame">
+            <div class="device-screen">
+                <div class="status-bar">
+                    <span id="clock">9:41</span>
+                    <span>📶 📡 🔋</span>
+                </div>
+
+                <div class="top-bar">
+                    <h1 id="screenTitle">Chat with AVA</h1>
+                    <div class="status-badge">
+                        <div class="status-dot"></div>
+                        <span>Active</span>
+                    </div>
+                </div>
+
+                <div class="content-area" id="contentArea">
+                    <!-- Chat view (default) -->
+                    <div id="chatView" class="view-content">
+                        <div class="user-message chat-message">Hey AVA, what can you help me with?</div>
+                        <div class="ai-message chat-message">Hello! I'm AVA, your personal AI assistant. I can help you with conversations, learning, and managing your daily tasks. What would you like to do?</div>
+                        <div class="user-message chat-message">Tell me about the weather</div>
+                        <div class="ai-message chat-message">I can provide weather information for your location. Currently, it's 72°F and partly cloudy. Would you like a detailed forecast?</div>
+                        <div class="user-message chat-message">Yes please!</div>
+                        <div class="ai-message chat-message">Here's your 5-day forecast:
+• Today: 72°F, Partly Cloudy
+• Tomorrow: 68°F, Rainy
+• Sunday: 75°F, Sunny
+• Monday: 73°F, Cloudy
+• Tuesday: 70°F, Sunny</div>
+                    </div>
+
+                    <!-- Teach view (hidden by default) -->
+                    <div id="teachView" class="view-content" style="display: none;">
+                        <div class="teaching-card">
+                            <h3>Voice Commands</h3>
+                            <p>"Open navigation" → Opens navigation view</p>
+                        </div>
+                        <div class="teaching-card">
+                            <h3>Quick Actions</h3>
+                            <p>"Set a timer for 5 minutes" → Creates countdown</p>
+                        </div>
+                        <div class="teaching-card">
+                            <h3>Smart Responses</h3>
+                            <p>"What's my schedule?" → Shows calendar</p>
+                        </div>
+                        <div class="teaching-card">
+                            <h3>Personalization</h3>
+                            <p>"Remember I like dark mode" → Saves preference</p>
+                        </div>
+                    </div>
+
+                    <!-- Settings view (hidden by default) -->
+                    <div id="settingsView" class="view-content" style="display: none;">
+                        <div class="teaching-card">
+                            <h3>Theme Settings</h3>
+                            <p>Choose between light, dark, or auto theme modes</p>
+                        </div>
+                        <div class="teaching-card">
+                            <h3>Voice Preferences</h3>
+                            <p>Customize voice recognition and response settings</p>
+                        </div>
+                        <div class="teaching-card">
+                            <h3>Privacy & Security</h3>
+                            <p>Manage your data, permissions, and security options</p>
+                        </div>
+                        <div class="teaching-card">
+                            <h3>About AVA</h3>
+                            <p>Version 2.0 | On-device AI Assistant</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bottom-nav">
+                    <div class="nav-item active" onclick="switchView('chat')">
+                        <div class="nav-icon">💬</div>
+                        <span>Chat</span>
+                    </div>
+                    <div class="nav-item" onclick="switchView('teach')">
+                        <div class="nav-icon">🎓</div>
+                        <span>Teach</span>
+                    </div>
+                    <div class="nav-item" onclick="switchView('settings')">
+                        <div class="nav-icon">⚙️</div>
+                        <span>Settings</span>
+                    </div>
+                </div>
+
+                <!-- AVA Overlay Demo (overlays the device screen) -->
+                <!-- Floating Bubble -->
+                <div class="floating-bubble" id="floatingBubble" onclick="toggleOverlayDemo()">
+                    <span style="font-size: 28px;">🎤</span>
+                </div>
+
+                <!-- Chat Overlay -->
+                <div class="chat-overlay" id="chatOverlay">
+                    <!-- Compact Header (always visible) -->
+                    <div class="overlay-compact-header" id="overlayHeader">
+                        <div class="overlay-ava-info">
+                            <div class="overlay-ava-icon">🎤</div>
+                            <div class="overlay-ava-text">
+                                <h4>AVA Assistant</h4>
+                                <p id="overlayStatusText">Tap to expand</p>
+                            </div>
+                        </div>
+                        <div class="overlay-controls">
+                            <button class="overlay-control-btn" onclick="toggleOpacitySlider()" title="Adjust transparency">
+                                <span>💧</span>
+                            </button>
+                            <button class="overlay-control-btn" id="expandBtn" onclick="toggleExpandOverlay()" title="Expand/Minimize">
+                                <span id="expandIcon">🔼</span>
+                            </button>
+                            <button class="overlay-control-btn close" onclick="toggleOverlayDemo()" title="Close">
+                                <span>✖️</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Opacity Slider (conditionally visible) -->
+                    <div class="overlay-opacity-slider" id="opacitySlider">
+                        <div class="opacity-slider-row">
+                            <span>Transparency</span>
+                            <span class="opacity-value" id="opacityValue">15%</span>
+                        </div>
+                        <input type="range" class="opacity-slider-input" id="opacityInput"
+                               min="30" max="95" value="85"
+                               oninput="updateOverlayOpacity(this.value)">
+                    </div>
+
+                    <!-- Expanded Content (conditionally visible) -->
+                    <div class="overlay-expanded-content" id="expandedContent">
+                        <!-- Chat Area -->
+                        <div class="overlay-chat-area">
+                            <div class="overlay-chat-placeholder">
+                                <div class="icon">💬</div>
+                                <h3>AVA Chat Interface</h3>
+                                <p>Integration with ChatScreen coming soon</p>
+                                <p class="highlight">You can see the app behind this overlay!</p>
+                            </div>
+                        </div>
+
+                        <!-- Input Area -->
+                        <div class="overlay-input-area">
+                            <input type="text" class="overlay-input-field" placeholder="Ask AVA anything...">
+                            <button class="overlay-send-btn">📤</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metrics-panel">
+        <h2>Demo Metrics</h2>
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Current Size</div>
+                <div class="metric-value" id="currentSize">Mobile</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Orientation</div>
+                <div class="metric-value" id="currentOrientation">Portrait</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Dimensions</div>
+                <div class="metric-value" id="currentDimensions">375 × 667</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Active View</div>
+                <div class="metric-value" id="currentView">Chat</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentOrientation = 'portrait';
+        let currentSize = 'mobile';
+        let currentViewName = 'chat';
+
+        // Update clock
+        function updateClock() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function setOrientation(orientation) {
+            currentOrientation = orientation;
+            const frame = document.getElementById('deviceFrame');
+
+            // Remove old orientation class
+            frame.classList.remove('portrait', 'landscape');
+            // Add new orientation class
+            frame.classList.add(orientation);
+
+            // Update toggle buttons
+            document.querySelectorAll('.orientation-toggle button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update metrics
+            updateMetrics();
+        }
+
+        function changeSize(size) {
+            currentSize = size;
+            const frame = document.getElementById('deviceFrame');
+
+            // Remove old size class
+            frame.classList.remove('size-mobile', 'size-tablet', 'size-large');
+            // Add new size class
+            frame.classList.add(`size-${size}`);
+
+            // Update size buttons
+            const sizeButtons = document.querySelectorAll('.control-row:first-child .btn-secondary');
+            sizeButtons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update metrics
+            updateMetrics();
+        }
+
+        function switchView(viewName) {
+            currentViewName = viewName;
+
+            // Hide all views
+            document.getElementById('chatView').style.display = 'none';
+            document.getElementById('teachView').style.display = 'none';
+            document.getElementById('settingsView').style.display = 'none';
+
+            // Show selected view
+            document.getElementById(`${viewName}View`).style.display = 'flex';
+
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.nav-item').classList.add('active');
+
+            // Update view buttons
+            const viewButtons = document.querySelectorAll('.control-row:last-child .btn-secondary');
+            viewButtons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update title
+            const titles = {
+                chat: 'Chat with AVA',
+                teach: 'Teach AVA',
+                settings: 'Settings'
+            };
+            document.getElementById('screenTitle').textContent = titles[viewName];
+
+            // Update metrics
+            updateMetrics();
+        }
+
+        function updateMetrics() {
+            const dimensions = {
+                mobile: { portrait: '375 × 667', landscape: '667 × 375' },
+                tablet: { portrait: '720 × 1024', landscape: '1024 × 720' },
+                large: { portrait: '800 × 1280', landscape: '1280 × 800' }
+            };
+
+            const sizeNames = {
+                mobile: 'Mobile',
+                tablet: 'Tablet',
+                large: 'Large'
+            };
+
+            const viewNames = {
+                chat: 'Chat',
+                teach: 'Teach',
+                settings: 'Settings'
+            };
+
+            document.getElementById('currentSize').textContent = sizeNames[currentSize];
+            document.getElementById('currentOrientation').textContent =
+                currentOrientation.charAt(0).toUpperCase() + currentOrientation.slice(1);
+            document.getElementById('currentDimensions').textContent =
+                dimensions[currentSize][currentOrientation];
+            document.getElementById('currentView').textContent = viewNames[currentViewName];
+        }
+
+        // Initialize
+        updateMetrics();
+
+        // Overlay Demo Functions
+        let isOverlayVisible = false;
+        let isOverlayExpanded = false;
+        let isOpacitySliderVisible = false;
+
+        function toggleOverlayDemo() {
+            isOverlayVisible = !isOverlayVisible;
+            const overlay = document.getElementById('chatOverlay');
+            overlay.classList.toggle('visible', isOverlayVisible);
+
+            // If closing, reset to compact mode
+            if (!isOverlayVisible) {
+                compactOverlayDemo();
+            }
+        }
+
+        function toggleExpandOverlay() {
+            if (isOverlayExpanded) {
+                compactOverlayDemo();
+            } else {
+                expandOverlayDemo();
+            }
+        }
+
+        function expandOverlayDemo() {
+            if (!isOverlayVisible) {
+                toggleOverlayDemo();
+            }
+            isOverlayExpanded = true;
+            const expandedContent = document.getElementById('expandedContent');
+            const overlayHeader = document.getElementById('overlayHeader');
+            const expandIcon = document.getElementById('expandIcon');
+            const statusText = document.getElementById('overlayStatusText');
+
+            expandedContent.classList.add('visible');
+            overlayHeader.classList.add('no-border');
+            expandIcon.textContent = '🔽';
+            statusText.textContent = 'Tap to minimize';
+        }
+
+        function compactOverlayDemo() {
+            isOverlayExpanded = false;
+            const expandedContent = document.getElementById('expandedContent');
+            const overlayHeader = document.getElementById('overlayHeader');
+            const expandIcon = document.getElementById('expandIcon');
+            const statusText = document.getElementById('overlayStatusText');
+
+            expandedContent.classList.remove('visible');
+            overlayHeader.classList.remove('no-border');
+            expandIcon.textContent = '🔼';
+            statusText.textContent = 'Tap to expand';
+        }
+
+        function toggleOpacitySlider() {
+            isOpacitySliderVisible = !isOpacitySliderVisible;
+            const opacitySlider = document.getElementById('opacitySlider');
+            opacitySlider.classList.toggle('visible', isOpacitySliderVisible);
+        }
+
+        function updateOverlayOpacity(value) {
+            const overlay = document.getElementById('chatOverlay');
+            const opacityPercent = (100 - parseInt(value));
+            const opacityValue = document.getElementById('opacityValue');
+
+            // Update display
+            opacityValue.textContent = `${opacityPercent}%`;
+
+            // Update overlay background opacity
+            const alpha = parseFloat(value) / 100;
+            overlay.style.background = `rgba(28, 28, 30, ${alpha})`;
+        }
+
+        // Initialize overlay opacity
+        updateOverlayOpacity(85);
+    </script>
+</body>
+</html>
