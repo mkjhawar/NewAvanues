@@ -90,6 +90,9 @@ include(":Modules:VoiceOS:core:text-utils")         // Text manipulation and san
 include(":Modules:VoiceOS:core:json-utils")          // JSON manipulation utilities
 include(":Modules:VoiceOS:core:database")            // SQLDelight KMP database (VoiceDataManager migration)
 
+// Shared Modules (Cross-project KMP libraries)
+include(":Modules:Shared:NLU")                      // Unified NLU with AVU format parser
+
 // Code Import - Temporary modules for testing
 // include(":CodeImport:SR6-Hybrid")  // DISABLED - Using unified :libraries:SpeechRecognition instead
 // include(":CodeImport:VoiceOSAccessibility")  // DISABLED - Using apps:VoiceOSCore instead
@@ -133,3 +136,6 @@ project(":Modules:VoiceOS:core:json-utils").projectDir = file("../../../Modules/
 project(":Modules:VoiceOS:core:database").projectDir = file("../../../Modules/VoiceOS/core/database")
 
 project(":Common:ThirdParty:Vosk").projectDir = file("../../../Common/ThirdParty/Vosk")
+
+// Shared module mappings
+project(":Modules:Shared:NLU").projectDir = file("../../../Modules/Shared/NLU")
