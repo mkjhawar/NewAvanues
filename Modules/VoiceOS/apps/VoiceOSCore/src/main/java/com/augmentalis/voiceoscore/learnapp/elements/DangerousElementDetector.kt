@@ -223,7 +223,10 @@ class DangerousElementDetector {
             // Financial
             Regex("transfer", RegexOption.IGNORE_CASE) to "Transfer",
             Regex("withdraw", RegexOption.IGNORE_CASE) to "Withdraw",
-            Regex("donate", RegexOption.IGNORE_CASE) to "Donate"
+            Regex("donate", RegexOption.IGNORE_CASE) to "Donate",
+
+            // Download actions (2025-12-07) - skip click but generate UUID/command
+            Regex("download", RegexOption.IGNORE_CASE) to "Download"
         )
 
         /**
@@ -281,7 +284,9 @@ class DangerousElementDetector {
             "reset" to "Reset action",
             "clear" to "Clear action",
             "erase" to "Erase action",
-            "uninstall" to "Uninstall action"
+            "uninstall" to "Uninstall action",
+            // Download actions (2025-12-07) - skip click but generate UUID/command
+            "download" to "Download action"
         )
     }
 }
