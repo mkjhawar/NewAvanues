@@ -71,6 +71,33 @@ import com.augmentalis.voiceoscore.ui.components.FloatingEngineSelector
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/**
+ * Ocean Theme Color Palette
+ * Modern, calming colors optimized for RealWear Navigator 500
+ */
+object OceanTheme {
+    // Primary ocean colors
+    val DeepOcean = Color(0xFF0A1628)      // Dark background
+    val OceanBlue = Color(0xFF0D47A1)      // Primary blue
+    val TealWave = Color(0xFF00838F)       // Teal accent
+    val SeafoamGreen = Color(0xFF00897B)   // Green accent
+    val CoralAccent = Color(0xFFFF7043)    // Warning/action accent
+
+    // Surface colors
+    val SurfaceLight = Color(0xFF1A2A3D)   // Card surface
+    val SurfaceMedium = Color(0xFF0F1E2E) // Elevated surface
+
+    // Text colors
+    val TextPrimary = Color(0xFFE3F2FD)    // Light blue-white
+    val TextSecondary = Color(0xFF90CAF9)  // Muted blue
+    val TextMuted = Color(0xFF64B5F6)      // Subtle text
+
+    // Status colors
+    val StatusActive = Color(0xFF4DB6AC)   // Teal green
+    val StatusInactive = Color(0xFFFF8A65) // Coral orange
+    val StatusWarning = Color(0xFFFFB74D)  // Amber
+}
+
 class MainActivity : ComponentActivity() {
     
     private val viewModel: MainViewModel by viewModels()
@@ -213,54 +240,68 @@ fun MainScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF000000))
+            .background(OceanTheme.DeepOcean)
     ) {
         if (isLandscape) {
-            // LANDSCAPE: Two-column layout for maximum space usage
+            // LANDSCAPE: Modern 3-column layout for RealWear 854x480
+            // Optimized for voice-controlled navigation
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(spacing.outerPadding),
-                horizontalArrangement = Arrangement.spacedBy(spacing.itemSpacing)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Left column: Header + Permissions
+                // Left column: Branding + Status (narrow)
                 Column(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(spacing.itemSpacing)
+                        .weight(0.35f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    HeaderSectionCompact(spacing)
-                    ServiceStatusCardCompact(
+                    // Compact branding header
+                    OceanHeaderLandscape()
+
+                    // Service status - most important
+                    OceanServiceStatusLandscape(
                         serviceEnabled = serviceEnabled,
                         overlayPermissionGranted = overlayPermissionGranted,
                         onEnableService = {
                             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                             context.startActivity(intent)
                         },
-                        onRequestOverlay = onRequestOverlayPermission,
-                        spacing = spacing
+                        onRequestOverlay = onRequestOverlayPermission
                     )
                 }
 
-                // Right column: Stats + Navigation + Footer
+                // Center column: Stats + Quick Actions
                 Column(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(spacing.itemSpacing)
+                        .weight(0.35f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    QuickStatsCardCompact(configuration = configuration, spacing = spacing)
-                    NavigationCardsCompact(
+                    OceanStatsLandscape(configuration = configuration)
+                    OceanQuickActionsLandscape(
                         onNavigateToSettings = onNavigateToSettings,
                         onNavigateToTesting = onNavigateToTesting,
-                        serviceEnabled = serviceEnabled,
-                        spacing = spacing
+                        serviceEnabled = serviceEnabled
+                    )
+                }
+
+                // Right column: Navigation cards (wider)
+                Column(
+                    modifier = Modifier
+                        .weight(0.3f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    OceanNavigationLandscape(
+                        onNavigateToSettings = onNavigateToSettings,
+                        onNavigateToTesting = onNavigateToTesting,
+                        serviceEnabled = serviceEnabled
                     )
                     Spacer(modifier = Modifier.weight(1f))
-                    FooterSectionCompact()
+                    OceanFooterLandscape()
                 }
             }
         } else {
@@ -1023,4 +1064,524 @@ fun FooterSectionCompact() {
         style = MaterialTheme.typography.labelSmall,
         color = Color.White.copy(alpha = 0.3f)
     )
+}
+
+// ============================================================================
+// OCEAN THEME LANDSCAPE COMPONENTS
+// Optimized for RealWear Navigator 500 (854x480)
+// ============================================================================
+
+/**
+ * Ocean-themed header for landscape mode
+ */
+@Composable
+fun OceanHeaderLandscape() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .glassMorphism(
+                config = GlassMorphismConfig(
+                    cornerRadius = 8.dp,
+                    backgroundOpacity = 0.15f,
+                    borderOpacity = 0.2f,
+                    borderWidth = 1.dp,
+                    tintColor = OceanTheme.TealWave,
+                    tintOpacity = 0.15f
+                ),
+                depth = DepthLevel(0.7f)
+            ),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Ocean wave icon effect
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                            colors = listOf(OceanTheme.TealWave, OceanTheme.OceanBlue)
+                        ),
+                        shape = RoundedCornerShape(6.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Accessibility,
+                    contentDescription = "VoiceOS",
+                    modifier = Modifier.size(18.dp),
+                    tint = OceanTheme.TextPrimary
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Column {
+                Text(
+                    text = "VoiceOS",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = OceanTheme.TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Voice Control System",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = OceanTheme.TextMuted
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Ocean-themed service status for landscape
+ */
+@Composable
+fun OceanServiceStatusLandscape(
+    serviceEnabled: Boolean,
+    overlayPermissionGranted: Boolean,
+    onEnableService: () -> Unit,
+    onRequestOverlay: () -> Unit
+) {
+    val allEnabled = serviceEnabled && overlayPermissionGranted
+    val statusColor = if (allEnabled) OceanTheme.StatusActive else OceanTheme.StatusInactive
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .glassMorphism(
+                config = GlassMorphismConfig(
+                    cornerRadius = 8.dp,
+                    backgroundOpacity = 0.12f,
+                    borderOpacity = 0.18f,
+                    borderWidth = 1.dp,
+                    tintColor = statusColor,
+                    tintOpacity = 0.12f
+                ),
+                depth = DepthLevel(0.6f)
+            ),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
+            // Status header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Status",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = OceanTheme.TextPrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(statusColor, RoundedCornerShape(50))
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (allEnabled) "Ready" else "Setup",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = statusColor,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Permission items
+            OceanPermissionItem(
+                icon = Icons.Default.Accessibility,
+                label = "Accessibility",
+                isEnabled = serviceEnabled,
+                onClick = if (!serviceEnabled) onEnableService else null
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            OceanPermissionItem(
+                icon = Icons.Default.Layers,
+                label = "Overlay",
+                isEnabled = overlayPermissionGranted,
+                onClick = if (!overlayPermissionGranted) onRequestOverlay else null
+            )
+        }
+    }
+}
+
+/**
+ * Ocean-themed permission item
+ */
+@Composable
+fun OceanPermissionItem(
+    icon: ImageVector,
+    label: String,
+    isEnabled: Boolean,
+    onClick: (() -> Unit)?
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = onClick != null) { onClick?.invoke() }
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            modifier = Modifier.size(14.dp),
+            tint = if (isEnabled) OceanTheme.StatusActive else OceanTheme.StatusInactive
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = OceanTheme.TextSecondary,
+            modifier = Modifier.weight(1f)
+        )
+        Icon(
+            imageVector = if (isEnabled) Icons.Default.CheckCircle else Icons.Default.Warning,
+            contentDescription = null,
+            modifier = Modifier.size(12.dp),
+            tint = if (isEnabled) OceanTheme.StatusActive else OceanTheme.StatusInactive
+        )
+        if (onClick != null) {
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Configure",
+                modifier = Modifier.size(10.dp),
+                tint = OceanTheme.TextMuted
+            )
+        }
+    }
+}
+
+/**
+ * Ocean-themed stats card for landscape
+ */
+@Composable
+fun OceanStatsLandscape(configuration: ServiceConfiguration) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .glassMorphism(
+                config = GlassMorphismConfig(
+                    cornerRadius = 8.dp,
+                    backgroundOpacity = 0.1f,
+                    borderOpacity = 0.15f,
+                    borderWidth = 1.dp,
+                    tintColor = OceanTheme.SeafoamGreen,
+                    tintOpacity = 0.1f
+                ),
+                depth = DepthLevel(0.5f)
+            ),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = "Configuration",
+                style = MaterialTheme.typography.labelMedium,
+                color = OceanTheme.TextPrimary,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                OceanStatItem(
+                    value = if (configuration.handlersEnabled) "7" else "—",
+                    label = "Handlers",
+                    color = OceanTheme.TealWave
+                )
+                OceanStatItem(
+                    value = if (configuration.cursorEnabled) "ON" else "OFF",
+                    label = "Cursor",
+                    color = OceanTheme.SeafoamGreen
+                )
+                OceanStatItem(
+                    value = "${configuration.maxCacheSize}",
+                    label = "Cache",
+                    color = OceanTheme.OceanBlue
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Ocean-themed stat item
+ */
+@Composable
+fun OceanStatItem(value: String, label: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleSmall,
+            color = color,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = OceanTheme.TextMuted
+        )
+    }
+}
+
+/**
+ * Ocean-themed quick actions for landscape
+ */
+@Composable
+fun OceanQuickActionsLandscape(
+    onNavigateToSettings: () -> Unit,
+    onNavigateToTesting: () -> Unit,
+    serviceEnabled: Boolean
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .glassMorphism(
+                config = GlassMorphismConfig(
+                    cornerRadius = 8.dp,
+                    backgroundOpacity = 0.08f,
+                    borderOpacity = 0.12f,
+                    borderWidth = 1.dp,
+                    tintColor = OceanTheme.OceanBlue,
+                    tintOpacity = 0.08f
+                ),
+                depth = DepthLevel(0.4f)
+            ),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = "Quick Actions",
+                style = MaterialTheme.typography.labelMedium,
+                color = OceanTheme.TextPrimary,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OceanActionButton(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Settings,
+                    label = "Settings",
+                    color = OceanTheme.TealWave,
+                    onClick = onNavigateToSettings
+                )
+                OceanActionButton(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.PlayArrow,
+                    label = "Test",
+                    color = OceanTheme.SeafoamGreen,
+                    enabled = serviceEnabled,
+                    onClick = onNavigateToTesting
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Ocean-themed action button
+ */
+@Composable
+fun OceanActionButton(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    label: String,
+    color: Color,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .clickable(enabled = enabled) { onClick() },
+        shape = RoundedCornerShape(6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (enabled) color.copy(alpha = 0.15f) else OceanTheme.SurfaceMedium
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                modifier = Modifier.size(14.dp),
+                tint = if (enabled) color else OceanTheme.TextMuted
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (enabled) OceanTheme.TextPrimary else OceanTheme.TextMuted,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+/**
+ * Ocean-themed navigation section for landscape
+ */
+@Composable
+fun OceanNavigationLandscape(
+    onNavigateToSettings: () -> Unit,
+    onNavigateToTesting: () -> Unit,
+    serviceEnabled: Boolean
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .glassMorphism(
+                config = GlassMorphismConfig(
+                    cornerRadius = 8.dp,
+                    backgroundOpacity = 0.1f,
+                    borderOpacity = 0.15f,
+                    borderWidth = 1.dp,
+                    tintColor = OceanTheme.OceanBlue,
+                    tintOpacity = 0.1f
+                ),
+                depth = DepthLevel(0.5f)
+            ),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = "Navigate",
+                style = MaterialTheme.typography.labelMedium,
+                color = OceanTheme.TextPrimary,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            // Settings nav item
+            OceanNavItem(
+                icon = Icons.Default.Settings,
+                title = "Settings",
+                subtitle = "Configure VoiceOS",
+                color = OceanTheme.TealWave,
+                onClick = onNavigateToSettings
+            )
+
+            // Testing nav item
+            OceanNavItem(
+                icon = Icons.Default.PlayArrow,
+                title = "Testing",
+                subtitle = "Test commands",
+                color = OceanTheme.SeafoamGreen,
+                enabled = serviceEnabled,
+                onClick = onNavigateToTesting
+            )
+        }
+    }
+}
+
+/**
+ * Ocean-themed navigation item
+ */
+@Composable
+fun OceanNavItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    color: Color,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { onClick() },
+        shape = RoundedCornerShape(6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (enabled) color.copy(alpha = 0.1f) else Color.Transparent
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                modifier = Modifier.size(16.dp),
+                tint = if (enabled) color else OceanTheme.TextMuted
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (enabled) OceanTheme.TextPrimary else OceanTheme.TextMuted,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = OceanTheme.TextMuted
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Go",
+                modifier = Modifier.size(12.dp),
+                tint = if (enabled) OceanTheme.TextMuted else Color.Transparent
+            )
+        }
+    }
+}
+
+/**
+ * Ocean-themed footer for landscape
+ */
+@Composable
+fun OceanFooterLandscape() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(4.dp)
+                .background(OceanTheme.TealWave, RoundedCornerShape(50))
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = "VOS4 • Intelligent Devices",
+            style = MaterialTheme.typography.labelSmall,
+            color = OceanTheme.TextMuted.copy(alpha = 0.6f)
+        )
+    }
 }
