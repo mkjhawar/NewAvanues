@@ -597,6 +597,18 @@ class LearnAppIntegration private constructor(
                 floatingProgressWidget?.updatePauseState(true)
             }
 
+            is ExplorationState.Paused -> {
+                // FIX (2025-12-07): Handle unified Paused state
+                // This state is used by the new pause() function in ExplorationEngine
+                val progress = calculateProgress(state)
+                floatingProgressWidget?.updateProgress(
+                    progress,
+                    "Paused: ${state.reason}",
+                    "Tap Resume to continue"
+                )
+                floatingProgressWidget?.updatePauseState(true)
+            }
+
             is ExplorationState.Completed -> {
                 // Dismiss floating widget
                 floatingProgressWidget?.dismiss()
@@ -911,6 +923,11 @@ class LearnAppIntegration private constructor(
                 }
                 is ExplorationState.PausedByUser -> {
                     // Calculate from screens explored
+                    val percentage = state.progress.calculatePercentage()
+                    (percentage * 100).toInt().coerceIn(0, 100)
+                }
+                is ExplorationState.Paused -> {
+                    // FIX (2025-12-07): Handle unified Paused state
                     val percentage = state.progress.calculatePercentage()
                     (percentage * 100).toInt().coerceIn(0, 100)
                 }
