@@ -181,26 +181,13 @@ class FloatingProgressWidget(
         scope.launch {
             withContext(Dispatchers.Main) {
                 try {
-                    // FIX (2025-12-07): Check if widget is still attached
-                    // If isShowing is true but the view is not attached, recover
-                    if (isShowing && widgetView?.windowToken == null) {
-                        Log.w(TAG, "Widget view detached - attempting to recover")
-                        isShowing = false
-                        try {
-                            // Re-add the view to WindowManager
-                            windowManager.addView(widgetView, layoutParams)
-                            isShowing = true
-                            Log.i(TAG, "Widget successfully recovered")
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to recover widget - recreating", e)
-                            // View might be invalid, recreate it
-                            widgetView = null
-                            createWidget()
-                            layoutParams = createLayoutParams()
-                            windowManager.addView(widgetView, layoutParams)
-                            isShowing = true
-                            Log.i(TAG, "Widget recreated successfully")
-                        }
+                    // FIX (2025-12-08): Removed faulty recovery mechanism that caused duplicate widgets
+                    // The windowToken check was unreliable and caused addView to be called
+                    // while the view was still attached, creating duplicates.
+                    // If the widget is not showing, simply skip the update.
+                    if (!isShowing) {
+                        Log.d(TAG, "Widget not showing, skipping progress update")
+                        return@withContext
                     }
 
                     progressIndicator?.setProgressCompat(progress, true)
@@ -217,31 +204,16 @@ class FloatingProgressWidget(
     /**
      * Update pause state
      *
-     * FIX (2025-12-07): Added recovery mechanism for detached widget
-     *
      * @param paused True if exploration is paused
      */
     fun updatePauseState(paused: Boolean) {
         scope.launch {
             withContext(Dispatchers.Main) {
                 try {
-                    // FIX (2025-12-07): Check if widget is still attached and recover if needed
-                    if (isShowing && widgetView?.windowToken == null) {
-                        Log.w(TAG, "Widget view detached during pause state update - attempting to recover")
-                        isShowing = false
-                        try {
-                            windowManager.addView(widgetView, layoutParams)
-                            isShowing = true
-                            Log.i(TAG, "Widget successfully recovered")
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to recover widget - recreating", e)
-                            widgetView = null
-                            createWidget()
-                            layoutParams = createLayoutParams()
-                            windowManager.addView(widgetView, layoutParams)
-                            isShowing = true
-                            Log.i(TAG, "Widget recreated successfully")
-                        }
+                    // FIX (2025-12-08): Removed faulty recovery mechanism that caused duplicate widgets
+                    if (!isShowing) {
+                        Log.d(TAG, "Widget not showing, skipping pause state update")
+                        return@withContext
                     }
 
                     isPaused = paused
@@ -263,10 +235,10 @@ class FloatingProgressWidget(
     /**
      * Check if widget is currently showing
      *
-     * FIX (2025-12-07): Also verify the view is actually attached to WindowManager
-     * The widget may report isShowing=true but the view could be detached
+     * FIX (2025-12-08): Simplified - just return isShowing flag
+     * The windowToken check was unreliable and caused false negatives
      */
-    fun isShowing(): Boolean = isShowing && widgetView?.windowToken != null
+    fun isShowing(): Boolean = isShowing
 
     /**
      * Cleanup resources
