@@ -152,13 +152,19 @@ class DangerousElementDetector {
             Regex("force\\s*stop", RegexOption.IGNORE_CASE) to "Force stop (CRITICAL)",
             Regex("force\\s*close", RegexOption.IGNORE_CASE) to "Force close (CRITICAL)",
 
-            // CRITICAL: Communication actions (2025-12-05)
+            // CRITICAL: Communication actions (2025-12-05, enhanced 2025-12-08)
             Regex("audio\\s*call", RegexOption.IGNORE_CASE) to "Audio call (CRITICAL)",
             Regex("video\\s*call", RegexOption.IGNORE_CASE) to "Video call (CRITICAL)",
-            Regex("make\\s*call", RegexOption.IGNORE_CASE) to "Make call (CRITICAL)",
-            Regex("start\\s*call", RegexOption.IGNORE_CASE) to "Start call (CRITICAL)",
+            Regex("make.*call", RegexOption.IGNORE_CASE) to "Make call (CRITICAL)",  // Fixed: was make\s*call, now catches "Make a call"
+            Regex("start.*call", RegexOption.IGNORE_CASE) to "Start call (CRITICAL)", // Fixed: was start\s*call
             Regex("dial", RegexOption.IGNORE_CASE) to "Dial (CRITICAL)",
             Regex("call\\s*now", RegexOption.IGNORE_CASE) to "Call now (CRITICAL)",
+            Regex("^call$", RegexOption.IGNORE_CASE) to "Call button (CRITICAL)",  // NEW: standalone "Call" button
+            Regex("join.*call", RegexOption.IGNORE_CASE) to "Join call (CRITICAL)",  // NEW: join meeting/call
+            Regex("answer", RegexOption.IGNORE_CASE) to "Answer call (CRITICAL)",  // NEW: answer incoming call
+            Regex("new.*meeting", RegexOption.IGNORE_CASE) to "New meeting (CRITICAL)",  // NEW: create meeting
+            Regex("schedule.*meeting", RegexOption.IGNORE_CASE) to "Schedule meeting (CRITICAL)",  // NEW: schedule meeting
+            Regex("instant.*meeting", RegexOption.IGNORE_CASE) to "Instant meeting (CRITICAL)",  // NEW: instant meeting
 
             // CRITICAL: Audio/microphone settings (2025-12-05)
             Regex("^microphone$", RegexOption.IGNORE_CASE) to "Microphone (CRITICAL)",
@@ -203,13 +209,14 @@ class DangerousElementDetector {
             Regex("reset", RegexOption.IGNORE_CASE) to "Reset",
             Regex("erase", RegexOption.IGNORE_CASE) to "Erase",
 
-            // Sending / sharing / posting
+            // Sending / sharing / posting (enhanced 2025-12-08)
             Regex("send\\s*message", RegexOption.IGNORE_CASE) to "Send message",
             Regex("send\\s*email", RegexOption.IGNORE_CASE) to "Send email",
             Regex("post", RegexOption.IGNORE_CASE) to "Post",
             Regex("share", RegexOption.IGNORE_CASE) to "Share",
             Regex("publish", RegexOption.IGNORE_CASE) to "Publish",
             Regex("tweet", RegexOption.IGNORE_CASE) to "Tweet",
+            Regex("^reply$", RegexOption.IGNORE_CASE) to "Reply (CRITICAL)",  // NEW: Reply button in Teams/messaging apps
 
             // Permissions / access
             Regex("grant.*permission", RegexOption.IGNORE_CASE) to "Grant permission",
@@ -245,7 +252,7 @@ class DangerousElementDetector {
             "quit" to "Quit (CRITICAL)",
             "force_stop" to "Force stop (CRITICAL)",
             "force_close" to "Force close (CRITICAL)",
-            // Communication actions (2025-12-05)
+            // Communication actions (2025-12-05, enhanced 2025-12-08)
             "audio_call" to "Audio call (CRITICAL)",
             "video_call" to "Video call (CRITICAL)",
             "audiocall" to "Audio call (CRITICAL)",
@@ -253,6 +260,16 @@ class DangerousElementDetector {
             "make_call" to "Make call (CRITICAL)",
             "start_call" to "Start call (CRITICAL)",
             "dial" to "Dial (CRITICAL)",
+            // NEW (2025-12-08): Teams-specific call patterns
+            "call_control" to "Call control (CRITICAL)",  // call_control_mute, call_control_speaker
+            "call_end" to "End call (CRITICAL)",  // call_end_button
+            "calls_call" to "Call item (CRITICAL)",  // calls_call_item_v3
+            "call_more" to "Call options (CRITICAL)",  // call_more_options
+            "fab" to "Floating action button (CRITICAL)",  // FAB often triggers calls
+            "join_meeting" to "Join meeting (CRITICAL)",
+            "new_meeting" to "New meeting (CRITICAL)",
+            "schedule_meeting" to "Schedule meeting (CRITICAL)",
+            "answer" to "Answer call (CRITICAL)",
             // Audio/microphone settings (2025-12-05)
             "microphone" to "Microphone (CRITICAL)",
             "dictation" to "Dictation (CRITICAL)",
@@ -281,6 +298,7 @@ class DangerousElementDetector {
             "post" to "Post action",
             "share" to "Share action",
             "publish" to "Publish action",
+            "reply" to "Reply action (CRITICAL)",  // NEW (2025-12-08): Reply in messaging apps
             "reset" to "Reset action",
             "clear" to "Clear action",
             "erase" to "Erase action",
