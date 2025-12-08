@@ -513,7 +513,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 //                        val objectCommand = prettyGson.toJson(allCommands)
 //                        Log.d(TAG, "RegisterVoiceCmd allCommands = $objectCommand")
 //                    }
-                    speechEngineManager?.updateCommands(allCommands)  // TEMPORARY: Null-safe for standalone
+                    speechEngineManager.updateCommands(allCommands)
 
                     Log.i(TAG, "✓ Database commands registered successfully with speech engine")
                     Log.i(TAG, "  Total commands in speech vocabulary: ${allCommands.toSet().size}")
@@ -867,7 +867,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 //                                val objectCommand = prettyGson.toJson(allCommands)
 //                                Log.d(TAG, "RegisterVoiceCmd allCommands = $objectCommand")
 //                            }
-                            speechEngineManager?.updateCommands(allCommands)
+                            speechEngineManager.updateCommands(allCommands)
                             allRegisteredDynamicCommands.clear()
                             allRegisteredDynamicCommands.addAll(commandCache)
                             lastCommandLoaded = System.currentTimeMillis()
@@ -1699,7 +1699,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             if (intent?.action == Const.ACTION_CONFIG_UPDATE) {
                 config = ServiceConfiguration.loadFromPreferences(this@VoiceOSService)
                 Log.i(TAG, "CHANGE_LANG onReceive config = $config")
-                speechEngineManager?.updateConfiguration(
+                speechEngineManager.updateConfiguration(
                     SpeechConfigurationData(
                         language = config.voiceLanguage,
                         mode = SpeechMode.DYNAMIC_COMMAND,
@@ -1742,7 +1742,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             }
 
             // Update speech configuration with new language
-            speechEngineManager?.updateConfiguration(
+            speechEngineManager.updateConfiguration(
                 SpeechConfigurationData(
                     language = language,
                     mode = mode,
@@ -1755,7 +1755,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             )
 
             // Start listening
-            speechEngineManager?.startListening()
+            speechEngineManager.startListening()
             Log.i(TAG, "Voice recognition started successfully")
             true
         } catch (e: Exception) {
@@ -1776,7 +1776,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                 return false
             }
 
-            speechEngineManager?.stopListening()
+            speechEngineManager.stopListening()
             Log.i(TAG, "Voice recognition stopped successfully")
             true
         } catch (e: Exception) {
@@ -1806,6 +1806,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 
             val packageName = rootNode.packageName?.toString() ?: "unknown"
             val elements = uiScrapingEngine.extractUIElements(null)
+            @Suppress("DEPRECATION")
             rootNode.recycle()
 
             // Convert to JSON format
@@ -1881,6 +1882,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 
             val packageName = rootNode.packageName?.toString() ?: "unknown"
             val elements = uiScrapingEngine.extractUIElements(null)
+            @Suppress("DEPRECATION")
             rootNode.recycle()
 
             // Convert to simplified JSON format
@@ -1976,8 +1978,9 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             }
 
             // Parse actionJson to extract target element hash and action type
-            val actionData = try {
-                prettyGson.fromJson(actionJson, Map::class.java) as? Map<String, Any> ?: emptyMap()
+            val actionData: Map<String, Any> = try {
+                @Suppress("UNCHECKED_CAST")
+                (prettyGson.fromJson(actionJson, Map::class.java) as? Map<String, Any>) ?: emptyMap()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse actionJson", e)
                 return false
