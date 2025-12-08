@@ -60,10 +60,10 @@ class DebugOverlayView(
     private var currentFilter = OverlayDisplayMode.ALL_ITEMS
     private var currentScreenFilter: String? = null
 
-    // Sizing
-    private val overlayWidth = dpToPx(320)
-    private val collapsedHeight = dpToPx(48)
-    private val expandedHeight = dpToPx(400)
+    // Sizing - Optimized for RealWear Navigator 500 (854x480, ~480dp width)
+    private val overlayWidth = dpToPx(240)   // ~50% of screen width
+    private val collapsedHeight = dpToPx(36)
+    private val expandedHeight = dpToPx(280) // Fits in 480dp height with room for widget
 
     // Move callback
     var onMoveRequested: ((Float, Float) -> Unit)? = null
@@ -97,8 +97,8 @@ class DebugOverlayView(
         // Summary stats
         summaryText = TextView(context).apply {
             setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)  // Smaller for RealWear
+            setPadding(dpToPx(2), dpToPx(2), dpToPx(2), dpToPx(2))
             setBackgroundColor(0x40000000)
         }
         mainLayout.addView(summaryText)
@@ -147,9 +147,9 @@ class DebugOverlayView(
 
             // Title
             val title = TextView(context).apply {
-                text = "DEBUG OVERLAY"
+                text = "DEBUG"
                 setTextColor(Color.WHITE)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)  // Smaller for RealWear
                 setTypeface(null, Typeface.BOLD)
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
@@ -212,8 +212,8 @@ class DebugOverlayView(
             val btn = TextView(context).apply {
                 text = label
                 setTextColor(if (mode == currentFilter) Color.WHITE else 0xB0FFFFFF.toInt())
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-                setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4))
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)  // Smaller for RealWear
+                setPadding(dpToPx(6), dpToPx(2), dpToPx(6), dpToPx(2))
                 setBackgroundColor(if (mode == currentFilter) 0x40FFFFFF else 0x20FFFFFF)
                 setOnClickListener {
                     currentFilter = mode
@@ -410,8 +410,8 @@ class DebugOverlayView(
         // Status emoji
         val statusView = TextView(context).apply {
             text = item.statusEmoji()
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setPadding(dpToPx(4), 0, dpToPx(4), 0)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)  // Smaller for RealWear
+            setPadding(dpToPx(2), 0, dpToPx(2), 0)
         }
         row.addView(statusView)
 
@@ -425,25 +425,25 @@ class DebugOverlayView(
         val nameView = TextView(context).apply {
             text = item.shortName()
             setTextColor(item.statusColor())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)  // Smaller for RealWear
             maxLines = 1
         }
         detailsLayout.addView(nameView)
 
         // VUID and class
         val infoText = buildString {
-            item.vuid?.let { append(it.take(8)) } ?: append("no VUID")
+            item.vuid?.let { append(it.take(6)) } ?: append("-")  // Shorter VUID
             append(" • ")
-            append(item.className)
+            append(item.className.take(12))  // Truncate class name
             if (showScreen) {
                 append(" • ")
-                append(item.screenName.substringAfterLast('.'))
+                append(item.screenName.substringAfterLast('.').take(10))
             }
         }
         val infoView = TextView(context).apply {
             text = infoText
             setTextColor(0x80FFFFFF.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 8f)  // Smaller for RealWear
             maxLines = 1
         }
         detailsLayout.addView(infoView)
