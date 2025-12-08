@@ -105,6 +105,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        aidl = true
     }
 
     compileOptions {
@@ -120,6 +121,7 @@ android {
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     sourceSets["main"].res.srcDirs("src/androidMain/res")
+    sourceSets["main"].aidl.srcDirs("src/androidMain/aidl")
 }
 
 dependencies {

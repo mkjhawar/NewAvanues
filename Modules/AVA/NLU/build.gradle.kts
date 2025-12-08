@@ -60,6 +60,7 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation(project(":core:Data"))
+                implementation(project(":Actions"))
                 implementation(libs.kotlinx.coroutines.android)
                 implementation(libs.onnxruntime.android)
                 implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
