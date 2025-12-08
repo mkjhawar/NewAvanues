@@ -156,6 +156,14 @@ class LearnAppIntegration private constructor(
      */
     private val explorationStrategy: ExplorationStrategy = DFSExplorationStrategy()
 
+    /**
+     * AVU Quantizer Integration (2025-12-08)
+     *
+     * Real-time quantization of UI elements during exploration for NLU/LLM integration.
+     * Captures elements as they're discovered and builds compact, tokenized representations.
+     */
+    private val avuQuantizerIntegration: com.augmentalis.voiceoscore.learnapp.ai.quantized.AVUQuantizerIntegration
+
     init {
         // Initialize preferences
         preferences = LearnAppPreferences(context)
@@ -221,6 +229,10 @@ class LearnAppIntegration private constructor(
         // FIX (2025-12-01): Initialize JIT element capture for Voice Command Element Persistence
         // This enables JIT learning to capture elements and generate voice commands
         justInTimeLearner.initializeElementCapture(accessibilityService)
+
+        // Initialize AVU Quantizer Integration (2025-12-08)
+        // Real-time quantization for NLU/LLM integration
+        avuQuantizerIntegration = com.augmentalis.voiceoscore.learnapp.ai.quantized.AVUQuantizerIntegration(context)
 
         // Set up event listeners
         setupEventListeners()
@@ -496,6 +508,11 @@ class LearnAppIntegration private constructor(
                                     )
                                 }
                             }
+
+                            // AVU Quantizer (2025-12-08): Start quantization before exploration
+                            val appName = metadataProvider.getMetadata(packageName)?.appName ?: packageName.substringAfterLast(".")
+                            avuQuantizerIntegration.startQuantization(packageName, appName)
+
                             // Start exploration engine with session ID for database persistence
                             explorationEngine.startExploration(packageName, result.sessionId)
                         }
@@ -621,6 +638,14 @@ class LearnAppIntegration private constructor(
                 // DEBUG (2025-12-08): Clear debug callback and overlay
                 clearDebugOverlayCallback()
 
+                // AVU Quantizer (2025-12-08): Stop quantization and save results
+                val quantizedContext = avuQuantizerIntegration.stopQuantization()
+                if (quantizedContext != null) {
+                    val stats = avuQuantizerIntegration.getQuantizerStats()
+                    Log.i(TAG, "📊 Quantized context saved: ${stats.screensProcessed} screens, " +
+                        "${stats.elementsProcessed} elements, ${stats.actionCandidates} actions")
+                }
+
                 // Dismiss floating widget
                 floatingProgressWidget?.dismiss()
 
@@ -739,6 +764,7 @@ class LearnAppIntegration private constructor(
     private fun setupDebugOverlayCallback() {
         val widget = floatingProgressWidget ?: return
 
+        // REWRITTEN (2025-12-08): Use new scrollable debug overlay
         // Create callback that forwards events to the debug overlay manager
         val callback = object : ExplorationDebugCallback {
             override fun onScreenExplored(
@@ -749,39 +775,53 @@ class LearnAppIntegration private constructor(
                 parentScreenHash: String?
             ) {
                 // Get debug overlay manager from widget and update it
-                if (widget.isDebugOverlayEnabled()) {
-                    val debugManager = widget.getDebugOverlayManager()
-                    debugManager.updateElements(
-                        elements = elements,
-                        screenHash = screenHash,
-                        activityName = activityName,
-                        packageName = packageName,
-                        parentScreenHash = parentScreenHash
-                    )
-                    Log.d(TAG, "📊 Debug overlay updated: ${elements.size} elements on $activityName")
-                }
+                // Always track items, even if overlay is hidden
+                val debugManager = widget.getDebugOverlayManager()
+                debugManager.onScreenExplored(
+                    elements = elements,
+                    screenHash = screenHash,
+                    activityName = activityName,
+                    packageName = packageName,
+                    parentScreenHash = parentScreenHash
+                )
+                Log.d(TAG, "📊 Debug tracker updated: ${elements.size} elements on $activityName")
             }
 
             override fun onElementNavigated(elementKey: String, destinationScreenHash: String) {
                 // Record navigation link in debug overlay
-                if (widget.isDebugOverlayEnabled()) {
-                    val debugManager = widget.getDebugOverlayManager()
-                    debugManager.recordNavigation(elementKey, destinationScreenHash)
+                // Parse elementKey which is "screenHash:stableId"
+                val debugManager = widget.getDebugOverlayManager()
+                val parts = elementKey.split(":", limit = 2)
+                if (parts.size == 2) {
+                    debugManager.recordNavigation(parts[1], parts[0], destinationScreenHash)
                 }
             }
 
             override fun onProgressUpdated(progress: Int) {
-                // Update progress in debug overlay
-                if (widget.isDebugOverlayEnabled()) {
-                    val debugManager = widget.getDebugOverlayManager()
-                    debugManager.updateProgress(progress)
-                }
+                // Progress handled by floating widget, not debug overlay
+                Log.d(TAG, "📊 Progress: $progress%")
+            }
+
+            override fun onElementClicked(stableId: String, screenHash: String, vuid: String?) {
+                // Track clicked item in debug overlay
+                val debugManager = widget.getDebugOverlayManager()
+                debugManager.markItemClicked(stableId, screenHash, null)
+            }
+
+            override fun onElementBlocked(stableId: String, screenHash: String, reason: String) {
+                // Track blocked item in debug overlay
+                val debugManager = widget.getDebugOverlayManager()
+                debugManager.markItemBlocked(stableId, screenHash, reason)
             }
         }
 
-        // Set callback on exploration engine
-        explorationEngine.setDebugCallback(callback)
-        Log.i(TAG, "📊 Debug overlay callback configured")
+        // AVU Quantizer Integration (2025-12-08): Chain the quantizer with the debug overlay callback
+        // This enables real-time quantization during exploration while preserving debug overlay functionality
+        avuQuantizerIntegration.setChainedCallback(callback)
+
+        // Set the quantizer integration as the primary callback (it will chain to debug overlay)
+        explorationEngine.setDebugCallback(avuQuantizerIntegration)
+        Log.i(TAG, "📊 Debug overlay + AVU quantizer callbacks configured")
     }
 
     /**
@@ -789,6 +829,7 @@ class LearnAppIntegration private constructor(
      */
     private fun clearDebugOverlayCallback() {
         explorationEngine.setDebugCallback(null)
+        avuQuantizerIntegration.setChainedCallback(null)
         floatingProgressWidget?.getDebugOverlayManager()?.reset()
     }
 
@@ -1247,6 +1288,82 @@ class LearnAppIntegration private constructor(
             Log.d("LearnAppIntegration", "Triggering LearnApp for package: $packageName")
         }
         startExploration(packageName)
+    }
+
+    // ========== AVU Quantized Context API (2025-12-08) ==========
+
+    /**
+     * Get quantized context for a learned app
+     *
+     * Returns the compact, NLU-optimized representation of the app's UI structure.
+     * Use this for LLM context loading, action prediction, or voice command matching.
+     *
+     * @param packageName Package name of the learned app
+     * @return QuantizedContext if available, null if app not learned or no quantized data
+     */
+    suspend fun getQuantizedContext(packageName: String): com.augmentalis.voiceoscore.learnapp.ai.quantized.QuantizedContext? {
+        return avuQuantizerIntegration.getQuantizedContext(packageName)
+    }
+
+    /**
+     * Generate LLM prompt for a user goal
+     *
+     * Creates a prompt suitable for LLM consumption based on the app's quantized context.
+     * Choose format based on token budget:
+     * - COMPACT: ~50-100 tokens (quick context)
+     * - HTML: ~200 tokens (research-backed format)
+     * - FULL: ~500+ tokens (complete context)
+     *
+     * @param packageName Package name of the learned app
+     * @param userGoal User's goal (e.g., "open settings", "send message")
+     * @param format Prompt format (COMPACT, HTML, or FULL)
+     * @return LLM-ready prompt string, or null if no context available
+     */
+    suspend fun generateLLMPrompt(
+        packageName: String,
+        userGoal: String,
+        format: com.augmentalis.voiceoscore.learnapp.ai.quantized.LLMPromptFormat =
+            com.augmentalis.voiceoscore.learnapp.ai.quantized.LLMPromptFormat.COMPACT
+    ): String? {
+        return avuQuantizerIntegration.generateLLMPrompt(packageName, userGoal, format)
+    }
+
+    /**
+     * Generate action prediction prompt for current screen
+     *
+     * Creates a prompt optimized for predicting the next action based on user intent.
+     * Shows available elements and navigation options for the current screen.
+     *
+     * @param packageName Package name of the app
+     * @param currentScreenHash Hash of the current screen
+     * @param userIntent User's intent (e.g., "go back", "tap search")
+     * @return Action prediction prompt, or null if no context available
+     */
+    suspend fun generateActionPredictionPrompt(
+        packageName: String,
+        currentScreenHash: String,
+        userIntent: String
+    ): String? {
+        return avuQuantizerIntegration.generateActionPredictionPrompt(packageName, currentScreenHash, userIntent)
+    }
+
+    /**
+     * Check if quantized context exists for an app
+     *
+     * @param packageName Package name to check
+     * @return true if quantized context is available
+     */
+    fun hasQuantizedContext(packageName: String): Boolean {
+        return avuQuantizerIntegration.hasQuantizedContext(packageName)
+    }
+
+    /**
+     * List all apps with quantized contexts
+     *
+     * @return List of package names with available quantized contexts
+     */
+    suspend fun listQuantizedApps(): List<String> {
+        return avuQuantizerIntegration.listQuantizedPackages()
     }
 
     companion object {
