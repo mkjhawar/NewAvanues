@@ -338,6 +338,13 @@ class FloatingProgressWidget(
     fun enableDebugOverlay() {
         if (!isDebugOverlayEnabled) {
             toggleDebugOverlay()
+        } else {
+            // Already enabled flag, but ensure overlay is actually shown
+            val manager = getDebugOverlayManager()
+            if (!manager.isVisible()) {
+                manager.show()
+                Log.i(TAG, "Debug overlay shown (was enabled but not visible)")
+            }
         }
     }
 

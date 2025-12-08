@@ -71,8 +71,8 @@ class DebugOverlayManager(
 
     // State
     private var isVisible = false
-    private var positionX = 50
-    private var positionY = 200
+    private var positionX = 20  // Left edge with small margin
+    private var positionY = 100 // Below status bar
 
     /**
      * Whether debug overlay is currently visible
