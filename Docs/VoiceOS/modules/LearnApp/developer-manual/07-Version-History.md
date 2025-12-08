@@ -67,6 +67,24 @@ This chapter documents the complete version history and changelog for LearnApp.
   - Commit: 43f0c480
   - Files: ExplorationEngine.kt (79 insertions, 25 deletions)
 
+- **1.9.1** (2025-12-08): Enhanced call/meeting blocking patterns
+  - Added Teams-specific call patterns: "Make a call", "Call" button, "Join call", "Answer"
+  - Added meeting patterns: "New meeting", "Schedule meeting", "Instant meeting"
+  - Added "Reply" to critical blocklist (can send messages in Teams/messaging apps)
+  - Fixed regex: `make\s*call` → `make.*call` to catch "Make a call"
+  - Added resource ID patterns: `call_control`, `call_end`, `calls_call`, `fab`, `reply`
+  - Files: DangerousElementDetector.kt, ExplorationEngine.kt
+
+- **1.10.0** (2025-12-08): Blocked vs non-blocked stats display
+  - User request: Show separate stats for blocked vs non-blocked items
+  - New format: "XX% of non-blocked items (YY/ZZ clicked), WW blocked"
+  - Added `cumulativeBlockedVuids` tracking set for blocked elements
+  - Added fields to ExplorationStats: `clickedElements`, `nonBlockedElements`, `blockedElements`
+  - Added `formatCompletion()` method to ExplorationStats
+  - Updated toast notification to show new format
+  - Updated final stats logging with breakdown
+  - Files: ExplorationEngine.kt, ExplorationStats.kt, LearnAppIntegration.kt
+
 ---
 ## Related Documentation
 

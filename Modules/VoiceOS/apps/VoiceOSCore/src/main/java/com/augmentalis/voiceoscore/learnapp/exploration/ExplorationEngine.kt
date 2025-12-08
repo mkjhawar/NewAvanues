@@ -206,9 +206,13 @@ class ExplorationEngine(
      * FIX (2025-12-08): Global cumulative tracking - NEVER cleared during exploration
      * These track ALL exploration progress regardless of intent relaunches
      * Used for final completion percentage calculation
+     *
+     * UPDATE (2025-12-08): Added blocked VUID tracking for separate stats display
+     * Format: "XX% of Non-Blocked screens (XX/YYY), ##% of non-blocked entries (aa of zz clickable items)"
      */
-    private val cumulativeDiscoveredVuids = mutableSetOf<String>()  // All discovered element VUIDs
+    private val cumulativeDiscoveredVuids = mutableSetOf<String>()  // All discovered element VUIDs (clickable only)
     private val cumulativeClickedVuids = mutableSetOf<String>()      // All clicked element VUIDs
+    private val cumulativeBlockedVuids = mutableSetOf<String>()      // All blocked (critical dangerous) VUIDs
 
     /**
      * Expandable control detector - identifies dropdowns, menus, etc.
@@ -581,6 +585,7 @@ class ExplorationEngine(
         // but are cleared for each new app exploration
         cumulativeDiscoveredVuids.clear()
         cumulativeClickedVuids.clear()
+        cumulativeBlockedVuids.clear()  // UPDATE (2025-12-08): Clear blocked tracking too
 
         // Initialize checklist tracking
         checklistManager.startChecklist(packageName)
@@ -639,6 +644,10 @@ class ExplorationEngine(
 
         // FIX (2025-12-08): Add to cumulative tracking (class-level, survives intent relaunches)
         cumulativeDiscoveredVuids.addAll(clickableUuids)
+
+        // UPDATE (2025-12-08): Track blocked VUIDs separately for stats display
+        val blockedUuids = criticalElements.mapNotNull { it.uuid }
+        cumulativeBlockedVuids.addAll(blockedUuids)
 
         // Log skipped critical elements with details
         if (criticalElements.isNotEmpty()) {
@@ -1044,8 +1053,16 @@ class ExplorationEngine(
         // FIX (2025-12-08): Use cumulative tracking for final stats instead of clickTracker
         // clickTracker.getStats() only reflects post-last-clear data (loses progress on intent relaunch)
         // Cumulative sets preserve ALL exploration progress throughout the session
-        val cumulativeCompleteness = if (cumulativeDiscoveredVuids.isNotEmpty()) {
-            (cumulativeClickedVuids.size.toFloat() / cumulativeDiscoveredVuids.size.toFloat()) * 100f
+        //
+        // UPDATE (2025-12-08): Show blocked vs non-blocked separately per user request
+        // Format: "XX% of Non-Blocked items (XX/YYY), ZZ blocked items"
+        val nonBlockedCount = cumulativeDiscoveredVuids.size
+        val clickedCount = cumulativeClickedVuids.size
+        val blockedCount = cumulativeBlockedVuids.size
+        val totalCount = nonBlockedCount + blockedCount  // All discovered items (clickable + blocked)
+
+        val cumulativeCompleteness = if (nonBlockedCount > 0) {
+            (clickedCount.toFloat() / nonBlockedCount.toFloat()) * 100f
         } else {
             0f
         }
@@ -1056,14 +1073,21 @@ class ExplorationEngine(
             "🏁 Iterative DFS complete. Explored ${visitedScreens.size} unique screens")
         android.util.Log.i("ExplorationEngine",
             "🔍 TERMINATION_REASON: $terminationReason")
+
+        // UPDATE (2025-12-08): New stats format showing blocked vs non-blocked separately
+        // Format requested: "XX% of Non-Blocked screens (XX/YYY), ##% of non-blocked entries (aa of zz clickable items)"
         android.util.Log.i("ExplorationEngine",
-            "📊 Final Stats (CUMULATIVE): ${cumulativeClickedVuids.size}/${cumulativeDiscoveredVuids.size} VUIDs clicked " +
-            "(${cumulativeCompleteness.toInt()}% completeness)")
+            "📊 Final Stats: ${cumulativeCompleteness.toInt()}% of non-blocked items " +
+            "(${clickedCount}/${nonBlockedCount} clicked), ${blockedCount} blocked items skipped")
         android.util.Log.i("ExplorationEngine",
-            "📊 Final Stats (clickTracker - may be post-clear): ${clickTrackerStats.clickedElements}/${clickTrackerStats.totalElements} " +
-            "(${clickTrackerStats.overallCompleteness.toInt()}%)")
+            "📊 Breakdown: ${clickedCount} clicked + ${nonBlockedCount - clickedCount} unclicked + ${blockedCount} blocked = ${totalCount} total VUIDs")
         android.util.Log.i("ExplorationEngine",
             "📊 Screens: ${visitedScreens.size} total visited")
+
+        // Legacy format for comparison (debugging)
+        android.util.Log.d("ExplorationEngine",
+            "📊 [DEBUG] clickTracker stats (may be post-clear): ${clickTrackerStats.clickedElements}/${clickTrackerStats.totalElements} " +
+            "(${clickTrackerStats.overallCompleteness.toInt()}%)")
 
         // Export checklist to file
         val checklistPath = "/sdcard/Download/learnapp-checklist-${packageName.substringAfterLast('.')}-${System.currentTimeMillis()}.md"
@@ -3307,8 +3331,14 @@ class ExplorationEngine(
 
         // FIX (2025-12-08): Use cumulative tracking for completeness instead of clickTracker
         // clickTracker may have been cleared during intent relaunches
-        val cumulativeCompleteness = if (cumulativeDiscoveredVuids.isNotEmpty()) {
-            (cumulativeClickedVuids.size.toFloat() / cumulativeDiscoveredVuids.size.toFloat()) * 100f
+        //
+        // UPDATE (2025-12-08): Calculate blocked vs non-blocked for stats display
+        val statsNonBlockedCount = cumulativeDiscoveredVuids.size
+        val statsClickedCount = cumulativeClickedVuids.size
+        val statsBlockedCount = cumulativeBlockedVuids.size
+
+        val cumulativeCompleteness = if (statsNonBlockedCount > 0) {
+            (statsClickedCount.toFloat() / statsNonBlockedCount.toFloat()) * 100f
         } else {
             0f
         }
@@ -3354,7 +3384,11 @@ class ExplorationEngine(
             dangerousElementsSkipped = dangerousElementsSkipped,
             loginScreensDetected = loginScreensDetected,
             scrollableContainersFound = scrollableContainersFound,
-            completeness = cumulativeCompleteness  // FIX (2025-12-08): Use cumulative tracking for accurate completeness
+            completeness = cumulativeCompleteness,  // FIX (2025-12-08): Use cumulative tracking for accurate completeness
+            // UPDATE (2025-12-08): Blocked vs non-blocked tracking for stats display
+            clickedElements = statsClickedCount,
+            nonBlockedElements = statsNonBlockedCount,
+            blockedElements = statsBlockedCount
         )
     }
 

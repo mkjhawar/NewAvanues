@@ -646,13 +646,20 @@ class LearnAppIntegration private constructor(
                     }
 
                     // FIX (2025-12-06): Enhanced completion notification with completeness
+                    // UPDATE (2025-12-08): Show blocked vs non-blocked stats
+                    // Format: "XX% of non-blocked items (YY/ZZ clicked), WW blocked"
                     val completeness = state.stats.completeness
+                    val clicked = state.stats.clickedElements
+                    val nonBlocked = state.stats.nonBlockedElements
+                    val blocked = state.stats.blockedElements
+
                     val message = if (completeness >= 95) {
                         "Learning complete! (${completeness.toInt()}%)\n" +
-                        "${state.stats.totalScreens} screens, ${state.stats.totalElements} elements"
+                        "${state.stats.totalScreens} screens, $clicked/$nonBlocked items clicked" +
+                        if (blocked > 0) ", $blocked blocked" else ""
                     } else {
-                        "Partial learning (${completeness.toInt()}%)\n" +
-                        "Some screens may have been blocked"
+                        "${completeness.toInt()}% of non-blocked items ($clicked/$nonBlocked clicked)\n" +
+                        if (blocked > 0) "$blocked items blocked (call/send/etc)" else "Some screens may have been blocked"
                     }
 
                     // Show success notification
