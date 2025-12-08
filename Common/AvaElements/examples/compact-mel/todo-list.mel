@@ -1,0 +1,45 @@
+@mel/1.0
+id:com.augmentalis.todolist
+name:Todo List
+tier:data
+description:Task manager with filtering - iOS compatible
+
+state:
+  items:[]
+  newTask:""
+  filter:"all"
+  nextId:1
+
+reducers:
+  setNewTask(text): newTask=$text
+  addTask: items=$if($gt($len($newTask),0),$push($items,{id:$nextId,text:$newTask,done:false}),$items); newTask=$if($gt($len($newTask),0),"",$newTask); nextId=$if($gt($len($newTask),0),$add($nextId,1),$nextId)
+  toggleTask(id): items=$map($items,$if($eq($get($item,"id"),$id),$set($item,"done",$not($get($item,"done"))),$item))
+  deleteTask(id): items=$filter($items,$ne($get($item,"id"),$id))
+  setFilter(f): filter=$f
+  clearCompleted: items=$filter($items,$not($get($item,"done")))
+
+ui:Col{@p(16),gap(16);
+  Text{text:"Todo List";fontSize:28;fontWeight:"bold"};
+  Row{@gap(8);
+    Field{value:$newTask;@change->setNewTask;placeholder:"Add a new task...";flex:1};
+    Btn{label:"Add";@tap->addTask;variant:"primary"}
+  };
+  Row{@gap(8);
+    Chip{label:"All";@tap->setFilter("all");selected:$eq($filter,"all")};
+    Chip{label:"Active";@tap->setFilter("active");selected:$eq($filter,"active")};
+    Chip{label:"Done";@tap->setFilter("done");selected:$eq($filter,"done")}
+  };
+  LazyCol{@gap(8);
+    items:$filter($items,$if($eq($filter,"all"),true,$if($eq($filter,"done"),$get($item,"done"),$not($get($item,"done")))));
+    itemBuilder:Row{@gap(12),p(12),bg(#f9f9f9),r(8);
+      Check{checked:$get($item,"done");@tap->toggleTask($get($item,"id"))};
+      Text{text:$get($item,"text");flex:1;textDecoration:$if($get($item,"done"),"line-through","none");color:$if($get($item,"done"),#999999,#333333)};
+      IconBtn{icon:"delete";@tap->deleteTask($get($item,"id"));color:#cc0000}
+    }
+  };
+  Row{@gap(16);
+    Text{text:$cat($str($size($filter($items,$not($get($item,"done")))))," items left");color:#666666};
+    Spacer{};
+    Btn{label:"Clear Done";@tap->clearCompleted;variant:"ghost";visible:$gt($size($filter($items,$get($item,"done"))),0)}
+  }
+}

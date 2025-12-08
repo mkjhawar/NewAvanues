@@ -1,0 +1,30 @@
+@mel/1.0
+id:com.augmentalis.calculator
+name:Calculator
+tier:data
+description:Full calculator - works on iOS using Tier 1 functions
+
+state:
+  display:"0"
+  buffer:""
+  operator:null
+
+reducers:
+  digit(d): display=$if($eq($display,"0"),$str($d),$cat($display,$str($d)))
+  decimal: display=$if($has($display,"."),$display,$cat($display,"."))
+  op(o): buffer=$display; operator=$o; display="0"
+  calc: display=$str($if($eq($operator,"+"),$add($num($buffer),$num($display)),$if($eq($operator,"-"),$sub($num($buffer),$num($display)),$if($eq($operator,"*"),$mul($num($buffer),$num($display)),$if($eq($operator,"/"),$div($num($buffer),$num($display)),$num($display)))))); buffer=""; operator=null
+  clear: display="0"; buffer=""; operator=null
+  back: display=$if($gt($len($display),1),$slice($display,0,$sub($len($display),1)),"0")
+
+ui:Col{@p(16),gap(12);
+  Box{@p(16),bg(#f5f5f5),r(8);
+    Text{text:$display;fontSize:48;textAlign:"end";fontFamily:"monospace";fontWeight:"bold"}
+  };
+  Div{};
+  Row{@gap(8);Btn{label:"7";@tap->digit(7);flex:1;fontSize:24};Btn{label:"8";@tap->digit(8);flex:1;fontSize:24};Btn{label:"9";@tap->digit(9);flex:1;fontSize:24};Btn{label:"/";@tap->op("/");flex:1;fontSize:24;variant:"secondary"}};
+  Row{@gap(8);Btn{label:"4";@tap->digit(4);flex:1;fontSize:24};Btn{label:"5";@tap->digit(5);flex:1;fontSize:24};Btn{label:"6";@tap->digit(6);flex:1;fontSize:24};Btn{label:"*";@tap->op("*");flex:1;fontSize:24;variant:"secondary"}};
+  Row{@gap(8);Btn{label:"1";@tap->digit(1);flex:1;fontSize:24};Btn{label:"2";@tap->digit(2);flex:1;fontSize:24};Btn{label:"3";@tap->digit(3);flex:1;fontSize:24};Btn{label:"-";@tap->op("-");flex:1;fontSize:24;variant:"secondary"}};
+  Row{@gap(8);Btn{label:"C";@tap->clear;flex:1;fontSize:20;variant:"danger"};Btn{label:"0";@tap->digit(0);flex:1;fontSize:24};Btn{label:".";@tap->decimal;flex:1;fontSize:24};Btn{label:"+";@tap->op("+");flex:1;fontSize:24;variant:"secondary"}};
+  Row{@gap(8);Btn{label:"<";@tap->back;flex:1;fontSize:20;variant:"outline"};Btn{label:"=";@tap->calc;flex:3;fontSize:28;variant:"primary"}}
+}

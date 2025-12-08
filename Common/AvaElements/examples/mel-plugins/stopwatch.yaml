@@ -1,0 +1,279 @@
+# stopwatch.yaml
+# A stopwatch plugin demonstrating time tracking and lap recording
+# Tier: logic (lap recording feature)
+#
+# Features:
+# - Start/stop/reset timer
+# - Lap recording
+# - Time formatting (MM:SS.ms)
+# - Lap list display
+
+plugin:
+  id: "com.augmentalis.stopwatch"
+  name: "Stopwatch"
+  version: "1.0.0"
+  description: "A stopwatch with lap recording"
+  tier: logic  # Laps require Tier 2
+
+state:
+  elapsed: 0             # Elapsed time in milliseconds
+  isRunning: false       # Timer running state
+  laps: []               # Array of lap times
+  startTime: 0           # Start timestamp
+  lapStartTime: 0        # Last lap start time
+
+reducers:
+  # Start the stopwatch
+  start:
+    next_state:
+      isRunning: true
+      startTime: $date.now()
+      lapStartTime: $date.now()
+
+  # Stop the stopwatch
+  stop:
+    next_state:
+      isRunning: false
+      elapsed: $math.add(
+        $state.elapsed,
+        $date.diff($date.now(), $state.startTime)
+      )
+
+  # Reset everything
+  reset:
+    next_state:
+      elapsed: 0
+      isRunning: false
+      laps: []
+      startTime: 0
+      lapStartTime: 0
+
+  # Record a lap
+  lap:
+    next_state:
+      laps: $array.append(
+        $state.laps,
+        $object.create(
+          "time", $math.add($state.elapsed, $date.diff($date.now(), $state.startTime)),
+          "lapTime", $date.diff($date.now(), $state.lapStartTime),
+          "number", $math.add($array.length($state.laps), 1)
+        )
+      )
+      lapStartTime: $date.now()
+
+# Tier 2 scripts for enhanced functionality
+scripts:
+  formatTime:
+    params: [ms]
+    body: |
+      let totalSeconds = $math.floor($math.divide($ms, 1000))
+      let minutes = $math.floor($math.divide($totalSeconds, 60))
+      let seconds = $math.mod($totalSeconds, 60)
+      let milliseconds = $math.mod($ms, 1000)
+
+      let paddedMinutes = $logic.if($logic.lt($minutes, 10), $string.concat("0", $string.concat("", $minutes)), $string.concat("", $minutes))
+      let paddedSeconds = $logic.if($logic.lt($seconds, 10), $string.concat("0", $string.concat("", $seconds)), $string.concat("", $seconds))
+      let paddedMs = $string.substring($string.concat($string.concat("", $milliseconds), "000"), 0, 3)
+
+      return $string.concat($paddedMinutes, $string.concat(":", $string.concat($paddedSeconds, $string.concat(".", $paddedMs))))
+
+ui:
+  Column:
+    style:
+      padding: 16
+      gap: 24
+    children:
+      # Header
+      - Text:
+          value: "Stopwatch"
+          style:
+            fontSize: 28
+            fontWeight: "bold"
+            textAlign: "center"
+
+      # Time display
+      - Container:
+          style:
+            backgroundColor: "#000000"
+            borderRadius: 16
+            padding: 32
+          children:
+            - Text:
+                value: $string.concat(
+                  $string.concat(
+                    "",
+                    $math.floor($math.divide($math.divide($state.elapsed, 1000), 60))
+                  ),
+                  $string.concat(
+                    ":",
+                    $string.concat(
+                      $logic.if(
+                        $logic.lt($math.mod($math.floor($math.divide($state.elapsed, 1000)), 60), 10),
+                        "0",
+                        ""
+                      ),
+                      $string.concat(
+                        "",
+                        $math.mod($math.floor($math.divide($state.elapsed, 1000)), 60)
+                      )
+                    )
+                  )
+                )
+                style:
+                  fontSize: 64
+                  fontWeight: "bold"
+                  textAlign: "center"
+                  color: "#00ff00"
+                  fontFamily: "monospace"
+
+      # Control buttons
+      - Row:
+          style:
+            gap: 12
+            justifyContent: "center"
+          children:
+            # Reset button (only when stopped)
+            - Button:
+                label: "Reset"
+                onTap: "reset"
+                variant: "outline"
+                visible: $logic.and(
+                  $logic.not($state.isRunning),
+                  $logic.gt($state.elapsed, 0)
+                )
+                style:
+                  flex: 1
+                  height: 60
+                  fontSize: 18
+
+            # Lap button (only when running)
+            - Button:
+                label: "Lap"
+                onTap: "lap"
+                variant: "secondary"
+                visible: $state.isRunning
+                style:
+                  flex: 1
+                  height: 60
+                  fontSize: 18
+
+            # Start/Stop button
+            - Button:
+                label: $logic.if($state.isRunning, "Stop", "Start")
+                onTap: $logic.if($state.isRunning, "stop", "start")
+                variant: $logic.if($state.isRunning, "danger", "primary")
+                style:
+                  flex: 1
+                  height: 60
+                  fontSize: 20
+                  fontWeight: "bold"
+
+      # Laps section
+      - Container:
+          visible: $logic.gt($array.length($state.laps), 0)
+          children:
+            - Column:
+                style:
+                  gap: 12
+                children:
+                  - Divider: {}
+
+                  - Text:
+                      value: "Laps"
+                      style:
+                        fontSize: 18
+                        fontWeight: "bold"
+
+                  # Lap list
+                  - Column:
+                      style:
+                        gap: 8
+                        maxHeight: 300
+                        overflowY: "scroll"
+                      children:
+                        - ForEach:
+                            data: $array.reverse($state.laps)
+                            itemKey: "number"
+                            template:
+                              Row:
+                                style:
+                                  padding: 12
+                                  backgroundColor: "#f5f5f5"
+                                  borderRadius: 8
+                                  justifyContent: "space-between"
+                                  alignItems: "center"
+                                children:
+                                  - Row:
+                                      style:
+                                        gap: 12
+                                        alignItems: "center"
+                                      children:
+                                        - Container:
+                                            style:
+                                              width: 32
+                                              height: 32
+                                              backgroundColor: "#0066cc"
+                                              borderRadius: 16
+                                              justifyContent: "center"
+                                              alignItems: "center"
+                                            children:
+                                              - Text:
+                                                  value: $string.concat("", $object.get($item, "number"))
+                                                  style:
+                                                    fontSize: 14
+                                                    fontWeight: "bold"
+                                                    color: "#ffffff"
+                                        - Column:
+                                            style:
+                                              gap: 4
+                                            children:
+                                              - Text:
+                                                  value: $string.concat("Lap ", $string.concat("", $object.get($item, "number")))
+                                                  style:
+                                                    fontSize: 14
+                                                    fontWeight: "medium"
+                                              - Text:
+                                                  value: $string.concat(
+                                                    "+",
+                                                    $string.concat(
+                                                      "",
+                                                      $math.divide($object.get($item, "lapTime"), 1000)
+                                                    )
+                                                  )
+                                                  style:
+                                                    fontSize: 12
+                                                    color: "#666"
+                                  - Text:
+                                      value: $string.concat(
+                                        "",
+                                        $math.divide($object.get($item, "time"), 1000)
+                                      )
+                                      style:
+                                        fontSize: 16
+                                        fontWeight: "bold"
+                                        fontFamily: "monospace"
+
+      # Instructions (when empty)
+      - Container:
+          visible: $logic.and(
+            $logic.not($state.isRunning),
+            $logic.equals($state.elapsed, 0)
+          )
+          children:
+            - Column:
+                style:
+                  gap: 8
+                  alignItems: "center"
+                  padding: 24
+                children:
+                  - Text:
+                      value: "Press Start to begin"
+                      style:
+                        fontSize: 16
+                        color: "#999"
+                  - Text:
+                      value: "Use Lap button while running to record splits"
+                      style:
+                        fontSize: 14
+                        color: "#ccc"
+                        textAlign: "center"

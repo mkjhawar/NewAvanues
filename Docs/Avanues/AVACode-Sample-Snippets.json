@@ -1,0 +1,425 @@
+{
+  "snippets": [
+    {
+      "id": "avamagic-button-simple",
+      "name": "Simple Button",
+      "description": "Basic button with text and onClick handler",
+      "category": "FOUNDATION",
+      "tags": ["button", "basic", "foundation"],
+      "code": "Button(\"${label}\") {\n    onClick = { ${action} }\n}",
+      "language": "AVAMAGIC_DSL",
+      "author": "AVAMagic Team",
+      "created": "2025-11-21T10:00:00Z",
+      "modified": "2025-11-21T10:00:00Z",
+      "version": "1.0.0",
+      "platforms": ["ANDROID", "IOS_26", "WINDOWS_11", "MACOS_26", "VISIONOS_2", "ANDROID_XR", "SAMSUNG_ONE_UI_7"],
+      "dependencies": [],
+      "imports": [],
+      "variables": [
+        {
+          "name": "label",
+          "defaultValue": "Click Me",
+          "description": "Button text",
+          "type": "STRING"
+        },
+        {
+          "name": "action",
+          "defaultValue": "/* TODO */",
+          "description": "Click action",
+          "type": "STRING"
+        }
+      ],
+      "isPublic": true,
+      "isFavorite": false,
+      "usageCount": 0,
+      "rating": 0.0,
+      "downloads": 0
+    },
+    {
+      "id": "avamagic-textfield-basic",
+      "name": "Text Field",
+      "description": "Basic text input field with placeholder",
+      "category": "FOUNDATION",
+      "tags": ["textfield", "input", "form"],
+      "code": "TextField {\n    id = \"${fieldId}\"\n    placeholder = \"${placeholder}\"\n    value = ${stateVariable}\n    onValueChange = { ${stateVariable} = it }\n}",
+      "language": "AVAMAGIC_DSL",
+      "author": "AVAMagic Team",
+      "created": "2025-11-21T10:00:00Z",
+      "modified": "2025-11-21T10:00:00Z",
+      "version": "1.0.0",
+      "platforms": ["ANDROID", "IOS_26", "WINDOWS_11", "MACOS_26"],
+      "dependencies": [],
+      "imports": [],
+      "variables": [
+        {
+          "name": "fieldId",
+          "defaultValue": "textField",
+          "description": "Field ID",
+          "type": "STRING"
+        },
+        {
+          "name": "placeholder",
+          "defaultValue": "Enter text",
+          "description": "Placeholder text",
+          "type": "STRING"
+        },
+        {
+          "name": "stateVariable",
+          "defaultValue": "text",
+          "description": "State variable name",
+          "type": "STRING"
+        }
+      ],
+      "isPublic": true,
+      "isFavorite": false,
+      "usageCount": 0,
+      "rating": 0.0,
+      "downloads": 0
+    },
+    {
+      "id": "avamagic-login-material3",
+      "name": "Material 3 Login Screen",
+      "description": "Complete login screen with email/password, social auth, and forgot password",
+      "category": "AUTHENTICATION",
+      "tags": ["login", "auth", "material3", "form", "social"],
+      "code": "fun ${screenName}() = AvaUI {\n    theme = Themes.${themeName}\n\n    val email = remember { mutableStateOf(\"\") }\n    val password = remember { mutableStateOf(\"\") }\n\n    Column {\n        fillMaxSize()\n        verticalArrangement = Arrangement.Center\n        horizontalAlignment = Alignment.CenterHorizontally\n        padding = 24f\n\n        // Logo\n        Image {\n            source = \"assets://app_logo.png\"\n            width = 120f\n            height = 120f\n        }\n\n        Spacer { height = 32f }\n\n        // Title\n        Text(\"${appName}\") {\n            font = Font.DisplayMedium\n            color = theme.primary\n        }\n\n        Text(\"Sign in to continue\") {\n            font = Font.BodyLarge\n            color = theme.onSurfaceVariant\n        }\n\n        Spacer { height = 48f }\n\n        // Email field\n        TextField {\n            id = \"email\"\n            placeholder = \"Email address\"\n            leadingIcon = \"mail\"\n            keyboardType = KeyboardType.Email\n            value = email.value\n            onValueChange = { email.value = it }\n            fillMaxWidth()\n        }\n\n        Spacer { height = 16f }\n\n        // Password field\n        TextField {\n            id = \"password\"\n            placeholder = \"Password\"\n            leadingIcon = \"lock\"\n            keyboardType = KeyboardType.Password\n            isPassword = true\n            value = password.value\n            onValueChange = { password.value = it }\n            fillMaxWidth()\n        }\n\n        Spacer { height = 8f }\n\n        // Forgot password\n        Row {\n            fillMaxWidth()\n            horizontalArrangement = Arrangement.End\n\n            Button(\"Forgot Password?\") {\n                variant = ButtonVariant.Text\n                onClick = { navigateToForgotPassword() }\n            }\n        }\n\n        Spacer { height = 24f }\n\n        // Sign in button\n        Button(\"${buttonLabel}\") {\n            variant = ButtonVariant.Filled\n            fillMaxWidth()\n            height = 56f\n            onClick = { ${loginAction} }\n        }\n\n        Spacer { height = 16f }\n\n        // Divider with text\n        Row {\n            fillMaxWidth()\n            verticalAlignment = Alignment.CenterVertically\n\n            Divider { weight = 1f }\n            Text(\"  OR  \") {\n                font = Font.BodySmall\n                color = theme.onSurfaceVariant\n            }\n            Divider { weight = 1f }\n        }\n\n        Spacer { height = 16f }\n\n        // Social login\n        Row {\n            fillMaxWidth()\n            horizontalArrangement = Arrangement.SpaceEvenly\n\n            Button(\"\") {\n                icon = \"google\"\n                variant = ButtonVariant.Outlined\n                width = 64f\n                height = 56f\n                onClick = { loginWithGoogle() }\n            }\n\n            Button(\"\") {\n                icon = \"apple\"\n                variant = ButtonVariant.Outlined\n                width = 64f\n                height = 56f\n                onClick = { loginWithApple() }\n            }\n\n            Button(\"\") {\n                icon = \"facebook\"\n                variant = ButtonVariant.Outlined\n                width = 64f\n                height = 56f\n                onClick = { loginWithFacebook() }\n            }\n        }\n\n        Spacer { height = 24f }\n\n        // Sign up link\n        Row {\n            horizontalArrangement = Arrangement.Center\n\n            Text(\"Don't have an account? \") {\n                font = Font.BodyMedium\n                color = theme.onSurfaceVariant\n            }\n\n            Button(\"Sign Up\") {\n                variant = ButtonVariant.Text\n                onClick = { navigateToSignUp() }\n            }\n        }\n    }\n}",
+      "language": "AVAMAGIC_DSL",
+      "author": "Manoj Jhawar",
+      "created": "2025-11-21T10:00:00Z",
+      "modified": "2025-11-21T10:00:00Z",
+      "version": "1.0.0",
+      "previewUrl": "https://cdn.avamagic.dev/snippets/login-material3/preview.png",
+      "thumbnailUrl": "https://cdn.avamagic.dev/snippets/login-material3/thumb.png",
+      "platforms": ["ANDROID", "IOS_26", "WINDOWS_11", "MACOS_26"],
+      "dependencies": [],
+      "imports": ["com.augmentalis.avamagic.ui.*", "androidx.compose.runtime.*"],
+      "variables": [
+        {
+          "name": "screenName",
+          "defaultValue": "MaterialLoginScreen",
+          "description": "Screen function name",
+          "type": "STRING"
+        },
+        {
+          "name": "themeName",
+          "defaultValue": "Material3Light",
+          "description": "Theme to apply",
+          "type": "STRING"
+        },
+        {
+          "name": "appName",
+          "defaultValue": "Welcome Back",
+          "description": "App name shown in header",
+          "type": "STRING"
+        },
+        {
+          "name": "buttonLabel",
+          "defaultValue": "Sign In",
+          "description": "Login button text",
+          "type": "STRING"
+        },
+        {
+          "name": "loginAction",
+          "defaultValue": "performLogin(email.value, password.value)",
+          "description": "Login button action",
+          "type": "STRING"
+        }
+      ],
+      "isPublic": true,
+      "isFavorite": false,
+      "usageCount": 0,
+      "rating": 5.0,
+      "downloads": 0
+    },
+    {
+      "id": "avamagic-card-elevated",
+      "name": "Elevated Card",
+      "description": "Material 3 elevated card with content",
+      "category": "LAYOUT",
+      "tags": ["card", "container", "material3"],
+      "code": "Card {\n    variant = CardVariant.Elevated\n    elevation = ${elevation}f\n    padding = ${padding}f\n    fillMaxWidth()\n\n    Column {\n        spacing = 12f\n\n        Text(\"${title}\") {\n            font = Font.TitleMedium\n            color = theme.onSurface\n        }\n\n        Text(\"${description}\") {\n            font = Font.BodyMedium\n            color = theme.onSurfaceVariant\n        }\n    }\n}",
+      "language": "AVAMAGIC_DSL",
+      "author": "AVAMagic Team",
+      "created": "2025-11-21T10:00:00Z",
+      "modified": "2025-11-21T10:00:00Z",
+      "version": "1.0.0",
+      "platforms": ["ANDROID", "IOS_26", "WINDOWS_11", "MACOS_26"],
+      "dependencies": [],
+      "imports": [],
+      "variables": [
+        {
+          "name": "elevation",
+          "defaultValue": "2",
+          "description": "Card elevation in dp",
+          "type": "NUMBER"
+        },
+        {
+          "name": "padding",
+          "defaultValue": "16",
+          "description": "Card padding in dp",
+          "type": "NUMBER"
+        },
+        {
+          "name": "title",
+          "defaultValue": "Card Title",
+          "description": "Card title text",
+          "type": "STRING"
+        },
+        {
+          "name": "description",
+          "defaultValue": "Card description goes here",
+          "description": "Card description text",
+          "type": "STRING"
+        }
+      ],
+      "isPublic": true,
+      "isFavorite": false,
+      "usageCount": 0,
+      "rating": 0.0,
+      "downloads": 0
+    },
+    {
+      "id": "avamagic-list-basic",
+      "name": "Basic List",
+      "description": "Simple list with items",
+      "category": "DATA",
+      "tags": ["list", "data", "scrollable"],
+      "code": "ScrollView {\n    fillMaxSize()\n\n    Column {\n        spacing = 8f\n        padding = 16f\n\n        forEach(${dataSource}) { item ->\n            ListItem {\n                title = item.${titleProperty}\n                subtitle = item.${subtitleProperty}\n                leadingIcon = \"${icon}\"\n                onClick = { handleItemClick(item) }\n            }\n        }\n    }\n}",
+      "language": "AVAMAGIC_DSL",
+      "author": "AVAMagic Team",
+      "created": "2025-11-21T10:00:00Z",
+      "modified": "2025-11-21T10:00:00Z",
+      "version": "1.0.0",
+      "platforms": ["ANDROID", "IOS_26", "WINDOWS_11", "MACOS_26"],
+      "dependencies": [],
+      "imports": [],
+      "variables": [
+        {
+          "name": "dataSource",
+          "defaultValue": "items",
+          "description": "List data source variable",
+          "type": "STRING"
+        },
+        {
+          "name": "titleProperty",
+          "defaultValue": "title",
+          "description": "Property for item title",
+          "type": "STRING"
+        },
+        {
+          "name": "subtitleProperty",
+          "defaultValue": "subtitle",
+          "description": "Property for item subtitle",
+          "type": "STRING"
+        },
+        {
+          "name": "icon",
+          "defaultValue": "circle",
+          "description": "Leading icon name",
+          "type": "ICON"
+        }
+      ],
+      "isPublic": true,
+      "isFavorite": false,
+      "usageCount": 0,
+      "rating": 0.0,
+      "downloads": 0
+    },
+    {
+      "id": "avamagic-dialog-basic",
+      "name": "Basic Dialog",
+      "description": "Simple dialog with title, message, and buttons",
+      "category": "FEEDBACK",
+      "tags": ["dialog", "modal", "popup"],
+      "code": "Dialog {\n    visible = ${showDialog}\n    onDismiss = { ${showDialog} = false }\n\n    Card {\n        padding = 24f\n        width = 300f\n\n        Column {\n            spacing = 16f\n\n            Text(\"${title}\") {\n                font = Font.HeadlineSmall\n                color = theme.onSurface\n            }\n\n            Text(\"${message}\") {\n                font = Font.BodyMedium\n                color = theme.onSurfaceVariant\n            }\n\n            Row {\n                fillMaxWidth()\n                horizontalArrangement = Arrangement.End\n                spacing = 8f\n\n                Button(\"${cancelLabel}\") {\n                    variant = ButtonVariant.Text\n                    onClick = { ${showDialog} = false }\n                }\n\n                Button(\"${confirmLabel}\") {\n                    variant = ButtonVariant.Filled\n                    onClick = {\n                        ${confirmAction}\n                        ${showDialog} = false\n                    }\n                }\n            }\n        }\n    }\n}",
+      "language": "AVAMAGIC_DSL",
+      "author": "AVAMagic Team",
+      "created": "2025-11-21T10:00:00Z",
+      "modified": "2025-11-21T10:00:00Z",
+      "version": "1.0.0",
+      "platforms": ["ANDROID", "IOS_26", "WINDOWS_11", "MACOS_26"],
+      "dependencies": [],
+      "imports": [],
+      "variables": [
+        {
+          "name": "showDialog",
+          "defaultValue": "showDialog",
+          "description": "Dialog visibility state variable",
+          "type": "STRING"
+        },
+        {
+          "name": "title",
+          "defaultValue": "Confirm Action",
+          "description": "Dialog title",
+          "type": "STRING"
+        },
+        {
+          "name": "message",
+          "defaultValue": "Are you sure you want to proceed?",
+          "description": "Dialog message",
+          "type": "STRING"
+        },
+        {
+          "name": "cancelLabel",
+          "defaultValue": "Cancel",
+          "description": "Cancel button text",
+          "type": "STRING"
+        },
+        {
+          "name": "confirmLabel",
+          "defaultValue": "Confirm",
+          "description": "Confirm button text",
+          "type": "STRING"
+        },
+        {
+          "name": "confirmAction",
+          "defaultValue": "/* TODO: Handle confirmation */",
+          "description": "Action to perform on confirm",
+          "type": "STRING"
+        }
+      ],
+      "isPublic": true,
+      "isFavorite": false,
+      "usageCount": 0,
+      "rating": 0.0,
+      "downloads": 0
+    },
+    {
+      "id": "avamagic-appbar-basic",
+      "name": "Basic App Bar",
+      "description": "Material 3 top app bar with title and actions",
+      "category": "NAVIGATION",
+      "tags": ["appbar", "toolbar", "navigation"],
+      "code": "AppBar {\n    title = \"${title}\"\n    navigationIcon = \"${navIcon}\"\n    onNavigationClick = { ${navAction} }\n\n    actions {\n        IconButton {\n            icon = \"search\"\n            onClick = { openSearch() }\n        }\n\n        IconButton {\n            icon = \"more_vert\"\n            onClick = { showMenu() }\n        }\n    }\n}",
+      "language": "AVAMAGIC_DSL",
+      "author": "AVAMagic Team",
+      "created": "2025-11-21T10:00:00Z",
+      "modified": "2025-11-21T10:00:00Z",
+      "version": "1.0.0",
+      "platforms": ["ANDROID", "IOS_26", "WINDOWS_11", "MACOS_26"],
+      "dependencies": [],
+      "imports": [],
+      "variables": [
+        {
+          "name": "title",
+          "defaultValue": "My App",
+          "description": "App bar title",
+          "type": "STRING"
+        },
+        {
+          "name": "navIcon",
+          "defaultValue": "menu",
+          "description": "Navigation icon",
+          "type": "ICON"
+        },
+        {
+          "name": "navAction",
+          "defaultValue": "openDrawer()",
+          "description": "Navigation icon action",
+          "type": "STRING"
+        }
+      ],
+      "isPublic": true,
+      "isFavorite": false,
+      "usageCount": 0,
+      "rating": 0.0,
+      "downloads": 0
+    },
+    {
+      "id": "avamagic-form-basic",
+      "name": "Basic Form",
+      "description": "Form with multiple input fields and submit button",
+      "category": "FORM",
+      "tags": ["form", "input", "validation"],
+      "code": "fun ${formName}() = AvaUI {\n    theme = Themes.${themeName}\n\n    val ${field1State} = remember { mutableStateOf(\"\") }\n    val ${field2State} = remember { mutableStateOf(\"\") }\n    val ${field3State} = remember { mutableStateOf(\"\") }\n\n    Column {\n        fillMaxSize()\n        padding = 24f\n        spacing = 16f\n\n        Text(\"${formTitle}\") {\n            font = Font.HeadlineMedium\n            color = theme.onSurface\n        }\n\n        TextField {\n            label = \"${field1Label}\"\n            value = ${field1State}.value\n            onValueChange = { ${field1State}.value = it }\n            fillMaxWidth()\n        }\n\n        TextField {\n            label = \"${field2Label}\"\n            value = ${field2State}.value\n            onValueChange = { ${field2State}.value = it }\n            fillMaxWidth()\n        }\n\n        TextField {\n            label = \"${field3Label}\"\n            value = ${field3State}.value\n            onValueChange = { ${field3State}.value = it }\n            fillMaxWidth()\n        }\n\n        Spacer { height = 24f }\n\n        Button(\"${submitLabel}\") {\n            variant = ButtonVariant.Filled\n            fillMaxWidth()\n            height = 56f\n            onClick = { ${submitAction} }\n        }\n    }\n}",
+      "language": "AVAMAGIC_DSL",
+      "author": "AVAMagic Team",
+      "created": "2025-11-21T10:00:00Z",
+      "modified": "2025-11-21T10:00:00Z",
+      "version": "1.0.0",
+      "platforms": ["ANDROID", "IOS_26", "WINDOWS_11", "MACOS_26"],
+      "dependencies": [],
+      "imports": ["androidx.compose.runtime.*"],
+      "variables": [
+        {
+          "name": "formName",
+          "defaultValue": "BasicForm",
+          "description": "Form function name",
+          "type": "STRING"
+        },
+        {
+          "name": "themeName",
+          "defaultValue": "Material3Light",
+          "description": "Theme to apply",
+          "type": "STRING"
+        },
+        {
+          "name": "formTitle",
+          "defaultValue": "Contact Form",
+          "description": "Form title",
+          "type": "STRING"
+        },
+        {
+          "name": "field1State",
+          "defaultValue": "name",
+          "description": "First field state variable",
+          "type": "STRING"
+        },
+        {
+          "name": "field1Label",
+          "defaultValue": "Name",
+          "description": "First field label",
+          "type": "STRING"
+        },
+        {
+          "name": "field2State",
+          "defaultValue": "email",
+          "description": "Second field state variable",
+          "type": "STRING"
+        },
+        {
+          "name": "field2Label",
+          "defaultValue": "Email",
+          "description": "Second field label",
+          "type": "STRING"
+        },
+        {
+          "name": "field3State",
+          "defaultValue": "message",
+          "description": "Third field state variable",
+          "type": "STRING"
+        },
+        {
+          "name": "field3Label",
+          "defaultValue": "Message",
+          "description": "Third field label",
+          "type": "STRING"
+        },
+        {
+          "name": "submitLabel",
+          "defaultValue": "Submit",
+          "description": "Submit button text",
+          "type": "STRING"
+        },
+        {
+          "name": "submitAction",
+          "defaultValue": "submitForm(name.value, email.value, message.value)",
+          "description": "Submit action",
+          "type": "STRING"
+        }
+      ],
+      "isPublic": true,
+      "isFavorite": false,
+      "usageCount": 0,
+      "rating": 0.0,
+      "downloads": 0
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "totalSnippets": 8,
+    "categories": ["FOUNDATION", "AUTHENTICATION", "LAYOUT", "DATA", "FEEDBACK", "NAVIGATION", "FORM"],
+    "generatedBy": "AVAMagic Snippet System",
+    "generatedDate": "2025-11-21T10:00:00Z"
+  }
+}
