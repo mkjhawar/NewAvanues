@@ -1688,7 +1688,13 @@ class ExplorationEngine(
             // Destructive account actions
             "delete account", "deactivate account", "remove account", "close account",
             // Factory/system reset
-            "factory reset", "wipe data", "erase all", "format"
+            "factory reset", "wipe data", "erase all", "format",
+            // CRITICAL: Call/meeting actions (2025-12-08) - NEVER initiate calls
+            "call", "make a call", "make call", "start call", "audio call", "video call",
+            "dial", "answer", "join call", "join meeting", "new meeting", "schedule meeting",
+            "instant meeting", "meet now", "call_control", "call_end", "calls_call",
+            // CRITICAL: Reply actions (2025-12-08) - can send messages
+            "reply"
         )
 
         val isCritical = criticalPatterns.any { pattern ->
