@@ -215,6 +215,27 @@ class ExplorationEngine(
     }
 
     /**
+     * Termination reason tracking (P1 Diagnostic Fix - 2025-12-07)
+     *
+     * Tracks why exploration ended to help diagnose partial learning issues.
+     * Logged at exploration completion for debugging.
+     */
+    enum class TerminationReason {
+        COMPLETED,            // Normal completion - all screens explored
+        TIMEOUT,              // Auto-pause timeout expired (login/permission)
+        RECOVERY_FAILED,      // Couldn't recover to target app after external navigation
+        CONSECUTIVE_FAILURES, // Too many consecutive click failures
+        STACK_EXHAUSTED,      // DFS stack empty (normal completion path)
+        MAX_DURATION,         // Overall exploration timeout reached
+        USER_STOPPED          // User manually stopped exploration
+    }
+
+    /**
+     * Current termination reason (set when exploration ends)
+     */
+    private var terminationReason: TerminationReason? = null
+
+    /**
      * Exploration state flow
      */
     private val _explorationState = MutableStateFlow<ExplorationState>(ExplorationState.Idle)
@@ -305,6 +326,7 @@ class ExplorationEngine(
                 clickTracker.clear() // Clear click tracking for new session
                 clickFailures.clear() // Clear telemetry for new session
                 clickedStableIds.clear() // VOS-HYBRID-CLITE: Clear stableId tracking for new session
+                terminationReason = null // P1 Fix: Reset termination tracking for new session
                 startTimestamp = System.currentTimeMillis()
                 dangerousElementsSkipped = 0
                 loginScreensDetected = 0
@@ -506,10 +528,27 @@ class ExplorationEngine(
         )
 
         // Register screen with clickTracker for progress tracking
-        clickTracker.registerScreen(
-            rootScreenState.hash,
-            rootElementsWithUuids.mapNotNull { it.uuid }
-        )
+        // P4 Fix (2025-12-07): Exclude critical dangerous elements from total count
+        // These elements are never clicked, so including them inflates totalElements
+        // and causes artificially low completeness percentages
+        // NOTE: Critical elements still get UUIDs (for voice commands) but aren't counted for completeness
+        val criticalElements = rootElementsWithUuids.filter { isCriticalDangerousElement(it) }
+        val clickableElements = rootElementsWithUuids.filter { !isCriticalDangerousElement(it) }
+        val clickableUuids = clickableElements.mapNotNull { it.uuid }
+        clickTracker.registerScreen(rootScreenState.hash, clickableUuids)
+
+        // Log skipped critical elements with details
+        if (criticalElements.isNotEmpty()) {
+            android.util.Log.i("ExplorationEngine-P4",
+                "📊 Screen ${rootScreenState.hash.take(8)}: Registered ${clickableUuids.size} clickable, " +
+                "excluded ${criticalElements.size} critical dangerous elements:")
+            criticalElements.forEach { elem ->
+                val desc = elem.text.ifEmpty { elem.contentDescription.ifEmpty { elem.className } }
+                val hasUuid = elem.uuid != null
+                android.util.Log.i("ExplorationEngine-P4",
+                    "   🚫 \"$desc\" [UUID: ${if (hasUuid) "✓" else "✗"}] - still actionable via voice but excluded from completeness")
+            }
+        }
 
         android.util.Log.i("ExplorationEngine",
             "🚀 Starting ITERATIVE DFS exploration of $packageName (max depth: $maxDepth)")
@@ -518,6 +557,7 @@ class ExplorationEngine(
         while (explorationStack.isNotEmpty()) {
             // Phase 2: Check pause state before each iteration
             // FIX (2025-12-06): Added timeout logic to prevent waiting forever when auto-paused
+            // P3 Fix (2025-12-07): Added warning at 50% timeout
             if (_pauseState.value != ExplorationPauseState.RUNNING) {
                 val pauseState = _pauseState.value
                 android.util.Log.i("ExplorationEngine", "⏸️ Exploration paused - waiting for resume (state: $pauseState)")
@@ -529,16 +569,61 @@ class ExplorationEngine(
                     Long.MAX_VALUE  // Infinite for manual user pause
                 }
 
-                // Wait for resume with timeout
-                val resumed = withTimeoutOrNull(timeout) {
-                    _pauseState.first { it == ExplorationPauseState.RUNNING }
-                    true
-                } ?: false
+                // P3 Fix: Wait with warning at 50% timeout
+                if (pauseState == ExplorationPauseState.PAUSED_AUTO) {
+                    val warningTimeout = timeout / 2  // 5 minutes
 
-                if (!resumed) {
-                    android.util.Log.w("ExplorationEngine",
-                        "⚠️ Pause timeout reached (${timeout / 60000} minutes) - terminating exploration")
-                    break
+                    // First phase: wait up to 50% timeout
+                    val resumedEarly = withTimeoutOrNull(warningTimeout) {
+                        _pauseState.first { it == ExplorationPauseState.RUNNING }
+                        true
+                    } ?: false
+
+                    if (!resumedEarly && _pauseState.value != ExplorationPauseState.RUNNING) {
+                        // Show warning - 50% time remaining
+                        android.util.Log.w("ExplorationEngine",
+                            "⏰ TIMEOUT_WARNING: ${warningTimeout / 60000} minutes remaining before auto-pause expires")
+                        android.util.Log.w("ExplorationEngine",
+                            "💡 TIP: Complete login/permission action or tap 'Continue' to resume exploration")
+
+                        // Emit warning state for UI notification
+                        val currentState = _explorationState.value
+                        if (currentState is ExplorationState.Running) {
+                            _explorationState.value = currentState.copy(
+                                progress = currentState.progress.copy(
+                                    currentScreen = "⏰ Waiting for login/permission (${warningTimeout / 60000}min left)..."
+                                )
+                            )
+                        }
+
+                        // Second phase: wait remaining 50%
+                        val resumedLate = withTimeoutOrNull(warningTimeout) {
+                            _pauseState.first { it == ExplorationPauseState.RUNNING }
+                            true
+                        } ?: false
+
+                        if (!resumedLate) {
+                            terminationReason = TerminationReason.TIMEOUT
+                            android.util.Log.w("ExplorationEngine",
+                                "⚠️ Pause timeout reached (${timeout / 60000} minutes) - terminating exploration")
+                            android.util.Log.w("ExplorationEngine",
+                                "🔍 TERMINATION_REASON: TIMEOUT - Auto-pause (login/permission) timed out after ${timeout / 60000} minutes")
+                            break
+                        }
+                    }
+                } else {
+                    // Manual pause - wait indefinitely
+                    val resumed = withTimeoutOrNull(timeout) {
+                        _pauseState.first { it == ExplorationPauseState.RUNNING }
+                        true
+                    } ?: false
+
+                    if (!resumed) {
+                        terminationReason = TerminationReason.TIMEOUT
+                        android.util.Log.w("ExplorationEngine",
+                            "⚠️ Pause timeout reached - terminating exploration")
+                        break
+                    }
                 }
 
                 android.util.Log.i("ExplorationEngine", "▶️ Exploration resumed - continuing DFS loop")
@@ -546,7 +631,10 @@ class ExplorationEngine(
 
             // Check timeout
             if (System.currentTimeMillis() - startTime > maxDuration) {
+                terminationReason = TerminationReason.MAX_DURATION
                 android.util.Log.w("ExplorationEngine", "Exploration timeout reached")
+                android.util.Log.w("ExplorationEngine",
+                    "🔍 TERMINATION_REASON: MAX_DURATION - Overall exploration timeout (${maxDuration / 60000} minutes) reached")
                 break
             }
 
@@ -610,6 +698,14 @@ class ExplorationEngine(
                             // Clear the entire stack
                             explorationStack.clear()
 
+                            // P2 Fix (2025-12-07): Clear click tracker to match fresh exploration
+                            // Without this, totalElements is inflated by stale screen registrations,
+                            // causing low completeness percentage (e.g., 16%)
+                            val oldStats = clickTracker.getStats()
+                            clickTracker.clear()
+                            android.util.Log.i("ExplorationEngine",
+                                "🔄 P2 Fix: Cleared clickTracker (had ${oldStats.totalElements} elements from ${oldStats.totalScreens} stale screens)")
+
                             // Re-explore from current screen (app entry point)
                             val freshRoot = accessibilityService.rootInActiveWindow
                             if (freshRoot != null) {
@@ -634,10 +730,11 @@ class ExplorationEngine(
                                     )
 
                                     // Register screen with clickTracker for progress tracking
-                                    clickTracker.registerScreen(
-                                        freshState.hash,
-                                        freshElements.mapNotNull { it.uuid }
-                                    )
+                                    // P4 Fix: Exclude critical dangerous elements
+                                    val freshClickableUuids = freshElements
+                                        .filter { !isCriticalDangerousElement(it) }
+                                        .mapNotNull { it.uuid }
+                                    clickTracker.registerScreen(freshState.hash, freshClickableUuids)
 
                                     val freshFrame = ExplorationFrame(
                                         screenHash = freshState.hash,
@@ -675,10 +772,11 @@ class ExplorationEngine(
                                             )
 
                                             // Update screen registration with current element count
-                                            clickTracker.registerScreen(
-                                                freshState.hash,
-                                                resumeElements.mapNotNull { it.uuid }
-                                            )
+                                            // P4 Fix: Exclude critical dangerous elements
+                                            val resumeClickableUuids = resumeElements
+                                                .filter { !isCriticalDangerousElement(it) }
+                                                .mapNotNull { it.uuid }
+                                            clickTracker.registerScreen(freshState.hash, resumeClickableUuids)
 
                                             val resumeFrame = ExplorationFrame(
                                                 screenHash = freshState.hash,
@@ -749,10 +847,11 @@ class ExplorationEngine(
                             elements = newElementsWithUuids
                         )
 
-                        clickTracker.registerScreen(
-                            postExploreState.hash,
-                            newElementsWithUuids.mapNotNull { it.uuid }
-                        )
+                        // P4 Fix: Exclude critical dangerous elements from total count
+                        val newClickableUuids = newElementsWithUuids
+                            .filter { !isCriticalDangerousElement(it) }
+                            .mapNotNull { it.uuid }
+                        clickTracker.registerScreen(postExploreState.hash, newClickableUuids)
 
                         if (developerSettings.isVerboseLoggingEnabled()) {
                             android.util.Log.d("ExplorationEngine",
@@ -803,8 +902,23 @@ class ExplorationEngine(
             }
         }
 
+        // Set termination reason if not already set (normal completion)
+        if (terminationReason == null) {
+            terminationReason = TerminationReason.STACK_EXHAUSTED
+        }
+
+        // Log termination reason for diagnostics
+        val stats = clickTracker.getStats()
         android.util.Log.i("ExplorationEngine",
             "🏁 Iterative DFS complete. Explored ${visitedScreens.size} unique screens")
+        android.util.Log.i("ExplorationEngine",
+            "🔍 TERMINATION_REASON: $terminationReason")
+        android.util.Log.i("ExplorationEngine",
+            "📊 Final Stats: ${stats.clickedElements}/${stats.totalElements} elements clicked " +
+            "(${stats.overallCompleteness.toInt()}% completeness)")
+        android.util.Log.i("ExplorationEngine",
+            "📊 Screens: ${stats.fullyExploredScreens} fully explored, " +
+            "${stats.partiallyExploredScreens} partial, ${stats.unexploredScreens} unexplored")
 
         // Export checklist to file
         val checklistPath = "/sdcard/Download/learnapp-checklist-${packageName.substringAfterLast('.')}-${System.currentTimeMillis()}.md"
@@ -1155,8 +1269,12 @@ class ExplorationEngine(
         }
 
         if (consecutiveFailures >= maxConsecutiveFailures) {
+            // Note: This sets a local flag but doesn't terminate the whole exploration
+            // It only stops exploring THIS screen. The main loop continues.
             android.util.Log.w("ExplorationEngine-HybridCLite",
-                "⚠️ Reached $maxConsecutiveFailures consecutive failures, stopping")
+                "⚠️ Reached $maxConsecutiveFailures consecutive failures, stopping screen exploration")
+            android.util.Log.w("ExplorationEngine-HybridCLite",
+                "🔍 SCREEN_TERMINATION: CONSECUTIVE_FAILURES on screen ${frame.screenHash.take(8)}...")
         }
 
         android.util.Log.i("ExplorationEngine-HybridCLite",
