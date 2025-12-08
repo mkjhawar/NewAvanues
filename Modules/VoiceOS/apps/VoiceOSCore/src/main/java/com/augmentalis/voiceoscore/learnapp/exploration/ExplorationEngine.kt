@@ -156,8 +156,17 @@ class ExplorationEngine(
 
     /**
      * Element click tracker - per-element progress tracking
+     * NOTE: This tracker may be cleared on intent relaunch for fresh-scrape logic
      */
     private val clickTracker = ElementClickTracker()
+
+    /**
+     * FIX (2025-12-08): Global cumulative tracking - NEVER cleared during exploration
+     * These track ALL exploration progress regardless of intent relaunches
+     * Used for final completion percentage calculation
+     */
+    private val cumulativeDiscoveredVuids = mutableSetOf<String>()  // All discovered element VUIDs
+    private val cumulativeClickedVuids = mutableSetOf<String>()      // All clicked element VUIDs
 
     /**
      * Expandable control detector - identifies dropdowns, menus, etc.
@@ -406,23 +415,27 @@ class ExplorationEngine(
                 exploreAppIterative(packageName, maxDepth = 10)
 
                 // Exploration completed - check completion status
-                val clickStats = clickTracker.getStats()
-                android.util.Log.i("ExplorationEngine", "📊 Exploration Statistics:")
-                android.util.Log.i("ExplorationEngine", clickStats.toLogString())
+                // FIX (2025-12-08): Use cumulative tracking instead of clickTracker for accurate stats
+                val cumulativeCompleteness = if (cumulativeDiscoveredVuids.isNotEmpty()) {
+                    (cumulativeClickedVuids.size.toFloat() / cumulativeDiscoveredVuids.size.toFloat()) * 100f
+                } else {
+                    0f
+                }
+                android.util.Log.i("ExplorationEngine", "📊 Exploration Statistics (CUMULATIVE):")
+                android.util.Log.i("ExplorationEngine", "   VUIDs: ${cumulativeClickedVuids.size}/${cumulativeDiscoveredVuids.size} clicked")
+                android.util.Log.i("ExplorationEngine", "   Completeness: ${cumulativeCompleteness.toInt()}%")
 
-                // Mark app as fully learned if completeness >= 95%
-                if (clickStats.overallCompleteness >= developerSettings.getCompletenessThresholdPercent()) {
-                    android.util.Log.i("ExplorationEngine", "✅ App fully learned (${clickStats.overallCompleteness}%)!")
-                    android.util.Log.i("ExplorationEngine", "   ${clickStats.clickedElements}/${clickStats.totalElements} elements clicked")
-                    android.util.Log.i("ExplorationEngine", "   ${clickStats.fullyExploredScreens}/${clickStats.totalScreens} screens fully explored")
+                // Mark app as fully learned if completeness >= threshold (using cumulative stats)
+                if (cumulativeCompleteness >= developerSettings.getCompletenessThresholdPercent()) {
+                    android.util.Log.i("ExplorationEngine", "✅ App fully learned (${cumulativeCompleteness.toInt()}%)!")
+                    android.util.Log.i("ExplorationEngine", "   ${cumulativeClickedVuids.size}/${cumulativeDiscoveredVuids.size} VUIDs clicked")
 
                     // Mark app as fully learned in database
                     repository.markAppAsFullyLearned(packageName, System.currentTimeMillis())
                 } else {
-                    android.util.Log.w("ExplorationEngine", "⚠️ App partially learned (${clickStats.overallCompleteness}%)")
-                    android.util.Log.w("ExplorationEngine", "   ${clickStats.clickedElements}/${clickStats.totalElements} elements clicked")
-                    android.util.Log.w("ExplorationEngine", "   ${clickStats.fullyExploredScreens}/${clickStats.totalScreens} screens fully explored")
-                    android.util.Log.w("ExplorationEngine", "   Not marking as fully learned (threshold: 95%)")
+                    android.util.Log.w("ExplorationEngine", "⚠️ App partially learned (${cumulativeCompleteness.toInt()}%)")
+                    android.util.Log.w("ExplorationEngine", "   ${cumulativeClickedVuids.size}/${cumulativeDiscoveredVuids.size} VUIDs clicked")
+                    android.util.Log.w("ExplorationEngine", "   Not marking as fully learned (threshold: ${developerSettings.getCompletenessThresholdPercent().toInt()}%)")
                 }
 
                 val stats = createExplorationStats(packageName)
@@ -500,6 +513,12 @@ class ExplorationEngine(
         // Key: element stableId, Value: generated UUID
         val registeredElementUuids = mutableSetOf<String>()
 
+        // FIX (2025-12-08): Clear cumulative tracking at START of new exploration session
+        // These class-level sets preserve progress across intent relaunches within a session
+        // but are cleared for each new app exploration
+        cumulativeDiscoveredVuids.clear()
+        cumulativeClickedVuids.clear()
+
         // Initialize checklist tracking
         checklistManager.startChecklist(packageName)
 
@@ -554,6 +573,9 @@ class ExplorationEngine(
         val clickableElements = rootElementsWithUuids.filter { !isCriticalDangerousElement(it) }
         val clickableUuids = clickableElements.mapNotNull { it.uuid }
         clickTracker.registerScreen(rootScreenState.hash, clickableUuids)
+
+        // FIX (2025-12-08): Add to cumulative tracking (class-level, survives intent relaunches)
+        cumulativeDiscoveredVuids.addAll(clickableUuids)
 
         // Log skipped critical elements with details
         if (criticalElements.isNotEmpty()) {
@@ -757,6 +779,9 @@ class ExplorationEngine(
                                         .mapNotNull { it.uuid }
                                     clickTracker.registerScreen(freshState.hash, freshClickableUuids)
 
+                                    // FIX (2025-12-08): Add to cumulative tracking (class-level, survives intent relaunches)
+                                    cumulativeDiscoveredVuids.addAll(freshClickableUuids)
+
                                     val freshFrame = ExplorationFrame(
                                         screenHash = freshState.hash,
                                         screenState = freshState,
@@ -798,6 +823,9 @@ class ExplorationEngine(
                                                 .filter { !isCriticalDangerousElement(it) }
                                                 .mapNotNull { it.uuid }
                                             clickTracker.registerScreen(freshState.hash, resumeClickableUuids)
+
+                                            // FIX (2025-12-08): Add to cumulative tracking (class-level, survives intent relaunches)
+                                            cumulativeDiscoveredVuids.addAll(resumeClickableUuids)
 
                                             val resumeFrame = ExplorationFrame(
                                                 screenHash = freshState.hash,
@@ -888,6 +916,9 @@ class ExplorationEngine(
                             .mapNotNull { it.uuid }
                         clickTracker.registerScreen(postExploreState.hash, newClickableUuids)
 
+                        // FIX (2025-12-08): Add to cumulative tracking (class-level, survives intent relaunches)
+                        cumulativeDiscoveredVuids.addAll(newClickableUuids)
+
                         if (developerSettings.isVerboseLoggingEnabled()) {
                             android.util.Log.d("ExplorationEngine",
                                 "📝 Pushed new screen onto stack: ${postExploreState.hash.take(8)}... " +
@@ -947,17 +978,29 @@ class ExplorationEngine(
         }
 
         // Log termination reason for diagnostics
-        val stats = clickTracker.getStats()
+        // FIX (2025-12-08): Use cumulative tracking for final stats instead of clickTracker
+        // clickTracker.getStats() only reflects post-last-clear data (loses progress on intent relaunch)
+        // Cumulative sets preserve ALL exploration progress throughout the session
+        val cumulativeCompleteness = if (cumulativeDiscoveredVuids.isNotEmpty()) {
+            (cumulativeClickedVuids.size.toFloat() / cumulativeDiscoveredVuids.size.toFloat()) * 100f
+        } else {
+            0f
+        }
+
+        // Log both for comparison (debugging)
+        val clickTrackerStats = clickTracker.getStats()
         android.util.Log.i("ExplorationEngine",
             "🏁 Iterative DFS complete. Explored ${visitedScreens.size} unique screens")
         android.util.Log.i("ExplorationEngine",
             "🔍 TERMINATION_REASON: $terminationReason")
         android.util.Log.i("ExplorationEngine",
-            "📊 Final Stats: ${stats.clickedElements}/${stats.totalElements} elements clicked " +
-            "(${stats.overallCompleteness.toInt()}% completeness)")
+            "📊 Final Stats (CUMULATIVE): ${cumulativeClickedVuids.size}/${cumulativeDiscoveredVuids.size} VUIDs clicked " +
+            "(${cumulativeCompleteness.toInt()}% completeness)")
         android.util.Log.i("ExplorationEngine",
-            "📊 Screens: ${stats.fullyExploredScreens} fully explored, " +
-            "${stats.partiallyExploredScreens} partial, ${stats.unexploredScreens} unexplored")
+            "📊 Final Stats (clickTracker - may be post-clear): ${clickTrackerStats.clickedElements}/${clickTrackerStats.totalElements} " +
+            "(${clickTrackerStats.overallCompleteness.toInt()}%)")
+        android.util.Log.i("ExplorationEngine",
+            "📊 Screens: ${visitedScreens.size} total visited")
 
         // Export checklist to file
         val checklistPath = "/sdcard/Download/learnapp-checklist-${packageName.substringAfterLast('.')}-${System.currentTimeMillis()}.md"
@@ -1332,11 +1375,13 @@ class ExplorationEngine(
                 clickCount++
                 consecutiveFailures = 0
 
-                // Also update tracking systems if UUID available
+                // Also update tracking systems if VUID available
                 element.node?.let { node ->
-                    val uuid = thirdPartyGenerator.generateUuid(node, packageName)
-                    clickTracker.markElementClicked(frame.screenHash, uuid)
-                    checklistManager.markElementCompleted(frame.screenHash, uuid)
+                    val vuid = thirdPartyGenerator.generateUuid(node, packageName)
+                    clickTracker.markElementClicked(frame.screenHash, vuid)
+                    checklistManager.markElementCompleted(frame.screenHash, vuid)
+                    // FIX (2025-12-08): Add to cumulative clicked tracking (class-level, survives intent relaunches)
+                    cumulativeClickedVuids.add(vuid)
                 }
 
                 // Wait for UI to settle
@@ -1893,6 +1938,8 @@ class ExplorationEngine(
                             }
 
                             clickTracker.markElementClicked(explorationResult.screenState.hash, elementUuid)
+                            // FIX (2025-12-08): Add to cumulative clicked tracking (class-level, survives intent relaunches)
+                            cumulativeClickedVuids.add(elementUuid)
                             delay(developerSettings.getScrollDelayMs())
                             continue
                         }
@@ -1942,8 +1989,10 @@ class ExplorationEngine(
                         }
                     }
 
-                    // Mark element as clicked in tracker (using temp UUID)
+                    // Mark element as clicked in tracker (using temp VUID)
                     clickTracker.markElementClicked(explorationResult.screenState.hash, elementUuid)
+                    // FIX (2025-12-08): Add to cumulative clicked tracking (class-level, survives intent relaunches)
+                    cumulativeClickedVuids.add(elementUuid)
 
                     // Log click success
                     if (developerSettings.isVerboseLoggingEnabled()) {
@@ -3168,8 +3217,13 @@ class ExplorationEngine(
         val graphStats = graph.getStats()
         val elapsed = System.currentTimeMillis() - startTimestamp
 
-        // Get actual completeness from click tracker
-        val clickStats = clickTracker.getStats()
+        // FIX (2025-12-08): Use cumulative tracking for completeness instead of clickTracker
+        // clickTracker may have been cleared during intent relaunches
+        val cumulativeCompleteness = if (cumulativeDiscoveredVuids.isNotEmpty()) {
+            (cumulativeClickedVuids.size.toFloat() / cumulativeDiscoveredVuids.size.toFloat()) * 100f
+        } else {
+            0f
+        }
 
         // Generate AI context from navigation graph
         try {
@@ -3212,7 +3266,7 @@ class ExplorationEngine(
             dangerousElementsSkipped = dangerousElementsSkipped,
             loginScreensDetected = loginScreensDetected,
             scrollableContainersFound = scrollableContainersFound,
-            completeness = clickStats.overallCompleteness  // FIX: Pass actual completeness percentage
+            completeness = cumulativeCompleteness  // FIX (2025-12-08): Use cumulative tracking for accurate completeness
         )
     }
 
