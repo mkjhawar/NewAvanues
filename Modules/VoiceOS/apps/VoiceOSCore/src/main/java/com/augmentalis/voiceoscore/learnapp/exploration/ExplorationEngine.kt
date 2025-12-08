@@ -65,7 +65,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Debug callback interface for screen exploration events
  *
  * Provides real-time updates about screen exploration progress,
- * including element discovery and navigation tracking.
+ * including element discovery, click tracking, and navigation.
+ *
+ * REWRITTEN (2025-12-08): Added onElementClicked and onElementBlocked for item tracking.
  *
  * @since 2025-12-08 (Debug Overlay Feature)
  */
@@ -90,7 +92,7 @@ interface ExplorationDebugCallback {
     /**
      * Called when an element click causes navigation to a new screen
      *
-     * @param elementKey Identifier for the clicked element (VUID or stableId)
+     * @param elementKey Identifier for the clicked element (screenHash:stableId)
      * @param destinationScreenHash Hash of the screen navigated to
      */
     fun onElementNavigated(elementKey: String, destinationScreenHash: String)
@@ -101,6 +103,24 @@ interface ExplorationDebugCallback {
      * @param progress Current progress percentage (0-100)
      */
     fun onProgressUpdated(progress: Int)
+
+    /**
+     * Called when an element is clicked (2025-12-08)
+     *
+     * @param stableId Element stable ID
+     * @param screenHash Screen where element was clicked
+     * @param vuid VUID if assigned
+     */
+    fun onElementClicked(stableId: String, screenHash: String, vuid: String?) {}
+
+    /**
+     * Called when an element is blocked (critical dangerous) (2025-12-08)
+     *
+     * @param stableId Element stable ID
+     * @param screenHash Screen where element was found
+     * @param reason Blocking reason
+     */
+    fun onElementBlocked(stableId: String, screenHash: String, reason: String) {}
 }
 
 /**
@@ -649,7 +669,7 @@ class ExplorationEngine(
         val blockedUuids = criticalElements.mapNotNull { it.uuid }
         cumulativeBlockedVuids.addAll(blockedUuids)
 
-        // Log skipped critical elements with details
+        // Log skipped critical elements with details and fire debug callbacks
         if (criticalElements.isNotEmpty()) {
             android.util.Log.i("ExplorationEngine-P4",
                 "📊 Screen ${rootScreenState.hash.take(8)}: Registered ${clickableUuids.size} clickable, " +
@@ -659,6 +679,10 @@ class ExplorationEngine(
                 val hasUuid = elem.uuid != null
                 android.util.Log.i("ExplorationEngine-P4",
                     "   🚫 \"$desc\" [UUID: ${if (hasUuid) "✓" else "✗"}] - still actionable via voice but excluded from completeness")
+
+                // DEBUG (2025-12-08): Fire blocked callback for debug overlay
+                val reason = getCriticalDangerReason(elem) ?: "Critical dangerous element"
+                debugCallback?.onElementBlocked(elem.stableId(), rootScreenState.hash, reason)
             }
         }
 
@@ -1478,6 +1502,9 @@ class ExplorationEngine(
                     checklistManager.markElementCompleted(frame.screenHash, vuid)
                     // FIX (2025-12-08): Add to cumulative clicked tracking (class-level, survives intent relaunches)
                     cumulativeClickedVuids.add(vuid)
+
+                    // DEBUG (2025-12-08): Fire clicked callback for debug overlay
+                    debugCallback?.onElementClicked(stableId, screenStartHash, vuid)
                 }
 
                 // Wait for UI to settle
@@ -1732,6 +1759,84 @@ class ExplorationEngine(
         }
 
         return isCritical
+    }
+
+    /**
+     * Get the reason why an element is critically dangerous (2025-12-08)
+     *
+     * @param element Element to check
+     * @return Reason string or null if not dangerous
+     */
+    private fun getCriticalDangerReason(element: com.augmentalis.voiceoscore.learnapp.models.ElementInfo): String? {
+        val text = element.text.lowercase()
+        val contentDesc = element.contentDescription.lowercase()
+        val resourceId = element.resourceId.lowercase()
+        val combinedText = "$text $contentDesc $resourceId"
+
+        // Critical patterns with their reasons
+        val criticalPatternsWithReasons = listOf(
+            // System power actions
+            "power off" to "Power off (CRITICAL)",
+            "poweroff" to "Power off (CRITICAL)",
+            "shut down" to "Shutdown (CRITICAL)",
+            "shutdown" to "Shutdown (CRITICAL)",
+            "restart" to "Restart (CRITICAL)",
+            "reboot" to "Reboot (CRITICAL)",
+            "sleep" to "Sleep (CRITICAL)",
+            "hibernate" to "Hibernate (CRITICAL)",
+            "turn off" to "Turn off (CRITICAL)",
+            // App termination
+            "exit" to "Exit (CRITICAL)",
+            "quit" to "Quit (CRITICAL)",
+            "close app" to "Close app (CRITICAL)",
+            "force stop" to "Force stop (CRITICAL)",
+            "force close" to "Force close (CRITICAL)",
+            // Session termination
+            "sign out" to "Sign out",
+            "signout" to "Sign out",
+            "log out" to "Log out",
+            "logout" to "Log out",
+            "sign-out" to "Sign out",
+            "log-out" to "Log out",
+            // Destructive account actions
+            "delete account" to "Delete account",
+            "deactivate account" to "Deactivate account",
+            "remove account" to "Remove account",
+            "close account" to "Close account",
+            // Factory/system reset
+            "factory reset" to "Factory reset (CRITICAL)",
+            "wipe data" to "Wipe data (CRITICAL)",
+            "erase all" to "Erase all (CRITICAL)",
+            "format" to "Format (CRITICAL)",
+            // Call/meeting actions
+            "call" to "Call (CRITICAL)",
+            "make a call" to "Make call (CRITICAL)",
+            "make call" to "Make call (CRITICAL)",
+            "start call" to "Start call (CRITICAL)",
+            "audio call" to "Audio call (CRITICAL)",
+            "video call" to "Video call (CRITICAL)",
+            "dial" to "Dial (CRITICAL)",
+            "answer" to "Answer (CRITICAL)",
+            "join call" to "Join call (CRITICAL)",
+            "join meeting" to "Join meeting (CRITICAL)",
+            "new meeting" to "New meeting (CRITICAL)",
+            "schedule meeting" to "Schedule meeting (CRITICAL)",
+            "instant meeting" to "Instant meeting (CRITICAL)",
+            "meet now" to "Meet now (CRITICAL)",
+            "call_control" to "Call control (CRITICAL)",
+            "call_end" to "End call (CRITICAL)",
+            "calls_call" to "Call item (CRITICAL)",
+            // Reply actions
+            "reply" to "Reply (sends message)"
+        )
+
+        for ((pattern, reason) in criticalPatternsWithReasons) {
+            if (combinedText.contains(pattern)) {
+                return reason
+            }
+        }
+
+        return null
     }
 
     /**

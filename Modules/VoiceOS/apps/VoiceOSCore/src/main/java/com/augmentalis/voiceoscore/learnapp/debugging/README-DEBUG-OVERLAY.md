@@ -1,121 +1,174 @@
-# LearnApp Debug Overlay
+# LearnApp Debug Overlay (REWRITTEN 2025-12-08)
 
-Visual debugging tool for LearnApp exploration that overlays colored highlights on UI elements.
+Scrollable visual debugging tool for LearnApp exploration that tracks ALL items scanned.
 
 ## Features
 
-- **Real-time element visualization** - See which elements have been learned, their VUIDs, and navigation links
-- **Color-coded learning source** - Distinguish between LearnApp-learned and JIT-learned elements
-- **Navigation tracking** - View which elements link to which screens
-- **Toggle controls** - Enable/disable via FloatingProgressWidget buttons
-- **Three verbosity levels** - Control detail level (minimal/standard/verbose)
+- **Scrollable item list** - View ALL items discovered during exploration
+- **Click tracking** - See which items were clicked vs not clicked
+- **Block tracking** - See which items were blocked (with reason)
+- **Screen grouping** - Group items by source screen
+- **Filter buttons** - Filter by All/Screens/Clicked/Blocked/Stats
+- **Summary statistics** - Real-time progress stats
+- **Draggable window** - Move overlay anywhere on screen
+- **Collapsible** - Collapse to minimal header
 
-## Color Coding
+## Status Icons
 
-| Color | Meaning |
-|-------|---------|
-| 🟢 Green | LearnApp-learned element (full exploration) |
-| 🔵 Blue | JIT-learned element (passive learning) |
-| 🟡 Yellow | Has VUID but not linked to navigation |
-| 🟠 Orange | Currently being explored |
-| ⚪ Gray | Not yet learned |
-| 🔴 Red | Dangerous element (will be skipped) |
+| Icon | Meaning |
+|------|---------|
+| ⚪ | Discovered (not clicked) |
+| ✅ | Clicked |
+| 🚫 | Blocked (dangerous element) |
+| 🔄 | Currently exploring |
 
-## Link Indicators
+## Filter Modes
 
-- **↗** Arrow at top-right: Element navigates TO another screen
-- **•** Dot at bottom-left: Element was reached FROM another screen
-
-## Verbosity Levels
-
-1. **MINIMAL** - Color boxes only (fastest)
-2. **STANDARD** - Color + truncated VUID (8 chars)
-3. **VERBOSE** - Full info: VUID, display name, navigation links
-
-## Controls
-
-The FloatingProgressWidget has two debug buttons:
-
-- **Eye icon (👁)** - Toggle overlay visibility on/off
-- **Notes icon (📝)** - Cycle through verbosity levels
+| Mode | Description |
+|------|-------------|
+| **All** | Show all items in a flat list |
+| **Screens** | Group items by source screen |
+| **Clicked** | Show only clicked items |
+| **Blocked** | Show only blocked items |
+| **Stats** | Show summary statistics |
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    LearnAppIntegration                       │
-│  ┌─────────────────────────────────────────────────────────┐│
-│  │           ExplorationDebugCallback                       ││
-│  │  - onScreenExplored(elements, screenHash, ...)          ││
-│  │  - onElementNavigated(elementKey, destinationHash)      ││
-│  │  - onProgressUpdated(progress)                          ││
-│  └────────────────────────┬────────────────────────────────┘│
-│                           │                                  │
-│  ┌────────────────────────▼────────────────────────────────┐│
-│  │            FloatingProgressWidget                        ││
-│  │  - Debug toggle button (eye icon)                       ││
-│  │  - Verbosity button (notes icon)                        ││
-│  │  - getDebugOverlayManager()                             ││
-│  └────────────────────────┬────────────────────────────────┘│
-│                           │                                  │
-│  ┌────────────────────────▼────────────────────────────────┐│
-│  │            DebugOverlayManager                           ││
-│  │  - show() / hide() / toggle()                           ││
-│  │  - updateElements(...)                                   ││
-│  │  - cycleVerbosity()                                      ││
-│  │  - recordNavigation(...)                                 ││
-│  └────────────────────────┬────────────────────────────────┘│
-│                           │                                  │
-│  ┌────────────────────────▼────────────────────────────────┐│
-│  │            LearnAppDebugOverlay (View)                   ││
-│  │  - Draws colored boxes around elements                  ││
-│  │  - Renders legend at bottom                             ││
-│  │  - Custom Canvas drawing                                ││
-│  └─────────────────────────────────────────────────────────┘│
+│                    ExplorationEngine                         │
+│  - onScreenExplored(elements, screenHash, ...)              │
+│  - onElementClicked(stableId, screenHash, vuid)             │
+│  - onElementBlocked(stableId, screenHash, reason)           │
+│  - onElementNavigated(elementKey, destinationHash)          │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+┌───────────────────────────▼─────────────────────────────────┐
+│                LearnAppIntegration                           │
+│  - setupDebugOverlayCallback()                              │
+│  - Forwards events to DebugOverlayManager                   │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+┌───────────────────────────▼─────────────────────────────────┐
+│              DebugOverlayManager                             │
+│  - show() / hide() / toggle()                               │
+│  - onScreenExplored() / markItemClicked() / markItemBlocked()│
+│  - getTracker() → ExplorationItemTracker                    │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+┌───────────────────────────▼─────────────────────────────────┐
+│             ExplorationItemTracker                           │
+│  - registerScreen() / registerItems()                        │
+│  - markClicked() / markBlocked()                            │
+│  - getAllItems() / getItemsByStatus() / getSummary()        │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+┌───────────────────────────▼─────────────────────────────────┐
+│                DebugOverlayView                              │
+│  - Scrollable LinearLayout with item rows                   │
+│  - Filter buttons for display modes                         │
+│  - Summary stats header                                      │
+│  - Draggable/collapsible                                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Data Flow
+## Data Models
 
-1. **ExplorationEngine** fires callbacks when:
-   - Screen is explored → `onScreenExplored(elements, screenHash, ...)`
-   - Navigation occurs → `onElementNavigated(elementKey, destinationHash)`
-   - Progress updates → `onProgressUpdated(progress)`
+### ExplorationItem
+```kotlin
+data class ExplorationItem(
+    val id: String,              // Unique ID (screenHash:stableId)
+    val vuid: String?,           // Voice UUID if assigned
+    val displayName: String,     // Element text/description
+    val className: String,       // Element class (Button, etc.)
+    val resourceId: String?,     // Android resource ID
+    val screenHash: String,      // Screen where found
+    val screenName: String,      // Activity name
+    var status: ItemStatus,      // DISCOVERED/CLICKED/BLOCKED/EXPLORING
+    val blockReason: String?,    // Why blocked (if blocked)
+    val timestamp: Long,         // When discovered
+    var clickedAt: Long?,        // When clicked (if clicked)
+    var navigatedTo: String?     // Where navigated (if clicked)
+)
+```
 
-2. **LearnAppIntegration** receives callbacks and forwards to **DebugOverlayManager**
-
-3. **DebugOverlayManager** converts `ElementInfo` to `DebugElementState` and updates the overlay
-
-4. **LearnAppDebugOverlay** redraws with new state
+### ExplorationSummary
+```kotlin
+data class ExplorationSummary(
+    val totalItems: Int,         // Total items discovered
+    val clickedItems: Int,       // Items clicked
+    val blockedItems: Int,       // Items blocked
+    val discoveredItems: Int,    // Items not yet clicked
+    val totalScreens: Int,       // Screens discovered
+    val completionPercent: Int   // Completion %
+)
+```
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `DebugOverlayState.kt` | Data models (DebugElementState, DebugScreenState, etc.) |
-| `LearnAppDebugOverlay.kt` | Custom View that draws element highlights |
-| `DebugOverlayManager.kt` | Lifecycle manager, state coordinator |
-| `ExplorationEngine.kt` | Fires debug callbacks (ExplorationDebugCallback interface) |
-| `LearnAppIntegration.kt` | Wires callback to overlay manager |
-| `FloatingProgressWidget.kt` | UI controls for toggle/verbosity |
+| `ExplorationItemData.kt` | Data models (ExplorationItem, ExplorationScreen, etc.) |
+| `ExplorationItemTracker.kt` | Central tracker for all items and screens |
+| `DebugOverlayView.kt` | Scrollable view with filter buttons |
+| `DebugOverlayManager.kt` | Lifecycle manager, coordinates everything |
+| `README-DEBUG-OVERLAY.md` | This documentation |
 
 ## Usage
 
-Debug overlay is **automatically enabled** when exploration starts.
+The debug overlay is **automatically enabled** when exploration starts.
 
-To manually control:
+### Toggle Visibility
+Press the eye (👁) button on FloatingProgressWidget to toggle.
 
+### Manual Control
 ```kotlin
-// Toggle overlay
-floatingProgressWidget?.getDebugOverlayManager()?.toggle()
+// Get manager
+val debugManager = floatingProgressWidget.getDebugOverlayManager()
 
-// Set verbosity
-floatingProgressWidget?.getDebugOverlayManager()?.setVerbosity(DebugVerbosity.VERBOSE)
+// Toggle
+debugManager.toggle()
 
-// Disable
-floatingProgressWidget?.disableDebugOverlay()
+// Get tracker for direct access
+val tracker = debugManager.getTracker()
+val summary = tracker.getSummary()
+
+// Export to markdown
+val report = tracker.exportToMarkdown()
 ```
+
+## Example Output
+
+```
+📊 Statistics Summary
+────────────────────────
+Total Items:      156
+Clicked:          85  (✅)
+Blocked:          12  (🚫)
+Not Clicked:      59  (⚪)
+Screens:          8
+Completion:       59%
+
+📱 Screens Breakdown
+────────────────────────
+ActivityMain         45/52  (87%)
+ChatListActivity     12/18  (67%)
+SettingsActivity     8/15   (53%)
+...
+```
+
+## Blocked Items
+
+Items are blocked when they match critical dangerous patterns:
+
+| Category | Examples |
+|----------|----------|
+| Power | power off, shutdown, restart, sleep |
+| App Control | exit, quit, force stop |
+| Account | sign out, delete account |
+| Communication | call, dial, answer, join meeting |
+| Messaging | reply, send message, post |
 
 ## Created
 
-2025-12-08 - VOS4 Development Team
+2025-12-08 - VOS4 Development Team (Complete rewrite)

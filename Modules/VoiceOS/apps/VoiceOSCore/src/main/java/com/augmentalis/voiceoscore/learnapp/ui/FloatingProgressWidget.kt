@@ -316,24 +316,15 @@ class FloatingProgressWidget(
     }
 
     /**
-     * Cycle through verbosity levels
+     * Cycle through verbosity levels (now toggles overlay visibility)
+     *
+     * NOTE (2025-12-08): Verbosity no longer used - new overlay has filter buttons.
+     * This method now toggles the debug overlay visibility.
      */
     private fun cycleVerbosity() {
-        val manager = getDebugOverlayManager()
-        manager.cycleVerbosity()
-
-        // Update button appearance based on verbosity
-        val verbosity = manager.verbosity
-        val tintColor = when (verbosity) {
-            DebugVerbosity.MINIMAL -> 0x4D9E9E9E.toInt()   // Gray
-            DebugVerbosity.STANDARD -> 0x4D9C27B0.toInt() // Purple
-            DebugVerbosity.VERBOSE -> 0x4DFF5722.toInt()  // Orange
-        }
-        verbosityButton?.setBackgroundTintList(
-            android.content.res.ColorStateList.valueOf(tintColor)
-        )
-
-        Log.i(TAG, "Verbosity changed to: $verbosity")
+        // Toggle visibility instead of cycling verbosity
+        toggleDebugOverlay()
+        Log.i(TAG, "Debug overlay toggled via verbosity button")
     }
 
     /**

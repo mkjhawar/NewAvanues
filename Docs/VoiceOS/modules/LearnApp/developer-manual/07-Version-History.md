@@ -85,6 +85,34 @@ This chapter documents the complete version history and changelog for LearnApp.
   - Updated final stats logging with breakdown
   - Files: ExplorationEngine.kt, ExplorationStats.kt, LearnAppIntegration.kt
 
+- **1.10.1** (2025-12-08): Debug overlay complete rewrite (CRITICAL)
+  - User request: "Floating overlay not working, REWRITE from scratch"
+  - Problem: Old Canvas-based overlay only showed current screen elements, not a scrollable LIST
+  - Solution: Complete rewrite with scrollable item list tracking ALL exploration items
+  - **Deleted files:**
+    - LearnAppDebugOverlay.kt (old Canvas-based drawing)
+    - DebugOverlayState.kt (old state tracking)
+    - Old DebugOverlayManager.kt (verbosity-based)
+  - **Created files:**
+    - ExplorationItemData.kt - Data models (ExplorationItem, ExplorationSummary, ItemStatus enum)
+    - ExplorationItemTracker.kt - Central tracker for ALL items across ALL screens
+    - DebugOverlayView.kt - Scrollable LinearLayout with filter buttons
+    - DebugOverlayManager.kt - New lifecycle manager (complete rewrite)
+    - README-DEBUG-OVERLAY.md - New documentation
+  - **Modified files:**
+    - ExplorationEngine.kt - Added onElementClicked() and onElementBlocked() callbacks
+    - LearnAppIntegration.kt - Updated to use new debug overlay API
+    - FloatingProgressWidget.kt - Fixed cycleVerbosity() to use toggleDebugOverlay()
+  - **New features:**
+    - Scrollable list showing ALL items discovered during exploration
+    - Filter buttons: All/Screens/Clicked/Blocked/Stats
+    - Status icons: ⚪ (discovered), ✅ (clicked), 🚫 (blocked), 🔄 (exploring)
+    - Persistent tracking survives show/hide cycles
+    - Thread-safe ConcurrentHashMap storage
+    - Draggable, collapsible overlay window
+    - Export to markdown functionality
+  - Files: 4 deleted, 5 created, 3 modified
+
 ---
 ## Related Documentation
 
