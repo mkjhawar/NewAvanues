@@ -44,6 +44,40 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation("androidx.core:core-ktx:1.12.0")
+
+                // Compose BOM
+                implementation(platform("androidx.compose:compose-bom:2024.02.00"))
+
+                // Material 3 Core
+                implementation("androidx.compose.material3:material3")
+
+                // Material 3 Extended (icons, components)
+                implementation("androidx.compose.material3:material3-window-size-class")
+                implementation("androidx.compose.material:material-icons-extended")
+
+                // Compose UI
+                implementation("androidx.compose.ui:ui")
+                implementation("androidx.compose.ui:ui-graphics")
+                implementation("androidx.compose.ui:ui-tooling-preview")
+
+                // Compose Foundation
+                implementation("androidx.compose.foundation:foundation")
+
+                // Activity Compose
+                implementation("androidx.activity:activity-compose:1.8.2")
+
+                // Lifecycle
+                implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+                implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
+                implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+            }
+        }
+
+        val androidDebug by getting {
+            dependencies {
+                // Compose UI Tooling (debug only)
+                implementation("androidx.compose.ui:ui-tooling")
+                implementation("androidx.compose.ui:ui-test-manifest")
             }
         }
 
@@ -76,5 +110,13 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.8"
     }
 }
