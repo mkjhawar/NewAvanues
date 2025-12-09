@@ -13,6 +13,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.commandmanager.CommandManager
@@ -30,6 +31,11 @@ import com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.voiceos.hash.HashUtils
+import com.augmentalis.voiceoscore.learnapp.exploration.RetroactiveVUIDCreator
+import com.augmentalis.voiceoscore.learnapp.exploration.RetroactiveResult
+import com.augmentalis.voiceoscore.learnapp.commands.RenameCommandHandler
+import com.augmentalis.voiceoscore.learnapp.commands.RenameResult
+import com.augmentalis.uuidcreator.UUIDCreator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -54,10 +60,16 @@ import org.json.JSONArray
  * 4. Find actual UI node by hash
  * 5. Execute click action
  * 6. Increment usage count
+ *
+ * Enhanced with rename command support (2025-12-08):
+ * - Detects "rename" commands and routes to RenameCommandHandler
+ * - Resolves synonyms before executing commands
+ * - Provides TTS feedback for rename operations
  */
 class VoiceCommandProcessor(
     private val context: Context,
-    private val accessibilityService: AccessibilityService
+    private val accessibilityService: AccessibilityService,
+    private val tts: TextToSpeech? = null
 ) {
 
     companion object {
@@ -91,6 +103,28 @@ class VoiceCommandProcessor(
     // Part of Voice Command Element Persistence feature
     private val elementSearchEngine: ElementSearchEngine = ElementSearchEngine(accessibilityService)
 
+    // Phase 4 (2025-12-08): Retroactive VUID creator for fixing missing VUIDs
+    private val retroactiveVUIDCreator: RetroactiveVUIDCreator by lazy {
+        RetroactiveVUIDCreator(
+            context = context,
+            accessibilityService = accessibilityService,
+            databaseManager = databaseManager,
+            uuidCreator = UUIDCreator.getInstance()
+        )
+    }
+
+    // Phase 4 (2025-12-08): Rename command handler for on-demand command renaming
+    // Lazy initialization - only created if TTS is available
+    private val renameCommandHandler: RenameCommandHandler? by lazy {
+        tts?.let { textToSpeech ->
+            RenameCommandHandler(
+                context = context,
+                database = databaseManager,
+                tts = textToSpeech
+            )
+        }
+    }
+
     /**
      * Process a voice command
      *
@@ -105,6 +139,16 @@ class VoiceCommandProcessor(
 
             // Normalize input
             val normalizedInput = voiceInput.lowercase().trim()
+
+            // Phase 4 (2025-12-08): Check for rename commands FIRST (highest priority)
+            if (isRenameCommand(normalizedInput)) {
+                return@withContext handleRenameCommand(voiceInput, normalizedInput)
+            }
+
+            // Phase 4 (2025-12-08): Check for retroactive VUID creation commands
+            if (normalizedInput.matches(Regex("create missing (vuids?|voice identifiers?) (for )?(.+)", RegexOption.IGNORE_CASE))) {
+                return@withContext handleRetroactiveVUIDCreation(normalizedInput)
+            }
 
             // Get current app package name
             val currentPackage = getCurrentPackageName()
@@ -153,9 +197,13 @@ class VoiceCommandProcessor(
                 return@withContext tryStaticCommand(normalizedInput, voiceInput)
             }
 
+            // Phase 4 (2025-12-08): Resolve command with synonyms first
+            // This allows users to say renamed commands (e.g., "Save" instead of "Button 1")
+            val resolvedCommand = resolveCommandWithSynonyms(normalizedInput, scrapedApp.appId)
+
             // Find matching command (dynamic app-specific commands)
             // FIX (2025-12-01): scrapedApp is now ScrapedAppDTO, not entity
-            val matchedCommand = findMatchingCommand(scrapedApp.appId, normalizedInput)
+            val matchedCommand = resolvedCommand ?: findMatchingCommand(scrapedApp.appId, normalizedInput)
             if (matchedCommand == null) {
                 // PII Redaction: Sanitize normalized input before logging
                 PIILoggingWrapper.w(TAG, "No dynamic command found for: '$normalizedInput', trying real-time element search")
@@ -535,6 +583,129 @@ class VoiceCommandProcessor(
         result
     }
 
+    // ==================== RENAME COMMAND INTEGRATION ====================
+    // Phase 4 (2025-12-08): On-demand command renaming support
+
+    /**
+     * Check if voice input is a rename command
+     *
+     * Detects patterns:
+     * - "rename X to Y"
+     * - "rename X as Y"
+     * - "change X to Y"
+     *
+     * @param normalizedInput Normalized lowercase voice input
+     * @return true if this is a rename command
+     */
+    private fun isRenameCommand(normalizedInput: String): Boolean {
+        return normalizedInput.startsWith("rename ") ||
+               normalizedInput.startsWith("change ")
+    }
+
+    /**
+     * Handle rename command
+     *
+     * Routes to RenameCommandHandler for processing. Requires current app package.
+     *
+     * @param originalVoiceInput Original voice input (for error messages)
+     * @param normalizedInput Normalized voice input
+     * @return CommandResult with rename operation status
+     */
+    private suspend fun handleRenameCommand(
+        originalVoiceInput: String,
+        normalizedInput: String
+    ): CommandResult {
+        // Check if rename handler is available (requires TTS)
+        val handler = renameCommandHandler
+        if (handler == null) {
+            Log.w(TAG, "Rename command handler not available (TTS not initialized)")
+            return CommandResult.failure("Rename feature not available")
+        }
+
+        // Get current app package
+        val currentPackage = getCurrentPackageName()
+        if (currentPackage == null) {
+            Log.w(TAG, "Could not determine current app for rename command")
+            return CommandResult.failure("Could not identify current app")
+        }
+
+        Log.i(TAG, "Processing rename command for app: $currentPackage")
+
+        // Process rename through handler
+        return when (val result = handler.processRenameCommand(normalizedInput, currentPackage)) {
+            is RenameResult.Success -> {
+                Log.i(TAG, "✅ Command renamed: ${result.oldName} → ${result.newName}")
+                CommandResult.success(
+                    message = "Renamed to ${result.newName}",
+                    actionType = "rename_command",
+                    elementHash = result.command.elementHash
+                )
+            }
+            is RenameResult.Error -> {
+                Log.w(TAG, "❌ Rename failed: ${result.message}")
+                CommandResult.failure(result.message)
+            }
+        }
+    }
+
+    /**
+     * Resolve command with synonyms
+     *
+     * If voice input matches a synonym, return the original command.
+     * This enables users to use renamed commands naturally.
+     *
+     * Example:
+     * - User says: "Save"
+     * - Synonym: "save" → "click button 1"
+     * - Returns: GeneratedCommandDTO for "click button 1"
+     *
+     * @param normalizedInput Normalized voice input
+     * @param appId Current app ID
+     * @return Matched command if synonym found, null otherwise
+     */
+    private suspend fun resolveCommandWithSynonyms(
+        normalizedInput: String,
+        appId: String
+    ): com.augmentalis.database.dto.GeneratedCommandDTO? = withContext(Dispatchers.IO) {
+        try {
+            // Get all elements for the app
+            val elements = databaseManager.scrapedElements.getByApp(appId)
+
+            // Get all commands for these elements
+            val commands = elements.flatMap { element ->
+                databaseManager.generatedCommands.getByElement(element.elementHash)
+            }
+
+            ConditionalLogger.d(TAG) { "Resolving synonyms: checking ${commands.size} commands" }
+
+            // Check each command's synonyms
+            commands.firstOrNull { command ->
+                // Parse synonyms (comma-separated)
+                val synonyms = command.synonyms
+                    ?.split(",")
+                    ?.map { it.trim() }
+                    ?.filter { it.isNotBlank() }
+                    ?: emptyList()
+
+                // Check if input matches any synonym
+                synonyms.any { synonym ->
+                    // Match with or without action prefix
+                    normalizedInput == synonym ||
+                    normalizedInput == "${command.actionType} $synonym"
+                }
+            }?.also { matchedCommand ->
+                // PII Redaction: Sanitize command text before logging
+                PIILoggingWrapper.d(TAG, "Resolved synonym: '$normalizedInput' → ${matchedCommand.commandText}")
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error resolving command with synonyms", e)
+            null
+        }
+    }
+
+    // ==================== END RENAME COMMAND INTEGRATION ====================
+
     // ==================== DYNAMIC COMMAND FALLBACK MECHANISM ====================
     // YOLO FIX: Multi-tier fallback for voice commands when hash-based lookup fails
 
@@ -903,6 +1074,151 @@ class VoiceCommandProcessor(
         } catch (e: Exception) {
             Log.e(TAG, "Error executing $actionType on node: ${e.message}", e)
             false
+        }
+    }
+
+    // ==================== END FALLBACK MECHANISM ====================
+
+    /**
+     * Handle retroactive VUID creation commands
+     *
+     * Phase 4 (2025-12-08): Creates missing VUIDs for already-explored apps
+     * without re-running full exploration.
+     *
+     * Supported commands:
+     * - "create missing VUIDs for [app name]"
+     * - "create missing VUIDs for current app"
+     * - "create missing VUIDs for all apps"
+     * - "create missing voice identifiers for DeviceInfo"
+     *
+     * @param normalizedInput Normalized voice command
+     * @return CommandResult with operation status and statistics
+     */
+    private suspend fun handleRetroactiveVUIDCreation(normalizedInput: String): CommandResult {
+        return try {
+            Log.i(TAG, "Handling retroactive VUID creation command: $normalizedInput")
+
+            // Extract target from command
+            val targetMatch = Regex("create missing (vuids?|voice identifiers?) (for )?(.+)", RegexOption.IGNORE_CASE)
+                .find(normalizedInput)
+
+            val target = targetMatch?.groupValues?.get(3)?.trim() ?: "current app"
+
+            when {
+                // Single app: "create missing VUIDs for DeviceInfo" or "current app"
+                target == "current app" || target == "this app" -> {
+                    val currentPackage = getCurrentPackageName()
+                    if (currentPackage == null) {
+                        return CommandResult.failure("Could not identify current app")
+                    }
+
+                    Log.i(TAG, "Creating missing VUIDs for current app: $currentPackage")
+                    val result = retroactiveVUIDCreator.createMissingVUIDs(currentPackage)
+
+                    when (result) {
+                        is RetroactiveResult.Success -> {
+                            val message = buildString {
+                                appendLine("✓ Created ${result.newCount} missing VUIDs")
+                                appendLine("Existing: ${result.existingCount}")
+                                appendLine("Total: ${result.totalCount}")
+                                appendLine("Scanned: ${result.elementsScanned} elements")
+                                appendLine("Time: ${result.executionTimeMs}ms")
+                            }
+                            Log.i(TAG, message)
+                            CommandResult.success(message, actionType = "retroactive_vuid_creation")
+                        }
+                        is RetroactiveResult.Error -> {
+                            Log.e(TAG, "Retroactive VUID creation failed: ${result.message}")
+                            CommandResult.failure("Failed: ${result.message}")
+                        }
+                    }
+                }
+
+                // All apps: "create missing VUIDs for all apps"
+                target == "all apps" || target == "all applications" -> {
+                    Log.i(TAG, "Creating missing VUIDs for all scraped apps")
+
+                    // Get all scraped apps
+                    val scrapedApps = withContext(Dispatchers.IO) {
+                        databaseManager.scrapedApps.getAll()
+                    }
+
+                    if (scrapedApps.isEmpty()) {
+                        return CommandResult.failure("No apps have been scraped yet")
+                    }
+
+                    val packageNames = scrapedApps.map { it.packageName }
+                    Log.i(TAG, "Processing ${packageNames.size} apps")
+
+                    val results = retroactiveVUIDCreator.createMissingVUIDsForApps(packageNames)
+                    val report = retroactiveVUIDCreator.generateBatchReport(results)
+
+                    Log.i(TAG, "Batch retroactive VUID creation completed:\n$report")
+                    CommandResult.success(report, actionType = "retroactive_vuid_creation_batch")
+                }
+
+                // Specific app by name: "create missing VUIDs for DeviceInfo"
+                else -> {
+                    // Try to resolve app name to package name
+                    val packageName = resolveAppName(target) ?: run {
+                        Log.w(TAG, "Could not resolve app name: $target")
+                        return CommandResult.failure("Could not find app: $target")
+                    }
+
+                    Log.i(TAG, "Creating missing VUIDs for app: $packageName")
+                    val result = retroactiveVUIDCreator.createMissingVUIDs(packageName)
+
+                    when (result) {
+                        is RetroactiveResult.Success -> {
+                            val message = buildString {
+                                appendLine("✓ Created ${result.newCount} missing VUIDs for $target")
+                                appendLine("Existing: ${result.existingCount}")
+                                appendLine("Total: ${result.totalCount}")
+                                appendLine("Scanned: ${result.elementsScanned} elements")
+                                appendLine("Time: ${result.executionTimeMs}ms")
+                            }
+                            Log.i(TAG, message)
+                            CommandResult.success(message, actionType = "retroactive_vuid_creation")
+                        }
+                        is RetroactiveResult.Error -> {
+                            Log.e(TAG, "Retroactive VUID creation failed: ${result.message}")
+                            CommandResult.failure("Failed: ${result.message}")
+                        }
+                    }
+                }
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error handling retroactive VUID creation", e)
+            CommandResult.failure("Error: ${e.message}")
+        }
+    }
+
+    /**
+     * Resolve app name to package name
+     *
+     * Tries to match app name against scraped apps in database.
+     *
+     * @param appName User-provided app name (e.g., "DeviceInfo", "Instagram")
+     * @return Package name if found, null otherwise
+     */
+    private suspend fun resolveAppName(appName: String): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Get all scraped apps
+                val scrapedApps = databaseManager.scrapedApps.getAll()
+
+                // Try exact match on package name suffix (e.g., "deviceinfo" matches "com.ytheekshana.deviceinfo")
+                val normalizedName = appName.lowercase().replace(" ", "")
+                val exactMatch = scrapedApps.find { app ->
+                    app.packageName.lowercase().contains(normalizedName)
+                }
+
+                exactMatch?.packageName
+            } catch (e: Exception) {
+                Log.w(TAG, "Error resolving app name: $appName", e)
+                null
+            }
         }
     }
 

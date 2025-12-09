@@ -18,6 +18,8 @@ import android.util.Log
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
+import com.augmentalis.voiceoscore.learnapp.detection.AppFramework
+import com.augmentalis.voiceoscore.learnapp.detection.CrossPlatformDetector
 import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 
@@ -70,6 +72,14 @@ class LearnAppCore(
     }
 
     /**
+     * Framework detection cache
+     *
+     * Caches detected framework per package name to avoid repeated detection.
+     * Key: package name, Value: detected framework
+     */
+    private val frameworkCache = mutableMapOf<String, AppFramework>()
+
+    /**
      * Batch queue for BATCH mode
      *
      * Commands are queued during exploration and flushed as single transaction.
@@ -102,7 +112,7 @@ class LearnAppCore(
             }
 
             // 2. Generate voice command
-            val command = generateVoiceCommand(element, uuid) ?: return ElementProcessingResult(
+            val command = generateVoiceCommand(element, uuid, packageName) ?: return ElementProcessingResult(
                 uuid = uuid,
                 command = null,
                 success = false,
@@ -222,36 +232,75 @@ class LearnAppCore(
      *
      * Creates GeneratedCommandDTO with command text, synonyms, and metadata.
      *
-     * Label priority: text > contentDescription > resourceId
-     * Command format: "{actionType} {label}" (lowercase)
+     * Enhanced for cross-platform apps:
+     * - Label priority: text > contentDescription > resourceId > FALLBACK
+     * - Fallback generation for unlabeled elements (Flutter, React Native)
+     * - Lower thresholds for cross-platform frameworks
+     * - Command format: "{actionType} {label}" (lowercase)
      *
      * @param element Element to generate command for
      * @param uuid Pre-generated UUID for this element
+     * @param packageName Package name for framework detection
      * @return GeneratedCommandDTO or null if no label found
      */
     private fun generateVoiceCommand(
         element: ElementInfo,
-        uuid: String
+        uuid: String,
+        packageName: String = ""
     ): GeneratedCommandDTO? {
-        // Extract label (text > contentDescription > resourceId)
+        // Detect app framework (cached)
+        val framework = if (packageName.isNotEmpty() && element.node != null) {
+            frameworkCache.getOrPut(packageName) {
+                CrossPlatformDetector.detectFramework(packageName, element.node)
+            }
+        } else {
+            AppFramework.NATIVE
+        }
+
+        // Extract label (text > contentDescription > resourceId > FALLBACK)
         val label = element.text.takeIf { it.isNotBlank() }
             ?: element.contentDescription.takeIf { it.isNotBlank() }
-            ?: element.resourceId.substringAfterLast("/")
-            ?: return null
+            ?: element.resourceId.substringAfterLast("/").takeIf { it.isNotBlank() }
+            ?: generateFallbackLabel(element, framework)  // NEW: Fallback generation
 
-        // Skip very short or meaningless labels
-        val minLabelLength = developerSettings.getMinGeneratedLabelLength()
+        // Get framework-adjusted minimum label length
+        val minLabelLength = framework.getMinLabelLength(
+            developerSettings.getMinGeneratedLabelLength()
+        )
+
+        // For clickable elements in cross-platform apps, ALWAYS generate labels
+        // (even if label is short/numeric)
+        val isClickableInCrossPlatform = element.isClickable &&
+                (framework.needsAggressiveFallback() || framework.needsModerateFallback())
+
+        if (isClickableInCrossPlatform) {
+            // Generate command even for short labels
+            val actionType = determineActionType(element)
+            val commandText = "$actionType $label".lowercase()
+            val synonyms = generateSynonyms(actionType, label)
+            val elementHash = calculateElementHash(element)
+
+            return GeneratedCommandDTO(
+                id = 0L,
+                elementHash = elementHash,
+                commandText = commandText,
+                actionType = actionType,
+                confidence = if (label.length >= minLabelLength) 0.85 else 0.6,
+                synonyms = synonyms,
+                isUserApproved = 0L,
+                usageCount = 0L,
+                lastUsed = null,
+                createdAt = System.currentTimeMillis()
+            )
+        }
+
+        // For non-clickable or native apps, apply quality filters
         if (label.length < minLabelLength || label.all { it.isDigit() }) {
             return null
         }
 
         // Determine action type
-        val actionType = when {
-            element.isEditText() -> "type"  // EditText fields
-            element.isScrollable -> "scroll"  // Scrollable containers
-            element.isClickable -> "click"  // Clickable elements
-            else -> "click"  // Default action
-        }
+        val actionType = determineActionType(element)
 
         // Generate command text
         val commandText = "$actionType $label".lowercase()
@@ -275,6 +324,327 @@ class LearnAppCore(
             lastUsed = null,
             createdAt = System.currentTimeMillis()
         )
+    }
+
+    /**
+     * Determine action type for element
+     *
+     * @param element Element to analyze
+     * @return Action type string (click, type, scroll, etc.)
+     */
+    private fun determineActionType(element: ElementInfo): String {
+        return when {
+            element.isEditText() -> "type"  // EditText fields
+            element.isScrollable -> "scroll"  // Scrollable containers
+            element.isClickable -> "click"  // Clickable elements
+            else -> "click"  // Default action
+        }
+    }
+
+    /**
+     * Generate fallback labels for unlabeled elements
+     *
+     * Used for cross-platform apps (Flutter, React Native, Unity, Unreal) that lack semantic labels.
+     *
+     * Strategies (in priority order):
+     * 1. Game engines (Unity/Unreal): Spatial grid labeling
+     * 2. Position-based: "Tab 1", "Button 2", "Card 3"
+     * 3. Context-aware: "Top button", "Bottom card"
+     * 4. Type + index fallback: "View 1", "Element 2"
+     *
+     * @param element Element to generate label for
+     * @param framework Detected app framework
+     * @return Generated label string
+     */
+    private fun generateFallbackLabel(element: ElementInfo, framework: AppFramework): String {
+        // Only generate fallback for cross-platform apps
+        if (framework == AppFramework.NATIVE) {
+            return "unlabeled"
+        }
+
+        // Special handling for game engines (spatial coordinate-based)
+        if (framework == AppFramework.UNITY) {
+            return generateUnityLabel(element)
+        }
+
+        if (framework == AppFramework.UNREAL) {
+            return generateUnrealLabel(element)
+        }
+
+        // Strategy 1: Position-based labels
+        val positionLabel = generatePositionLabel(element)
+        if (positionLabel != null) return positionLabel
+
+        // Strategy 2: Context-aware labels
+        val contextLabel = generateContextLabel(element)
+        if (contextLabel != null) return contextLabel
+
+        // Strategy 3: Type + index fallback
+        val elementType = element.className.substringAfterLast(".").lowercase()
+        return "$elementType ${element.index + 1}"
+    }
+
+    /**
+     * Generate fallback labels for Unity apps
+     *
+     * Unity apps render to OpenGL surface with no accessibility tree.
+     * Strategy: Use grid-based spatial labeling with coordinates.
+     *
+     * Unity apps are uniquely challenging:
+     * - Single GLSurfaceView or UnityPlayer view
+     * - No semantic labels (text, contentDescription, resourceId)
+     * - Individual UI elements NOT exposed to accessibility
+     * - Must use spatial coordinates for voice control
+     *
+     * Label format: "[Size] Row Column [Type]"
+     * Examples:
+     * - "Top Left Button"
+     * - "Large Center Middle Button"
+     * - "Small Bottom Right Element"
+     *
+     * @param element Element to generate label for
+     * @return Grid-based spatial label
+     */
+    private fun generateUnityLabel(element: ElementInfo): String {
+        val bounds = element.bounds
+        val screenWidth = element.screenWidth.takeIf { it > 0 } ?: 1080
+        val screenHeight = element.screenHeight.takeIf { it > 0 } ?: 1920
+
+        // Divide screen into 3x3 grid
+        val col = when {
+            bounds.centerX() < screenWidth / 3 -> "Left"
+            bounds.centerX() > screenWidth * 2 / 3 -> "Right"
+            else -> "Center"
+        }
+
+        val row = when {
+            bounds.centerY() < screenHeight / 3 -> "Top"
+            bounds.centerY() > screenHeight * 2 / 3 -> "Bottom"
+            else -> "Middle"
+        }
+
+        // Calculate element size relative to screen
+        val elementArea = bounds.width() * bounds.height()
+        val screenArea = screenWidth * screenHeight
+        val sizeRatio = elementArea.toFloat() / screenArea.toFloat()
+
+        val size = when {
+            sizeRatio > 0.111f -> "Large"  // > 1/9 of screen
+            sizeRatio < 0.028f -> "Small"  // < 1/36 of screen
+            else -> ""  // Medium (default, no size label)
+        }
+
+        // Determine element type if available
+        val type = when {
+            element.className.contains("Button", ignoreCase = true) -> "Button"
+            element.className.contains("Image", ignoreCase = true) -> "Image"
+            element.className.contains("Text", ignoreCase = true) -> "Text"
+            element.isClickable -> "Button"  // Clickable elements treated as buttons
+            else -> "Element"
+        }
+
+        // Build label: [Size] Row Column [Type]
+        return buildString {
+            if (size.isNotEmpty()) {
+                append(size)
+                append(" ")
+            }
+            append(row)
+            append(" ")
+            append(col)
+            append(" ")
+            append(type)
+        }.trim()
+    }
+
+    /**
+     * Generate fallback labels for Unreal Engine apps
+     *
+     * Unreal Engine apps have more complex UI than Unity (AAA mobile games).
+     * Strategy: Use 4x4 grid with edge/corner detection for HUD elements.
+     *
+     * Unreal Engine challenges:
+     * - Renders via Slate UI framework to graphics surface
+     * - Minimal accessibility support (like Unity)
+     * - More complex UI than Unity (AAA games like PUBG Mobile, Fortnite)
+     * - Common HUD elements at edges and corners
+     *
+     * Differences from Unity:
+     * - 4x4 grid instead of 3x3 (more UI elements)
+     * - Edge/corner detection for HUD elements
+     * - "Upper"/"Lower" instead of "Middle" for clarity
+     * - Uses "Widget" terminology for clickable elements
+     *
+     * Label format: "[Corner/Edge] [Size] Row Column [Type]"
+     * Examples:
+     * - "Corner Top Far Left Button"
+     * - "Edge Small Bottom Right Icon"
+     * - "Large Upper Left Widget"
+     * - "Lower Right Button"
+     *
+     * @param element Element to generate label for
+     * @return 4x4 grid-based spatial label with edge/corner detection
+     */
+    private fun generateUnrealLabel(element: ElementInfo): String {
+        val bounds = element.bounds
+        val screenWidth = element.screenWidth.takeIf { it > 0 } ?: 1080
+        val screenHeight = element.screenHeight.takeIf { it > 0 } ?: 1920
+
+        // Divide screen into 4x4 grid (finer than Unity's 3x3)
+        val col = when {
+            bounds.centerX() < screenWidth / 4 -> "Far Left"
+            bounds.centerX() < screenWidth / 2 -> "Left"
+            bounds.centerX() < screenWidth * 3 / 4 -> "Right"
+            else -> "Far Right"
+        }
+
+        val row = when {
+            bounds.centerY() < screenHeight / 4 -> "Top"
+            bounds.centerY() < screenHeight / 2 -> "Upper"
+            bounds.centerY() < screenHeight * 3 / 4 -> "Lower"
+            else -> "Bottom"
+        }
+
+        // Check if element is in corner (common for HUD elements in Unreal games)
+        val isCorner = (bounds.centerX() < screenWidth / 4 || bounds.centerX() > screenWidth * 3 / 4) &&
+                (bounds.centerY() < screenHeight / 4 || bounds.centerY() > screenHeight * 3 / 4)
+
+        // Check if element is at edge (common for menu buttons)
+        val edgeThreshold = 50  // pixels from screen edge
+        val isEdge = !isCorner && (
+                bounds.left < edgeThreshold ||
+                        bounds.right > screenWidth - edgeThreshold ||
+                        bounds.top < edgeThreshold ||
+                        bounds.bottom > screenHeight - edgeThreshold
+                )
+
+        // Calculate element size relative to screen
+        val elementArea = bounds.width() * bounds.height()
+        val screenArea = screenWidth * screenHeight
+        val sizeRatio = elementArea.toFloat() / screenArea.toFloat()
+
+        val size = when {
+            sizeRatio > 0.167f -> "Large"  // > 1/6 of screen (larger threshold for Unreal)
+            sizeRatio < 0.031f -> "Small"  // < 1/32 of screen (finer granularity)
+            else -> ""  // Medium (default, no size label)
+        }
+
+        // Determine element type (Unreal uses "Widget" terminology)
+        val type = when {
+            element.className.contains("Button", ignoreCase = true) -> "Button"
+            element.className.contains("Image", ignoreCase = true) -> "Icon"
+            element.className.contains("Text", ignoreCase = true) -> "Text"
+            element.isClickable -> "Widget"  // Unreal uses "Widget" for UI elements
+            else -> "Element"
+        }
+
+        // Build label: [Corner/Edge] [Size] Row Column [Type]
+        return buildString {
+            if (isCorner) {
+                append("Corner ")
+            } else if (isEdge) {
+                append("Edge ")
+            }
+
+            if (size.isNotEmpty()) {
+                append(size)
+                append(" ")
+            }
+
+            append(row)
+            append(" ")
+            append(col)
+            append(" ")
+            append(type)
+        }.trim()
+    }
+
+    /**
+     * Generate position-based label
+     *
+     * Examples:
+     * - LinearLayout with 5 children → "Tab 1", "Tab 2", ..., "Tab 5"
+     * - CardView in RecyclerView → "Card 1", "Card 2", ...
+     *
+     * @param element Element to generate label for
+     * @return Position-based label or null if not applicable
+     */
+    private fun generatePositionLabel(element: ElementInfo): String? {
+        val parent = element.parent ?: return null
+        val siblings = parent.children ?: return null
+
+        // Get element position among siblings
+        val position = element.index
+        if (position < 0) return null
+
+        // Determine label prefix based on element type and parent
+        val prefix = when {
+            // Tab-like layouts
+            element.className.contains("LinearLayout", ignoreCase = true) &&
+                    parent.className.contains("TabLayout", ignoreCase = true) -> "Tab"
+
+            // Card-like layouts
+            element.className.contains("CardView", ignoreCase = true) -> "Card"
+
+            // Button-like elements
+            element.className.contains("Button", ignoreCase = true) -> "Button"
+
+            // List items
+            parent.className.contains("RecyclerView", ignoreCase = true) ||
+                    parent.className.contains("ListView", ignoreCase = true) -> "Item"
+
+            // Generic clickable
+            element.isClickable -> "Option"
+
+            else -> return null
+        }
+
+        return "$prefix ${position + 1}"
+    }
+
+    /**
+     * Generate context-aware label
+     *
+     * Uses screen position to generate labels like:
+     * - "Top button", "Bottom card"
+     * - "Left tab", "Right tab"
+     * - "Center button"
+     *
+     * @param element Element to generate label for
+     * @return Context-aware label or null if not applicable
+     */
+    private fun generateContextLabel(element: ElementInfo): String? {
+        val bounds = element.bounds
+        val screenHeight = element.screenHeight
+        val screenWidth = element.screenWidth
+
+        // Can't generate context label without screen dimensions
+        if (screenHeight <= 0 || screenWidth <= 0) return null
+
+        // Determine vertical position
+        val verticalPos = when {
+            bounds.top < screenHeight / 3 -> "Top"
+            bounds.top > screenHeight * 2 / 3 -> "Bottom"
+            else -> "Center"
+        }
+
+        // Determine horizontal position (for tabs)
+        val horizontalPos = when {
+            bounds.left < screenWidth / 3 -> "Left"
+            bounds.left > screenWidth * 2 / 3 -> "Right"
+            else -> "Center"
+        }
+
+        // Choose appropriate label
+        val type = element.className.substringAfterLast(".").lowercase()
+            .replace("view", "")
+            .replace("layout", "")
+            .takeIf { it.isNotBlank() } ?: "element"
+
+        return when {
+            bounds.width() > screenWidth * 0.7 -> "$verticalPos $type"
+            else -> "$horizontalPos $verticalPos $type".trim()
+        }
     }
 
     /**

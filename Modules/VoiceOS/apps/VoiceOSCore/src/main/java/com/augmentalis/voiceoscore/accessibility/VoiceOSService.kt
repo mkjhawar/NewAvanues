@@ -29,6 +29,9 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import com.augmentalis.commandmanager.CommandManager
 // TEMP DISABLED: import com.augmentalis.commandmanager.database.CommandDatabase
 import com.augmentalis.voiceoscore.learnapp.integration.LearnAppIntegration
+import com.augmentalis.voiceoscore.learnapp.ui.RenameHintOverlay
+import com.augmentalis.voiceoscore.learnapp.detection.ScreenActivityDetector
+import com.augmentalis.voiceoscore.learnapp.commands.RenameCommandHandler
 import com.augmentalis.speechrecognition.SpeechEngine
 import com.augmentalis.speechrecognition.SpeechMode
 import com.augmentalis.uuidcreator.UUIDCreator
@@ -240,6 +243,11 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         }
     }
 
+    // Rename feature components (Phase 2: On-Demand Command Renaming)
+    private var renameHintOverlay: RenameHintOverlay? = null
+    private var screenActivityDetector: ScreenActivityDetector? = null
+    private var renameCommandHandler: RenameCommandHandler? = null
+
     // Event debouncing to prevent excessive scraping in apps with dynamic content
     private val eventDebouncer = Debouncer(VoiceOSConstants.Timing.EVENT_DEBOUNCE_MS)
 
@@ -298,6 +306,47 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize database - will fall back to in-memory cache", e)
             scrapingDatabase = null
+        }
+
+        // Initialize rename feature components (Phase 2: On-Demand Command Renaming)
+        initializeRenameFeature()
+    }
+
+    /**
+     * Initialize rename feature components
+     *
+     * Initializes:
+     * 1. RenameHintOverlay - Shows contextual hints when screen has generated labels
+     * 2. ScreenActivityDetector - Detects screen changes and triggers hints
+     * 3. RenameCommandHandler - Processes "Rename X to Y" voice commands
+     */
+    private fun initializeRenameFeature() {
+        try {
+            Log.i(TAG, "=== Initializing Rename Feature ===")
+
+            // Initialize RenameHintOverlay
+            renameHintOverlay = RenameHintOverlay(this, null)
+            Log.d(TAG, "✓ RenameHintOverlay initialized")
+
+            // Initialize ScreenActivityDetector (requires RenameHintOverlay + database)
+            scrapingDatabase?.let { database ->
+                renameHintOverlay?.let { overlay ->
+                    screenActivityDetector = ScreenActivityDetector(this, database.databaseManager, overlay)
+                    Log.d(TAG, "✓ ScreenActivityDetector initialized")
+                } ?: Log.w(TAG, "RenameHintOverlay not initialized, skipping ScreenActivityDetector")
+            } ?: Log.w(TAG, "Database not initialized, skipping ScreenActivityDetector")
+
+            // Initialize RenameCommandHandler (requires database + TTS)
+            // Note: TTS is initialized later in speech engine, so we'll initialize handler on-demand
+            // when first rename command is received
+            Log.d(TAG, "RenameCommandHandler will be initialized on-demand when TTS is ready")
+
+            Log.i(TAG, "=== Rename Feature Initialized ===")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error initializing rename feature", e)
+            renameHintOverlay = null
+            screenActivityDetector = null
+            renameCommandHandler = null
         }
     }
 
@@ -801,6 +850,18 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                 }
 
                 AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                    // Forward to ScreenActivityDetector for rename hint display
+                    screenActivityDetector?.let { detector ->
+                        serviceScope.launch {
+                            try {
+                                Log.v(TAG, "Forwarding WINDOW_STATE_CHANGED to ScreenActivityDetector")
+                                detector.onWindowStateChanged(event)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error in ScreenActivityDetector", e)
+                            }
+                        }
+                    }
+
                     // Update app context and trigger scraping for new windows
                     serviceScope.launch {
                         // Also trigger UI scraping for window state changes
@@ -1162,6 +1223,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
      * Handle voice command with caching
      *
      * Phase 1: Now routes to CommandManager when available
+     * Phase 2: Added rename command detection and routing
      */
     private fun handleVoiceCommand(command: String, confidence: Float) {
         Log.d(TAG, "handleVoiceCommand: command='$command', confidence=$confidence")
@@ -1174,6 +1236,27 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 
         val normalizedCommand = command.lowercase().trim()
         val currentPackage = rootInActiveWindow?.packageName?.toString()
+
+        // RENAME TIER: Check if this is a rename command (BEFORE other tiers)
+        if (isRenameCommand(normalizedCommand)) {
+            serviceScope.launch {
+                try {
+                    Log.i(TAG, "Rename command detected: '$normalizedCommand'")
+                    val handled = handleRenameCommand(normalizedCommand, currentPackage)
+
+                    if (handled) {
+                        Log.i(TAG, "✓ Rename command executed successfully")
+                        return@launch // Rename handled, done
+                    } else {
+                        Log.w(TAG, "Rename command failed, not continuing to regular tiers")
+                        // Don't fall through to regular commands - rename failures are explicit
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing rename command: ${e.message}", e)
+                }
+            }
+            return // Return here to prevent dual execution
+        }
 
         // WEB TIER: Check if this is a web command (BEFORE other tiers)
         if (currentPackage != null && webCommandCoordinator.isCurrentAppBrowser(currentPackage)) {
@@ -1201,6 +1284,100 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 
         // Not a browser, handle as regular command through tier system
         handleRegularCommand(normalizedCommand, confidence)
+    }
+
+    /**
+     * Check if voice input is a rename command
+     *
+     * Detects patterns:
+     * - "rename X to Y"
+     * - "rename X as Y"
+     * - "change X to Y"
+     *
+     * @param voiceInput Normalized voice input (lowercase)
+     * @return true if rename command, false otherwise
+     */
+    private fun isRenameCommand(voiceInput: String): Boolean {
+        val patterns = listOf(
+            Regex("rename .+ to .+"),
+            Regex("rename .+ as .+"),
+            Regex("change .+ to .+")
+        )
+        return patterns.any { it.matches(voiceInput) }
+    }
+
+    /**
+     * Handle rename command
+     *
+     * Initializes RenameCommandHandler on-demand (requires TTS from speech engine).
+     * Processes rename command and returns result.
+     *
+     * @param voiceInput Normalized voice input
+     * @param packageName Current app package (or null if unavailable)
+     * @return true if rename succeeded, false if failed
+     */
+    private suspend fun handleRenameCommand(
+        voiceInput: String,
+        packageName: String?
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            // Validate package name
+            if (packageName == null) {
+                Log.w(TAG, "Cannot process rename: no current package")
+                return@withContext false
+            }
+
+            // Initialize handler on-demand if not already initialized
+            if (renameCommandHandler == null) {
+                Log.d(TAG, "Initializing RenameCommandHandler on-demand...")
+
+                // Get TTS from speech engine
+                val tts = try {
+                    // TODO: Get TTS instance from SpeechEngineManager
+                    // For now, create a simple TTS instance
+                    android.speech.tts.TextToSpeech(applicationContext) { status ->
+                        if (status == android.speech.tts.TextToSpeech.SUCCESS) {
+                            Log.d(TAG, "TTS initialized for rename commands")
+                        } else {
+                            Log.e(TAG, "TTS initialization failed")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to create TTS instance", e)
+                    return@withContext false
+                }
+
+                scrapingDatabase?.let { database ->
+                    renameCommandHandler = RenameCommandHandler(
+                        context = applicationContext,
+                        database = database.databaseManager,
+                        tts = tts
+                    )
+                    Log.d(TAG, "✓ RenameCommandHandler initialized")
+                } ?: run {
+                    Log.e(TAG, "Cannot initialize RenameCommandHandler: database not available")
+                    return@withContext false
+                }
+            }
+
+            // Process rename command
+            val handler = renameCommandHandler ?: return@withContext false
+            val result = handler.processRenameCommand(voiceInput, packageName)
+
+            when (result) {
+                is com.augmentalis.voiceoscore.learnapp.commands.RenameResult.Success -> {
+                    Log.i(TAG, "Rename successful: ${result.oldName} → ${result.newName}")
+                    true
+                }
+                is com.augmentalis.voiceoscore.learnapp.commands.RenameResult.Error -> {
+                    Log.e(TAG, "Rename failed: ${result.message}")
+                    false
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in handleRenameCommand", e)
+            false
+        }
     }
 
     /**
@@ -1564,6 +1741,31 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                 Log.d(TAG, "LearnApp integration reference cleared")
             }
         } ?: Log.d(TAG, "LearnApp integration was not initialized, skipping cleanup")
+
+        // Cleanup rename feature components
+        try {
+            Log.d(TAG, "Cleaning up rename feature components...")
+
+            // Clear RenameHintOverlay (no explicit cleanup needed, just clear reference)
+            renameHintOverlay = null
+            Log.d(TAG, "✓ RenameHintOverlay reference cleared")
+
+            // Clear ScreenActivityDetector (no explicit cleanup needed)
+            screenActivityDetector = null
+            Log.d(TAG, "✓ ScreenActivityDetector reference cleared")
+
+            // Shutdown TTS in RenameCommandHandler if initialized
+            renameCommandHandler?.let {
+                // Note: TTS cleanup should be handled by the handler itself if needed
+                Log.d(TAG, "Clearing RenameCommandHandler reference")
+            }
+            renameCommandHandler = null
+            Log.d(TAG, "✓ RenameCommandHandler reference cleared")
+
+            Log.i(TAG, "✓ Rename feature components cleaned up")
+        } catch (e: Exception) {
+            Log.e(TAG, "✗ Error cleaning up rename feature", e)
+        }
 
         // Cleanup OverlayManager (lazy delegate handles initialization check)
         try {

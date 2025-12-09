@@ -173,9 +173,15 @@ class LearnAppIntegration private constructor(
             com.augmentalis.database.DatabaseDriverFactory(context)
         )
 
-        // Initialize repository with direct SQLDelight access (no DAO layer)
-        repository = LearnAppRepository(databaseManager, context)
-        metadataProvider = AppMetadataProvider(context)
+        // Initialize ScrapedAppMetadataSource implementation for app name resolution
+        val scrapedAppMetadataSource = com.augmentalis.voiceoscore.learnapp.database.repository.ScrapedAppMetadataSourceImpl(
+            context = context,
+            databaseManager = databaseManager
+        )
+
+        // Initialize repository with direct SQLDelight access and scraped app metadata source
+        repository = LearnAppRepository(databaseManager, context, scrapedAppMetadataSource)
+        metadataProvider = AppMetadataProvider(context, scrapedAppMetadataSource)
 
         // Initialize UUIDCreator components
         uuidCreator = UUIDCreator.getInstance()
@@ -746,6 +752,23 @@ class LearnAppIntegration private constructor(
      */
     fun getExplorationState(): StateFlow<ExplorationState> {
         return explorationEngine.explorationState
+    }
+
+    /**
+     * Get current foreground package name
+     *
+     * Returns the package name of the currently focused app.
+     * Used by RelearnAppCommand to detect "relearn this app" target.
+     *
+     * @return Package name of foreground app, or null if not available
+     */
+    fun getCurrentForegroundPackage(): String? {
+        return try {
+            accessibilityService.rootInActiveWindow?.packageName?.toString()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get foreground package", e)
+            null
+        }
     }
 
     // ========== Debug Overlay Methods ==========
