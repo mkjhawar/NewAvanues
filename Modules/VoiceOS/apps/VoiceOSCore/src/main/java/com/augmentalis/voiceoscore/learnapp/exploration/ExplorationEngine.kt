@@ -49,6 +49,10 @@ import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import com.augmentalis.voiceoscore.learnapp.core.LearnAppCore
 import com.augmentalis.voiceoscore.learnapp.core.ProcessingMode
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
+// Phase 3 (2025-12-08): VUIDMetrics integration for observability
+import com.augmentalis.voiceoscore.learnapp.metrics.VUIDCreationMetricsCollector
+import com.augmentalis.voiceoscore.learnapp.metrics.VUIDCreationDebugOverlay
+import com.augmentalis.voiceoscore.learnapp.database.repository.VUIDMetricsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -245,6 +249,20 @@ class ExplorationEngine(
     private val expandableDetector = ExpandableControlDetector(context)
 
     /**
+     * PHASE 3 (2025-12-08): VUID Metrics tracking for observability
+     *
+     * Tracks real-time VUID creation stats, displays debug overlay, and persists metrics to database.
+     */
+    private val metricsCollector = VUIDCreationMetricsCollector()
+    private val metricsRepository = VUIDMetricsRepository(databaseManager)
+    private val debugOverlay by lazy {
+        VUIDCreationDebugOverlay(
+            context,
+            context.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+        )
+    }
+
+    /**
      * Navigation graph builder
      */
     private lateinit var navigationGraphBuilder: NavigationGraphBuilder
@@ -391,6 +409,18 @@ class ExplorationEngine(
      */
     private var debugCallback: ExplorationDebugCallback? = null
 
+    init {
+        // PHASE 3 (2025-12-08): Initialize VUID metrics database schema
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                metricsRepository.initializeSchema()
+                android.util.Log.d("ExplorationEngine", "VUID metrics schema initialized")
+            } catch (e: Exception) {
+                android.util.Log.e("ExplorationEngine", "Failed to initialize metrics schema", e)
+            }
+        }
+    }
+
     /**
      * Set the debug callback for exploration events
      *
@@ -429,6 +459,13 @@ class ExplorationEngine(
                 scrollableContainersFound = 0
 
                 android.util.Log.i("ExplorationEngine", "🚀 Starting exploration of: $packageName")
+
+                // PHASE 3 (2025-12-08): Reset metrics and show debug overlay
+                metricsCollector.reset()
+                debugOverlay.setMetricsCollector(metricsCollector)
+                if (developerSettings.isDebugOverlayEnabled()) {
+                    debugOverlay.show(packageName)
+                }
 
                 // FIX: Check if system app (partial support - read-only)
                 if (isSystemApp(packageName)) {
@@ -1131,9 +1168,19 @@ class ExplorationEngine(
         packageName: String
     ): List<com.augmentalis.voiceoscore.learnapp.models.ElementInfo> {
         val startTime = System.currentTimeMillis()
+
+        // PHASE 3 (2025-12-08): Track element detection
+        elements.forEach { _ ->
+            metricsCollector.onElementDetected()
+        }
+
         val elementsWithUuids = elements.map { element ->
             element.node?.let { node ->
                 val uuid = thirdPartyGenerator.generateUuid(node, packageName)
+
+                // PHASE 3 (2025-12-08): Track VUID creation
+                metricsCollector.onVUIDCreated()
+
                 element.copy(uuid = uuid)
             } ?: element
         }
@@ -1400,6 +1447,11 @@ class ExplorationEngine(
                 continue
             }
 
+            // PHASE 3 (2025-12-08): Track element detection
+            freshExploration.allElements.forEach { _ ->
+                metricsCollector.onElementDetected()
+            }
+
             // DEBUG (2025-12-08): Fire debug callback with screen elements
             debugCallback?.onScreenExplored(
                 elements = freshExploration.safeClickableElements,
@@ -1415,12 +1467,22 @@ class ExplorationEngine(
             // FIX (2025-12-07): Skip elements that lead to already-fully-explored screens
             val unclickedElements = freshExploration.safeClickableElements
                 .filter { it.stableId() !in clickedIds }
-                .filter { !isCriticalDangerousElement(it) }  // NEVER click critical elements
+                .filter { element ->
+                    // PHASE 3 (2025-12-08): Track filtering for critical dangerous elements
+                    if (isCriticalDangerousElement(element)) {
+                        metricsCollector.onElementFiltered(element, "Critical dangerous element")
+                        false  // NEVER click critical elements
+                    } else {
+                        true
+                    }
+                }
                 .filter { element ->
                     // Skip elements that we know lead to already-visited screens
                     val elementKey = "${screenStartHash}:${element.stableId()}"
                     val destinationScreen = elementToDestination[elementKey]
                     if (destinationScreen != null && destinationScreen in visitedScreens) {
+                        // PHASE 3 (2025-12-08): Track filtering for already-visited destinations
+                        metricsCollector.onElementFiltered(element, "Leads to already-visited screen")
                         android.util.Log.i("ExplorationEngine-HybridCLite",
                             "🔄 Skipping '${element.text.ifEmpty { element.contentDescription }}' - leads to already-visited ${destinationScreen.take(8)}...")
                         false
@@ -1498,6 +1560,10 @@ class ExplorationEngine(
                 // Also update tracking systems if VUID available
                 element.node?.let { node ->
                     val vuid = thirdPartyGenerator.generateUuid(node, packageName)
+
+                    // PHASE 3 (2025-12-08): Track VUID creation
+                    metricsCollector.onVUIDCreated()
+
                     clickTracker.markElementClicked(frame.screenHash, vuid)
                     checklistManager.markElementCompleted(frame.screenHash, vuid)
                     // FIX (2025-12-08): Add to cumulative clicked tracking (class-level, survives intent relaunches)
@@ -1980,6 +2046,11 @@ class ExplorationEngine(
                 val allElementsToRegister = explorationResult.allElements
                 val tempUuidMap = mutableMapOf<com.augmentalis.voiceoscore.learnapp.models.ElementInfo, String>()
 
+                // PHASE 3 (2025-12-08): Track element detection
+                allElementsToRegister.forEach { _ ->
+                    metricsCollector.onElementDetected()
+                }
+
                 if (developerSettings.isVerboseLoggingEnabled()) {
                     android.util.Log.d("ExplorationEngine-Perf",
                         "⚡ Click-Before-Register: Pre-generating UUIDs for ${allElementsToRegister.size} elements...")
@@ -1991,6 +2062,9 @@ class ExplorationEngine(
                         val uuid = thirdPartyGenerator.generateUuid(node, packageName)
                         element.uuid = uuid
                         tempUuidMap[element] = uuid
+
+                        // PHASE 3 (2025-12-08): Track VUID creation
+                        metricsCollector.onVUIDCreated()
                     }
                 }
                 val uuidGenElapsed = System.currentTimeMillis() - uuidGenStartTime
@@ -2072,6 +2146,9 @@ class ExplorationEngine(
 
                     // Check if should explore
                     if (!strategy.shouldExplore(element)) {
+                        // PHASE 3 (2025-12-08): Track strategy filtering
+                        metricsCollector.onElementFiltered(element, "Strategy rejected")
+
                         if (developerSettings.isVerboseLoggingEnabled()) {
                             android.util.Log.d("ExplorationEngine-Skip",
                                 "STRATEGY REJECTED: \"$elementDesc\" ($elementType) - UUID: ${element.uuid}")
@@ -2082,6 +2159,9 @@ class ExplorationEngine(
                     // Get UUID from temp map (pre-generated in Step 1)
                     val elementUuid = tempUuidMap[element]
                     if (elementUuid == null) {
+                        // PHASE 3 (2025-12-08): Track filtering for elements without UUID
+                        metricsCollector.onElementFiltered(element, "No UUID generated")
+
                         android.util.Log.w("ExplorationEngine-Skip",
                             "NO UUID: \"$elementDesc\" ($elementType) - Skipping")
                         continue
@@ -2602,6 +2682,11 @@ class ExplorationEngine(
     ): List<String> {
         val startTime = System.currentTimeMillis()
 
+        // PHASE 3 (2025-12-08): Track element detection
+        elements.forEach { _ ->
+            metricsCollector.onElementDetected()
+        }
+
         // Step 1: Generate UUIDs and register elements (fast, no DB)
         val uuidElementMap = mutableMapOf<String, com.augmentalis.voiceoscore.learnapp.models.ElementInfo>()
         var skippedCount = 0
@@ -2612,6 +2697,8 @@ class ExplorationEngine(
                 val stableId = element.stableId()
                 if (registeredUuids != null && stableId in registeredUuids) {
                     skippedCount++
+                    // PHASE 3 (2025-12-08): Track filtering for already-registered elements
+                    metricsCollector.onElementFiltered(element, "Already registered")
                     // Still need to return UUID if element already has one
                     element.uuid?.let { return@let }
                     return@let
@@ -2619,6 +2706,9 @@ class ExplorationEngine(
 
                 // Generate UUID
                 val uuid = thirdPartyGenerator.generateUuid(node, packageName)
+
+                // PHASE 3 (2025-12-08): Track VUID creation
+                metricsCollector.onVUIDCreated()
 
                 // Mark as registered
                 registeredUuids?.add(stableId)
@@ -3551,6 +3641,24 @@ class ExplorationEngine(
                         stats = stats
                     )
 
+                    // PHASE 3 (2025-12-08): Generate and save VUID metrics
+                    try {
+                        val metrics = metricsCollector.buildMetrics(currentState.packageName)
+
+                        // Log final report
+                        android.util.Log.i("ExplorationEngine", "=== VUID CREATION METRICS ===")
+                        android.util.Log.i("ExplorationEngine", metrics.toReportString())
+
+                        // Save to database
+                        metricsRepository.saveMetrics(metrics)
+                        android.util.Log.d("ExplorationEngine", "Metrics saved to database")
+                    } catch (e: Exception) {
+                        android.util.Log.e("ExplorationEngine", "Failed to save metrics", e)
+                    }
+
+                    // Hide debug overlay
+                    debugOverlay.hide()
+
                     // Cleanup resources
                     cleanup()
 
@@ -3658,6 +3766,9 @@ class ExplorationEngine(
         if (developerSettings.isVerboseLoggingEnabled()) {
             android.util.Log.d("ExplorationEngine", "Cleaning up resources...")
         }
+
+        // PHASE 3 (2025-12-08): Hide debug overlay
+        debugOverlay.hide()
 
         // Clear screen state manager (releases AccessibilityNodeInfo references)
         screenStateManager.clear()

@@ -268,6 +268,46 @@ class VUIDCreationMetricsCollector {
     }
 
     /**
+     * Called when an ElementInfo is filtered out (no VUID created)
+     *
+     * Overload for ElementInfo data class used in ExplorationEngine.
+     *
+     * @param element ElementInfo that was filtered
+     * @param reason Why element was filtered
+     */
+    @Synchronized
+    fun onElementFiltered(element: com.augmentalis.voiceoscore.learnapp.models.ElementInfo, reason: String) {
+        val className = element.className
+
+        // Update type counts
+        filteredByType[className] = filteredByType.getOrDefault(className, 0) + 1
+
+        // Update reason counts
+        filterReasons[reason] = filterReasons.getOrDefault(reason, 0) + 1
+
+        // Determine severity for ElementInfo
+        val severity = if (element.isClickable) {
+            FilterSeverity.ERROR // Should never filter clickable elements
+        } else if (element.className in containerTypes) {
+            FilterSeverity.WARNING // Suspicious: container filtered
+        } else {
+            FilterSeverity.INTENDED // Expected filtering
+        }
+
+        // Record filtered element
+        val filtered = FilteredElement(
+            elementHash = element.hashCode().toString(),
+            name = element.text.ifEmpty { element.contentDescription }.ifEmpty { null },
+            className = className,
+            isClickable = element.isClickable,
+            filterReason = reason,
+            severity = severity
+        )
+
+        filteredElements.add(filtered)
+    }
+
+    /**
      * Determine severity of filtering decision
      *
      * @param element Filtered element

@@ -29,6 +29,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import com.augmentalis.commandmanager.CommandManager
 // TEMP DISABLED: import com.augmentalis.commandmanager.database.CommandDatabase
 import com.augmentalis.voiceoscore.learnapp.integration.LearnAppIntegration
+import com.augmentalis.voiceoscore.learnapp.integration.CommandDiscoveryIntegration
 import com.augmentalis.voiceoscore.learnapp.ui.RenameHintOverlay
 import com.augmentalis.voiceoscore.learnapp.detection.ScreenActivityDetector
 import com.augmentalis.voiceoscore.learnapp.commands.RenameCommandHandler
@@ -159,6 +160,10 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     private val learnAppInitState = AtomicInteger(0)
     @Volatile
     private var learnAppInitialized = false  // Keep for backward compatibility with debug logs
+
+    // PHASE 3 (2025-12-08): Command Discovery integration
+    // Auto-observes ExplorationEngine.state() and triggers discovery flow on completion
+    private var discoveryIntegration: CommandDiscoveryIntegration? = null
 
     // Hybrid foreground service state
     private var foregroundServiceActive = false
@@ -1055,6 +1060,31 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             Log.i(TAG, "LearnApp will now monitor for new third-party app launches")
             Log.i(TAG, "LEARNAPP_DEBUG: Initialization SUCCESS - learnAppIntegration is ${if (learnAppIntegration != null) "NOT NULL" else "NULL"}")
 
+            // PHASE 3 (2025-12-08): Command Discovery integration
+            // Auto-observes ExplorationEngine.state() via StateFlow
+            // Triggers visual overlay, audio summary, and tutorial when exploration completes
+            Log.d(TAG, "LEARNAPP_DEBUG: Initializing CommandDiscoveryIntegration...")
+            learnAppIntegration?.let { integration ->
+                try {
+                    discoveryIntegration = CommandDiscoveryIntegration(
+                        context = this,
+                        explorationEngine = integration.getExplorationEngine()
+                    )
+                    Log.i(TAG, "✓ Command Discovery integration initialized successfully")
+                    Log.d(TAG, "  - Visual overlay: ACTIVE (10s auto-hide)")
+                    Log.d(TAG, "  - Audio summary: ACTIVE")
+                    Log.d(TAG, "  - Interactive tutorial: ACTIVE")
+                    Log.d(TAG, "  - Command list UI: ACTIVE")
+                    Log.d(TAG, "  - Contextual hints: ACTIVE")
+                    Log.d(TAG, "Auto-observation enabled - no manual wiring needed")
+                } catch (e: Exception) {
+                    Log.e(TAG, "✗ Failed to initialize Command Discovery integration", e)
+                    Log.e(TAG, "  Error type: ${e.javaClass.simpleName}")
+                    Log.e(TAG, "  Error message: ${e.message}")
+                    discoveryIntegration = null
+                }
+            } ?: Log.w(TAG, "Skipping Command Discovery - LearnAppIntegration not available")
+
         } catch (e: Exception) {
             Log.e(TAG, "LEARNAPP_DEBUG: EXCEPTION during initialization!")
             Log.e(TAG, "✗ Failed to initialize LearnApp integration", e)
@@ -1741,6 +1771,23 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                 Log.d(TAG, "LearnApp integration reference cleared")
             }
         } ?: Log.d(TAG, "LearnApp integration was not initialized, skipping cleanup")
+
+        // Cleanup Command Discovery integration
+        // PHASE 3 (2025-12-08): Cleanup CommandDiscoveryIntegration
+        discoveryIntegration?.let { integration ->
+            try {
+                Log.d(TAG, "Cleaning up Command Discovery integration...")
+                integration.cleanup()
+                Log.i(TAG, "✓ Command Discovery integration cleaned up successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "✗ Error cleaning up Command Discovery integration", e)
+                Log.e(TAG, "Cleanup error type: ${e.javaClass.simpleName}")
+                Log.e(TAG, "Cleanup error message: ${e.message}")
+            } finally {
+                discoveryIntegration = null
+                Log.d(TAG, "Command Discovery integration reference cleared")
+            }
+        } ?: Log.d(TAG, "Command Discovery integration was not initialized, skipping cleanup")
 
         // Cleanup rename feature components
         try {

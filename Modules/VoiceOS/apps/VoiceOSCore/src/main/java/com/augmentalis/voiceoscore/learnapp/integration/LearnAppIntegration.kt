@@ -1189,6 +1189,27 @@ class LearnAppIntegration private constructor(
 
 
     /**
+     * Get ExplorationEngine instance for external integration
+     *
+     * PHASE 3 (2025-12-08): Added for CommandDiscoveryIntegration
+     * Allows external components to observe exploration state via StateFlow
+     *
+     * ## Usage:
+     * ```kotlin
+     * val engine = learnAppIntegration.getExplorationEngine()
+     * engine.state()
+     *     .filterIsInstance<ExplorationState.Completed>()
+     *     .collect { state ->
+     *         // Handle exploration completion
+     *     }
+     * ```
+     *
+     * @return ExplorationEngine instance
+     * @since 1.0.0 (Phase 3: Command Discovery integration)
+     */
+    fun getExplorationEngine(): ExplorationEngine = explorationEngine
+
+    /**
      * Cleanup (call in onDestroy)
      * FIX (2025-11-30): Added scope.cancel() to prevent coroutine leaks
      * FIX (2025-12-04): Enhanced cleanup to fix overlay memory leak
