@@ -13,7 +13,13 @@ kotlin {
         }
     }
 
-    jvm("desktop")
+    jvm {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+    }
 
     listOf(
         iosX64(),
@@ -59,25 +65,18 @@ kotlin {
                 implementation("androidx.compose.ui:ui")
                 implementation("androidx.compose.ui:ui-graphics")
                 implementation("androidx.compose.ui:ui-tooling-preview")
+                implementation("androidx.compose.ui:ui-tooling")
 
                 // Compose Foundation
                 implementation("androidx.compose.foundation:foundation")
 
                 // Activity Compose
-                implementation("androidx.activity:activity-compose:1.8.2")
+                implementation("androidx.compose.ui:activity-compose:1.8.2")
 
                 // Lifecycle
                 implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
                 implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
                 implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-            }
-        }
-
-        val androidDebug by getting {
-            dependencies {
-                // Compose UI Tooling (debug only)
-                implementation("androidx.compose.ui:ui-tooling")
-                implementation("androidx.compose.ui:ui-test-manifest")
             }
         }
 
@@ -91,7 +90,7 @@ kotlin {
             iosSimulatorArm64Main.dependsOn(this)
         }
 
-        val desktopMain by getting {
+        val jvmMain by getting {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
             }
