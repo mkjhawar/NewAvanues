@@ -128,23 +128,30 @@ data class AccessibilityFingerprint(
         private fun calculateDefaultHierarchyPath(node: AccessibilityNodeInfo): String {
             val path = mutableListOf<Int>()
             var current: AccessibilityNodeInfo? = node
+            val nodesToRecycle = mutableListOf<AccessibilityNodeInfo>()
 
-            // Walk up tree, collecting indices
-            while (current != null) {
-                val parent = current.parent
-                if (parent != null) {
-                    // Find current's index in parent
-                    val index = findChildIndex(parent, current)
-                    if (index >= 0) {
-                        path.add(0, index) // Prepend to build path from root
+            try {
+                // Walk up tree, collecting indices
+                while (current != null) {
+                    val parent = current.parent
+                    if (parent != null) {
+                        // Find current's index in parent
+                        val index = findChildIndex(parent, current)
+                        if (index >= 0) {
+                            path.add(0, index) // Prepend to build path from root
+                        }
+                        nodesToRecycle.add(parent)
+                        current = parent
+                    } else {
+                        break
                     }
-                    current = parent
-                } else {
-                    break
                 }
-            }
 
-            return "/" + path.joinToString("/")
+                return "/" + path.joinToString("/")
+            } finally {
+                // Always recycle nodes to prevent memory leaks
+                nodesToRecycle.forEach { it.recycle() }
+            }
         }
 
         /**
@@ -160,8 +167,13 @@ data class AccessibilityFingerprint(
         ): Int {
             for (i in 0 until parent.childCount) {
                 val currentChild = parent.getChild(i)
-                if (currentChild != null && currentChild == child) {
-                    return i
+                try {
+                    if (currentChild != null && currentChild == child) {
+                        return i
+                    }
+                } finally {
+                    // Always recycle child node to prevent memory leaks
+                    currentChild?.recycle()
                 }
             }
             return -1
