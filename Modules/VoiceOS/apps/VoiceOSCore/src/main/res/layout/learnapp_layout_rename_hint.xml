@@ -43,8 +43,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_info"
-            android:contentDescription="Information icon"
-            android:tint="?attr/colorOnPrimaryContainer"/>
+            android:contentDescription="Information icon"/>
 
         <Space
             android:layout_width="12dp"
@@ -64,7 +63,7 @@
                 android:layout_height="wrap_content"
                 android:text="Rename buttons by saying:"
                 android:textSize="14sp"
-                android:textColor="?attr/colorOnPrimaryContainer"
+                android:textColor="@android:color/white"
                 android:textStyle="normal"
                 android:fontFamily="sans-serif-medium"/>
 
@@ -79,7 +78,7 @@
                 android:layout_height="wrap_content"
                 android:text="&quot;Rename Button 1 to Save&quot;"
                 android:textSize="16sp"
-                android:textColor="?attr/colorOnPrimaryContainer"
+                android:textColor="@android:color/white"
                 android:textStyle="italic"
                 android:fontFamily="sans-serif"/>
         </LinearLayout>
