@@ -1,18 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    layout_consent_dialog.xml - Material Design 3 consent dialog layout
+    layout_consent_dialog.xml - Consent dialog layout (native Android widgets)
     Path: modules/apps/LearnApp/src/main/res/layout/layout_consent_dialog.xml
 
     Author: Manoj Jhawar
     Code-Reviewed-By: CCA
     Created: 2025-10-24
+    Updated: 2025-12-08 (v1.0.6 - Removed Material3 components to fix Compose lifecycle crash)
 
-    XML layout for consent dialog with Material Components styling.
+    XML layout for consent dialog using native Android widgets.
     Used by ConsentDialog widget class for app learning consent.
+
+    Fix History:
+    - v1.0.6 (2025-12-08): Removed Material3 Button styles and CardView to eliminate
+      Compose dependency that was causing ViewTreeLifecycleOwner crash in
+      AccessibilityService context
 -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -48,63 +53,56 @@
         android:gravity="center"
         android:contentDescription="VoiceOS will explore this app to enable voice commands" />
 
-    <!-- Details Card -->
-    <androidx.cardview.widget.CardView
+    <!-- Details Card (Replaced CardView with LinearLayout to avoid Compose dependency) -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        app:cardCornerRadius="8dp"
-        app:cardElevation="0dp"
-        app:cardBackgroundColor="#10FFFFFF">
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="@drawable/bg_card_info">
 
-        <LinearLayout
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:text="This will:"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="This will:"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="?android:attr/textColorPrimary" />
+        <!-- Bullet points -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="• Click buttons and menus"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary" />
 
-            <!-- Bullet points -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="• Click buttons and menus"
-                android:textSize="14sp"
-                android:textColor="?android:attr/textColorSecondary" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="• Navigate between screens"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="• Navigate between screens"
-                android:textSize="14sp"
-                android:textColor="?android:attr/textColorSecondary" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="• Skip dangerous actions"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="• Skip dangerous actions"
-                android:textSize="14sp"
-                android:textColor="?android:attr/textColorSecondary" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="• Take ~2-5 minutes"
-                android:textSize="14sp"
-                android:textColor="?android:attr/textColorSecondary" />
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="• Take ~2-5 minutes"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary" />
+    </LinearLayout>
 
     <!-- Buttons -->
     <LinearLayout
@@ -116,34 +114,37 @@
 
         <Button
             android:id="@+id/btn_deny"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="No"
             android:minWidth="88dp"
             android:textSize="14sp"
+            android:background="@drawable/bg_button_text"
+            android:textColor="?attr/colorPrimary"
             android:contentDescription="Deny consent for learning this app" />
 
         <Button
             android:id="@+id/btn_skip"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="Skip"
             android:minWidth="88dp"
             android:textSize="14sp"
+            android:background="@drawable/bg_button_text"
+            android:textColor="?attr/colorPrimary"
             android:contentDescription="Skip full learning and use passive just-in-time mode instead" />
 
         <Button
             android:id="@+id/btn_allow"
-            style="@style/Widget.MaterialComponents.Button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="Yes"
             android:minWidth="88dp"
             android:textSize="14sp"
+            android:background="@drawable/bg_button_primary"
+            android:textColor="@android:color/white"
             android:contentDescription="Allow VoiceOS to learn this app" />
     </LinearLayout>
 

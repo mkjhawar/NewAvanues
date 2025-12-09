@@ -5,7 +5,7 @@
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
  * Created: 2025-10-24
- * Updated: 2025-10-28 (v1.0.5 - Refactored to use WidgetOverlayHelper for thread safety)
+ * Updated: 2025-12-08 (v1.0.6 - Removed Material3 components to fix Compose lifecycle crash)
  *
  * WindowManager-based overlay for app learning consent.
  * Uses WindowManager.addView() directly to bypass Dialog's Activity requirement.
@@ -77,6 +77,11 @@ import com.augmentalis.voiceoscore.utils.MaterialThemeHelper
  *
  * ## Fix History
  *
+ * - v1.0.6 (2025-12-08): Fixed Compose lifecycle crash - Removed Material3 components
+ *   - Replaced Material3 Button styles with custom ripple drawables
+ *   - Replaced androidx.cardview.widget.CardView with LinearLayout + custom background
+ *   - Eliminated Compose dependency that caused ViewTreeLifecycleOwner crash
+ *   - Material3 components internally use Compose, which requires LifecycleOwner not available in AccessibilityService
  * - v1.0.5 (2025-10-28): Fixed BadTokenException race condition - Refactored to use WidgetOverlayHelper
  *   - Replaced Handler.post() with WidgetOverlayHelper.ensureMainThread()
  *   - Eliminates race condition: immediate execution on main thread (no Handler delay)
