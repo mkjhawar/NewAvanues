@@ -112,24 +112,44 @@ enum class WindowType {
 
 ## Layout Presets
 
-| Preset | Description |
-|--------|-------------|
-| ARC_3_FRONT | Three windows in curved arc |
-| GRID_2x2 | Four evenly sized windows |
-| STACK_CENTER | One main + stacked background |
-| THEATER | Large cinema window + side tools |
+| Preset | Description | Voice Command |
+|--------|-------------|---------------|
+| LINEAR_HORIZONTAL | 5-6 windows in horizontal array (DEFAULT) | "Linear mode" |
+| ARC_3_FRONT | Three windows in curved arc | "Arc mode" |
+| GRID_2x2 | Four evenly sized windows | "Grid mode" |
+| STACK_CENTER | One main + stacked background | "Stack mode" |
+| THEATER | Large cinema window + side tools | "Theater mode" |
+
+**Default**: LINEAR_HORIZONTAL (macOS/Vision Pro style)
 
 ---
 
 ## Visual Identity
 
+### Window Styles (User-Configurable via Voice)
+
+| Element | Minimal Style (DEFAULT) | Glass Style | Voice Command |
+|---------|-------------------------|-------------|---------------|
+| Window Borders | Very subtle or none | Thin dark-glass with soft glow | "Minimal borders" / "Glass borders" |
+| Background | Neutral gradient, soft lighting | Same | - |
+| Shadows | Soft drop shadows | Enhanced with glow | - |
+| Perspective | Slight 3D tilt | Slight 3D tilt | - |
+
+### Colors & Effects
+
 | Element | Style |
 |---------|-------|
-| Window Borders | Thin dark-glass with soft glow |
 | Accent Colors | Blue (comm), Orange (data), Green (utils) |
-| Curvature | Horizontal curve on large windows |
-| Control Rail | Floating curved toolbar (Home, Workspace, Layout, Voice, Settings) |
-| Utility Belt | Lower mini-panels (music, timers, battery) |
+| Curvature | Horizontal curve on large windows (optional) |
+| Lighting | Soft ambient lighting, neutral gradient background |
+
+### Control UI (Hybrid Approach)
+
+| Component | Location | Purpose | Voice Command |
+|-----------|----------|---------|---------------|
+| **Window Dock** | Bottom center | Dot indicators for windows, active highlight | "Show dock" / "Hide dock" |
+| **Control Rail** | Top or side (floating) | Home, Workspace, Layout, Voice, Settings | "Show controls" / "Hide controls" |
+| **Utility Belt** | Bottom corners | Music, timers, battery, notifications | "Show utilities" |
 
 ---
 
@@ -147,11 +167,23 @@ enum class WindowType {
 ### Layout & Positioning
 | Command | Action |
 |---------|--------|
-| "Theater mode" | Switches to THEATER layout preset |
-| "Arrange in arc" | Switches to ARC_3_FRONT layout |
+| "Linear mode" | Switches to LINEAR_HORIZONTAL (default) |
+| "Arc mode" | Switches to ARC_3_FRONT layout |
+| "Grid mode" | Switches to GRID_2x2 layout |
+| "Stack mode" | Switches to STACK_CENTER layout |
+| "Theater mode" | Switches to THEATER layout |
 | "Move email to the right" | Repositions window spatially |
 | "Make browser bigger" | Increases window dimensions |
 | "Pin this window" | Pins current focused window |
+
+### Visual Customization
+| Command | Action |
+|---------|--------|
+| "Minimal borders" | Switches to minimal window border style |
+| "Glass borders" | Switches to dark-glass border style with glow |
+| "Show dock" / "Hide dock" | Toggles window dock visibility |
+| "Show controls" / "Hide controls" | Toggles Control Rail visibility |
+| "Show utilities" | Displays Utility Belt |
 
 ### Workspace Management
 | Command | Action |

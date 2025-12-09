@@ -32,12 +32,15 @@ Cockpit provides a **voice-controlled** spatial workspace system similar to Appl
 
 ## Layout Presets
 
-| Preset | Description |
-|--------|-------------|
-| `ARC_3_FRONT` | Three windows in curved arc |
-| `GRID_2x2` | Four evenly sized windows |
-| `STACK_CENTER` | One main + stacked background |
-| `THEATER` | Large cinema window + side tools |
+| Preset | Description | Voice Command |
+|--------|-------------|---------------|
+| `LINEAR_HORIZONTAL` | 5-6 windows in horizontal array (DEFAULT) | "Linear mode" |
+| `ARC_3_FRONT` | Three windows in curved arc | "Arc mode" |
+| `GRID_2x2` | Four evenly sized windows | "Grid mode" |
+| `STACK_CENTER` | One main + stacked background | "Stack mode" |
+| `THEATER` | Large cinema window + side tools | "Theater mode" |
+
+**Default**: LINEAR_HORIZONTAL provides familiar macOS/Vision Pro style experience.
 
 ## Voice Commands (VoiceOS Integration)
 
@@ -51,10 +54,20 @@ Cockpit provides a **voice-controlled** spatial workspace system similar to Appl
 
 ### Layout Control
 ```
+"Linear mode"             → Switches to LINEAR_HORIZONTAL (default)
+"Arc mode"                → Switches to ARC_3_FRONT layout
+"Grid mode"               → Switches to GRID_2x2 layout
 "Theater mode"            → Switches to THEATER layout
-"Arrange in arc"          → Switches to ARC_3_FRONT layout
 "Move email to the right" → Repositions window
 "Make browser bigger"     → Increases window size
+```
+
+### Visual Customization
+```
+"Minimal borders"         → Clean macOS-style (default)
+"Glass borders"           → Dark-glass with glow effect
+"Show dock"               → Display window indicators
+"Show controls"           → Display Control Rail
 ```
 
 ### Workspace Management
@@ -151,11 +164,22 @@ Common/Cockpit/
 
 ## Visual Identity
 
-- **Window Borders**: Thin dark-glass with soft inner glow
+### Window Styles (User-Configurable)
+- **Minimal (Default)**: Very subtle borders, clean macOS-style
+- **Glass**: Dark-glass borders with soft inner glow
+- **Background**: Neutral gradient with soft ambient lighting
+- **Shadows**: Soft drop shadows (enhanced with glow in Glass mode)
+- **Perspective**: Slight 3D tilt for depth
+
+### Colors & Effects
 - **Accent Colors**: Blue (communication), Orange (data/analytics), Green (utilities)
-- **Curvature**: Horizontal curve on large windows
-- **Control Rail**: Floating curved toolbar
-- **Utility Belt**: Lower mini-panels
+- **Curvature**: Optional horizontal curve on large windows
+- **Lighting**: Soft ambient lighting, neutral gradient background
+
+### Control UI (Hybrid)
+- **Window Dock**: Bottom center with dot indicators (like macOS/Vision Pro)
+- **Control Rail**: Floating toolbar (Home, Workspace, Layout, Voice, Settings)
+- **Utility Belt**: Corner mini-panels (music, timers, battery)
 
 ## Documentation
 
