@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    bg_hint_card.xml - Hint card background with rounded corners and elevation
+
+    Replaces Material3 Card to avoid Compose dependency
+    Semi-transparent primary container color with rounded corners
+
+    Created: 2025-12-08
+    Purpose: Fix RenameHintOverlay Compose lifecycle crash
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Shadow layer for elevation effect -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#20000000"/>
+            <corners android:radius="12dp"/>
+        </shape>
+    </item>
+
+    <!-- Card background -->
+    <item
+        android:bottom="2dp"
+        android:right="2dp">
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/colorPrimaryContainer"/>
+            <corners android:radius="12dp"/>
+        </shape>
+    </item>
+</layer-list>

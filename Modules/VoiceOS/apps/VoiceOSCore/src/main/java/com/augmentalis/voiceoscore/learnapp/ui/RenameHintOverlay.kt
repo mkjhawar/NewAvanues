@@ -5,6 +5,7 @@
  * Author: Manoj Jhawar
  * Code-Reviewed-By: Claude Code (IDEACODE v10.3)
  * Created: 2025-12-08
+ * Updated: 2025-12-08 (v1.0.1 - Removed Compose to fix lifecycle crash)
  * Related: LearnApp-Rename-Hint-Overlay-Mockups-5081220-V1.md
  *          LearnApp-On-Demand-Command-Renaming-5081220-V2.md
  *
@@ -14,48 +15,39 @@
  *
  * Features:
  * - Detects screens with generated labels (Button 1, Tab 2, etc.)
- * - Shows Material Design 3 hint card with example command
+ * - Shows Material Design hint card with example command
  * - 3-second auto-dismiss with fade animation
  * - TTS announcement for accessibility
  * - Session-based tracking (doesn't repeat)
- * - High contrast mode support
- * - Small screen responsive design
+ * - Native Android widgets (no Compose)
+ *
+ * ## Fix History
+ *
+ * - v1.0.1 (2025-12-08): Fixed Compose lifecycle crash - Removed all Compose components
+ *   - Replaced ComposeView + RenameHintCard with native XML layout
+ *   - Replaced Compose animations with native View animations (alpha fade)
+ *   - Eliminated Compose dependency that caused ViewTreeLifecycleOwner crash
+ *   - ComposeView internally requires LifecycleOwner not available in AccessibilityService
  */
 
 package com.augmentalis.voiceoscore.learnapp.ui
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
-import android.content.res.Configuration
 import android.graphics.PixelFormat
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
 import android.view.WindowManager
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import android.view.animation.AlphaAnimation
+import android.view.animation.Animation
+import android.widget.TextView
+import com.augmentalis.voiceoscore.R
 import com.augmentalis.database.dto.GeneratedCommandDTO
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /**
  * RenameHintOverlay - Manages hint overlay lifecycle
@@ -102,7 +94,7 @@ class RenameHintOverlay(
     /**
      * Currently displayed view (if any)
      */
-    private var currentView: ComposeView? = null
+    private var currentView: View? = null
 
     /**
      * Set of screen identifiers where hint has been shown this session
@@ -185,7 +177,7 @@ class RenameHintOverlay(
     /**
      * Show hint overlay
      *
-     * Creates ComposeView with Material Design 3 card and adds to WindowManager.
+     * Inflates XML layout with native Android widgets and adds to WindowManager.
      * Auto-dismisses after 3 seconds with fade animation.
      * Announces via TTS for accessibility.
      *
@@ -193,7 +185,7 @@ class RenameHintOverlay(
      */
     private fun show(exampleCommand: GeneratedCommandDTO) {
         // Remove any existing view first
-        currentView?.let { view ->
+        currentView?.let { view: View ->
             try {
                 windowManager.removeView(view)
             } catch (e: Exception) {
@@ -213,15 +205,16 @@ class RenameHintOverlay(
             "rename_hint"
         )
 
-        // Create ComposeView
-        val composeView = ComposeView(context).apply {
-            setContent {
-                RenameHintCard(
-                    exampleCommand = buttonName,
-                    onDismiss = { hide() }
-                )
-            }
-        }
+        // Inflate XML layout
+        val inflater = LayoutInflater.from(context)
+        val view = inflater.inflate(R.layout.learnapp_layout_rename_hint, null)
+
+        // Update example text
+        val textExample = view.findViewById<TextView>(R.id.text_example)
+        textExample.text = "\"Rename $buttonName to Save\""
+
+        // Get the card container for animation
+        val hintCard = view.findViewById<View>(R.id.hint_card)
 
         // Window layout parameters
         val params = WindowManager.LayoutParams(
@@ -233,14 +226,37 @@ class RenameHintOverlay(
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = dpToPx(16) // 16dp from top
         }
 
         // Add to WindowManager
         try {
-            windowManager.addView(composeView, params)
-            currentView = composeView
+            windowManager.addView(view, params)
+            currentView = view
             Log.i(TAG, "Rename hint overlay displayed")
+
+            // Fade-in animation (200ms)
+            val fadeIn = AlphaAnimation(0.0f, 1.0f).apply {
+                duration = 200
+                fillAfter = true
+            }
+            hintCard.startAnimation(fadeIn)
+
+            // Auto-dismiss after 3 seconds with fade-out
+            Handler(Looper.getMainLooper()).postDelayed({
+                val fadeOut = AlphaAnimation(1.0f, 0.0f).apply {
+                    duration = 200
+                    fillAfter = true
+                    setAnimationListener(object : Animation.AnimationListener {
+                        override fun onAnimationStart(animation: Animation?) {}
+                        override fun onAnimationRepeat(animation: Animation?) {}
+                        override fun onAnimationEnd(animation: Animation?) {
+                            hide()
+                        }
+                    })
+                }
+                hintCard.startAnimation(fadeOut)
+            }, 3000)
+
         } catch (e: Exception) {
             Log.e(TAG, "Failed to add rename hint overlay", e)
         }
@@ -252,7 +268,7 @@ class RenameHintOverlay(
      * Removes view from WindowManager if currently displayed.
      */
     private fun hide() {
-        currentView?.let { view ->
+        currentView?.let { view: View ->
             try {
                 windowManager.removeView(view)
                 Log.d(TAG, "Rename hint overlay removed")
@@ -308,322 +324,5 @@ class RenameHintOverlay(
 
     companion object {
         private const val TAG = "RenameHintOverlay"
-    }
-}
-
-/**
- * RenameHintCard - Material Design 3 hint card composable
- *
- * Shows contextual hint with example command.
- * 3-second auto-dismiss with fade animation.
- * Responsive to screen size and high contrast mode.
- *
- * ## Visual Design
- *
- * ```
- * ┌───────────────────────────────────────────────────────────┐
- * │ ℹ️  Rename buttons by saying:                             │
- * │    "Rename Button 1 to Save"                             │
- * └───────────────────────────────────────────────────────────┘
- * ```
- *
- * @param exampleCommand Button name to use in example (e.g., "Button 1")
- * @param onDismiss Callback when hint auto-dismisses
- */
-@Composable
-fun RenameHintCard(
-    exampleCommand: String,
-    onDismiss: () -> Unit = {}
-) {
-    // Animation state
-    var visible by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-
-    // Configuration for responsive design
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-    val isSmallScreen = configuration.screenWidthDp < 360
-    val isHighContrast = configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
-        Configuration.UI_MODE_NIGHT_YES
-
-    // Auto-dismiss after 3 seconds
-    LaunchedEffect(Unit) {
-        visible = true
-        coroutineScope.launch {
-            delay(3000)
-            visible = false
-            delay(200) // Wait for fade out animation
-            onDismiss()
-        }
-    }
-
-    // Animated visibility with fade
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing)),
-        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp),
-            contentAlignment = Alignment.TopCenter
-        ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth(if (isSmallScreen) 0.95f else 0.9f)
-                    .padding(horizontal = if (isSmallScreen) 12.dp else 16.dp)
-                    .then(
-                        if (isHighContrast) {
-                            Modifier.border(
-                                width = 2.dp,
-                                color = MaterialTheme.colorScheme.primary,
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                        } else {
-                            Modifier
-                        }
-                    ),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                        .copy(alpha = if (isHighContrast) 1.0f else 0.9f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(if (isSmallScreen) 12.dp else 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Info icon
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Info",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(if (isHighContrast) 28.dp else 24.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    // Text content
-                    Column {
-                        // Title
-                        Text(
-                            text = if (isSmallScreen) "Rename:" else "Rename buttons by saying:",
-                            style = if (isSmallScreen) {
-                                MaterialTheme.typography.bodySmall
-                            } else {
-                                MaterialTheme.typography.bodyMedium
-                            },
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontWeight = if (isHighContrast) FontWeight.Bold else FontWeight.Medium
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        // Example command
-                        Text(
-                            text = "\"Rename $exampleCommand to Save\"",
-                            style = if (isSmallScreen) {
-                                MaterialTheme.typography.bodyMedium
-                            } else {
-                                MaterialTheme.typography.bodyLarge
-                            },
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontStyle = FontStyle.Italic,
-                            fontWeight = if (isHighContrast) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ============================================================================
-// Preview Composables
-// ============================================================================
-
-/**
- * Preview: Light mode with standard screen size
- */
-@Preview(name = "Light Mode", showBackground = true)
-@Composable
-fun RenameHintOverlayPreview() {
-    MaterialTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Simulated app content
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                Text("DeviceInfo App", style = MaterialTheme.typography.headlineMedium)
-                Spacer(Modifier.height(16.dp))
-                Row {
-                    Button(onClick = {}) { Text("Button 1") }
-                    Spacer(Modifier.width(8.dp))
-                    Button(onClick = {}) { Text("Button 2") }
-                }
-            }
-
-            // Overlay
-            RenameHintCard(exampleCommand = "Button 1")
-        }
-    }
-}
-
-/**
- * Preview: Dark mode (high contrast)
- */
-@Preview(name = "Dark Mode", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
-@Composable
-fun RenameHintOverlayPreviewDark() {
-    MaterialTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                Text("DeviceInfo App", style = MaterialTheme.typography.headlineMedium)
-                Spacer(Modifier.height(16.dp))
-                Row {
-                    Button(onClick = {}) { Text("Button 1") }
-                    Spacer(Modifier.width(8.dp))
-                    Button(onClick = {}) { Text("Button 2") }
-                }
-            }
-
-            RenameHintCard(exampleCommand = "Button 1")
-        }
-    }
-}
-
-/**
- * Preview: Small screen (compact layout)
- */
-@Preview(name = "Small Screen", device = "spec:width=320dp,height=640dp,dpi=160")
-@Composable
-fun RenameHintOverlayPreviewSmall() {
-    MaterialTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
-            ) {
-                Text("DeviceInfo", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                Row {
-                    Button(
-                        onClick = {},
-                        modifier = Modifier.size(80.dp)
-                    ) {
-                        Text("Btn 1", fontSize = 12.sp)
-                    }
-                    Spacer(Modifier.width(4.dp))
-                    Button(
-                        onClick = {},
-                        modifier = Modifier.size(80.dp)
-                    ) {
-                        Text("Btn 2", fontSize = 12.sp)
-                    }
-                }
-            }
-
-            RenameHintCard(exampleCommand = "Button 1")
-        }
-    }
-}
-
-/**
- * Preview: Unity game with spatial label
- */
-@Preview(name = "Unity Spatial Label", showBackground = true)
-@Composable
-fun RenameHintOverlayPreviewUnity() {
-    MaterialTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                Text("Unity Game", style = MaterialTheme.typography.headlineMedium)
-                Spacer(Modifier.height(16.dp))
-                Row {
-                    Button(onClick = {}) { Text("TL Btn") }
-                    Spacer(Modifier.weight(1f))
-                    Button(onClick = {}) { Text("TR Btn") }
-                }
-            }
-
-            RenameHintCard(exampleCommand = "Top Left Button")
-        }
-    }
-}
-
-/**
- * Preview: RealWear Navigator 500 variant
- */
-@Preview(name = "RealWear Navigator 500", showBackground = true)
-@Composable
-fun RenameHintOverlayPreviewRealWear() {
-    MaterialTheme(
-        colorScheme = darkColorScheme()
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // RealWear-style UI
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
-            ) {
-                Text("RealWear Navigator 500", style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.height(8.dp))
-                Row {
-                    Button(onClick = {}) { Text("[1]") }
-                    Spacer(Modifier.width(8.dp))
-                    Button(onClick = {}) { Text("[2]") }
-                }
-            }
-
-            // High contrast overlay for RealWear
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth(0.95f)
-                    .padding(horizontal = 8.dp)
-                    .align(Alignment.TopCenter)
-                    .padding(top = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.Black
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Info",
-                        tint = Color.Yellow,
-                        modifier = Modifier.size(32.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Text(
-                        text = "SAY: \"RENAME 1 TO SAVE\"",
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = Color.White,
-                        letterSpacing = 1.sp
-                    )
-                }
-            }
-        }
     }
 }
