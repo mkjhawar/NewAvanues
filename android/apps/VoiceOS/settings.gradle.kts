@@ -52,6 +52,10 @@ rootProject.name = "VoiceOS"
 // Main application (test harness)
 include(":app")
 
+// Cockpit MVP Demo
+include(":android:apps:cockpit-mvp")
+include(":Common:Cockpit")
+
 // Standalone Apps (Moved to monorepo Modules/)
 include(":Modules:VoiceOS:apps:VoiceOSCore")  // RE-ENABLED for Agent Swarm migration
 include(":Modules:VoiceOS:apps:VoiceUI")  // Voice UI with Magic components
@@ -89,9 +93,6 @@ include(":Modules:VoiceOS:core:voiceos-logging")    // VoiceOS Logging - PII-saf
 include(":Modules:VoiceOS:core:text-utils")         // Text manipulation and sanitization utilities
 include(":Modules:VoiceOS:core:json-utils")          // JSON manipulation utilities
 include(":Modules:VoiceOS:core:database")            // SQLDelight KMP database (VoiceDataManager migration)
-
-// Shared Modules (Cross-project KMP libraries)
-include(":Modules:Shared:NLU")                      // Unified NLU with AVU format parser
 
 // Code Import - Temporary modules for testing
 // include(":CodeImport:SR6-Hybrid")  // DISABLED - Using unified :libraries:SpeechRecognition instead
@@ -137,5 +138,5 @@ project(":Modules:VoiceOS:core:database").projectDir = file("../../../Modules/Vo
 
 project(":Common:ThirdParty:Vosk").projectDir = file("../../../Common/ThirdParty/Vosk")
 
-// Shared module mappings
-project(":Modules:Shared:NLU").projectDir = file("../../../Modules/Shared/NLU")
+project(":android:apps:cockpit-mvp").projectDir = file("../cockpit-mvp")
+project(":Common:Cockpit").projectDir = file("../../../Common/Cockpit")

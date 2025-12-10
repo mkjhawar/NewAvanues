@@ -11,7 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -21,7 +20,6 @@ import com.augmentalis.cockpit.mvp.components.GlassmorphicSurface
  * Floating top navigation bar with glassmorphic styling
  * Shows current workspace context and window count
  * Adapts to display cutouts (notch, punch hole, dynamic island)
- * Includes haptic feedback for button interactions
  */
 @Composable
 fun TopNavigationBar(
@@ -31,9 +29,6 @@ fun TopNavigationBar(
     workspaceName: String = "Cockpit Workspace",
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val hapticManager = remember { HapticFeedbackManager(context) }
-
     // Get display cutout insets to avoid camera/island
     val displayCutoutInsets = WindowInsets.displayCutout
     val topInset = with(LocalDensity.current) {
@@ -65,10 +60,7 @@ fun TopNavigationBar(
             ) {
                 // Left: Menu icon
                 IconButton(
-                    onClick = {
-                        hapticManager.performLightTap()
-                        /* TODO: Open workspace menu */
-                    },
+                    onClick = { /* TODO: Open workspace menu */ },
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
@@ -105,10 +97,7 @@ fun TopNavigationBar(
                 ) {
                     // Head cursor toggle
                     IconButton(
-                        onClick = {
-                            hapticManager.performMediumTap()
-                            onToggleHeadCursor()
-                        },
+                        onClick = onToggleHeadCursor,
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(

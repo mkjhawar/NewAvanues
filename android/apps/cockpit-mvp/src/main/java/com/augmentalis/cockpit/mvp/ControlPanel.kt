@@ -10,15 +10,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.avanues.cockpit.core.window.WindowType
 import com.augmentalis.cockpit.mvp.components.GlassmorphicSurface
 
-/**
- * Control panel with add and reset buttons
- * Includes haptic feedback for all interactions
- */
 @Composable
 fun ControlPanel(
     windowCount: Int,
@@ -27,8 +22,6 @@ fun ControlPanel(
     onReset: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val hapticManager = remember { HapticFeedbackManager(context) }
     var showAddDialog by remember { mutableStateOf(false) }
 
     // Get bottom insets to avoid navigation bar and add padding
@@ -60,14 +53,7 @@ fun ControlPanel(
             ) {
                 // Add window icon button (75% size)
                 IconButton(
-                    onClick = {
-                        if (windowCount < maxWindows) {
-                            hapticManager.performSuccess()
-                            showAddDialog = true
-                        } else {
-                            hapticManager.performError()
-                        }
-                    },
+                    onClick = { showAddDialog = true },
                     enabled = windowCount < maxWindows,
                     modifier = Modifier.size(OceanTheme.buttonSizeSmall)
                 ) {
@@ -89,10 +75,7 @@ fun ControlPanel(
 
                 // Reset icon button (75% size)
                 IconButton(
-                    onClick = {
-                        hapticManager.performMediumTap()
-                        onReset()
-                    },
+                    onClick = onReset,
                     modifier = Modifier.size(OceanTheme.buttonSizeSmall)
                 ) {
                     Icon(

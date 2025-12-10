@@ -44,45 +44,22 @@ fun CockpitMVPScreen(
 ) {
     val windows by viewModel.windows.collectAsState()
     val positions by viewModel.windowPositions.collectAsState()
-    val windowColors by viewModel.windowColors.collectAsState()
     val isHeadCursorEnabled by viewModel.isHeadCursorEnabled.collectAsState()
-    val isSpatialMode by viewModel.isSpatialMode.collectAsState()
-    val layoutPreset by viewModel.layoutPreset.collectAsState()
-    val selectedWindowId by viewModel.selectedWindowId.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Main workspace with windows (2D flat or 3D curved)
-        if (isSpatialMode) {
-            SpatialWorkspaceView(
-                windows = windows,
-                layoutPreset = layoutPreset,
-                windowColors = windowColors,
-                selectedWindowId = selectedWindowId,
-                onRemoveWindow = { viewModel.removeWindow(it) },
-                onCycleLayoutPreset = { forward -> viewModel.cycleLayoutPreset(forward) },
-                onWindowHover = { windowId -> viewModel.setSelectedWindow(windowId) },
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            WorkspaceView(
-                windows = windows,
-                positions = positions,
-                onRemoveWindow = { viewModel.removeWindow(it) },
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        // Main workspace with windows
+        WorkspaceView(
+            windows = windows,
+            positions = positions,
+            onRemoveWindow = { viewModel.removeWindow(it) },
+            modifier = Modifier.fillMaxSize()
+        )
 
         // Top navigation bar
-        // TODO: Add spatial mode toggle and layout cycling to TopNavigationBar
         TopNavigationBar(
             windowCount = windows.size,
             onToggleHeadCursor = { viewModel.toggleHeadCursor() },
             isHeadCursorEnabled = isHeadCursorEnabled,
-            workspaceName = if (isSpatialMode) {
-                "Spatial - ${viewModel.getLayoutPresetName()}"
-            } else {
-                "Cockpit Workspace"
-            },
             modifier = Modifier.align(Alignment.TopCenter)
         )
 
@@ -102,9 +79,7 @@ fun CockpitMVPScreen(
             HeadCursorOverlay(
                 isEnabled = isHeadCursorEnabled,
                 onCursorPositionChange = { x, y ->
-                    // Pass cursor position to ViewModel for hit detection
-                    // Actual hit detection happens in SpatialWorkspaceView
-                    viewModel.updateCursorPosition(x, y)
+                    // TODO: Handle cursor position for window selection/interaction
                 }
             )
         }
