@@ -69,14 +69,16 @@ Product-specific code goes in `Modules/{Product}/`.
 
 ### AVA - After WebAvanue
 - **Repo name:** AVA
-- **Project name:** AVA
-- **Destination:** `Avanues/AVA/`
-- **EXCLUDE:** /external-models initially (18GB, 10+ files >100MB)
-- **MOVE:** external-models AFTER migration (not copy)
-- **Git ignore:** Files >100MB before moving external-models
-- **Note:** User will manually migrate external-models later
-- **Branding:** Under `Avanues/` folder for brand consistency
-- **Special:** Do NOT migrate /voiceos files from this repo
+- **Project name:** AVA AI
+- **Destination:** `android/apps/ava/`, `Modules/AVA/`
+- Phase 1: Copy files to monorepo structure
+- Phase 2: Update Gradle paths from `:common:*` to new structure
+- Phase 3: Build verification
+- Branch: `AVA-Development`
+- Docs: See `AVA/MIGRATION-COMPLETE.md`
+- **Build Status:** ✅ assembleDebug SUCCESS
+- **Special:** voiceos files in AVA are AVA-specific client code (VoiceOSQueryProvider, etc.)
+>>>>>>> AVA-Development
 
 ### Avanues - Final
 - **Repo name:** Avanues

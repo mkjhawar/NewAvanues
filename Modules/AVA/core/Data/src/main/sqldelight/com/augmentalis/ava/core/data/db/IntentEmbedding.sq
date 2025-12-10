@@ -1,0 +1,103 @@
+-- Intent embedding table for pre-computed embeddings
+-- Migrated from Room IntentEmbeddingEntity
+-- CRITICAL: This table enables 95% faster initialization (4.2s → 0.2s)
+-- Stores mALBERT/MobileBERT embeddings as BLOB for fast vector similarity search
+
+CREATE TABLE intent_embedding (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    intent_id TEXT NOT NULL,
+    locale TEXT NOT NULL,
+    embedding_vector BLOB NOT NULL,
+    embedding_dimension INTEGER NOT NULL,
+    model_version TEXT NOT NULL,
+    normalization_type TEXT NOT NULL DEFAULT 'l2',
+    ontology_id TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    example_count INTEGER NOT NULL DEFAULT 1,
+    source TEXT NOT NULL DEFAULT 'AVA_FILE_UNIVERSAL_V2'
+);
+
+-- Unique constraint on intent_id + locale (one embedding per intent per language)
+CREATE UNIQUE INDEX idx_intent_embedding_intent_locale ON intent_embedding(intent_id, locale);
+CREATE INDEX idx_intent_embedding_locale ON intent_embedding(locale);
+CREATE INDEX idx_intent_embedding_model_version ON intent_embedding(model_version);
+CREATE INDEX idx_intent_embedding_ontology_id ON intent_embedding(ontology_id);
+CREATE INDEX idx_intent_embedding_created_at ON intent_embedding(created_at);
+
+-- Insert or replace (VOS4 INSERT OR REPLACE pattern)
+-- CRITICAL: This enables embedding cache updates
+insert:
+INSERT OR REPLACE INTO intent_embedding (
+    intent_id, locale, embedding_vector, embedding_dimension, model_version,
+    normalization_type, ontology_id, created_at, updated_at, example_count, source
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Select all embeddings for a locale (for intent classification)
+selectByLocale:
+SELECT * FROM intent_embedding
+WHERE locale = ?
+ORDER BY intent_id ASC;
+
+-- Select embedding by intent and locale
+selectByIntentAndLocale:
+SELECT * FROM intent_embedding
+WHERE intent_id = ? AND locale = ?;
+
+-- Select all embeddings (for bulk operations)
+selectAll:
+SELECT * FROM intent_embedding
+ORDER BY locale, intent_id;
+
+-- Select embeddings by model version (for migration)
+selectByModelVersion:
+SELECT * FROM intent_embedding
+WHERE model_version = ?;
+
+-- Select embeddings by dimension (for model change detection)
+selectByDimension:
+SELECT * FROM intent_embedding
+WHERE embedding_dimension = ?;
+
+-- Count embeddings
+count:
+SELECT COUNT(*) FROM intent_embedding;
+
+-- Count embeddings by locale
+countByLocale:
+SELECT COUNT(*) FROM intent_embedding
+WHERE locale = ?;
+
+-- Count embeddings by model version
+countByModelVersion:
+SELECT COUNT(*) FROM intent_embedding
+WHERE model_version = ?;
+
+-- Update embedding vector (for re-computation)
+updateEmbedding:
+UPDATE intent_embedding
+SET embedding_vector = ?,
+    embedding_dimension = ?,
+    model_version = ?,
+    updated_at = ?,
+    example_count = ?
+WHERE intent_id = ? AND locale = ?;
+
+-- Delete embedding by intent and locale
+deleteByIntentAndLocale:
+DELETE FROM intent_embedding
+WHERE intent_id = ? AND locale = ?;
+
+-- Delete all embeddings for a locale
+deleteByLocale:
+DELETE FROM intent_embedding
+WHERE locale = ?;
+
+-- Delete all embeddings for a model version (for model migration)
+deleteByModelVersion:
+DELETE FROM intent_embedding
+WHERE model_version = ?;
+
+-- Delete all embeddings
+deleteAll:
+DELETE FROM intent_embedding;

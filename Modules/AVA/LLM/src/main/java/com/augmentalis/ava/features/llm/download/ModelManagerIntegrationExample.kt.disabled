@@ -1,0 +1,362 @@
+/**
+ * Integration Example: Updating ModelManager to use ModelDownloadManager
+ *
+ * This example shows how to refactor the existing NLU ModelManager
+ * to use the new ModelDownloadManager system for cache-first loading.
+ *
+ * Benefits:
+ * - Unified download system across all features
+ * - Better progress tracking
+ * - Pause/Resume support
+ * - Checksum verification
+ * - Improved error handling
+ *
+ * Created: 2025-11-03
+ * Author: AVA AI Team
+ */
+
+package com.augmentalis.ava.features.llm.download
+
+import android.content.Context
+import com.augmentalis.ava.core.common.Result
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import timber.log.Timber
+import java.io.File
+
+/**
+ * Example: Refactored NLU ModelManager using ModelDownloadManager
+ *
+ * This replaces the existing custom download logic in:
+ * Universal/AVA/Features/NLU/src/androidMain/kotlin/com/augmentalis/ava/features/nlu/ModelManager.kt
+ *
+ * Migration steps:
+ * 1. Add dependency on LLM feature module (for download system)
+ * 2. Replace custom download logic with ModelDownloadManager
+ * 3. Update initialization to use AVAModelRegistry
+ * 4. Keep existing interface for backward compatibility
+ */
+class NLUModelManagerExample(private val context: Context) {
+
+    // Use shared cache and download managers
+    private val cacheManager = ModelCacheManager(context)
+    private val downloadManager = ModelDownloadManager(context, cacheManager)
+
+    /**
+     * Check if models are available locally
+     * (Maintains existing interface)
+     */
+    fun isModelAvailable(): Boolean {
+        // Use cache manager instead of checking files directly
+        return cacheManager.isModelCached(AVAModelRegistry.MOBILEBERT_INT8.id) &&
+                cacheManager.isModelCached(AVAModelRegistry.MOBILEBERT_VOCAB.id)
+    }
+
+    /**
+     * Get model file path
+     * (Maintains existing interface)
+     */
+    fun getModelPath(): String {
+        return cacheManager.getModelPath(AVAModelRegistry.MOBILEBERT_INT8.id)
+            ?: throw IllegalStateException("MobileBERT model not found in cache")
+    }
+
+    /**
+     * Get vocabulary file path
+     * (Maintains existing interface)
+     */
+    fun getVocabPath(): String {
+        return cacheManager.getModelPath(AVAModelRegistry.MOBILEBERT_VOCAB.id)
+            ?: throw IllegalStateException("Vocabulary file not found in cache")
+    }
+
+    /**
+     * Download models if needed
+     * (Enhanced version with better progress tracking)
+     */
+    suspend fun downloadModelsIfNeeded(
+        onProgress: (Float) -> Unit
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val configs = listOf(
+                AVAModelRegistry.MOBILEBERT_INT8,
+                AVAModelRegistry.MOBILEBERT_VOCAB
+            )
+
+            var completedCount = 0
+            val totalModels = configs.size
+
+            for (config in configs) {
+                downloadManager.ensureModelAvailable(config)
+                    .collect { state ->
+                        when (state) {
+                            is DownloadState.Downloading -> {
+                                // Calculate overall progress
+                                val modelProgress = state.progress
+                                val overallProgress = (completedCount + modelProgress) / totalModels
+                                onProgress(overallProgress)
+
+                                Timber.d(
+                                    "Downloading ${config.name}: ${state.getProgressPercentage()}% " +
+                                            "(${state.getSpeed()})"
+                                )
+                            }
+
+                            is DownloadState.Completed -> {
+                                completedCount++
+                                val overallProgress = completedCount.toFloat() / totalModels
+                                onProgress(overallProgress)
+
+                                Timber.i("Completed ${config.name} (${config.getFormattedSize()})")
+                            }
+
+                            is DownloadState.Error -> {
+                                throw state.error
+                            }
+
+                            else -> {
+                                // Idle or Paused states
+                            }
+                        }
+                    }
+            }
+
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to download NLU models")
+            Result.Error(
+                exception = e,
+                message = "Failed to download models: ${e.message}"
+            )
+        }
+    }
+
+    /**
+     * Copy models from assets (fallback)
+     * Note: This should be removed when fully migrated to on-demand downloads
+     */
+    suspend fun copyModelFromAssets(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            // This can remain for backward compatibility during migration
+            // but should eventually be removed to save APK size
+
+            val modelDir = cacheManager.getModelDirectory(AVAModelRegistry.MOBILEBERT_INT8.id)
+            modelDir.mkdirs()
+
+            // Copy MobileBERT
+            val modelFile = File(modelDir, "model_int8.onnx")
+            if (!modelFile.exists()) {
+                context.assets.open("models/mobilebert_int8.onnx").use { input ->
+                    modelFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            }
+
+            // Copy vocabulary
+            val vocabDir = cacheManager.getModelDirectory(AVAModelRegistry.MOBILEBERT_VOCAB.id)
+            vocabDir.mkdirs()
+
+            val vocabFile = File(vocabDir, "vocab.txt")
+            if (!vocabFile.exists()) {
+                context.assets.open("models/vocab.txt").use { input ->
+                    vocabFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            }
+
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(
+                exception = e,
+                message = "Failed to copy models from assets: ${e.message}"
+            )
+        }
+    }
+
+    /**
+     * Delete downloaded models
+     * (Enhanced with cache manager)
+     */
+    suspend fun clearModels(): Result<Unit> {
+        return try {
+            cacheManager.deleteModel(AVAModelRegistry.MOBILEBERT_INT8.id)
+            cacheManager.deleteModel(AVAModelRegistry.MOBILEBERT_VOCAB.id)
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(
+                exception = e,
+                message = "Failed to clear models: ${e.message}"
+            )
+        }
+    }
+
+    /**
+     * Get total size of downloaded models
+     * (Enhanced with cache manager)
+     */
+    suspend fun getModelsSize(): Long {
+        return cacheManager.getModelSize(AVAModelRegistry.MOBILEBERT_INT8.id) +
+                cacheManager.getModelSize(AVAModelRegistry.MOBILEBERT_VOCAB.id)
+    }
+
+    /**
+     * Advanced: Pause model download
+     * (New capability enabled by ModelDownloadManager)
+     */
+    suspend fun pauseDownload(): Result<Unit> {
+        return downloadManager.pauseDownload(AVAModelRegistry.MOBILEBERT_INT8.id)
+    }
+
+    /**
+     * Advanced: Resume model download
+     * (New capability enabled by ModelDownloadManager)
+     */
+    suspend fun resumeDownload(): Result<Unit> {
+        return downloadManager.resumeDownload(AVAModelRegistry.MOBILEBERT_INT8.id)
+    }
+
+    /**
+     * Advanced: Cancel model download
+     * (New capability enabled by ModelDownloadManager)
+     */
+    suspend fun cancelDownload(): Result<Unit> {
+        return downloadManager.cancelDownload(AVAModelRegistry.MOBILEBERT_INT8.id)
+    }
+}
+
+/**
+ * Example: Refactored LocalLLMProvider initialization
+ *
+ * Shows how to integrate ModelDownloadManager with the LLM provider
+ */
+class LocalLLMProviderExample(private val context: Context) {
+
+    private val cacheManager = ModelCacheManager(context)
+    private val downloadManager = ModelDownloadManager(context, cacheManager)
+
+    /**
+     * Initialize LLM with on-demand model download
+     */
+    suspend fun initialize(modelId: String): Result<String> {
+        return try {
+            // Get model configuration from registry
+            val config = AVAModelRegistry.REGISTRY.getModel(modelId)
+                ?: return Result.Error(
+                    exception = IllegalArgumentException("Unknown model"),
+                    message = "Model not found in registry: $modelId"
+                )
+
+            // Check dependencies
+            val dependencies = AVAModelRegistry.REGISTRY.getAllDependencies(modelId)
+            if (dependencies.isNotEmpty()) {
+                Timber.i("Model has ${dependencies.size} dependencies")
+
+                // Download dependencies first
+                for (dep in dependencies) {
+                    downloadManager.ensureModelAvailable(dep)
+                        .collect { state ->
+                            if (state is DownloadState.Error) {
+                                throw state.error
+                            }
+                        }
+                }
+            }
+
+            // Download main model (or use cached version)
+            var modelPath: String? = null
+            downloadManager.ensureModelAvailable(config)
+                .collect { state ->
+                    when (state) {
+                        is DownloadState.Downloading -> {
+                            Timber.d(
+                                "Loading ${config.name}: ${state.getProgressPercentage()}%"
+                            )
+                        }
+
+                        is DownloadState.Completed -> {
+                            modelPath = state.filePath
+                            Timber.i("Model ready: ${state.filePath}")
+                        }
+
+                        is DownloadState.Error -> {
+                            throw state.error
+                        }
+
+                        else -> {}
+                    }
+                }
+
+            val path = modelPath ?: throw IllegalStateException("Model path not found")
+
+            // Verify checksum if provided
+            if (config.checksum != null) {
+                val checksumResult = cacheManager.verifyChecksum(modelId, config.checksum)
+                when (checksumResult) {
+                    is Result.Success -> {
+                        if (!checksumResult.data) {
+                            return Result.Error(
+                                exception = IllegalStateException("Checksum mismatch"),
+                                message = "Model integrity check failed"
+                            )
+                        }
+                    }
+
+                    is Result.Error -> return checksumResult
+                }
+            }
+
+            Result.Success(path)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to initialize LLM")
+            Result.Error(
+                exception = e,
+                message = "Initialization failed: ${e.message}"
+            )
+        }
+    }
+}
+
+/**
+ * Migration Checklist for Existing Code
+ *
+ * 1. Add LLM module dependency to NLU build.gradle.kts:
+ *    ```
+ *    implementation(project(":Universal:AVA:Features:LLM"))
+ *    ```
+ *
+ * 2. Update ModelManager to use ModelDownloadManager:
+ *    - Replace custom download logic
+ *    - Use AVAModelRegistry for configuration
+ *    - Leverage cache manager for file operations
+ *
+ * 3. Update LocalLLMProvider initialization:
+ *    - Add model download before loading
+ *    - Use cache-first approach
+ *    - Handle download states in UI
+ *
+ * 4. Remove bundled models from assets:
+ *    - Delete models from assets/ directory
+ *    - Update .gitignore if needed
+ *    - Document model sources in README
+ *
+ * 5. Add UI for download progress:
+ *    - Show progress bar during first launch
+ *    - Allow users to pause/resume
+ *    - Display error messages clearly
+ *
+ * 6. Test scenarios:
+ *    - First launch (no cached models)
+ *    - Subsequent launches (cached models)
+ *    - Network errors during download
+ *    - Insufficient storage
+ *    - Interrupted downloads (pause/resume)
+ *    - Checksum verification
+ *
+ * 7. Performance validation:
+ *    - Measure APK size before/after
+ *    - Test download times on various networks
+ *    - Verify cache hit performance
+ *    - Check memory usage during downloads
+ */
