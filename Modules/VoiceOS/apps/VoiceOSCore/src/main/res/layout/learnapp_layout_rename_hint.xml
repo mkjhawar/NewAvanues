@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    learnapp_layout_rename_hint.xml - Rename hint overlay layout (native Android widgets)
+    Path: Modules/VoiceOS/apps/VoiceOSCore/src/main/res/layout/learnapp_layout_rename_hint.xml
+
+    Author: Manoj Jhawar
+    Code-Reviewed-By: Claude Code
+    Created: 2025-12-08
+    Related: VoiceOS-Issue-LearnApp-RenameHintOverlay-Crash-80812-V1.md
+
+    XML layout for rename hint overlay using native Android widgets.
+    Replaces Compose-based RenameHintCard to avoid ViewTreeLifecycleOwner crash.
+
+    Fix History:
+    - v1.0.0 (2025-12-08): Replaced Compose RenameHintCard with native XML layout
+      to eliminate Compose dependency that was causing ViewTreeLifecycleOwner crash
+      in AccessibilityService context
+-->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingTop="16dp">
+
+    <!-- Card Container with 90% width, centered -->
+    <LinearLayout
+        android:id="@+id/hint_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/bg_hint_card"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical"
+        android:alpha="0.0"
+        android:contentDescription="Rename hint overlay">
+
+        <!-- Info Icon -->
+        <ImageView
+            android:id="@+id/icon_info"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_info"
+            android:contentDescription="Information icon"/>
+
+        <Space
+            android:layout_width="12dp"
+            android:layout_height="0dp"/>
+
+        <!-- Text Content -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Title Text -->
+            <TextView
+                android:id="@+id/text_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Rename buttons by saying:"
+                android:textSize="14sp"
+                android:textColor="@android:color/white"
+                android:textStyle="normal"
+                android:fontFamily="sans-serif-medium"/>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="4dp"/>
+
+            <!-- Example Command Text -->
+            <TextView
+                android:id="@+id/text_example"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="&quot;Rename Button 1 to Save&quot;"
+                android:textSize="16sp"
+                android:textColor="@android:color/white"
+                android:textStyle="italic"
+                android:fontFamily="sans-serif"/>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

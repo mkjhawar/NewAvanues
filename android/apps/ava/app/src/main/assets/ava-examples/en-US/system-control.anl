@@ -1,0 +1,94 @@
+# Avanues Universal Format v1.0
+# Type: AVA - Voice Intent Examples
+# Extension: .anl
+# Project: AVA (AI Voice Assistant)
+---
+schema: avu-1.0
+version: 1.0.0
+locale: en-US
+project: ava
+metadata:
+  file: system-control.anl
+  category: system_control
+  name: System Control
+  description: System settings and device control intents
+  priority: 1
+  count: 12
+---
+VCM:wifi_on:turn on wifi
+VCM:wifi_on:enable wifi
+VCM:wifi_on:wifi on
+VCM:wifi_on:activate wifi
+VCM:wifi_on:connect wifi
+
+VCM:wifi_off:turn off wifi
+VCM:wifi_off:disable wifi
+VCM:wifi_off:wifi off
+VCM:wifi_off:deactivate wifi
+VCM:wifi_off:disconnect wifi
+
+VCM:bluetooth_on:turn on bluetooth
+VCM:bluetooth_on:enable bluetooth
+VCM:bluetooth_on:bluetooth on
+VCM:bluetooth_on:activate bluetooth
+VCM:bluetooth_on:connect bluetooth
+
+VCM:bluetooth_off:turn off bluetooth
+VCM:bluetooth_off:disable bluetooth
+VCM:bluetooth_off:bluetooth off
+VCM:bluetooth_off:deactivate bluetooth
+VCM:bluetooth_off:disconnect bluetooth
+
+VCM:airplane_mode_on:airplane mode on
+VCM:airplane_mode_on:enable airplane mode
+VCM:airplane_mode_on:turn on airplane mode
+VCM:airplane_mode_on:flight mode on
+VCM:airplane_mode_on:activate airplane mode
+
+VCM:airplane_mode_off:airplane mode off
+VCM:airplane_mode_off:disable airplane mode
+VCM:airplane_mode_off:turn off airplane mode
+VCM:airplane_mode_off:flight mode off
+VCM:airplane_mode_off:deactivate airplane mode
+
+VCM:brightness_up:brightness up
+VCM:brightness_up:increase brightness
+VCM:brightness_up:brighter screen
+VCM:brightness_up:turn up brightness
+VCM:brightness_up:raise brightness
+
+VCM:brightness_down:brightness down
+VCM:brightness_down:decrease brightness
+VCM:brightness_down:dimmer screen
+VCM:brightness_down:turn down brightness
+VCM:brightness_down:lower brightness
+
+VCM:flashlight_on:flashlight on
+VCM:flashlight_on:turn on flashlight
+VCM:flashlight_on:enable torch
+VCM:flashlight_on:torch on
+VCM:flashlight_on:turn on light
+
+VCM:flashlight_off:flashlight off
+VCM:flashlight_off:turn off flashlight
+VCM:flashlight_off:disable torch
+VCM:flashlight_off:torch off
+VCM:flashlight_off:turn off light
+
+VCM:lock_screen:lock screen
+VCM:lock_screen:lock device
+VCM:lock_screen:lock phone
+VCM:lock_screen:screen off
+VCM:lock_screen:turn off screen
+
+VCM:screenshot:take screenshot
+VCM:screenshot:capture screen
+VCM:screenshot:screen capture
+VCM:screenshot:screenshot
+VCM:screenshot:take picture of screen
+---
+synonyms:
+  turn_on: [enable, activate]
+  turn_off: [disable, deactivate]
+  increase: [up, raise, brighter, louder]
+  decrease: [down, lower, dimmer, quieter]

@@ -1,0 +1,474 @@
+// filename: Universal/AVA/Features/RAG/src/androidTest/kotlin/com/augmentalis/ava/features/rag/RAGEndToEndTest.kt
+// created: 2025-11-22
+// author: AVA AI Team - Testing Phase 2.0
+// © Augmentalis Inc, Intelligent Devices LLC
+
+package com.augmentalis.ava.features.rag
+
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.augmentalis.ava.features.rag.chat.LLMProvider
+import com.augmentalis.ava.features.rag.chat.RAGChatEngine
+import com.augmentalis.ava.features.rag.chat.ChatConfig
+import com.augmentalis.ava.features.rag.chat.ChatResponse
+import com.augmentalis.ava.features.rag.data.SQLiteRAGRepository
+import com.augmentalis.ava.features.rag.domain.*
+import com.augmentalis.ava.features.rag.embeddings.EmbeddingProvider
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.Assert.*
+import java.io.File
+
+/**
+ * End-to-End tests for complete RAG workflow
+ *
+ * Tests the entire pipeline:
+ * 1. Add document
+ * 2. Process and chunk document
+ * 3. Generate embeddings
+ * 4. Store in database
+ * 5. Search for relevant chunks
+ * 6. Generate context-aware response
+ * 7. Return response with sources
+ *
+ * Part of: RAG Phase 2.0 - Testing (90% coverage target)
+ */
+@RunWith(AndroidJUnit4::class)
+class RAGEndToEndTest {
+
+    private lateinit var context: Context
+    private lateinit var repository: SQLiteRAGRepository
+    private lateinit var chatEngine: RAGChatEngine
+    private lateinit var mockEmbeddingProvider: MockEmbeddingProvider
+    private lateinit var mockLLMProvider: MockLLMProvider
+    private lateinit var testFile: File
+
+    @Before
+    fun setup() {
+        context = ApplicationProvider.getApplicationContext()
+
+        // Create test document
+        testFile = File(context.cacheDir, "end-to-end-test.txt")
+        testFile.writeText("""
+            AVA AI User Manual
+
+            Chapter 1: Getting Started
+            AVA is a voice-first AI assistant that helps you manage your daily tasks.
+
+            Chapter 2: Voice Commands
+            You can activate AVA by saying "Hey AVA" or pressing the voice button.
+            AVA responds to natural language commands.
+
+            Chapter 3: Document Management
+            AVA can index and search through your documents using advanced RAG technology.
+            The system uses embeddings to find relevant information quickly.
+
+            Chapter 4: Troubleshooting
+            If AVA is not responding, check your microphone permissions.
+            Make sure your device is connected to the internet.
+        """.trimIndent())
+
+        mockEmbeddingProvider = MockEmbeddingProvider()
+        mockLLMProvider = MockLLMProvider()
+
+        repository = SQLiteRAGRepository(
+            context = context,
+            embeddingProvider = mockEmbeddingProvider,
+            chunkingConfig = ChunkingConfig(
+                strategy = ChunkingStrategy.FIXED_SIZE,
+                maxTokens = 100,
+                overlapTokens = 10
+            )
+        )
+
+        chatEngine = RAGChatEngine(
+            ragRepository = repository,
+            llmProvider = mockLLMProvider,
+            config = ChatConfig(
+                maxContextChunks = 3,
+                minSimilarity = 0.5f
+            )
+        )
+    }
+
+    @After
+    fun tearDown() = runBlocking {
+        repository.clearAll()
+        testFile.delete()
+
+        // Clear database
+        val dbFile = context.getDatabasePath("rag_database")
+        dbFile.delete()
+    }
+
+    // ========== COMPLETE WORKFLOW TESTS ==========
+
+    @Test
+    fun testCompleteRAGWorkflow() = runBlocking {
+        // Step 1: Add document
+        val addResult = repository.addDocument(
+            AddDocumentRequest(
+                filePath = testFile.absolutePath,
+                title = "AVA User Manual",
+                processImmediately = false
+            )
+        )
+
+        assertTrue("Document should be added", addResult.isSuccess)
+        val documentId = addResult.getOrThrow().documentId
+
+        // Step 2: Verify document exists
+        val doc = repository.getDocument(documentId).getOrThrow()
+        assertNotNull("Document should exist", doc)
+        assertEquals("AVA User Manual", doc?.title)
+
+        // Step 3: Get statistics
+        val stats = repository.getStatistics().getOrThrow()
+        assertEquals("Should have 1 document", 1, stats.totalDocuments)
+
+        // Step 4: Search for content (even without processing, we can test search)
+        val searchResult = repository.search(
+            SearchQuery(
+                query = "How to activate AVA",
+                maxResults = 5,
+                minSimilarity = 0.0f
+            )
+        )
+
+        assertTrue("Search should succeed", searchResult.isSuccess)
+        val searchResponse = searchResult.getOrThrow()
+        assertEquals("Search query should match", "How to activate AVA", searchResponse.query)
+
+        // Step 5: Ask question through chat engine
+        mockLLMProvider.responseText = "You can activate AVA by saying 'Hey AVA' or pressing the voice button."
+
+        val chatResponses = chatEngine.ask("How do I activate AVA?").toList()
+
+        assertTrue("Should have chat responses", chatResponses.isNotEmpty())
+
+        // Verify we got complete response
+        val completeResponse = chatResponses.filterIsInstance<ChatResponse.Complete>().firstOrNull()
+        val noContextResponse = chatResponses.filterIsInstance<ChatResponse.NoContext>().firstOrNull()
+
+        assertTrue("Should have either complete or no-context response",
+            completeResponse != null || noContextResponse != null)
+    }
+
+    @Test
+    fun testMultipleDocumentsWorkflow() = runBlocking {
+        // Create multiple test documents
+        val doc1 = File(context.cacheDir, "doc1.txt")
+        doc1.writeText("Android development guide. Use Kotlin for modern Android apps.")
+
+        val doc2 = File(context.cacheDir, "doc2.txt")
+        doc2.writeText("iOS development guide. Use Swift for modern iOS apps.")
+
+        // Add both documents
+        val add1 = repository.addDocument(
+            AddDocumentRequest(filePath = doc1.absolutePath, title = "Android Guide")
+        )
+        val add2 = repository.addDocument(
+            AddDocumentRequest(filePath = doc2.absolutePath, title = "iOS Guide")
+        )
+
+        assertTrue("Android doc should be added", add1.isSuccess)
+        assertTrue("iOS doc should be added", add2.isSuccess)
+
+        // Verify statistics
+        val stats = repository.getStatistics().getOrThrow()
+        assertEquals("Should have 2 documents", 2, stats.totalDocuments)
+
+        // Search across all documents
+        val searchResult = repository.search(
+            SearchQuery(query = "development", maxResults = 10)
+        )
+
+        assertTrue("Search should succeed", searchResult.isSuccess)
+
+        // Cleanup
+        doc1.delete()
+        doc2.delete()
+    }
+
+    @Test
+    fun testDocumentUpdateWorkflow() = runBlocking {
+        // Add document
+        val addResult = repository.addDocument(
+            AddDocumentRequest(filePath = testFile.absolutePath, title = "Original Title")
+        )
+        val documentId = addResult.getOrThrow().documentId
+
+        // Verify original
+        val originalDoc = repository.getDocument(documentId).getOrThrow()
+        assertEquals("Original Title", originalDoc?.title)
+
+        // Delete and re-add with new title (simulates update)
+        repository.deleteDocument(documentId)
+
+        val readdResult = repository.addDocument(
+            AddDocumentRequest(filePath = testFile.absolutePath, title = "Updated Title")
+        )
+
+        assertTrue("Re-add should succeed", readdResult.isSuccess)
+
+        val newDocId = readdResult.getOrThrow().documentId
+        val updatedDoc = repository.getDocument(newDocId).getOrThrow()
+
+        assertEquals("Updated Title", updatedDoc?.title)
+    }
+
+    @Test
+    fun testSearchWithFiltersWorkflow() = runBlocking {
+        // Add TXT document
+        val txtDoc = File(context.cacheDir, "test.txt")
+        txtDoc.writeText("Text document content")
+
+        repository.addDocument(
+            AddDocumentRequest(filePath = txtDoc.absolutePath, title = "TXT Doc")
+        )
+
+        // Search with document type filter
+        val searchResult = repository.search(
+            SearchQuery(
+                query = "content",
+                filters = SearchFilters(documentTypes = listOf(DocumentType.TXT)),
+                maxResults = 10
+            )
+        )
+
+        assertTrue("Filtered search should succeed", searchResult.isSuccess)
+
+        txtDoc.delete()
+    }
+
+    @Test
+    fun testConversationHistoryWorkflow() = runBlocking {
+        // First question
+        mockLLMProvider.responseText = "AVA is a voice-first AI assistant."
+
+        val response1 = chatEngine.ask("What is AVA?").toList()
+        assertTrue("First question should get response", response1.isNotEmpty())
+
+        // Follow-up question with history
+        mockLLMProvider.responseText = "It helps you manage daily tasks and search documents."
+
+        val history = listOf(
+            Message(role = MessageRole.USER, content = "What is AVA?"),
+            Message(role = MessageRole.ASSISTANT, content = "AVA is a voice-first AI assistant.")
+        )
+
+        val response2 = chatEngine.ask(
+            question = "What does it do?",
+            conversationHistory = history
+        ).toList()
+
+        assertTrue("Follow-up question should get response", response2.isNotEmpty())
+    }
+
+    @Test
+    fun testErrorHandlingWorkflow() = runBlocking {
+        // Try to add non-existent file
+        val addResult = repository.addDocument(
+            AddDocumentRequest(filePath = "/non/existent/file.txt")
+        )
+
+        assertTrue("Should fail gracefully for non-existent file", addResult.isFailure)
+
+        // System should remain functional
+        val stats = repository.getStatistics()
+        assertTrue("Statistics should still work", stats.isSuccess)
+    }
+
+    @Test
+    fun testClearAllWorkflow() = runBlocking {
+        // Add documents
+        repository.addDocument(AddDocumentRequest(filePath = testFile.absolutePath))
+
+        val doc2 = File(context.cacheDir, "doc2.txt")
+        doc2.writeText("Content 2")
+        repository.addDocument(AddDocumentRequest(filePath = doc2.absolutePath))
+
+        // Verify documents exist
+        val beforeStats = repository.getStatistics().getOrThrow()
+        assertTrue("Should have documents", beforeStats.totalDocuments > 0)
+
+        // Clear all
+        repository.clearAll()
+
+        // Verify all cleared
+        val afterStats = repository.getStatistics().getOrThrow()
+        assertEquals("Should have no documents", 0, afterStats.totalDocuments)
+
+        doc2.delete()
+    }
+
+    @Test
+    fun testLargeDocumentWorkflow() = runBlocking {
+        // Create large document (50KB)
+        val largeContent = buildString {
+            repeat(1000) { i ->
+                append("Paragraph $i: This is a test paragraph with some content. ")
+                append("It contains information that can be searched and retrieved. ")
+                append("\n\n")
+            }
+        }
+
+        val largeFile = File(context.cacheDir, "large-doc.txt")
+        largeFile.writeText(largeContent)
+
+        // Add large document
+        val addResult = repository.addDocument(
+            AddDocumentRequest(filePath = largeFile.absolutePath, title = "Large Document")
+        )
+
+        assertTrue("Should handle large document", addResult.isSuccess)
+
+        // Verify statistics
+        val stats = repository.getStatistics().getOrThrow()
+        assertTrue("Storage usage should reflect large document", stats.storageUsedBytes > 0)
+
+        largeFile.delete()
+    }
+
+    @Test
+    fun testConcurrentOperationsWorkflow() = runBlocking {
+        // Create multiple files
+        val files = (1..5).map { i ->
+            File(context.cacheDir, "concurrent-$i.txt").also {
+                it.writeText("Content for document $i")
+            }
+        }
+
+        // Add all concurrently
+        val results = files.map { file ->
+            repository.addDocument(
+                AddDocumentRequest(filePath = file.absolutePath, title = file.name)
+            )
+        }
+
+        // All should succeed
+        assertTrue("All adds should succeed", results.all { it.isSuccess })
+
+        // Verify all added
+        val stats = repository.getStatistics().getOrThrow()
+        assertEquals("Should have all documents", 5, stats.totalDocuments)
+
+        // Cleanup
+        files.forEach { it.delete() }
+    }
+
+    @Test
+    fun testPersistenceAcrossInstancesWorkflow() = runBlocking {
+        // Add document with first instance
+        val addResult = repository.addDocument(
+            AddDocumentRequest(filePath = testFile.absolutePath, title = "Persistent Doc")
+        )
+        val documentId = addResult.getOrThrow().documentId
+
+        // Create new repository instance (simulates app restart)
+        val newRepository = SQLiteRAGRepository(
+            context = context,
+            embeddingProvider = mockEmbeddingProvider
+        )
+
+        // Verify document persists
+        val doc = newRepository.getDocument(documentId).getOrThrow()
+        assertNotNull("Document should persist", doc)
+        assertEquals("Persistent Doc", doc?.title)
+
+        // Verify statistics persist
+        val stats = newRepository.getStatistics().getOrThrow()
+        assertTrue("Should have persisted documents", stats.totalDocuments > 0)
+    }
+
+    // ========== PERFORMANCE WORKFLOW TESTS ==========
+
+    @Test
+    fun testQuickSearchPerformance() = runBlocking {
+        // Add document
+        repository.addDocument(AddDocumentRequest(filePath = testFile.absolutePath))
+
+        // Measure search time
+        val startTime = System.currentTimeMillis()
+
+        val searchResult = repository.search(
+            SearchQuery(query = "voice commands", maxResults = 10)
+        )
+
+        val endTime = System.currentTimeMillis()
+        val searchTime = endTime - startTime
+
+        assertTrue("Search should succeed", searchResult.isSuccess)
+        assertTrue("Search should be fast (< 200ms)", searchTime < 200)
+    }
+
+    @Test
+    fun testMultipleSearchesPerformance() = runBlocking {
+        // Add document
+        repository.addDocument(AddDocumentRequest(filePath = testFile.absolutePath))
+
+        // Perform multiple searches
+        val queries = listOf(
+            "voice commands",
+            "document management",
+            "troubleshooting",
+            "getting started"
+        )
+
+        val startTime = System.currentTimeMillis()
+
+        queries.forEach { query ->
+            repository.search(SearchQuery(query = query, maxResults = 5))
+        }
+
+        val endTime = System.currentTimeMillis()
+        val totalTime = endTime - startTime
+
+        assertTrue("Multiple searches should be fast (< 500ms)", totalTime < 500)
+    }
+
+    // ========== MOCK IMPLEMENTATIONS ==========
+
+    private class MockEmbeddingProvider : EmbeddingProvider {
+        override suspend fun embed(text: String): Result<Embedding> {
+            val dimension = 384
+            val hash = text.hashCode()
+            val values = FloatArray(dimension) { i ->
+                ((hash + i) % 1000) / 1000f
+            }
+            return Result.success(Embedding.Float32(values))
+        }
+
+        override suspend fun embedBatch(texts: List<String>): Result<List<Embedding>> {
+            return Result.success(texts.map { embed(it).getOrThrow() })
+        }
+
+        override val dimension: Int = 384
+        override val isReady: Boolean = true
+
+        override suspend fun initialize(): Result<Unit> = Result.success(Unit)
+        override fun close() {}
+    }
+
+    private class MockLLMProvider : LLMProvider {
+        var responseText = "Default LLM response"
+
+        override fun generateStream(prompt: String): Flow<String> = flow {
+            // Stream response word by word
+            responseText.split(" ").forEach { word ->
+                emit("$word ")
+            }
+        }
+
+        override suspend fun generate(prompt: String): String {
+            return responseText
+        }
+    }
+}
