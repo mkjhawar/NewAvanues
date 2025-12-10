@@ -104,6 +104,9 @@ include(":tests:voiceoscore-unit-tests")  // Pure JVM unit tests for VoiceOSCore
 // include(":tests:automated-tests")  // DISABLED: Depends on VoiceOSCore (Phase 1 Quick Fix)
 
 // Project directory mappings (monorepo structure)
+project(":cockpit-mvp").projectDir = file("../cockpit-mvp")
+project(":Common:Cockpit").projectDir = file("../../../Common/Cockpit")
+
 project(":Modules:VoiceOS:apps:VoiceOSCore").projectDir = file("../../../Modules/VoiceOS/apps/VoiceOSCore")
 project(":Modules:VoiceOS:apps:VoiceUI").projectDir = file("../../../Modules/VoiceOS/apps/VoiceUI")
 project(":Modules:VoiceOS:apps:VoiceCursor").projectDir = file("../../../Modules/VoiceOS/apps/VoiceCursor")

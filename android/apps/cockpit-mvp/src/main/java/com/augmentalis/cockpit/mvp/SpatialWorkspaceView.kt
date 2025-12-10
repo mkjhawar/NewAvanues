@@ -16,7 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.avanues.cockpit.core.window.AppWindow
 import com.avanues.cockpit.core.workspace.Vector3D
-import com.avanues.cockpit.layout.LayoutPreset
+import com.avanues.cockpit.layout.presets.LayoutPreset
 import com.augmentalis.cockpit.mvp.rendering.SpatialWindowRenderer
 import kotlin.math.abs
 
