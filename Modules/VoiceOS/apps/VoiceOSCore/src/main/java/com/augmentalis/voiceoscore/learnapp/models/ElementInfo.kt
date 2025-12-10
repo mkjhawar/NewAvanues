@@ -121,7 +121,12 @@ data class ElementInfo(
     val node: AccessibilityNodeInfo? = null,
     var uuid: String? = null,
     var classification: String? = null,
-    val explorationBehavior: ExplorationBehavior = ExplorationBehavior.SKIP
+    val explorationBehavior: ExplorationBehavior = ExplorationBehavior.SKIP,
+    val screenWidth: Int = 0,
+    val screenHeight: Int = 0,
+    val parent: ElementInfo? = null,
+    val children: List<ElementInfo>? = null,
+    val index: Int = 0
 ) {
 
     /**

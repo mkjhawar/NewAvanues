@@ -201,7 +201,10 @@ dependencies {
     
     // Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
-    
+
+    // FlowLayout for Compose
+    implementation("com.google.accompanist:accompanist-flowlayout:0.35.0-alpha")
+
     // Material Design (for UI)
     implementation("com.google.android.material:material:1.11.0")
 

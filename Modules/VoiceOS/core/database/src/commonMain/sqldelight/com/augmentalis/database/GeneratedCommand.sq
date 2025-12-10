@@ -33,6 +33,10 @@ SELECT * FROM commands_generated WHERE elementHash = ?;
 getAll:
 SELECT * FROM commands_generated ORDER BY usageCount DESC;
 
+-- Alias for getAll (for compatibility with agent-generated code)
+getAllCommands:
+SELECT * FROM commands_generated ORDER BY usageCount DESC;
+
 getByActionType:
 SELECT * FROM commands_generated WHERE actionType = ? ORDER BY confidence DESC;
 
@@ -77,3 +81,23 @@ SELECT COUNT(*) > 0 FROM commands_generated WHERE elementHash = ? AND commandTex
 insertIfNotExists:
 INSERT OR IGNORE INTO commands_generated(elementHash, commandText, actionType, confidence, synonyms, isUserApproved, usageCount, lastUsed, createdAt)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get commands by package (via join with scraped_element)
+getByPackage:
+SELECT gc.* FROM commands_generated gc
+INNER JOIN scraped_element se ON gc.elementHash = se.elementHash
+WHERE se.appId = ?
+ORDER BY gc.usageCount DESC;
+
+-- Update command (for synonym updates)
+update:
+UPDATE commands_generated
+SET elementHash = ?,
+    commandText = ?,
+    actionType = ?,
+    confidence = ?,
+    synonyms = ?,
+    isUserApproved = ?,
+    usageCount = ?,
+    lastUsed = ?
+WHERE id = ?;

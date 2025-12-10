@@ -127,13 +127,27 @@ class ScreenStateManager(
         // FIX (2025-11-24): Detect if current window is a popup/dialog
         val windowInfo = detectPopupWindow(rootNode, packageName)
 
-        // Calculate fingerprint (popup-aware)
-        val hash = if (windowInfo.isPopup) {
-            // For popups, generate stable hash based on structure, not content
-            fingerprinter.calculatePopupFingerprint(rootNode, windowInfo.popupType)
-        } else {
-            // For regular screens, use normal fingerprinting
-            fingerprinter.calculateFingerprint(rootNode)
+        // FIX (2025-12-07): Detect if screen has dynamic content (lists, feeds, etc.)
+        val isDynamicContentScreen = detectDynamicContentScreen(rootNode)
+
+        // Calculate fingerprint (popup-aware and dynamic-content-aware)
+        val hash = when {
+            windowInfo.isPopup -> {
+                // For popups, generate stable hash based on structure, not content
+                fingerprinter.calculatePopupFingerprint(rootNode, windowInfo.popupType)
+            }
+            isDynamicContentScreen -> {
+                // For dynamic content screens (lists, feeds), use structural hash
+                if (developerSettings?.isVerboseLoggingEnabled() == true) {
+                    android.util.Log.d("ScreenStateManager",
+                        "🔄 Using structural fingerprint for dynamic content screen")
+                }
+                fingerprinter.calculateStructuralFingerprint(rootNode)
+            }
+            else -> {
+                // For regular screens, use normal fingerprinting
+                fingerprinter.calculateFingerprint(rootNode)
+            }
         }
 
         // Check if state already exists (exact match)
@@ -651,6 +665,111 @@ class ScreenStateManager(
         val isPopup: Boolean,
         val popupType: String
     )
+
+    /**
+     * Detect if screen has dynamic content that changes frequently.
+     *
+     * FIX (2025-12-07): Detect screens with dynamic content for stable hashing
+     * Issue: Screens like Teams channels, chat lists, feeds get different hashes
+     * on each visit due to new messages, updated timestamps, notification badges.
+     * Solution: Detect these screens and use structural fingerprinting.
+     *
+     * Detection heuristics:
+     * - RecyclerView/ListView with many items (scrollable lists)
+     * - Known dynamic app patterns (Teams, Slack, email clients)
+     * - High number of similar child elements (repeated list items)
+     *
+     * @param rootNode Root node to analyze
+     * @return true if screen has dynamic content
+     */
+    private fun detectDynamicContentScreen(rootNode: AccessibilityNodeInfo): Boolean {
+        var recyclerViewCount = 0
+        var listViewCount = 0
+        var scrollableCount = 0
+        var viewPagerCount = 0
+        var tabLayoutCount = 0
+        var totalElements = 0
+
+        // Traverse tree and count scrollable containers
+        traverseForDynamicContent(rootNode) { node ->
+            totalElements++
+            val className = node.className?.toString() ?: ""
+
+            when {
+                className.contains("RecyclerView", ignoreCase = true) -> recyclerViewCount++
+                className.contains("ListView", ignoreCase = true) -> listViewCount++
+                className.contains("ViewPager", ignoreCase = true) -> viewPagerCount++
+                className.contains("TabLayout", ignoreCase = true) -> tabLayoutCount++
+                className.contains("HorizontalScrollView", ignoreCase = true) -> scrollableCount++
+                node.isScrollable -> scrollableCount++
+            }
+        }
+
+        // Heuristic 1: Multiple RecyclerViews or ListViews indicate dynamic lists
+        if (recyclerViewCount >= 1 || listViewCount >= 1) {
+            if (developerSettings?.isVerboseLoggingEnabled() == true) {
+                android.util.Log.d("ScreenStateManager",
+                    "🔄 Dynamic screen detected: RecyclerView=$recyclerViewCount, ListView=$listViewCount")
+            }
+            return true
+        }
+
+        // Heuristic 2: Many scrollable elements with high element count
+        if (scrollableCount >= 2 && totalElements > 50) {
+            if (developerSettings?.isVerboseLoggingEnabled() == true) {
+                android.util.Log.d("ScreenStateManager",
+                    "🔄 Dynamic screen detected: scrollables=$scrollableCount, elements=$totalElements")
+            }
+            return true
+        }
+
+        // FIX (2025-12-07): Heuristic 3: ViewPager + scroll combo (Teams Posts/Files/Wiki pattern)
+        // These screens have tabs with different content, each potentially scrollable
+        if (viewPagerCount >= 1 && (recyclerViewCount >= 1 || scrollableCount >= 1)) {
+            if (developerSettings?.isVerboseLoggingEnabled() == true) {
+                android.util.Log.d("ScreenStateManager",
+                    "🔄 Dynamic screen detected: ViewPager=$viewPagerCount + scrollables=$scrollableCount (tab+scroll combo)")
+            }
+            return true
+        }
+
+        // Heuristic 4: TabLayout indicates multiple content views
+        if (tabLayoutCount >= 1 && totalElements > 30) {
+            if (developerSettings?.isVerboseLoggingEnabled() == true) {
+                android.util.Log.d("ScreenStateManager",
+                    "🔄 Dynamic screen detected: TabLayout=$tabLayoutCount, elements=$totalElements")
+            }
+            return true
+        }
+
+        return false
+    }
+
+    /**
+     * Traverse node tree for dynamic content detection.
+     *
+     * @param node Current node
+     * @param visitor Visitor function
+     */
+    private fun traverseForDynamicContent(
+        node: AccessibilityNodeInfo,
+        visitor: (AccessibilityNodeInfo) -> Unit
+    ) {
+        visitor(node)
+
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { child ->
+                try {
+                    traverseForDynamicContent(child, visitor)
+                } finally {
+                    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        @Suppress("DEPRECATION")
+                        child.recycle()
+                    }
+                }
+            }
+        }
+    }
 }
 
 /**

@@ -46,9 +46,13 @@ package com.augmentalis.voiceoscore.learnapp.models
  * @property dangerousElementsSkipped Number of dangerous elements skipped
  * @property loginScreensDetected Number of login screens detected
  * @property scrollableContainersFound Number of scrollable containers found
- * @property completeness Overall exploration completeness percentage (0-100)
+ * @property completeness Overall exploration completeness percentage (0-100) - of NON-BLOCKED items
+ * @property clickedElements Number of elements clicked (2025-12-08)
+ * @property nonBlockedElements Total non-blocked clickable elements (2025-12-08)
+ * @property blockedElements Number of blocked (critical dangerous) elements (2025-12-08)
  *
  * @since 1.0.0
+ * @since 1.10.0 (2025-12-08): Added clicked/blocked element tracking for stats display
  */
 data class ExplorationStats(
     val packageName: String,
@@ -61,7 +65,11 @@ data class ExplorationStats(
     val dangerousElementsSkipped: Int = 0,
     val loginScreensDetected: Int = 0,
     val scrollableContainersFound: Int = 0,
-    val completeness: Float = 0f
+    val completeness: Float = 0f,
+    // UPDATE (2025-12-08): Blocked vs non-blocked tracking
+    val clickedElements: Int = 0,
+    val nonBlockedElements: Int = 0,
+    val blockedElements: Int = 0
 ) {
 
     /**
@@ -96,6 +104,18 @@ data class ExplorationStats(
         return totalEdges.toFloat() / totalScreens.toFloat()
     }
 
+    /**
+     * Get formatted completion string (2025-12-08)
+     * Format: "XX% of non-blocked items (YY/ZZ clicked), WW blocked"
+     */
+    fun formatCompletion(): String {
+        return if (nonBlockedElements > 0) {
+            "${completeness.toInt()}% of non-blocked items ($clickedElements/$nonBlockedElements clicked), $blockedElements blocked"
+        } else {
+            "${completeness.toInt()}% complete"
+        }
+    }
+
     override fun toString(): String {
         return """
             Exploration Complete: $appName
@@ -106,13 +126,16 @@ data class ExplorationStats(
             - Navigation Edges: $totalEdges
             - Max Depth: $maxDepth
             - Duration: ${formatDuration()}
-            - Completeness: ${"%.1f".format(completeness)}%
+            - Completeness: ${formatCompletion()}
 
             🛡️ Safety:
+            - Blocked Elements (call/send/etc): $blockedElements
             - Dangerous Elements Skipped: $dangerousElementsSkipped
             - Login Screens Detected: $loginScreensDetected
 
             📜 Details:
+            - Clicked Elements: $clickedElements
+            - Non-Blocked (clickable): $nonBlockedElements
             - Scrollable Containers: $scrollableContainersFound
             - Avg Elements/Screen: ${"%.1f".format(averageElementsPerScreen())}
             - Avg Edges/Screen: ${"%.1f".format(averageEdgesPerScreen())}

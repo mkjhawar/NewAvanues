@@ -21,6 +21,7 @@ import com.augmentalis.voiceoscore.learnapp.models.ScreenState
 import com.augmentalis.voiceoscore.learnapp.scrolling.ScrollDetector
 import com.augmentalis.voiceoscore.learnapp.scrolling.ScrollExecutor
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
+import com.augmentalis.voiceoscore.learnapp.detection.CrossPlatformDetector
 
 /**
  * Screen Explorer
@@ -95,20 +96,25 @@ class ScreenExplorer(
             return ScreenExplorationResult.Error("Root node is null")
         }
 
-        // 1. Capture screen state
+        // 1. Detect framework (for smart clickability filtering)
+        // Integrated 2025-12-08: Cross-platform framework detection
+        val framework = CrossPlatformDetector.detectFramework(packageName, rootNode)
+        elementClassifier.setFramework(packageName, framework)
+
+        // 2. Capture screen state
         val screenState = screenStateManager.captureScreenState(rootNode, packageName, depth)
 
-        // 2. Check if already visited
+        // 3. Check if already visited
         if (screenStateManager.isVisited(screenState.hash)) {
             return ScreenExplorationResult.AlreadyVisited(screenState)
         }
 
-        // 3. Collect all elements (including offscreen via scrolling)
+        // 4. Collect all elements (including offscreen via scrolling)
         val collectionResult = collectAllElements(rootNode)
         val allElements = collectionResult.elements
         val scrollableCount = collectionResult.scrollableContainerCount
 
-        // 4. Classify elements
+        // 5. Classify elements (now with framework-aware clickability detection)
         val classifications = elementClassifier.classifyAll(allElements)
 
         // 5. Check for login screen

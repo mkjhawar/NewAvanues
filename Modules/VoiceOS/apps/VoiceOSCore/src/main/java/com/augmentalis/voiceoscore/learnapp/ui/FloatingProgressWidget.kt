@@ -26,13 +26,14 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.util.Log
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import com.augmentalis.voiceoscore.R
+import com.augmentalis.voiceoscore.learnapp.debugging.DebugOverlayManager
+import com.augmentalis.voiceoscore.learnapp.debugging.DebugVerbosity
+import com.augmentalis.voiceoscore.utils.MaterialThemeHelper
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.textview.MaterialTextView
 import kotlinx.coroutines.CoroutineScope
@@ -95,7 +96,21 @@ class FloatingProgressWidget(
     private var statsText: MaterialTextView? = null
     private var pauseButton: MaterialButton? = null
     private var stopButton: MaterialButton? = null
+    private var debugButton: MaterialButton? = null
+    private var verbosityButton: MaterialButton? = null
     private var dragHandle: View? = null
+    private var sizeDecreaseButton: MaterialButton? = null
+    private var sizeIncreaseButton: MaterialButton? = null
+    private var sizeLabel: MaterialTextView? = null
+
+    // Debug overlay manager
+    private var debugOverlayManager: DebugOverlayManager? = null
+    private var isDebugOverlayEnabled = true  // Default ON during exploration
+
+    // Size state: S=0.7, M=1.0, L=1.3, XL=1.6
+    private val sizeScales = floatArrayOf(0.7f, 1.0f, 1.3f, 1.6f)
+    private val sizeNames = arrayOf("S", "M", "L", "XL")
+    private var currentSizeIndex = 1 // Default: M (1.0x)
 
     // Drag state
     private var initialX = 0
@@ -162,6 +177,10 @@ class FloatingProgressWidget(
     /**
      * Update progress display
      *
+     * FIX (2025-12-07): Added recovery mechanism for detached widget
+     * If the widget gets detached from WindowManager (e.g., during screen navigation),
+     * this will detect the issue and re-add the view.
+     *
      * @param progress Progress percentage (0-100)
      * @param status Status message (e.g., "Learning Instagram...")
      * @param stats Stats text (e.g., "12 screens, 145 elements")
@@ -170,6 +189,15 @@ class FloatingProgressWidget(
         scope.launch {
             withContext(Dispatchers.Main) {
                 try {
+                    // FIX (2025-12-08): Removed faulty recovery mechanism that caused duplicate widgets
+                    // The windowToken check was unreliable and caused addView to be called
+                    // while the view was still attached, creating duplicates.
+                    // If the widget is not showing, simply skip the update.
+                    if (!isShowing) {
+                        Log.d(TAG, "Widget not showing, skipping progress update")
+                        return@withContext
+                    }
+
                     progressIndicator?.setProgressCompat(progress, true)
                     progressPercent?.text = "$progress%"
                     statusText?.text = status
@@ -190,6 +218,12 @@ class FloatingProgressWidget(
         scope.launch {
             withContext(Dispatchers.Main) {
                 try {
+                    // FIX (2025-12-08): Removed faulty recovery mechanism that caused duplicate widgets
+                    if (!isShowing) {
+                        Log.d(TAG, "Widget not showing, skipping pause state update")
+                        return@withContext
+                    }
+
                     isPaused = paused
                     pauseButton?.setIconResource(
                         if (paused) R.drawable.ic_play else R.drawable.ic_pause
@@ -208,6 +242,9 @@ class FloatingProgressWidget(
 
     /**
      * Check if widget is currently showing
+     *
+     * FIX (2025-12-08): Simplified - just return isShowing flag
+     * The windowToken check was unreliable and caused false negatives
      */
     fun isShowing(): Boolean = isShowing
 
@@ -219,6 +256,8 @@ class FloatingProgressWidget(
             withContext(Dispatchers.Main) {
                 try {
                     dismiss()
+                    debugOverlayManager?.dispose()
+                    debugOverlayManager = null
                     widgetView = null
                     layoutParams = null
                     progressIndicator = null
@@ -227,7 +266,12 @@ class FloatingProgressWidget(
                     statsText = null
                     pauseButton = null
                     stopButton = null
+                    debugButton = null
+                    verbosityButton = null
                     dragHandle = null
+                    sizeDecreaseButton = null
+                    sizeIncreaseButton = null
+                    sizeLabel = null
                 } catch (e: Exception) {
                     Log.e(TAG, "Error during cleanup", e)
                 }
@@ -235,14 +279,90 @@ class FloatingProgressWidget(
         }
     }
 
+    // ========== Debug Overlay Methods ==========
+
+    /**
+     * Get or create the debug overlay manager
+     */
+    fun getDebugOverlayManager(): DebugOverlayManager {
+        if (debugOverlayManager == null) {
+            debugOverlayManager = DebugOverlayManager(context, windowManager)
+        }
+        return debugOverlayManager!!
+    }
+
+    /**
+     * Toggle debug overlay visibility
+     */
+    private fun toggleDebugOverlay() {
+        isDebugOverlayEnabled = !isDebugOverlayEnabled
+
+        val manager = getDebugOverlayManager()
+        if (isDebugOverlayEnabled) {
+            manager.show()
+            debugButton?.setIconResource(R.drawable.ic_visibility)
+            debugButton?.setBackgroundTintList(
+                android.content.res.ColorStateList.valueOf(0x4D2196F3)
+            )
+            Log.i(TAG, "Debug overlay enabled")
+        } else {
+            manager.hide()
+            debugButton?.setIconResource(R.drawable.ic_visibility_off)
+            debugButton?.setBackgroundTintList(
+                android.content.res.ColorStateList.valueOf(0x4D757575)
+            )
+            Log.i(TAG, "Debug overlay disabled")
+        }
+    }
+
+    /**
+     * Cycle through verbosity levels (now toggles overlay visibility)
+     *
+     * NOTE (2025-12-08): Verbosity no longer used - new overlay has filter buttons.
+     * This method now toggles the debug overlay visibility.
+     */
+    private fun cycleVerbosity() {
+        // Toggle visibility instead of cycling verbosity
+        toggleDebugOverlay()
+        Log.i(TAG, "Debug overlay toggled via verbosity button")
+    }
+
+    /**
+     * Check if debug overlay is enabled
+     */
+    fun isDebugOverlayEnabled(): Boolean = isDebugOverlayEnabled
+
+    /**
+     * Enable debug overlay and show it
+     */
+    fun enableDebugOverlay() {
+        if (!isDebugOverlayEnabled) {
+            toggleDebugOverlay()
+        } else {
+            // Already enabled flag, but ensure overlay is actually shown
+            val manager = getDebugOverlayManager()
+            if (!manager.isVisible()) {
+                manager.show()
+                Log.i(TAG, "Debug overlay shown (was enabled but not visible)")
+            }
+        }
+    }
+
+    /**
+     * Disable debug overlay and hide it
+     */
+    fun disableDebugOverlay() {
+        if (isDebugOverlayEnabled) {
+            toggleDebugOverlay()
+        }
+    }
+
     // ========== Private Methods ==========
 
     @SuppressLint("ClickableViewAccessibility")
     private fun createWidget() {
-        widgetView = LayoutInflater.from(context).inflate(
-            R.layout.floating_progress_widget,
-            null
-        )
+        // Use MaterialThemeHelper to inflate Material3 views in AccessibilityService context
+        widgetView = MaterialThemeHelper.inflateOverlay(context, R.layout.floating_progress_widget)
 
         widgetView?.let { view ->
             // Get UI element references
@@ -267,12 +387,83 @@ class FloatingProgressWidget(
                 onStopClick()
             }
 
+            // Debug overlay toggle button
+            debugButton = view.findViewById(R.id.floating_debug_button)
+            debugButton?.setOnClickListener {
+                toggleDebugOverlay()
+            }
+
+            // Verbosity toggle button
+            verbosityButton = view.findViewById(R.id.floating_verbosity_button)
+            verbosityButton?.setOnClickListener {
+                cycleVerbosity()
+            }
+
+            // Size control buttons
+            sizeDecreaseButton = view.findViewById(R.id.floating_size_decrease_button)
+            sizeIncreaseButton = view.findViewById(R.id.floating_size_increase_button)
+            sizeLabel = view.findViewById(R.id.floating_size_label)
+
+            sizeDecreaseButton?.setOnClickListener {
+                decreaseSize()
+            }
+            sizeIncreaseButton?.setOnClickListener {
+                increaseSize()
+            }
+
+            // Update initial size label
+            updateSizeLabel()
+
             // Set up drag on entire widget
             view.setOnTouchListener(DragTouchListener())
 
             // Also allow drag via drag handle specifically
             dragHandle?.setOnTouchListener(DragTouchListener())
         }
+    }
+
+    /**
+     * Increase widget size (up to XL)
+     */
+    private fun increaseSize() {
+        if (currentSizeIndex < sizeScales.size - 1) {
+            currentSizeIndex++
+            applyScale()
+            updateSizeLabel()
+            Log.i(TAG, "Widget size increased to ${sizeNames[currentSizeIndex]}")
+        }
+    }
+
+    /**
+     * Decrease widget size (down to S)
+     */
+    private fun decreaseSize() {
+        if (currentSizeIndex > 0) {
+            currentSizeIndex--
+            applyScale()
+            updateSizeLabel()
+            Log.i(TAG, "Widget size decreased to ${sizeNames[currentSizeIndex]}")
+        }
+    }
+
+    /**
+     * Apply current scale to widget
+     */
+    private fun applyScale() {
+        widgetView?.let { view ->
+            val scale = sizeScales[currentSizeIndex]
+            view.scaleX = scale
+            view.scaleY = scale
+            view.pivotX = view.width / 2f
+            view.pivotY = 0f // Scale from top
+        }
+    }
+
+    /**
+     * Update size label text
+     */
+    private fun updateSizeLabel() {
+        sizeLabel?.text = "Size: ${sizeNames[currentSizeIndex]}"
     }
 
     private fun createLayoutParams(): WindowManager.LayoutParams {

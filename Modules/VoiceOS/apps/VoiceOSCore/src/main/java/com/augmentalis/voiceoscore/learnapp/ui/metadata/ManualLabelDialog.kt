@@ -13,11 +13,11 @@ package com.augmentalis.voiceoscore.learnapp.ui.metadata
 
 import android.app.Dialog
 import android.content.Context
-import android.view.LayoutInflater
 import android.view.Window
 import android.widget.TextView
 import com.augmentalis.voiceoscore.R
 import com.augmentalis.voiceoscore.learnapp.metadata.MetadataNotificationItem
+import com.augmentalis.voiceoscore.utils.MaterialThemeHelper
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -80,17 +80,17 @@ class ManualLabelDialog(
         // Dismiss existing dialog if any
         dismissDialog()
 
-        // Create dialog
-        val dialog = Dialog(context).apply {
+        // Get themed context for Material components (Dialog, Chip, MaterialButton, etc.)
+        val themedContext = MaterialThemeHelper.getThemedContext(context)
+
+        // Create dialog with themed context
+        val dialog = Dialog(themedContext).apply {
             requestWindowFeature(Window.FEATURE_NO_TITLE)
             setCancelable(true)
         }
 
-        // Inflate layout
-        val view = LayoutInflater.from(context).inflate(
-            R.layout.learnapp_manual_label_dialog,
-            null
-        )
+        // Inflate layout with themed context
+        val view = MaterialThemeHelper.inflateOverlay(context, R.layout.learnapp_manual_label_dialog)
 
         // Get view references
         val textPreviewType: TextView = view.findViewById(R.id.text_preview_type)
@@ -128,9 +128,9 @@ class ManualLabelDialog(
             bounds.height()
         )
 
-        // Populate suggestion chips
+        // Populate suggestion chips (use themed context for Material Chip)
         item.suggestions.forEach { suggestion ->
-            val chip = Chip(context).apply {
+            val chip = Chip(themedContext).apply {
                 text = suggestion.text
                 isCheckable = true
                 setOnCheckedChangeListener { _, isChecked ->

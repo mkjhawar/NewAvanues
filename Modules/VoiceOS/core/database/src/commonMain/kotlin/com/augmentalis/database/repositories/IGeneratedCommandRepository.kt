@@ -39,6 +39,11 @@ interface IGeneratedCommandRepository {
     suspend fun getAll(): List<GeneratedCommandDTO>
 
     /**
+     * Get all commands (alias for getAll for compatibility).
+     */
+    suspend fun getAllCommands(): List<GeneratedCommandDTO>
+
+    /**
      * Get commands by action type.
      */
     suspend fun getByActionType(actionType: String): List<GeneratedCommandDTO>
@@ -97,4 +102,18 @@ interface IGeneratedCommandRepository {
      * Count all commands.
      */
     suspend fun count(): Long
+
+    /**
+     * Get all commands for a specific package.
+     * @param packageName App package name (appId)
+     * @return List of commands for the package
+     */
+    suspend fun getByPackage(packageName: String): List<GeneratedCommandDTO>
+
+    /**
+     * Update an existing command.
+     * Used for updating synonyms and other command properties.
+     * @param command Command to update
+     */
+    suspend fun update(command: GeneratedCommandDTO)
 }
