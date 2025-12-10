@@ -3,6 +3,8 @@ package com.augmentalis.cockpit.mvp
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ViewInAr
+import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.SensorsOff
@@ -28,6 +30,8 @@ fun TopNavigationBar(
     windowCount: Int,
     onToggleHeadCursor: () -> Unit,
     isHeadCursorEnabled: Boolean,
+    onToggleSpatialMode: () -> Unit,
+    isSpatialMode: Boolean,
     workspaceName: String = "Cockpit Workspace",
     modifier: Modifier = Modifier
 ) {
@@ -115,6 +119,22 @@ fun TopNavigationBar(
                             imageVector = if (isHeadCursorEnabled) Icons.Default.Sensors else Icons.Default.SensorsOff,
                             contentDescription = if (isHeadCursorEnabled) "Disable head cursor" else "Enable head cursor",
                             tint = if (isHeadCursorEnabled) OceanTheme.success else Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Spatial mode toggle (2D/3D)
+                    IconButton(
+                        onClick = {
+                            hapticManager.performMediumTap()
+                            onToggleSpatialMode()
+                        },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isSpatialMode) Icons.Default.ViewInAr else Icons.Default.ViewStream,
+                            contentDescription = if (isSpatialMode) "Switch to 2D mode" else "Switch to 3D mode",
+                            tint = if (isSpatialMode) OceanTheme.primary else Color.White.copy(alpha = 0.6f),
                             modifier = Modifier.size(20.dp)
                         )
                     }

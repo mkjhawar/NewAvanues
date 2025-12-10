@@ -78,6 +78,8 @@ fun CockpitMVPScreen(
             windowCount = windows.size,
             onToggleHeadCursor = { viewModel.toggleHeadCursor() },
             isHeadCursorEnabled = isHeadCursorEnabled,
+            onToggleSpatialMode = { viewModel.toggleSpatialMode() },
+            isSpatialMode = isSpatialMode,
             workspaceName = if (isSpatialMode) {
                 "Spatial - ${viewModel.getLayoutPresetName()}"
             } else {
