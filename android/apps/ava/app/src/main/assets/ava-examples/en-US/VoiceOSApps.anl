@@ -1,0 +1,21 @@
+# Avanues Universal Format v1.0
+# Type: VOS - App Interaction
+# Extension: .anl
+# Project: VoiceOS
+---
+schema: avu-1.0
+version: 1.0.0
+locale: en-US
+project: ava
+metadata:
+  file: VoiceOSApps.anl
+  category: voiceos_apps
+  name: VoiceOS App Interaction
+  description: In-app search and control
+  priority: 2
+  count: 1
+---
+VCM:app_search:search in app
+VCM:app_search:find in this app
+VCM:app_search:search here
+VCM:app_search:lookup in app

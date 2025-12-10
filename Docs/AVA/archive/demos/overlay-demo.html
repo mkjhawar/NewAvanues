@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AVA Overlay UI Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            /* Rich blue gradient with vibrant accents */
+            background: linear-gradient(135deg, #0f2a4a 0%, #1a4d7a 50%, #2563a8 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .demo-container {
+            width: 100%;
+            max-width: 1600px;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            /* Frosted glass with vibrant blue tint */
+            background: linear-gradient(135deg,
+                rgba(100, 180, 255, 0.12) 0%,
+                rgba(80, 150, 240, 0.1) 100%);
+            backdrop-filter: blur(12px) saturate(140%);
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            border: 2px solid rgba(100, 200, 255, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                        0 0 20px rgba(100, 200, 255, 0.1),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.4);
+        }
+
+        .controls h3 {
+            color: rgba(255, 255, 255, 0.98);
+            margin-bottom: 15px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            font-weight: 700;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(80, 160, 255, 0.7);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(80, 160, 255, 0.5),
+                        0 0 12px rgba(80, 160, 255, 0.2);
+        }
+
+        .control-btn.active {
+            /* Vibrant blue accent for active state */
+            background: linear-gradient(135deg,
+                rgba(60, 140, 255, 0.5) 0%,
+                rgba(40, 120, 255, 0.45) 100%);
+            border-color: rgba(80, 160, 255, 0.8);
+            color: white;
+            box-shadow: 0 3px 8px rgba(60, 140, 255, 0.5),
+                        0 0 15px rgba(60, 140, 255, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .orientation-toggle {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .orientation-btn {
+            padding: 10px 20px;
+            margin: 0 5px;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        }
+
+        .orientation-btn.active {
+            background: linear-gradient(135deg,
+                rgba(60, 140, 255, 0.5) 0%,
+                rgba(40, 120, 255, 0.45) 100%);
+            border-color: rgba(80, 160, 255, 0.8);
+            color: white;
+            box-shadow: 0 3px 8px rgba(60, 140, 255, 0.5),
+                        0 0 15px rgba(60, 140, 255, 0.3);
+        }
+
+        .orientation-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(100, 200, 255, 0.5);
+        }
+
+        .screens-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .screen-demo {
+            background: linear-gradient(135deg,
+                rgba(100, 180, 255, 0.12) 0%,
+                rgba(80, 150, 240, 0.1) 100%);
+            backdrop-filter: blur(12px) saturate(140%);
+            border-radius: 20px;
+            padding: 30px;
+            border: 2px solid rgba(100, 200, 255, 0.3);
+            min-height: 600px;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+                        0 0 20px rgba(100, 200, 255, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .screen-title {
+            color: rgba(255, 255, 255, 0.98);
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+        }
+
+        .phone-mockup {
+            width: 100%;
+            max-width: 340px;
+            height: 600px;
+            background: #1a1a1a;
+            border-radius: 30px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border: 8px solid #2a2a2a;
+            transition: all 0.3s;
+        }
+
+        /* Realistic app backgrounds for see-through effect demonstration */
+        .app-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 0;
+        }
+
+        .app-background.chrome {
+            background: linear-gradient(180deg, #f5f5f5 0%, #ffffff 100%);
+        }
+
+        .app-background.whatsapp {
+            background: linear-gradient(180deg, #075e54 0%, #128c7e 50%, #25d366 100%);
+        }
+
+        .app-background.gmail {
+            background: linear-gradient(180deg, #d93025 0%, #ffffff 20%, #f5f5f5 100%);
+        }
+
+        .app-background.instagram {
+            background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%);
+        }
+
+        .app-background.maps {
+            background: linear-gradient(180deg, #34a853 0%, #fbbc04 50%, #ea4335 100%);
+        }
+
+        .app-background.youtube {
+            background: linear-gradient(180deg, #ff0000 0%, #282828 20%, #181818 100%);
+        }
+
+        .app-background.generic {
+            background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+        }
+
+        /* Simulate content within apps */
+        .app-content {
+            position: absolute;
+            top: 60px;
+            left: 16px;
+            right: 16px;
+            z-index: 1;
+            opacity: 0.7;
+        }
+
+        .app-content-text {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #333;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .app-content-image {
+            background: rgba(200, 200, 200, 0.5);
+            height: 120px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .phone-mockup.landscape {
+            max-width: 100%;
+            width: 100%;
+            height: 400px;
+            border-radius: 20px;
+        }
+
+        /* Voice Orb - Blue frosted glass with vibrant outline */
+        .voice-orb {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            background: rgba(60, 140, 255, 0.2);
+            backdrop-filter: blur(20px) saturate(150%);
+            border-radius: 50%;
+            border: 2.5px solid rgba(80, 160, 255, 0.7);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3),
+                        0 3px 12px rgba(60, 140, 255, 0.4),
+                        0 0 20px rgba(60, 140, 255, 0.2),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: move;
+            transition: transform 0.2s;
+            z-index: 10;
+        }
+
+        .voice-orb:hover {
+            transform: scale(1.05);
+        }
+
+        .voice-orb.dragging {
+            cursor: grabbing;
+        }
+
+        /* Orb States */
+        .orb-icon {
+            color: rgba(255,255,255,0.9);
+            font-size: 28px;
+        }
+
+        /* Idle - Pulsing */
+        @keyframes orb-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .voice-orb.idle .orb-icon {
+            animation: orb-pulse 2s ease-in-out infinite;
+        }
+
+        /* Listening - Waveform */
+        .waveform {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            height: 28px;
+        }
+
+        .waveform .bar {
+            width: 4px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 2px;
+        }
+
+        @keyframes wave-1 {
+            0%, 100% { height: 10px; }
+            50% { height: 20px; }
+        }
+
+        @keyframes wave-2 {
+            0%, 100% { height: 10px; }
+            50% { height: 20px; }
+        }
+
+        @keyframes wave-3 {
+            0%, 100% { height: 10px; }
+            50% { height: 20px; }
+        }
+
+        .waveform .bar:nth-child(1) { animation: wave-1 0.6s ease-in-out infinite; }
+        .waveform .bar:nth-child(2) { animation: wave-2 0.7s ease-in-out infinite; }
+        .waveform .bar:nth-child(3) { animation: wave-3 0.8s ease-in-out infinite; }
+
+        /* Processing - Rotating */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .voice-orb.processing .orb-icon {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Speaking - Glow */
+        .voice-orb.speaking::before {
+            content: '';
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            animation: glow-pulse 0.8s ease-in-out infinite;
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        /* Glass Panel - Blue frosted glass with glow */
+        .glass-panel {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 340px;
+            height: 480px;
+            /* Blue-tinted frosted glass */
+            background: linear-gradient(135deg,
+                rgba(60, 140, 255, 0.15) 0%,
+                rgba(40, 120, 240, 0.12) 100%);
+            backdrop-filter: blur(40px) saturate(160%);
+            border-radius: 24px;
+            /* Bright blue outline with glow */
+            border: 2px solid rgba(80, 160, 255, 0.5);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4),
+                        0 4px 20px rgba(60, 140, 255, 0.3),
+                        0 0 30px rgba(60, 140, 255, 0.15),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.5);
+            padding: 24px;
+            opacity: 0;
+            transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 5;
+        }
+
+        .glass-panel.expanded {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        /* Landscape panel adjustments */
+        .phone-mockup.landscape .glass-panel {
+            width: 480px;
+            height: 280px;
+            padding: 20px;
+        }
+
+        .phone-mockup.landscape .glass-panel .panel-title {
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .phone-mockup.landscape .glass-panel .section-label {
+            font-size: 11px;
+            margin-bottom: 6px;
+        }
+
+        .phone-mockup.landscape .glass-panel .section-content {
+            font-size: 12px;
+            line-height: 18px;
+            padding: 10px;
+        }
+
+        .phone-mockup.landscape .glass-panel .transcript-section,
+        .phone-mockup.landscape .glass-panel .response-section {
+            margin-bottom: 12px;
+        }
+
+        .phone-mockup.landscape .glass-panel .suggestions-section {
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+        }
+
+        .panel-title {
+            /* White title with bright blue bottom border */
+            color: rgba(255, 255, 255, 0.98);
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5),
+                         0 0 10px rgba(60, 140, 255, 0.3);
+            border-bottom: 2px solid rgba(80, 160, 255, 0.7);
+            padding-bottom: 12px;
+        }
+
+        .transcript-section,
+        .response-section {
+            margin-bottom: 16px;
+        }
+
+        .section-label {
+            /* Warm cream label text */
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .response-section .section-label {
+            /* Bright blue accent for AVA responses */
+            color: rgba(80, 160, 255, 0.95);
+            text-shadow: 0 0 8px rgba(80, 160, 255, 0.3);
+        }
+
+        .section-content {
+            /* Cream text on frosted warm background */
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 14px;
+            line-height: 20px;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1.5px solid rgba(255, 255, 255, 0.25);
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1),
+                        0 1px 2px rgba(0, 0, 0, 0.08);
+        }
+
+        .suggestions-section {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            right: 24px;
+        }
+
+        .suggestions-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .suggestion-chip {
+            padding: 8px 16px;
+            /* Warm cream chips */
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(20px) saturate(130%);
+            border: 1.5px solid rgba(255, 255, 255, 0.35);
+            border-radius: 16px;
+            /* Cream text */
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15),
+                        0 1px 2px rgba(0, 0, 0, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .suggestion-chip:hover {
+            background: rgba(60, 140, 255, 0.3);
+            border-color: rgba(80, 160, 255, 0.7);
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(60, 140, 255, 0.4),
+                        0 0 15px rgba(60, 140, 255, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .suggestion-chip:active {
+            transform: scale(0.98);
+            background: rgba(60, 140, 255, 0.4);
+            border-color: rgba(80, 180, 255, 0.7);
+        }
+
+        /* Context Demos */
+        .context-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            /* Vibrant blue gradient for context awareness */
+            background: linear-gradient(135deg,
+                rgba(60, 140, 255, 0.4) 0%,
+                rgba(40, 120, 240, 0.35) 100%);
+            backdrop-filter: blur(12px);
+            color: rgba(255, 255, 255, 0.98);
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1.5px solid rgba(80, 160, 255, 0.6);
+            box-shadow: 0 2px 8px rgba(60, 140, 255, 0.4),
+                        0 0 12px rgba(60, 140, 255, 0.2),
+                        inset 0 0.5px 0 rgba(255, 255, 255, 0.4);
+        }
+
+        .app-icon {
+            font-size: 20px;
+            margin-right: 4px;
+        }
+
+        /* Interactive Demo */
+        .interactive-overlay {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .background-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.3);
+            font-size: 14px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .status-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 32px;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            justify-content: space-between;
+            padding: 0 12px;
+            align-items: center;
+            font-size: 11px;
+            color: white;
+            z-index: 100;
+        }
+
+        .orientation-indicator {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            /* Blue badge for informational labels */
+            background: linear-gradient(135deg,
+                rgba(100, 180, 255, 0.3) 0%,
+                rgba(80, 150, 240, 0.25) 100%);
+            backdrop-filter: blur(12px);
+            color: rgba(255, 255, 255, 0.98);
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1.5px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 2px 6px rgba(93, 78, 55, 0.3),
+                        inset 0 0.5px 0 rgba(255, 255, 255, 0.3);
+            z-index: 1;
+        }
+
+        /* Responsive Layouts for Small Screens */
+        /* 640x480 devices */
+        @media (max-width: 640px) and (max-height: 480px) {
+            .phone-mockup {
+                max-width: 280px;
+                height: 420px;
+                border: 4px solid #2a2a2a;
+            }
+
+            .glass-panel {
+                width: 280px !important;
+                height: 360px !important;
+                padding: 16px !important;
+            }
+
+            .panel-title {
+                font-size: 14px !important;
+                margin-bottom: 10px !important;
+            }
+
+            .section-label {
+                font-size: 10px !important;
+                margin-bottom: 4px !important;
+            }
+
+            .section-content {
+                font-size: 12px !important;
+                line-height: 16px !important;
+                padding: 8px !important;
+            }
+
+            .suggestion-chip {
+                padding: 6px 10px !important;
+                font-size: 11px !important;
+            }
+
+            .suggestions-section {
+                bottom: 16px !important;
+                left: 16px !important;
+                right: 16px !important;
+            }
+
+            .voice-orb {
+                width: 48px !important;
+                height: 48px !important;
+            }
+
+            .orb-icon {
+                font-size: 20px !important;
+            }
+        }
+
+        /* 1024x720 devices (landscape tablets) */
+        @media (min-width: 1024px) and (max-height: 720px) {
+            .phone-mockup.landscape {
+                max-width: 560px;
+                height: 320px;
+            }
+
+            .phone-mockup.landscape .glass-panel {
+                width: 460px !important;
+                height: 260px !important;
+                padding: 16px !important;
+            }
+
+            .phone-mockup.landscape .panel-title {
+                font-size: 15px !important;
+                margin-bottom: 10px !important;
+            }
+
+            .phone-mockup.landscape .section-content {
+                font-size: 11px !important;
+                line-height: 16px !important;
+                padding: 8px !important;
+            }
+
+            .phone-mockup.landscape .suggestion-chip {
+                padding: 6px 12px !important;
+                font-size: 11px !important;
+            }
+        }
+
+        /* 1280x720 devices */
+        @media (min-width: 1280px) and (max-height: 720px) {
+            .phone-mockup.landscape {
+                max-width: 580px;
+                height: 330px;
+            }
+
+            .phone-mockup.landscape .glass-panel {
+                width: 480px !important;
+                height: 270px !important;
+                padding: 18px !important;
+            }
+        }
+
+        /* General mobile responsiveness */
+        @media (max-width: 768px) {
+            .screens-grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .subtitle {
+                font-size: 0.95rem;
+            }
+
+            body {
+                padding: 12px;
+            }
+
+            .screen-demo {
+                padding: 20px;
+                min-height: auto;
+            }
+
+            .controls {
+                padding: 16px;
+            }
+
+            .button-group {
+                gap: 8px;
+            }
+
+            .control-btn {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+        }
+
+        /* Prevent text overflow in all contexts */
+        .section-content {
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            hyphens: auto;
+            overflow: hidden;
+        }
+
+        .panel-title,
+        .section-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Ensure orb stays within bounds considering status bar */
+        .voice-orb {
+            min-height: 48px;
+            min-width: 48px;
+        }
+
+        /* Adjust orientation indicator to not overlap with status bar */
+        .orientation-indicator {
+            top: 48px;
+            z-index: 99;
+        }
+
+        /* Content area should respect status bar */
+        .background-content {
+            padding-top: 50px;
+        }
+
+        /* Glass panel should respect status bar in portrait */
+        @media (orientation: portrait) {
+            .glass-panel {
+                max-height: calc(100% - 80px);
+            }
+        }
+
+        /* Glass panel adjustments for landscape with status bar */
+        @media (orientation: landscape) {
+            .glass-panel.expanded {
+                max-height: calc(100% - 60px);
+                margin-top: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>🎤 AVA Overlay UI Demo</h1>
+        <p class="subtitle">Interactive demonstration of AVA's glassmorphic overlay system</p>
+
+        <div class="orientation-toggle">
+            <button class="orientation-btn active" onclick="setOrientation('portrait')">📱 Portrait</button>
+            <button class="orientation-btn" onclick="setOrientation('landscape')">🔄 Landscape</button>
+        </div>
+
+        <div class="controls">
+            <h3>Interactive Controls</h3>
+            <div class="button-group">
+                <button class="control-btn" onclick="setOrbState('idle')">💤 Idle State</button>
+                <button class="control-btn" onclick="setOrbState('listening')">🎵 Listening</button>
+                <button class="control-btn" onclick="setOrbState('processing')">⚙️ Processing</button>
+                <button class="control-btn" onclick="setOrbState('speaking')">💬 Speaking</button>
+                <button class="control-btn" onclick="togglePanel()">📱 Toggle Panel</button>
+            </div>
+        </div>
+
+        <div class="screens-grid">
+            <!-- Interactive Demo -->
+            <div class="screen-demo">
+                <h2 class="screen-title">Interactive Demo (Drag the Orb!)</h2>
+                <div class="phone-mockup" id="phoneDemo">
+                    <!-- Simulated app background - Chrome browser -->
+                    <div class="app-background chrome"></div>
+                    <div class="app-content">
+                        <div class="app-content-text">
+                            <strong>Top Restaurants Near You</strong><br>
+                            1. The Italian Place - 4.8★<br>
+                            2. Sushi Garden - 4.7★<br>
+                            3. Burger House - 4.6★
+                        </div>
+                        <div class="app-content-image"></div>
+                        <div class="app-content-text">
+                            Featured dining options in your area...
+                        </div>
+                    </div>
+
+                    <div class="orientation-indicator" id="orientationLabel">Portrait Mode</div>
+                    <div class="status-bar">
+                        <span>9:41</span>
+                        <span>🔋 100%</span>
+                    </div>
+                    <div class="interactive-overlay">
+                        <div class="voice-orb idle" id="interactiveOrb" style="left: 24px; top: 320px;">
+                            <span class="orb-icon">🎤</span>
+                        </div>
+                        <div class="glass-panel" id="interactivePanel">
+                            <div class="panel-title">AVA Assistant</div>
+                            <div class="transcript-section">
+                                <div class="section-label">You said:</div>
+                                <div class="section-content" id="interactiveTranscript">
+                                    Search for restaurants near me
+                                </div>
+                            </div>
+                            <div class="response-section">
+                                <div class="section-label">AVA:</div>
+                                <div class="section-content" id="interactiveResponse">
+                                    I can help you search for "restaurants near me". Would you like me to open your browser or provide a summary?
+                                </div>
+                            </div>
+                            <div class="suggestions-section">
+                                <div class="section-label">Suggestions:</div>
+                                <div class="suggestions-grid">
+                                    <div class="suggestion-chip">🔍 Search</div>
+                                    <div class="suggestion-chip">📝 Summarize</div>
+                                    <div class="suggestion-chip">🌐 Translate</div>
+                                    <div class="suggestion-chip">➕ More</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Landscape Expanded Panel -->
+            <div class="screen-demo">
+                <h2 class="screen-title">Landscape Mode - Expanded Panel</h2>
+                <div class="phone-mockup landscape">
+                    <div class="orientation-indicator">Landscape Mode</div>
+                    <div class="status-bar">
+                        <span>9:41</span>
+                        <span>🔋 100%</span>
+                    </div>
+                    <div class="glass-panel expanded">
+                        <div class="panel-title">AVA Assistant</div>
+                        <div class="transcript-section">
+                            <div class="section-label">You said:</div>
+                            <div class="section-content">
+                                Search for restaurants near me
+                            </div>
+                        </div>
+                        <div class="response-section">
+                            <div class="section-label">AVA:</div>
+                            <div class="section-content">
+                                I can help you search. Would you like me to open your browser?
+                            </div>
+                        </div>
+                        <div class="suggestions-section">
+                            <div class="section-label">Suggestions:</div>
+                            <div class="suggestions-grid">
+                                <div class="suggestion-chip">🔍 Search</div>
+                                <div class="suggestion-chip">📝 Summarize</div>
+                                <div class="suggestion-chip">🌐 Translate</div>
+                                <div class="suggestion-chip">➕ More</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="voice-orb idle" style="right: 24px; bottom: 50px;">
+                        <span class="orb-icon">🎤</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Landscape Browser Context -->
+            <div class="screen-demo">
+                <h2 class="screen-title">Landscape - Browser Context (See-Through Effect)</h2>
+                <div class="phone-mockup landscape">
+                    <!-- Simulated Chrome browser with article -->
+                    <div class="app-background chrome"></div>
+                    <div class="app-content">
+                        <div class="app-content-text">
+                            <strong>The Future of AI Assistants</strong><br>
+                            <small style="opacity: 0.7;">TechNews.com - 5 min read</small><br><br>
+                            Artificial intelligence is transforming how we interact with our devices. Context-aware assistants can now understand not just what you say, but where and when you say it...
+                        </div>
+                        <div class="app-content-image"></div>
+                    </div>
+
+                    <div class="context-indicator">
+                        <span class="app-icon">🌐</span> Chrome
+                    </div>
+                    <div class="orientation-indicator">Landscape Mode</div>
+                    <div class="status-bar">
+                        <span>9:41</span>
+                        <span>🔋 100%</span>
+                    </div>
+                    <div class="glass-panel expanded">
+                        <div class="panel-title">AVA Assistant</div>
+                        <div class="transcript-section">
+                            <div class="section-label">You said:</div>
+                            <div class="section-content">
+                                Summarize this article
+                            </div>
+                        </div>
+                        <div class="response-section">
+                            <div class="section-label">AVA:</div>
+                            <div class="section-content">
+                                I'll summarize the article for you. One moment...
+                            </div>
+                        </div>
+                        <div class="suggestions-section">
+                            <div class="section-label">Suggestions:</div>
+                            <div class="suggestions-grid">
+                                <div class="suggestion-chip">📄 Summarize</div>
+                                <div class="suggestion-chip">🌐 Translate</div>
+                                <div class="suggestion-chip">🔊 Read aloud</div>
+                                <div class="suggestion-chip">🔖 Save</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="voice-orb speaking" style="left: 24px; bottom: 50px;">
+                        <span class="orb-icon">🎤</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Portrait States Below -->
+            <div class="screen-demo">
+                <h2 class="screen-title">Portrait - WhatsApp (See-Through on Green Background)</h2>
+                <div class="phone-mockup">
+                    <!-- Simulated WhatsApp background -->
+                    <div class="app-background whatsapp"></div>
+                    <div class="app-content">
+                        <div class="app-content-text" style="background: rgba(220, 248, 198, 0.95); border-radius: 12px 12px 0 12px; margin-left: auto; max-width: 85%;">
+                            Hey! Are you free for dinner tonight?
+                        </div>
+                        <div class="app-content-text" style="background: rgba(255, 255, 255, 0.95); border-radius: 12px 12px 12px 0; max-width: 85%;">
+                            Yes! Where should we go?
+                        </div>
+                        <div class="app-content-text" style="background: rgba(220, 248, 198, 0.95); border-radius: 12px 12px 0 12px; margin-left: auto; max-width: 85%;">
+                            How about that new Italian place?
+                        </div>
+                    </div>
+
+                    <div class="orientation-indicator">Portrait Mode - WhatsApp</div>
+                    <div class="status-bar">
+                        <span>9:41</span>
+                        <span>🔋 100%</span>
+                    </div>
+                    <div class="voice-orb idle" style="left: 24px; top: 320px;">
+                        <span class="orb-icon">🎤</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="screen-demo">
+                <h2 class="screen-title">Portrait - Listening State</h2>
+                <div class="phone-mockup">
+                    <div class="orientation-indicator">Portrait Mode</div>
+                    <div class="status-bar">
+                        <span>9:41</span>
+                        <span>🔋 100%</span>
+                    </div>
+                    <div class="background-content">
+                        Voice recognition active<br>
+                        Waveform animation
+                    </div>
+                    <div class="voice-orb listening" style="left: 24px; top: 320px;">
+                        <div class="waveform">
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="screen-demo">
+                <h2 class="screen-title">Portrait - Glass Panel Over Maps (Adaptive Blur)</h2>
+                <div class="phone-mockup">
+                    <!-- Simulated Maps background -->
+                    <div class="app-background maps"></div>
+                    <div class="app-content">
+                        <div class="app-content-text" style="background: rgba(52, 168, 83, 0.9); color: white;">
+                            📍 Current Location: Downtown<br>
+                            ⏱️ 5 min to destination
+                        </div>
+                        <div class="app-content-image" style="background: linear-gradient(135deg, #34a853 30%, #fbbc04 60%, #ea4335 90%); height: 200px;"></div>
+                    </div>
+
+                    <div class="orientation-indicator">Portrait Mode - Maps</div>
+                    <div class="status-bar">
+                        <span>9:41</span>
+                        <span>🔋 100%</span>
+                    </div>
+                    <div class="glass-panel expanded">
+                        <div class="panel-title">AVA Assistant</div>
+                        <div class="transcript-section">
+                            <div class="section-label">You said:</div>
+                            <div class="section-content">
+                                Search for restaurants near me
+                            </div>
+                        </div>
+                        <div class="response-section">
+                            <div class="section-label">AVA:</div>
+                            <div class="section-content">
+                                I can help you search for "restaurants near me". Would you like me to open your browser or provide a summary?
+                            </div>
+                        </div>
+                        <div class="suggestions-section">
+                            <div class="section-label">Suggestions:</div>
+                            <div class="suggestions-grid">
+                                <div class="suggestion-chip">🔍 Search</div>
+                                <div class="suggestion-chip">📝 Summarize</div>
+                                <div class="suggestion-chip">🌐 Translate</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="voice-orb idle" style="right: 24px; bottom: 80px;">
+                        <span class="orb-icon">🎤</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Landscape with orb positions -->
+            <div class="screen-demo">
+                <h2 class="screen-title">Landscape - Orb Positioning</h2>
+                <div class="phone-mockup landscape">
+                    <div class="orientation-indicator">Landscape Mode - Collapsed</div>
+                    <div class="status-bar">
+                        <span>9:41</span>
+                        <span>🔋 100%</span>
+                    </div>
+                    <div class="background-content">
+                        Orb can be positioned anywhere<br>
+                        in landscape mode
+                    </div>
+                    <div class="voice-orb idle" style="right: 24px; top: 140px;">
+                        <span class="orb-icon">🎤</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="screen-demo">
+                <h2 class="screen-title">Landscape - Processing</h2>
+                <div class="phone-mockup landscape">
+                    <div class="orientation-indicator">Landscape Mode</div>
+                    <div class="status-bar">
+                        <span>9:41</span>
+                        <span>🔋 100%</span>
+                    </div>
+                    <div class="background-content">
+                        NLU classifying intent<br>
+                        Chat generating response
+                    </div>
+                    <div class="voice-orb processing" style="left: 270px; top: 140px;">
+                        <span class="orb-icon">🎤</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Interactive orb dragging
+        const interactiveOrb = document.getElementById('interactiveOrb');
+        const interactivePanel = document.getElementById('interactivePanel');
+        const phoneDemo = document.getElementById('phoneDemo');
+        let isDragging = false;
+        let currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
+
+        interactiveOrb.addEventListener('mousedown', dragStart);
+        interactiveOrb.addEventListener('touchstart', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag);
+        document.addEventListener('mouseup', dragEnd);
+        document.addEventListener('touchend', dragEnd);
+
+        function dragStart(e) {
+            if (e.type === "touchstart") {
+                initialX = e.touches[0].clientX - xOffset;
+                initialY = e.touches[0].clientY - yOffset;
+            } else {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+            }
+
+            if (e.target === interactiveOrb || interactiveOrb.contains(e.target)) {
+                isDragging = true;
+                interactiveOrb.classList.add('dragging');
+            }
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+
+                if (e.type === "touchmove") {
+                    currentX = e.touches[0].clientX - initialX;
+                    currentY = e.touches[0].clientY - initialY;
+                } else {
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                }
+
+                xOffset = currentX;
+                yOffset = currentY;
+
+                setTranslate(currentX, currentY, interactiveOrb);
+            }
+        }
+
+        function dragEnd(e) {
+            isDragging = false;
+            interactiveOrb.classList.remove('dragging');
+        }
+
+        function setTranslate(xPos, yPos, el) {
+            const rect = el.parentElement.getBoundingClientRect();
+            const maxX = rect.width - 64;
+            const maxY = rect.height - 64;
+
+            xPos = Math.max(0, Math.min(xPos, maxX));
+            yPos = Math.max(0, Math.min(yPos, maxY));
+
+            el.style.transform = `translate(${xPos}px, ${yPos}px)`;
+        }
+
+        // State controls
+        function setOrbState(state) {
+            interactiveOrb.className = 'voice-orb ' + state;
+
+            const iconSpan = interactiveOrb.querySelector('.orb-icon, .waveform');
+            if (iconSpan) iconSpan.remove();
+
+            if (state === 'listening') {
+                const waveform = document.createElement('div');
+                waveform.className = 'waveform';
+                waveform.innerHTML = '<div class="bar"></div><div class="bar"></div><div class="bar"></div>';
+                interactiveOrb.appendChild(waveform);
+            } else {
+                const icon = document.createElement('span');
+                icon.className = 'orb-icon';
+                icon.textContent = '🎤';
+                interactiveOrb.appendChild(icon);
+            }
+
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+        }
+
+        function togglePanel() {
+            interactivePanel.classList.toggle('expanded');
+            if (event && event.target) {
+                event.target.classList.toggle('active');
+            }
+        }
+
+        function setOrientation(orientation) {
+            const orientationLabel = document.getElementById('orientationLabel');
+
+            if (orientation === 'landscape') {
+                phoneDemo.classList.add('landscape');
+                orientationLabel.textContent = 'Landscape Mode';
+            } else {
+                phoneDemo.classList.remove('landscape');
+                orientationLabel.textContent = 'Portrait Mode';
+            }
+
+            // Update button states
+            document.querySelectorAll('.orientation-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // Click orb to toggle panel
+        interactiveOrb.addEventListener('click', (e) => {
+            if (!isDragging) {
+                interactivePanel.classList.toggle('expanded');
+            }
+        });
+    </script>
+</body>
+</html>

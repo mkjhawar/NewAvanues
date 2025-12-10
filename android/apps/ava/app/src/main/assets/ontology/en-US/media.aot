@@ -1,0 +1,262 @@
+{
+  "schema": "ava-ontology-3.0",
+  "version": "3.0.0",
+  "locale": "en-US",
+  "metadata": {
+    "filename": "media.aot",
+    "category": "media",
+    "name": "Media Control Intents",
+    "description": "Music, video, and media playback control actions",
+    "ontology_count": 6,
+    "author": "AVA AI",
+    "created_at": "2025-11-26T00:00:00Z"
+  },
+  "ontology": [
+    {
+      "id": "play_music",
+      "canonical_form": "start_music_playback",
+      "description": "User wants to play music, a song, artist, or playlist",
+      "synonyms": [
+        "play music",
+        "play song",
+        "play some music",
+        "play a song",
+        "start music",
+        "put on music",
+        "play",
+        "listen to music",
+        "play artist",
+        "play album",
+        "play playlist"
+      ],
+      "action_type": "multi_step",
+      "action_sequence": [
+        {
+          "step": 1,
+          "action": "OPEN_APP",
+          "capability_required": "music_player"
+        },
+        {
+          "step": 2,
+          "action": "PLAY_MEDIA",
+          "media_type": "music",
+          "extract_entities": ["song", "artist", "album", "playlist", "genre"]
+        }
+      ],
+      "required_capabilities": ["music_player"],
+      "entity_schema": {
+        "song": {
+          "type": "MEDIA_TITLE",
+          "patterns": ["play {song}", "the song {song}"],
+          "optional": true
+        },
+        "artist": {
+          "type": "PERSON",
+          "patterns": ["by {artist}", "from {artist}", "{artist}"],
+          "optional": true
+        },
+        "album": {
+          "type": "MEDIA_TITLE",
+          "patterns": ["album {album}", "the album {album}"],
+          "optional": true
+        },
+        "playlist": {
+          "type": "MEDIA_TITLE",
+          "patterns": ["playlist {playlist}", "my {playlist} playlist"],
+          "optional": true
+        }
+      },
+      "priority": 1,
+      "tags": ["music", "play", "song", "audio", "media"]
+    },
+    {
+      "id": "pause_media",
+      "canonical_form": "pause_playback",
+      "description": "User wants to pause the currently playing media",
+      "synonyms": [
+        "pause",
+        "pause music",
+        "pause video",
+        "stop playing",
+        "pause playback",
+        "hold",
+        "pause it"
+      ],
+      "action_type": "single_step",
+      "action_sequence": [
+        {
+          "step": 1,
+          "action": "MEDIA_CONTROL",
+          "control_type": "pause"
+        }
+      ],
+      "required_capabilities": ["media_control"],
+      "entity_schema": {},
+      "priority": 1,
+      "tags": ["pause", "stop", "media", "control"]
+    },
+    {
+      "id": "resume_media",
+      "canonical_form": "resume_playback",
+      "description": "User wants to resume paused media playback",
+      "synonyms": [
+        "resume",
+        "continue",
+        "play",
+        "resume playing",
+        "continue playing",
+        "unpause",
+        "keep playing"
+      ],
+      "action_type": "single_step",
+      "action_sequence": [
+        {
+          "step": 1,
+          "action": "MEDIA_CONTROL",
+          "control_type": "resume"
+        }
+      ],
+      "required_capabilities": ["media_control"],
+      "entity_schema": {},
+      "priority": 2,
+      "tags": ["resume", "play", "continue", "media"]
+    },
+    {
+      "id": "skip_track",
+      "canonical_form": "skip_to_next",
+      "description": "User wants to skip to the next track or media item",
+      "synonyms": [
+        "skip",
+        "next",
+        "next song",
+        "skip this",
+        "next track",
+        "skip song",
+        "play next",
+        "forward"
+      ],
+      "action_type": "single_step",
+      "action_sequence": [
+        {
+          "step": 1,
+          "action": "MEDIA_CONTROL",
+          "control_type": "next"
+        }
+      ],
+      "required_capabilities": ["media_control"],
+      "entity_schema": {},
+      "priority": 1,
+      "tags": ["skip", "next", "forward", "media"]
+    },
+    {
+      "id": "previous_track",
+      "canonical_form": "go_to_previous",
+      "description": "User wants to go back to the previous track",
+      "synonyms": [
+        "previous",
+        "go back",
+        "previous song",
+        "last song",
+        "previous track",
+        "play previous",
+        "back"
+      ],
+      "action_type": "single_step",
+      "action_sequence": [
+        {
+          "step": 1,
+          "action": "MEDIA_CONTROL",
+          "control_type": "previous"
+        }
+      ],
+      "required_capabilities": ["media_control"],
+      "entity_schema": {},
+      "priority": 2,
+      "tags": ["previous", "back", "last", "media"]
+    },
+    {
+      "id": "play_video",
+      "canonical_form": "start_video_playback",
+      "description": "User wants to play a video or watch something",
+      "synonyms": [
+        "play video",
+        "watch video",
+        "play movie",
+        "watch movie",
+        "watch",
+        "play on youtube",
+        "watch on youtube",
+        "stream video",
+        "watch show"
+      ],
+      "action_type": "multi_step",
+      "action_sequence": [
+        {
+          "step": 1,
+          "action": "OPEN_APP",
+          "capability_required": "video_player"
+        },
+        {
+          "step": 2,
+          "action": "PLAY_MEDIA",
+          "media_type": "video",
+          "extract_entities": ["title", "platform"]
+        }
+      ],
+      "required_capabilities": ["video_player"],
+      "entity_schema": {
+        "title": {
+          "type": "MEDIA_TITLE",
+          "patterns": ["play {title}", "watch {title}"],
+          "optional": true
+        },
+        "platform": {
+          "type": "APP_NAME",
+          "patterns": ["on {platform}", "in {platform}"],
+          "optional": true
+        }
+      },
+      "priority": 1,
+      "tags": ["video", "movie", "watch", "stream", "youtube"]
+    }
+  ],
+  "global_synonyms": {
+    "play": ["start", "begin", "put on"],
+    "stop": ["pause", "halt", "end"]
+  },
+  "capability_mappings": {
+    "music_player": {
+      "apps": [
+        {
+          "package": "com.spotify.music",
+          "name": "Spotify",
+          "actions": ["PLAY_MEDIA", "SEARCH_MEDIA"]
+        },
+        {
+          "package": "com.google.android.apps.youtube.music",
+          "name": "YouTube Music",
+          "actions": ["PLAY_MEDIA", "SEARCH_MEDIA"]
+        },
+        {
+          "package": "com.apple.android.music",
+          "name": "Apple Music",
+          "actions": ["PLAY_MEDIA"]
+        }
+      ]
+    },
+    "video_player": {
+      "apps": [
+        {
+          "package": "com.google.android.youtube",
+          "name": "YouTube",
+          "actions": ["PLAY_MEDIA", "SEARCH_MEDIA"]
+        },
+        {
+          "package": "com.netflix.mediaclient",
+          "name": "Netflix",
+          "actions": ["PLAY_MEDIA"]
+        }
+      ]
+    }
+  }
+}

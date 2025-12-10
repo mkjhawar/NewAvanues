@@ -1,0 +1,41 @@
+# Avanues Universal Format v2.0
+# Type: AVA - Voice Intent Examples
+# Extension: .anl
+# Project: AVA (AI Voice Assistant)
+---
+schema: avu-1.0
+version: 1.0.0
+locale: en-US
+project: ava
+metadata:
+  file: productivity.anl
+  category: productivity
+  name: Productivity Tools
+  description: Alarms, reminders, calendar events
+  priority: 1
+  count: 2
+---
+PROD:set_alarm:create alarm
+PROD:set_alarm:wake me up
+PROD:set_alarm:set wake up alarm
+PROD:set_alarm:alarm for tomorrow
+PROD:set_alarm:morning alarm
+PROD:set_alarm:set timer
+PROD:set_alarm:create timer
+PROD:set_alarm:alarm at 7am
+PROD:set_alarm:wake up at 6:30
+PROD:set_alarm:alarm in 30 minutes
+
+PROD:set_reminder:create reminder
+PROD:set_reminder:remind me
+PROD:set_reminder:remember to
+PROD:set_reminder:don't let me forget
+PROD:set_reminder:reminder for later
+PROD:set_reminder:make a note
+PROD:set_reminder:reminder at 3pm
+PROD:set_reminder:remind me tomorrow
+PROD:set_reminder:set note
+---
+synonyms:
+  set: [create, make, schedule, program, configure]
+  remind: [remember, note, alert, notify]

@@ -1,0 +1,77 @@
+-- Learning table for user feedback and reinforcement learning
+-- Migrated from Room LearningEntity
+-- VOS4 Patterns: Feedback tracking with outcome
+
+CREATE TABLE learning (
+    id TEXT PRIMARY KEY NOT NULL,
+    decision_id TEXT NOT NULL,
+    feedback_type TEXT NOT NULL,
+    user_correction TEXT,
+    timestamp INTEGER NOT NULL,
+    outcome TEXT NOT NULL,
+    notes TEXT
+);
+
+CREATE INDEX idx_learning_decision_id ON learning(decision_id);
+CREATE INDEX idx_learning_feedback_type ON learning(feedback_type);
+CREATE INDEX idx_learning_timestamp ON learning(timestamp);
+
+-- Insert or replace (VOS4 INSERT OR REPLACE pattern)
+insert:
+INSERT OR REPLACE INTO learning (
+    id, decision_id, feedback_type, user_correction, timestamp, outcome, notes
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- Select all learning events
+selectAll:
+SELECT * FROM learning
+ORDER BY timestamp DESC;
+
+-- Select by decision ID
+selectByDecisionId:
+SELECT * FROM learning
+WHERE decision_id = ?
+ORDER BY timestamp DESC;
+
+-- Select by feedback type
+selectByFeedbackType:
+SELECT * FROM learning
+WHERE feedback_type = ?
+ORDER BY timestamp DESC;
+
+-- Select by outcome
+selectByOutcome:
+SELECT * FROM learning
+WHERE outcome = ?
+ORDER BY timestamp DESC;
+
+-- Select negative feedback
+selectNegativeFeedback:
+SELECT * FROM learning
+WHERE feedback_type = 'NEGATIVE' OR feedback_type = 'CORRECTION'
+ORDER BY timestamp DESC;
+
+-- Select with corrections
+selectWithCorrections:
+SELECT * FROM learning
+WHERE user_correction IS NOT NULL
+ORDER BY timestamp DESC;
+
+-- Count total learning events
+count:
+SELECT COUNT(*) FROM learning;
+
+-- Count by feedback type
+countByFeedbackType:
+SELECT COUNT(*) FROM learning
+WHERE feedback_type = ?;
+
+-- Delete by ID
+delete:
+DELETE FROM learning
+WHERE id = ?;
+
+-- Delete by decision ID
+deleteByDecisionId:
+DELETE FROM learning
+WHERE decision_id = ?;

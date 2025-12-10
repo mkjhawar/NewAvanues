@@ -1,0 +1,175 @@
+# Avanues Universal Format v1.0
+# Type: VOS - Device Control
+# Extension: .anl
+# Project: VoiceOS
+---
+schema: avu-1.0
+version: 1.0.0
+locale: en-US
+project: ava
+metadata:
+  file: VoiceOSDevice.anl
+  category: voiceos_device
+  name: VoiceOS Device Control
+  description: Power, Connectivity, and Settings
+  priority: 2
+  count: 15
+---
+# Power Control
+VCM:shut_down:shut down device
+VCM:shut_down:power off
+VCM:shut_down:turn off device
+VCM:shut_down:shutdown
+VCM:shut_down:power down
+VCM:shut_down:turn off
+VCM:shut_down:shut down
+VCM:shut_down:device off
+VCM:shut_down:power off device
+VCM:shut_down:switch off
+VCM:shut_down:close device
+
+VCM:reboot:reboot device
+VCM:reboot:restart device
+VCM:reboot:restart
+VCM:reboot:reboot
+VCM:reboot:device restart
+VCM:reboot:reset device
+VCM:reboot:power cycle
+VCM:reboot:restart system
+VCM:reboot:reboot system
+VCM:reboot:device reboot
+VCM:reboot:system restart
+
+VCM:turn_off_display:turn off display
+VCM:turn_off_display:screen off
+VCM:turn_off_display:display off
+VCM:turn_off_display:turn off screen
+VCM:turn_off_display:black screen
+VCM:turn_off_display:screen sleep
+VCM:turn_off_display:display sleep
+VCM:turn_off_display:screen dark
+VCM:turn_off_display:turn screen off
+VCM:turn_off_display:screen blank
+VCM:turn_off_display:display blank
+
+# Connectivity Control
+VCM:turn_on_bluetooth:turn on bluetooth
+VCM:turn_on_bluetooth:bluetooth on
+VCM:turn_on_bluetooth:enable bluetooth
+VCM:turn_on_bluetooth:bluetooth enable
+VCM:turn_on_bluetooth:start bluetooth
+VCM:turn_on_bluetooth:activate bluetooth
+VCM:turn_on_bluetooth:bluetooth start
+VCM:turn_on_bluetooth:bluetooth active
+VCM:turn_on_bluetooth:switch on bluetooth
+VCM:turn_on_bluetooth:bluetooth switch on
+VCM:turn_on_bluetooth:open bluetooth
+
+VCM:turn_off_bluetooth:turn off bluetooth
+VCM:turn_off_bluetooth:bluetooth off
+VCM:turn_off_bluetooth:disable bluetooth
+VCM:turn_off_bluetooth:bluetooth disable
+VCM:turn_off_bluetooth:stop bluetooth
+VCM:turn_off_bluetooth:deactivate bluetooth
+VCM:turn_off_bluetooth:bluetooth stop
+VCM:turn_off_bluetooth:bluetooth inactive
+VCM:turn_off_bluetooth:switch off bluetooth
+VCM:turn_off_bluetooth:bluetooth switch off
+VCM:turn_off_bluetooth:close bluetooth
+
+VCM:turn_on_wifi:turn on wifi
+VCM:turn_on_wifi:wifi on
+VCM:turn_on_wifi:enable wifi
+VCM:turn_on_wifi:wifi enable
+VCM:turn_on_wifi:start wifi
+VCM:turn_on_wifi:activate wifi
+VCM:turn_on_wifi:wifi start
+VCM:turn_on_wifi:wifi active
+VCM:turn_on_wifi:switch on wifi
+VCM:turn_on_wifi:wifi switch on
+VCM:turn_on_wifi:open wifi
+
+VCM:turn_off_wifi:turn off wifi
+VCM:turn_off_wifi:wifi off
+VCM:turn_off_wifi:disable wifi
+VCM:turn_off_wifi:wifi disable
+VCM:turn_off_wifi:stop wifi
+VCM:turn_off_wifi:deactivate wifi
+VCM:turn_off_wifi:wifi stop
+VCM:turn_off_wifi:wifi inactive
+VCM:turn_off_wifi:switch off wifi
+VCM:turn_off_wifi:wifi switch off
+VCM:turn_off_wifi:close wifi
+
+# Settings Navigation
+VCM:open_settings:open settings
+VCM:open_settings:settings
+VCM:open_settings:preferences
+VCM:open_settings:configuration
+VCM:open_settings:options
+VCM:open_settings:system settings
+VCM:open_settings:device settings
+VCM:open_settings:setup
+VCM:open_settings:control panel
+VCM:open_settings:settings menu
+VCM:open_settings:preferences menu
+
+VCM:open_connection:open connections
+VCM:open_connection:connections
+VCM:open_connection:network settings
+VCM:open_connection:connectivity
+VCM:open_connection:connection settings
+VCM:open_connection:network options
+VCM:open_connection:wireless settings
+VCM:open_connection:internet settings
+VCM:open_connection:network menu
+VCM:open_connection:connection menu
+VCM:open_connection:connectivity settings
+
+VCM:open_sound:open sound
+VCM:open_sound:sound settings
+VCM:open_sound:audio settings
+VCM:open_sound:volume settings
+VCM:open_sound:sound options
+VCM:open_sound:audio options
+VCM:open_sound:sound menu
+VCM:open_sound:audio menu
+VCM:open_sound:sound preferences
+VCM:open_sound:audio preferences
+VCM:open_sound:sound control
+
+VCM:open_display:open display
+VCM:open_display:display settings
+VCM:open_display:screen settings
+VCM:open_display:display options
+VCM:open_display:screen options
+VCM:open_display:display menu
+VCM:open_display:screen menu
+VCM:open_display:display preferences
+VCM:open_display:screen preferences
+VCM:open_display:visual settings
+VCM:open_display:display control
+
+VCM:open_security:open security
+VCM:open_security:security settings
+VCM:open_security:privacy settings
+VCM:open_security:security options
+VCM:open_security:privacy options
+VCM:open_security:security menu
+VCM:open_security:privacy menu
+VCM:open_security:security preferences
+VCM:open_security:privacy preferences
+VCM:open_security:protection settings
+VCM:open_security:safety settings
+
+VCM:open_about:open about
+VCM:open_about:about device
+VCM:open_about:device info
+VCM:open_about:system info
+VCM:open_about:about phone
+VCM:open_about:device information
+VCM:open_about:system information
+VCM:open_about:about system
+VCM:open_about:phone info
+VCM:open_about:about menu
+VCM:open_about:device details

@@ -1,0 +1,109 @@
+-- Conversation table for chat history
+-- Migrated from Room ConversationEntity
+-- VOS4 Patterns: Composite indices, denormalized message_count
+
+CREATE TABLE conversation (
+    id TEXT PRIMARY KEY NOT NULL,
+    title TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    message_count INTEGER NOT NULL DEFAULT 0,
+    is_archived INTEGER AS kotlin.Boolean NOT NULL DEFAULT 0,
+    metadata TEXT
+);
+
+CREATE INDEX idx_conversation_created_at ON conversation(created_at);
+CREATE INDEX idx_conversation_updated_at ON conversation(updated_at);
+CREATE INDEX idx_conversation_is_archived ON conversation(is_archived);
+
+-- Insert or replace (VOS4 INSERT OR REPLACE pattern)
+insert:
+INSERT OR REPLACE INTO conversation (id, title, created_at, updated_at, message_count, is_archived, metadata)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- Select all conversations (sorted by most recent)
+selectAll:
+SELECT * FROM conversation
+ORDER BY updated_at DESC;
+
+-- Select by ID
+selectById:
+SELECT * FROM conversation
+WHERE id = ?;
+
+-- Select non-archived conversations
+selectNonArchived:
+SELECT * FROM conversation
+WHERE is_archived = 0
+ORDER BY updated_at DESC;
+
+-- Update conversation title
+updateTitle:
+UPDATE conversation
+SET title = ?, updated_at = ?
+WHERE id = ?;
+
+-- Update message count
+updateMessageCount:
+UPDATE conversation
+SET message_count = ?, updated_at = ?
+WHERE id = ?;
+
+-- Archive conversation
+archive:
+UPDATE conversation
+SET is_archived = 1, updated_at = ?
+WHERE id = ?;
+
+-- Unarchive conversation
+unarchive:
+UPDATE conversation
+SET is_archived = 0, updated_at = ?
+WHERE id = ?;
+
+-- Delete conversation
+delete:
+DELETE FROM conversation
+WHERE id = ?;
+
+-- Count total conversations
+count:
+SELECT COUNT(*) FROM conversation;
+
+-- Count non-archived conversations
+countNonArchived:
+SELECT COUNT(*) FROM conversation
+WHERE is_archived = 0;
+
+-- Increment message count (VOS4 denormalized pattern)
+incrementMessageCount:
+UPDATE conversation
+SET message_count = message_count + 1, updated_at = ?
+WHERE id = ?;
+
+-- Search conversations by title
+searchByTitle:
+SELECT * FROM conversation
+WHERE title LIKE '%' || ? || '%'
+ORDER BY updated_at DESC;
+
+-- Select all conversations with last message preview
+selectAllWithPreview:
+SELECT
+    c.id,
+    c.title,
+    c.created_at,
+    c.updated_at,
+    c.message_count,
+    c.is_archived,
+    c.metadata,
+    COALESCE(
+        (SELECT content
+         FROM message
+         WHERE conversation_id = c.id
+         ORDER BY timestamp DESC
+         LIMIT 1),
+        ''
+    ) AS preview
+FROM conversation c
+ORDER BY c.updated_at DESC;

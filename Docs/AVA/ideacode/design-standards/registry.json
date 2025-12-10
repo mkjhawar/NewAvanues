@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "baseStandards": "/Volumes/M-Drive/Coding/ideacode/design-standards",
+  "additions": [],
+  "metadata": {
+    "project": "ava",
+    "created": "2025-11-15T06:36:39Z",
+    "lastUpdated": "2025-11-15T06:36:39Z"
+  },
+  "categories": {
+    "architecture": "System architecture and design patterns",
+    "ui-ux": "User interface and experience standards",
+    "security": "Security practices and requirements",
+    "performance": "Performance optimization guidelines",
+    "decisions": "Architectural decision records",
+    "learnings": "Lessons learned and best practices"
+  }
+}

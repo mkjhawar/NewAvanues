@@ -1,0 +1,227 @@
+// filename: Universal/AVA/Features/RAG/src/androidTest/kotlin/com/augmentalis/ava/features/rag/data/AnnotationRepositoryTest.kt
+// created: 2025-11-22
+// author: AVA AI Team - Agent 3
+// © Augmentalis Inc, Intelligent Devices LLC
+
+package com.augmentalis.ava.features.rag.data
+
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.augmentalis.ava.features.rag.data.room.RAGDatabase
+import com.augmentalis.ava.features.rag.domain.*
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+@RunWith(AndroidJUnit4::class)
+class AnnotationRepositoryTest {
+
+    private lateinit var database: RAGDatabase
+    private lateinit var repository: RoomAnnotationRepository
+
+    @Before
+    fun setup() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        database = RAGDatabase.getInstance(context)
+        repository = RoomAnnotationRepository(
+            database.annotationDao(),
+            database.chunkDao(),
+            database.documentDao()
+        )
+    }
+
+    @After
+    fun tearDown() {
+        RAGDatabase.closeInstance()
+    }
+
+    @Test
+    fun testAddAnnotation() = runBlocking {
+        val annotation = Annotation(
+            id = "test-ann-1",
+            chunkId = "chunk-123",
+            documentId = "doc-456",
+            type = AnnotationType.HIGHLIGHT,
+            content = AnnotationContent(
+                text = "Important passage",
+                startOffset = 100,
+                endOffset = 117
+            ),
+            tags = listOf("key-point"),
+            createdAt = "2024-01-01T00:00:00Z",
+            modifiedAt = "2024-01-01T00:00:00Z",
+            color = AnnotationColor.YELLOW
+        )
+
+        val result = repository.addAnnotation(annotation)
+        assertTrue(result.isSuccess)
+        assertEquals(annotation, result.getOrNull())
+    }
+
+    @Test
+    fun testGetAnnotationsForChunk() = runBlocking {
+        val chunkId = "chunk-789"
+        val annotation1 = Annotation(
+            id = "test-ann-2",
+            chunkId = chunkId,
+            documentId = "doc-111",
+            type = AnnotationType.NOTE,
+            content = AnnotationContent(
+                text = "First note",
+                startOffset = 0,
+                endOffset = 10,
+                note = "Important observation"
+            ),
+            createdAt = "2024-01-01T00:00:00Z",
+            modifiedAt = "2024-01-01T00:00:00Z"
+        )
+        val annotation2 = Annotation(
+            id = "test-ann-3",
+            chunkId = chunkId,
+            documentId = "doc-111",
+            type = AnnotationType.HIGHLIGHT,
+            content = AnnotationContent(
+                text = "Second highlight",
+                startOffset = 50,
+                endOffset = 66
+            ),
+            createdAt = "2024-01-01T00:00:00Z",
+            modifiedAt = "2024-01-01T00:00:00Z"
+        )
+
+        repository.addAnnotation(annotation1)
+        repository.addAnnotation(annotation2)
+
+        val result = repository.getAnnotationsForChunk(chunkId)
+        assertTrue(result.isSuccess)
+        val annotations = result.getOrNull() ?: emptyList()
+        assertTrue(annotations.size >= 2)
+    }
+
+    @Test
+    fun testGetAnnotationsByType() = runBlocking {
+        val annotation = Annotation(
+            id = "test-ann-4",
+            chunkId = "chunk-222",
+            documentId = "doc-333",
+            type = AnnotationType.IMPORTANT,
+            content = AnnotationContent(
+                text = "Critical finding",
+                startOffset = 0,
+                endOffset = 16
+            ),
+            createdAt = "2024-01-01T00:00:00Z",
+            modifiedAt = "2024-01-01T00:00:00Z"
+        )
+
+        repository.addAnnotation(annotation)
+
+        val result = repository.getAnnotationsByType(AnnotationType.IMPORTANT)
+        assertTrue(result.isSuccess)
+        val annotations = result.getOrNull() ?: emptyList()
+        assertTrue(annotations.any { it.type == AnnotationType.IMPORTANT })
+    }
+
+    @Test
+    fun testUpdateAnnotation() = runBlocking {
+        val annotation = Annotation(
+            id = "test-ann-5",
+            chunkId = "chunk-444",
+            documentId = "doc-555",
+            type = AnnotationType.NOTE,
+            content = AnnotationContent(
+                text = "Original text",
+                startOffset = 0,
+                endOffset = 13,
+                note = "Original note"
+            ),
+            createdAt = "2024-01-01T00:00:00Z",
+            modifiedAt = "2024-01-01T00:00:00Z"
+        )
+
+        repository.addAnnotation(annotation)
+
+        val updated = annotation.copy(
+            content = annotation.content.copy(note = "Updated note"),
+            modifiedAt = "2024-01-02T00:00:00Z"
+        )
+
+        val updateResult = repository.updateAnnotation(updated)
+        assertTrue(updateResult.isSuccess)
+    }
+
+    @Test
+    fun testDeleteAnnotation() = runBlocking {
+        val annotation = Annotation(
+            id = "test-ann-6",
+            chunkId = "chunk-666",
+            documentId = "doc-777",
+            type = AnnotationType.HIGHLIGHT,
+            content = AnnotationContent(
+                text = "To be deleted",
+                startOffset = 0,
+                endOffset = 13
+            ),
+            createdAt = "2024-01-01T00:00:00Z",
+            modifiedAt = "2024-01-01T00:00:00Z"
+        )
+
+        repository.addAnnotation(annotation)
+        val deleteResult = repository.deleteAnnotation(annotation.id)
+        assertTrue(deleteResult.isSuccess)
+    }
+
+    @Test
+    fun testSearchAnnotations() = runBlocking {
+        val annotation = Annotation(
+            id = "test-ann-7",
+            chunkId = "chunk-888",
+            documentId = "doc-999",
+            type = AnnotationType.NOTE,
+            content = AnnotationContent(
+                text = "Searchable text",
+                startOffset = 0,
+                endOffset = 15,
+                note = "This is a unique search term: hypothesis"
+            ),
+            createdAt = "2024-01-01T00:00:00Z",
+            modifiedAt = "2024-01-01T00:00:00Z"
+        )
+
+        repository.addAnnotation(annotation)
+
+        val result = repository.searchAnnotations("hypothesis")
+        assertTrue(result.isSuccess)
+        val annotations = result.getOrNull() ?: emptyList()
+        assertTrue(annotations.any { it.content.note?.contains("hypothesis") == true })
+    }
+
+    @Test
+    fun testGetAnnotationsByTag() = runBlocking {
+        val annotation = Annotation(
+            id = "test-ann-8",
+            chunkId = "chunk-101",
+            documentId = "doc-202",
+            type = AnnotationType.HIGHLIGHT,
+            content = AnnotationContent(
+                text = "Tagged content",
+                startOffset = 0,
+                endOffset = 14
+            ),
+            tags = listOf("research", "key-finding"),
+            createdAt = "2024-01-01T00:00:00Z",
+            modifiedAt = "2024-01-01T00:00:00Z"
+        )
+
+        repository.addAnnotation(annotation)
+
+        val result = repository.getAnnotationsByTag("research")
+        assertTrue(result.isSuccess)
+        val annotations = result.getOrNull() ?: emptyList()
+        assertTrue(annotations.any { it.tags.contains("research") })
+    }
+}
