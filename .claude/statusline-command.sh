@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Claude Code Enhanced Status Line (v10.0)
-# Format: IDEACODE v# | repo | branch | git-stats | context-indicator | model | CLI version
+# Claude Code Enhanced Status Line (v10.3)
+# Format: IDEACODE v# | repo | branch | git-stats | context-indicator | mcp-name | model | CLI version
 # Features: Auto-save at 80%, context warnings, git status
 
 # Read JSON input from stdin
@@ -46,12 +46,11 @@ if [[ -n "$session_id" ]] && [[ "$session_id" != "null" ]]; then
     session_short="${session_id:0:8}"
 fi
 
-# Get IDEACODE framework version from config
+# Get IDEACODE framework version from central version-info.json
 ideacode_version="?"
-if [[ -f "$cwd/.ideacode/config.ideacode" ]]; then
-    ideacode_version=$(jq -r '.version // "?"' "$cwd/.ideacode/config.ideacode" 2>/dev/null)
-elif [[ -f "$cwd/.ideacode/config.yml" ]]; then
-    ideacode_version=$(grep '^version:' "$cwd/.ideacode/config.yml" 2>/dev/null | sed 's/version: *"//' | sed 's/"//' | xargs)
+central_version_file="/Volumes/M-Drive/Coding/ideacode/version-info.json"
+if [[ -f "$central_version_file" ]]; then
+    ideacode_version=$(jq -r '.framework_version // "?"' "$central_version_file" 2>/dev/null)
 fi
 
 # Git info with detailed status
@@ -150,14 +149,44 @@ fi
 # Build statusline
 status_parts=()
 
-# IDEACODE version
-[[ "$ideacode_version" != "?" ]] && status_parts+=("IDEACODE v${ideacode_version}")
+# IDEACODE version (always show, use "?" if not found)
+status_parts+=("IDEACODE v${ideacode_version}")
 
-# Repository
-[[ -n "$repo" ]] && status_parts+=("$repo")
+# Check if IDEACODE API is running, auto-start if not
+api_marker="$HOME/.claude/.ideacode_api_started"
+if curl -s --connect-timeout 0.5 http://localhost:3847/health > /dev/null 2>&1; then
+    status_parts+=("API")
+    touch "$api_marker" 2>/dev/null
+else
+    # Auto-start API server if not already attempted this session
+    if [[ ! -f "$api_marker" ]]; then
+        api_dir="/Volumes/M-Drive/Coding/ideacode/ideacode-api"
+        if [[ -d "$api_dir" ]]; then
+            # Start API server in background
+            (cd "$api_dir" && npm start > /dev/null 2>&1 &) &
+            touch "$api_marker" 2>/dev/null
+            # Give it a moment to start
+            sleep 0.5
+            if curl -s --connect-timeout 0.5 http://localhost:3847/health > /dev/null 2>&1; then
+                status_parts+=("API")
+            fi
+        fi
+    fi
+fi
+
+# Repository (always show if in git repo)
+if [[ -n "$repo" ]]; then
+    status_parts+=("$repo")
+else
+    # Fallback: use directory name
+    repo_fallback=$(basename "$cwd" 2>/dev/null || echo "unknown")
+    [[ "$repo_fallback" != "~" ]] && status_parts+=("$repo_fallback")
+fi
 
 # Branch (with * if dirty)
-[[ -n "$branch" ]] && status_parts+=("${git_dirty}${branch}")
+if [[ -n "$branch" ]]; then
+    status_parts+=("${git_dirty}${branch}")
+fi
 
 # Git stats (if any changes)
 [[ -n "$git_stats" ]] && status_parts+=("$git_stats")
@@ -167,36 +196,6 @@ status_parts=()
 
 # Model
 status_parts+=("$model_short")
-
-# Detect API vs Subscription mode
-is_api_mode=false
-if [[ -n "$ANTHROPIC_API_KEY" ]]; then
-    is_api_mode=true
-fi
-
-# Session cost (API mode only) or duration (subscription mode)
-session_info=""
-if [[ "$is_api_mode" == true ]] && [[ -n "$cost_display" ]]; then
-    session_info="$cost_display"
-    [[ -n "$duration_display" ]] && session_info="$session_info $duration_display"
-else
-    # Subscription mode - just show duration
-    [[ -n "$duration_display" ]] && session_info="$duration_display"
-fi
-[[ -n "$session_info" ]] && status_parts+=("$(echo $session_info | xargs)")
-
-# Lines changed
-if [[ "$lines_added" != "0" ]] || [[ "$lines_removed" != "0" ]]; then
-    lines_display="+${lines_added}/-${lines_removed}"
-    status_parts+=("$lines_display")
-fi
-
-# Active MCP server (read from Claude Code config)
-mcp_config="$HOME/Library/Application Support/Claude Code/mcp.json"
-if [[ -f "$mcp_config" ]]; then
-    mcp_name=$(jq -r '.mcpServers | keys[0] // empty' "$mcp_config" 2>/dev/null)
-    [[ -n "$mcp_name" ]] && status_parts+=("$mcp_name")
-fi
 
 # CLI version - only show both if update available
 if [[ "$version" != "$newest_version" ]]; then
