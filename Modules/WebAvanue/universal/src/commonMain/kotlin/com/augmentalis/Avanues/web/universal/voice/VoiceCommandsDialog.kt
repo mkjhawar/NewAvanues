@@ -153,65 +153,82 @@ fun VoiceCommandsDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth(0.95f)
-                .fillMaxHeight(0.85f),
-            color = OceanDesignTokens.Surface.elevated,
-            shape = RoundedCornerShape(OceanDesignTokens.CornerRadius.xxl),
-            tonalElevation = OceanDesignTokens.Elevation.lg,
-            shadowElevation = OceanDesignTokens.Elevation.xxl
-        ) {
-            Column(
+        BoxWithConstraints {
+            // Detect landscape orientation
+            val isLandscape = maxWidth > maxHeight
+
+            // Optimize for landscape: wider dialog, less padding
+            val dialogWidth = if (isLandscape) 0.90f else 0.95f
+            val dialogHeight = if (isLandscape) 0.90f else 0.85f
+            val contentPadding = if (isLandscape) OceanDesignTokens.Spacing.md else OceanDesignTokens.Spacing.xl
+            val headerSpacing = if (isLandscape) OceanDesignTokens.Spacing.md else OceanDesignTokens.Spacing.xl
+
+            Surface(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(OceanDesignTokens.Spacing.xl)
+                    .fillMaxWidth(dialogWidth)
+                    .fillMaxHeight(dialogHeight),
+                color = OceanDesignTokens.Surface.elevated,
+                shape = RoundedCornerShape(OceanDesignTokens.CornerRadius.xxl),
+                tonalElevation = OceanDesignTokens.Elevation.lg,
+                shadowElevation = OceanDesignTokens.Elevation.xxl
             ) {
-                // Current category snapshot
-                val currentCategory = selectedCategory
-
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(contentPadding)
                 ) {
-                    Text(
-                        text = currentCategory?.title ?: "Voice Commands",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = OceanDesignTokens.Text.primary
-                    )
+                    // Current category snapshot
+                    val currentCategory = selectedCategory
 
-                    OceanComponents.IconButton(onClick = onDismiss) {
-                        OceanComponents.Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            variant = IconVariant.Secondary
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = currentCategory?.title ?: "Voice Commands",
+                            style = if (isLandscape) {
+                                MaterialTheme.typography.titleLarge
+                            } else {
+                                MaterialTheme.typography.headlineSmall
+                            },
+                            color = OceanDesignTokens.Text.primary
                         )
+
+                        OceanComponents.IconButton(onClick = onDismiss) {
+                            OceanComponents.Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                variant = IconVariant.Secondary
+                            )
+                        }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(OceanDesignTokens.Spacing.xl))
+                    Spacer(modifier = Modifier.height(headerSpacing))
 
-                // Content with navigation animation
-                Box(modifier = Modifier.weight(1f)) {
-                    if (currentCategory == null) {
-                        CategoriesView(
-                            onCategorySelected = { category ->
-                                selectedCategory = category
-                            }
-                        )
-                    } else {
-                        CommandsView(
-                            category = currentCategory,
-                            onBack = { selectedCategory = null },
-                            onCommandClick = { command ->
-                                val shouldDismiss = onCommandExecute(command)
-                                if (shouldDismiss) {
-                                    onDismiss()
+                    // Content with navigation animation
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (currentCategory == null) {
+                            CategoriesView(
+                                isLandscape = isLandscape,
+                                onCategorySelected = { category ->
+                                    selectedCategory = category
                                 }
-                            }
-                        )
+                            )
+                        } else {
+                            CommandsView(
+                                category = currentCategory,
+                                isLandscape = isLandscape,
+                                onBack = { selectedCategory = null },
+                                onCommandClick = { command ->
+                                    val shouldDismiss = onCommandExecute(command)
+                                    if (shouldDismiss) {
+                                        onDismiss()
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -225,24 +242,25 @@ fun VoiceCommandsDialog(
  */
 @Composable
 private fun CategoriesView(
+    isLandscape: Boolean,
     onCategorySelected: (VoiceCommandCategory) -> Unit
 ) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val isLandscape = maxWidth > maxHeight
-        val columns = if (isLandscape) 3 else 1
+    val columns = if (isLandscape) 3 else 1
+    val horizontalSpacing = if (isLandscape) 6.dp else 8.dp
+    val verticalSpacing = if (isLandscape) 8.dp else 12.dp
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(VoiceCommandCategory.entries.toList()) { category ->
-                CategoryButton(
-                    category = category,
-                    onClick = { onCategorySelected(category) }
-                )
-            }
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(columns),
+        horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
+        verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        items(VoiceCommandCategory.entries.toList()) { category ->
+            CategoryButton(
+                category = category,
+                isLandscape = isLandscape,
+                onClick = { onCategorySelected(category) }
+            )
         }
     }
 }
@@ -253,13 +271,19 @@ private fun CategoriesView(
 @Composable
 private fun CategoryButton(
     category: VoiceCommandCategory,
+    isLandscape: Boolean,
     onClick: () -> Unit
 ) {
+    val buttonHeight = if (isLandscape) 56.dp else 64.dp
+    val iconSize = if (isLandscape) 24.dp else 28.dp
+    val textStyle = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium
+    val iconSpacing = if (isLandscape) OceanDesignTokens.Spacing.md else OceanDesignTokens.Spacing.lg
+
     Button(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp),
+            .height(buttonHeight),
         colors = ButtonDefaults.buttonColors(
             containerColor = OceanDesignTokens.Surface.elevated,
             contentColor = OceanDesignTokens.Text.primary
@@ -272,19 +296,19 @@ private fun CategoryButton(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.lg),
+                horizontalArrangement = Arrangement.spacedBy(iconSpacing),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OceanComponents.Icon(
                     imageVector = category.icon,
                     contentDescription = null,
                     variant = IconVariant.Primary,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(iconSize)
                 )
 
                 Text(
                     text = category.title,
-                    style = MaterialTheme.typography.titleMedium
+                    style = textStyle
                 )
             }
 
@@ -305,44 +329,49 @@ private fun CategoryButton(
 @Composable
 private fun CommandsView(
     category: VoiceCommandCategory,
+    isLandscape: Boolean,
     onBack: () -> Unit,
     onCommandClick: (String) -> Unit
 ) {
+    val backButtonPadding = if (isLandscape) OceanDesignTokens.Spacing.md else OceanDesignTokens.Spacing.lg
+    val columns = if (isLandscape) 2 else 1
+    val horizontalSpacing = if (isLandscape) 6.dp else 8.dp
+    val verticalSpacing = if (isLandscape) 8.dp else 12.dp
+
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
         // Back button
         TextButton(
             onClick = onBack,
-            modifier = Modifier.padding(bottom = OceanDesignTokens.Spacing.lg)
+            modifier = Modifier.padding(bottom = backButtonPadding)
         ) {
             OceanComponents.Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
                 variant = IconVariant.Primary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(if (isLandscape) 18.dp else 20.dp)
             )
             Spacer(modifier = Modifier.width(OceanDesignTokens.Spacing.sm))
-            Text(text = "Back to categories")
+            Text(
+                text = "Back to categories",
+                style = if (isLandscape) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge
+            )
         }
 
         // Commands grid - adaptive columns for landscape
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val isLandscape = maxWidth > maxHeight
-            val columns = if (isLandscape) 2 else 1
-
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(columns),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(category.commands) { command ->
-                    CommandItemCard(
-                        command = command,
-                        onClick = { onCommandClick(command.command) }
-                    )
-                }
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(columns),
+            horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
+            verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(category.commands) { command ->
+                CommandItemCard(
+                    command = command,
+                    isLandscape = isLandscape,
+                    onClick = { onCommandClick(command.command) }
+                )
             }
         }
     }
@@ -355,8 +384,15 @@ private fun CommandsView(
 @Composable
 private fun CommandItemCard(
     command: CommandItem,
+    isLandscape: Boolean,
     onClick: () -> Unit
 ) {
+    val cardPadding = if (isLandscape) OceanDesignTokens.Spacing.sm else OceanDesignTokens.Spacing.md
+    val itemSpacing = if (isLandscape) OceanDesignTokens.Spacing.sm else OceanDesignTokens.Spacing.md
+    val badgeMinWidth = if (isLandscape) 90.dp else 100.dp
+    val commandTextStyle = if (isLandscape) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall
+    val descriptionTextStyle = if (isLandscape) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall
+
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -368,23 +404,23 @@ private fun CommandItemCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(OceanDesignTokens.Spacing.md),
-            horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md),
+                .padding(cardPadding),
+            horizontalArrangement = Arrangement.spacedBy(itemSpacing),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Command badge - fixed minimum width for consistency
             Surface(
                 color = OceanDesignTokens.Surface.primary,
                 shape = MaterialTheme.shapes.small,
-                modifier = Modifier.widthIn(min = 100.dp)
+                modifier = Modifier.widthIn(min = badgeMinWidth)
             ) {
                 Text(
                     text = command.command,
                     modifier = Modifier.padding(
                         horizontal = OceanDesignTokens.Spacing.sm,
-                        vertical = OceanDesignTokens.Spacing.sm
+                        vertical = if (isLandscape) 4.dp else OceanDesignTokens.Spacing.sm
                     ),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = commandTextStyle,
                     color = OceanDesignTokens.Text.onPrimary,
                     maxLines = 1
                 )
@@ -393,7 +429,7 @@ private fun CommandItemCard(
             // Description
             Text(
                 text = command.description,
-                style = MaterialTheme.typography.bodySmall,
+                style = descriptionTextStyle,
                 color = OceanDesignTokens.Text.secondary,
                 modifier = Modifier.weight(1f),
                 maxLines = 1
