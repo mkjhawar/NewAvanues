@@ -6,7 +6,8 @@ import android.graphics.Path
 import android.graphics.PorterDuff
 import com.avanues.cockpit.core.window.AppWindow
 import com.avanues.cockpit.core.workspace.Vector3D
-import com.avanues.cockpit.layout.LayoutPreset
+import com.avanues.cockpit.layout.presets.LayoutPreset
+import com.avanues.cockpit.layout.presets.WindowPosition
 
 /**
  * Spatial window renderer for curved 3D window display
