@@ -1,0 +1,642 @@
+name: VOS4 Test Automation Pipeline
+
+on:
+  push:
+    branches: [ main, develop, 'feature/*', 'release/*' ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run tests daily at 2 AM UTC to catch any environment issues
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of tests to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - unit
+          - integration
+          - performance
+          - security
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false -Xmx4g -XX:MaxMetaspaceSize=1g
+  GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+  MIN_COVERAGE_THRESHOLD: 85
+  JAVA_VERSION: '17'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # PREPARATION STAGE - Setup and validation
+  # ============================================================================
+  prepare:
+    name: Prepare Build Environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+      test-matrix: ${{ steps.test-matrix.outputs.matrix }}
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better caching and analysis
+      
+      - name: Generate Cache Key
+        id: cache-key
+        run: |
+          CACHE_KEY="gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle/**/*') }}"
+          echo "key=$CACHE_KEY" >> $GITHUB_OUTPUT
+          echo "Generated cache key: $CACHE_KEY"
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'gradle'
+      
+      - name: Cache Gradle Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle/caches
+            .gradle/wrapper
+          key: ${{ steps.cache-key.outputs.key }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+      
+      - name: Validate Gradle Wrapper
+        run: |
+          chmod +x gradlew
+          ./gradlew --version
+      
+      - name: Generate Test Matrix
+        id: test-matrix
+        run: |
+          # Generate dynamic test matrix based on available modules
+          MODULES=$(./gradlew projects --quiet | grep -E "Project ':[^:]*'" | sed "s/Project ':\([^']*\)'.*/\1/" | jq -R -s -c 'split("\n")[:-1]')
+          echo "matrix={\"module\": $MODULES}" >> $GITHUB_OUTPUT
+          echo "Generated test matrix for modules: $MODULES"
+      
+      - name: Prepare Build Cache
+        run: |
+          ./gradlew --refresh-dependencies --no-daemon dependencies
+          echo "Dependencies downloaded and cached"
+
+  # ============================================================================
+  # STATIC ANALYSIS STAGE - Code quality checks
+  # ============================================================================
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    needs: prepare
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      
+      - name: Restore Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle/caches
+            .gradle/wrapper
+          key: ${{ needs.prepare.outputs.cache-key }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+      
+      - name: Run Android Lint
+        run: |
+          ./gradlew lint --continue --no-daemon
+          echo "Android Lint completed"
+      
+      - name: Run Detekt (Kotlin Static Analysis)
+        run: |
+          ./gradlew detekt --continue --no-daemon || echo "Detekt completed with warnings"
+      
+      - name: Run KtLint (Code Style)
+        run: |
+          ./gradlew ktlintCheck --continue --no-daemon || echo "KtLint completed with warnings"
+      
+      - name: Upload Lint Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-reports
+          path: |
+            **/build/reports/lint-results*.html
+            **/build/reports/lint-results*.xml
+            **/build/reports/detekt/
+            **/build/reports/ktlint/
+          retention-days: 30
+
+  # ============================================================================
+  # BUILD STAGE - Compile all modules
+  # ============================================================================
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [prepare, static-analysis]
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        build-type: [debug, release]
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      
+      - name: Restore Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle/caches
+            .gradle/wrapper
+          key: ${{ needs.prepare.outputs.cache-key }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+      
+      - name: Build All Modules
+        run: |
+          echo "Building VOS4 with ${{ matrix.build-type }} configuration"
+          if [ "${{ matrix.build-type }}" == "debug" ]; then
+            ./gradlew assembleDebug --no-daemon --parallel
+          else
+            ./gradlew assembleRelease --no-daemon --parallel
+          fi
+      
+      - name: Verify Build Outputs
+        run: |
+          find . -name "*.apk" -type f -exec ls -lh {} \;
+          find . -name "*.aar" -type f -exec ls -lh {} \;
+      
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-${{ matrix.build-type }}
+          path: |
+            **/build/outputs/apk/**/*.apk
+            **/build/outputs/aar/**/*.aar
+            **/build/libs/**/*.jar
+          retention-days: 7
+
+  # ============================================================================
+  # UNIT TESTS STAGE - Fast feedback tests
+  # ============================================================================
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: [prepare, build]
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.test-matrix) }}
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      
+      - name: Restore Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle/caches
+            .gradle/wrapper
+          key: ${{ needs.prepare.outputs.cache-key }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+      
+      - name: Run Unit Tests for ${{ matrix.module }}
+        if: ${{ github.event.inputs.test_type == '' || github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'unit' }}
+        run: |
+          echo "Running unit tests for module: ${{ matrix.module }}"
+          ./gradlew :${{ matrix.module }}:test --no-daemon --continue
+      
+      - name: Generate Test Reports
+        if: always()
+        run: |
+          ./gradlew :${{ matrix.module }}:jacocoTestReport --no-daemon
+      
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-unit-${{ matrix.module }}
+          path: |
+            ${{ matrix.module }}/build/test-results/test/**/*.xml
+            ${{ matrix.module }}/build/reports/tests/test/
+            ${{ matrix.module }}/build/reports/jacoco/test/
+          retention-days: 30
+
+  # ============================================================================
+  # INTEGRATION TESTS STAGE - Module interaction tests
+  # ============================================================================
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [prepare, unit-tests]
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      
+      - name: Restore Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle/caches
+            .gradle/wrapper
+          key: ${{ needs.prepare.outputs.cache-key }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+      
+      - name: Run Integration Tests
+        if: ${{ github.event.inputs.test_type == '' || github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'integration' }}
+        run: |
+          echo "Running integration tests..."
+          ./gradlew testIntegration --no-daemon --continue || echo "Integration tests completed with some failures"
+      
+      - name: Upload Integration Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-integration
+          path: |
+            **/build/test-results/testIntegration/**/*.xml
+            **/build/reports/tests/testIntegration/
+          retention-days: 30
+
+  # ============================================================================
+  # PERFORMANCE TESTS STAGE - Performance benchmarks
+  # ============================================================================
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [prepare, unit-tests]
+    timeout-minutes: 45
+    if: ${{ github.event.inputs.test_type == '' || github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'performance' }}
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      
+      - name: Restore Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle/caches
+            .gradle/wrapper
+          key: ${{ needs.prepare.outputs.cache-key }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+      
+      - name: Run Performance Tests
+        run: |
+          echo "Running performance benchmarks..."
+          # Run specific performance test classes
+          ./gradlew :apps:VoiceAccessibility:test --tests="*PerformanceTest*" --no-daemon
+          ./gradlew :libraries:SpeechRecognition:test --tests="*PerformanceTest*" --no-daemon
+      
+      - name: Generate Performance Reports
+        run: |
+          echo "Generating performance analysis..."
+          find . -name "*PerformanceTest*" -type f -exec echo "Found performance test: {}" \;
+      
+      - name: Upload Performance Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-test-results
+          path: |
+            **/build/test-results/test/**/*PerformanceTest*.xml
+            **/build/reports/tests/test/
+            **/build/performance-reports/
+          retention-days: 30
+
+  # ============================================================================
+  # SECURITY TESTS STAGE - Security validation
+  # ============================================================================
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    needs: [prepare, unit-tests]
+    timeout-minutes: 20
+    if: ${{ github.event.inputs.test_type == '' || github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'security' }}
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      
+      - name: Restore Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle/caches
+            .gradle/wrapper
+          key: ${{ needs.prepare.outputs.cache-key }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+      
+      - name: Run Security Tests
+        run: |
+          echo "Running security tests..."
+          # Run security-specific test classes
+          ./gradlew test --tests="*SecurityTest*" --no-daemon --continue
+      
+      - name: Security Scan with OWASP Dependency Check
+        run: |
+          echo "Running OWASP dependency check..."
+          ./gradlew dependencyCheckAnalyze --no-daemon || echo "Dependency check completed"
+      
+      - name: Upload Security Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-test-results
+          path: |
+            **/build/test-results/test/**/*SecurityTest*.xml
+            **/build/reports/dependency-check-report.html
+            **/build/reports/tests/test/
+          retention-days: 30
+
+  # ============================================================================
+  # COVERAGE ANALYSIS STAGE - Aggregate and validate coverage
+  # ============================================================================
+  coverage-analysis:
+    name: Coverage Analysis
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+      
+      - name: Restore Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle/caches
+            .gradle/wrapper
+          key: ${{ needs.prepare.outputs.cache-key }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+      
+      - name: Download All Test Results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-*
+          path: test-artifacts
+      
+      - name: Aggregate Coverage Reports
+        run: |
+          echo "Generating aggregate coverage report..."
+          ./gradlew jacocoTestReport --no-daemon
+          ./gradlew jacocoRootReport --no-daemon || echo "Root report generation completed"
+      
+      - name: Verify Coverage Threshold
+        run: |
+          echo "Verifying coverage meets minimum threshold of ${MIN_COVERAGE_THRESHOLD}%"
+          ./gradlew verifyCoverage --no-daemon
+      
+      - name: Generate Coverage Summary
+        run: |
+          echo "## Coverage Summary" > coverage-summary.md
+          echo "Generated on: $(date)" >> coverage-summary.md
+          echo "" >> coverage-summary.md
+          
+          # Find and summarize coverage reports
+          find . -name "jacocoTestReport.xml" -type f | while read -r file; do
+            module=$(echo "$file" | sed 's|./||' | cut -d'/' -f1)
+            echo "### Module: $module" >> coverage-summary.md
+            
+            # Extract coverage percentage (basic XML parsing)
+            if [ -f "$file" ]; then
+              echo "- Coverage report found at: $file" >> coverage-summary.md
+            fi
+            echo "" >> coverage-summary.md
+          done
+      
+      - name: Upload Coverage Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: |
+            **/build/reports/jacoco/**/*
+            **/build/jacoco/
+            coverage-summary.md
+          retention-days: 30
+      
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: '**/build/reports/jacoco/test/jacocoTestReport.xml'
+          flags: unittests
+          name: VOS4-coverage
+          fail_ci_if_error: false
+
+  # ============================================================================
+  # QUALITY GATE STAGE - Final validation
+  # ============================================================================
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [static-analysis, coverage-analysis, performance-tests, security-tests]
+    if: always()
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+      
+      - name: Validate Quality Metrics
+        run: |
+          echo "=== VOS4 Quality Gate Report ==="
+          echo "Date: $(date)"
+          echo "Commit: $GITHUB_SHA"
+          echo "Branch: $GITHUB_REF_NAME"
+          echo ""
+          
+          # Check for critical failures
+          FAILED_JOBS=""
+          
+          if [ "${{ needs.static-analysis.result }}" == "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS static-analysis"
+          fi
+          
+          if [ "${{ needs.coverage-analysis.result }}" == "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS coverage-analysis"
+          fi
+          
+          if [ "${{ needs.performance-tests.result }}" == "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS performance-tests"
+          fi
+          
+          if [ "${{ needs.security-tests.result }}" == "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS security-tests"
+          fi
+          
+          if [ -n "$FAILED_JOBS" ]; then
+            echo "❌ Quality gate FAILED. Failed jobs: $FAILED_JOBS"
+            echo "failed=true" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✅ Quality gate PASSED. All quality checks completed successfully."
+            echo "failed=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Generate Final Report
+        if: always()
+        run: |
+          cat > final-report.md << 'EOF'
+          # VOS4 Test Automation Report
+          
+          **Build**: ${{ github.run_number }}
+          **Commit**: ${{ github.sha }}
+          **Branch**: ${{ github.ref_name }}
+          **Date**: $(date)
+          
+          ## Job Results
+          - **Static Analysis**: ${{ needs.static-analysis.result }}
+          - **Coverage Analysis**: ${{ needs.coverage-analysis.result }}
+          - **Performance Tests**: ${{ needs.performance-tests.result }}
+          - **Security Tests**: ${{ needs.security-tests.result }}
+          
+          ## Quality Metrics
+          - **Minimum Coverage**: ${MIN_COVERAGE_THRESHOLD}%
+          - **Java Version**: ${JAVA_VERSION}
+          
+          ## Artifacts Generated
+          - Build artifacts (APK/AAR/JAR files)
+          - Test reports (Unit, Integration, Performance, Security)
+          - Coverage reports (JaCoCo XML/HTML)
+          - Static analysis reports (Lint, Detekt, KtLint)
+          
+          EOF
+      
+      - name: Upload Final Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: final-test-report
+          path: final-report.md
+          retention-days: 90
+
+  # ============================================================================
+  # NOTIFICATION STAGE - Notify on failures
+  # ============================================================================
+  notify:
+    name: Notify Results
+    runs-on: ubuntu-latest
+    needs: [quality-gate]
+    if: always() && (failure() || success())
+    
+    steps:
+      - name: Notify Success
+        if: ${{ needs.quality-gate.result == 'success' }}
+        run: |
+          echo "✅ VOS4 Test Pipeline SUCCESS"
+          echo "All tests passed and quality gates met."
+          echo "Build #${{ github.run_number }} is ready for deployment."
+      
+      - name: Notify Failure
+        if: ${{ needs.quality-gate.result == 'failure' }}
+        run: |
+          echo "❌ VOS4 Test Pipeline FAILED"
+          echo "Quality gate failed. Please check the failed jobs and fix issues."
+          echo "Build #${{ github.run_number }} is NOT ready for deployment."
+          exit 1
+      
+      # Optional: Add actual notification integrations here
+      # - name: Slack Notification
+      #   uses: 8398a7/action-slack@v3
+      #   with:
+      #     status: ${{ job.status }}
+      #     webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+      
+      # - name: Email Notification  
+      #   uses: dawidd6/action-send-mail@v3
+      #   with:
+      #     server_address: smtp.gmail.com
+      #     server_port: 587
+      #     username: ${{ secrets.MAIL_USERNAME }}
+      #     password: ${{ secrets.MAIL_PASSWORD }}
+      #     subject: VOS4 Test Results - ${{ job.status }}
+      #     body: Test pipeline completed with status ${{ job.status }}

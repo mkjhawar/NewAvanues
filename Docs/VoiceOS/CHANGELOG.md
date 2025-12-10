@@ -8,6 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **LearnApp:** Exploration hanging on infinite/dynamic scrollable content ([Fix Doc](fixes/VoiceOS-learnapp-infinite-scroll-timeout-fix-50712-V1.md))
+  - Root cause: No timeout protection on scrollable containers with BOTH directions (horizontal + vertical)
+  - Root cause: Dynamic content (Teams channels, social feeds) causing infinite scroll loops
+  - Solution: Added multi-layer timeout protection:
+    - 30s total / 10s per-container timeout in ScreenExplorer.collectAllElements()
+    - Limited scroll iterations for BOTH direction (10 vertical, 5 horizontal)
+    - 2-minute per-screen exploration timeout
+    - 45s timeout for exploreScreen() calls
+  - Impact: LearnApp no longer hangs on Teams, Instagram, and other dynamic content apps
+  - Files changed: `ScreenExplorer.kt`, `ScrollExecutor.kt`, `ExplorationEngine.kt`
+  - Severity: HIGH (complete exploration hang)
+
+- **LearnApp:** Progress overlay not visible during exploration, no way to interrupt
+  - Root cause: ProgressOverlayManager rendering below content, no STOP button
+  - Solution: New FloatingProgressWidget with:
+    - TYPE_ACCESSIBILITY_OVERLAY for proper z-ordering (above all content)
+    - Draggable functionality (user can move anywhere on screen)
+    - Semi-transparent background (92% opacity)
+    - Pause/Resume and STOP buttons
+  - Impact: Users can now see progress, pause/resume, or stop exploration at any time
+  - Files changed: `FloatingProgressWidget.kt` (new), `floating_progress_widget.xml` (new), `LearnAppIntegration.kt`
+  - Severity: MEDIUM (usability improvement)
+
+### Fixed
 - **VoiceOSCore:** Dynamic command real-time element search failure ([Fix Doc](docs/fixes/VoiceOSCore-dynamic-command-realtime-search-2025-11-13.md))
   - Root cause: Broken recursive node search logic + false success reporting in Tier 3
   - Solution: Kotlin extension functions for safe AccessibilityNodeInfo lifecycle + proper result checking

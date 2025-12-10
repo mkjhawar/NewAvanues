@@ -1,0 +1,46 @@
+# Build and cache directories
+.gradle/
+.cxx/
+build/
+*/build/
+**/build/
+.idea/
+*.iml
+
+# Native build artifacts
+libraries/SpeechRecognition/.cxx/
+*.o
+*.so
+*.a
+
+# Large binary files
+*.aar
+*.jar
+*.apk
+*.aab
+
+# Git internals
+.git/objects/
+
+# Temporary and log files
+*.log
+*.bin
+*.hprof
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Gradle cache
+.gradletasknamecache
+gradle-app.setting
+
+# Android Studio captures
+captures/
+
+# External native build
+.externalNativeBuild/

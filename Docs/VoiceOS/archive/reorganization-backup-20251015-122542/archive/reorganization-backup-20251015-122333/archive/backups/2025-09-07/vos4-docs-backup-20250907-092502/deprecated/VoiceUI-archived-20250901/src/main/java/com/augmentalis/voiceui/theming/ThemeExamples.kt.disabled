@@ -1,0 +1,568 @@
+/**
+ * ThemeExamples.kt - Examples of creating and modifying custom themes
+ * 
+ * Shows how developers can create their own themes, modify existing ones,
+ * and create dynamic adaptive themes.
+ */
+
+package com.augmentalis.voiceui.theming
+
+import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import com.augmentalis.voiceui.designer.UITheme
+import com.augmentalis.voiceui.designer.EasingType
+import com.augmentalis.voiceui.universalui.DeviceType
+import com.augmentalis.voiceui.universalui.AdaptiveVoiceUI
+
+/**
+ * EXAMPLE 1: Create a brand new theme from scratch
+ */
+fun createBrandTheme(): CustomTheme {
+    return CustomThemeBuilder()
+        .name("My Brand Theme")
+        .colors {
+            // Brand colors
+            primary(Color(0xFF FF6B35))      // Brand orange
+            secondary(Color(0xFF004E89))     // Brand blue
+            background(Color(0xFFFFF8F3))    // Warm white
+            surface(Color(0xFFFFFFFF))       // Pure white
+            error(Color(0xFFE63946))         // Error red
+            
+            // Text colors
+            onPrimary(Color.White)
+            onSecondary(Color.White)
+            onBackground(Color(0xFF1A1A1A))
+            onSurface(Color(0xFF1A1A1A))
+            
+            // Custom brand colors
+            custom("accent", Color(0xFF06FFA5))     // Brand green accent
+            custom("warning", Color(0xFFF77F00))    // Warning orange
+            custom("success", Color(0xFF06FFA5))    // Success green
+            custom("info", Color(0xFF4ECDC4))       // Info teal
+        }
+        .typography {
+            // Custom font stack
+            h1(size = 72f, weight = FontWeight.Bold, font = "brand-display")
+            h2(size = 48f, weight = FontWeight.SemiBold, font = "brand-display")
+            h3(size = 36f, weight = FontWeight.Medium, font = "brand-sans")
+            body1(size = 16f, weight = FontWeight.Normal, font = "brand-sans")
+            body2(size = 14f, weight = FontWeight.Normal, font = "brand-sans")
+            caption(size = 12f, weight = FontWeight.Light, font = "brand-sans")
+            button(size = 14f, weight = FontWeight.SemiBold, font = "brand-sans")
+            
+            // Custom text styles
+            custom("hero", 96f, FontWeight.Black, "brand-display")
+            custom("subtitle", 18f, FontWeight.Light, "brand-serif")
+            custom("overline", 10f, FontWeight.Bold, "brand-sans")
+        }
+        .spacing {
+            // Custom spacing scale (using 8px grid)
+            scale(base = 8f, ratio = 1.5f)  // Creates: xs=3.5, sm=5.3, md=8, lg=12, xl=18
+            
+            // Additional custom spacing
+            custom("gutter", 16f)
+            custom("section", 64f)
+            custom("page", 32f)
+        }
+        .shapes {
+            // Rounded corners for brand
+            small(4f)
+            medium(12f)
+            large(24f)
+            
+            // Custom shapes
+            custom("pill", ShapeStyle.Rounded(999f))  // Fully rounded
+            custom("sharp", ShapeStyle.Rectangle)      // No rounding
+            custom("circle", ShapeStyle.Circle)        // Perfect circle
+        }
+        .animations {
+            // Snappy animations for modern feel
+            fast(duration = 100, easing = EasingType.EASE_OUT)
+            normal(duration = 250, easing = EasingType.EASE_IN_OUT)
+            slow(duration = 400, easing = EasingType.SPRING)
+            
+            // Custom animations
+            custom("bounce", 600, EasingType.BOUNCE)
+            custom("elastic", 800, EasingType.ELASTIC)
+            custom("instant", 0, EasingType.LINEAR)
+        }
+        .shadows {
+            // Subtle shadows for depth
+            none()
+            small()
+            medium()
+            large()
+            
+            // Custom dramatic shadows
+            custom("dramatic", 4f, 12f, 24f, 4f)
+            custom("glow", 0f, 0f, 16f, 8f)
+            custom("inset", -2f, -2f, 4f, 0f)
+        }
+        .build()
+}
+
+/**
+ * EXAMPLE 2: Extend and modify Material theme
+ */
+fun createMaterialPlusTheme(): CustomTheme {
+    return CustomThemeBuilder()
+        .name("Material Plus")
+        .extending(UITheme.MATERIAL_ANDROID)  // Inherit all Material properties
+        .colors {
+            // Override specific colors
+            primary(Color(0xFF1976D2))        // Different blue
+            secondary(Color(0xFFFF6F00))      // Amber accent
+            
+            // Add custom colors while keeping others
+            custom("tertiary", Color(0xFF00C853))
+            custom("quaternary", Color(0xFFAA00FF))
+        }
+        .typography {
+            // Modify only specific text styles
+            h1(size = 80f)  // Smaller than Material default
+            button(size = 16f, weight = FontWeight.Bold)  // Bolder buttons
+        }
+        .spacing {
+            // Use Material spacing but add custom ones
+            custom("card", 12f)
+            custom("list", 8f)
+        }
+        .build()
+}
+
+/**
+ * EXAMPLE 3: Dark theme variant
+ */
+fun createDarkTheme(): CustomTheme {
+    return CustomThemeBuilder()
+        .name("Custom Dark")
+        .colors {
+            primary(Color(0xFFBB86FC))        // Purple 200
+            secondary(Color(0xFF03DAC6))      // Teal 200
+            background(Color(0xFF121212))     // Dark background
+            surface(Color(0xFF1E1E1E))        // Slightly lighter surface
+            error(Color(0xFFCF6679))          // Error light
+            
+            onPrimary(Color.Black)
+            onSecondary(Color.Black)
+            onBackground(Color(0xFFE1E1E1))
+            onSurface(Color(0xFFE1E1E1))
+            onError(Color.Black)
+            
+            // Dark theme specific colors
+            custom("elevation1", Color(0xFF1E1E1E))
+            custom("elevation2", Color(0xFF232323))
+            custom("elevation3", Color(0xFF252525))
+            custom("elevation4", Color(0xFF272727))
+        }
+        .shadows {
+            // Darker shadows for dark theme
+            small()  // Use defaults
+            custom("elevation", 0f, 1f, 3f, 0f)  // Subtle elevation shadow
+        }
+        .build()
+}
+
+/**
+ * EXAMPLE 4: Device-specific theme with overrides
+ */
+fun createAdaptiveTheme(): CustomTheme {
+    return CustomThemeBuilder()
+        .name("Adaptive Universal")
+        .colors {
+            // Base colors
+            primary(Color(0xFF2196F3))
+            secondary(Color(0xFFFF5722))
+            background(Color.White)
+            surface(Color(0xFFF5F5F5))
+        }
+        .typography {
+            // Base typography
+            h1(48f, FontWeight.Normal, "default")
+            body1(16f, FontWeight.Normal, "default")
+        }
+        // Override for phones - more compact
+        .forDevice(DeviceType.PHONE) {
+            typography {
+                h1(36f)  // Smaller headers on phones
+                body1(14f)  // Smaller body text
+            }
+            spacing {
+                small(4f)   // Tighter spacing
+                medium(8f)
+                large(12f)
+            }
+        }
+        // Override for tablets - more spacious
+        .forDevice(DeviceType.TABLET) {
+            typography {
+                h1(56f)  // Larger headers on tablets
+                body1(18f)  // Larger body text
+            }
+            spacing {
+                small(12f)   // More spacing
+                medium(24f)
+                large(36f)
+            }
+        }
+        // Override for TV - huge and readable
+        .forDevice(DeviceType.TV) {
+            typography {
+                h1(72f, FontWeight.Bold)  // Extra large for 10-foot UI
+                body1(24f)  // Large body text
+                button(20f, FontWeight.Bold)  // Large buttons
+            }
+            spacing {
+                small(16f)   // Generous spacing for TV
+                medium(32f)
+                large(48f)
+            }
+            colors {
+                // Higher contrast for TV viewing
+                primary(Color(0xFF0D47A1))  // Darker blue
+                onBackground(Color.Black)    // Pure black text
+            }
+        }
+        // Override for smart glasses - high contrast
+        .forDevice(DeviceType.SMART_GLASSES) {
+            colors {
+                primary(Color.White)
+                secondary(Color(0xFF00FF00))  // Bright green for AR
+                background(Color.Transparent)
+                surface(Color(0x88000000))    // Semi-transparent black
+                onBackground(Color.White)
+                onSurface(Color.White)
+            }
+            typography {
+                // Clear, readable fonts for AR
+                h1(36f, FontWeight.Bold)
+                body1(18f, FontWeight.Medium)
+            }
+        }
+        .build()
+}
+
+/**
+ * EXAMPLE 5: Dynamic theme that changes based on time of day
+ */
+@Composable
+fun DynamicTimeBasedTheme(): CustomTheme {
+    val hour = remember { java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY) }
+    
+    return when (hour) {
+        in 6..11 -> createMorningTheme()     // Morning: bright and energetic
+        in 12..17 -> createAfternoonTheme()  // Afternoon: productive
+        in 18..22 -> createEveningTheme()    // Evening: warm and relaxed
+        else -> createNightTheme()           // Night: dark and calm
+    }
+}
+
+fun createMorningTheme() = CustomThemeBuilder()
+    .name("Morning Light")
+    .colors {
+        primary(Color(0xFFFFA726))      // Sunrise orange
+        secondary(Color(0xFF66BB6A))    // Fresh green
+        background(Color(0xFFFFFBF0))   // Warm light
+    }
+    .build()
+
+fun createAfternoonTheme() = CustomThemeBuilder()
+    .name("Afternoon Productive")
+    .colors {
+        primary(Color(0xFF42A5F5))      // Sky blue
+        secondary(Color(0xFFAB47BC))    // Purple
+        background(Color.White)         // Clean white
+    }
+    .build()
+
+fun createEveningTheme() = CustomThemeBuilder()
+    .name("Evening Warm")
+    .colors {
+        primary(Color(0xFFFF7043))      // Sunset orange
+        secondary(Color(0xFF5C6BC0))    // Twilight indigo
+        background(Color(0xFFFFF3E0))   // Warm cream
+    }
+    .build()
+
+fun createNightTheme() = CustomThemeBuilder()
+    .name("Night Mode")
+    .colors {
+        primary(Color(0xFF7E57C2))      // Deep purple
+        secondary(Color(0xFF26A69A))    // Teal
+        background(Color(0xFF121212))   // Dark
+        onBackground(Color(0xFFE0E0E0)) // Light text
+    }
+    .build()
+
+/**
+ * EXAMPLE 6: Corporate theme with strict brand guidelines
+ */
+fun createCorporateTheme(): CustomTheme {
+    return CustomThemeBuilder()
+        .name("Enterprise Corp Theme")
+        .colors {
+            // Strict corporate colors (no deviation allowed)
+            primary(Color(0xFF003366))       // Corporate blue
+            secondary(Color(0xFF666666))     // Corporate gray
+            background(Color.White)
+            surface(Color(0xFFF8F8F8))
+            error(Color(0xFFCC0000))
+            
+            // No other colors allowed per brand guide
+            custom("approved1", Color(0xFF003366))
+            custom("approved2", Color(0xFF666666))
+            custom("approved3", Color(0xFF999999))
+            custom("approved4", Color(0xFFCCCCCC))
+        }
+        .typography {
+            // Corporate font requirements
+            h1(48f, FontWeight.Light, "helvetica-neue")
+            h2(36f, FontWeight.Light, "helvetica-neue")
+            h3(24f, FontWeight.Normal, "helvetica-neue")
+            body1(14f, FontWeight.Normal, "helvetica-neue")
+            body2(12f, FontWeight.Normal, "helvetica-neue")
+            
+            // Legal text style
+            custom("legal", 10f, FontWeight.Light, "helvetica-neue")
+            custom("disclaimer", 9f, FontWeight.Light, "helvetica-neue")
+        }
+        .spacing {
+            // Corporate standard spacing
+            extraSmall(4f)
+            small(8f)
+            medium(16f)
+            large(24f)
+            extraLarge(32f)
+            
+            // No custom spacing allowed
+        }
+        .shapes {
+            // Conservative shapes only
+            small(2f)   // Barely rounded
+            medium(4f)  // Slightly rounded
+            large(6f)   // Still conservative
+        }
+        .animations {
+            // Professional animations only
+            fast(200, EasingType.LINEAR)      // No fancy easing
+            normal(300, EasingType.LINEAR)
+            slow(400, EasingType.LINEAR)
+        }
+        .shadows {
+            // Minimal shadows for professional look
+            none()
+            custom("subtle", 0f, 1f, 2f, 0f)
+            custom("card", 0f, 2f, 4f, 0f)
+        }
+        .build()
+}
+
+/**
+ * EXAMPLE 7: Gaming theme with vibrant colors and effects
+ */
+fun createGamingTheme(): CustomTheme {
+    return CustomThemeBuilder()
+        .name("Neon Gaming")
+        .colors {
+            // Neon colors
+            primary(Color(0xFFFF00FF))       // Magenta
+            secondary(Color(0xFF00FFFF))     // Cyan
+            background(Color(0xFF0A0A0A))    // Near black
+            surface(Color(0xFF1A1A1A))       // Dark gray
+            
+            // Gaming accent colors
+            custom("neonGreen", Color(0xFF00FF00))
+            custom("neonYellow", Color(0xFFFFFF00))
+            custom("neonOrange", Color(0xFFFF6600))
+            custom("neonPurple", Color(0xFF9D00FF))
+            custom("healthBar", Color(0xFF00FF00))
+            custom("manaBar", Color(0xFF0099FF))
+            custom("xpBar", Color(0xFFFFD700))
+        }
+        .typography {
+            // Gaming fonts
+            h1(64f, FontWeight.Black, "game-font")
+            h2(48f, FontWeight.Bold, "game-font")
+            button(18f, FontWeight.Bold, "game-font")
+            
+            // Special gaming text
+            custom("score", 72f, FontWeight.Black, "digital-font")
+            custom("timer", 48f, FontWeight.Bold, "digital-font")
+            custom("achievement", 24f, FontWeight.Bold, "game-font")
+        }
+        .animations {
+            // Flashy gaming animations
+            fast(50, EasingType.EASE_OUT)
+            normal(150, EasingType.BOUNCE)
+            slow(300, EasingType.ELASTIC)
+            
+            custom("explosion", 100, EasingType.EASE_OUT)
+            custom("powerup", 500, EasingType.ELASTIC)
+            custom("damage", 200, EasingType.BOUNCE)
+        }
+        .shadows {
+            // Glowing shadows
+            custom("neonGlow", 0f, 0f, 20f, 10f)
+            custom("powerGlow", 0f, 0f, 30f, 15f)
+            custom("textGlow", 0f, 0f, 10f, 5f)
+        }
+        .build()
+}
+
+/**
+ * EXAMPLE 8: Accessibility-focused high contrast theme
+ */
+fun createAccessibilityTheme(): CustomTheme {
+    return CustomThemeBuilder()
+        .name("High Contrast Accessible")
+        .colors {
+            // Maximum contrast colors
+            primary(Color.Black)
+            secondary(Color.White)
+            background(Color.White)
+            surface(Color.Yellow)           // High visibility surface
+            error(Color.Red)
+            
+            onPrimary(Color.White)
+            onSecondary(Color.Black)
+            onBackground(Color.Black)
+            onSurface(Color.Black)
+            
+            // Focus indicators
+            custom("focus", Color.Blue)
+            custom("focusOutline", Color.Black)
+            custom("visited", Color.Purple)
+        }
+        .typography {
+            // Large, clear fonts
+            h1(72f, FontWeight.Bold, "arial")
+            h2(56f, FontWeight.Bold, "arial")
+            h3(42f, FontWeight.Bold, "arial")
+            body1(20f, FontWeight.Medium, "arial")
+            body2(18f, FontWeight.Medium, "arial")
+            button(22f, FontWeight.Bold, "arial")
+        }
+        .spacing {
+            // Generous spacing for clarity
+            extraSmall(8f)
+            small(16f)
+            medium(24f)
+            large(32f)
+            extraLarge(48f)
+        }
+        .shapes {
+            // Clear shapes with distinct borders
+            small(0f)    // Sharp corners for clarity
+            medium(0f)
+            large(0f)
+        }
+        .shadows {
+            // No shadows - rely on borders for depth
+            none()
+        }
+        .build()
+}
+
+/**
+ * EXAMPLE 9: Using and applying custom themes
+ */
+@Composable
+fun ApplyCustomThemeExample() {
+    // Create or load theme
+    val myTheme = createBrandTheme()
+    
+    // Register theme globally
+    ThemeManager.registerTheme(myTheme)
+    ThemeManager.setCurrentTheme("My Brand Theme")
+    
+    // Apply to screen
+    val currentTheme by ThemeManager.getCurrentTheme().collectAsState()
+    
+    currentTheme?.let { theme ->
+        AdaptiveVoiceScreen(
+            name = "themed_screen",
+            customTheme = theme  // Apply custom theme
+        ) {
+            text("This uses my custom theme!")
+            button("Styled Button") { /* action */ }
+        }
+    }
+}
+
+/**
+ * EXAMPLE 10: Import/Export themes for sharing
+ */
+fun shareThemeExample() {
+    val myTheme = createBrandTheme()
+    
+    // Export theme to JSON
+    val themeJson = ThemeManager.exportTheme(myTheme)
+    println("Theme JSON: $themeJson")
+    
+    // Save to file
+    val file = java.io.File("my-brand-theme.json")
+    ThemeManager.saveThemeToFile(myTheme, file)
+    
+    // Load from file
+    val loadedTheme = ThemeManager.loadThemeFromFile(file)
+    loadedTheme?.let {
+        ThemeManager.registerTheme(it)
+    }
+    
+    // Import from JSON string (e.g., from server or user input)
+    val importedTheme = ThemeManager.importTheme(themeJson)
+    importedTheme?.let {
+        ThemeManager.registerTheme(it)
+    }
+}
+
+/**
+ * EXAMPLE 11: Dynamic theme switching based on user preferences
+ */
+@Composable
+fun UserPreferenceThemeExample() {
+    var userPreference by remember { mutableStateOf("light") }
+    
+    val theme = when (userPreference) {
+        "light" -> createLightTheme()
+        "dark" -> createDarkTheme()
+        "high-contrast" -> createAccessibilityTheme()
+        "gaming" -> createGamingTheme()
+        "corporate" -> createCorporateTheme()
+        else -> createBrandTheme()
+    }
+    
+    AdaptiveVoiceScreen(
+        name = "preference_based",
+        customTheme = theme
+    ) {
+        text("Current theme: ${theme.name}")
+        
+        // Theme switcher
+        dropdown(
+            label = "Choose Theme",
+            options = listOf("light", "dark", "high-contrast", "gaming", "corporate"),
+            selected = userPreference,
+            onSelectionChange = { userPreference = it }
+        )
+    }
+}
+
+// Helper function to create light theme
+fun createLightTheme() = CustomThemeBuilder()
+    .name("Light Theme")
+    .colors {
+        primary(Color(0xFF2196F3))
+        secondary(Color(0xFFFF5722))
+        background(Color.White)
+        surface(Color(0xFFF5F5F5))
+        onBackground(Color.Black)
+    }
+    .build()
+
+// Placeholder composables for examples
+@Composable private fun AdaptiveVoiceScreen(name: String, customTheme: CustomTheme? = null, content: @Composable () -> Unit) {}
+@Composable private fun text(text: String) {}
+@Composable private fun button(text: String, onClick: () -> Unit) {}
+@Composable private fun dropdown(label: String, options: List<String>, selected: String, onSelectionChange: (String) -> Unit) {}
