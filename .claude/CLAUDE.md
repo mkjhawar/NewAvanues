@@ -4,7 +4,6 @@ NewAvanues - Platform-centric KMP monorepo.
 
 ---
 
-<<<<<<< HEAD
 ## IDEACODE API (PREFERRED - 97% TOKEN SAVINGS)
 
 API URL: `http://localhost:3847`
@@ -20,8 +19,6 @@ Start: `cd /Volumes/M-Drive/Coding/ideacode/ideacode-api && npm start`
 
 ---
 
-=======
->>>>>>> AVA-Development
 ## MANDATORY: Before Any File Operation
 
 1. **READ REGISTRIES FIRST:**
