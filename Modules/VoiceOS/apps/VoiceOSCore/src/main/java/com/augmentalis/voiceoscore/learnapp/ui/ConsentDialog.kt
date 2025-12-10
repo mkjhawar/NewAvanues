@@ -19,10 +19,6 @@ import android.content.Context
 import android.graphics.PixelFormat
 import android.util.Log
 import android.view.Gravity
-<<<<<<< HEAD
-=======
-import android.view.LayoutInflater
->>>>>>> AVA-Development
 import android.view.View
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
@@ -31,10 +27,7 @@ import android.widget.CheckBox
 import android.widget.TextView
 import com.augmentalis.voiceoscore.R
 import com.augmentalis.voiceoscore.learnapp.ui.widgets.WidgetOverlayHelper
-<<<<<<< HEAD
 import com.augmentalis.voiceoscore.utils.MaterialThemeHelper
-=======
->>>>>>> AVA-Development
 
 
 /**
@@ -152,16 +145,9 @@ class ConsentDialog(private val context: AccessibilityService) {
                 }
             }
 
-<<<<<<< HEAD
             // Inflate custom view with Material theme for MaterialComponents.Button styles
             Log.d(TAG, "Inflating consent dialog layout")
             val customView = MaterialThemeHelper.inflateOverlay(context, R.layout.learnapp_layout_consent_dialog)
-=======
-            // Inflate custom view
-            Log.d(TAG, "Inflating consent dialog layout")
-            val customView = LayoutInflater.from(context)
-                .inflate(R.layout.learnapp_layout_consent_dialog, null)
->>>>>>> AVA-Development
             Log.d(TAG, "Layout inflated successfully")
 
             // Configure title

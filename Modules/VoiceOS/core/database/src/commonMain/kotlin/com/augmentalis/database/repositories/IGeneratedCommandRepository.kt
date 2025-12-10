@@ -39,14 +39,11 @@ interface IGeneratedCommandRepository {
     suspend fun getAll(): List<GeneratedCommandDTO>
 
     /**
-<<<<<<< HEAD
      * Get all commands (alias for getAll for compatibility).
      */
     suspend fun getAllCommands(): List<GeneratedCommandDTO>
 
     /**
-=======
->>>>>>> AVA-Development
      * Get commands by action type.
      */
     suspend fun getByActionType(actionType: String): List<GeneratedCommandDTO>
@@ -105,7 +102,6 @@ interface IGeneratedCommandRepository {
      * Count all commands.
      */
     suspend fun count(): Long
-<<<<<<< HEAD
 
     /**
      * Get all commands for a specific package.
@@ -120,6 +116,4 @@ interface IGeneratedCommandRepository {
      * @param command Command to update
      */
     suspend fun update(command: GeneratedCommandDTO)
-=======
->>>>>>> AVA-Development
 }

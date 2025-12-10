@@ -17,11 +17,8 @@ import com.augmentalis.voiceoscore.learnapp.models.ElementClassification
 import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationBehavior
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
-<<<<<<< HEAD
 import com.augmentalis.uuidcreator.core.ClickabilityDetector
 import com.augmentalis.voiceoscore.learnapp.detection.CrossPlatformDetector
-=======
->>>>>>> AVA-Development
 
 /**
  * Element Classifier
@@ -79,7 +76,6 @@ class ElementClassifier(
     private val loginDetector = LoginScreenDetector()
 
     /**
-<<<<<<< HEAD
      * Clickability detector (multi-signal scoring)
      *
      * Integrated 2025-12-08: Smart filtering with 6-signal scoring system
@@ -133,8 +129,6 @@ class ElementClassifier(
     }
 
     /**
-=======
->>>>>>> AVA-Development
      * Classify single element
      *
      * AGGRESSIVE MODE: Clicks ALL potentially interactive elements, not just those marked isClickable.
@@ -335,19 +329,15 @@ class ElementClassifier(
      * - Lowered size threshold for elements with content (40dp)
      * - Check for sibling navigation elements
      *
-<<<<<<< HEAD
      * ENHANCEMENT (2025-12-08): Integrated ClickabilityDetector for smart filtering
      * - Uses 6-signal scoring system when AccessibilityNodeInfo available
      * - Threshold: 0.5+ = should create VUID
      * - Fallback to heuristic-based detection if node unavailable
      *
-=======
->>>>>>> AVA-Development
      * @param element Element to check
      * @return true if should be clicked in aggressive mode
      */
     private fun isAggressivelyClickable(element: ElementInfo): Boolean {
-<<<<<<< HEAD
         // SMART FILTERING (2025-12-08): Use ClickabilityDetector if node available
         // This provides multi-signal scoring (6 signals, 0.5+ threshold)
         element.node?.let { node ->
@@ -394,8 +384,6 @@ class ElementClassifier(
         // FALLBACK: Heuristic-based detection (original logic)
         // Used when AccessibilityNodeInfo is not available
 
-=======
->>>>>>> AVA-Development
         // Already marked clickable
         if (element.isClickable) {
             return true

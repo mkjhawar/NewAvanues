@@ -58,15 +58,9 @@ class LearnAppDeveloperSettings(context: Context) {
         const val KEY_MAX_EXPLORATION_DEPTH = "max_exploration_depth"
         const val DEFAULT_MAX_EXPLORATION_DEPTH = 10
 
-<<<<<<< HEAD
         /** Maximum exploration duration in milliseconds. Default: 1,080,000 (18 minutes) */
         const val KEY_EXPLORATION_TIMEOUT_MS = "exploration_timeout_ms"
         const val DEFAULT_EXPLORATION_TIMEOUT_MS = 1_080_000L
-=======
-        /** Maximum exploration duration in milliseconds. Default: 300,000 (5 minutes) */
-        const val KEY_EXPLORATION_TIMEOUT_MS = "exploration_timeout_ms"
-        const val DEFAULT_EXPLORATION_TIMEOUT_MS = 300_000L
->>>>>>> AVA-Development
 
         /** Estimated initial screen count for progress calculation. Default: 20 */
         const val KEY_ESTIMATED_INITIAL_SCREEN_COUNT = "estimated_initial_screen_count"
@@ -301,13 +295,10 @@ class LearnAppDeveloperSettings(context: Context) {
         /** Enable screenshot capture on each screen. Default: false */
         const val KEY_SCREENSHOT_ON_SCREEN = "screenshot_on_screen"
         const val DEFAULT_SCREENSHOT_ON_SCREEN = false
-<<<<<<< HEAD
 
         /** Enable VUID creation debug overlay. Default: false */
         const val KEY_DEBUG_OVERLAY_ENABLED = "debug_overlay_enabled"
         const val DEFAULT_DEBUG_OVERLAY_ENABLED = false
-=======
->>>>>>> AVA-Development
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -770,7 +761,6 @@ class LearnAppDeveloperSettings(context: Context) {
         prefs.edit().putBoolean(KEY_SCREENSHOT_ON_SCREEN, enabled).apply()
     }
 
-<<<<<<< HEAD
     fun isDebugOverlayEnabled(): Boolean =
         prefs.getBoolean(KEY_DEBUG_OVERLAY_ENABLED, DEFAULT_DEBUG_OVERLAY_ENABLED)
 
@@ -778,8 +768,6 @@ class LearnAppDeveloperSettings(context: Context) {
         prefs.edit().putBoolean(KEY_DEBUG_OVERLAY_ENABLED, enabled).apply()
     }
 
-=======
->>>>>>> AVA-Development
     // ========== UTILITY METHODS ==========
 
     /** Reset all settings to defaults */
@@ -857,12 +845,8 @@ class LearnAppDeveloperSettings(context: Context) {
             KEY_OVERLAY_AUTO_HIDE_DELAY_MS to getOverlayAutoHideDelayMs(),
             // Debug
             KEY_VERBOSE_LOGGING to isVerboseLoggingEnabled(),
-<<<<<<< HEAD
             KEY_SCREENSHOT_ON_SCREEN to isScreenshotOnScreenEnabled(),
             KEY_DEBUG_OVERLAY_ENABLED to isDebugOverlayEnabled()
-=======
-            KEY_SCREENSHOT_ON_SCREEN to isScreenshotOnScreenEnabled()
->>>>>>> AVA-Development
         )
     }
 
@@ -936,12 +920,8 @@ class LearnAppDeveloperSettings(context: Context) {
             KEY_OVERLAY_AUTO_HIDE_DELAY_MS to "Overlay auto-hide delay (ms)",
             // Debug
             KEY_VERBOSE_LOGGING to "Enable detailed logging for debugging",
-<<<<<<< HEAD
             KEY_SCREENSHOT_ON_SCREEN to "Capture screenshot on each new screen",
             KEY_DEBUG_OVERLAY_ENABLED to "Show VUID creation debug overlay during exploration"
-=======
-            KEY_SCREENSHOT_ON_SCREEN to "Capture screenshot on each new screen"
->>>>>>> AVA-Development
         )
     }
 
@@ -1020,12 +1000,8 @@ class LearnAppDeveloperSettings(context: Context) {
             "UI & Debug" to listOf(
                 KEY_OVERLAY_AUTO_HIDE_DELAY_MS,
                 KEY_VERBOSE_LOGGING,
-<<<<<<< HEAD
                 KEY_SCREENSHOT_ON_SCREEN,
                 KEY_DEBUG_OVERLAY_ENABLED
-=======
-                KEY_SCREENSHOT_ON_SCREEN
->>>>>>> AVA-Development
             )
         )
     }

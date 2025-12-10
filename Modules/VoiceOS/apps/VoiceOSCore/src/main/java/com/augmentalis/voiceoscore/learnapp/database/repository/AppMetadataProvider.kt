@@ -126,7 +126,6 @@ class AppMetadataProvider(
         val bytes = MessageDigest.getInstance("MD5").digest(input.toByteArray())
         return bytes.joinToString("") { "%02x".format(it) }
     }
-<<<<<<< HEAD
 
     /**
      * Resolve package name from app name
@@ -170,8 +169,6 @@ class AppMetadataProvider(
             null
         }
     }
-=======
->>>>>>> AVA-Development
 }
 
 /**

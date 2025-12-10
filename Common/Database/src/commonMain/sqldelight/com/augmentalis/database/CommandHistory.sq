@@ -1,0 +1,138 @@
+-- CommandHistory.sq
+-- Voice command execution history tracking
+
+CREATE TABLE command_history_entry (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    originalText TEXT NOT NULL,
+    processedCommand TEXT,
+    confidence REAL NOT NULL,
+    timestamp INTEGER NOT NULL,
+    language TEXT NOT NULL,
+    engineUsed TEXT NOT NULL,
+    success INTEGER NOT NULL,
+    executionTimeMs INTEGER NOT NULL,
+    usageCount INTEGER NOT NULL DEFAULT 1,
+    source TEXT NOT NULL DEFAULT 'VOICE'
+);
+
+CREATE INDEX idx_che_timestamp ON command_history_entry(timestamp);
+CREATE INDEX idx_che_language ON command_history_entry(language);
+CREATE INDEX idx_che_engine ON command_history_entry(engineUsed);
+CREATE INDEX idx_che_success ON command_history_entry(success);
+
+-- Insert new entry
+insert:
+INSERT OR REPLACE INTO command_history_entry(
+    originalText, processedCommand, confidence, timestamp,
+    language, engineUsed, success, executionTimeMs, usageCount, source
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get by ID
+getById:
+SELECT * FROM command_history_entry WHERE id = ?;
+
+-- Get all entries
+getAll:
+SELECT * FROM command_history_entry ORDER BY timestamp DESC;
+
+-- Get by time range
+getByTimeRange:
+SELECT * FROM command_history_entry
+WHERE timestamp BETWEEN :start AND :end
+ORDER BY timestamp DESC;
+
+-- Get by language
+getByLanguage:
+SELECT * FROM command_history_entry
+WHERE language = :language
+ORDER BY timestamp DESC;
+
+-- Get by engine
+getByEngine:
+SELECT * FROM command_history_entry
+WHERE engineUsed = :engine
+ORDER BY timestamp DESC;
+
+-- Get successful commands
+getSuccessful:
+SELECT * FROM command_history_entry
+WHERE success = 1
+ORDER BY timestamp DESC;
+
+-- Get most used commands
+getMostUsed:
+SELECT originalText, SUM(usageCount) AS totalUsage
+FROM command_history_entry
+WHERE success = 1
+GROUP BY originalText
+ORDER BY totalUsage DESC
+LIMIT :limit;
+
+-- Get success rate
+getSuccessRate:
+SELECT CASE WHEN COUNT(*) = 0 THEN 0.0
+ELSE CAST(SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) AS REAL) / COUNT(*)
+END AS rate FROM command_history_entry;
+
+-- Get success rate by engine
+getSuccessRateByEngine:
+SELECT engineUsed,
+    CASE WHEN COUNT(*) = 0 THEN 0.0
+    ELSE CAST(SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) AS REAL) / COUNT(*)
+    END AS rate
+FROM command_history_entry
+GROUP BY engineUsed;
+
+-- Increment usage count
+incrementUsage:
+UPDATE command_history_entry
+SET usageCount = usageCount + 1
+WHERE id = ?;
+
+-- Delete old entries
+deleteOlderThan:
+DELETE FROM command_history_entry WHERE timestamp < ?;
+
+-- Cleanup with retention
+cleanupOldEntries:
+DELETE FROM command_history_entry
+WHERE id NOT IN (
+    SELECT id FROM command_history_entry
+    ORDER BY timestamp DESC
+    LIMIT :retainCount
+)
+AND timestamp < :cutoffTime;
+
+-- Delete all
+deleteAll:
+DELETE FROM command_history_entry;
+
+-- Count entries
+count:
+SELECT COUNT(*) FROM command_history_entry;
+
+-- Count successful entries
+countSuccessful:
+SELECT COUNT(*) FROM command_history_entry WHERE success = 1;
+
+-- Get entries after timestamp
+getAfterTime:
+SELECT * FROM command_history_entry
+WHERE timestamp > :timestamp
+ORDER BY timestamp DESC;
+
+-- Get recent entries
+getRecent:
+SELECT * FROM command_history_entry
+ORDER BY timestamp DESC
+LIMIT :limit;
+
+-- Get average execution time
+getAverageExecutionTime:
+SELECT CASE WHEN COUNT(*) = 0 THEN 0.0
+ELSE CAST(SUM(executionTimeMs) AS REAL) / COUNT(*)
+END FROM command_history_entry;
+
+-- Last insert row ID
+lastInsertRowId:
+SELECT last_insert_rowid();

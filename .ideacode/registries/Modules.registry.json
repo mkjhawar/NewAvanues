@@ -160,19 +160,16 @@
       "path": "Modules/AvaConnect",
       "status": "planned",
       "description": "AvaConnect connectivity feature module"
-<<<<<<< HEAD
     },
     {
       "id": "Cockpit",
       "name": "Cockpit",
-      "type": "module",
-      "profile": "feature-module",
-      "platforms": ["android", "ios", "macos", "windows", "linux"],
-      "path": "Modules/Cockpit",
-      "status": "development",
-      "description": "Voice-first spatial workspace library for managing floating windows in AR/2D environments"
-=======
->>>>>>> AVA-Development
+      "type": "package",
+      "profile": "kmp-library",
+      "platforms": ["android", "ios", "macos", "windows", "linux", "web"],
+      "path": "Common/Cockpit",
+      "status": "active",
+      "description": "Spatial workspace library for managing floating windows in AR/2D environments"
     }
   ]
 }

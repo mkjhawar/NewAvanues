@@ -9,10 +9,7 @@
 package com.augmentalis.voiceoscore.accessibility.ui
 
 import android.content.Intent
-<<<<<<< HEAD
 import android.content.res.Configuration
-=======
->>>>>>> AVA-Development
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -75,15 +72,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-<<<<<<< HEAD
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-=======
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
->>>>>>> AVA-Development
 import androidx.compose.ui.unit.dp
 import com.augmentalis.voiceoscore.accessibility.ui.theme.AccessibilityTheme
 import com.augmentalis.voiceoscore.accessibility.ui.utils.DepthLevel
@@ -110,7 +102,6 @@ class AccessibilitySettings : ComponentActivity() {
     }
 }
 
-<<<<<<< HEAD
 /**
  * Adaptive spacing for Settings screen based on orientation
  */
@@ -146,8 +137,6 @@ fun getSettingsAdaptiveSpacing(): SettingsAdaptiveSpacing {
     }
 }
 
-=======
->>>>>>> AVA-Development
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -155,18 +144,12 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
-<<<<<<< HEAD
     val spacing = getSettingsAdaptiveSpacing()
     val localConfig = LocalConfiguration.current
     val isLandscape = localConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     @Suppress("UNUSED_VARIABLE")
     val configuration by settingsViewModel.configuration.collectAsState()
-=======
-
-    @Suppress("UNUSED_VARIABLE")
-    val configuration by settingsViewModel.configuration.collectAsState() // Configuration passed to child components
->>>>>>> AVA-Development
     val performanceMode by settingsViewModel.performanceMode.collectAsState()
     val handlerStates by settingsViewModel.handlerStates.collectAsState()
     val isLoading by settingsViewModel.isLoading.collectAsState()
@@ -180,16 +163,11 @@ fun SettingsScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-<<<<<<< HEAD
-=======
-            // Top App Bar
->>>>>>> AVA-Development
             SettingsTopBar(
                 onNavigateBack = onNavigateBack,
                 onOpenSystemSettings = {
                     val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                     context.startActivity(intent)
-<<<<<<< HEAD
                 },
                 isLandscape = isLandscape
             )
@@ -201,20 +179,6 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(spacing.itemSpacing),
                 contentPadding = PaddingValues(vertical = spacing.itemSpacing)
             ) {
-=======
-                }
-            )
-
-            // Settings Content
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(vertical = 16.dp)
-            ) {
-                // Error message if any
->>>>>>> AVA-Development
                 if (!errorMessage.isNullOrBlank()) {
                     item {
                         Card(
@@ -225,20 +189,13 @@ fun SettingsScreen(
                         ) {
                             Text(
                                 text = errorMessage ?: "",
-<<<<<<< HEAD
                                 modifier = Modifier.padding(spacing.cardPadding),
                                 color = Color(0xFFFF5722),
                                 style = MaterialTheme.typography.bodySmall
-=======
-                                modifier = Modifier.padding(16.dp),
-                                color = Color(0xFFFF5722),
-                                style = MaterialTheme.typography.bodyMedium
->>>>>>> AVA-Development
                             )
                         }
                     }
                 }
-<<<<<<< HEAD
 
                 item {
                     LanguageControlSection(settingsViewModel = settingsViewModel, spacing = spacing)
@@ -270,58 +227,10 @@ fun SettingsScreen(
 
                 item {
                     AdvancedSettingsSection(settingsViewModel = settingsViewModel, spacing = spacing)
-=======
-                // Service Control Section
-                item {
-                    LanguageControlSection(
-                        settingsViewModel = settingsViewModel
-                    )
-                }
-
-                // Service Control Section
-                item {
-                    ServiceControlSection(
-                        settingsViewModel = settingsViewModel
-                    )
-                }
-
-                // Handler Toggles Section
-                item {
-                    HandlerTogglesSection(
-                        settingsViewModel = settingsViewModel,
-                        handlerStates = handlerStates
-                    )
-                }
-
-                // Performance Settings Section
-                item {
-                    PerformanceSettingsSection(
-                        settingsViewModel = settingsViewModel,
-                        performanceMode = performanceMode
-                    )
-                }
-
-                // Cursor Settings Section
-                item {
-                    CursorSettingsSection(
-                        settingsViewModel = settingsViewModel
-                    )
-                }
-
-                // Advanced Settings Section
-                item {
-                    AdvancedSettingsSection(
-                        settingsViewModel = settingsViewModel
-                    )
->>>>>>> AVA-Development
                 }
             }
         }
 
-<<<<<<< HEAD
-=======
-        // Loading overlay
->>>>>>> AVA-Development
         if (isLoading) {
             Box(
                 modifier = Modifier
@@ -329,13 +238,7 @@ fun SettingsScreen(
                     .background(Color.Black.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
-<<<<<<< HEAD
                 CircularProgressIndicator(color = Color(0xFF2196F3))
-=======
-                CircularProgressIndicator(
-                    color = Color(0xFF2196F3)
-                )
->>>>>>> AVA-Development
             }
         }
     }
@@ -345,12 +248,8 @@ fun SettingsScreen(
 @Composable
 fun SettingsTopBar(
     onNavigateBack: () -> Unit,
-<<<<<<< HEAD
     onOpenSystemSettings: () -> Unit,
     isLandscape: Boolean = false
-=======
-    onOpenSystemSettings: () -> Unit
->>>>>>> AVA-Development
 ) {
     Card(
         modifier = Modifier
@@ -358,7 +257,6 @@ fun SettingsTopBar(
             .glassMorphism(
                 config = GlassMorphismConfig(
                     cornerRadius = 0.dp,
-<<<<<<< HEAD
                     backgroundOpacity = 0.08f,
                     borderOpacity = 0.1f,
                     borderWidth = 0.dp,
@@ -366,20 +264,10 @@ fun SettingsTopBar(
                     tintOpacity = 0.1f
                 ),
                 depth = DepthLevel(0.6f)
-=======
-                    backgroundOpacity = 0.1f,
-                    borderOpacity = 0.2f,
-                    borderWidth = 0.dp,
-                    tintColor = Color(0xFF4285F4),
-                    tintOpacity = 0.15f
-                ),
-                depth = DepthLevel(0.8f)
->>>>>>> AVA-Development
             ),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(0.dp)
     ) {
-<<<<<<< HEAD
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -410,49 +298,13 @@ fun SettingsTopBar(
                 )
             }
         }
-=======
-        TopAppBar(
-            title = {
-                Text(
-                    text = "Settings",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White
-                    )
-                }
-            },
-            actions = {
-                IconButton(onClick = onOpenSystemSettings) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "System Settings",
-                        tint = Color.White
-                    )
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent
-            )
-        )
->>>>>>> AVA-Development
     }
 }
 
 @Composable
 fun ServiceControlSection(
-<<<<<<< HEAD
     settingsViewModel: SettingsViewModel,
     spacing: SettingsAdaptiveSpacing
-=======
-    settingsViewModel: SettingsViewModel
->>>>>>> AVA-Development
 ) {
     val showToasts by settingsViewModel.showToasts.collectAsState()
     val verboseLogging by settingsViewModel.verboseLogging.collectAsState()
@@ -460,7 +312,6 @@ fun ServiceControlSection(
 
     SettingsSection(
         title = "Service Control",
-<<<<<<< HEAD
         icon = Icons.Default.Power,
         spacing = spacing
     ) {
@@ -484,33 +335,6 @@ fun ServiceControlSection(
             isChecked = verboseLogging,
             onCheckedChange = { settingsViewModel.updateVerboseLogging(it) },
             spacing = spacing
-=======
-        icon = Icons.Default.Power
-    ) {
-        SettingsToggle(
-            title = "Service Enabled",
-            description = "Enable/disable the accessibility service",
-            isChecked = configuration.isEnabled,
-            onCheckedChange = { /* Service enable/disable handled by system settings */ }
-        )
-
-        SettingsToggle(
-            title = "Show Notifications",
-            description = "Display toast messages for commands",
-            isChecked = showToasts,
-            onCheckedChange = { enabled ->
-                settingsViewModel.updateShowToasts(enabled)
-            }
-        )
-
-        SettingsToggle(
-            title = "Verbose Logging",
-            description = "Enable detailed debug logging",
-            isChecked = verboseLogging,
-            onCheckedChange = { enabled ->
-                settingsViewModel.updateVerboseLogging(enabled)
-            }
->>>>>>> AVA-Development
         )
     }
 }
@@ -518,17 +342,10 @@ fun ServiceControlSection(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LanguageControlSection(
-<<<<<<< HEAD
     settingsViewModel: SettingsViewModel,
     spacing: SettingsAdaptiveSpacing
 ) {
     var expanded by remember { mutableStateOf(false) }
-=======
-    settingsViewModel: SettingsViewModel
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val context = LocalContext.current
->>>>>>> AVA-Development
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded }
@@ -537,18 +354,10 @@ fun LanguageControlSection(
             value = settingsViewModel.selectedOption.value,
             onValueChange = {},
             readOnly = true,
-<<<<<<< HEAD
             label = { Text("Language", style = MaterialTheme.typography.labelSmall) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.menuAnchor().fillMaxWidth(),
             textStyle = MaterialTheme.typography.bodySmall
-=======
-            label = { Text("Select an option") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth()
->>>>>>> AVA-Development
         )
 
         ExposedDropdownMenu(
@@ -557,11 +366,7 @@ fun LanguageControlSection(
         ) {
             settingsViewModel.options.forEach { option ->
                 DropdownMenuItem(
-<<<<<<< HEAD
                     text = { Text(option, style = MaterialTheme.typography.bodySmall) },
-=======
-                    text = { Text(option) },
->>>>>>> AVA-Development
                     onClick = {
                         settingsViewModel.onOptionSelected(option)
                         expanded = false
@@ -575,7 +380,6 @@ fun LanguageControlSection(
 @Composable
 fun HandlerTogglesSection(
     settingsViewModel: SettingsViewModel,
-<<<<<<< HEAD
     handlerStates: Map<String, Boolean>,
     spacing: SettingsAdaptiveSpacing
 ) {
@@ -586,31 +390,13 @@ fun HandlerTogglesSection(
     ) {
         settingsViewModel.getAllHandlerDefinitions().forEach { handler ->
             val isEnabled = handlerStates[handler.id] ?: false
-=======
-    handlerStates: Map<String, Boolean>
-) {
-    SettingsSection(
-        title = "Command Handlers",
-        icon = Icons.Default.Tune
-    ) {
-        settingsViewModel.getAllHandlerDefinitions().forEach { handler ->
-            val isEnabled = handlerStates[handler.id] ?: false
-
->>>>>>> AVA-Development
             SettingsToggle(
                 title = handler.name,
                 description = handler.description,
                 isChecked = isEnabled,
-<<<<<<< HEAD
                 enabled = !handler.isCore,
                 onCheckedChange = { settingsViewModel.toggleHandler(handler.id, it) },
                 spacing = spacing
-=======
-                enabled = !handler.isCore, // Core handlers cannot be disabled
-                onCheckedChange = { enabled ->
-                    settingsViewModel.toggleHandler(handler.id, enabled)
-                }
->>>>>>> AVA-Development
             )
         }
     }
@@ -619,19 +405,14 @@ fun HandlerTogglesSection(
 @Composable
 fun PerformanceSettingsSection(
     settingsViewModel: SettingsViewModel,
-<<<<<<< HEAD
     performanceMode: PerformanceMode,
     spacing: SettingsAdaptiveSpacing
-=======
-    performanceMode: PerformanceMode
->>>>>>> AVA-Development
 ) {
     val dynamicCommandsEnabled by settingsViewModel.dynamicCommandsEnabled.collectAsState()
     val cacheEnabled by settingsViewModel.cacheEnabled.collectAsState()
     val maxCacheSize by settingsViewModel.maxCacheSize.collectAsState()
 
     @Suppress("UNUSED_VARIABLE")
-<<<<<<< HEAD
     val configuration by settingsViewModel.configuration.collectAsState()
 
     SettingsSection(
@@ -645,21 +426,6 @@ fun PerformanceSettingsSection(
             color = Color.White,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(bottom = 4.dp)
-=======
-    val configuration by settingsViewModel.configuration.collectAsState() // Reserved for future configuration display
-
-    SettingsSection(
-        title = "Performance",
-        icon = Icons.Default.Speed
-    ) {
-        // Performance Mode Selection
-        Text(
-            text = "Performance Mode",
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(bottom = 8.dp)
->>>>>>> AVA-Development
         )
 
         PerformanceMode.values().forEach { mode ->
@@ -667,17 +433,12 @@ fun PerformanceSettingsSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { settingsViewModel.updatePerformanceMode(mode) }
-<<<<<<< HEAD
                     .padding(vertical = 2.dp),
-=======
-                    .padding(vertical = 4.dp),
->>>>>>> AVA-Development
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
                     selected = performanceMode == mode,
                     onClick = { settingsViewModel.updatePerformanceMode(mode) },
-<<<<<<< HEAD
                     colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF4285F4)),
                     modifier = Modifier.size(spacing.iconSize + 8.dp)
                 )
@@ -686,37 +447,18 @@ fun PerformanceSettingsSection(
                     Text(
                         text = mode.displayName,
                         style = MaterialTheme.typography.bodySmall,
-=======
-                    colors = RadioButtonDefaults.colors(
-                        selectedColor = Color(0xFF4285F4)
-                    )
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Column {
-                    Text(
-                        text = mode.displayName,
-                        style = MaterialTheme.typography.bodyMedium,
->>>>>>> AVA-Development
                         color = Color.White,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
                         text = mode.description,
-<<<<<<< HEAD
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White.copy(alpha = 0.6f)
-=======
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f)
->>>>>>> AVA-Development
                     )
                 }
             }
         }
 
-<<<<<<< HEAD
         Spacer(modifier = Modifier.height(spacing.itemSpacing))
 
         SettingsToggle(
@@ -736,62 +478,26 @@ fun PerformanceSettingsSection(
         SettingsSlider(
             title = "Cache Size",
             description = "Max cached commands",
-=======
-        Spacer(modifier = Modifier.height(16.dp))
-
-        SettingsToggle(
-            title = "Dynamic Commands",
-            description = "Generate commands based on screen content",
-            isChecked = dynamicCommandsEnabled,
-            onCheckedChange = { enabled ->
-                settingsViewModel.updateDynamicCommandsEnabled(enabled)
-            }
-        )
-
-        SettingsToggle(
-            title = "Command Caching",
-            description = "Cache frequently used commands",
-            isChecked = cacheEnabled,
-            onCheckedChange = { enabled ->
-                settingsViewModel.updateCacheEnabled(enabled)
-            }
-        )
-
-        SettingsSlider(
-            title = "Cache Size",
-            description = "Maximum number of cached commands",
->>>>>>> AVA-Development
             value = maxCacheSize.toFloat(),
             range = 10f..500f,
             steps = 48,
             enabled = cacheEnabled,
-<<<<<<< HEAD
             onValueChange = { settingsViewModel.updateMaxCacheSize(it.toInt()) },
             spacing = spacing
-=======
-            onValueChange = { value ->
-                settingsViewModel.updateMaxCacheSize(value.toInt())
-            }
->>>>>>> AVA-Development
         )
     }
 }
 
 @Composable
 fun CursorSettingsSection(
-<<<<<<< HEAD
     settingsViewModel: SettingsViewModel,
     spacing: SettingsAdaptiveSpacing
-=======
-    settingsViewModel: SettingsViewModel
->>>>>>> AVA-Development
 ) {
     val cursorEnabled by settingsViewModel.cursorEnabled.collectAsState()
     val cursorSize by settingsViewModel.cursorSize.collectAsState()
     val cursorSpeed by settingsViewModel.cursorSpeed.collectAsState()
 
     SettingsSection(
-<<<<<<< HEAD
         title = "Cursor",
         icon = Icons.Default.CenterFocusStrong,
         spacing = spacing
@@ -806,75 +512,36 @@ fun CursorSettingsSection(
         SettingsSlider(
             title = "Size",
             description = "Cursor size (dp)",
-=======
-        title = "Cursor Settings",
-        icon = Icons.Default.CenterFocusStrong
-    ) {
-        SettingsToggle(
-            title = "Voice Cursor",
-            description = "Enable voice-controlled cursor",
-            isChecked = cursorEnabled,
-            onCheckedChange = { enabled ->
-                settingsViewModel.updateCursorEnabled(enabled)
-            }
-        )
-
-        SettingsSlider(
-            title = "Cursor Size",
-            description = "Size of the cursor in dp",
->>>>>>> AVA-Development
             value = cursorSize,
             range = 24f..96f,
             steps = 8,
             enabled = cursorEnabled,
-<<<<<<< HEAD
             onValueChange = { settingsViewModel.updateCursorSize(it) },
             spacing = spacing
         )
         SettingsSlider(
             title = "Speed",
             description = "Movement speed",
-=======
-            onValueChange = { value ->
-                settingsViewModel.updateCursorSize(value)
-            }
-        )
-
-        SettingsSlider(
-            title = "Cursor Speed",
-            description = "Movement speed multiplier",
->>>>>>> AVA-Development
             value = cursorSpeed,
             range = 0.1f..3.0f,
             steps = 28,
             enabled = cursorEnabled,
-<<<<<<< HEAD
             onValueChange = { settingsViewModel.updateCursorSpeed(it) },
             spacing = spacing
-=======
-            onValueChange = { value ->
-                settingsViewModel.updateCursorSpeed(value)
-            }
->>>>>>> AVA-Development
         )
     }
 }
 
 @Composable
 fun AdvancedSettingsSection(
-<<<<<<< HEAD
     settingsViewModel: SettingsViewModel,
     spacing: SettingsAdaptiveSpacing
-=======
-    settingsViewModel: SettingsViewModel
->>>>>>> AVA-Development
 ) {
     val uiScrapingEnabled by settingsViewModel.uiScrapingEnabled.collectAsState()
     val configuration by settingsViewModel.configuration.collectAsState()
 
     SettingsSection(
         title = "Advanced",
-<<<<<<< HEAD
         icon = Icons.Default.Science,
         spacing = spacing
     ) {
@@ -894,36 +561,10 @@ fun AdvancedSettingsSection(
         )
 
         Spacer(modifier = Modifier.height(spacing.itemSpacing))
-=======
-        icon = Icons.Default.Science
-    ) {
-        SettingsToggle(
-            title = "UI Scraping",
-            description = "Extract detailed screen information (experimental)",
-            isChecked = uiScrapingEnabled,
-            onCheckedChange = { enabled ->
-                settingsViewModel.updateUiScrapingEnabled(enabled)
-            }
-        )
-
-        SettingsToggle(
-            title = "Fingerprint Gestures",
-            description = "Use fingerprint sensor for gestures (if available)",
-            isChecked = configuration.fingerprintGesturesEnabled,
-            onCheckedChange = { _ ->
-                // This feature is not implemented in SettingsViewModel yet
-                // Could be added if needed
-            }
-        )
-
-        // Reset to defaults button
-        Spacer(modifier = Modifier.height(16.dp))
->>>>>>> AVA-Development
 
         Button(
             onClick = { settingsViewModel.resetToDefaults() },
             modifier = Modifier.fillMaxWidth(),
-<<<<<<< HEAD
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4285F4)),
             contentPadding = PaddingValues(vertical = spacing.cardPadding / 2)
         ) {
@@ -931,15 +572,6 @@ fun AdvancedSettingsSection(
                 text = "Reset",
                 color = Color.White,
                 style = MaterialTheme.typography.labelMedium
-=======
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF4285F4)
-            )
-        ) {
-            Text(
-                text = "Reset to Defaults",
-                color = Color.White
->>>>>>> AVA-Development
             )
         }
     }
@@ -949,10 +581,7 @@ fun AdvancedSettingsSection(
 fun SettingsSection(
     title: String,
     icon: ImageVector,
-<<<<<<< HEAD
     spacing: SettingsAdaptiveSpacing,
-=======
->>>>>>> AVA-Development
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
@@ -960,7 +589,6 @@ fun SettingsSection(
             .fillMaxWidth()
             .glassMorphism(
                 config = GlassMorphismConfig(
-<<<<<<< HEAD
                     cornerRadius = 10.dp,
                     backgroundOpacity = 0.08f,
                     borderOpacity = 0.1f,
@@ -969,38 +597,19 @@ fun SettingsSection(
                     tintOpacity = 0.08f
                 ),
                 depth = DepthLevel(0.5f)
-=======
-                    cornerRadius = 16.dp,
-                    backgroundOpacity = 0.1f,
-                    borderOpacity = 0.2f,
-                    borderWidth = 1.dp,
-                    tintColor = Color(0xFF4285F4),
-                    tintOpacity = 0.12f
-                ),
-                depth = DepthLevel(0.6f)
->>>>>>> AVA-Development
             ),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
-<<<<<<< HEAD
             modifier = Modifier.padding(spacing.cardPadding)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(bottom = spacing.itemSpacing / 2)
-=======
-            modifier = Modifier.padding(20.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 16.dp)
->>>>>>> AVA-Development
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
-<<<<<<< HEAD
                     modifier = Modifier.size(spacing.iconSize),
                     tint = Color(0xFF4285F4)
                 )
@@ -1008,25 +617,10 @@ fun SettingsSection(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
-=======
-                    modifier = Modifier.size(24.dp),
-                    tint = Color(0xFF4285F4)
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
->>>>>>> AVA-Development
                     color = Color.White,
                     fontWeight = FontWeight.SemiBold
                 )
             }
-<<<<<<< HEAD
-=======
-
->>>>>>> AVA-Development
             content()
         }
     }
@@ -1038,18 +632,13 @@ fun SettingsToggle(
     description: String,
     isChecked: Boolean,
     enabled: Boolean = true,
-<<<<<<< HEAD
     onCheckedChange: (Boolean) -> Unit,
     spacing: SettingsAdaptiveSpacing
-=======
-    onCheckedChange: (Boolean) -> Unit
->>>>>>> AVA-Development
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled) { onCheckedChange(!isChecked) }
-<<<<<<< HEAD
             .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1066,28 +655,6 @@ fun SettingsToggle(
                 color = if (enabled) Color.White.copy(alpha = 0.6f) else Color.Gray.copy(alpha = 0.4f)
             )
         }
-=======
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (enabled) Color.White else Color.Gray,
-                fontWeight = FontWeight.Medium
-            )
-
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (enabled) Color.White.copy(alpha = 0.7f) else Color.Gray.copy(alpha = 0.5f)
-            )
-        }
-
->>>>>>> AVA-Development
         Switch(
             checked = isChecked,
             onCheckedChange = if (enabled) onCheckedChange else null,
@@ -1110,28 +677,19 @@ fun SettingsSlider(
     range: ClosedFloatingPointRange<Float>,
     steps: Int = 0,
     enabled: Boolean = true,
-<<<<<<< HEAD
     onValueChange: (Float) -> Unit,
     spacing: SettingsAdaptiveSpacing
-=======
-    onValueChange: (Float) -> Unit
->>>>>>> AVA-Development
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-<<<<<<< HEAD
             .padding(vertical = 2.dp)
-=======
-            .padding(vertical = 8.dp)
->>>>>>> AVA-Development
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-<<<<<<< HEAD
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
@@ -1145,46 +703,19 @@ fun SettingsSlider(
                     color = if (enabled) Color.White.copy(alpha = 0.6f) else Color.Gray.copy(alpha = 0.4f)
                 )
             }
-=======
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (enabled) Color.White else Color.Gray,
-                    fontWeight = FontWeight.Medium
-                )
-
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (enabled) Color.White.copy(alpha = 0.7f) else Color.Gray.copy(alpha = 0.5f)
-                )
-            }
-
->>>>>>> AVA-Development
             Text(
                 text = when {
                     value >= 1000 -> "${(value / 1000f).toInt()}k"
                     value.rem(1f) == 0f -> value.toInt().toString()
                     else -> String.format("%.1f", value)
                 },
-<<<<<<< HEAD
                 style = MaterialTheme.typography.labelMedium,
-=======
-                style = MaterialTheme.typography.bodyLarge,
->>>>>>> AVA-Development
                 color = if (enabled) Color(0xFF4285F4) else Color.Gray,
                 fontWeight = FontWeight.Bold
             )
         }
 
-<<<<<<< HEAD
         Spacer(modifier = Modifier.height(2.dp))
-=======
-        Spacer(modifier = Modifier.height(8.dp))
->>>>>>> AVA-Development
 
         Slider(
             value = value,

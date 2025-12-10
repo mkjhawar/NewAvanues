@@ -13,10 +13,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
-<<<<<<< HEAD
 import android.speech.tts.TextToSpeech
-=======
->>>>>>> AVA-Development
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.commandmanager.CommandManager
@@ -34,14 +31,11 @@ import com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.voiceos.hash.HashUtils
-<<<<<<< HEAD
 import com.augmentalis.voiceoscore.learnapp.exploration.RetroactiveVUIDCreator
 import com.augmentalis.voiceoscore.learnapp.exploration.RetroactiveResult
 import com.augmentalis.voiceoscore.learnapp.commands.RenameCommandHandler
 import com.augmentalis.voiceoscore.learnapp.commands.RenameResult
 import com.augmentalis.uuidcreator.UUIDCreator
-=======
->>>>>>> AVA-Development
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -66,7 +60,6 @@ import org.json.JSONArray
  * 4. Find actual UI node by hash
  * 5. Execute click action
  * 6. Increment usage count
-<<<<<<< HEAD
  *
  * Enhanced with rename command support (2025-12-08):
  * - Detects "rename" commands and routes to RenameCommandHandler
@@ -77,12 +70,6 @@ class VoiceCommandProcessor(
     private val context: Context,
     private val accessibilityService: AccessibilityService,
     private val tts: TextToSpeech? = null
-=======
- */
-class VoiceCommandProcessor(
-    private val context: Context,
-    private val accessibilityService: AccessibilityService
->>>>>>> AVA-Development
 ) {
 
     companion object {
@@ -116,7 +103,6 @@ class VoiceCommandProcessor(
     // Part of Voice Command Element Persistence feature
     private val elementSearchEngine: ElementSearchEngine = ElementSearchEngine(accessibilityService)
 
-<<<<<<< HEAD
     // Phase 4 (2025-12-08): Retroactive VUID creator for fixing missing VUIDs
     private val retroactiveVUIDCreator: RetroactiveVUIDCreator by lazy {
         RetroactiveVUIDCreator(
@@ -139,8 +125,6 @@ class VoiceCommandProcessor(
         }
     }
 
-=======
->>>>>>> AVA-Development
     /**
      * Process a voice command
      *
@@ -156,7 +140,6 @@ class VoiceCommandProcessor(
             // Normalize input
             val normalizedInput = voiceInput.lowercase().trim()
 
-<<<<<<< HEAD
             // Phase 4 (2025-12-08): Check for rename commands FIRST (highest priority)
             if (isRenameCommand(normalizedInput)) {
                 return@withContext handleRenameCommand(voiceInput, normalizedInput)
@@ -167,8 +150,6 @@ class VoiceCommandProcessor(
                 return@withContext handleRetroactiveVUIDCreation(normalizedInput)
             }
 
-=======
->>>>>>> AVA-Development
             // Get current app package name
             val currentPackage = getCurrentPackageName()
             if (currentPackage == null) {
@@ -216,7 +197,6 @@ class VoiceCommandProcessor(
                 return@withContext tryStaticCommand(normalizedInput, voiceInput)
             }
 
-<<<<<<< HEAD
             // Phase 4 (2025-12-08): Resolve command with synonyms first
             // This allows users to say renamed commands (e.g., "Save" instead of "Button 1")
             val resolvedCommand = resolveCommandWithSynonyms(normalizedInput, scrapedApp.appId)
@@ -224,11 +204,6 @@ class VoiceCommandProcessor(
             // Find matching command (dynamic app-specific commands)
             // FIX (2025-12-01): scrapedApp is now ScrapedAppDTO, not entity
             val matchedCommand = resolvedCommand ?: findMatchingCommand(scrapedApp.appId, normalizedInput)
-=======
-            // Find matching command (dynamic app-specific commands)
-            // FIX (2025-12-01): scrapedApp is now ScrapedAppDTO, not entity
-            val matchedCommand = findMatchingCommand(scrapedApp.appId, normalizedInput)
->>>>>>> AVA-Development
             if (matchedCommand == null) {
                 // PII Redaction: Sanitize normalized input before logging
                 PIILoggingWrapper.w(TAG, "No dynamic command found for: '$normalizedInput', trying real-time element search")
@@ -608,7 +583,6 @@ class VoiceCommandProcessor(
         result
     }
 
-<<<<<<< HEAD
     // ==================== RENAME COMMAND INTEGRATION ====================
     // Phase 4 (2025-12-08): On-demand command renaming support
 
@@ -732,8 +706,6 @@ class VoiceCommandProcessor(
 
     // ==================== END RENAME COMMAND INTEGRATION ====================
 
-=======
->>>>>>> AVA-Development
     // ==================== DYNAMIC COMMAND FALLBACK MECHANISM ====================
     // YOLO FIX: Multi-tier fallback for voice commands when hash-based lookup fails
 
@@ -1106,7 +1078,6 @@ class VoiceCommandProcessor(
     }
 
     // ==================== END FALLBACK MECHANISM ====================
-<<<<<<< HEAD
 
     /**
      * Handle retroactive VUID creation commands
@@ -1252,8 +1223,6 @@ class VoiceCommandProcessor(
     }
 
     // ==================== END FALLBACK MECHANISM ====================
-=======
->>>>>>> AVA-Development
 }
 
 /**

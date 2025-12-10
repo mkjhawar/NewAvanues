@@ -16,10 +16,6 @@ package com.augmentalis.voiceoscore.learnapp.ui
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.view.Gravity
-<<<<<<< HEAD
-=======
-import android.view.LayoutInflater
->>>>>>> AVA-Development
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
@@ -29,10 +25,7 @@ import android.graphics.PixelFormat
 import com.augmentalis.voiceoscore.R
 import com.augmentalis.voiceoscore.learnapp.exploration.ExplorationEngine
 import com.augmentalis.voiceoscore.learnapp.ui.widgets.ProgressOverlay
-<<<<<<< HEAD
 import com.augmentalis.voiceoscore.utils.MaterialThemeHelper
-=======
->>>>>>> AVA-Development
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.textview.MaterialTextView
@@ -157,15 +150,8 @@ class ProgressOverlayManager(
      * @return Configured command bar view
      */
     private fun createCommandBar(): View {
-<<<<<<< HEAD
         // Use MaterialThemeHelper to inflate Material3 views in AccessibilityService context
         val view = MaterialThemeHelper.inflateOverlay(context, R.layout.command_bar_layout)
-=======
-        val view = LayoutInflater.from(context).inflate(
-            R.layout.command_bar_layout,
-            null
-        )
->>>>>>> AVA-Development
 
         // Get references to UI elements
         progressIndicator = view.findViewById(R.id.progress_indicator)

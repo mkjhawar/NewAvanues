@@ -52,8 +52,8 @@ rootProject.name = "VoiceOS"
 // Main application (test harness)
 include(":app")
 
-// Cockpit MVP Demo (Cockpit-Development branch)
-include(":cockpit-mvp")
+// Cockpit MVP Demo
+include(":android:apps:cockpit-mvp")
 include(":Common:Cockpit")
 
 // Standalone Apps (Moved to monorepo Modules/)
@@ -140,3 +140,6 @@ project(":Modules:VoiceOS:core:json-utils").projectDir = file("../../../Modules/
 project(":Modules:VoiceOS:core:database").projectDir = file("../../../Modules/VoiceOS/core/database")
 
 project(":Common:ThirdParty:Vosk").projectDir = file("../../../Common/ThirdParty/Vosk")
+
+project(":android:apps:cockpit-mvp").projectDir = file("../cockpit-mvp")
+project(":Common:Cockpit").projectDir = file("../../../Common/Cockpit")

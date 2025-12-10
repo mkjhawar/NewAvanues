@@ -39,12 +39,8 @@ class CommandDefinitions {
         loadSystemCommands()
         loadAppCommands()
         loadTextCommands()
-<<<<<<< HEAD
         loadLearnAppCommands()
 
-=======
-        
->>>>>>> AVA-Development
         android.util.Log.d(TAG, "Loaded ${builtInDefinitions.size} built-in command definitions")
     }
     
@@ -359,11 +355,7 @@ class CommandDefinitions {
                 CommandParameter("text", ParameterType.STRING, required = false)
             )
         )
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> AVA-Development
         builtInDefinitions["paste_text"] = CommandDefinition(
             id = "paste_text",
             name = "Paste",
@@ -371,11 +363,7 @@ class CommandDefinitions {
             category = "INPUT",
             patterns = listOf("paste", "paste text", "insert")
         )
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> AVA-Development
         builtInDefinitions["select_all"] = CommandDefinition(
             id = "select_all",
             name = "Select All",
@@ -383,11 +371,7 @@ class CommandDefinitions {
             category = "INPUT",
             patterns = listOf("select all", "select everything", "highlight all")
         )
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> AVA-Development
         builtInDefinitions["cut_text"] = CommandDefinition(
             id = "cut_text",
             name = "Cut",
@@ -396,7 +380,6 @@ class CommandDefinitions {
             patterns = listOf("cut", "cut text", "cut selection")
         )
     }
-<<<<<<< HEAD
 
     // LearnApp Commands
     private fun loadLearnAppCommands() {
@@ -415,6 +398,4 @@ class CommandDefinitions {
             )
         )
     }
-=======
->>>>>>> AVA-Development
 }

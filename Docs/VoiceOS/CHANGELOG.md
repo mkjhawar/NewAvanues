@@ -8,7 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-<<<<<<< HEAD
 - **LearnApp:** Exploration hanging on infinite/dynamic scrollable content ([Fix Doc](fixes/VoiceOS-learnapp-infinite-scroll-timeout-fix-50712-V1.md))
   - Root cause: No timeout protection on scrollable containers with BOTH directions (horizontal + vertical)
   - Root cause: Dynamic content (Teams channels, social feeds) causing infinite scroll loops
@@ -33,8 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Severity: MEDIUM (usability improvement)
 
 ### Fixed
-=======
->>>>>>> AVA-Development
 - **VoiceOSCore:** Dynamic command real-time element search failure ([Fix Doc](docs/fixes/VoiceOSCore-dynamic-command-realtime-search-2025-11-13.md))
   - Root cause: Broken recursive node search logic + false success reporting in Tier 3
   - Solution: Kotlin extension functions for safe AccessibilityNodeInfo lifecycle + proper result checking

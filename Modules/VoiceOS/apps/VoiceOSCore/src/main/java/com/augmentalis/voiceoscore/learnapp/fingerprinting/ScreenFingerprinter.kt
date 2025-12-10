@@ -295,7 +295,6 @@ class ScreenFingerprinter {
         return false
     }
 
-<<<<<<< HEAD
     /**
      * Calculate structural fingerprint for dynamic content screens.
      *
@@ -352,8 +351,6 @@ class ScreenFingerprinter {
         return calculateSHA256(signatureBuilder.toString())
     }
 
-=======
->>>>>>> AVA-Development
     companion object {
         /**
          * Empty hash (for null roots)

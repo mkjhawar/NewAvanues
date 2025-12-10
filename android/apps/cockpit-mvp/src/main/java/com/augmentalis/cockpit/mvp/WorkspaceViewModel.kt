@@ -5,7 +5,8 @@ import androidx.compose.runtime.mutableStateListOf
 import com.avanues.cockpit.core.window.AppWindow
 import com.avanues.cockpit.core.window.WindowType
 import com.avanues.cockpit.core.workspace.Vector3D
-import com.avanues.cockpit.layout.LayoutPreset
+import com.avanues.cockpit.layout.presets.LayoutPreset
+import com.avanues.cockpit.layout.presets.WindowPosition
 import com.avanues.cockpit.layout.presets.LinearHorizontalLayout
 import com.avanues.cockpit.layout.presets.ArcFrontLayout
 import com.avanues.cockpit.layout.presets.TheaterLayout

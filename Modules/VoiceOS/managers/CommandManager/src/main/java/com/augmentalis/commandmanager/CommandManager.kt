@@ -87,11 +87,7 @@ class CommandManager(private val context: Context) {
     // Action cache (command ID -> BaseAction instance)
     // Actions are created dynamically from database metadata via ActionFactory
     private val actionCache = mutableMapOf<String, BaseAction>()
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> AVA-Development
     /**
      * Execute command directly with confidence-based filtering
      */
