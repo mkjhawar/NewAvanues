@@ -157,9 +157,11 @@ fun VoiceCommandsDialog(
             // Detect landscape orientation
             val isLandscape = maxWidth > maxHeight
 
-            // Optimize for landscape: wider dialog, less padding
-            val dialogWidth = if (isLandscape) 0.90f else 0.95f
-            val dialogHeight = if (isLandscape) 0.90f else 0.85f
+            // Optimize for landscape: Material Design compliant sizing
+            // Portrait: 90% × 85% - users expect dominant dialog
+            // Landscape: 80% × 80% - provides breathing room, clear tap-outside area
+            val dialogWidth = if (isLandscape) 0.80f else 0.90f
+            val dialogHeight = if (isLandscape) 0.80f else 0.85f
             val contentPadding = if (isLandscape) OceanDesignTokens.Spacing.md else OceanDesignTokens.Spacing.xl
             val headerSpacing = if (isLandscape) OceanDesignTokens.Spacing.md else OceanDesignTokens.Spacing.xl
 
