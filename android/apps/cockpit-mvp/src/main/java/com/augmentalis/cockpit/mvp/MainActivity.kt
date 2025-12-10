@@ -3,18 +3,35 @@ package com.augmentalis.cockpit.mvp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.augmentalis.cockpit.mvp.theme.AppTheme
+import com.augmentalis.cockpit.mvp.theme.CockpitThemeProvider
 
+/**
+ * Cockpit MVP - Main Activity
+ *
+ * Features:
+ * - Functional window management (add, remove, reset)
+ * - Glassmorphic Ocean Theme UI
+ * - Orientation support (portrait: vertical, landscape: horizontal)
+ * - Display cutout detection and handling
+ * - Head-based navigation with IMU/DeviceManager
+ * - MagicUI migration-ready architecture
+ */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Enable edge-to-edge for full screen immersion
+        enableEdgeToEdge()
+
         setContent {
-            MaterialTheme {
+            CockpitThemeProvider(theme = AppTheme.OCEAN) {
                 CockpitMVPScreen()
             }
         }
@@ -22,40 +39,44 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun CockpitMVPScreen() {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "Cockpit MVP Demo",
-                style = MaterialTheme.typography.headlineLarge
-            )
-            Spacer(modifier = Modifier.height(32.dp))
-            Card(modifier = Modifier.fillMaxWidth(0.8f)) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Cockpit Library Loaded Successfully",
-                         style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("✓ Common/Cockpit KMP library")
-                    Text("✓ AppWindow model")
-                    Text("✓ Vector3D spatial positioning")
-                    Text("✓ LayoutPreset system")
-                    Text("✓ LinearHorizontalLayout preset")
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Next steps:", style = MaterialTheme.typography.titleSmall)
-                    Text("• Implement UI components (ControlRail, UtilityBelt, WindowDock)")
-                    Text("• Add workspace management")
-                    Text("• Integrate VoiceOS")
-                }
-            }
+fun CockpitMVPScreen(
+    viewModel: WorkspaceViewModel = viewModel()
+) {
+    val windows by viewModel.windows.collectAsState()
+    val positions by viewModel.windowPositions.collectAsState()
+    val isHeadCursorEnabled by viewModel.isHeadCursorEnabled.collectAsState()
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Main workspace with windows
+        WorkspaceView(
+            windows = windows,
+            positions = positions,
+            onRemoveWindow = { viewModel.removeWindow(it) },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Top navigation bar
+        TopNavigationBar(
+            windowCount = windows.size,
+            onToggleHeadCursor = { viewModel.toggleHeadCursor() },
+            isHeadCursorEnabled = isHeadCursorEnabled,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
+
+        // Bottom control panel (floating pill-shaped)
+        ControlPanel(
+            windowCount = windows.size,
+            maxWindows = 6,
+            onAddWindow = { title, type, color ->
+                viewModel.addWindow(title, type, color)
+            },
+            onReset = { viewModel.resetWorkspace() },
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+
+        // Head cursor overlay (when enabled)
+        if (isHeadCursorEnabled) {
+            HeadCursorOverlay()
         }
     }
 }
