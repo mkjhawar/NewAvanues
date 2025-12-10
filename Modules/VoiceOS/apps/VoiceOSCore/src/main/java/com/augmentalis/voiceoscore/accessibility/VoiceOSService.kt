@@ -29,10 +29,13 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import com.augmentalis.commandmanager.CommandManager
 // TEMP DISABLED: import com.augmentalis.commandmanager.database.CommandDatabase
 import com.augmentalis.voiceoscore.learnapp.integration.LearnAppIntegration
+<<<<<<< HEAD
 import com.augmentalis.voiceoscore.learnapp.integration.CommandDiscoveryIntegration
 import com.augmentalis.voiceoscore.learnapp.ui.RenameHintOverlay
 import com.augmentalis.voiceoscore.learnapp.detection.ScreenActivityDetector
 import com.augmentalis.voiceoscore.learnapp.commands.RenameCommandHandler
+=======
+>>>>>>> AVA-Development
 import com.augmentalis.speechrecognition.SpeechEngine
 import com.augmentalis.speechrecognition.SpeechMode
 import com.augmentalis.uuidcreator.UUIDCreator
@@ -161,10 +164,13 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     @Volatile
     private var learnAppInitialized = false  // Keep for backward compatibility with debug logs
 
+<<<<<<< HEAD
     // PHASE 3 (2025-12-08): Command Discovery integration
     // Auto-observes ExplorationEngine.state() and triggers discovery flow on completion
     private var discoveryIntegration: CommandDiscoveryIntegration? = null
 
+=======
+>>>>>>> AVA-Development
     // Hybrid foreground service state
     private var foregroundServiceActive = false
     private var appInBackground = false
@@ -248,11 +254,14 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         }
     }
 
+<<<<<<< HEAD
     // Rename feature components (Phase 2: On-Demand Command Renaming)
     private var renameHintOverlay: RenameHintOverlay? = null
     private var screenActivityDetector: ScreenActivityDetector? = null
     private var renameCommandHandler: RenameCommandHandler? = null
 
+=======
+>>>>>>> AVA-Development
     // Event debouncing to prevent excessive scraping in apps with dynamic content
     private val eventDebouncer = Debouncer(VoiceOSConstants.Timing.EVENT_DEBOUNCE_MS)
 
@@ -312,6 +321,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             Log.e(TAG, "Failed to initialize database - will fall back to in-memory cache", e)
             scrapingDatabase = null
         }
+<<<<<<< HEAD
 
         // Initialize rename feature components (Phase 2: On-Demand Command Renaming)
         initializeRenameFeature()
@@ -353,6 +363,8 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             screenActivityDetector = null
             renameCommandHandler = null
         }
+=======
+>>>>>>> AVA-Development
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -855,6 +867,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                 }
 
                 AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+<<<<<<< HEAD
                     // Forward to ScreenActivityDetector for rename hint display
                     screenActivityDetector?.let { detector ->
                         serviceScope.launch {
@@ -867,6 +880,8 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                         }
                     }
 
+=======
+>>>>>>> AVA-Development
                     // Update app context and trigger scraping for new windows
                     serviceScope.launch {
                         // Also trigger UI scraping for window state changes
@@ -1060,6 +1075,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             Log.i(TAG, "LearnApp will now monitor for new third-party app launches")
             Log.i(TAG, "LEARNAPP_DEBUG: Initialization SUCCESS - learnAppIntegration is ${if (learnAppIntegration != null) "NOT NULL" else "NULL"}")
 
+<<<<<<< HEAD
             // PHASE 3 (2025-12-08): Command Discovery integration
             // Auto-observes ExplorationEngine.state() via StateFlow
             // Triggers visual overlay, audio summary, and tutorial when exploration completes
@@ -1085,6 +1101,8 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                 }
             } ?: Log.w(TAG, "Skipping Command Discovery - LearnAppIntegration not available")
 
+=======
+>>>>>>> AVA-Development
         } catch (e: Exception) {
             Log.e(TAG, "LEARNAPP_DEBUG: EXCEPTION during initialization!")
             Log.e(TAG, "✗ Failed to initialize LearnApp integration", e)
@@ -1253,7 +1271,10 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
      * Handle voice command with caching
      *
      * Phase 1: Now routes to CommandManager when available
+<<<<<<< HEAD
      * Phase 2: Added rename command detection and routing
+=======
+>>>>>>> AVA-Development
      */
     private fun handleVoiceCommand(command: String, confidence: Float) {
         Log.d(TAG, "handleVoiceCommand: command='$command', confidence=$confidence")
@@ -1267,6 +1288,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         val normalizedCommand = command.lowercase().trim()
         val currentPackage = rootInActiveWindow?.packageName?.toString()
 
+<<<<<<< HEAD
         // RENAME TIER: Check if this is a rename command (BEFORE other tiers)
         if (isRenameCommand(normalizedCommand)) {
             serviceScope.launch {
@@ -1288,6 +1310,8 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             return // Return here to prevent dual execution
         }
 
+=======
+>>>>>>> AVA-Development
         // WEB TIER: Check if this is a web command (BEFORE other tiers)
         if (currentPackage != null && webCommandCoordinator.isCurrentAppBrowser(currentPackage)) {
             serviceScope.launch {
@@ -1317,6 +1341,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     }
 
     /**
+<<<<<<< HEAD
      * Check if voice input is a rename command
      *
      * Detects patterns:
@@ -1411,6 +1436,8 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     }
 
     /**
+=======
+>>>>>>> AVA-Development
      * Handle regular (non-web) commands through tier system
      */
     private fun handleRegularCommand(normalizedCommand: String, confidence: Float) {
@@ -1772,6 +1799,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             }
         } ?: Log.d(TAG, "LearnApp integration was not initialized, skipping cleanup")
 
+<<<<<<< HEAD
         // Cleanup Command Discovery integration
         // PHASE 3 (2025-12-08): Cleanup CommandDiscoveryIntegration
         discoveryIntegration?.let { integration ->
@@ -1814,6 +1842,8 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             Log.e(TAG, "✗ Error cleaning up rename feature", e)
         }
 
+=======
+>>>>>>> AVA-Development
         // Cleanup OverlayManager (lazy delegate handles initialization check)
         try {
             Log.d(TAG, "Cleaning up OverlayManager...")

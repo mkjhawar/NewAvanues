@@ -33,10 +33,13 @@ SELECT * FROM commands_generated WHERE elementHash = ?;
 getAll:
 SELECT * FROM commands_generated ORDER BY usageCount DESC;
 
+<<<<<<< HEAD
 -- Alias for getAll (for compatibility with agent-generated code)
 getAllCommands:
 SELECT * FROM commands_generated ORDER BY usageCount DESC;
 
+=======
+>>>>>>> AVA-Development
 getByActionType:
 SELECT * FROM commands_generated WHERE actionType = ? ORDER BY confidence DESC;
 
@@ -81,6 +84,7 @@ SELECT COUNT(*) > 0 FROM commands_generated WHERE elementHash = ? AND commandTex
 insertIfNotExists:
 INSERT OR IGNORE INTO commands_generated(elementHash, commandText, actionType, confidence, synonyms, isUserApproved, usageCount, lastUsed, createdAt)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+<<<<<<< HEAD
 
 -- Get commands by package (via join with scraped_element)
 getByPackage:
@@ -101,3 +105,5 @@ SET elementHash = ?,
     usageCount = ?,
     lastUsed = ?
 WHERE id = ?;
+=======
+>>>>>>> AVA-Development

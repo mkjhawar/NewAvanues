@@ -1,0 +1,21 @@
+# Avanues Universal Format v1.0
+# Type: VOS - Media Casting
+# Extension: .anl
+# Project: VoiceOS
+---
+schema: avu-1.0
+version: 1.0.0
+locale: en-US
+project: ava
+metadata:
+  file: VoiceOSCasting.anl
+  category: voiceos_casting
+  name: VoiceOS Casting
+  description: Cast media to devices
+  priority: 2
+  count: 1
+---
+VCM:media_cast:cast to tv
+VCM:media_cast:cast screen
+VCM:media_cast:connect to chromecast
+VCM:media_cast:start casting

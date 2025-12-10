@@ -21,7 +21,10 @@ import com.augmentalis.voiceoscore.learnapp.models.ScreenState
 import com.augmentalis.voiceoscore.learnapp.scrolling.ScrollDetector
 import com.augmentalis.voiceoscore.learnapp.scrolling.ScrollExecutor
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
+<<<<<<< HEAD
 import com.augmentalis.voiceoscore.learnapp.detection.CrossPlatformDetector
+=======
+>>>>>>> AVA-Development
 
 /**
  * Screen Explorer
@@ -96,6 +99,7 @@ class ScreenExplorer(
             return ScreenExplorationResult.Error("Root node is null")
         }
 
+<<<<<<< HEAD
         // 1. Detect framework (for smart clickability filtering)
         // Integrated 2025-12-08: Cross-platform framework detection
         val framework = CrossPlatformDetector.detectFramework(packageName, rootNode)
@@ -105,16 +109,30 @@ class ScreenExplorer(
         val screenState = screenStateManager.captureScreenState(rootNode, packageName, depth)
 
         // 3. Check if already visited
+=======
+        // 1. Capture screen state
+        val screenState = screenStateManager.captureScreenState(rootNode, packageName, depth)
+
+        // 2. Check if already visited
+>>>>>>> AVA-Development
         if (screenStateManager.isVisited(screenState.hash)) {
             return ScreenExplorationResult.AlreadyVisited(screenState)
         }
 
+<<<<<<< HEAD
         // 4. Collect all elements (including offscreen via scrolling)
+=======
+        // 3. Collect all elements (including offscreen via scrolling)
+>>>>>>> AVA-Development
         val collectionResult = collectAllElements(rootNode)
         val allElements = collectionResult.elements
         val scrollableCount = collectionResult.scrollableContainerCount
 
+<<<<<<< HEAD
         // 5. Classify elements (now with framework-aware clickability detection)
+=======
+        // 4. Classify elements
+>>>>>>> AVA-Development
         val classifications = elementClassifier.classifyAll(allElements)
 
         // 5. Check for login screen
@@ -197,19 +215,25 @@ class ScreenExplorer(
      *
      * Includes offscreen elements via scrolling.
      *
+<<<<<<< HEAD
      * FIX (2025-12-07): Added timeout protection for scrollable containers
      * - Limits scroll collection to 10 seconds per container
      * - Prevents infinite loops on dynamic/loading content (Teams, social feeds)
      * - Total collection timeout: 30 seconds for all containers
      *
+=======
+>>>>>>> AVA-Development
      * @param rootNode Root node
      * @return Collection result with elements and scrollable container count
      */
     private suspend fun collectAllElements(rootNode: AccessibilityNodeInfo): CollectionResult {
         val allElements = mutableSetOf<ElementInfo>()
+<<<<<<< HEAD
         val totalStartTime = System.currentTimeMillis()
         val totalTimeout = 30_000L  // 30 seconds total for all scrollables
         val perContainerTimeout = 10_000L  // 10 seconds per scrollable container
+=======
+>>>>>>> AVA-Development
 
         // 1. Collect visible elements
         val visibleElements = collectVisibleElements(rootNode)
@@ -219,6 +243,7 @@ class ScreenExplorer(
         val scrollables = scrollDetector.findScrollableContainers(rootNode)
         val scrollableCount = scrollables.size
 
+<<<<<<< HEAD
         if (scrollableCount > 0 && developerSettings.isVerboseLoggingEnabled()) {
             android.util.Log.d("ScreenExplorer",
                 "📜 Found $scrollableCount scrollable container(s) - collecting with timeout protection")
@@ -254,6 +279,15 @@ class ScreenExplorer(
                 // Handle scrolling errors gracefully
                 android.util.Log.w("ScreenExplorer",
                     "⚠️ Scroll error on container ${index + 1}: ${e.message}")
+=======
+        // 3. Scroll each container and collect offscreen elements
+        for (scrollable in scrollables) {
+            try {
+                val scrolledElements = scrollExecutor.scrollAndCollectAll(scrollable)
+                allElements.addAll(scrolledElements)
+            } catch (e: Exception) {
+                // Handle scrolling errors gracefully
+>>>>>>> AVA-Development
                 // Continue with other scrollables
             }
         }

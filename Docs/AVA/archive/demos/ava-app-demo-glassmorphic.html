@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AVA AI - Glassmorphic Demo (AVAConnect Style)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: white;
+        }
+
+        .page-title {
+            font-size: 32px;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn.primary {
+            background: #03DAC6;
+            color: #000;
+            border-color: #03DAC6;
+        }
+
+        .btn.primary:hover {
+            background: #018786;
+        }
+
+        .device-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 36px;
+            padding: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .device-container.portrait {
+            width: 375px;
+            height: 667px;
+        }
+
+        .device-container.landscape {
+            width: 667px;
+            height: 375px;
+        }
+
+        .device-screen {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 28px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-bar {
+            height: 24px;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 12px;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .top-bar {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .top-bar h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .action-button {
+            width: 32px;
+            height: 32px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .action-button:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.1);
+        }
+
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            background: transparent;
+            position: relative;
+            padding: 16px;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .bottom-nav {
+            height: 64px;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .nav-item.active {
+            color: #03DAC6;
+            background: rgba(3, 218, 198, 0.1);
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-icon {
+            font-size: 24px;
+        }
+
+        .nav-label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        /* Chat Screen */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+            animation: slideIn 0.3s ease;
+            position: relative;
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            background: rgba(3, 218, 198, 0.3);
+            border: 1px solid rgba(3, 218, 198, 0.5);
+            color: #fff;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-meta {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 4px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .confidence-badge {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid rgba(76, 175, 80, 0.5);
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .chat-input {
+            margin-top: auto;
+            display: flex;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 12px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chat-input input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 14px;
+            padding: 8px 12px;
+            background: transparent;
+            color: white;
+        }
+
+        .chat-input input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .send-btn {
+            background: #03DAC6;
+            color: #000;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s ease;
+            font-weight: bold;
+        }
+
+        .send-btn:hover {
+            background: #018786;
+            transform: scale(1.05);
+        }
+
+        /* Teach Screen */
+        .teach-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .fab {
+            position: fixed;
+            bottom: 90px;
+            right: 30px;
+            width: 56px;
+            height: 56px;
+            background: #03DAC6;
+            color: #000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 300;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(3, 218, 198, 0.4);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(3, 218, 198, 0.6);
+        }
+
+        .teach-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .teach-card:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .teach-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .teach-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .badge {
+            background: rgba(3, 218, 198, 0.3);
+            border: 1px solid rgba(3, 218, 198, 0.5);
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge.inactive {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .example-text {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.5;
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border-left: 3px solid #03DAC6;
+        }
+
+        .example-count {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 8px;
+        }
+
+        /* Settings Screen */
+        .settings-container {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .settings-section {
+            margin-bottom: 8px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .setting-item {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .setting-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .setting-info {
+            flex: 1;
+        }
+
+        .setting-label {
+            font-size: 15px;
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 2px;
+        }
+
+        .setting-desc {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .toggle {
+            width: 48px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .toggle.active {
+            background: #03DAC6;
+            border-color: #03DAC6;
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: #fff;
+            border-radius: 50%;
+            top: 1px;
+            left: 1px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle.active::after {
+            transform: translateX(20px);
+        }
+
+        .info-text {
+            text-align: center;
+            padding: 16px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 13px;
+        }
+
+        /* Modal/Dialog */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+            color: white;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 16px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 12px;
+            outline: none;
+            transition: border 0.2s ease;
+            color: white;
+        }
+
+        .modal-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .modal-input:focus {
+            border-color: #03DAC6;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn.primary {
+            background: #03DAC6;
+            color: #000;
+        }
+
+        .modal-btn.primary:hover {
+            background: #018786;
+        }
+
+        .modal-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .example-list {
+            margin-top: 16px;
+        }
+
+        .example-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .example-item-text {
+            flex: 1;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .delete-btn {
+            background: rgba(244, 67, 54, 0.3);
+            border: 1px solid rgba(244, 67, 54, 0.5);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .delete-btn:hover {
+            background: rgba(244, 67, 54, 0.5);
+        }
+
+        /* Progress bar for downloads */
+        .progress-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .progress-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .progress-percent {
+            font-size: 14px;
+            font-weight: 600;
+            color: #03DAC6;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #03DAC6 0%, #018786 100%);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 2000;
+            animation: toastSlide 0.3s ease;
+            display: none;
+        }
+
+        .toast.show {
+            display: block;
+        }
+
+        @keyframes toastSlide {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .device-container.portrait {
+                width: 90vw;
+                max-width: 375px;
+                height: auto;
+                aspect-ratio: 375 / 667;
+            }
+
+            .device-container.landscape {
+                width: 90vw;
+                max-width: 667px;
+                height: auto;
+                aspect-ratio: 667 / 375;
+            }
+        }
+
+        /* Slider */
+        .slider-container {
+            margin-top: 12px;
+            padding: 0 8px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #03DAC6;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(3, 218, 198, 0.4);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #03DAC6;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(3, 218, 198, 0.4);
+        }
+
+        /* Scrollbar styling */
+        .content-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .content-area::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .content-area::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .content-area::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1 class="page-title">🤖 AVA AI - Glassmorphic Demo</h1>
+
+    <div class="controls">
+        <button class="btn primary" id="orientationBtn" onclick="toggleOrientation()">
+            📱 Switch to Landscape
+        </button>
+        <button class="btn" onclick="changeScreen('chat')">Chat</button>
+        <button class="btn" onclick="changeScreen('teach')">Teach</button>
+        <button class="btn" onclick="changeScreen('settings')">Settings</button>
+    </div>
+
+    <div class="device-container portrait" id="device">
+        <div class="device-screen">
+            <div class="status-bar">
+                <span id="clock">9:41</span>
+                <span>📶 📡 🔋</span>
+            </div>
+
+            <div class="top-bar">
+                <h1 id="screenTitle">Chat</h1>
+                <div class="status-badge">
+                    <div class="status-dot"></div>
+                    <span>Active</span>
+                </div>
+            </div>
+
+            <div class="content-area" id="contentArea">
+                <!-- Chat Screen (default) -->
+                <div class="chat-container" id="chatScreen">
+                    <div class="message assistant">
+                        👋 Hello! I'm AVA, your AI assistant. How can I help you today?
+                        <div class="message-meta">
+                            <span>9:41 AM</span>
+                        </div>
+                    </div>
+                    <div class="message user">
+                        What can you do?
+                        <div class="message-meta">
+                            <span>9:42 AM</span>
+                        </div>
+                    </div>
+                    <div class="message assistant">
+                        I can help you with various tasks using on-device AI:
+                        <br><br>
+                        • Natural conversations<br>
+                        • Intent classification<br>
+                        • Custom command learning<br>
+                        • Privacy-focused processing
+                        <div class="message-meta">
+                            <span>9:42 AM</span>
+                            <span class="confidence-badge">92%</span>
+                        </div>
+                    </div>
+                    <div class="message user">
+                        Open calculator
+                        <div class="message-meta">
+                            <span>9:43 AM</span>
+                        </div>
+                    </div>
+                    <div class="message assistant">
+                        Opening Calculator app... ✓
+                        <div class="message-meta">
+                            <span>9:43 AM</span>
+                            <span class="confidence-badge">98%</span>
+                            <span>🎯 Intent: OPEN_APP</span>
+                        </div>
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" id="chatInput" placeholder="Type a message...">
+                        <button class="send-btn" onclick="sendMessage()">➤</button>
+                    </div>
+                </div>
+
+                <!-- Teach Screen -->
+                <div class="teach-container" id="teachScreen" style="display: none;">
+                    <div class="teach-card" onclick="editCommand(0)">
+                        <div class="teach-header">
+                            <span class="teach-title">Open Calculator</span>
+                            <span class="badge">ACTIVE</span>
+                        </div>
+                        <div class="example-text">
+                            "Open the calculator app"
+                        </div>
+                        <div class="example-text">
+                            "Launch calculator"
+                        </div>
+                        <div class="example-text">
+                            "I need to do some math"
+                        </div>
+                        <div class="example-count">3 training examples</div>
+                    </div>
+
+                    <div class="teach-card" onclick="editCommand(1)">
+                        <div class="teach-header">
+                            <span class="teach-title">Send Message</span>
+                            <span class="badge">ACTIVE</span>
+                        </div>
+                        <div class="example-text">
+                            "Send a message to John"
+                        </div>
+                        <div class="example-text">
+                            "Text Mom I'll be late"
+                        </div>
+                        <div class="example-text">
+                            "Message Sarah about dinner"
+                        </div>
+                        <div class="example-count">3 training examples</div>
+                    </div>
+
+                    <div class="teach-card" onclick="editCommand(2)">
+                        <div class="teach-header">
+                            <span class="teach-title">Set Reminder</span>
+                            <span class="badge">ACTIVE</span>
+                        </div>
+                        <div class="example-text">
+                            "Remind me to call the dentist"
+                        </div>
+                        <div class="example-text">
+                            "Set a reminder for tomorrow"
+                        </div>
+                        <div class="example-text">
+                            "Don't let me forget the meeting"
+                        </div>
+                        <div class="example-count">3 training examples</div>
+                    </div>
+
+                    <div class="teach-card" onclick="editCommand(3)">
+                        <div class="teach-header">
+                            <span class="teach-title">Play Music</span>
+                            <span class="badge inactive">INACTIVE</span>
+                        </div>
+                        <div class="example-text">
+                            "Play some music"
+                        </div>
+                        <div class="example-count">1 training example (need 3+)</div>
+                    </div>
+
+                    <div class="info-text">
+                        💡 Click any command to edit training examples<br>
+                        🎯 Need 3+ examples for best accuracy
+                    </div>
+                </div>
+
+                <!-- Settings Screen -->
+                <div class="settings-container" id="settingsScreen" style="display: none;">
+                    <div class="settings-section">
+                        <div class="section-title">Natural Language Understanding</div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Enable NLU</div>
+                                <div class="setting-desc">Use on-device intent classification</div>
+                            </div>
+                            <div class="toggle active" id="nluToggle"></div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Confidence Threshold</div>
+                                <div class="setting-desc" id="thresholdDesc">75% - Higher = more accurate</div>
+                            </div>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" min="0" max="100" value="75" class="slider" id="thresholdSlider">
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <div class="section-title">Language Model</div>
+                        <div class="setting-item" onclick="showLLMProviders()">
+                            <div class="setting-info">
+                                <div class="setting-label">LLM Provider</div>
+                                <div class="setting-desc" id="llmProviderDesc">Local (On-Device)</div>
+                            </div>
+                            <span style="font-size: 18px; color: rgba(255,255,255,0.6);">›</span>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Streaming</div>
+                                <div class="setting-desc">Show responses as they generate</div>
+                            </div>
+                            <div class="toggle active"></div>
+                        </div>
+                        <div class="setting-item" onclick="showModelDownload()">
+                            <div class="setting-info">
+                                <div class="setting-label">Download Models</div>
+                                <div class="setting-desc">Manage AI models</div>
+                            </div>
+                            <span style="font-size: 18px; color: rgba(255,255,255,0.6);">›</span>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <div class="section-title">Privacy</div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Crash Reporting</div>
+                                <div class="setting-desc">Help improve AVA</div>
+                            </div>
+                            <div class="toggle" id="crashToggle"></div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Analytics</div>
+                                <div class="setting-desc">Usage statistics</div>
+                            </div>
+                            <div class="toggle"></div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <div class="section-title">Appearance</div>
+                        <div class="setting-item" onclick="showThemeSelector()">
+                            <div class="setting-info">
+                                <div class="setting-label">Theme</div>
+                                <div class="setting-desc" id="themeDesc">System Default</div>
+                            </div>
+                            <span style="font-size: 18px; color: rgba(255,255,255,0.6);">›</span>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <div class="section-title">Storage</div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Cache Size</div>
+                                <div class="setting-desc" id="cacheSize">15 MB</div>
+                            </div>
+                        </div>
+                        <div class="setting-item" onclick="clearCache()">
+                            <div class="setting-label" style="color: #03DAC6;">Clear Cache</div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <div class="section-title">About</div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Version</div>
+                                <div class="setting-desc">1.0.0-alpha01</div>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">App Size</div>
+                                <div class="setting-desc">33 MB</div>
+                            </div>
+                        </div>
+                        <div class="setting-item" onclick="showLicenses()">
+                            <div class="setting-label" style="color: #03DAC6;">Open Source Licenses</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-nav">
+                <div class="nav-item active" onclick="changeScreen('chat')">
+                    <div class="nav-icon">💬</div>
+                    <div class="nav-label">Chat</div>
+                </div>
+                <div class="nav-item" onclick="changeScreen('teach')">
+                    <div class="nav-icon">🎓</div>
+                    <div class="nav-label">Teach</div>
+                </div>
+                <div class="nav-item" onclick="changeScreen('settings')">
+                    <div class="nav-icon">⚙️</div>
+                    <div class="nav-label">Settings</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAB for adding new commands (visible on Teach screen) -->
+    <div class="fab" id="fab" style="display: none;" onclick="addNewCommand()">+</div>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Modal for editing commands -->
+    <div class="modal" id="commandModal">
+        <div class="modal-content">
+            <div class="modal-header" id="modalTitle">Edit Command</div>
+            <input type="text" class="modal-input" id="commandName" placeholder="Command name (e.g., Open Calculator)">
+            <div class="modal-header" style="font-size: 16px; margin-top: 16px;">Training Examples</div>
+            <input type="text" class="modal-input" id="newExample" placeholder="Add training example...">
+            <button class="modal-btn primary" onclick="addExample()">Add Example</button>
+            <div class="example-list" id="exampleList"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" onclick="closeModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="saveCommand()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for LLM providers -->
+    <div class="modal" id="llmModal">
+        <div class="modal-content">
+            <div class="modal-header">Choose LLM Provider</div>
+            <div class="glass-panel" style="cursor: pointer; margin-bottom: 8px;" onclick="selectLLMProvider('Local (On-Device)')">
+                <div class="setting-label">Local (On-Device)</div>
+                <div class="setting-desc">Privacy-first, works offline</div>
+            </div>
+            <div class="glass-panel" style="cursor: pointer; margin-bottom: 8px;" onclick="selectLLMProvider('Anthropic Claude')">
+                <div class="setting-label">Anthropic Claude</div>
+                <div class="setting-desc">Most capable, requires internet</div>
+            </div>
+            <div class="glass-panel" style="cursor: pointer; margin-bottom: 8px;" onclick="selectLLMProvider('OpenRouter')">
+                <div class="setting-label">OpenRouter</div>
+                <div class="setting-desc">Access multiple models</div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" onclick="closeLLMModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for model download -->
+    <div class="modal" id="downloadModal">
+        <div class="modal-content">
+            <div class="modal-header">Download AI Models</div>
+            <div class="progress-container">
+                <div class="progress-header">
+                    <span class="progress-title">Phi-2 (2.7B)</span>
+                    <span class="progress-percent">Downloaded ✓</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 100%;"></div>
+                </div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-header">
+                    <span class="progress-title">NLU Model</span>
+                    <span class="progress-percent">Downloaded ✓</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 100%;"></div>
+                </div>
+            </div>
+            <div class="progress-container" style="cursor: pointer;" onclick="downloadModel()">
+                <div class="progress-header">
+                    <span class="progress-title">Llama-3.2 (3B)</span>
+                    <span class="progress-percent" id="downloadPercent">Not Downloaded</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="downloadProgress" style="width: 0%;"></div>
+                </div>
+            </div>
+            <div class="info-text">
+                💾 Total: 1.2 GB / 5 GB available
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" onclick="closeDownloadModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for theme selector -->
+    <div class="modal" id="themeModal">
+        <div class="modal-content">
+            <div class="modal-header">Choose Theme</div>
+            <div class="glass-panel" style="cursor: pointer; margin-bottom: 8px;" onclick="selectTheme('System Default')">
+                <div class="setting-label">System Default</div>
+                <div class="setting-desc">Follow system settings</div>
+            </div>
+            <div class="glass-panel" style="cursor: pointer; margin-bottom: 8px;" onclick="selectTheme('Light')">
+                <div class="setting-label">Light</div>
+                <div class="setting-desc">Always use light theme</div>
+            </div>
+            <div class="glass-panel" style="cursor: pointer; margin-bottom: 8px;" onclick="selectTheme('Dark')">
+                <div class="setting-label">Dark</div>
+                <div class="setting-desc">Always use dark theme</div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" onclick="closeThemeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentScreen = 'chat';
+        let isLandscape = false;
+        let currentCommandIndex = -1;
+        let commands = [
+            {
+                name: 'Open Calculator',
+                active: true,
+                examples: ['Open the calculator app', 'Launch calculator', 'I need to do some math']
+            },
+            {
+                name: 'Send Message',
+                active: true,
+                examples: ['Send a message to John', "Text Mom I'll be late", 'Message Sarah about dinner']
+            },
+            {
+                name: 'Set Reminder',
+                active: true,
+                examples: ['Remind me to call the dentist', 'Set a reminder for tomorrow', "Don't let me forget the meeting"]
+            },
+            {
+                name: 'Play Music',
+                active: false,
+                examples: ['Play some music']
+            }
+        ];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateClock();
+            setInterval(updateClock, 60000);
+
+            // Settings interactions
+            document.getElementById('thresholdSlider').addEventListener('input', function(e) {
+                const value = e.target.value;
+                document.getElementById('thresholdDesc').textContent = `${value}% - Higher = more accurate`;
+            });
+
+            // Toggle handlers
+            document.querySelectorAll('.toggle').forEach(toggle => {
+                toggle.addEventListener('click', function() {
+                    this.classList.toggle('active');
+
+                    // Special handling for specific toggles
+                    if (this.id === 'nluToggle') {
+                        showToast(this.classList.contains('active') ? 'NLU Enabled' : 'NLU Disabled');
+                    } else if (this.id === 'crashToggle') {
+                        showToast(this.classList.contains('active') ? 'Crash Reporting Enabled' : 'Crash Reporting Disabled');
+                    }
+                });
+            });
+
+            // Chat input handler
+            document.getElementById('chatInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        });
+
+        function updateClock() {
+            const now = new Date();
+            const hours = now.getHours() % 12 || 12;
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}`;
+        }
+
+        function toggleOrientation() {
+            isLandscape = !isLandscape;
+            const device = document.getElementById('device');
+            const orientationBtn = document.getElementById('orientationBtn');
+
+            if (isLandscape) {
+                device.classList.remove('portrait');
+                device.classList.add('landscape');
+                orientationBtn.innerHTML = '📱 Switch to Portrait';
+            } else {
+                device.classList.remove('landscape');
+                device.classList.add('portrait');
+                orientationBtn.innerHTML = '📱 Switch to Landscape';
+            }
+        }
+
+        function changeScreen(screenName) {
+            currentScreen = screenName;
+
+            // Hide all screens
+            document.getElementById('chatScreen').style.display = 'none';
+            document.getElementById('teachScreen').style.display = 'none';
+            document.getElementById('settingsScreen').style.display = 'none';
+            document.getElementById('fab').style.display = 'none';
+
+            // Update nav items
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => item.classList.remove('active'));
+
+            // Show selected screen
+            let title = '';
+
+            switch(screenName) {
+                case 'chat':
+                    document.getElementById('chatScreen').style.display = 'flex';
+                    title = 'Chat';
+                    navItems[0].classList.add('active');
+                    break;
+                case 'teach':
+                    document.getElementById('teachScreen').style.display = 'flex';
+                    document.getElementById('fab').style.display = 'flex';
+                    title = 'Teach AVA';
+                    navItems[1].classList.add('active');
+                    break;
+                case 'settings':
+                    document.getElementById('settingsScreen').style.display = 'flex';
+                    title = 'Settings';
+                    navItems[2].classList.add('active');
+                    break;
+            }
+
+            document.getElementById('screenTitle').textContent = title;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            const chatContainer = document.getElementById('chatScreen');
+            const inputContainer = chatContainer.querySelector('.chat-input');
+
+            // Add user message
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user';
+            const now = new Date();
+            const time = `${now.getHours() % 12 || 12}:${String(now.getMinutes()).padStart(2, '0')} ${now.getHours() >= 12 ? 'PM' : 'AM'}`;
+            userMessage.innerHTML = `
+                ${message}
+                <div class="message-meta">
+                    <span>${time}</span>
+                </div>
+            `;
+            chatContainer.insertBefore(userMessage, inputContainer);
+
+            input.value = '';
+
+            // Simulate NLU processing and response
+            setTimeout(() => {
+                const confidence = Math.floor(Math.random() * 15) + 85; // 85-100%
+                const responses = [
+                    `I understand you want to: "${message}". Processing that on-device for your privacy. 🔒`,
+                    `Got it! I'm working on: "${message}" using local AI processing.`,
+                    `Processing your request: "${message}". Everything stays on your device!`,
+                    `I can help with that! Executing: "${message}" with on-device intelligence.`
+                ];
+                const response = responses[Math.floor(Math.random() * responses.length)];
+
+                const assistantMessage = document.createElement('div');
+                assistantMessage.className = 'message assistant';
+                assistantMessage.innerHTML = `
+                    ${response}
+                    <div class="message-meta">
+                        <span>${time}</span>
+                        <span class="confidence-badge">${confidence}%</span>
+                    </div>
+                `;
+                chatContainer.insertBefore(assistantMessage, inputContainer);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, 800);
+        }
+
+        function editCommand(index) {
+            currentCommandIndex = index;
+            const command = commands[index];
+
+            document.getElementById('modalTitle').textContent = 'Edit Command';
+            document.getElementById('commandName').value = command.name;
+            renderExamples();
+
+            document.getElementById('commandModal').classList.add('show');
+        }
+
+        function addNewCommand() {
+            currentCommandIndex = -1;
+
+            document.getElementById('modalTitle').textContent = 'New Command';
+            document.getElementById('commandName').value = '';
+            document.getElementById('exampleList').innerHTML = '';
+
+            document.getElementById('commandModal').classList.add('show');
+        }
+
+        function renderExamples() {
+            const command = commands[currentCommandIndex];
+            const exampleList = document.getElementById('exampleList');
+            exampleList.innerHTML = '';
+
+            if (!command || !command.examples) return;
+
+            command.examples.forEach((example, index) => {
+                const item = document.createElement('div');
+                item.className = 'example-item';
+                item.innerHTML = `
+                    <span class="example-item-text">${example}</span>
+                    <button class="delete-btn" onclick="deleteExample(${index})">Delete</button>
+                `;
+                exampleList.appendChild(item);
+            });
+        }
+
+        function addExample() {
+            const input = document.getElementById('newExample');
+            const example = input.value.trim();
+
+            if (!example) return;
+
+            if (currentCommandIndex === -1) {
+                showToast('Save command first');
+                return;
+            }
+
+            commands[currentCommandIndex].examples.push(example);
+            input.value = '';
+            renderExamples();
+            showToast('Example added');
+        }
+
+        function deleteExample(index) {
+            if (currentCommandIndex === -1) return;
+
+            commands[currentCommandIndex].examples.splice(index, 1);
+            renderExamples();
+            showToast('Example deleted');
+        }
+
+        function saveCommand() {
+            const name = document.getElementById('commandName').value.trim();
+
+            if (!name) {
+                showToast('Command name required');
+                return;
+            }
+
+            if (currentCommandIndex === -1) {
+                commands.push({
+                    name: name,
+                    active: false,
+                    examples: []
+                });
+                showToast('Command created');
+            } else {
+                commands[currentCommandIndex].name = name;
+                commands[currentCommandIndex].active = commands[currentCommandIndex].examples.length >= 3;
+                showToast('Command saved');
+            }
+
+            closeModal();
+        }
+
+        function closeModal() {
+            document.getElementById('commandModal').classList.remove('show');
+        }
+
+        function showLLMProviders() {
+            document.getElementById('llmModal').classList.add('show');
+        }
+
+        function closeLLMModal() {
+            document.getElementById('llmModal').classList.remove('show');
+        }
+
+        function selectLLMProvider(provider) {
+            document.getElementById('llmProviderDesc').textContent = provider;
+            closeLLMModal();
+            showToast(`LLM Provider: ${provider}`);
+        }
+
+        function showModelDownload() {
+            document.getElementById('downloadModal').classList.add('show');
+        }
+
+        function closeDownloadModal() {
+            document.getElementById('downloadModal').classList.remove('show');
+        }
+
+        function downloadModel() {
+            const progressBar = document.getElementById('downloadProgress');
+            const percentText = document.getElementById('downloadPercent');
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 5;
+                progressBar.style.width = progress + '%';
+                percentText.textContent = progress + '%';
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    percentText.textContent = 'Downloaded ✓';
+                    showToast('Model downloaded successfully');
+                }
+            }, 200);
+        }
+
+        function showThemeSelector() {
+            document.getElementById('themeModal').classList.add('show');
+        }
+
+        function closeThemeModal() {
+            document.getElementById('themeModal').classList.remove('show');
+        }
+
+        function selectTheme(theme) {
+            document.getElementById('themeDesc').textContent = theme;
+            closeThemeModal();
+            showToast(`Theme: ${theme}`);
+        }
+
+        function clearCache() {
+            if (confirm('Clear 15 MB of cached data?')) {
+                setTimeout(() => {
+                    document.getElementById('cacheSize').textContent = '0 MB';
+                    showToast('Cache cleared');
+                }, 500);
+            }
+        }
+
+        function showLicenses() {
+            showToast('Opening licenses screen...');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+
+        // Close modals when clicking outside
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('show');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

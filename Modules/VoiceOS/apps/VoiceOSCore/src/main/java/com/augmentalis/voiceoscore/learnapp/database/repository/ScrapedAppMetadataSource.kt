@@ -31,6 +31,7 @@ interface ScrapedAppMetadataSource {
      * @since 1.0.0
      */
     suspend fun getAppsByPackageName(packageName: String): List<ScrapedAppMetadata>
+<<<<<<< HEAD
 
     /**
      * Get all scraped apps
@@ -43,6 +44,8 @@ interface ScrapedAppMetadataSource {
      * @since Phase 4 - Relearn App Command
      */
     suspend fun getAllApps(): List<ScrapedAppMetadata>
+=======
+>>>>>>> AVA-Development
 }
 
 /**

@@ -160,6 +160,7 @@
       "path": "Modules/AvaConnect",
       "status": "planned",
       "description": "AvaConnect connectivity feature module"
+<<<<<<< HEAD
     },
     {
       "id": "Cockpit",
@@ -170,6 +171,8 @@
       "path": "Modules/Cockpit",
       "status": "development",
       "description": "Voice-first spatial workspace library for managing floating windows in AR/2D environments"
+=======
+>>>>>>> AVA-Development
     }
   ]
 }

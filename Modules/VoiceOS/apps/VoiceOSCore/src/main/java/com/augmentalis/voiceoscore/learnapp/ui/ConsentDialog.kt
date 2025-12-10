@@ -5,7 +5,11 @@
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
  * Created: 2025-10-24
+<<<<<<< HEAD
  * Updated: 2025-12-08 (v1.0.6 - Removed Material3 components to fix Compose lifecycle crash)
+=======
+ * Updated: 2025-10-28 (v1.0.5 - Refactored to use WidgetOverlayHelper for thread safety)
+>>>>>>> AVA-Development
  *
  * WindowManager-based overlay for app learning consent.
  * Uses WindowManager.addView() directly to bypass Dialog's Activity requirement.
@@ -19,6 +23,10 @@ import android.content.Context
 import android.graphics.PixelFormat
 import android.util.Log
 import android.view.Gravity
+<<<<<<< HEAD
+=======
+import android.view.LayoutInflater
+>>>>>>> AVA-Development
 import android.view.View
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
@@ -27,7 +35,10 @@ import android.widget.CheckBox
 import android.widget.TextView
 import com.augmentalis.voiceoscore.R
 import com.augmentalis.voiceoscore.learnapp.ui.widgets.WidgetOverlayHelper
+<<<<<<< HEAD
 import com.augmentalis.voiceoscore.utils.MaterialThemeHelper
+=======
+>>>>>>> AVA-Development
 
 
 /**
@@ -77,11 +88,14 @@ import com.augmentalis.voiceoscore.utils.MaterialThemeHelper
  *
  * ## Fix History
  *
+<<<<<<< HEAD
  * - v1.0.6 (2025-12-08): Fixed Compose lifecycle crash - Removed Material3 components
  *   - Replaced Material3 Button styles with custom ripple drawables
  *   - Replaced androidx.cardview.widget.CardView with LinearLayout + custom background
  *   - Eliminated Compose dependency that caused ViewTreeLifecycleOwner crash
  *   - Material3 components internally use Compose, which requires LifecycleOwner not available in AccessibilityService
+=======
+>>>>>>> AVA-Development
  * - v1.0.5 (2025-10-28): Fixed BadTokenException race condition - Refactored to use WidgetOverlayHelper
  *   - Replaced Handler.post() with WidgetOverlayHelper.ensureMainThread()
  *   - Eliminates race condition: immediate execution on main thread (no Handler delay)
@@ -150,9 +164,16 @@ class ConsentDialog(private val context: AccessibilityService) {
                 }
             }
 
+<<<<<<< HEAD
             // Inflate custom view with Material theme for MaterialComponents.Button styles
             Log.d(TAG, "Inflating consent dialog layout")
             val customView = MaterialThemeHelper.inflateOverlay(context, R.layout.learnapp_layout_consent_dialog)
+=======
+            // Inflate custom view
+            Log.d(TAG, "Inflating consent dialog layout")
+            val customView = LayoutInflater.from(context)
+                .inflate(R.layout.learnapp_layout_consent_dialog, null)
+>>>>>>> AVA-Development
             Log.d(TAG, "Layout inflated successfully")
 
             // Configure title

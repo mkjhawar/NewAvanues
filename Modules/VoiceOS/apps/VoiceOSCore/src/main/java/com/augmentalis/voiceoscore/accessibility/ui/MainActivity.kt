@@ -9,7 +9,10 @@
 package com.augmentalis.voiceoscore.accessibility.ui
 
 import android.content.Intent
+<<<<<<< HEAD
 import android.content.res.Configuration
+=======
+>>>>>>> AVA-Development
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -24,16 +27,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+<<<<<<< HEAD
 import androidx.compose.foundation.layout.fillMaxHeight
+=======
+>>>>>>> AVA-Development
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+<<<<<<< HEAD
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+=======
+import androidx.compose.foundation.shape.RoundedCornerShape
+>>>>>>> AVA-Development
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Accessibility
@@ -55,10 +65,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+<<<<<<< HEAD
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+=======
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+>>>>>>> AVA-Development
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.augmentalis.voiceoscore.accessibility.config.ServiceConfiguration
@@ -71,6 +86,7 @@ import com.augmentalis.voiceoscore.ui.components.FloatingEngineSelector
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+<<<<<<< HEAD
 /**
  * Ocean Theme Color Palette
  * Modern, calming colors optimized for RealWear Navigator 500
@@ -98,6 +114,8 @@ object OceanTheme {
     val StatusWarning = Color(0xFFFFB74D)  // Amber
 }
 
+=======
+>>>>>>> AVA-Development
 class MainActivity : ComponentActivity() {
     
     private val viewModel: MainViewModel by viewModels()
@@ -180,6 +198,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+<<<<<<< HEAD
 /**
  * Adaptive spacing values based on orientation
  */
@@ -218,6 +237,8 @@ fun getAdaptiveSpacing(): AdaptiveSpacing {
     }
 }
 
+=======
+>>>>>>> AVA-Development
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -232,6 +253,7 @@ fun MainScreen(
     val configuration by viewModel.configuration.observeAsState(ServiceConfiguration.createDefault())
     val selectedEngine by viewModel.selectedEngine.observeAsState("vivoka")
     val isRecognizing by viewModel.isRecognizing.observeAsState(false)
+<<<<<<< HEAD
 
     val localConfig = LocalConfiguration.current
     val isLandscape = localConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -336,6 +358,52 @@ fun MainScreen(
             }
         }
 
+=======
+    
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Color(0xFF000000) // Dark background for glassmorphism
+            )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            // Header
+            HeaderSection()
+            
+            // Service Status Card
+            ServiceStatusCard(
+                serviceEnabled = serviceEnabled,
+                overlayPermissionGranted = overlayPermissionGranted,
+                onEnableService = {
+                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                    context.startActivity(intent)
+                },
+                onRequestOverlay = onRequestOverlayPermission
+            )
+            
+            // Quick Stats
+            QuickStatsCard(configuration = configuration)
+            
+            // Navigation Cards
+            NavigationCards(
+                onNavigateToSettings = onNavigateToSettings,
+                onNavigateToTesting = onNavigateToTesting,
+                serviceEnabled = serviceEnabled
+            )
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            // Footer
+            FooterSection()
+        }
+        
+>>>>>>> AVA-Development
         // Floating Engine Selector for testing
         FloatingEngineSelector(
             selectedEngine = selectedEngine,
@@ -355,30 +423,50 @@ fun MainScreen(
 }
 
 @Composable
+<<<<<<< HEAD
 fun HeaderSection(spacing: AdaptiveSpacing) {
+=======
+fun HeaderSection() {
+>>>>>>> AVA-Development
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .glassMorphism(
                 config = GlassMorphismConfig(
+<<<<<<< HEAD
                     cornerRadius = 12.dp,
                     backgroundOpacity = 0.1f,
                     borderOpacity = 0.15f,
                     borderWidth = 0.5.dp,
                     tintColor = Color(0xFF4285F4),
                     tintOpacity = 0.1f
+=======
+                    cornerRadius = 16.dp,
+                    backgroundOpacity = 0.1f,
+                    borderOpacity = 0.2f,
+                    borderWidth = 1.dp,
+                    tintColor = Color(0xFF4285F4),
+                    tintOpacity = 0.15f
+>>>>>>> AVA-Development
                 ),
                 depth = DepthLevel(0.8f)
             ),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
+<<<<<<< HEAD
         Row(
             modifier = Modifier.padding(spacing.cardPadding),
             verticalAlignment = Alignment.CenterVertically
+=======
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+>>>>>>> AVA-Development
         ) {
             Icon(
                 imageVector = Icons.Default.Accessibility,
                 contentDescription = "VoiceOS Accessibility",
+<<<<<<< HEAD
                 modifier = Modifier.size(spacing.iconSize),
                 tint = Color(0xFF4285F4)
             )
@@ -447,6 +535,26 @@ fun HeaderSectionCompact(spacing: AdaptiveSpacing) {
                     color = Color.White.copy(alpha = 0.6f)
                 )
             }
+=======
+                modifier = Modifier.size(48.dp),
+                tint = Color(0xFF4285F4)
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Text(
+                text = "VoiceOS Accessibility",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+            
+            Text(
+                text = "Voice-controlled device interaction",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White.copy(alpha = 0.8f)
+            )
+>>>>>>> AVA-Development
         }
     }
 }
@@ -456,27 +564,44 @@ fun ServiceStatusCard(
     serviceEnabled: Boolean,
     overlayPermissionGranted: Boolean,
     onEnableService: () -> Unit,
+<<<<<<< HEAD
     onRequestOverlay: () -> Unit,
     spacing: AdaptiveSpacing
+=======
+    onRequestOverlay: () -> Unit
+>>>>>>> AVA-Development
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .glassMorphism(
                 config = GlassMorphismConfig(
+<<<<<<< HEAD
                     cornerRadius = 12.dp,
                     backgroundOpacity = 0.1f,
                     borderOpacity = 0.15f,
                     borderWidth = 0.5.dp,
                     tintColor = if (serviceEnabled && overlayPermissionGranted) Color(0xFF00C853) else Color(0xFFFF5722),
                     tintOpacity = 0.1f
+=======
+                    cornerRadius = 16.dp,
+                    backgroundOpacity = 0.1f,
+                    borderOpacity = 0.2f,
+                    borderWidth = 1.dp,
+                    tintColor = if (serviceEnabled && overlayPermissionGranted) Color(0xFF00C853) else Color(0xFFFF5722),
+                    tintOpacity = 0.15f
+>>>>>>> AVA-Development
                 ),
                 depth = DepthLevel(0.6f)
             ),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
+<<<<<<< HEAD
             modifier = Modifier.padding(spacing.cardPadding)
+=======
+            modifier = Modifier.padding(20.dp)
+>>>>>>> AVA-Development
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -485,6 +610,7 @@ fun ServiceStatusCard(
             ) {
                 Text(
                     text = "Service Status",
+<<<<<<< HEAD
                     style = MaterialTheme.typography.titleSmall,
                     color = Color.White,
                     fontWeight = FontWeight.SemiBold
@@ -494,20 +620,45 @@ fun ServiceStatusCard(
 
             Spacer(modifier = Modifier.height(spacing.itemSpacing))
 
+=======
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold
+                )
+                
+                StatusIndicator(
+                    isActive = serviceEnabled && overlayPermissionGranted
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Accessibility Service Status
+>>>>>>> AVA-Development
             PermissionRow(
                 icon = Icons.Default.Accessibility,
                 title = "Accessibility Service",
                 isGranted = serviceEnabled,
+<<<<<<< HEAD
                 onClick = if (!serviceEnabled) onEnableService else null,
                 spacing = spacing
             )
 
             Spacer(modifier = Modifier.height(spacing.itemSpacing / 2))
 
+=======
+                onClick = if (!serviceEnabled) onEnableService else null
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // System Overlay Permission
+>>>>>>> AVA-Development
             PermissionRow(
                 icon = Icons.Default.Layers,
                 title = "System Overlay",
                 isGranted = overlayPermissionGranted,
+<<<<<<< HEAD
                 onClick = if (!overlayPermissionGranted) onRequestOverlay else null,
                 spacing = spacing
             )
@@ -577,6 +728,9 @@ fun ServiceStatusCardCompact(
                 isGranted = overlayPermissionGranted,
                 onClick = if (!overlayPermissionGranted) onRequestOverlay else null,
                 spacing = spacing
+=======
+                onClick = if (!overlayPermissionGranted) onRequestOverlay else null
+>>>>>>> AVA-Development
             )
         }
     }
@@ -587,19 +741,28 @@ fun PermissionRow(
     icon: ImageVector,
     title: String,
     isGranted: Boolean,
+<<<<<<< HEAD
     onClick: (() -> Unit)? = null,
     spacing: AdaptiveSpacing
+=======
+    onClick: (() -> Unit)? = null
+>>>>>>> AVA-Development
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = onClick != null) { onClick?.invoke() }
+<<<<<<< HEAD
             .padding(vertical = 2.dp),
+=======
+            .padding(vertical = 4.dp),
+>>>>>>> AVA-Development
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = title,
+<<<<<<< HEAD
             modifier = Modifier.size(spacing.smallIconSize),
             tint = if (isGranted) Color(0xFF00C853) else Color(0xFFFF5722)
         )
@@ -626,12 +789,41 @@ fun PermissionRow(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = "Configure",
                 modifier = Modifier.size(spacing.smallIconSize - 4.dp),
+=======
+            modifier = Modifier.size(20.dp),
+            tint = if (isGranted) Color(0xFF00C853) else Color(0xFFFF5722)
+        )
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.White,
+            modifier = Modifier.weight(1f)
+        )
+        
+        Icon(
+            imageVector = if (isGranted) Icons.Default.CheckCircle else Icons.Default.Warning,
+            contentDescription = if (isGranted) "Granted" else "Required",
+            modifier = Modifier.size(18.dp),
+            tint = if (isGranted) Color(0xFF00C853) else Color(0xFFFF5722)
+        )
+        
+        if (onClick != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Configure",
+                modifier = Modifier.size(16.dp),
+>>>>>>> AVA-Development
                 tint = Color.White.copy(alpha = 0.6f)
             )
         }
     }
 }
 
+<<<<<<< HEAD
 /**
  * Compact permission row for landscape
  */
@@ -687,29 +879,47 @@ fun PermissionRowCompact(
 
 @Composable
 fun StatusIndicator(isActive: Boolean, spacing: AdaptiveSpacing) {
+=======
+@Composable
+fun StatusIndicator(isActive: Boolean) {
+>>>>>>> AVA-Development
     Row(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
+<<<<<<< HEAD
                 .size(6.dp)
+=======
+                .size(8.dp)
+>>>>>>> AVA-Development
                 .background(
                     color = if (isActive) Color(0xFF00C853) else Color(0xFFFF5722),
                     shape = RoundedCornerShape(50)
                 )
         )
+<<<<<<< HEAD
 
         Spacer(modifier = Modifier.width(4.dp))
 
         Text(
             text = if (isActive) "Active" else "Inactive",
             style = MaterialTheme.typography.labelSmall,
+=======
+        
+        Spacer(modifier = Modifier.width(8.dp))
+        
+        Text(
+            text = if (isActive) "Active" else "Inactive",
+            style = MaterialTheme.typography.bodyMedium,
+>>>>>>> AVA-Development
             color = if (isActive) Color(0xFF00C853) else Color(0xFFFF5722),
             fontWeight = FontWeight.Medium
         )
     }
 }
 
+<<<<<<< HEAD
 /**
  * Compact status indicator for landscape
  */
@@ -727,23 +937,37 @@ fun StatusIndicatorCompact(isActive: Boolean) {
 
 @Composable
 fun QuickStatsCard(configuration: ServiceConfiguration, spacing: AdaptiveSpacing) {
+=======
+@Composable
+fun QuickStatsCard(configuration: ServiceConfiguration) {
+>>>>>>> AVA-Development
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .glassMorphism(
                 config = GlassMorphismConfig(
+<<<<<<< HEAD
                     cornerRadius = 12.dp,
                     backgroundOpacity = 0.1f,
                     borderOpacity = 0.15f,
                     borderWidth = 0.5.dp,
                     tintColor = Color(0xFF673AB7),
                     tintOpacity = 0.1f
+=======
+                    cornerRadius = 16.dp,
+                    backgroundOpacity = 0.1f,
+                    borderOpacity = 0.2f,
+                    borderWidth = 1.dp,
+                    tintColor = Color(0xFF673AB7),
+                    tintOpacity = 0.15f
+>>>>>>> AVA-Development
                 ),
                 depth = DepthLevel(0.6f)
             ),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
+<<<<<<< HEAD
             modifier = Modifier.padding(spacing.cardPadding)
         ) {
             Text(
@@ -755,12 +979,26 @@ fun QuickStatsCard(configuration: ServiceConfiguration, spacing: AdaptiveSpacing
 
             Spacer(modifier = Modifier.height(spacing.itemSpacing))
 
+=======
+            modifier = Modifier.padding(20.dp)
+        ) {
+            Text(
+                text = "Configuration",
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+>>>>>>> AVA-Development
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 StatItem(
                     label = "Handlers",
+<<<<<<< HEAD
                     value = if (configuration.handlersEnabled) "7" else "Off"
                 )
                 StatItem(
@@ -824,6 +1062,19 @@ fun QuickStatsCardCompact(configuration: ServiceConfiguration, spacing: Adaptive
                 StatItemCompact(
                     label = "Cache",
                     value = "${configuration.maxCacheSize}"
+=======
+                    value = if (configuration.handlersEnabled) "7 Active" else "Disabled"
+                )
+                
+                StatItem(
+                    label = "Cursor",
+                    value = if (configuration.cursorEnabled) "Enabled" else "Disabled"
+                )
+                
+                StatItem(
+                    label = "Cache",
+                    value = "${configuration.maxCacheSize} cmds"
+>>>>>>> AVA-Development
                 )
             }
         }
@@ -837,6 +1088,7 @@ fun StatItem(label: String, value: String) {
     ) {
         Text(
             text = value,
+<<<<<<< HEAD
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold
@@ -867,6 +1119,17 @@ fun StatItemCompact(label: String, value: String) {
             text = label,
             style = MaterialTheme.typography.labelSmall,
             color = Color.White.copy(alpha = 0.5f)
+=======
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold
+        )
+        
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White.copy(alpha = 0.7f)
+>>>>>>> AVA-Development
         )
     }
 }
@@ -875,6 +1138,7 @@ fun StatItemCompact(label: String, value: String) {
 fun NavigationCards(
     onNavigateToSettings: () -> Unit,
     onNavigateToTesting: () -> Unit,
+<<<<<<< HEAD
     serviceEnabled: Boolean,
     spacing: AdaptiveSpacing
 ) {
@@ -882,19 +1146,38 @@ fun NavigationCards(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(spacing.itemSpacing)
     ) {
+=======
+    serviceEnabled: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Settings Card
+>>>>>>> AVA-Development
         NavigationCard(
             modifier = Modifier.weight(1f),
             icon = Icons.Default.Settings,
             title = "Settings",
+<<<<<<< HEAD
             description = "Configure options",
             tintColor = Color(0xFF2196F3),
             onClick = onNavigateToSettings,
             spacing = spacing
         )
+=======
+            description = "Configure service options",
+            tintColor = Color(0xFF2196F3),
+            onClick = onNavigateToSettings
+        )
+        
+        // Testing Card
+>>>>>>> AVA-Development
         NavigationCard(
             modifier = Modifier.weight(1f),
             icon = Icons.Default.PlayArrow,
             title = "Testing",
+<<<<<<< HEAD
             description = "Test commands",
             tintColor = Color(0xFF4CAF50),
             enabled = serviceEnabled,
@@ -934,6 +1217,12 @@ fun NavigationCardsCompact(
             enabled = serviceEnabled,
             onClick = onNavigateToTesting,
             spacing = spacing
+=======
+            description = "Test voice commands",
+            tintColor = Color(0xFF4CAF50),
+            enabled = serviceEnabled,
+            onClick = onNavigateToTesting
+>>>>>>> AVA-Development
         )
     }
 }
@@ -946,32 +1235,50 @@ fun NavigationCard(
     description: String,
     tintColor: Color,
     enabled: Boolean = true,
+<<<<<<< HEAD
     onClick: () -> Unit,
     spacing: AdaptiveSpacing
+=======
+    onClick: () -> Unit
+>>>>>>> AVA-Development
 ) {
     Card(
         modifier = modifier
             .clickable(enabled = enabled) { onClick() }
             .glassMorphism(
                 config = GlassMorphismConfig(
+<<<<<<< HEAD
                     cornerRadius = 12.dp,
                     backgroundOpacity = if (enabled) 0.1f else 0.05f,
                     borderOpacity = if (enabled) 0.15f else 0.08f,
                     borderWidth = 0.5.dp,
                     tintColor = if (enabled) tintColor else Color.Gray,
                     tintOpacity = if (enabled) 0.1f else 0.05f
+=======
+                    cornerRadius = 16.dp,
+                    backgroundOpacity = if (enabled) 0.1f else 0.05f,
+                    borderOpacity = if (enabled) 0.2f else 0.1f,
+                    borderWidth = 1.dp,
+                    tintColor = if (enabled) tintColor else Color.Gray,
+                    tintOpacity = if (enabled) 0.15f else 0.08f
+>>>>>>> AVA-Development
                 ),
                 depth = DepthLevel(0.4f)
             ),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
+<<<<<<< HEAD
             modifier = Modifier.padding(spacing.cardPadding),
+=======
+            modifier = Modifier.padding(20.dp),
+>>>>>>> AVA-Development
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = title,
+<<<<<<< HEAD
                 modifier = Modifier.size(spacing.iconSize),
                 tint = if (enabled) tintColor else Color.Gray
             )
@@ -1039,6 +1346,25 @@ fun NavigationCardCompact(
                 style = MaterialTheme.typography.labelMedium,
                 color = if (enabled) Color.White else Color.Gray,
                 fontWeight = FontWeight.Medium
+=======
+                modifier = Modifier.size(32.dp),
+                tint = if (enabled) tintColor else Color.Gray
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = if (enabled) Color.White else Color.Gray,
+                fontWeight = FontWeight.SemiBold
+            )
+            
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (enabled) Color.White.copy(alpha = 0.7f) else Color.Gray.copy(alpha = 0.5f)
+>>>>>>> AVA-Development
             )
         }
     }
@@ -1048,6 +1374,7 @@ fun NavigationCardCompact(
 fun FooterSection() {
     Text(
         text = "VOS4 • Intelligent Devices LLC",
+<<<<<<< HEAD
         style = MaterialTheme.typography.labelSmall,
         color = Color.White.copy(alpha = 0.4f),
         modifier = Modifier.fillMaxWidth()
@@ -1584,4 +1911,10 @@ fun OceanFooterLandscape() {
             color = OceanTheme.TextMuted.copy(alpha = 0.6f)
         )
     }
+=======
+        style = MaterialTheme.typography.bodySmall,
+        color = Color.White.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth()
+    )
+>>>>>>> AVA-Development
 }

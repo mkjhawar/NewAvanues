@@ -52,10 +52,13 @@ class SQLDelightGeneratedCommandRepository(
         queries.getAll().executeAsList().map { it.toGeneratedCommandDTO() }
     }
 
+<<<<<<< HEAD
     override suspend fun getAllCommands(): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
         queries.getAllCommands().executeAsList().map { it.toGeneratedCommandDTO() }
     }
 
+=======
+>>>>>>> AVA-Development
     override suspend fun getByActionType(actionType: String): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
         queries.getByActionType(actionType).executeAsList().map { it.toGeneratedCommandDTO() }
     }
@@ -103,6 +106,7 @@ class SQLDelightGeneratedCommandRepository(
     override suspend fun count(): Long = withContext(Dispatchers.Default) {
         queries.count().executeAsOne()
     }
+<<<<<<< HEAD
 
     override suspend fun getByPackage(packageName: String): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
         queries.getByPackage(packageName).executeAsList().map { it.toGeneratedCommandDTO() }
@@ -121,4 +125,6 @@ class SQLDelightGeneratedCommandRepository(
             id = command.id
         )
     }
+=======
+>>>>>>> AVA-Development
 }

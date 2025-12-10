@@ -152,6 +152,7 @@ class DangerousElementDetector {
             Regex("force\\s*stop", RegexOption.IGNORE_CASE) to "Force stop (CRITICAL)",
             Regex("force\\s*close", RegexOption.IGNORE_CASE) to "Force close (CRITICAL)",
 
+<<<<<<< HEAD
             // CRITICAL: Communication actions (2025-12-05, enhanced 2025-12-08)
             Regex("audio\\s*call", RegexOption.IGNORE_CASE) to "Audio call (CRITICAL)",
             Regex("video\\s*call", RegexOption.IGNORE_CASE) to "Video call (CRITICAL)",
@@ -165,6 +166,15 @@ class DangerousElementDetector {
             Regex("new.*meeting", RegexOption.IGNORE_CASE) to "New meeting (CRITICAL)",  // NEW: create meeting
             Regex("schedule.*meeting", RegexOption.IGNORE_CASE) to "Schedule meeting (CRITICAL)",  // NEW: schedule meeting
             Regex("instant.*meeting", RegexOption.IGNORE_CASE) to "Instant meeting (CRITICAL)",  // NEW: instant meeting
+=======
+            // CRITICAL: Communication actions (2025-12-05)
+            Regex("audio\\s*call", RegexOption.IGNORE_CASE) to "Audio call (CRITICAL)",
+            Regex("video\\s*call", RegexOption.IGNORE_CASE) to "Video call (CRITICAL)",
+            Regex("make\\s*call", RegexOption.IGNORE_CASE) to "Make call (CRITICAL)",
+            Regex("start\\s*call", RegexOption.IGNORE_CASE) to "Start call (CRITICAL)",
+            Regex("dial", RegexOption.IGNORE_CASE) to "Dial (CRITICAL)",
+            Regex("call\\s*now", RegexOption.IGNORE_CASE) to "Call now (CRITICAL)",
+>>>>>>> AVA-Development
 
             // CRITICAL: Audio/microphone settings (2025-12-05)
             Regex("^microphone$", RegexOption.IGNORE_CASE) to "Microphone (CRITICAL)",
@@ -209,14 +219,21 @@ class DangerousElementDetector {
             Regex("reset", RegexOption.IGNORE_CASE) to "Reset",
             Regex("erase", RegexOption.IGNORE_CASE) to "Erase",
 
+<<<<<<< HEAD
             // Sending / sharing / posting (enhanced 2025-12-08)
+=======
+            // Sending / sharing / posting
+>>>>>>> AVA-Development
             Regex("send\\s*message", RegexOption.IGNORE_CASE) to "Send message",
             Regex("send\\s*email", RegexOption.IGNORE_CASE) to "Send email",
             Regex("post", RegexOption.IGNORE_CASE) to "Post",
             Regex("share", RegexOption.IGNORE_CASE) to "Share",
             Regex("publish", RegexOption.IGNORE_CASE) to "Publish",
             Regex("tweet", RegexOption.IGNORE_CASE) to "Tweet",
+<<<<<<< HEAD
             Regex("^reply$", RegexOption.IGNORE_CASE) to "Reply (CRITICAL)",  // NEW: Reply button in Teams/messaging apps
+=======
+>>>>>>> AVA-Development
 
             // Permissions / access
             Regex("grant.*permission", RegexOption.IGNORE_CASE) to "Grant permission",
@@ -230,10 +247,14 @@ class DangerousElementDetector {
             // Financial
             Regex("transfer", RegexOption.IGNORE_CASE) to "Transfer",
             Regex("withdraw", RegexOption.IGNORE_CASE) to "Withdraw",
+<<<<<<< HEAD
             Regex("donate", RegexOption.IGNORE_CASE) to "Donate",
 
             // Download actions (2025-12-07) - skip click but generate UUID/command
             Regex("download", RegexOption.IGNORE_CASE) to "Download"
+=======
+            Regex("donate", RegexOption.IGNORE_CASE) to "Donate"
+>>>>>>> AVA-Development
         )
 
         /**
@@ -252,7 +273,11 @@ class DangerousElementDetector {
             "quit" to "Quit (CRITICAL)",
             "force_stop" to "Force stop (CRITICAL)",
             "force_close" to "Force close (CRITICAL)",
+<<<<<<< HEAD
             // Communication actions (2025-12-05, enhanced 2025-12-08)
+=======
+            // Communication actions (2025-12-05)
+>>>>>>> AVA-Development
             "audio_call" to "Audio call (CRITICAL)",
             "video_call" to "Video call (CRITICAL)",
             "audiocall" to "Audio call (CRITICAL)",
@@ -260,6 +285,7 @@ class DangerousElementDetector {
             "make_call" to "Make call (CRITICAL)",
             "start_call" to "Start call (CRITICAL)",
             "dial" to "Dial (CRITICAL)",
+<<<<<<< HEAD
             // NEW (2025-12-08): Teams-specific call patterns
             "call_control" to "Call control (CRITICAL)",  // call_control_mute, call_control_speaker
             "call_end" to "End call (CRITICAL)",  // call_end_button
@@ -270,6 +296,8 @@ class DangerousElementDetector {
             "new_meeting" to "New meeting (CRITICAL)",
             "schedule_meeting" to "Schedule meeting (CRITICAL)",
             "answer" to "Answer call (CRITICAL)",
+=======
+>>>>>>> AVA-Development
             // Audio/microphone settings (2025-12-05)
             "microphone" to "Microphone (CRITICAL)",
             "dictation" to "Dictation (CRITICAL)",
@@ -298,6 +326,7 @@ class DangerousElementDetector {
             "post" to "Post action",
             "share" to "Share action",
             "publish" to "Publish action",
+<<<<<<< HEAD
             "reply" to "Reply action (CRITICAL)",  // NEW (2025-12-08): Reply in messaging apps
             "reset" to "Reset action",
             "clear" to "Clear action",
@@ -305,6 +334,12 @@ class DangerousElementDetector {
             "uninstall" to "Uninstall action",
             // Download actions (2025-12-07) - skip click but generate UUID/command
             "download" to "Download action"
+=======
+            "reset" to "Reset action",
+            "clear" to "Clear action",
+            "erase" to "Erase action",
+            "uninstall" to "Uninstall action"
+>>>>>>> AVA-Development
         )
     }
 }

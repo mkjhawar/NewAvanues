@@ -70,6 +70,7 @@ class SpeechEngineManager(private val context: Context) {
     private var lastSuccessfulEngine: SpeechEngine? = null
     private var engineInitializationHistory = mutableMapOf<SpeechEngine, Long>()
 
+<<<<<<< HEAD
     // FIX #2: Rate-limiting for command updates (prevent 50-75KB/sec memory pressure)
     private var lastCommandUpdateTime = 0L
     private val commandUpdateMutex = Mutex()
@@ -89,6 +90,8 @@ class SpeechEngineManager(private val context: Context) {
      * No code changes needed here - the crash is prevented by reducing memory pressure.
      */
 
+=======
+>>>>>>> AVA-Development
 
     private val listenerManager = SpeechListenerManager()
     private var currentConfiguration = SpeechConfigurationData()
@@ -587,6 +590,7 @@ class SpeechEngineManager(private val context: Context) {
         }
     }
 
+<<<<<<< HEAD
     /**
      * Update voice commands with deduplication and rate-limiting
      *
@@ -628,6 +632,19 @@ class SpeechEngineManager(private val context: Context) {
                 }
             }
         }
+=======
+    fun updateCommands(commands: List<String>) {
+        when (currentEngine) {
+            is VivokaEngine -> {
+                Log.d(TAG, "SPEECH_TEST: updateCommands commands = $commands")
+                (currentEngine as VivokaEngine).setDynamicCommands(commands)
+            }
+            else -> {
+
+            }
+        }
+
+>>>>>>> AVA-Development
     }
 
     /**
@@ -739,8 +756,11 @@ class SpeechEngineManager(private val context: Context) {
     }
 
     companion object {
+<<<<<<< HEAD
         // FIX #2: Rate-limit constant (5 seconds minimum between command updates)
         private const val COMMAND_UPDATE_THROTTLE_MS = 5000L
+=======
+>>>>>>> AVA-Development
 
         private val STATIC_COMMANDS = listOf(
             // Navigation

@@ -1,0 +1,209 @@
+{
+  "version": "1.0.0",
+  "updated": "2025-11-13T20:00:00Z",
+  "description": "Registry of living documents - auto-updated by AI on task completion, blockers, or timeline changes",
+
+  "documents": {
+    "tasks.md": {
+      "type": "living_task_list",
+      "location": "project_root/tasks.md",
+      "update_triggers": [
+        "task_completed",
+        "task_added",
+        "blocker_encountered",
+        "priority_changed"
+      ],
+      "update_frequency": "every_5_exchanges",
+      "token_cost": 500,
+      "replaces": "Conversation-based task tracking (5-10K tokens)",
+      "auto_update": true,
+      "format": "markdown_checklist"
+    },
+
+    "decisions.md": {
+      "type": "living_decision_log",
+      "location": "project_root/decisions.md",
+      "update_triggers": [
+        "architectural_decision",
+        "technology_choice",
+        "implementation_approach",
+        "quality_gate_defined"
+      ],
+      "update_frequency": "on_decision",
+      "token_cost": 300,
+      "replaces": "Scattered decision context (3-5K tokens)",
+      "auto_update": true,
+      "format": "markdown_log"
+    },
+
+    "project_status.md": {
+      "type": "living_status_report",
+      "location": "project_root/PROJECT-STATUS.md",
+      "update_triggers": [
+        "milestone_completed",
+        "timeline_adjusted",
+        "risk_identified",
+        "dependency_changed"
+      ],
+      "update_frequency": "daily_or_milestone",
+      "token_cost": 800,
+      "replaces": "Ad-hoc status updates (2-3K tokens)",
+      "auto_update": true,
+      "format": "markdown_report"
+    },
+
+    "blockers.md": {
+      "type": "living_blocker_tracker",
+      "location": "project_root/BLOCKERS.md",
+      "update_triggers": [
+        "blocker_encountered",
+        "blocker_resolved",
+        "blocker_escalated",
+        "workaround_found"
+      ],
+      "update_frequency": "immediate",
+      "token_cost": 400,
+      "replaces": "Inline blocker mentions (1-2K tokens)",
+      "auto_update": true,
+      "format": "markdown_table"
+    },
+
+    "ai_maintenance.md": {
+      "type": "living_ai_protocol",
+      "location": ".ideacode/AI-MAINTENANCE.md",
+      "update_triggers": [
+        "protocol_learned",
+        "pattern_discovered",
+        "optimization_found",
+        "anti_pattern_identified"
+      ],
+      "update_frequency": "on_learning",
+      "token_cost": 1000,
+      "replaces": "N/A - new self-improvement mechanism",
+      "auto_update": true,
+      "format": "markdown_protocol",
+      "meta": true
+    }
+  },
+
+  "update_protocol": {
+    "description": "How AI should update living documents",
+
+    "every_5_exchanges": {
+      "action": "Check for updates needed",
+      "documents_to_check": ["tasks.md", "project_status.md"],
+      "process": [
+        "1. Identify completed tasks",
+        "2. Identify new blockers",
+        "3. Update task status",
+        "4. Update project status if milestone hit",
+        "5. Report updates to user"
+      ]
+    },
+
+    "on_decision": {
+      "action": "Log decision immediately",
+      "document": "decisions.md",
+      "process": [
+        "1. Extract decision details",
+        "2. Identify alternatives considered",
+        "3. Document rationale",
+        "4. Append to decisions.md",
+        "5. Cross-reference in tasks.md"
+      ]
+    },
+
+    "on_blocker": {
+      "action": "Track blocker immediately",
+      "document": "blockers.md",
+      "process": [
+        "1. Document blocker details",
+        "2. Identify impact and severity",
+        "3. Suggest workarounds if any",
+        "4. Add to BLOCKERS.md",
+        "5. Update affected tasks"
+      ]
+    },
+
+    "on_learning": {
+      "action": "Update AI maintenance protocol",
+      "document": "ai_maintenance.md",
+      "process": [
+        "1. Identify pattern or learning",
+        "2. Validate against existing protocols",
+        "3. Document if novel or improvement",
+        "4. Append to AI-MAINTENANCE.md",
+        "5. Apply immediately"
+      ]
+    }
+  },
+
+  "token_optimization": {
+    "description": "How living documents reduce token usage",
+
+    "before_living_docs": {
+      "task_tracking": "Embedded in conversation (5-10K tokens)",
+      "decision_tracking": "Scattered mentions (3-5K tokens)",
+      "blocker_tracking": "Inline context (1-2K tokens)",
+      "status_updates": "Repeated explanations (2-3K tokens)",
+      "total": "11-20K tokens per feature"
+    },
+
+    "with_living_docs": {
+      "task_tracking": "tasks.md reference (500 tokens)",
+      "decision_tracking": "decisions.md reference (300 tokens)",
+      "blocker_tracking": "blockers.md reference (400 tokens)",
+      "status_updates": "project_status.md reference (800 tokens)",
+      "total": "2K tokens per feature"
+    },
+
+    "savings": {
+      "tokens_saved": "9-18K per feature",
+      "percentage": "82-90% reduction",
+      "benefit": "More features per session"
+    }
+  },
+
+  "document_lifecycle": {
+    "creation": {
+      "when": "First task in project or first decision",
+      "template": "templates/living-documents/{type}-template.md",
+      "location": "Project root or .ideacode/"
+    },
+
+    "updates": {
+      "frequency": "See update_triggers for each document",
+      "method": "AI edits file directly (Edit tool)",
+      "validation": "Check format consistency",
+      "notification": "Report to user: 'Updated {document}'"
+    },
+
+    "archival": {
+      "when": "Feature/milestone completed",
+      "action": "Snapshot to archive/living-docs/YYYY/MM/",
+      "reset": "Clear completed tasks, keep active only",
+      "preservation": "Full history in archive"
+    }
+  },
+
+  "integration": {
+    "with_context_management": {
+      "every_5_exchanges": "Update tasks.md and check project_status.md",
+      "at_60_threshold": "Archive living docs snapshot before cleanup",
+      "before_clear": "Include living docs in session dump",
+      "after_clear": "Re-read all living docs for context"
+    },
+
+    "with_registries": {
+      "load_strategy": "Load living-documents.registry.json (300 tokens) instead of reading all docs (2K tokens)",
+      "on_demand": "Read specific living doc only when needed",
+      "caching": "Keep in context after first read until updated"
+    },
+
+    "with_scratchpads": {
+      "tasks_md": "Primary living document for task tracking",
+      "decisions_md": "Secondary living document for decisions",
+      "synergy": "Both persist across /clear operations"
+    }
+  }
+}

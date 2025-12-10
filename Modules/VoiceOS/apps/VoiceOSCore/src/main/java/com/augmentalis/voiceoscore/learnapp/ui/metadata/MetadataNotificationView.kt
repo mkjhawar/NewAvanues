@@ -23,7 +23,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.augmentalis.voiceoscore.R
 import com.augmentalis.voiceoscore.learnapp.metadata.MetadataNotificationItem
 import com.augmentalis.voiceoscore.learnapp.metadata.MetadataSuggestion
+<<<<<<< HEAD
 import com.augmentalis.voiceoscore.utils.MaterialThemeHelper
+=======
+>>>>>>> AVA-Development
 import com.google.android.material.button.MaterialButton
 
 /**
@@ -81,8 +84,13 @@ class MetadataNotificationView @JvmOverloads constructor(
     private var onCloseClickListener: (() -> Unit)? = null
 
     init {
+<<<<<<< HEAD
         // Inflate layout with Material theme for MaterialButton styles
         val view = MaterialThemeHelper.getInflater(context).inflate(
+=======
+        // Inflate layout
+        val view = LayoutInflater.from(context).inflate(
+>>>>>>> AVA-Development
             R.layout.learnapp_insufficient_metadata_notification,
             this,
             true

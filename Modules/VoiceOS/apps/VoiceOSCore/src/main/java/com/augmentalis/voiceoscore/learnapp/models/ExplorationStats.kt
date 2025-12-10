@@ -46,6 +46,7 @@ package com.augmentalis.voiceoscore.learnapp.models
  * @property dangerousElementsSkipped Number of dangerous elements skipped
  * @property loginScreensDetected Number of login screens detected
  * @property scrollableContainersFound Number of scrollable containers found
+<<<<<<< HEAD
  * @property completeness Overall exploration completeness percentage (0-100) - of NON-BLOCKED items
  * @property clickedElements Number of elements clicked (2025-12-08)
  * @property nonBlockedElements Total non-blocked clickable elements (2025-12-08)
@@ -53,6 +54,11 @@ package com.augmentalis.voiceoscore.learnapp.models
  *
  * @since 1.0.0
  * @since 1.10.0 (2025-12-08): Added clicked/blocked element tracking for stats display
+=======
+ * @property completeness Overall exploration completeness percentage (0-100)
+ *
+ * @since 1.0.0
+>>>>>>> AVA-Development
  */
 data class ExplorationStats(
     val packageName: String,
@@ -65,11 +71,15 @@ data class ExplorationStats(
     val dangerousElementsSkipped: Int = 0,
     val loginScreensDetected: Int = 0,
     val scrollableContainersFound: Int = 0,
+<<<<<<< HEAD
     val completeness: Float = 0f,
     // UPDATE (2025-12-08): Blocked vs non-blocked tracking
     val clickedElements: Int = 0,
     val nonBlockedElements: Int = 0,
     val blockedElements: Int = 0
+=======
+    val completeness: Float = 0f
+>>>>>>> AVA-Development
 ) {
 
     /**
@@ -104,6 +114,7 @@ data class ExplorationStats(
         return totalEdges.toFloat() / totalScreens.toFloat()
     }
 
+<<<<<<< HEAD
     /**
      * Get formatted completion string (2025-12-08)
      * Format: "XX% of non-blocked items (YY/ZZ clicked), WW blocked"
@@ -116,6 +127,8 @@ data class ExplorationStats(
         }
     }
 
+=======
+>>>>>>> AVA-Development
     override fun toString(): String {
         return """
             Exploration Complete: $appName
@@ -126,16 +139,25 @@ data class ExplorationStats(
             - Navigation Edges: $totalEdges
             - Max Depth: $maxDepth
             - Duration: ${formatDuration()}
+<<<<<<< HEAD
             - Completeness: ${formatCompletion()}
 
             🛡️ Safety:
             - Blocked Elements (call/send/etc): $blockedElements
+=======
+            - Completeness: ${"%.1f".format(completeness)}%
+
+            🛡️ Safety:
+>>>>>>> AVA-Development
             - Dangerous Elements Skipped: $dangerousElementsSkipped
             - Login Screens Detected: $loginScreensDetected
 
             📜 Details:
+<<<<<<< HEAD
             - Clicked Elements: $clickedElements
             - Non-Blocked (clickable): $nonBlockedElements
+=======
+>>>>>>> AVA-Development
             - Scrollable Containers: $scrollableContainersFound
             - Avg Elements/Screen: ${"%.1f".format(averageElementsPerScreen())}
             - Avg Edges/Screen: ${"%.1f".format(averageEdgesPerScreen())}

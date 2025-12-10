@@ -127,6 +127,7 @@ class ScreenStateManager(
         // FIX (2025-11-24): Detect if current window is a popup/dialog
         val windowInfo = detectPopupWindow(rootNode, packageName)
 
+<<<<<<< HEAD
         // FIX (2025-12-07): Detect if screen has dynamic content (lists, feeds, etc.)
         val isDynamicContentScreen = detectDynamicContentScreen(rootNode)
 
@@ -148,6 +149,15 @@ class ScreenStateManager(
                 // For regular screens, use normal fingerprinting
                 fingerprinter.calculateFingerprint(rootNode)
             }
+=======
+        // Calculate fingerprint (popup-aware)
+        val hash = if (windowInfo.isPopup) {
+            // For popups, generate stable hash based on structure, not content
+            fingerprinter.calculatePopupFingerprint(rootNode, windowInfo.popupType)
+        } else {
+            // For regular screens, use normal fingerprinting
+            fingerprinter.calculateFingerprint(rootNode)
+>>>>>>> AVA-Development
         }
 
         // Check if state already exists (exact match)
@@ -665,6 +675,7 @@ class ScreenStateManager(
         val isPopup: Boolean,
         val popupType: String
     )
+<<<<<<< HEAD
 
     /**
      * Detect if screen has dynamic content that changes frequently.
@@ -770,6 +781,8 @@ class ScreenStateManager(
             }
         }
     }
+=======
+>>>>>>> AVA-Development
 }
 
 /**

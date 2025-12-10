@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
+<<<<<<< HEAD
     layout_consent_dialog.xml - Consent dialog layout (native Android widgets)
+=======
+    layout_consent_dialog.xml - Material Design 3 consent dialog layout
+>>>>>>> AVA-Development
     Path: modules/apps/LearnApp/src/main/res/layout/layout_consent_dialog.xml
 
     Author: Manoj Jhawar
     Code-Reviewed-By: CCA
     Created: 2025-10-24
+<<<<<<< HEAD
     Updated: 2025-12-08 (v1.0.6 - Removed Material3 components to fix Compose lifecycle crash)
 
     XML layout for consent dialog using native Android widgets.
@@ -18,6 +23,15 @@
 -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+=======
+
+    XML layout for consent dialog with Material Components styling.
+    Used by ConsentDialog widget class for app learning consent.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+>>>>>>> AVA-Development
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -53,6 +67,7 @@
         android:gravity="center"
         android:contentDescription="VoiceOS will explore this app to enable voice commands" />
 
+<<<<<<< HEAD
     <!-- Details Card (Replaced CardView with LinearLayout to avoid Compose dependency) -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -103,6 +118,65 @@
             android:textSize="14sp"
             android:textColor="?android:attr/textColorSecondary" />
     </LinearLayout>
+=======
+    <!-- Details Card -->
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="#10FFFFFF">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="This will:"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="?android:attr/textColorPrimary" />
+
+            <!-- Bullet points -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="• Click buttons and menus"
+                android:textSize="14sp"
+                android:textColor="?android:attr/textColorSecondary" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="• Navigate between screens"
+                android:textSize="14sp"
+                android:textColor="?android:attr/textColorSecondary" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="• Skip dangerous actions"
+                android:textSize="14sp"
+                android:textColor="?android:attr/textColorSecondary" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="• Take ~2-5 minutes"
+                android:textSize="14sp"
+                android:textColor="?android:attr/textColorSecondary" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+>>>>>>> AVA-Development
 
     <!-- Buttons -->
     <LinearLayout
@@ -114,37 +188,58 @@
 
         <Button
             android:id="@+id/btn_deny"
+<<<<<<< HEAD
+=======
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+>>>>>>> AVA-Development
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="No"
             android:minWidth="88dp"
             android:textSize="14sp"
+<<<<<<< HEAD
             android:background="@drawable/bg_button_text"
             android:textColor="?attr/colorPrimary"
+=======
+>>>>>>> AVA-Development
             android:contentDescription="Deny consent for learning this app" />
 
         <Button
             android:id="@+id/btn_skip"
+<<<<<<< HEAD
+=======
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+>>>>>>> AVA-Development
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="Skip"
             android:minWidth="88dp"
             android:textSize="14sp"
+<<<<<<< HEAD
             android:background="@drawable/bg_button_text"
             android:textColor="?attr/colorPrimary"
+=======
+>>>>>>> AVA-Development
             android:contentDescription="Skip full learning and use passive just-in-time mode instead" />
 
         <Button
             android:id="@+id/btn_allow"
+<<<<<<< HEAD
+=======
+            style="@style/Widget.MaterialComponents.Button"
+>>>>>>> AVA-Development
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="Yes"
             android:minWidth="88dp"
             android:textSize="14sp"
+<<<<<<< HEAD
             android:background="@drawable/bg_button_primary"
             android:textColor="@android:color/white"
+=======
+>>>>>>> AVA-Development
             android:contentDescription="Allow VoiceOS to learn this app" />
     </LinearLayout>
 

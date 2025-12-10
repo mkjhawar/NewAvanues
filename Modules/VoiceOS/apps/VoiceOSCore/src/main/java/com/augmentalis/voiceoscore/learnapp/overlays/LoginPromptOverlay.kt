@@ -16,11 +16,18 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+<<<<<<< HEAD
+=======
+import android.view.LayoutInflater
+>>>>>>> AVA-Development
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
 import com.augmentalis.voiceoscore.R
+<<<<<<< HEAD
 import com.augmentalis.voiceoscore.utils.MaterialThemeHelper
+=======
+>>>>>>> AVA-Development
 
 /**
  * User action in response to login prompt
@@ -97,8 +104,14 @@ class LoginPromptOverlay(
             try {
                 Log.d(TAG, "Showing login prompt overlay for ${config.appName}")
 
+<<<<<<< HEAD
                 // Inflate custom view with Material theme for MaterialComponents.Button styles
                 val customView = MaterialThemeHelper.inflateOverlay(context, R.layout.learnapp_layout_login_prompt)
+=======
+                // Inflate custom view
+                val customView = LayoutInflater.from(context)
+                    .inflate(R.layout.learnapp_layout_login_prompt, null)
+>>>>>>> AVA-Development
 
                 // Configure app name
                 customView.findViewById<TextView>(R.id.app_name_text).text = config.appName

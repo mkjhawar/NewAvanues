@@ -68,24 +68,31 @@ class ScrollExecutor(
      *
      * Main entry point. Scrolls container and collects all elements.
      *
+<<<<<<< HEAD
      * FIX (2025-12-07): Reduced iterations for BOTH direction to prevent long waits
      * - BOTH direction (Teams channel, social feeds) uses reduced iteration count
      * - Added logging for scroll direction detection
      *
+=======
+>>>>>>> AVA-Development
      * @param scrollable Scrollable container node
      * @return List of all elements (including offscreen)
      */
     suspend fun scrollAndCollectAll(scrollable: AccessibilityNodeInfo): List<ElementInfo> {
         val direction = scrollDetector.detectScrollDirection(scrollable)
 
+<<<<<<< HEAD
         if (developerSettings.isVerboseLoggingEnabled()) {
             android.util.Log.d("ScrollExecutor", "🔄 Detected scroll direction: $direction")
         }
 
+=======
+>>>>>>> AVA-Development
         return when (direction) {
             ScrollDirection.VERTICAL -> scrollVerticallyAndCollect(scrollable)
             ScrollDirection.HORIZONTAL -> scrollHorizontallyAndCollect(scrollable)
             ScrollDirection.BOTH -> {
+<<<<<<< HEAD
                 // FIX (2025-12-07): For BOTH direction (complex scrollable like Teams),
                 // use reduced iterations to prevent infinite scroll on dynamic content
                 android.util.Log.d("ScrollExecutor",
@@ -93,6 +100,11 @@ class ScrollExecutor(
 
                 val vertical = scrollVerticallyAndCollectLimited(scrollable, maxIterations = 10)
                 val horizontal = scrollHorizontallyAndCollectLimited(scrollable, maxIterations = 5)
+=======
+                // Scroll vertically first, then horizontally
+                val vertical = scrollVerticallyAndCollect(scrollable)
+                val horizontal = scrollHorizontallyAndCollect(scrollable)
+>>>>>>> AVA-Development
                 (vertical + horizontal).distinctBy { it.hashCode() }
             }
         }
@@ -231,6 +243,7 @@ class ScrollExecutor(
     }
 
     /**
+<<<<<<< HEAD
      * Scroll vertically with limited iterations (for BOTH direction containers)
      *
      * FIX (2025-12-07): Added for BOTH direction containers to prevent infinite scroll
@@ -311,6 +324,8 @@ class ScrollExecutor(
     }
 
     /**
+=======
+>>>>>>> AVA-Development
      * Collect visible elements from container
      *
      * Traverses container and collects all child elements.

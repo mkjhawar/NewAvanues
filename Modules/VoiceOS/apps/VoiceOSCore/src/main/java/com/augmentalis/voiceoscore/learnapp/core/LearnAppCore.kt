@@ -18,8 +18,11 @@ import android.util.Log
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
+<<<<<<< HEAD
 import com.augmentalis.voiceoscore.learnapp.detection.AppFramework
 import com.augmentalis.voiceoscore.learnapp.detection.CrossPlatformDetector
+=======
+>>>>>>> AVA-Development
 import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 
@@ -72,6 +75,7 @@ class LearnAppCore(
     }
 
     /**
+<<<<<<< HEAD
      * Framework detection cache
      *
      * Caches detected framework per package name to avoid repeated detection.
@@ -80,6 +84,8 @@ class LearnAppCore(
     private val frameworkCache = mutableMapOf<String, AppFramework>()
 
     /**
+=======
+>>>>>>> AVA-Development
      * Batch queue for BATCH mode
      *
      * Commands are queued during exploration and flushed as single transaction.
@@ -112,7 +118,11 @@ class LearnAppCore(
             }
 
             // 2. Generate voice command
+<<<<<<< HEAD
             val command = generateVoiceCommand(element, uuid, packageName) ?: return ElementProcessingResult(
+=======
+            val command = generateVoiceCommand(element, uuid) ?: return ElementProcessingResult(
+>>>>>>> AVA-Development
                 uuid = uuid,
                 command = null,
                 success = false,
@@ -232,6 +242,7 @@ class LearnAppCore(
      *
      * Creates GeneratedCommandDTO with command text, synonyms, and metadata.
      *
+<<<<<<< HEAD
      * Enhanced for cross-platform apps:
      * - Label priority: text > contentDescription > resourceId > FALLBACK
      * - Fallback generation for unlabeled elements (Flutter, React Native)
@@ -241,10 +252,18 @@ class LearnAppCore(
      * @param element Element to generate command for
      * @param uuid Pre-generated UUID for this element
      * @param packageName Package name for framework detection
+=======
+     * Label priority: text > contentDescription > resourceId
+     * Command format: "{actionType} {label}" (lowercase)
+     *
+     * @param element Element to generate command for
+     * @param uuid Pre-generated UUID for this element
+>>>>>>> AVA-Development
      * @return GeneratedCommandDTO or null if no label found
      */
     private fun generateVoiceCommand(
         element: ElementInfo,
+<<<<<<< HEAD
         uuid: String,
         packageName: String = ""
     ): GeneratedCommandDTO? {
@@ -295,12 +314,33 @@ class LearnAppCore(
         }
 
         // For non-clickable or native apps, apply quality filters
+=======
+        uuid: String
+    ): GeneratedCommandDTO? {
+        // Extract label (text > contentDescription > resourceId)
+        val label = element.text.takeIf { it.isNotBlank() }
+            ?: element.contentDescription.takeIf { it.isNotBlank() }
+            ?: element.resourceId.substringAfterLast("/")
+            ?: return null
+
+        // Skip very short or meaningless labels
+        val minLabelLength = developerSettings.getMinGeneratedLabelLength()
+>>>>>>> AVA-Development
         if (label.length < minLabelLength || label.all { it.isDigit() }) {
             return null
         }
 
         // Determine action type
+<<<<<<< HEAD
         val actionType = determineActionType(element)
+=======
+        val actionType = when {
+            element.isEditText() -> "type"  // EditText fields
+            element.isScrollable -> "scroll"  // Scrollable containers
+            element.isClickable -> "click"  // Clickable elements
+            else -> "click"  // Default action
+        }
+>>>>>>> AVA-Development
 
         // Generate command text
         val commandText = "$actionType $label".lowercase()
@@ -327,6 +367,7 @@ class LearnAppCore(
     }
 
     /**
+<<<<<<< HEAD
      * Determine action type for element
      *
      * @param element Element to analyze
@@ -648,6 +689,8 @@ class LearnAppCore(
     }
 
     /**
+=======
+>>>>>>> AVA-Development
      * Generate command synonyms
      *
      * Creates alternative phrasings for voice command.
