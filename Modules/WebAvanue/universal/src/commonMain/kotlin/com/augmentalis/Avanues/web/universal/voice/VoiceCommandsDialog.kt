@@ -1,16 +1,9 @@
 package com.augmentalis.Avanues.web.universal.voice
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -157,13 +150,18 @@ fun VoiceCommandsDialog(
             // Detect landscape orientation
             val isLandscape = maxWidth > maxHeight
 
-            // Optimize for landscape: Material Design compliant sizing
-            // Portrait: 90% × 85% - users expect dominant dialog
-            // Landscape: 80% × 80% - provides breathing room, clear tap-outside area
-            val dialogWidth = if (isLandscape) 0.80f else 0.90f
-            val dialogHeight = if (isLandscape) 0.80f else 0.85f
-            val contentPadding = if (isLandscape) OceanDesignTokens.Spacing.md else OceanDesignTokens.Spacing.xl
-            val headerSpacing = if (isLandscape) OceanDesignTokens.Spacing.md else OceanDesignTokens.Spacing.xl
+            // Device-adaptive parameters for smart glasses, tablets, and phones
+            val deviceType = remember { DeviceDetector.detectDeviceType() }
+            val isTabletDevice = remember { DeviceDetector.isTablet() }
+            val params = remember(deviceType, isTabletDevice) {
+                DeviceAdaptiveParameters.forDeviceType(deviceType, isTabletDevice)
+            }
+
+            // Apply device-specific sizing
+            val dialogWidth = if (isLandscape) params.dialogWidthLandscape else params.dialogWidthPortrait
+            val dialogHeight = if (isLandscape) params.dialogHeightLandscape else params.dialogHeightPortrait
+            val contentPadding = if (isLandscape) params.contentPaddingLandscape else params.contentPaddingPortrait
+            val headerSpacing = if (isLandscape) params.headerSpacingLandscape else params.headerSpacingPortrait
 
             Surface(
                 modifier = Modifier
@@ -190,11 +188,8 @@ fun VoiceCommandsDialog(
                     ) {
                         Text(
                             text = currentCategory?.title ?: "Voice Commands",
-                            style = if (isLandscape) {
-                                MaterialTheme.typography.titleLarge
-                            } else {
-                                MaterialTheme.typography.headlineSmall
-                            },
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontSize = params.headerTextSize,
                             color = OceanDesignTokens.Text.primary
                         )
 
@@ -214,6 +209,7 @@ fun VoiceCommandsDialog(
                         if (currentCategory == null) {
                             CategoriesView(
                                 isLandscape = isLandscape,
+                                params = params,
                                 onCategorySelected = { category ->
                                     selectedCategory = category
                                 }
@@ -222,6 +218,7 @@ fun VoiceCommandsDialog(
                             CommandsView(
                                 category = currentCategory,
                                 isLandscape = isLandscape,
+                                params = params,
                                 onBack = { selectedCategory = null },
                                 onCommandClick = { command ->
                                     val shouldDismiss = onCommandExecute(command)
@@ -245,22 +242,21 @@ fun VoiceCommandsDialog(
 @Composable
 private fun CategoriesView(
     isLandscape: Boolean,
+    params: DeviceAdaptiveParameters,
     onCategorySelected: (VoiceCommandCategory) -> Unit
 ) {
-    val columns = if (isLandscape) 3 else 1
-    val horizontalSpacing = if (isLandscape) 6.dp else 8.dp
-    val verticalSpacing = if (isLandscape) 8.dp else 12.dp
+    val columns = if (isLandscape) params.categoriesColumnsLandscape else 1
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
-        horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
-        verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+        horizontalArrangement = Arrangement.spacedBy(params.gridHorizontalSpacing),
+        verticalArrangement = Arrangement.spacedBy(params.gridVerticalSpacing),
         modifier = Modifier.fillMaxSize()
     ) {
         items(VoiceCommandCategory.entries.toList()) { category ->
             CategoryButton(
                 category = category,
-                isLandscape = isLandscape,
+                params = params,
                 onClick = { onCategorySelected(category) }
             )
         }
@@ -273,19 +269,14 @@ private fun CategoriesView(
 @Composable
 private fun CategoryButton(
     category: VoiceCommandCategory,
-    isLandscape: Boolean,
+    params: DeviceAdaptiveParameters,
     onClick: () -> Unit
 ) {
-    val buttonHeight = if (isLandscape) 56.dp else 64.dp
-    val iconSize = if (isLandscape) 24.dp else 28.dp
-    val textStyle = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium
-    val iconSpacing = if (isLandscape) OceanDesignTokens.Spacing.md else OceanDesignTokens.Spacing.lg
-
     Button(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(buttonHeight),
+            .height(params.categoryButtonHeight),
         colors = ButtonDefaults.buttonColors(
             containerColor = OceanDesignTokens.Surface.elevated,
             contentColor = OceanDesignTokens.Text.primary
@@ -298,19 +289,20 @@ private fun CategoryButton(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(iconSpacing),
+                horizontalArrangement = Arrangement.spacedBy(params.itemSpacing),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OceanComponents.Icon(
                     imageVector = category.icon,
                     contentDescription = null,
                     variant = IconVariant.Primary,
-                    modifier = Modifier.size(iconSize)
+                    modifier = Modifier.size(params.iconSize)
                 )
 
                 Text(
                     text = category.title,
-                    style = textStyle
+                    style = MaterialTheme.typography.titleMedium,
+                    fontSize = params.categoryTextSize
                 )
             }
 
@@ -332,13 +324,11 @@ private fun CategoryButton(
 private fun CommandsView(
     category: VoiceCommandCategory,
     isLandscape: Boolean,
+    params: DeviceAdaptiveParameters,
     onBack: () -> Unit,
     onCommandClick: (String) -> Unit
 ) {
-    val backButtonPadding = if (isLandscape) OceanDesignTokens.Spacing.md else OceanDesignTokens.Spacing.lg
-    val columns = if (isLandscape) 2 else 1
-    val horizontalSpacing = if (isLandscape) 6.dp else 8.dp
-    val verticalSpacing = if (isLandscape) 8.dp else 12.dp
+    val columns = if (isLandscape) params.commandsColumnsLandscape else 1
 
     Column(
         modifier = Modifier.fillMaxSize()
@@ -346,32 +336,33 @@ private fun CommandsView(
         // Back button
         TextButton(
             onClick = onBack,
-            modifier = Modifier.padding(bottom = backButtonPadding)
+            modifier = Modifier.padding(bottom = params.itemSpacing)
         ) {
             OceanComponents.Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
                 variant = IconVariant.Primary,
-                modifier = Modifier.size(if (isLandscape) 18.dp else 20.dp)
+                modifier = Modifier.size(params.backButtonIconSize)
             )
             Spacer(modifier = Modifier.width(OceanDesignTokens.Spacing.sm))
             Text(
                 text = "Back to categories",
-                style = if (isLandscape) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                fontSize = params.categoryTextSize
             )
         }
 
         // Commands grid - adaptive columns for landscape
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
-            horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
-            verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+            horizontalArrangement = Arrangement.spacedBy(params.gridHorizontalSpacing),
+            verticalArrangement = Arrangement.spacedBy(params.gridVerticalSpacing),
             modifier = Modifier.fillMaxSize()
         ) {
             items(category.commands) { command ->
                 CommandItemCard(
                     command = command,
-                    isLandscape = isLandscape,
+                    params = params,
                     onClick = { onCommandClick(command.command) }
                 )
             }
@@ -386,15 +377,9 @@ private fun CommandsView(
 @Composable
 private fun CommandItemCard(
     command: CommandItem,
-    isLandscape: Boolean,
+    params: DeviceAdaptiveParameters,
     onClick: () -> Unit
 ) {
-    val cardPadding = if (isLandscape) OceanDesignTokens.Spacing.sm else OceanDesignTokens.Spacing.md
-    val itemSpacing = if (isLandscape) OceanDesignTokens.Spacing.sm else OceanDesignTokens.Spacing.md
-    val badgeMinWidth = if (isLandscape) 90.dp else 100.dp
-    val commandTextStyle = if (isLandscape) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall
-    val descriptionTextStyle = if (isLandscape) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall
-
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -406,23 +391,24 @@ private fun CommandItemCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(cardPadding),
-            horizontalArrangement = Arrangement.spacedBy(itemSpacing),
+                .padding(params.cardPadding),
+            horizontalArrangement = Arrangement.spacedBy(params.itemSpacing),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Command badge - fixed minimum width for consistency
             Surface(
                 color = OceanDesignTokens.Surface.primary,
                 shape = MaterialTheme.shapes.small,
-                modifier = Modifier.widthIn(min = badgeMinWidth)
+                modifier = Modifier.widthIn(min = params.badgeMinWidth)
             ) {
                 Text(
                     text = command.command,
                     modifier = Modifier.padding(
                         horizontal = OceanDesignTokens.Spacing.sm,
-                        vertical = if (isLandscape) 4.dp else OceanDesignTokens.Spacing.sm
+                        vertical = 6.dp
                     ),
-                    style = commandTextStyle,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = params.commandTextSize,
                     color = OceanDesignTokens.Text.onPrimary,
                     maxLines = 1
                 )
@@ -431,7 +417,8 @@ private fun CommandItemCard(
             // Description
             Text(
                 text = command.description,
-                style = descriptionTextStyle,
+                style = MaterialTheme.typography.bodySmall,
+                fontSize = params.descriptionTextSize,
                 color = OceanDesignTokens.Text.secondary,
                 modifier = Modifier.weight(1f),
                 maxLines = 1
