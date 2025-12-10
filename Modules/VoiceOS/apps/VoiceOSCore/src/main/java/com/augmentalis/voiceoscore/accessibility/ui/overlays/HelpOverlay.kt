@@ -9,6 +9,7 @@
 package com.augmentalis.voiceoscore.accessibility.ui.overlays
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -48,71 +50,100 @@ class HelpOverlay(
     
     @Composable
     override fun OverlayContent() {
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+        // Adjust padding and width based on orientation
+        val horizontalPadding = if (isLandscape) 12.dp else 24.dp
+        val verticalPadding = if (isLandscape) 12.dp else 24.dp
+        val contentWidth = if (isLandscape) 0.85f else 1f // 85% width in landscape
+
         AnimatedVisibility(
             visible = true,
             enter = fadeIn() + slideInVertically(),
             exit = fadeOut() + slideOutVertically()
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .glassMorphism(
-                        config = GlassMorphismConfig(
-                            cornerRadius = 0.dp,
-                            backgroundOpacity = 0.95f,
-                            borderOpacity = 0f,
-                            borderWidth = 0.dp,
-                            tintColor = Color.Black,
-                            tintOpacity = 0.8f
-                        ),
-                        depth = DepthLevel(1f)
-                    )
-                    .padding(24.dp)
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                // Header
-                HelpHeader(onDismiss = onDismiss)
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                // Category selection
-                CategorySelector(
-                    selectedCategory = _selectedCategory,
-                    onCategorySelected = { _selectedCategory = it }
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                // Command list
-                CommandList(
-                    category = _selectedCategory,
-                    searchQuery = _searchQuery
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth(contentWidth)
+                        .fillMaxHeight()
+                        .glassMorphism(
+                            config = GlassMorphismConfig(
+                                cornerRadius = if (isLandscape) 16.dp else 0.dp,
+                                backgroundOpacity = 0.95f,
+                                borderOpacity = if (isLandscape) 0.2f else 0f,
+                                borderWidth = if (isLandscape) 1.dp else 0.dp,
+                                tintColor = Color.Black,
+                                tintOpacity = 0.8f
+                            ),
+                            depth = DepthLevel(1f)
+                        )
+                        .padding(horizontal = horizontalPadding, vertical = verticalPadding)
+                ) {
+                    // Header
+                    HelpHeader(
+                        onDismiss = onDismiss,
+                        isLandscape = isLandscape
+                    )
+
+                    Spacer(modifier = Modifier.height(if (isLandscape) 12.dp else 24.dp))
+
+                    // Category selection
+                    CategorySelector(
+                        selectedCategory = _selectedCategory,
+                        onCategorySelected = { _selectedCategory = it }
+                    )
+
+                    Spacer(modifier = Modifier.height(if (isLandscape) 12.dp else 24.dp))
+
+                    // Command list
+                    CommandList(
+                        category = _selectedCategory,
+                        searchQuery = _searchQuery,
+                        isLandscape = isLandscape
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun HelpHeader(onDismiss: () -> Unit) {
+private fun HelpHeader(
+    onDismiss: () -> Unit,
+    isLandscape: Boolean = false
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "Voice Commands",
-                style = MaterialTheme.typography.headlineMedium,
+                style = if (isLandscape) {
+                    MaterialTheme.typography.headlineSmall
+                } else {
+                    MaterialTheme.typography.headlineMedium
+                },
                 color = Color.White,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = "Say any command to control your device",
-                style = MaterialTheme.typography.bodyLarge,
+                style = if (isLandscape) {
+                    MaterialTheme.typography.bodyMedium
+                } else {
+                    MaterialTheme.typography.bodyLarge
+                },
                 color = Color.White.copy(alpha = 0.7f)
             )
         }
-        
+
         IconButton(
             onClick = onDismiss,
             modifier = Modifier
@@ -197,21 +228,33 @@ private fun CategoryChip(
 @Composable
 private fun CommandList(
     category: HelpCategory,
-    @Suppress("UNUSED_PARAMETER") searchQuery: String
+    @Suppress("UNUSED_PARAMETER") searchQuery: String,
+    isLandscape: Boolean = false
 ) {
     val commands = remember(category) { getCommandsForCategory(category) }
-    
+    val spacing = if (isLandscape) 8.dp else 12.dp
+
     LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(spacing)
     ) {
         items(commands) { commandGroup ->
-            CommandGroupCard(commandGroup = commandGroup)
+            CommandGroupCard(
+                commandGroup = commandGroup,
+                isLandscape = isLandscape
+            )
         }
     }
 }
 
 @Composable
-private fun CommandGroupCard(commandGroup: CommandGroup) {
+private fun CommandGroupCard(
+    commandGroup: CommandGroup,
+    isLandscape: Boolean = false
+) {
+    val cardPadding = if (isLandscape) 10.dp else 16.dp
+    val itemSpacing = if (isLandscape) 4.dp else 6.dp
+    val titleSpacing = if (isLandscape) 6.dp else 8.dp
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -222,27 +265,41 @@ private fun CommandGroupCard(commandGroup: CommandGroup) {
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(cardPadding)
         ) {
             Text(
                 text = commandGroup.title,
-                style = MaterialTheme.typography.titleMedium,
+                style = if (isLandscape) {
+                    MaterialTheme.typography.titleSmall
+                } else {
+                    MaterialTheme.typography.titleMedium
+                },
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold
             )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
+
+            Spacer(modifier = Modifier.height(titleSpacing))
+
             commandGroup.commands.forEach { command ->
-                CommandItem(command = command)
-                Spacer(modifier = Modifier.height(6.dp))
+                CommandItem(
+                    command = command,
+                    isLandscape = isLandscape
+                )
+                Spacer(modifier = Modifier.height(itemSpacing))
             }
         }
     }
 }
 
 @Composable
-private fun CommandItem(command: VoiceCommand) {
+private fun CommandItem(
+    command: VoiceCommand,
+    isLandscape: Boolean = false
+) {
+    val phraseFontSize = if (isLandscape) 13.sp else 14.sp
+    val descriptionFontSize = if (isLandscape) 11.sp else 12.sp
+    val moreFontSize = if (isLandscape) 9.sp else 10.sp
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -254,24 +311,24 @@ private fun CommandItem(command: VoiceCommand) {
             Text(
                 text = "\"${command.phrase}\"",
                 color = Color(0xFF4CAF50),
-                fontSize = 14.sp,
+                fontSize = phraseFontSize,
                 fontWeight = FontWeight.Medium
             )
-            
+
             if (command.description.isNotEmpty()) {
                 Text(
                     text = command.description,
                     color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 12.sp
+                    fontSize = descriptionFontSize
                 )
             }
         }
-        
+
         if (command.alternatives.isNotEmpty()) {
             Text(
                 text = "+${command.alternatives.size} more",
                 color = Color.White.copy(alpha = 0.5f),
-                fontSize = 10.sp
+                fontSize = moreFontSize
             )
         }
     }
