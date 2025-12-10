@@ -1,0 +1,224 @@
+# Avanues Universal Format v1.0
+# Type: VOS - System UI
+# Extension: .anl
+# Project: VoiceOS
+---
+schema: avu-1.0
+version: 1.0.0
+locale: en-US
+project: ava
+metadata:
+  file: VoiceOSSystemUI.anl
+  category: voiceos_system_ui
+  name: VoiceOS System UI
+  description: Overlays, Notifications, Home, and Dialogs
+  priority: 2
+  count: 18
+---
+# Overlays (Numbers/Help/Commands)
+VCM:show_number:show number
+VCM:show_number:show numbers
+VCM:show_number:show hint
+VCM:show_number:display numbers
+VCM:show_number:numbers visible
+VCM:show_number:reveal numbers
+VCM:show_number:show hints
+VCM:show_number:display hints
+VCM:show_number:hints visible
+VCM:show_number:reveal hints
+VCM:show_number:number overlay
+
+VCM:hide_number:hide number
+VCM:hide_number:hide numbers
+VCM:hide_number:hide hint
+VCM:hide_number:conceal numbers
+VCM:hide_number:numbers hidden
+VCM:hide_number:remove numbers
+VCM:hide_number:hide hints
+VCM:hide_number:conceal hints
+VCM:hide_number:hints hidden
+VCM:hide_number:remove hints
+VCM:hide_number:clear overlay
+
+VCM:show_help:show help
+VCM:show_help:display help
+VCM:show_help:help
+VCM:show_help:assistance
+VCM:show_help:support
+VCM:show_help:guide
+VCM:show_help:tutorial
+VCM:show_help:instructions
+VCM:show_help:help menu
+VCM:show_help:user guide
+VCM:show_help:manual
+
+VCM:hide_help:hide help
+VCM:hide_help:close help
+VCM:hide_help:dismiss help
+VCM:hide_help:assistance close
+VCM:hide_help:support hide
+VCM:hide_help:exit help
+VCM:hide_help:help away
+VCM:hide_help:remove help
+VCM:hide_help:help off
+VCM:hide_help:help invisible
+VCM:hide_help:help gone
+
+VCM:show_command:show commands
+VCM:show_command:show command
+VCM:show_command:display commands
+VCM:show_command:command list
+VCM:show_command:commands visible
+VCM:show_command:reveal commands
+VCM:show_command:command menu
+VCM:show_command:voice commands
+VCM:show_command:available commands
+VCM:show_command:command help
+VCM:show_command:command guide
+
+VCM:hide_command:hide commands
+VCM:hide_command:hide command
+VCM:hide_command:conceal commands
+VCM:hide_command:commands hidden
+VCM:hide_command:remove commands
+VCM:hide_command:command away
+VCM:hide_command:commands off
+VCM:hide_command:commands invisible
+VCM:hide_command:commands gone
+VCM:hide_command:close commands
+VCM:hide_command:dismiss commands
+
+VCM:scan_commands:scan commands
+VCM:scan_commands:search commands
+VCM:scan_commands:find commands
+VCM:scan_commands:look for commands
+VCM:scan_commands:command search
+VCM:scan_commands:command scan
+VCM:scan_commands:detect commands
+VCM:scan_commands:identify commands
+VCM:scan_commands:discover commands
+VCM:scan_commands:explore commands
+VCM:scan_commands:review commands
+
+# Notifications
+VCM:show_notifications:show notification
+VCM:show_notifications:notification
+VCM:show_notifications:display notifications
+VCM:show_notifications:open notifications
+VCM:show_notifications:notifications visible
+VCM:show_notifications:reveal notifications
+VCM:show_notifications:show notifications
+VCM:show_notifications:display messages
+VCM:show_notifications:show messages
+VCM:show_notifications:open messages
+VCM:show_notifications:view alerts
+
+VCM:hide_notifications:hide notification
+VCM:hide_notifications:hide notifications
+VCM:hide_notifications:close notifications
+VCM:hide_notifications:dismiss notifications
+VCM:hide_notifications:notifications hidden
+VCM:hide_notifications:conceal notifications
+VCM:hide_notifications:clear notifications
+VCM:hide_notifications:remove notifications
+VCM:hide_notifications:close messages
+VCM:hide_notifications:hide messages
+VCM:hide_notifications:dismiss alerts
+
+# Navigation (System Level)
+VCM:navigate_home:navigate home
+VCM:navigate_home:go home
+VCM:navigate_home:return home
+VCM:navigate_home:home screen
+VCM:navigate_home:main screen
+VCM:navigate_home:open app drawer
+VCM:navigate_home:home page
+VCM:navigate_home:main page
+VCM:navigate_home:go to home
+VCM:navigate_home:back to home
+VCM:navigate_home:home button
+
+VCM:return_to_dashboard:return to dashboard
+VCM:return_to_dashboard:return to setup
+VCM:return_to_dashboard:go to dashboard
+VCM:return_to_dashboard:dashboard
+VCM:return_to_dashboard:main dashboard
+VCM:return_to_dashboard:control panel
+VCM:return_to_dashboard:home dashboard
+VCM:return_to_dashboard:setup screen
+VCM:return_to_dashboard:main screen
+VCM:return_to_dashboard:control screen
+VCM:return_to_dashboard:setup dashboard
+
+VCM:open_recent_apps:open recent apps
+VCM:open_recent_apps:recent apps
+VCM:open_recent_apps:recent applications
+VCM:open_recent_apps:app switcher
+VCM:open_recent_apps:task switcher
+VCM:open_recent_apps:recent programs
+VCM:open_recent_apps:recent tasks
+VCM:open_recent_apps:app history
+VCM:open_recent_apps:open recent
+VCM:open_recent_apps:switch apps
+VCM:open_recent_apps:recent list
+
+VCM:menu:menu
+VCM:menu:open menu
+VCM:menu:main menu
+VCM:menu:menu options
+VCM:menu:show menu
+VCM:menu:menu list
+VCM:menu:navigation menu
+VCM:menu:options menu
+VCM:menu:menu bar
+VCM:menu:menu screen
+VCM:menu:menu page
+
+# Dialog Interactions
+VCM:confirm:confirm
+VCM:confirm:accept
+VCM:confirm:agree
+VCM:confirm:yes
+VCM:confirm:right
+VCM:confirm:ok
+VCM:confirm:okay
+VCM:confirm:proceed
+VCM:confirm:continue
+VCM:confirm:go ahead
+VCM:confirm:sure
+
+VCM:cancel:cancel
+VCM:cancel:abort
+VCM:cancel:dismiss
+VCM:cancel:no
+VCM:cancel:decline
+VCM:cancel:stop
+VCM:cancel:quit
+VCM:cancel:exit
+VCM:cancel:back
+VCM:cancel:nevermind
+VCM:cancel:never mind
+
+VCM:submit:submit
+VCM:submit:send
+VCM:submit:go
+VCM:submit:enter
+VCM:submit:confirm
+VCM:submit:okay
+VCM:submit:done
+VCM:submit:finish
+VCM:submit:complete
+VCM:submit:save
+VCM:submit:apply
+
+VCM:close:close
+VCM:close:finish
+VCM:close:end
+VCM:close:stop
+VCM:close:shut
+VCM:close:exit
+VCM:close:quit
+VCM:close:leave
+VCM:close:back
+VCM:close:return
+VCM:close:cancel

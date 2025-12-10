@@ -1,0 +1,246 @@
+// filename: Universal/AVA/Features/RAG/src/commonTest/kotlin/com/augmentalis/ava/features/rag/cache/QueryCacheTest.kt
+// created: 2025-11-22
+// author: AVA AI Team - Phase 3.0 Testing
+// © Augmentalis Inc, Intelligent Devices LLC
+
+package com.augmentalis.ava.features.rag.cache
+
+import com.augmentalis.ava.features.rag.domain.SearchQuery
+import com.augmentalis.ava.features.rag.domain.SearchResponse
+import com.augmentalis.ava.features.rag.domain.SearchResult
+import kotlin.test.*
+
+/**
+ * Unit tests for QueryCache LRU implementation
+ *
+ * Covers:
+ * - Basic caching (get/put)
+ * - LRU eviction policy
+ * - Hit rate tracking
+ * - Memory management
+ * - Query embedding caching
+ */
+class QueryCacheTest {
+
+    private lateinit var cache: QueryCache
+
+    @BeforeTest
+    fun setup() {
+        cache = QueryCache(maxCacheSize = 10, maxMemoryBytes = 10 * 1024 * 1024)  // 10MB
+    }
+
+    @Test
+    fun testBasicCaching() {
+        val query = SearchQuery(query = "test query")
+        val response = createMockResponse("test query")
+
+        cache.put(query, response)
+        val retrieved = cache.get(query)
+
+        assertNotNull(retrieved)
+        assertEquals("test query", retrieved.query)
+    }
+
+    @Test
+    fun testCacheMiss() {
+        val query = SearchQuery(query = "missing query")
+        val retrieved = cache.get(query)
+
+        assertNull(retrieved)
+    }
+
+    @Test
+    fun testCacheHitRate() {
+        val query = SearchQuery(query = "test")
+        val response = createMockResponse("test")
+
+        cache.put(query, response)
+
+        // Hit
+        cache.get(query)
+        cache.get(query)
+
+        // Miss
+        cache.get(SearchQuery(query = "different"))
+
+        val stats = cache.getStatistics()
+
+        assertEquals(2, stats.totalHits)
+        assertEquals(1, stats.totalMisses)
+        assertEquals(2f / 3, stats.hitRate, 0.01f)
+    }
+
+    @Test
+    fun testLRUEviction() {
+        // Add 12 items to a cache with max size 10
+        for (i in 0..11) {
+            val query = SearchQuery(query = "query-$i")
+            val response = createMockResponse("query-$i")
+            cache.put(query, response)
+        }
+
+        val stats = cache.getStatistics()
+
+        // Should have evicted 2 oldest items
+        assertEquals(10, stats.cachedQueries)
+
+        // Most recent should still be in cache
+        assertNotNull(cache.get(SearchQuery(query = "query-11")))
+
+        // Oldest should be evicted
+        assertNull(cache.get(SearchQuery(query = "query-0")))
+    }
+
+    @Test
+    fun testQueryEmbeddingCaching() {
+        val queryText = "test embedding query"
+        val embedding = FloatArray(384) { it.toFloat() / 384 }
+
+        cache.putQueryEmbedding(queryText, embedding)
+
+        assertTrue(cache.hasQueryEmbedding(queryText))
+
+        val retrieved = cache.getQueryEmbedding(queryText)
+        assertNotNull(retrieved)
+        assertEquals(384, retrieved.size)
+        assertEquals(embedding[0], retrieved[0])
+    }
+
+    @Test
+    fun testQueryEmbeddingFrequency() {
+        val queryText = "frequent query"
+        val embedding = FloatArray(384) { it.toFloat() / 384 }
+
+        // Add same query multiple times
+        cache.putQueryEmbedding(queryText, embedding)
+        cache.putQueryEmbedding(queryText, embedding)
+        cache.putQueryEmbedding(queryText, embedding)
+
+        val topEmbeddings = cache.getMostFrequentEmbeddings(10)
+
+        assertTrue(topEmbeddings.any { it.queryText == queryText })
+        assertEquals(3, topEmbeddings.first { it.queryText == queryText }.frequency)
+    }
+
+    @Test
+    fun testClearCache() {
+        val query = SearchQuery(query = "test")
+        val response = createMockResponse("test")
+
+        cache.put(query, response)
+        cache.putQueryEmbedding("test", FloatArray(384))
+
+        cache.clear()
+
+        val stats = cache.getStatistics()
+        assertEquals(0, stats.cachedQueries)
+        assertEquals(0, stats.cachedEmbeddings)
+        assertNull(cache.get(query))
+    }
+
+    @Test
+    fun testMemoryBounding() {
+        val largeQuery = SearchQuery(query = "test")
+        val largeResponse = createMockResponse("test", resultCount = 1000)  // Large response
+
+        cache.put(largeQuery, largeResponse)
+
+        val stats = cache.getStatistics()
+
+        // Should be under max memory
+        assertTrue(stats.estimatedMemoryBytes <= stats.maxMemoryBytes)
+    }
+
+    @Test
+    fun testTopQueries() {
+        // Add queries with different access frequencies
+        for (i in 0..4) {
+            val query = SearchQuery(query = "popular-query")
+            cache.get(query)  // Access 5 times
+        }
+
+        for (i in 0..2) {
+            val query = SearchQuery(query = "normal-query")
+            cache.get(query)  // Access 3 times
+        }
+
+        // Add the query to cache first
+        cache.put(SearchQuery(query = "popular-query"), createMockResponse("popular-query"))
+        cache.put(SearchQuery(query = "normal-query"), createMockResponse("normal-query"))
+
+        val topQueries = cache.getTopQueries(5)
+
+        assertTrue(topQueries.isNotEmpty())
+    }
+
+    @Test
+    fun testCaseInsensitiveEmbedding() {
+        val embedding = FloatArray(384)
+
+        cache.putQueryEmbedding("Test Query", embedding)
+
+        // Should be case-insensitive
+        assertTrue(cache.hasQueryEmbedding("test query"))
+        assertTrue(cache.hasQueryEmbedding("TEST QUERY"))
+        assertTrue(cache.hasQueryEmbedding("TeSt QuErY"))
+    }
+
+    @Test
+    fun testCacheStatistics() {
+        val query1 = SearchQuery(query = "query1")
+        val query2 = SearchQuery(query = "query2")
+
+        cache.put(query1, createMockResponse("query1"))
+        cache.put(query2, createMockResponse("query2"))
+
+        cache.get(query1)  // Hit
+        cache.get(query1)  // Hit
+        cache.get(SearchQuery(query = "missing"))  // Miss
+
+        val stats = cache.getStatistics()
+
+        assertEquals(2, stats.cachedQueries)
+        assertEquals(2, stats.totalHits)
+        assertEquals(1, stats.totalMisses)
+        assertEquals(2f / 3, stats.hitRate, 0.01f)
+        assertTrue(stats.estimatedMemoryBytes > 0)
+        assertTrue(stats.memorySafetyMargin > 0)
+    }
+
+    // Helper functions
+
+    private fun createMockResponse(
+        query: String,
+        resultCount: Int = 5
+    ): SearchResponse {
+        val results = (0 until resultCount).map { i ->
+            SearchResult(
+                chunk = com.augmentalis.ava.features.rag.domain.Chunk(
+                    id = "chunk-$i",
+                    documentId = "doc-1",
+                    content = "Sample content $i",
+                    chunkIndex = i,
+                    startOffset = 0,
+                    endOffset = 100,
+                    metadata = com.augmentalis.ava.features.rag.domain.ChunkMetadata(
+                        section = "Section $i",
+                        pageNumber = i + 1,
+                        tokens = 50
+                    ),
+                    createdAt = kotlinx.datetime.Clock.System.now()
+                ),
+                similarity = 0.9f - (i * 0.05f),
+                document = null,
+                highlights = listOf("highlight $i")
+            )
+        }
+
+        return SearchResponse(
+            query = query,
+            results = results,
+            totalResults = resultCount,
+            searchTimeMs = 10,
+            cacheHit = false
+        )
+    }
+}

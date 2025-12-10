@@ -1,0 +1,89 @@
+-- RAG Filter Preset table for saved filter configurations
+-- Migrated from Room FilterPresetEntity
+
+CREATE TABLE rag_filter_preset (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    filters_json TEXT NOT NULL,
+    created_timestamp TEXT NOT NULL,
+    is_pinned INTEGER NOT NULL DEFAULT 0,
+    use_count INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX idx_rag_filter_preset_is_pinned ON rag_filter_preset(is_pinned);
+CREATE INDEX idx_rag_filter_preset_created_timestamp ON rag_filter_preset(created_timestamp);
+CREATE INDEX idx_rag_filter_preset_use_count ON rag_filter_preset(use_count DESC);
+
+-- Get all filter presets
+selectAll:
+SELECT * FROM rag_filter_preset
+ORDER BY is_pinned DESC, use_count DESC;
+
+-- Get filter preset by ID
+selectById:
+SELECT * FROM rag_filter_preset
+WHERE id = ?;
+
+-- Get filter preset by name
+selectByName:
+SELECT * FROM rag_filter_preset
+WHERE name = ?;
+
+-- Get pinned filter presets
+selectPinned:
+SELECT * FROM rag_filter_preset
+WHERE is_pinned = 1
+ORDER BY use_count DESC;
+
+-- Get most used filter presets
+selectMostUsed:
+SELECT * FROM rag_filter_preset
+ORDER BY use_count DESC
+LIMIT ?;
+
+-- Insert or replace filter preset
+insert:
+INSERT OR REPLACE INTO rag_filter_preset (
+    id, name, description, filters_json,
+    created_timestamp, is_pinned, use_count
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- Update filter preset
+update:
+UPDATE rag_filter_preset
+SET name = ?,
+    description = ?,
+    filters_json = ?
+WHERE id = ?;
+
+-- Increment use count
+incrementUseCount:
+UPDATE rag_filter_preset
+SET use_count = use_count + 1
+WHERE id = ?;
+
+-- Toggle pinned status
+togglePinned:
+UPDATE rag_filter_preset
+SET is_pinned = CASE WHEN is_pinned = 1 THEN 0 ELSE 1 END
+WHERE id = ?;
+
+-- Set pinned status
+setPinned:
+UPDATE rag_filter_preset
+SET is_pinned = ?
+WHERE id = ?;
+
+-- Delete filter preset by ID
+deleteById:
+DELETE FROM rag_filter_preset
+WHERE id = ?;
+
+-- Delete all filter presets
+deleteAll:
+DELETE FROM rag_filter_preset;
+
+-- Count all filter presets
+count:
+SELECT COUNT(*) FROM rag_filter_preset;

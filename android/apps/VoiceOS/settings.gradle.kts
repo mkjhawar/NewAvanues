@@ -52,6 +52,10 @@ rootProject.name = "VoiceOS"
 // Main application (test harness)
 include(":app")
 
+// Cockpit MVP Demo
+include(":android:apps:cockpit-mvp")
+include(":Common:Cockpit")
+
 // Standalone Apps (Moved to monorepo Modules/)
 include(":Modules:VoiceOS:apps:VoiceOSCore")  // RE-ENABLED for Agent Swarm migration
 include(":Modules:VoiceOS:apps:VoiceUI")  // Voice UI with Magic components
@@ -100,6 +104,9 @@ include(":tests:voiceoscore-unit-tests")  // Pure JVM unit tests for VoiceOSCore
 // include(":tests:automated-tests")  // DISABLED: Depends on VoiceOSCore (Phase 1 Quick Fix)
 
 // Project directory mappings (monorepo structure)
+project(":cockpit-mvp").projectDir = file("../cockpit-mvp")
+project(":Common:Cockpit").projectDir = file("../../../Common/Cockpit")
+
 project(":Modules:VoiceOS:apps:VoiceOSCore").projectDir = file("../../../Modules/VoiceOS/apps/VoiceOSCore")
 project(":Modules:VoiceOS:apps:VoiceUI").projectDir = file("../../../Modules/VoiceOS/apps/VoiceUI")
 project(":Modules:VoiceOS:apps:VoiceCursor").projectDir = file("../../../Modules/VoiceOS/apps/VoiceCursor")
@@ -133,3 +140,6 @@ project(":Modules:VoiceOS:core:json-utils").projectDir = file("../../../Modules/
 project(":Modules:VoiceOS:core:database").projectDir = file("../../../Modules/VoiceOS/core/database")
 
 project(":Common:ThirdParty:Vosk").projectDir = file("../../../Common/ThirdParty/Vosk")
+
+project(":android:apps:cockpit-mvp").projectDir = file("../cockpit-mvp")
+project(":Common:Cockpit").projectDir = file("../../../Common/Cockpit")
