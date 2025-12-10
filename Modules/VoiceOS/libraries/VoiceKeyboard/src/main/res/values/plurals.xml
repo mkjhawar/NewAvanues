@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <plurals name="dictation_timeout_summary">
-        <item quantity="one">Stop dictation after %d second of silence</item>
-        <item quantity="other">Stop dictation after %d seconds of silence</item>
-    </plurals>
-</resources>

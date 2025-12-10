@@ -1,4 +1,0 @@
-{
-  "_comment": "This file is deprecated. All intents should be defined in .ava files under assets/ava-examples/",
-  "_migration": "Intents will be automatically loaded from .ava files on first launch"
-}
