@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Claude Code Enhanced Status Line (v10.3)
-# Format: IDEACODE v# | repo | branch | git-stats | context-indicator | mcp-name | model | CLI version
-# Features: Auto-save at 80%, context warnings, git status
+# Claude Code Enhanced Status Line (v11.0)
+# Format: IDEACODE v# | API | repo | branch | git-stats | context-indicator | model | CLI version | RESTART CLIENT
+# Features: Auto-save at 80%, context warnings, git status, version tracking, API status colors
+# Colors: Green API (running), Red flashing API (needs restart), Red RESTART CLIENT (version/instruction changes)
 
 # Read JSON input from stdin
 input=$(cat)
@@ -146,6 +147,50 @@ if [[ "$cache_stale" == true ]]; then
     fi
 fi
 
+# Track IDEACODE version changes and instruction file changes
+restart_needed=false
+version_last_file="$HOME/.claude/.ideacode_version_last"
+checksum_file="$HOME/.claude/.instruction_checksums"
+
+# Check IDEACODE version change
+if [[ -f "$version_last_file" ]]; then
+    last_version=$(cat "$version_last_file" 2>/dev/null)
+    if [[ "$last_version" != "$ideacode_version" ]]; then
+        restart_needed=true
+    fi
+else
+    echo "$ideacode_version" > "$version_last_file" 2>/dev/null
+fi
+
+# Check instruction file changes (CLAUDE.md and config files)
+instruction_files=(
+    "/Volumes/M-Drive/Coding/.claude/CLAUDE.md"
+    "$cwd/.claude/CLAUDE.md"
+    "$cwd/.ideacode/config.ideacode"
+)
+
+current_checksums=""
+for file in "${instruction_files[@]}"; do
+    if [[ -f "$file" ]]; then
+        checksum=$(md5 -q "$file" 2>/dev/null || echo "")
+        current_checksums="${current_checksums}${file}:${checksum}\n"
+    fi
+done
+
+if [[ -f "$checksum_file" ]]; then
+    last_checksums=$(cat "$checksum_file" 2>/dev/null)
+    if [[ "$last_checksums" != "$current_checksums" ]]; then
+        restart_needed=true
+    fi
+else
+    printf "%b" "$current_checksums" > "$checksum_file" 2>/dev/null
+fi
+
+# Always update tracking files to current state (allows cross-session eventual consistency)
+# This prevents lock-in where restart_needed stays true indefinitely
+echo "$ideacode_version" > "$version_last_file" 2>/dev/null
+printf "%b" "$current_checksums" > "$checksum_file" 2>/dev/null
+
 # Build statusline
 status_parts=()
 
@@ -154,8 +199,14 @@ status_parts+=("IDEACODE v${ideacode_version}")
 
 # Check if IDEACODE API is running, auto-start if not
 api_marker="$HOME/.claude/.ideacode_api_started"
+api_status=""
 if curl -s --connect-timeout 0.5 http://localhost:3847/health > /dev/null 2>&1; then
-    status_parts+=("API")
+    # API is running - show >> << if restart needed, plain if normal
+    if [[ "$restart_needed" == true ]]; then
+        api_status=">>API<<"
+    else
+        api_status="API"
+    fi
     touch "$api_marker" 2>/dev/null
 else
     # Auto-start API server if not already attempted this session
@@ -168,11 +219,18 @@ else
             # Give it a moment to start
             sleep 0.5
             if curl -s --connect-timeout 0.5 http://localhost:3847/health > /dev/null 2>&1; then
-                status_parts+=("API")
+                if [[ "$restart_needed" == true ]]; then
+                    api_status=">>API<<"
+                else
+                    api_status="API"
+                fi
             fi
         fi
     fi
 fi
+
+# Add API status if set
+[[ -n "$api_status" ]] && status_parts+=("$api_status")
 
 # Repository (always show if in git repo)
 if [[ -n "$repo" ]]; then
@@ -202,6 +260,11 @@ if [[ "$version" != "$newest_version" ]]; then
     status_parts+=("v${version} -> v${newest_version}")
 else
     status_parts+=("v${version}")
+fi
+
+# Add RESTART CLIENT message if needed (version or instruction changes)
+if [[ "$restart_needed" == true ]]; then
+    status_parts+=(">>RESTART CLIENT<<")
 fi
 
 # Manually join with " | " separator
