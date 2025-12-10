@@ -1,0 +1,24 @@
+# Simplified CMakeLists.txt for Whisper JNI
+# This version uses minimal dependencies and should build
+
+cmake_minimum_required(VERSION 3.22.1)
+project("whisper-jni")
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_library(log-lib log)
+
+# Simplified: Just build the JNI wrapper without whisper.cpp
+# The actual whisper functionality will be added via pre-built library
+add_library(whisper-jni SHARED 
+    whisper_jni_stub.cpp  # Simplified stub implementation
+)
+
+target_link_libraries(whisper-jni
+    ${log-lib}
+    android
+)
+
+# Later, link with pre-built whisper library
+# target_link_libraries(whisper-jni whisper-prebuilt)

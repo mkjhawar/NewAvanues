@@ -31,6 +31,18 @@ interface ScrapedAppMetadataSource {
      * @since 1.0.0
      */
     suspend fun getAppsByPackageName(packageName: String): List<ScrapedAppMetadata>
+
+    /**
+     * Get all scraped apps
+     *
+     * Returns all apps in the scraping database.
+     * Used for app name → package resolution.
+     *
+     * @return List of all scraped app metadata
+     *
+     * @since Phase 4 - Relearn App Command
+     */
+    suspend fun getAllApps(): List<ScrapedAppMetadata>
 }
 
 /**

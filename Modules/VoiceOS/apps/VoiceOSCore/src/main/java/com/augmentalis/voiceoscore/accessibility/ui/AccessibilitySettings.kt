@@ -9,6 +9,7 @@
 package com.augmentalis.voiceoscore.accessibility.ui
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -71,8 +72,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.augmentalis.voiceoscore.accessibility.ui.theme.AccessibilityTheme
 import com.augmentalis.voiceoscore.accessibility.ui.utils.DepthLevel
@@ -99,6 +102,41 @@ class AccessibilitySettings : ComponentActivity() {
     }
 }
 
+/**
+ * Adaptive spacing for Settings screen based on orientation
+ */
+data class SettingsAdaptiveSpacing(
+    val horizontalPadding: Dp,
+    val cardPadding: Dp,
+    val itemSpacing: Dp,
+    val iconSize: Dp
+)
+
+/**
+ * Get adaptive spacing for settings screen
+ */
+@Composable
+fun getSettingsAdaptiveSpacing(): SettingsAdaptiveSpacing {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    return if (isLandscape) {
+        SettingsAdaptiveSpacing(
+            horizontalPadding = 12.dp,
+            cardPadding = 10.dp,
+            itemSpacing = 8.dp,
+            iconSize = 18.dp
+        )
+    } else {
+        SettingsAdaptiveSpacing(
+            horizontalPadding = 16.dp,
+            cardPadding = 14.dp,
+            itemSpacing = 12.dp,
+            iconSize = 20.dp
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -106,9 +144,12 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val spacing = getSettingsAdaptiveSpacing()
+    val localConfig = LocalConfiguration.current
+    val isLandscape = localConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     @Suppress("UNUSED_VARIABLE")
-    val configuration by settingsViewModel.configuration.collectAsState() // Configuration passed to child components
+    val configuration by settingsViewModel.configuration.collectAsState()
     val performanceMode by settingsViewModel.performanceMode.collectAsState()
     val handlerStates by settingsViewModel.handlerStates.collectAsState()
     val isLoading by settingsViewModel.isLoading.collectAsState()
@@ -122,24 +163,22 @@ fun SettingsScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Top App Bar
             SettingsTopBar(
                 onNavigateBack = onNavigateBack,
                 onOpenSystemSettings = {
                     val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                     context.startActivity(intent)
-                }
+                },
+                isLandscape = isLandscape
             )
 
-            // Settings Content
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(vertical = 16.dp)
+                    .padding(horizontal = spacing.horizontalPadding),
+                verticalArrangement = Arrangement.spacedBy(spacing.itemSpacing),
+                contentPadding = PaddingValues(vertical = spacing.itemSpacing)
             ) {
-                // Error message if any
                 if (!errorMessage.isNullOrBlank()) {
                     item {
                         Card(
@@ -150,60 +189,48 @@ fun SettingsScreen(
                         ) {
                             Text(
                                 text = errorMessage ?: "",
-                                modifier = Modifier.padding(16.dp),
+                                modifier = Modifier.padding(spacing.cardPadding),
                                 color = Color(0xFFFF5722),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
                     }
                 }
-                // Service Control Section
+
                 item {
-                    LanguageControlSection(
-                        settingsViewModel = settingsViewModel
-                    )
+                    LanguageControlSection(settingsViewModel = settingsViewModel, spacing = spacing)
                 }
 
-                // Service Control Section
                 item {
-                    ServiceControlSection(
-                        settingsViewModel = settingsViewModel
-                    )
+                    ServiceControlSection(settingsViewModel = settingsViewModel, spacing = spacing)
                 }
 
-                // Handler Toggles Section
                 item {
                     HandlerTogglesSection(
                         settingsViewModel = settingsViewModel,
-                        handlerStates = handlerStates
+                        handlerStates = handlerStates,
+                        spacing = spacing
                     )
                 }
 
-                // Performance Settings Section
                 item {
                     PerformanceSettingsSection(
                         settingsViewModel = settingsViewModel,
-                        performanceMode = performanceMode
+                        performanceMode = performanceMode,
+                        spacing = spacing
                     )
                 }
 
-                // Cursor Settings Section
                 item {
-                    CursorSettingsSection(
-                        settingsViewModel = settingsViewModel
-                    )
+                    CursorSettingsSection(settingsViewModel = settingsViewModel, spacing = spacing)
                 }
 
-                // Advanced Settings Section
                 item {
-                    AdvancedSettingsSection(
-                        settingsViewModel = settingsViewModel
-                    )
+                    AdvancedSettingsSection(settingsViewModel = settingsViewModel, spacing = spacing)
                 }
             }
         }
 
-        // Loading overlay
         if (isLoading) {
             Box(
                 modifier = Modifier
@@ -211,9 +238,7 @@ fun SettingsScreen(
                     .background(Color.Black.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(
-                    color = Color(0xFF2196F3)
-                )
+                CircularProgressIndicator(color = Color(0xFF2196F3))
             }
         }
     }
@@ -223,7 +248,8 @@ fun SettingsScreen(
 @Composable
 fun SettingsTopBar(
     onNavigateBack: () -> Unit,
-    onOpenSystemSettings: () -> Unit
+    onOpenSystemSettings: () -> Unit,
+    isLandscape: Boolean = false
 ) {
     Card(
         modifier = Modifier
@@ -231,53 +257,54 @@ fun SettingsTopBar(
             .glassMorphism(
                 config = GlassMorphismConfig(
                     cornerRadius = 0.dp,
-                    backgroundOpacity = 0.1f,
-                    borderOpacity = 0.2f,
+                    backgroundOpacity = 0.08f,
+                    borderOpacity = 0.1f,
                     borderWidth = 0.dp,
                     tintColor = Color(0xFF4285F4),
-                    tintOpacity = 0.15f
+                    tintOpacity = 0.1f
                 ),
-                depth = DepthLevel(0.8f)
+                depth = DepthLevel(0.6f)
             ),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(0.dp)
     ) {
-        TopAppBar(
-            title = {
-                Text(
-                    text = "Settings",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = if (isLandscape) 4.dp else 8.dp, vertical = if (isLandscape) 4.dp else 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.White,
+                    modifier = Modifier.size(if (isLandscape) 20.dp else 24.dp)
                 )
-            },
-            navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White
-                    )
-                }
-            },
-            actions = {
-                IconButton(onClick = onOpenSystemSettings) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "System Settings",
-                        tint = Color.White
-                    )
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent
+            }
+            Text(
+                text = "Settings",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                style = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
             )
-        )
+            IconButton(onClick = onOpenSystemSettings) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "System Settings",
+                    tint = Color.White,
+                    modifier = Modifier.size(if (isLandscape) 20.dp else 24.dp)
+                )
+            }
+        }
     }
 }
 
 @Composable
 fun ServiceControlSection(
-    settingsViewModel: SettingsViewModel
+    settingsViewModel: SettingsViewModel,
+    spacing: SettingsAdaptiveSpacing
 ) {
     val showToasts by settingsViewModel.showToasts.collectAsState()
     val verboseLogging by settingsViewModel.verboseLogging.collectAsState()
@@ -285,31 +312,29 @@ fun ServiceControlSection(
 
     SettingsSection(
         title = "Service Control",
-        icon = Icons.Default.Power
+        icon = Icons.Default.Power,
+        spacing = spacing
     ) {
         SettingsToggle(
             title = "Service Enabled",
-            description = "Enable/disable the accessibility service",
+            description = "Enable/disable accessibility service",
             isChecked = configuration.isEnabled,
-            onCheckedChange = { /* Service enable/disable handled by system settings */ }
+            onCheckedChange = { },
+            spacing = spacing
         )
-
         SettingsToggle(
             title = "Show Notifications",
-            description = "Display toast messages for commands",
+            description = "Display toast messages",
             isChecked = showToasts,
-            onCheckedChange = { enabled ->
-                settingsViewModel.updateShowToasts(enabled)
-            }
+            onCheckedChange = { settingsViewModel.updateShowToasts(it) },
+            spacing = spacing
         )
-
         SettingsToggle(
             title = "Verbose Logging",
-            description = "Enable detailed debug logging",
+            description = "Enable debug logging",
             isChecked = verboseLogging,
-            onCheckedChange = { enabled ->
-                settingsViewModel.updateVerboseLogging(enabled)
-            }
+            onCheckedChange = { settingsViewModel.updateVerboseLogging(it) },
+            spacing = spacing
         )
     }
 }
@@ -317,10 +342,10 @@ fun ServiceControlSection(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LanguageControlSection(
-    settingsViewModel: SettingsViewModel
+    settingsViewModel: SettingsViewModel,
+    spacing: SettingsAdaptiveSpacing
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val context = LocalContext.current
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded }
@@ -329,11 +354,10 @@ fun LanguageControlSection(
             value = settingsViewModel.selectedOption.value,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Select an option") },
+            label = { Text("Language", style = MaterialTheme.typography.labelSmall) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth()
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            textStyle = MaterialTheme.typography.bodySmall
         )
 
         ExposedDropdownMenu(
@@ -342,7 +366,7 @@ fun LanguageControlSection(
         ) {
             settingsViewModel.options.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(option) },
+                    text = { Text(option, style = MaterialTheme.typography.bodySmall) },
                     onClick = {
                         settingsViewModel.onOptionSelected(option)
                         expanded = false
@@ -356,23 +380,23 @@ fun LanguageControlSection(
 @Composable
 fun HandlerTogglesSection(
     settingsViewModel: SettingsViewModel,
-    handlerStates: Map<String, Boolean>
+    handlerStates: Map<String, Boolean>,
+    spacing: SettingsAdaptiveSpacing
 ) {
     SettingsSection(
-        title = "Command Handlers",
-        icon = Icons.Default.Tune
+        title = "Handlers",
+        icon = Icons.Default.Tune,
+        spacing = spacing
     ) {
         settingsViewModel.getAllHandlerDefinitions().forEach { handler ->
             val isEnabled = handlerStates[handler.id] ?: false
-
             SettingsToggle(
                 title = handler.name,
                 description = handler.description,
                 isChecked = isEnabled,
-                enabled = !handler.isCore, // Core handlers cannot be disabled
-                onCheckedChange = { enabled ->
-                    settingsViewModel.toggleHandler(handler.id, enabled)
-                }
+                enabled = !handler.isCore,
+                onCheckedChange = { settingsViewModel.toggleHandler(handler.id, it) },
+                spacing = spacing
             )
         }
     }
@@ -381,26 +405,27 @@ fun HandlerTogglesSection(
 @Composable
 fun PerformanceSettingsSection(
     settingsViewModel: SettingsViewModel,
-    performanceMode: PerformanceMode
+    performanceMode: PerformanceMode,
+    spacing: SettingsAdaptiveSpacing
 ) {
     val dynamicCommandsEnabled by settingsViewModel.dynamicCommandsEnabled.collectAsState()
     val cacheEnabled by settingsViewModel.cacheEnabled.collectAsState()
     val maxCacheSize by settingsViewModel.maxCacheSize.collectAsState()
 
     @Suppress("UNUSED_VARIABLE")
-    val configuration by settingsViewModel.configuration.collectAsState() // Reserved for future configuration display
+    val configuration by settingsViewModel.configuration.collectAsState()
 
     SettingsSection(
         title = "Performance",
-        icon = Icons.Default.Speed
+        icon = Icons.Default.Speed,
+        spacing = spacing
     ) {
-        // Performance Mode Selection
         Text(
-            text = "Performance Mode",
-            style = MaterialTheme.typography.titleMedium,
+            text = "Mode",
+            style = MaterialTheme.typography.labelMedium,
             color = Color.White,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 4.dp)
         )
 
         PerformanceMode.values().forEach { mode ->
@@ -408,159 +433,145 @@ fun PerformanceSettingsSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { settingsViewModel.updatePerformanceMode(mode) }
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
                     selected = performanceMode == mode,
                     onClick = { settingsViewModel.updatePerformanceMode(mode) },
-                    colors = RadioButtonDefaults.colors(
-                        selectedColor = Color(0xFF4285F4)
-                    )
+                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF4285F4)),
+                    modifier = Modifier.size(spacing.iconSize + 8.dp)
                 )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
+                Spacer(modifier = Modifier.width(4.dp))
                 Column {
                     Text(
                         text = mode.displayName,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = Color.White,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
                         text = mode.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f)
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.6f)
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(spacing.itemSpacing))
 
         SettingsToggle(
             title = "Dynamic Commands",
-            description = "Generate commands based on screen content",
+            description = "Generate from screen",
             isChecked = dynamicCommandsEnabled,
-            onCheckedChange = { enabled ->
-                settingsViewModel.updateDynamicCommandsEnabled(enabled)
-            }
+            onCheckedChange = { settingsViewModel.updateDynamicCommandsEnabled(it) },
+            spacing = spacing
         )
-
         SettingsToggle(
-            title = "Command Caching",
-            description = "Cache frequently used commands",
+            title = "Caching",
+            description = "Cache frequent commands",
             isChecked = cacheEnabled,
-            onCheckedChange = { enabled ->
-                settingsViewModel.updateCacheEnabled(enabled)
-            }
+            onCheckedChange = { settingsViewModel.updateCacheEnabled(it) },
+            spacing = spacing
         )
-
         SettingsSlider(
             title = "Cache Size",
-            description = "Maximum number of cached commands",
+            description = "Max cached commands",
             value = maxCacheSize.toFloat(),
             range = 10f..500f,
             steps = 48,
             enabled = cacheEnabled,
-            onValueChange = { value ->
-                settingsViewModel.updateMaxCacheSize(value.toInt())
-            }
+            onValueChange = { settingsViewModel.updateMaxCacheSize(it.toInt()) },
+            spacing = spacing
         )
     }
 }
 
 @Composable
 fun CursorSettingsSection(
-    settingsViewModel: SettingsViewModel
+    settingsViewModel: SettingsViewModel,
+    spacing: SettingsAdaptiveSpacing
 ) {
     val cursorEnabled by settingsViewModel.cursorEnabled.collectAsState()
     val cursorSize by settingsViewModel.cursorSize.collectAsState()
     val cursorSpeed by settingsViewModel.cursorSpeed.collectAsState()
 
     SettingsSection(
-        title = "Cursor Settings",
-        icon = Icons.Default.CenterFocusStrong
+        title = "Cursor",
+        icon = Icons.Default.CenterFocusStrong,
+        spacing = spacing
     ) {
         SettingsToggle(
             title = "Voice Cursor",
-            description = "Enable voice-controlled cursor",
+            description = "Enable voice cursor",
             isChecked = cursorEnabled,
-            onCheckedChange = { enabled ->
-                settingsViewModel.updateCursorEnabled(enabled)
-            }
+            onCheckedChange = { settingsViewModel.updateCursorEnabled(it) },
+            spacing = spacing
         )
-
         SettingsSlider(
-            title = "Cursor Size",
-            description = "Size of the cursor in dp",
+            title = "Size",
+            description = "Cursor size (dp)",
             value = cursorSize,
             range = 24f..96f,
             steps = 8,
             enabled = cursorEnabled,
-            onValueChange = { value ->
-                settingsViewModel.updateCursorSize(value)
-            }
+            onValueChange = { settingsViewModel.updateCursorSize(it) },
+            spacing = spacing
         )
-
         SettingsSlider(
-            title = "Cursor Speed",
-            description = "Movement speed multiplier",
+            title = "Speed",
+            description = "Movement speed",
             value = cursorSpeed,
             range = 0.1f..3.0f,
             steps = 28,
             enabled = cursorEnabled,
-            onValueChange = { value ->
-                settingsViewModel.updateCursorSpeed(value)
-            }
+            onValueChange = { settingsViewModel.updateCursorSpeed(it) },
+            spacing = spacing
         )
     }
 }
 
 @Composable
 fun AdvancedSettingsSection(
-    settingsViewModel: SettingsViewModel
+    settingsViewModel: SettingsViewModel,
+    spacing: SettingsAdaptiveSpacing
 ) {
     val uiScrapingEnabled by settingsViewModel.uiScrapingEnabled.collectAsState()
     val configuration by settingsViewModel.configuration.collectAsState()
 
     SettingsSection(
         title = "Advanced",
-        icon = Icons.Default.Science
+        icon = Icons.Default.Science,
+        spacing = spacing
     ) {
         SettingsToggle(
             title = "UI Scraping",
-            description = "Extract detailed screen information (experimental)",
+            description = "Extract screen info (experimental)",
             isChecked = uiScrapingEnabled,
-            onCheckedChange = { enabled ->
-                settingsViewModel.updateUiScrapingEnabled(enabled)
-            }
+            onCheckedChange = { settingsViewModel.updateUiScrapingEnabled(it) },
+            spacing = spacing
         )
-
         SettingsToggle(
             title = "Fingerprint Gestures",
-            description = "Use fingerprint sensor for gestures (if available)",
+            description = "Use fingerprint for gestures",
             isChecked = configuration.fingerprintGesturesEnabled,
-            onCheckedChange = { _ ->
-                // This feature is not implemented in SettingsViewModel yet
-                // Could be added if needed
-            }
+            onCheckedChange = { },
+            spacing = spacing
         )
 
-        // Reset to defaults button
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(spacing.itemSpacing))
 
         Button(
             onClick = { settingsViewModel.resetToDefaults() },
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF4285F4)
-            )
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4285F4)),
+            contentPadding = PaddingValues(vertical = spacing.cardPadding / 2)
         ) {
             Text(
-                text = "Reset to Defaults",
-                color = Color.White
+                text = "Reset",
+                color = Color.White,
+                style = MaterialTheme.typography.labelMedium
             )
         }
     }
@@ -570,6 +581,7 @@ fun AdvancedSettingsSection(
 fun SettingsSection(
     title: String,
     icon: ImageVector,
+    spacing: SettingsAdaptiveSpacing,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
@@ -577,41 +589,38 @@ fun SettingsSection(
             .fillMaxWidth()
             .glassMorphism(
                 config = GlassMorphismConfig(
-                    cornerRadius = 16.dp,
-                    backgroundOpacity = 0.1f,
-                    borderOpacity = 0.2f,
-                    borderWidth = 1.dp,
+                    cornerRadius = 10.dp,
+                    backgroundOpacity = 0.08f,
+                    borderOpacity = 0.1f,
+                    borderWidth = 0.5.dp,
                     tintColor = Color(0xFF4285F4),
-                    tintOpacity = 0.12f
+                    tintOpacity = 0.08f
                 ),
-                depth = DepthLevel(0.6f)
+                depth = DepthLevel(0.5f)
             ),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp)
+            modifier = Modifier.padding(spacing.cardPadding)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = spacing.itemSpacing / 2)
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(spacing.iconSize),
                     tint = Color(0xFF4285F4)
                 )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleSmall,
                     color = Color.White,
                     fontWeight = FontWeight.SemiBold
                 )
             }
-
             content()
         }
     }
@@ -623,32 +632,29 @@ fun SettingsToggle(
     description: String,
     isChecked: Boolean,
     enabled: Boolean = true,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    spacing: SettingsAdaptiveSpacing
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled) { onCheckedChange(!isChecked) }
-            .padding(vertical = 8.dp),
+            .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodySmall,
                 color = if (enabled) Color.White else Color.Gray,
                 fontWeight = FontWeight.Medium
             )
-
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (enabled) Color.White.copy(alpha = 0.7f) else Color.Gray.copy(alpha = 0.5f)
+                style = MaterialTheme.typography.labelSmall,
+                color = if (enabled) Color.White.copy(alpha = 0.6f) else Color.Gray.copy(alpha = 0.4f)
             )
         }
-
         Switch(
             checked = isChecked,
             onCheckedChange = if (enabled) onCheckedChange else null,
@@ -671,48 +677,45 @@ fun SettingsSlider(
     range: ClosedFloatingPointRange<Float>,
     steps: Int = 0,
     enabled: Boolean = true,
-    onValueChange: (Float) -> Unit
+    onValueChange: (Float) -> Unit,
+    spacing: SettingsAdaptiveSpacing
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
+            .padding(vertical = 2.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodySmall,
                     color = if (enabled) Color.White else Color.Gray,
                     fontWeight = FontWeight.Medium
                 )
-
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (enabled) Color.White.copy(alpha = 0.7f) else Color.Gray.copy(alpha = 0.5f)
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (enabled) Color.White.copy(alpha = 0.6f) else Color.Gray.copy(alpha = 0.4f)
                 )
             }
-
             Text(
                 text = when {
                     value >= 1000 -> "${(value / 1000f).toInt()}k"
                     value.rem(1f) == 0f -> value.toInt().toString()
                     else -> String.format("%.1f", value)
                 },
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.labelMedium,
                 color = if (enabled) Color(0xFF4285F4) else Color.Gray,
                 fontWeight = FontWeight.Bold
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(2.dp))
 
         Slider(
             value = value,

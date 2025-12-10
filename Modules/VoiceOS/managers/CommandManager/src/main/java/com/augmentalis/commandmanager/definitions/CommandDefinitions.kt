@@ -39,7 +39,8 @@ class CommandDefinitions {
         loadSystemCommands()
         loadAppCommands()
         loadTextCommands()
-        
+        loadLearnAppCommands()
+
         android.util.Log.d(TAG, "Loaded ${builtInDefinitions.size} built-in command definitions")
     }
     
@@ -354,7 +355,7 @@ class CommandDefinitions {
                 CommandParameter("text", ParameterType.STRING, required = false)
             )
         )
-        
+
         builtInDefinitions["paste_text"] = CommandDefinition(
             id = "paste_text",
             name = "Paste",
@@ -362,7 +363,7 @@ class CommandDefinitions {
             category = "INPUT",
             patterns = listOf("paste", "paste text", "insert")
         )
-        
+
         builtInDefinitions["select_all"] = CommandDefinition(
             id = "select_all",
             name = "Select All",
@@ -370,13 +371,31 @@ class CommandDefinitions {
             category = "INPUT",
             patterns = listOf("select all", "select everything", "highlight all")
         )
-        
+
         builtInDefinitions["cut_text"] = CommandDefinition(
             id = "cut_text",
             name = "Cut",
             description = "Cut text",
             category = "INPUT",
             patterns = listOf("cut", "cut text", "cut selection")
+        )
+    }
+
+    // LearnApp Commands
+    private fun loadLearnAppCommands() {
+        builtInDefinitions["relearn_app"] = CommandDefinition(
+            id = "relearn_app",
+            name = "Relearn App",
+            description = "Update VUIDs for an app without full re-exploration",
+            category = "LEARNAPP",
+            patterns = listOf(
+                "relearn {app_name}",
+                "relearn this app",
+                "relearn current app"
+            ),
+            parameters = listOf(
+                CommandParameter("app_name", ParameterType.STRING, required = false)
+            )
         )
     }
 }

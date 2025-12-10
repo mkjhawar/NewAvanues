@@ -25,8 +25,10 @@ import com.augmentalis.voiceoscore.learnapp.database.repository.SessionCreationR
 import com.augmentalis.voiceoscore.learnapp.detection.AppLaunchDetector
 import com.augmentalis.voiceoscore.learnapp.detection.LearnedAppTracker
 import com.augmentalis.voiceoscore.learnapp.exploration.DFSExplorationStrategy
+import com.augmentalis.voiceoscore.learnapp.exploration.ExplorationDebugCallback
 import com.augmentalis.voiceoscore.learnapp.exploration.ExplorationEngine
 import com.augmentalis.voiceoscore.learnapp.exploration.ExplorationStrategy
+import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationState
 import com.augmentalis.voiceoscore.learnapp.overlays.LoginPromptAction
 import com.augmentalis.voiceoscore.learnapp.overlays.LoginPromptConfig
@@ -35,7 +37,7 @@ import com.augmentalis.voiceoscore.learnapp.jit.JustInTimeLearner
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppPreferences
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 import com.augmentalis.voiceoscore.learnapp.ui.ConsentDialogManager
-import com.augmentalis.voiceoscore.learnapp.ui.ProgressOverlayManager
+import com.augmentalis.voiceoscore.learnapp.ui.FloatingProgressWidget
 import com.augmentalis.voiceoscore.scraping.AccessibilityScrapingIntegration
 import com.augmentalis.uuidcreator.UUIDCreator
 import com.augmentalis.uuidcreator.alias.UuidAliasManager
@@ -126,7 +128,7 @@ class LearnAppIntegration private constructor(
     private val learnedAppTracker: LearnedAppTracker
     private val appLaunchDetector: AppLaunchDetector
     private val consentDialogManager: ConsentDialogManager
-    private val progressOverlayManager: ProgressOverlayManager
+    private var floatingProgressWidget: FloatingProgressWidget? = null
     private val explorationEngine: ExplorationEngine
     private val scrapingIntegration: AccessibilityScrapingIntegration
     private val justInTimeLearner: JustInTimeLearner
@@ -154,6 +156,14 @@ class LearnAppIntegration private constructor(
      */
     private val explorationStrategy: ExplorationStrategy = DFSExplorationStrategy()
 
+    /**
+     * AVU Quantizer Integration (2025-12-08)
+     *
+     * Real-time quantization of UI elements during exploration for NLU/LLM integration.
+     * Captures elements as they're discovered and builds compact, tokenized representations.
+     */
+    private val avuQuantizerIntegration: com.augmentalis.voiceoscore.learnapp.ai.quantized.AVUQuantizerIntegration
+
     init {
         // Initialize preferences
         preferences = LearnAppPreferences(context)
@@ -163,9 +173,15 @@ class LearnAppIntegration private constructor(
             com.augmentalis.database.DatabaseDriverFactory(context)
         )
 
-        // Initialize repository with direct SQLDelight access (no DAO layer)
-        repository = LearnAppRepository(databaseManager, context)
-        metadataProvider = AppMetadataProvider(context)
+        // Initialize ScrapedAppMetadataSource implementation for app name resolution
+        val scrapedAppMetadataSource = com.augmentalis.voiceoscore.learnapp.database.repository.ScrapedAppMetadataSourceImpl(
+            context = context,
+            databaseManager = databaseManager
+        )
+
+        // Initialize repository with direct SQLDelight access and scraped app metadata source
+        repository = LearnAppRepository(databaseManager, context, scrapedAppMetadataSource)
+        metadataProvider = AppMetadataProvider(context, scrapedAppMetadataSource)
 
         // Initialize UUIDCreator components
         uuidCreator = UUIDCreator.getInstance()
@@ -184,7 +200,7 @@ class LearnAppIntegration private constructor(
         learnedAppTracker = LearnedAppTracker(context)
         appLaunchDetector = AppLaunchDetector(context, learnedAppTracker)
         consentDialogManager = ConsentDialogManager(accessibilityService, learnedAppTracker)
-        progressOverlayManager = ProgressOverlayManager(accessibilityService)
+        // FloatingProgressWidget initialized lazily when exploration starts
 
         // Initialize exploration engine
         // Phase 3 (2025-12-04): Pass LearnAppCore for voice command generation
@@ -200,8 +216,7 @@ class LearnAppIntegration private constructor(
             learnAppCore = learnAppCore  // Phase 3: Enable voice command generation
         )
 
-        // Phase 3: Wire explorationEngine to progressOverlayManager for pause/resume control
-        progressOverlayManager.explorationEngine = explorationEngine
+        // FloatingProgressWidget is initialized when exploration starts (lazy init)
 
         // Initialize scraping integration for potential future use
         scrapingIntegration = AccessibilityScrapingIntegration(context, accessibilityService)
@@ -220,6 +235,10 @@ class LearnAppIntegration private constructor(
         // FIX (2025-12-01): Initialize JIT element capture for Voice Command Element Persistence
         // This enables JIT learning to capture elements and generate voice commands
         justInTimeLearner.initializeElementCapture(accessibilityService)
+
+        // Initialize AVU Quantizer Integration (2025-12-08)
+        // Real-time quantization for NLU/LLM integration
+        avuQuantizerIntegration = com.augmentalis.voiceoscore.learnapp.ai.quantized.AVUQuantizerIntegration(context)
 
         // Set up event listeners
         setupEventListeners()
@@ -495,6 +514,11 @@ class LearnAppIntegration private constructor(
                                     )
                                 }
                             }
+
+                            // AVU Quantizer (2025-12-08): Start quantization before exploration
+                            val appName = metadataProvider.getMetadata(packageName)?.appName ?: packageName.substringAfterLast(".")
+                            avuQuantizerIntegration.startQuantization(packageName, appName)
+
                             // Start exploration engine with session ID for database persistence
                             explorationEngine.startExploration(packageName, result.sessionId)
                         }
@@ -506,8 +530,8 @@ class LearnAppIntegration private constructor(
                                 "Failed to create session for $packageName: ${result.reason}", result.cause
                             )
 
-                            // Hide progress overlay
-                            progressOverlayManager.hideProgressOverlay()
+                            // Dismiss floating widget
+                            floatingProgressWidget?.dismiss()
 
                             // Show error notification
                             showToastNotification(
@@ -521,8 +545,8 @@ class LearnAppIntegration private constructor(
                 // FIX: Handle timeout explicitly
                 Log.e("LearnAppIntegration", "Exploration initialization timed out for $packageName", e)
 
-                // Hide progress overlay
-                progressOverlayManager.hideProgressOverlay()
+                // Dismiss floating widget
+                floatingProgressWidget?.dismiss()
 
                 // Show timeout notification
                 showToastNotification(
@@ -543,19 +567,36 @@ class LearnAppIntegration private constructor(
     private fun handleExplorationStateChange(state: ExplorationState) {
         when (state) {
             is ExplorationState.Idle -> {
-                // Dismiss command bar
-                progressOverlayManager.dismissCommandBar()
+                // Dismiss floating widget
+                floatingProgressWidget?.dismiss()
             }
 
             is ExplorationState.Running -> {
-                // FIX (2025-12-06): Show/update command bar instead of full-screen overlay
+                // FIX (2025-12-07): Use new FloatingProgressWidget (draggable, transparent)
                 val progress = calculateProgress(state)
-                val message = "Exploring: ${state.progress.appName} (${state.progress.screensExplored} screens)"
+                val statusMsg = "Learning ${state.progress.appName}..."
+                val statsMsg = "${state.progress.screensExplored} screens, ${state.progress.elementsDiscovered} elements"
 
-                if (!progressOverlayManager.isCommandBarShowing()) {
-                    // Show command bar for first time
-                    progressOverlayManager.showCommandBar(state.packageName, progress)
-                    Log.i(TAG, "🚀 Started learning ${state.packageName} - Command bar shown")
+                // Create widget if needed (lazy init)
+                if (floatingProgressWidget == null) {
+                    floatingProgressWidget = FloatingProgressWidget(
+                        context = accessibilityService,
+                        onPauseClick = { explorationEngine.pauseExploration() },
+                        onResumeClick = { explorationEngine.resumeExploration() },
+                        onStopClick = { explorationEngine.stopExploration() }
+                    )
+
+                    // DEBUG (2025-12-08): Set up debug callback to wire overlay to exploration engine
+                    setupDebugOverlayCallback()
+                }
+
+                if (floatingProgressWidget?.isShowing() != true) {
+                    // Show widget for first time
+                    floatingProgressWidget?.show()
+                    Log.i(TAG, "🚀 Started learning ${state.packageName} - Floating widget shown")
+
+                    // DEBUG (2025-12-08): Show debug overlay by default when exploration starts
+                    floatingProgressWidget?.enableDebugOverlay()
 
                     // Show toast notification
                     scope.launch {
@@ -563,30 +604,56 @@ class LearnAppIntegration private constructor(
                             Toast.makeText(context, "🚀 Started learning ${state.progress.appName}", Toast.LENGTH_SHORT).show()
                         }
                     }
-                } else {
-                    // Update existing command bar
-                    progressOverlayManager.updateProgress(progress, message)
                 }
+
+                // Update progress
+                floatingProgressWidget?.updateProgress(progress, statusMsg, statsMsg)
             }
 
             is ExplorationState.PausedForLogin -> {
                 // Show login prompt overlay
                 showLoginPromptOverlay(state.packageName, state.progress.appName)
+                // Update widget to show paused state
+                floatingProgressWidget?.updatePauseState(true)
             }
 
             is ExplorationState.PausedByUser -> {
-                // Update command bar to show paused state
+                // Update widget to show paused state
                 val progress = calculateProgress(state)
-                progressOverlayManager.updateProgress(
+                floatingProgressWidget?.updateProgress(
                     progress,
-                    "⏸️ Paused by user - Tap Resume to continue"
+                    "Paused by user",
+                    "Tap Resume to continue"
                 )
-                progressOverlayManager.updatePauseState(true)
+                floatingProgressWidget?.updatePauseState(true)
+            }
+
+            is ExplorationState.Paused -> {
+                // FIX (2025-12-07): Handle unified Paused state
+                // This state is used by the new pause() function in ExplorationEngine
+                val progress = calculateProgress(state)
+                floatingProgressWidget?.updateProgress(
+                    progress,
+                    "Paused: ${state.reason}",
+                    "Tap Resume to continue"
+                )
+                floatingProgressWidget?.updatePauseState(true)
             }
 
             is ExplorationState.Completed -> {
-                // Dismiss command bar
-                progressOverlayManager.dismissCommandBar()
+                // DEBUG (2025-12-08): Clear debug callback and overlay
+                clearDebugOverlayCallback()
+
+                // AVU Quantizer (2025-12-08): Stop quantization and save results
+                val quantizedContext = avuQuantizerIntegration.stopQuantization()
+                if (quantizedContext != null) {
+                    val stats = avuQuantizerIntegration.getQuantizerStats()
+                    Log.i(TAG, "📊 Quantized context saved: ${stats.screensProcessed} screens, " +
+                        "${stats.elementsProcessed} elements, ${stats.actionCandidates} actions")
+                }
+
+                // Dismiss floating widget
+                floatingProgressWidget?.dismiss()
 
                 // Hide login prompt overlay if showing
                 hideLoginPromptOverlay()
@@ -610,13 +677,20 @@ class LearnAppIntegration private constructor(
                     }
 
                     // FIX (2025-12-06): Enhanced completion notification with completeness
+                    // UPDATE (2025-12-08): Show blocked vs non-blocked stats
+                    // Format: "XX% of non-blocked items (YY/ZZ clicked), WW blocked"
                     val completeness = state.stats.completeness
+                    val clicked = state.stats.clickedElements
+                    val nonBlocked = state.stats.nonBlockedElements
+                    val blocked = state.stats.blockedElements
+
                     val message = if (completeness >= 95) {
-                        "✅ Learning complete! (${completeness.toInt()}%)\n" +
-                        "${state.stats.totalScreens} screens, ${state.stats.totalElements} elements"
+                        "Learning complete! (${completeness.toInt()}%)\n" +
+                        "${state.stats.totalScreens} screens, $clicked/$nonBlocked items clicked" +
+                        if (blocked > 0) ", $blocked blocked" else ""
                     } else {
-                        "⚠️ Partial learning (${completeness.toInt()}%)\n" +
-                        "Some screens may have been blocked"
+                        "${completeness.toInt()}% of non-blocked items ($clicked/$nonBlocked clicked)\n" +
+                        if (blocked > 0) "$blocked items blocked (call/send/etc)" else "Some screens may have been blocked"
                     }
 
                     // Show success notification
@@ -624,18 +698,15 @@ class LearnAppIntegration private constructor(
                         title = "Learning Complete",
                         message = message
                     )
-
-                    // TODO (v1.9): Show background notification when NotificationManager is implemented
-                    // progressOverlayManager.notificationManager?.showBackgroundNotification(
-                    //     state.packageName,
-                    //     completeness.toInt()
-                    // )
                 }
             }
 
             is ExplorationState.Failed -> {
-                // Dismiss command bar
-                progressOverlayManager.dismissCommandBar()
+                // DEBUG (2025-12-08): Clear debug callback and overlay
+                clearDebugOverlayCallback()
+
+                // Dismiss floating widget
+                floatingProgressWidget?.dismiss()
 
                 // Hide login prompt overlay if showing
                 hideLoginPromptOverlay()
@@ -681,6 +752,108 @@ class LearnAppIntegration private constructor(
      */
     fun getExplorationState(): StateFlow<ExplorationState> {
         return explorationEngine.explorationState
+    }
+
+    /**
+     * Get current foreground package name
+     *
+     * Returns the package name of the currently focused app.
+     * Used by RelearnAppCommand to detect "relearn this app" target.
+     *
+     * @return Package name of foreground app, or null if not available
+     */
+    fun getCurrentForegroundPackage(): String? {
+        return try {
+            accessibilityService.rootInActiveWindow?.packageName?.toString()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get foreground package", e)
+            null
+        }
+    }
+
+    // ========== Debug Overlay Methods ==========
+
+    /**
+     * Set up debug overlay callback to wire FloatingProgressWidget's debug overlay
+     * to the ExplorationEngine's screen and element events.
+     *
+     * This enables real-time visualization of:
+     * - Elements discovered on each screen (with VUID, learning source)
+     * - Navigation links (which elements lead to which screens)
+     * - Exploration progress updates
+     *
+     * @since 2025-12-08 (Debug Overlay Feature)
+     */
+    private fun setupDebugOverlayCallback() {
+        val widget = floatingProgressWidget ?: return
+
+        // REWRITTEN (2025-12-08): Use new scrollable debug overlay
+        // Create callback that forwards events to the debug overlay manager
+        val callback = object : ExplorationDebugCallback {
+            override fun onScreenExplored(
+                elements: List<ElementInfo>,
+                screenHash: String,
+                activityName: String,
+                packageName: String,
+                parentScreenHash: String?
+            ) {
+                // Get debug overlay manager from widget and update it
+                // Always track items, even if overlay is hidden
+                val debugManager = widget.getDebugOverlayManager()
+                debugManager.onScreenExplored(
+                    elements = elements,
+                    screenHash = screenHash,
+                    activityName = activityName,
+                    packageName = packageName,
+                    parentScreenHash = parentScreenHash
+                )
+                Log.d(TAG, "📊 Debug tracker updated: ${elements.size} elements on $activityName")
+            }
+
+            override fun onElementNavigated(elementKey: String, destinationScreenHash: String) {
+                // Record navigation link in debug overlay
+                // Parse elementKey which is "screenHash:stableId"
+                val debugManager = widget.getDebugOverlayManager()
+                val parts = elementKey.split(":", limit = 2)
+                if (parts.size == 2) {
+                    debugManager.recordNavigation(parts[1], parts[0], destinationScreenHash)
+                }
+            }
+
+            override fun onProgressUpdated(progress: Int) {
+                // Progress handled by floating widget, not debug overlay
+                Log.d(TAG, "📊 Progress: $progress%")
+            }
+
+            override fun onElementClicked(stableId: String, screenHash: String, vuid: String?) {
+                // Track clicked item in debug overlay
+                val debugManager = widget.getDebugOverlayManager()
+                debugManager.markItemClicked(stableId, screenHash, null)
+            }
+
+            override fun onElementBlocked(stableId: String, screenHash: String, reason: String) {
+                // Track blocked item in debug overlay
+                val debugManager = widget.getDebugOverlayManager()
+                debugManager.markItemBlocked(stableId, screenHash, reason)
+            }
+        }
+
+        // AVU Quantizer Integration (2025-12-08): Chain the quantizer with the debug overlay callback
+        // This enables real-time quantization during exploration while preserving debug overlay functionality
+        avuQuantizerIntegration.setChainedCallback(callback)
+
+        // Set the quantizer integration as the primary callback (it will chain to debug overlay)
+        explorationEngine.setDebugCallback(avuQuantizerIntegration)
+        Log.i(TAG, "📊 Debug overlay + AVU quantizer callbacks configured")
+    }
+
+    /**
+     * Clear debug callback when exploration completes
+     */
+    private fun clearDebugOverlayCallback() {
+        explorationEngine.setDebugCallback(null)
+        avuQuantizerIntegration.setChainedCallback(null)
+        floatingProgressWidget?.getDebugOverlayManager()?.reset()
     }
 
     // ========== App Management Methods ==========
@@ -907,6 +1080,11 @@ class LearnAppIntegration private constructor(
                     val percentage = state.progress.calculatePercentage()
                     (percentage * 100).toInt().coerceIn(0, 100)
                 }
+                is ExplorationState.Paused -> {
+                    // FIX (2025-12-07): Handle unified Paused state
+                    val percentage = state.progress.calculatePercentage()
+                    (percentage * 100).toInt().coerceIn(0, 100)
+                }
                 else -> 0
             }
         } catch (e: Exception) {
@@ -1011,12 +1189,34 @@ class LearnAppIntegration private constructor(
 
 
     /**
+     * Get ExplorationEngine instance for external integration
+     *
+     * PHASE 3 (2025-12-08): Added for CommandDiscoveryIntegration
+     * Allows external components to observe exploration state via StateFlow
+     *
+     * ## Usage:
+     * ```kotlin
+     * val engine = learnAppIntegration.getExplorationEngine()
+     * engine.state()
+     *     .filterIsInstance<ExplorationState.Completed>()
+     *     .collect { state ->
+     *         // Handle exploration completion
+     *     }
+     * ```
+     *
+     * @return ExplorationEngine instance
+     * @since 1.0.0 (Phase 3: Command Discovery integration)
+     */
+    fun getExplorationEngine(): ExplorationEngine = explorationEngine
+
+    /**
      * Cleanup (call in onDestroy)
      * FIX (2025-11-30): Added scope.cancel() to prevent coroutine leaks
-     * FIX (2025-12-04): Enhanced cleanup to fix ProgressOverlay memory leak
+     * FIX (2025-12-04): Enhanced cleanup to fix overlay memory leak
+     * FIX (2025-12-07): Updated to use FloatingProgressWidget instead of ProgressOverlayManager
      *
      * Root cause: Memory leak chain:
-     *   VoiceOSService → learnAppIntegration → progressOverlayManager → progressOverlay → rootView (168.4 KB retained)
+     *   VoiceOSService → learnAppIntegration → floatingProgressWidget → widgetView (retained)
      *
      * Solution:
      *   1. Cancel coroutines first to stop any pending operations
@@ -1025,7 +1225,7 @@ class LearnAppIntegration private constructor(
      *
      * Leak verification:
      *   - LeakCanary should show zero leaks after this cleanup
-     *   - Memory profiler should show ProgressOverlay GC'd
+     *   - Memory profiler should show FloatingProgressWidget GC'd
      */
     fun cleanup() {
         if (developerSettings.isVerboseLoggingEnabled()) {
@@ -1060,13 +1260,14 @@ class LearnAppIntegration private constructor(
                 Log.d(TAG, "✓ Consent dialog manager cleaned up")
             }
 
-            // 4. CRITICAL: Cleanup progress overlay manager (fixes memory leak)
+            // 4. CRITICAL: Cleanup floating progress widget (fixes memory leak)
             if (developerSettings.isVerboseLoggingEnabled()) {
-                Log.d(TAG, "Cleaning up progress overlay manager...")
+                Log.d(TAG, "Cleaning up floating progress widget...")
             }
-            progressOverlayManager.cleanup()
+            floatingProgressWidget?.cleanup()
+            floatingProgressWidget = null
             if (developerSettings.isVerboseLoggingEnabled()) {
-                Log.d(TAG, "✓ Progress overlay manager cleaned up (leak chain broken)")
+                Log.d(TAG, "✓ Floating progress widget cleaned up (leak chain broken)")
             }
 
             // 5. Cleanup just-in-time learner
@@ -1131,6 +1332,82 @@ class LearnAppIntegration private constructor(
             Log.d("LearnAppIntegration", "Triggering LearnApp for package: $packageName")
         }
         startExploration(packageName)
+    }
+
+    // ========== AVU Quantized Context API (2025-12-08) ==========
+
+    /**
+     * Get quantized context for a learned app
+     *
+     * Returns the compact, NLU-optimized representation of the app's UI structure.
+     * Use this for LLM context loading, action prediction, or voice command matching.
+     *
+     * @param packageName Package name of the learned app
+     * @return QuantizedContext if available, null if app not learned or no quantized data
+     */
+    suspend fun getQuantizedContext(packageName: String): com.augmentalis.voiceoscore.learnapp.ai.quantized.QuantizedContext? {
+        return avuQuantizerIntegration.getQuantizedContext(packageName)
+    }
+
+    /**
+     * Generate LLM prompt for a user goal
+     *
+     * Creates a prompt suitable for LLM consumption based on the app's quantized context.
+     * Choose format based on token budget:
+     * - COMPACT: ~50-100 tokens (quick context)
+     * - HTML: ~200 tokens (research-backed format)
+     * - FULL: ~500+ tokens (complete context)
+     *
+     * @param packageName Package name of the learned app
+     * @param userGoal User's goal (e.g., "open settings", "send message")
+     * @param format Prompt format (COMPACT, HTML, or FULL)
+     * @return LLM-ready prompt string, or null if no context available
+     */
+    suspend fun generateLLMPrompt(
+        packageName: String,
+        userGoal: String,
+        format: com.augmentalis.voiceoscore.learnapp.ai.quantized.LLMPromptFormat =
+            com.augmentalis.voiceoscore.learnapp.ai.quantized.LLMPromptFormat.COMPACT
+    ): String? {
+        return avuQuantizerIntegration.generateLLMPrompt(packageName, userGoal, format)
+    }
+
+    /**
+     * Generate action prediction prompt for current screen
+     *
+     * Creates a prompt optimized for predicting the next action based on user intent.
+     * Shows available elements and navigation options for the current screen.
+     *
+     * @param packageName Package name of the app
+     * @param currentScreenHash Hash of the current screen
+     * @param userIntent User's intent (e.g., "go back", "tap search")
+     * @return Action prediction prompt, or null if no context available
+     */
+    suspend fun generateActionPredictionPrompt(
+        packageName: String,
+        currentScreenHash: String,
+        userIntent: String
+    ): String? {
+        return avuQuantizerIntegration.generateActionPredictionPrompt(packageName, currentScreenHash, userIntent)
+    }
+
+    /**
+     * Check if quantized context exists for an app
+     *
+     * @param packageName Package name to check
+     * @return true if quantized context is available
+     */
+    fun hasQuantizedContext(packageName: String): Boolean {
+        return avuQuantizerIntegration.hasQuantizedContext(packageName)
+    }
+
+    /**
+     * List all apps with quantized contexts
+     *
+     * @return List of package names with available quantized contexts
+     */
+    suspend fun listQuantizedApps(): List<String> {
+        return avuQuantizerIntegration.listQuantizedPackages()
     }
 
     companion object {

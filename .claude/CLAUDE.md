@@ -4,6 +4,21 @@ NewAvanues - Platform-centric KMP monorepo.
 
 ---
 
+## IDEACODE API (PREFERRED - 97% TOKEN SAVINGS)
+
+API URL: `http://localhost:3847`
+Check: `curl -s http://localhost:3847/health`
+
+| When API Running | Use |
+|------------------|-----|
+| /i.think, /i.analyze, /i.research | API (read-only, cacheable) |
+| /i.specify, /i.plan, /i.review | API (planning phases) |
+| /i.develop, /i.fix, /i.implement | MCP (needs file access) |
+
+Start: `cd /Volumes/M-Drive/Coding/ideacode/ideacode-api && npm start`
+
+---
+
 ## MANDATORY: Before Any File Operation
 
 1. **READ REGISTRIES FIRST:**

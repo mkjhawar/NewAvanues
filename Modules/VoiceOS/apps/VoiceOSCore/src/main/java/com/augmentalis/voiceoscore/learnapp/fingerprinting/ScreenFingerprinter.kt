@@ -295,6 +295,62 @@ class ScreenFingerprinter {
         return false
     }
 
+    /**
+     * Calculate structural fingerprint for dynamic content screens.
+     *
+     * FIX (2025-12-07): Generate stable hashes for screens with dynamic content
+     * Issue: Screens like Teams channels, chat lists, social feeds have constantly
+     * changing content (new messages, timestamps) causing different hashes on each visit.
+     * Solution: Hash based on STRUCTURE (view types, resource IDs, layout) not CONTENT.
+     *
+     * This is useful for:
+     * - Chat/messaging apps (new messages appear)
+     * - Social feeds (likes/comments update)
+     * - Email lists (new emails arrive)
+     * - Notification lists (badge counts change)
+     *
+     * @param rootNode Root node of screen
+     * @return SHA-256 hash based on structure only
+     */
+    fun calculateStructuralFingerprint(rootNode: AccessibilityNodeInfo?): String {
+        if (rootNode == null) {
+            return EMPTY_HASH
+        }
+
+        val signatureBuilder = StringBuilder()
+        signatureBuilder.append("STRUCTURAL:\n")
+
+        // Count element types for structural signature
+        val elementTypeCounts = mutableMapOf<String, Int>()
+        val resourceIds = mutableListOf<String>()
+
+        traverseNodeTree(rootNode) { node ->
+            val className = node.className?.toString() ?: "Unknown"
+            val resourceId = node.viewIdResourceName ?: ""
+
+            // Count by class name (structural)
+            elementTypeCounts[className] = elementTypeCounts.getOrDefault(className, 0) + 1
+
+            // Collect unique resource IDs (structural identifiers)
+            if (resourceId.isNotEmpty()) {
+                resourceIds.add(resourceId)
+            }
+        }
+
+        // Build signature from element type counts (order-independent)
+        elementTypeCounts.entries.sortedBy { it.key }.forEach { (className, count) ->
+            signatureBuilder.append("$className:$count\n")
+        }
+
+        // Add unique resource IDs (sorted for consistency)
+        signatureBuilder.append("IDS:")
+        resourceIds.distinct().sorted().forEach { id ->
+            signatureBuilder.append("$id|")
+        }
+
+        return calculateSHA256(signatureBuilder.toString())
+    }
+
     companion object {
         /**
          * Empty hash (for null roots)

@@ -1,0 +1,184 @@
+-- VoiceCommand.sq
+-- SQLDelight schema for static voice commands with locale fallback
+-- Migrated from Room: VoiceCommandEntity
+-- Extended with synonyms, description, is_fallback for CommandManager compatibility
+-- RENAMED (2025-12-05): commands_static -> commands_static for clarity
+
+CREATE TABLE commands_static (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    command_id TEXT NOT NULL,
+    locale TEXT NOT NULL,
+    trigger_phrase TEXT NOT NULL,
+    synonyms TEXT NOT NULL DEFAULT '[]',
+    action TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    category TEXT NOT NULL,
+    priority INTEGER NOT NULL DEFAULT 50,
+    is_fallback INTEGER NOT NULL DEFAULT 0,
+    is_enabled INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_vc_command_id ON commands_static(command_id);
+CREATE INDEX idx_vc_locale ON commands_static(locale);
+CREATE INDEX idx_vc_trigger ON commands_static(trigger_phrase);
+CREATE INDEX idx_vc_category ON commands_static(category);
+CREATE INDEX idx_vc_fallback ON commands_static(is_fallback);
+CREATE UNIQUE INDEX idx_vc_unique ON commands_static(command_id, locale);
+
+-- Get all commands
+getAllCommands:
+SELECT * FROM commands_static ORDER BY priority DESC, created_at DESC;
+
+-- Get command by ID
+getCommandById:
+SELECT * FROM commands_static WHERE id = ?;
+
+-- Get commands by command_id
+getCommandsByCommandId:
+SELECT * FROM commands_static WHERE command_id = ? ORDER BY locale;
+
+-- Get commands by locale
+getCommandsByLocale:
+SELECT * FROM commands_static WHERE locale = ? ORDER BY priority DESC;
+
+-- Get commands by locale with English fallback
+getCommandsByLocaleWithFallback:
+SELECT * FROM commands_static
+WHERE locale = ? OR locale = 'en-US'
+ORDER BY CASE WHEN locale = ? THEN 0 ELSE 1 END, priority DESC;
+
+-- Get commands by category
+getCommandsByCategory:
+SELECT * FROM commands_static WHERE category = ? ORDER BY priority DESC;
+
+-- Get enabled commands
+getEnabledCommands:
+SELECT * FROM commands_static WHERE is_enabled = 1 ORDER BY priority DESC;
+
+-- Search commands by trigger phrase
+searchByTrigger:
+SELECT * FROM commands_static
+WHERE trigger_phrase LIKE '%' || ? || '%'
+ORDER BY priority DESC;
+
+-- Insert command (basic - for existing callers)
+insertCommand:
+INSERT OR REPLACE INTO commands_static (command_id, locale, trigger_phrase, action, category, priority, is_enabled, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Insert command (full - with synonyms, description, is_fallback)
+insertCommandFull:
+INSERT OR REPLACE INTO commands_static (command_id, locale, trigger_phrase, synonyms, action, description, category, priority, is_fallback, is_enabled, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Update command
+updateCommand:
+UPDATE commands_static
+SET trigger_phrase = ?, action = ?, category = ?, priority = ?, is_enabled = ?, updated_at = ?
+WHERE id = ?;
+
+-- Update enabled state
+updateEnabledState:
+UPDATE commands_static SET is_enabled = ?, updated_at = ? WHERE id = ?;
+
+-- Delete command
+deleteCommand:
+DELETE FROM commands_static WHERE id = ?;
+
+-- Delete commands by command_id
+deleteByCommandId:
+DELETE FROM commands_static WHERE command_id = ?;
+
+-- Count commands
+countCommands:
+SELECT COUNT(*) FROM commands_static;
+
+-- Count commands by locale
+countByLocale:
+SELECT COUNT(*) FROM commands_static WHERE locale = ?;
+
+-- Get last inserted row ID
+lastInsertRowId:
+SELECT last_insert_rowid();
+
+-- ==================== Additional queries for Room compatibility ====================
+
+-- Get specific command by command_id and locale
+getCommand:
+SELECT * FROM commands_static WHERE command_id = ? AND locale = ? LIMIT 1;
+
+-- Get fallback commands (where is_fallback = 1)
+getFallbackCommands:
+SELECT * FROM commands_static WHERE is_fallback = 1 ORDER BY category, command_id;
+
+-- Get all unique locales
+getAllLocales:
+SELECT DISTINCT locale FROM commands_static ORDER BY locale;
+
+-- Get commands with fallback support (target locale + fallback commands)
+getCommandsWithFallback:
+SELECT * FROM commands_static
+WHERE locale = ? OR is_fallback = 1
+ORDER BY CASE WHEN locale = ? THEN 0 ELSE 1 END, category, command_id;
+
+-- Search commands by trigger_phrase or synonyms (case-insensitive)
+searchCommands:
+SELECT * FROM commands_static
+WHERE locale = ?
+AND (
+    LOWER(trigger_phrase) LIKE '%' || LOWER(?) || '%'
+    OR LOWER(synonyms) LIKE '%' || LOWER(?) || '%'
+)
+ORDER BY
+    CASE WHEN LOWER(trigger_phrase) = LOWER(?) THEN 0 ELSE 1 END,
+    priority DESC,
+    trigger_phrase;
+
+-- Get commands by category and locale
+getCommandsByCategoryAndLocale:
+SELECT * FROM commands_static WHERE category = ? AND locale = ? ORDER BY command_id;
+
+-- Check if any commands exist for a locale
+hasCommandsForLocale:
+SELECT COUNT(*) FROM commands_static WHERE locale = ? LIMIT 1;
+
+-- Delete all commands for a locale
+deleteCommandsForLocale:
+DELETE FROM commands_static WHERE locale = ?;
+
+-- Delete all commands
+deleteAllCommands:
+DELETE FROM commands_static;
+
+-- Update command priority
+updatePriority:
+UPDATE commands_static SET priority = ? WHERE command_id = ? AND locale = ?;
+
+-- Get global commands (system/navigation - context-independent)
+getGlobalCommands:
+SELECT * FROM commands_static
+WHERE locale = ? AND category IN ('SYSTEM', 'NAVIGATION')
+ORDER BY priority DESC;
+
+-- Get app-specific commands (non-global)
+getCommandsForApp:
+SELECT * FROM commands_static
+WHERE locale = ? AND category NOT IN ('SYSTEM', 'NAVIGATION')
+ORDER BY priority DESC;
+
+-- Get database statistics per locale (for LocaleStats)
+getDatabaseStats:
+SELECT
+    locale,
+    COUNT(*) AS count,
+    MAX(is_fallback) AS is_fallback
+FROM commands_static
+GROUP BY locale
+ORDER BY locale;
+
+-- Insert batch (for migration - same as insertCommandFull)
+insertBatch:
+INSERT OR REPLACE INTO commands_static (command_id, locale, trigger_phrase, synonyms, action, description, category, priority, is_fallback, is_enabled, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);

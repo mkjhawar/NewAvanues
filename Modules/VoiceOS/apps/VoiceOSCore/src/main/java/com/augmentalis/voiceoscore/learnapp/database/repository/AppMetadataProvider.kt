@@ -126,6 +126,49 @@ class AppMetadataProvider(
         val bytes = MessageDigest.getInstance("MD5").digest(input.toByteArray())
         return bytes.joinToString("") { "%02x".format(it) }
     }
+
+    /**
+     * Resolve package name from app name
+     *
+     * Searches for installed apps matching the given app name (case-insensitive).
+     * Used by RelearnAppCommand to resolve "relearn DeviceInfo" → com.ytheekshana.deviceinfo.
+     *
+     * @param appName Human-readable app name (e.g., "DeviceInfo", "Microsoft Teams")
+     * @return Package name if found, null otherwise
+     *
+     * @since Phase 4 - Relearn App Command
+     */
+    suspend fun resolvePackageByAppName(appName: String): String? = withContext(Dispatchers.IO) {
+        val normalizedAppName = appName.trim().lowercase()
+
+        // Try AppScrapingDatabase first
+        scrapedAppMetadataSource?.let { source ->
+            val allApps = source.getAllApps()
+            val match = allApps.firstOrNull { app ->
+                app.appName.lowercase().contains(normalizedAppName) ||
+                        normalizedAppName.contains(app.appName.lowercase())
+            }
+            if (match != null) {
+                return@withContext match.packageName
+            }
+        }
+
+        // Fallback to PackageManager
+        try {
+            val packageManager = context.packageManager
+            val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+
+            val match = installedApps.firstOrNull { appInfo ->
+                val label = packageManager.getApplicationLabel(appInfo).toString()
+                label.lowercase().contains(normalizedAppName) ||
+                        normalizedAppName.contains(label.lowercase())
+            }
+
+            match?.packageName
+        } catch (e: Exception) {
+            null
+        }
+    }
 }
 
 /**

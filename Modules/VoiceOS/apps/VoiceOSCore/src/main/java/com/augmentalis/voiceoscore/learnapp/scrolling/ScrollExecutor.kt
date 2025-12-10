@@ -68,19 +68,31 @@ class ScrollExecutor(
      *
      * Main entry point. Scrolls container and collects all elements.
      *
+     * FIX (2025-12-07): Reduced iterations for BOTH direction to prevent long waits
+     * - BOTH direction (Teams channel, social feeds) uses reduced iteration count
+     * - Added logging for scroll direction detection
+     *
      * @param scrollable Scrollable container node
      * @return List of all elements (including offscreen)
      */
     suspend fun scrollAndCollectAll(scrollable: AccessibilityNodeInfo): List<ElementInfo> {
         val direction = scrollDetector.detectScrollDirection(scrollable)
 
+        if (developerSettings.isVerboseLoggingEnabled()) {
+            android.util.Log.d("ScrollExecutor", "🔄 Detected scroll direction: $direction")
+        }
+
         return when (direction) {
             ScrollDirection.VERTICAL -> scrollVerticallyAndCollect(scrollable)
             ScrollDirection.HORIZONTAL -> scrollHorizontallyAndCollect(scrollable)
             ScrollDirection.BOTH -> {
-                // Scroll vertically first, then horizontally
-                val vertical = scrollVerticallyAndCollect(scrollable)
-                val horizontal = scrollHorizontallyAndCollect(scrollable)
+                // FIX (2025-12-07): For BOTH direction (complex scrollable like Teams),
+                // use reduced iterations to prevent infinite scroll on dynamic content
+                android.util.Log.d("ScrollExecutor",
+                    "📜 BOTH scroll direction detected - using limited scroll collection")
+
+                val vertical = scrollVerticallyAndCollectLimited(scrollable, maxIterations = 10)
+                val horizontal = scrollHorizontallyAndCollectLimited(scrollable, maxIterations = 5)
                 (vertical + horizontal).distinctBy { it.hashCode() }
             }
         }
@@ -215,6 +227,86 @@ class ScrollExecutor(
         scrollBackToStart(scrollable)
 
         // Limit to MAX_ELEMENTS_PER_SCROLLABLE
+        return allElements.take(developerSettings.getMaxElementsPerScrollable())
+    }
+
+    /**
+     * Scroll vertically with limited iterations (for BOTH direction containers)
+     *
+     * FIX (2025-12-07): Added for BOTH direction containers to prevent infinite scroll
+     *
+     * @param scrollable Scrollable container
+     * @param maxIterations Maximum scroll iterations
+     * @return List of collected elements
+     */
+    private suspend fun scrollVerticallyAndCollectLimited(
+        scrollable: AccessibilityNodeInfo,
+        maxIterations: Int
+    ): List<ElementInfo> {
+        val allElements = mutableSetOf<ElementInfo>()
+        var previousHash = ""
+        var unchangedCount = 0
+
+        repeat(maxIterations) {
+            val currentElements = collectVisibleElements(scrollable)
+            allElements.addAll(currentElements)
+
+            val currentHash = hashElements(currentElements)
+            if (currentHash == previousHash) {
+                unchangedCount++
+                if (unchangedCount >= 2) return@repeat
+            } else {
+                unchangedCount = 0
+            }
+            previousHash = currentHash
+
+            val scrolled = scrollable.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+            if (!scrolled) return@repeat
+
+            delay(developerSettings.getScrollDelayMs())
+        }
+
+        scrollBackToTop(scrollable)
+        return allElements.take(developerSettings.getMaxElementsPerScrollable())
+    }
+
+    /**
+     * Scroll horizontally with limited iterations (for BOTH direction containers)
+     *
+     * FIX (2025-12-07): Added for BOTH direction containers to prevent infinite scroll
+     *
+     * @param scrollable Scrollable container
+     * @param maxIterations Maximum scroll iterations
+     * @return List of collected elements
+     */
+    private suspend fun scrollHorizontallyAndCollectLimited(
+        scrollable: AccessibilityNodeInfo,
+        maxIterations: Int
+    ): List<ElementInfo> {
+        val allElements = mutableSetOf<ElementInfo>()
+        var previousHash = ""
+        var unchangedCount = 0
+
+        repeat(maxIterations) {
+            val currentElements = collectVisibleElements(scrollable)
+            allElements.addAll(currentElements)
+
+            val currentHash = hashElements(currentElements)
+            if (currentHash == previousHash) {
+                unchangedCount++
+                if (unchangedCount >= 2) return@repeat
+            } else {
+                unchangedCount = 0
+            }
+            previousHash = currentHash
+
+            val scrolled = scrollable.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+            if (!scrolled) return@repeat
+
+            delay(developerSettings.getScrollDelayMs())
+        }
+
+        scrollBackToStart(scrollable)
         return allElements.take(developerSettings.getMaxElementsPerScrollable())
     }
 

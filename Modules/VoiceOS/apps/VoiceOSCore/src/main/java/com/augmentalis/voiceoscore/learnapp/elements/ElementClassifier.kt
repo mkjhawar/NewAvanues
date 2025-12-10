@@ -17,6 +17,8 @@ import com.augmentalis.voiceoscore.learnapp.models.ElementClassification
 import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationBehavior
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
+import com.augmentalis.uuidcreator.core.ClickabilityDetector
+import com.augmentalis.voiceoscore.learnapp.detection.CrossPlatformDetector
 
 /**
  * Element Classifier
@@ -72,6 +74,59 @@ class ElementClassifier(
      * Login screen detector
      */
     private val loginDetector = LoginScreenDetector()
+
+    /**
+     * Clickability detector (multi-signal scoring)
+     *
+     * Integrated 2025-12-08: Smart filtering with 6-signal scoring system
+     * - Signal 1: isClickable flag (weight: 1.0)
+     * - Signal 2: isFocusable flag (weight: 0.3)
+     * - Signal 3: ACTION_CLICK present (weight: 0.4)
+     * - Signal 4: Clickable resource ID (weight: 0.2)
+     * - Signal 5: Clickable container (weight: 0.3)
+     * - Signal 6: Cross-platform boost (weight: 0.2-0.3)
+     *
+     * Threshold: 0.5+ = create VUID
+     *
+     * @since 1.2.0 (Phase 2 - Smart Detection)
+     */
+    private val clickabilityDetector = ClickabilityDetector(context)
+
+    /**
+     * Framework detection cache
+     *
+     * Cache framework type by package name to avoid repeated detection.
+     * Framework detection is expensive (tree traversal), so cache results.
+     *
+     * @since 1.2.0 (Cross-Platform Support)
+     */
+    private val frameworkCache = mutableMapOf<String, com.augmentalis.voiceoscore.learnapp.detection.AppFramework>()
+
+    /**
+     * Set framework for package (called by ScreenExplorer)
+     *
+     * Allows ScreenExplorer to detect framework once per app and cache it.
+     * This enables framework-aware clickability detection without expensive
+     * repeated tree traversals.
+     *
+     * @param packageName Package name
+     * @param framework Detected framework
+     * @since 1.2.0 (Cross-Platform Support)
+     */
+    fun setFramework(packageName: String, framework: com.augmentalis.voiceoscore.learnapp.detection.AppFramework) {
+        frameworkCache[packageName] = framework
+    }
+
+    /**
+     * Get cached framework for package
+     *
+     * @param packageName Package name
+     * @return Cached framework or null if not cached
+     * @since 1.2.0 (Cross-Platform Support)
+     */
+    private fun getFramework(packageName: String?): com.augmentalis.voiceoscore.learnapp.detection.AppFramework? {
+        return packageName?.let { frameworkCache[it] }
+    }
 
     /**
      * Classify single element
@@ -274,10 +329,61 @@ class ElementClassifier(
      * - Lowered size threshold for elements with content (40dp)
      * - Check for sibling navigation elements
      *
+     * ENHANCEMENT (2025-12-08): Integrated ClickabilityDetector for smart filtering
+     * - Uses 6-signal scoring system when AccessibilityNodeInfo available
+     * - Threshold: 0.5+ = should create VUID
+     * - Fallback to heuristic-based detection if node unavailable
+     *
      * @param element Element to check
      * @return true if should be clicked in aggressive mode
      */
     private fun isAggressivelyClickable(element: ElementInfo): Boolean {
+        // SMART FILTERING (2025-12-08): Use ClickabilityDetector if node available
+        // This provides multi-signal scoring (6 signals, 0.5+ threshold)
+        element.node?.let { node ->
+            try {
+                // Get packageName from node for framework detection
+                val packageName = node.packageName?.toString()
+
+                // Check framework cache for this package
+                val framework = packageName?.let { getFramework(it) }
+
+                // Determine if this is a game engine app
+                val isGameEngine = framework == com.augmentalis.voiceoscore.learnapp.detection.AppFramework.UNITY ||
+                                   framework == com.augmentalis.voiceoscore.learnapp.detection.AppFramework.UNREAL
+
+                // Determine if this needs cross-platform boost
+                val needsCrossPlatformBoost = framework?.needsAggressiveFallback() == true
+
+                // Calculate clickability score with framework-aware parameters
+                val score = clickabilityDetector.calculateScore(
+                    element = node,
+                    isGameEngine = isGameEngine,
+                    needsCrossPlatformBoost = needsCrossPlatformBoost
+                )
+
+                // If score meets threshold, element should be clicked
+                if (score.shouldCreateVUID()) {
+                    return true
+                }
+
+                // If score is below threshold, skip this element
+                // (don't fall through to heuristic checks - trust the detector)
+                return false
+
+            } catch (e: Exception) {
+                android.util.Log.w(
+                    "ElementClassifier",
+                    "ClickabilityDetector failed, falling back to heuristics",
+                    e
+                )
+                // Fall through to heuristic checks if detector fails
+            }
+        }
+
+        // FALLBACK: Heuristic-based detection (original logic)
+        // Used when AccessibilityNodeInfo is not available
+
         // Already marked clickable
         if (element.isClickable) {
             return true

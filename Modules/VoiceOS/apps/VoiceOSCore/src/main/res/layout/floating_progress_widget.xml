@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  floating_progress_widget.xml - Draggable Floating Progress Widget
+  Path: modules/apps/VoiceOSCore/src/main/res/layout/floating_progress_widget.xml
+
+  Floating, draggable, semi-transparent progress widget for LearnApp exploration.
+  Can be moved anywhere on screen to avoid blocking content.
+
+  Features:
+  - Semi-transparent background (75% opacity)
+  - Draggable via drag handle
+  - Circular progress indicator
+  - Status text
+  - Pause/Resume button
+  - STOP button (interrupts exploration)
+
+  Design Specs:
+  - Width: 180dp (compact)
+  - Corner radius: 16dp
+  - Background: 75% transparent
+  - Elevation: 16dp (floats above all content)
+
+  Author: VOS4 Development Team
+  Created: 2025-12-07
+-->
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/floating_widget_root"
+    android:layout_width="280dp"
+    android:layout_height="wrap_content"
+    android:minWidth="280dp"
+    app:cardElevation="16dp"
+    app:cardCornerRadius="16dp"
+    app:cardBackgroundColor="#E61C1C1E"
+    android:alpha="0.95">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- Drag Handle (touch to move) -->
+        <View
+            android:id="@+id/drag_handle"
+            android:layout_width="60dp"
+            android:layout_height="6dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/learnapp_drag_handle_bg" />
+
+        <!-- Progress Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Circular Progress -->
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/floating_progress_indicator"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:indeterminate="false"
+                app:indicatorSize="48dp"
+                app:trackThickness="4dp"
+                app:indicatorColor="#00C853"
+                app:trackColor="#4D00C853"
+                tools:progress="45" />
+
+            <!-- Progress Percentage -->
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/floating_progress_percent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="45%"
+                android:textColor="#FFFFFF"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                tools:text="45%" />
+
+        </LinearLayout>
+
+        <!-- Status Text -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/floating_status_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Learning..."
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            tools:text="Learning Instagram..." />
+
+        <!-- Screens/Elements Count -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/floating_stats_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="0 screens"
+            android:textColor="#B0FFFFFF"
+            android:textSize="14sp"
+            tools:text="12 screens, 145 elements" />
+
+        <!-- Primary Button Row (Pause/Stop/Debug/Verbosity) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <!-- Pause/Resume Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/floating_pause_button"
+                style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginEnd="8dp"
+                app:icon="@drawable/ic_pause"
+                app:iconSize="24dp"
+                app:iconTint="#FFFFFF"
+                app:backgroundTint="#6600C853"
+                android:contentDescription="Pause learning" />
+
+            <!-- STOP Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/floating_stop_button"
+                style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginEnd="8dp"
+                app:icon="@drawable/ic_stop"
+                app:iconSize="24dp"
+                app:iconTint="#FFFFFF"
+                app:backgroundTint="#66FF5252"
+                android:contentDescription="Stop learning" />
+
+            <!-- Debug Overlay Toggle Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/floating_debug_button"
+                style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginEnd="8dp"
+                app:icon="@drawable/ic_visibility"
+                app:iconSize="24dp"
+                app:iconTint="#FFFFFF"
+                app:backgroundTint="#662196F3"
+                android:contentDescription="Toggle debug overlay" />
+
+            <!-- Verbosity Toggle Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/floating_verbosity_button"
+                style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                app:icon="@drawable/ic_notes"
+                app:iconSize="24dp"
+                app:iconTint="#FFFFFF"
+                app:backgroundTint="#669C27B0"
+                android:contentDescription="Cycle verbosity level" />
+
+        </LinearLayout>
+
+        <!-- Size Toggle Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <!-- Decrease Size Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/floating_size_decrease_button"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="−"
+                android:textSize="20sp"
+                android:textColor="#FFFFFF"
+                android:minWidth="48dp"
+                android:contentDescription="Decrease widget size" />
+
+            <!-- Size Label -->
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/floating_size_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:text="Size: M"
+                android:textColor="#80FFFFFF"
+                android:textSize="12sp" />
+
+            <!-- Increase Size Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/floating_size_increase_button"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="+"
+                android:textSize="20sp"
+                android:textColor="#FFFFFF"
+                android:minWidth="48dp"
+                android:contentDescription="Increase widget size" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>
