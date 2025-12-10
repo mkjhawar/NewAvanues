@@ -148,8 +148,8 @@
       "profile": "feature-module",
       "platforms": ["android", "ios", "macos", "windows", "linux"],
       "path": "Modules/WebAvanue",
-      "status": "planned",
-      "description": "WebAvanue browser feature module"
+      "status": "active",
+      "description": "WebAvanue voice-controlled browser feature module"
     },
     {
       "id": "AvaConnect",

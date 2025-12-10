@@ -1,12 +1,13 @@
 /**
- * HelpOverlay.kt - Help system overlay for command discovery
+ * HelpOverlay.kt - Help system overlay for WebAvanue browser command discovery
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
+ * Author: WebAvanue Development Team
  * Code-Reviewed-By: CCA
  * Created: 2025-09-03
+ * Updated: 2025-12-10 - Moved from VoiceOSCore to WebAvanue module
  */
-package com.augmentalis.voiceoscore.accessibility.ui.overlays
+package com.augmentalis.webavanue.ui.overlays
 
 import android.content.Context
 import android.content.res.Configuration
@@ -31,10 +32,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.augmentalis.voiceoscore.accessibility.ui.utils.*
+import com.augmentalis.webavanue.ui.utils.*
 
 /**
- * Help overlay for command discovery
+ * Help overlay for WebAvanue browser voice command discovery
+ * Shows available voice commands for controlling the browser
  */
 class HelpOverlay(
     context: Context,
