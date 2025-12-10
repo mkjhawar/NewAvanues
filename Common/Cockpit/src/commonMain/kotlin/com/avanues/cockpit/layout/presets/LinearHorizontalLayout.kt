@@ -25,7 +25,7 @@ object LinearHorizontalLayout : LayoutPreset {
 
     override fun calculatePositions(
         windows: List<AppWindow>,
-        centerPoint: Vector3D = Vector3D(0f, 0f, -2f)
+        centerPoint: Vector3D
     ): List<WindowPosition> {
         val count = windows.size.coerceIn(minWindows, maxWindows)
 

@@ -138,5 +138,5 @@ project(":Modules:VoiceOS:core:database").projectDir = file("../../../Modules/Vo
 
 project(":Common:ThirdParty:Vosk").projectDir = file("../../../Common/ThirdParty/Vosk")
 
-project(":android:apps:cockpit-mvp").projectDir = file("../../cockpit-mvp")
+project(":android:apps:cockpit-mvp").projectDir = file("../cockpit-mvp")
 project(":Common:Cockpit").projectDir = file("../../../Common/Cockpit")

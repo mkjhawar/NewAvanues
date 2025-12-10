@@ -71,7 +71,7 @@ kotlin {
                 implementation("androidx.compose.foundation:foundation")
 
                 // Activity Compose
-                implementation("androidx.compose.ui:activity-compose:1.8.2")
+                implementation("androidx.activity:activity-compose:1.8.2")
 
                 // Lifecycle
                 implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
@@ -116,6 +116,6 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
+        kotlinCompilerExtensionVersion = "1.5.15"
     }
 }
