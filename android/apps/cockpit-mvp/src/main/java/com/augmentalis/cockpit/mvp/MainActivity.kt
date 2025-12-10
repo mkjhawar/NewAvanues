@@ -76,7 +76,12 @@ fun CockpitMVPScreen(
 
         // Head cursor overlay (when enabled)
         if (isHeadCursorEnabled) {
-            HeadCursorOverlay()
+            HeadCursorOverlay(
+                isEnabled = isHeadCursorEnabled,
+                onCursorPositionChange = { x, y ->
+                    // TODO: Handle cursor position for window selection/interaction
+                }
+            )
         }
     }
 }
