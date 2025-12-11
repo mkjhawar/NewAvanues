@@ -85,6 +85,22 @@ fun BrowserScreen(
     val settings by settingsViewModel.settings.collectAsState()
     val favorites by favoriteViewModel.favorites.collectAsState()
 
+    // Error state for user feedback
+    val error by tabViewModel.error.collectAsState()
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+
+    // Show error in Snackbar when error state changes
+    LaunchedEffect(error) {
+        error?.let { errorMessage ->
+            snackbarHostState.showSnackbar(
+                message = errorMessage,
+                duration = androidx.compose.material3.SnackbarDuration.Long
+            )
+            // Clear error after showing
+            tabViewModel.clearError()
+        }
+    }
+
     // Security dialog states
     val sslErrorState by securityViewModel.sslErrorState.collectAsState()
     val permissionRequestState by securityViewModel.permissionRequestState.collectAsState()
@@ -845,6 +861,22 @@ fun BrowserScreen(
                 selectedTabForGroupAssignment = null
             }
         )
+
+        // Error Snackbar - displays user-friendly error messages
+        // FIX: High Priority - Error user feedback (was silent failures)
+        androidx.compose.material3.SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp)
+        ) { data ->
+            androidx.compose.material3.Snackbar(
+                snackbarData = data,
+                containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
+                contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer,
+                actionColor = androidx.compose.material3.MaterialTheme.colorScheme.error
+            )
+        }
 
         // Listening indicator is now part of command bar, not floating overlay
     }
