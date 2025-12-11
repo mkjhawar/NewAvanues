@@ -37,7 +37,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
         ArcFrontLayout,
         TheaterLayout
     )
-    private var currentLayoutIndex = 0
+    private var currentLayoutIndex = 1  // Default to ArcFrontLayout (angled windows)
 
     // Mutable list of windows
     private val _windows = MutableStateFlow<List<AppWindow>>(emptyList())
@@ -108,7 +108,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
         _windowColors.value = emptyMap()
         _isHeadCursorEnabled.value = false
         _isSpatialMode.value = false
-        currentLayoutIndex = 0
+        currentLayoutIndex = 1  // Reset to ArcFrontLayout (angled windows)
         _layoutPreset.value = layoutPresets[currentLayoutIndex]
 
         // Re-initialize with sample windows
@@ -220,21 +220,29 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
      * State Transitions:
      * - Normal (isHidden=false, isLarge=false) → Maximized (isHidden=false, isLarge=true)
      * - Maximized (isHidden=false, isLarge=true) → Normal (isHidden=false, isLarge=false)
-     * - Minimized (isHidden=true, isLarge=*) → Maximized (isHidden=false, isLarge=true)
+     * - Minimized (isHidden=true, isLarge=*) → Restore (isHidden=false, keep isLarge)
      *
-     * Fix (Issue #1): Always clears isHidden state before toggling isLarge
-     * This prevents windows from getting stuck in minimized state (48dp height)
+     * Fix (Issue #2): Restore to previous state when minimized
+     * When window is minimized, restore to pre-minimize size (not always maximize)
      *
      * @param windowId The ID of the window to toggle size
      */
     fun toggleWindowSize(windowId: String) {
         _windows.value = _windows.value.map { window ->
             if (window.id == windowId) {
-                window.copy(
-                    isHidden = false,        // FIX: Always restore when maximizing
-                    isLarge = !window.isLarge,
-                    updatedAt = System.currentTimeMillis()
-                )
+                if (window.isHidden) {
+                    // Restore from minimized: clear isHidden, keep isLarge (preserve pre-minimize state)
+                    window.copy(
+                        isHidden = false,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                } else {
+                    // Normal maximize/restore toggle
+                    window.copy(
+                        isLarge = !window.isLarge,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                }
             } else {
                 window
             }

@@ -1,10 +1,14 @@
 package com.avanues.cockpit.layout.presets
 
+import com.avanues.cockpit.core.display.DisplayConfig
+import com.avanues.cockpit.core.display.DisplayType
+import com.avanues.cockpit.core.display.WindowSizeMode
 import com.avanues.cockpit.core.window.AppWindow
 import com.avanues.cockpit.core.workspace.Vector3D
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.tan
 
 /**
  * ARC_FRONT Layout Preset
@@ -124,5 +128,75 @@ object ArcFrontLayout : LayoutPreset {
             widthMeters = 0.7f,   // ~27 inches at 3m distance
             heightMeters = 0.55f  // ~22 inches at 3m distance
         )
+    }
+
+    /**
+     * Calculate responsive dimensions based on display configuration
+     *
+     * @param window Window to calculate dimensions for
+     * @param index Window index in layout
+     * @param totalWindows Total number of windows
+     * @param displayConfig Display configuration (AR vs LCD, screen size, etc.)
+     * @param screenWidthPx Screen width in pixels
+     * @param screenHeightPx Screen height in pixels
+     * @return Responsive window dimensions
+     */
+    fun calculateResponsiveDimensions(
+        window: AppWindow,
+        index: Int,
+        totalWindows: Int,
+        displayConfig: DisplayConfig,
+        screenWidthPx: Int,
+        screenHeightPx: Int
+    ): WindowDimensions {
+        return when (displayConfig.windowSizeMode) {
+            WindowSizeMode.PHYSICAL_METERS -> {
+                // AR mode: Fixed physical dimensions at viewing distance
+                WindowDimensions(
+                    widthMeters = 0.7f,
+                    heightMeters = 0.55f
+                )
+            }
+
+            WindowSizeMode.SCREEN_PERCENTAGE -> {
+                // LCD mode: Calculate dimensions as percentage of screen
+                // Target: 30% width, 40% height per window
+                val targetWidthPct = 0.30f
+                val targetHeightPct = 0.40f
+
+                val targetWidthPx = screenWidthPx * targetWidthPct
+                val targetHeightPx = screenHeightPx * targetHeightPct
+
+                // Convert pixels to meters using FOV projection
+                // Formula: meters = (pixels / screenSize) * (2 * tan(FOV/2) * distance)
+                val fovRadH = displayConfig.fovHorizontal * PI.toFloat() / 180f
+                val fovRadV = displayConfig.fovVertical * PI.toFloat() / 180f
+
+                val metersPerPixelH = (2f * tan(fovRadH / 2f) * displayConfig.viewingDistance) / screenWidthPx
+                val metersPerPixelV = (2f * tan(fovRadV / 2f) * displayConfig.viewingDistance) / screenHeightPx
+
+                val widthMeters = targetWidthPx * metersPerPixelH
+                val heightMeters = targetHeightPx * metersPerPixelV
+
+                // Clamp to reasonable bounds
+                WindowDimensions(
+                    widthMeters = widthMeters.coerceIn(0.3f, 2.0f),
+                    heightMeters = heightMeters.coerceIn(0.25f, 1.5f)
+                )
+            }
+        }
+    }
+
+    /**
+     * Calculate arc radius based on display type
+     *
+     * @param displayConfig Display configuration
+     * @return Arc radius in meters
+     */
+    fun calculateArcRadius(displayConfig: DisplayConfig): Float {
+        return when (displayConfig.displayType) {
+            DisplayType.AR_GLASSES -> ARC_RADIUS_METERS  // 3.0m for AR
+            DisplayType.LCD_SCREEN -> displayConfig.viewingDistance * 0.8f  // 80% of viewing distance
+        }
     }
 }

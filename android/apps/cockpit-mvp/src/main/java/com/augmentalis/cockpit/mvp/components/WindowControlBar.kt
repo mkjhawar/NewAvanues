@@ -88,9 +88,21 @@ fun WindowControlBar(
                 modifier = Modifier.size(40.dp)
             ) {
                 Icon(
-                    imageVector = if (isLarge) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                    contentDescription = if (isLarge) "Restore window" else "Maximize window",
-                    tint = if (isLarge) OceanTheme.primary else OceanTheme.textSecondary,
+                    imageVector = when {
+                        isHidden -> Icons.Default.CropSquare  // Restore from minimized
+                        isLarge -> Icons.Default.FullscreenExit  // Restore to normal
+                        else -> Icons.Default.Fullscreen  // Maximize
+                    },
+                    contentDescription = when {
+                        isHidden -> "Restore window"
+                        isLarge -> "Restore to normal size"
+                        else -> "Maximize window"
+                    },
+                    tint = when {
+                        isHidden -> OceanTheme.primary  // Highlight restore
+                        isLarge -> OceanTheme.primary  // Highlight restore
+                        else -> OceanTheme.textSecondary
+                    },
                     modifier = Modifier.size(18.dp)
                 )
             }

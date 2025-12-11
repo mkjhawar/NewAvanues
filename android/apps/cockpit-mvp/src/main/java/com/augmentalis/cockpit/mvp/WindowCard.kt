@@ -12,6 +12,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.augmentalis.cockpit.mvp.components.GlassmorphicCard
 import com.augmentalis.cockpit.mvp.components.WindowControlBar
@@ -34,28 +36,31 @@ fun WindowCard(
     isSelected: Boolean = false,
     freeformManager: FreeformWindowManager? = null
 ) {
-    BoxWithConstraints {
-        val screenWidth = maxWidth
-        val screenHeight = maxHeight
+    // Get TRUE screen dimensions (not parent container dimensions)
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
 
-        // Dynamic maximize size: fill screen minus 20dp border on all sides
-        val maximizedWidth = screenWidth - 40.dp
-        val maximizedHeight = screenHeight - 40.dp
+    val screenWidth = with(density) { configuration.screenWidthDp.dp }
+    val screenHeight = with(density) { configuration.screenHeightDp.dp }
 
-        // Animated window size based on isLarge state
-        // Normal: 300x400dp, Large: dynamic (screen - 40dp border)
-        val animatedWidth by animateDpAsState(
-            targetValue = if (window.isLarge) maximizedWidth else OceanTheme.windowWidthDefault,
-            animationSpec = tween(durationMillis = 300),
-            label = "window_width"
-        )
-        val animatedHeight by animateDpAsState(
-            targetValue = if (window.isHidden) 48.dp
-                else if (window.isLarge) maximizedHeight
-                else OceanTheme.windowHeightDefault,
-            animationSpec = tween(durationMillis = 300),
-            label = "window_height"
-        )
+    // Dynamic maximize size: fill screen minus 20dp border on all sides
+    val maximizedWidth = screenWidth - 40.dp
+    val maximizedHeight = screenHeight - 40.dp
+
+    // Animated window size based on isLarge state
+    // Normal: 300x400dp, Large: dynamic (screen - 40dp border)
+    val animatedWidth by animateDpAsState(
+        targetValue = if (window.isLarge) maximizedWidth else OceanTheme.windowWidthDefault,
+        animationSpec = tween(durationMillis = 300),
+        label = "window_width"
+    )
+    val animatedHeight by animateDpAsState(
+        targetValue = if (window.isHidden) 48.dp
+            else if (window.isLarge) maximizedHeight
+            else OceanTheme.windowHeightDefault,
+        animationSpec = tween(durationMillis = 300),
+        label = "window_height"
+    )
 
         GlassmorphicCard(
             modifier = modifier
@@ -109,7 +114,6 @@ fun WindowCard(
                 }
             }
         }
-    }
 }
 
 /**

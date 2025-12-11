@@ -1,11 +1,14 @@
 package com.avanues.cockpit.core.window
 
+import kotlinx.serialization.Serializable
+
 /**
  * WindowContent - Sealed class hierarchy for window content types
  *
  * Defines what content should be rendered inside an AppWindow.
  * Each type has specific configuration for its renderer.
  */
+@Serializable
 sealed class WindowContent {
 
     /**
@@ -88,6 +91,7 @@ sealed class WindowContent {
 /**
  * Document types for DocumentContent renderer selection
  */
+@Serializable
 enum class DocumentType {
     PDF,
     IMAGE,

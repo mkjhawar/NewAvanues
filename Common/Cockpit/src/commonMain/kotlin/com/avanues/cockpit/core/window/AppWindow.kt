@@ -1,6 +1,7 @@
 package com.avanues.cockpit.core.window
 
 import com.avanues.cockpit.core.workspace.Vector3D
+import kotlinx.serialization.Serializable
 
 /**
  * Core domain model for a floating spatial window
@@ -29,6 +30,7 @@ data class AppWindow(
     val updatedAt: Long = 0L                 // Last update timestamp (set by platform)
 )
 
+@Serializable
 enum class WindowType {
     ANDROID_APP,
     WEB_APP,

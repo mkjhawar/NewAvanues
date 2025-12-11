@@ -1,9 +1,14 @@
 package com.augmentalis.cockpit.mvp
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
@@ -33,6 +38,7 @@ fun ControlPanel(
 ) {
     val context = LocalContext.current
     val hapticManager = remember { HapticFeedbackManager(context) }
+    val presetManager = remember { WindowPresetManager(context) }
     var showAddDialog by remember { mutableStateOf(false) }
 
     // Get bottom insets to avoid navigation bar and add padding
@@ -112,6 +118,7 @@ fun ControlPanel(
 
     if (showAddDialog) {
         AddWindowDialog(
+            presetManager = presetManager,
             onDismiss = { showAddDialog = false },
             onConfirm = { title, type, color, content ->
                 onAddWindow(title, type, color, content)
@@ -123,6 +130,7 @@ fun ControlPanel(
 
 @Composable
 private fun AddWindowDialog(
+    presetManager: WindowPresetManager,
     onDismiss: () -> Unit,
     onConfirm: (String, WindowType, String, WindowContent) -> Unit
 ) {
@@ -130,12 +138,46 @@ private fun AddWindowDialog(
     var selectedType by remember { mutableStateOf(WindowType.WEB_APP) }
     var url by remember { mutableStateOf("https://google.com") }
     var packageName by remember { mutableStateOf("com.android.calculator2") }
+    var saveAsPreset by remember { mutableStateOf(false) }
+    var groupName by remember { mutableStateOf("default") }
+    val presets = remember { presetManager.loadPresets() }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add Window") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .heightIn(max = 500.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Preset List Section
+                if (presets.isNotEmpty()) {
+                    Text("Saved Presets:", style = MaterialTheme.typography.labelMedium)
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 120.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(presets) { preset ->
+                            PresetRow(
+                                preset = preset,
+                                onClick = {
+                                    title = preset.title
+                                    selectedType = preset.type
+                                    when (val content = preset.content) {
+                                        is WindowContent.WebContent -> url = content.url
+                                        is WindowContent.FreeformAppContent -> packageName = content.packageName
+                                        else -> {}
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                }
+
+                // Window Title
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -143,6 +185,7 @@ private fun AddWindowDialog(
                     singleLine = true
                 )
 
+                // Window Type Selection
                 Text("Window Type:", style = MaterialTheme.typography.labelMedium)
                 WindowType.values()
                     .filter { it != WindowType.WIDGET }
@@ -159,7 +202,7 @@ private fun AddWindowDialog(
                         }
                     }
 
-                // Show URL input for WEB_APP type
+                // URL Input (WEB_APP)
                 if (selectedType == WindowType.WEB_APP) {
                     OutlinedTextField(
                         value = url,
@@ -182,6 +225,18 @@ private fun AddWindowDialog(
                                         WindowType.ANDROID_APP -> WindowContent.FreeformAppContent(packageName)
                                         else -> WindowContent.MockContent
                                     }
+
+                                    // Save preset if checkbox is checked
+                                    if (saveAsPreset) {
+                                        presetManager.savePreset(
+                                            title = title,
+                                            type = selectedType,
+                                            content = content,
+                                            groupName = groupName,
+                                            color = color
+                                        )
+                                    }
+
                                     onConfirm(title, selectedType, color, content)
                                 }
                             }
@@ -189,7 +244,7 @@ private fun AddWindowDialog(
                     )
                 }
 
-                // Show package name input for ANDROID_APP type
+                // Package Name Input (ANDROID_APP)
                 if (selectedType == WindowType.ANDROID_APP) {
                     OutlinedTextField(
                         value = packageName,
@@ -197,6 +252,32 @@ private fun AddWindowDialog(
                         label = { Text("Package Name") },
                         singleLine = true,
                         placeholder = { Text("com.example.app") }
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                // Save as Preset Section
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { saveAsPreset = !saveAsPreset }
+                ) {
+                    Checkbox(
+                        checked = saveAsPreset,
+                        onCheckedChange = { saveAsPreset = it }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Save as preset")
+                }
+
+                // Group Name (only visible when saving preset)
+                if (saveAsPreset) {
+                    OutlinedTextField(
+                        value = groupName,
+                        onValueChange = { groupName = it },
+                        label = { Text("Group Name") },
+                        singleLine = true,
+                        placeholder = { Text("default") }
                     )
                 }
             }
@@ -217,6 +298,17 @@ private fun AddWindowDialog(
                             WindowType.WEB_APP -> WindowContent.WebContent(url)
                             WindowType.ANDROID_APP -> WindowContent.FreeformAppContent(packageName)
                             else -> WindowContent.MockContent
+                        }
+
+                        // Save preset if checkbox is checked
+                        if (saveAsPreset) {
+                            presetManager.savePreset(
+                                title = title,
+                                type = selectedType,
+                                content = content,
+                                groupName = groupName,
+                                color = color
+                            )
                         }
 
                         onConfirm(title, selectedType, color, content)
@@ -240,4 +332,48 @@ private fun getTypeLabel(type: WindowType): String = when (type) {
     WindowType.WEB_APP -> "Web Page (URL)"
     WindowType.WIDGET -> "Widget"
     WindowType.REMOTE_DESKTOP -> "Remote Desktop"
+}
+
+@Composable
+private fun PresetRow(
+    preset: com.avanues.cockpit.presets.WindowPreset,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        color = Color(android.graphics.Color.parseColor(preset.color)).copy(alpha = 0.1f),
+        shape = MaterialTheme.shapes.small
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = preset.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "${getTypeLabel(preset.type)} • ${preset.groupName}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(
+                        color = Color(android.graphics.Color.parseColor(preset.color)),
+                        shape = MaterialTheme.shapes.extraSmall
+                    )
+            )
+        }
+    }
 }

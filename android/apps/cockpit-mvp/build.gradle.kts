@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     kotlin("android")
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.20"
 }
 
 android {
@@ -53,4 +54,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // For WindowPreset JSON serialization (Phase 2)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 }
