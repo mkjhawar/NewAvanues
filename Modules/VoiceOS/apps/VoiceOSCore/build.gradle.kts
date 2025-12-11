@@ -238,6 +238,10 @@ dependencies {
     implementation(project(":Modules:VoiceOS:apps:VoiceCursor"))
     implementation(project(":Modules:VoiceOS:libraries:UUIDCreator"))
 
+    // JIT-LearnApp Separation (2025-12-11)
+    implementation(project(":Modules:VoiceOS:libraries:JITLearning"))      // JIT service with AIDL
+    implementation(project(":Modules:VoiceOS:libraries:LearnAppCore"))     // Shared business logic
+
     // LearnApp dependencies merged (2025-11-24)
     implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))      // From LearnApp
     implementation(project(":Modules:VoiceOS:libraries:VoiceUIElements"))    // From LearnApp

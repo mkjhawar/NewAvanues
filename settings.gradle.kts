@@ -39,6 +39,7 @@ include(":Modules:VoiceOS:core:text-utils")
 include(":Modules:VoiceOS:core:validation")
 
 // VoiceOS Apps
+include(":Modules:VoiceOS:apps:LearnApp")  // Standalone app exploration tool
 include(":Modules:VoiceOS:apps:VoiceRecognition")
 include(":Modules:VoiceOS:apps:VoiceOSCore")
 include(":Modules:VoiceOS:apps:VoiceCursor")
@@ -54,6 +55,8 @@ include(":Modules:VoiceOS:managers:LocalizationManager")
 
 // VoiceOS Libraries
 include(":Modules:VoiceOS:libraries:DeviceManager")
+include(":Modules:VoiceOS:libraries:JITLearning")  // JIT learning service with AIDL interface
+include(":Modules:VoiceOS:libraries:LearnAppCore")  // Shared business logic for JIT and LearnApp
 include(":Modules:VoiceOS:libraries:PluginSystem")
 include(":Modules:VoiceOS:libraries:SpeechRecognition")
 include(":Modules:VoiceOS:libraries:Translation")

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  JITLearning Module Manifest
+
+  Declares JITLearningService as foreground service.
+  Service will be started by VoiceOSCore app.
+
+  Author: Manoj Jhawar
+  Created: 2025-12-11 (JIT-LearnApp Separation)
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Foreground service permission (required for Android 9+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <application>
+        <!--
+          JIT Learning Service
+
+          Runs as foreground service in VoiceOSCore process.
+          Provides AIDL interface for LearnApp coordination.
+
+          Properties:
+          - enabled: true (always available)
+          - exported: true (accessible from other apps via AIDL)
+          - foregroundServiceType: dataSync (passive learning = data synchronization)
+        -->
+        <service
+            android:name=".JITLearningService"
+            android:enabled="true"
+            android:exported="true"
+            android:foregroundServiceType="dataSync">
+            <intent-filter>
+                <action android:name="com.augmentalis.jitlearning.ELEMENT_CAPTURE_SERVICE" />
+            </intent-filter>
+        </service>
+    </application>
+
+</manifest>
