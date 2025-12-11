@@ -1,6 +1,9 @@
 package com.augmentalis.cockpit.mvp
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -11,7 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.augmentalis.cockpit.mvp.components.GlassmorphicCard
+import com.augmentalis.cockpit.mvp.components.WindowControlBar
+import com.augmentalis.cockpit.mvp.content.*
 import com.avanues.cockpit.core.window.AppWindow
+import com.avanues.cockpit.core.window.WindowContent
 import com.avanues.cockpit.core.window.WindowType
 
 @Composable
@@ -19,75 +25,155 @@ fun WindowCard(
     window: AppWindow,
     color: String,
     onClose: () -> Unit,
+    onMinimize: () -> Unit,
+    onToggleSize: () -> Unit,
+    onSelect: () -> Unit,
+    onContentStateChange: (WindowContent) -> Unit,
     modifier: Modifier = Modifier,
-    isFocused: Boolean = false
+    isFocused: Boolean = false,
+    isSelected: Boolean = false,
+    freeformManager: FreeformWindowManager? = null
 ) {
-    GlassmorphicCard(
-        modifier = modifier
-            .width(OceanTheme.windowWidthDefault)
-            .height(OceanTheme.windowHeightDefault),
-        isFocused = isFocused
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Accent color indicator at the top
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .background(Color(android.graphics.Color.parseColor(color)))
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Window header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = window.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = OceanTheme.textPrimary
-                    )
-                    IconButton(
-                        onClick = onClose,
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = OceanTheme.textPrimary
-                        )
-                    }
-                }
+    BoxWithConstraints {
+        val screenWidth = maxWidth
+        val screenHeight = maxHeight
 
-                // Window content
+        // Dynamic maximize size: fill screen minus 20dp border on all sides
+        val maximizedWidth = screenWidth - 40.dp
+        val maximizedHeight = screenHeight - 40.dp
+
+        // Animated window size based on isLarge state
+        // Normal: 300x400dp, Large: dynamic (screen - 40dp border)
+        val animatedWidth by animateDpAsState(
+            targetValue = if (window.isLarge) maximizedWidth else OceanTheme.windowWidthDefault,
+            animationSpec = tween(durationMillis = 300),
+            label = "window_width"
+        )
+        val animatedHeight by animateDpAsState(
+            targetValue = if (window.isHidden) 48.dp
+                else if (window.isLarge) maximizedHeight
+                else OceanTheme.windowHeightDefault,
+            animationSpec = tween(durationMillis = 300),
+            label = "window_height"
+        )
+
+        GlassmorphicCard(
+            modifier = modifier
+                .width(animatedWidth)
+                .height(animatedHeight)
+                .clickable { onSelect() }, // Click to select window
+            isFocused = isFocused,
+            isSelected = isSelected
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Accent color indicator at the top
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .background(Color(android.graphics.Color.parseColor(color)))
+                )
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.Top
                 ) {
-                    Text(
-                        text = getWindowTypeLabel(window.type),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OceanTheme.textSecondary
+                    // Window control bar (title + minimize/maximize/close buttons)
+                    WindowControlBar(
+                        title = window.title,
+                        isHidden = window.isHidden,
+                        isLarge = window.isLarge,
+                        onMinimize = onMinimize,
+                        onToggleSize = onToggleSize,
+                        onClose = onClose,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Text(
-                        text = "Voice: \"${window.voiceName}\"",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OceanTheme.textSecondary
-                    )
-                    Text(
-                        text = "Position: (${window.position.x.format()}, ${window.position.y.format()}, ${window.position.z.format()})",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OceanTheme.textTertiary
-                    )
+
+                    // Window content - only visible if not hidden
+                    if (!window.isHidden) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .padding(top = 8.dp)
+                        ) {
+                            WindowContentRouter(
+                                content = window.content,
+                                onContentStateChange = onContentStateChange,
+                                freeformManager = freeformManager,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+/**
+ * WindowContentRouter - Routes WindowContent to appropriate renderer
+ *
+ * Dispatches based on WindowContent type:
+ * - WebContent → WebViewContent
+ * - DocumentContent → DocumentViewerContent
+ * - FreeformAppContent → FreeformWindowContent
+ * - MockContent → MockWindowContent (metadata display)
+ *
+ * @param onContentStateChange Callback when content state changes (for Phase 3 persistence)
+ */
+@Composable
+private fun WindowContentRouter(
+    content: WindowContent,
+    onContentStateChange: (WindowContent) -> Unit,
+    freeformManager: FreeformWindowManager?,
+    modifier: Modifier = Modifier
+) {
+    when (content) {
+        is WindowContent.WebContent -> {
+            WebViewContent(
+                webContent = content,
+                onScrollChanged = { scrollX, scrollY ->
+                    // Update content with new scroll position
+                    onContentStateChange(content.copy(scrollX = scrollX, scrollY = scrollY))
+                },
+                modifier = modifier
+            )
+        }
+        is WindowContent.DocumentContent -> {
+            DocumentViewerContent(
+                documentContent = content,
+                modifier = modifier
+            )
+        }
+        is WindowContent.FreeformAppContent -> {
+            FreeformWindowContent(
+                freeformContent = content,
+                freeformManager = freeformManager,
+                modifier = modifier
+            )
+        }
+        is WindowContent.MockContent -> {
+            MockWindowContent(modifier = modifier)
+        }
+    }
+}
+
+/**
+ * MockWindowContent - Shows metadata for testing/placeholder
+ */
+@Composable
+private fun MockWindowContent(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Mock Content",
+            style = MaterialTheme.typography.bodyMedium,
+            color = OceanTheme.textSecondary
+        )
     }
 }
 

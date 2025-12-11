@@ -2,6 +2,8 @@ package com.augmentalis.cockpit.mvp
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
@@ -11,7 +13,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.avanues.cockpit.core.window.WindowContent
 import com.avanues.cockpit.core.window.WindowType
 import com.augmentalis.cockpit.mvp.components.GlassmorphicSurface
 
@@ -23,7 +27,7 @@ import com.augmentalis.cockpit.mvp.components.GlassmorphicSurface
 fun ControlPanel(
     windowCount: Int,
     maxWindows: Int = 6,
-    onAddWindow: (title: String, type: WindowType, color: String) -> Unit,
+    onAddWindow: (title: String, type: WindowType, color: String, content: WindowContent) -> Unit,
     onReset: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -109,8 +113,8 @@ fun ControlPanel(
     if (showAddDialog) {
         AddWindowDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { title, type, color ->
-                onAddWindow(title, type, color)
+            onConfirm = { title, type, color, content ->
+                onAddWindow(title, type, color, content)
                 showAddDialog = false
             }
         )
@@ -120,10 +124,12 @@ fun ControlPanel(
 @Composable
 private fun AddWindowDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String, WindowType, String) -> Unit
+    onConfirm: (String, WindowType, String, WindowContent) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf(WindowType.ANDROID_APP) }
+    var selectedType by remember { mutableStateOf(WindowType.WEB_APP) }
+    var url by remember { mutableStateOf("https://google.com") }
+    var packageName by remember { mutableStateOf("com.android.calculator2") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -138,17 +144,60 @@ private fun AddWindowDialog(
                 )
 
                 Text("Window Type:", style = MaterialTheme.typography.labelMedium)
-                WindowType.values().forEach { type ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = selectedType == type,
-                            onClick = { selectedType = type }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(getTypeLabel(type))
+                WindowType.values()
+                    .filter { it != WindowType.WIDGET }
+                    .forEach { type ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedType == type,
+                                onClick = { selectedType = type }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(getTypeLabel(type))
+                        }
                     }
+
+                // Show URL input for WEB_APP type
+                if (selectedType == WindowType.WEB_APP) {
+                    OutlinedTextField(
+                        value = url,
+                        onValueChange = { url = it },
+                        label = { Text("URL") },
+                        singleLine = true,
+                        placeholder = { Text("https://example.com") },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                if (title.isNotBlank()) {
+                                    val color = when (selectedType) {
+                                        WindowType.ANDROID_APP -> "#FF6B9D"
+                                        WindowType.WEB_APP -> "#4ECDC4"
+                                        WindowType.WIDGET -> "#95E1D3"
+                                        WindowType.REMOTE_DESKTOP -> "#FFD93D"
+                                    }
+                                    val content = when (selectedType) {
+                                        WindowType.WEB_APP -> WindowContent.WebContent(url)
+                                        WindowType.ANDROID_APP -> WindowContent.FreeformAppContent(packageName)
+                                        else -> WindowContent.MockContent
+                                    }
+                                    onConfirm(title, selectedType, color, content)
+                                }
+                            }
+                        )
+                    )
+                }
+
+                // Show package name input for ANDROID_APP type
+                if (selectedType == WindowType.ANDROID_APP) {
+                    OutlinedTextField(
+                        value = packageName,
+                        onValueChange = { packageName = it },
+                        label = { Text("Package Name") },
+                        singleLine = true,
+                        placeholder = { Text("com.example.app") }
+                    )
                 }
             }
         },
@@ -162,7 +211,15 @@ private fun AddWindowDialog(
                             WindowType.WIDGET -> "#95E1D3"
                             WindowType.REMOTE_DESKTOP -> "#FFD93D"
                         }
-                        onConfirm(title, selectedType, color)
+
+                        // Create WindowContent based on type
+                        val content = when (selectedType) {
+                            WindowType.WEB_APP -> WindowContent.WebContent(url)
+                            WindowType.ANDROID_APP -> WindowContent.FreeformAppContent(packageName)
+                            else -> WindowContent.MockContent
+                        }
+
+                        onConfirm(title, selectedType, color, content)
                     }
                 },
                 enabled = title.isNotBlank()
@@ -180,7 +237,7 @@ private fun AddWindowDialog(
 
 private fun getTypeLabel(type: WindowType): String = when (type) {
     WindowType.ANDROID_APP -> "Android App"
-    WindowType.WEB_APP -> "Web App"
+    WindowType.WEB_APP -> "Web Page (URL)"
     WindowType.WIDGET -> "Widget"
     WindowType.REMOTE_DESKTOP -> "Remote Desktop"
 }

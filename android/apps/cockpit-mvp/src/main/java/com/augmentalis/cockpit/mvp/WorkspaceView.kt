@@ -21,7 +21,12 @@ import com.avanues.cockpit.core.window.AppWindow
 fun WorkspaceView(
     windows: List<AppWindow>,
     positions: Map<String, com.avanues.cockpit.core.workspace.Vector3D>,
+    selectedWindowId: String?,
     onRemoveWindow: (String) -> Unit,
+    onMinimizeWindow: (String) -> Unit,
+    onToggleWindowSize: (String) -> Unit,
+    onSelectWindow: (String) -> Unit,
+    onUpdateWindowContent: (String, com.avanues.cockpit.core.window.WindowContent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(
@@ -79,6 +84,11 @@ fun WorkspaceView(
                             window = window,
                             color = color,
                             onClose = { onRemoveWindow(window.id) },
+                            onMinimize = { onMinimizeWindow(window.id) },
+                            onToggleSize = { onToggleWindowSize(window.id) },
+                            onSelect = { onSelectWindow(window.id) },
+                            onContentStateChange = { content -> onUpdateWindowContent(window.id, content) },
+                            isSelected = window.id == selectedWindowId,
                             modifier = Modifier.fillMaxWidth(0.85f)
                         )
                     }
@@ -104,6 +114,11 @@ fun WorkspaceView(
                             window = window,
                             color = color,
                             onClose = { onRemoveWindow(window.id) },
+                            onMinimize = { onMinimizeWindow(window.id) },
+                            onToggleSize = { onToggleWindowSize(window.id) },
+                            onSelect = { onSelectWindow(window.id) },
+                            onContentStateChange = { content -> onUpdateWindowContent(window.id, content) },
+                            isSelected = window.id == selectedWindowId,
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight(0.7f)

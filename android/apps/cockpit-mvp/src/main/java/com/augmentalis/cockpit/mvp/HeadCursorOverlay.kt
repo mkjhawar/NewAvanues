@@ -16,12 +16,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import com.augmentalis.devicemanager.sensors.imu.CursorAdapter
 import kotlinx.coroutines.flow.collectLatest
 
 /**
  * Head-based cursor overlay using IMU data from DeviceManager
  * Shows a circular cursor that follows head movements
+ *
+ * NOTE: Temporarily disabled - requires DeviceManager module integration
  */
 @Composable
 fun HeadCursorOverlay(
@@ -31,11 +32,10 @@ fun HeadCursorOverlay(
 ) {
     if (!isEnabled) return
 
-    val context = LocalContext.current
     val density = LocalDensity.current
 
-    var cursorX by remember { mutableFloatStateOf(0f) }
-    var cursorY by remember { mutableFloatStateOf(0f) }
+    var cursorX by remember { mutableFloatStateOf(0.5f) }
+    var cursorY by remember { mutableFloatStateOf(0.5f) }
 
     // Dwell time for selection (when cursor stays on target)
     var dwellProgress by remember { mutableFloatStateOf(0f) }
@@ -52,28 +52,8 @@ fun HeadCursorOverlay(
         label = "cursor_alpha"
     )
 
-    // Initialize cursor adapter
-    val cursorAdapter = remember {
-        CursorAdapter(context, "CockpitMVP").apply {
-            startTracking()
-        }
-    }
-
-    // Collect cursor position from IMU
-    LaunchedEffect(cursorAdapter) {
-        cursorAdapter.positionFlow.collectLatest { position ->
-            cursorX = position.x
-            cursorY = position.y
-            onCursorPositionChange(cursorX, cursorY)
-        }
-    }
-
-    // Dispose cursor adapter when leaving composition
-    DisposableEffect(cursorAdapter) {
-        onDispose {
-            cursorAdapter.stopTracking()
-        }
-    }
+    // TODO: Integrate with DeviceManager CursorAdapter when available
+    // For now, use center position
 
     // Draw cursor overlay
     Box(modifier = modifier.fillMaxSize()) {

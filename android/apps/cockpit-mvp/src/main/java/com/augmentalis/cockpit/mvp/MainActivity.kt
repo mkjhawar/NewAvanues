@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.augmentalis.cockpit.mvp.theme.AppTheme
 import com.augmentalis.cockpit.mvp.theme.CockpitThemeProvider
@@ -39,9 +40,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun CockpitMVPScreen(
-    viewModel: WorkspaceViewModel = viewModel()
-) {
+fun CockpitMVPScreen() {
+    val context = LocalContext.current
+    val viewModel: WorkspaceViewModel = viewModel(
+        factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.getInstance(context.applicationContext as android.app.Application)
+    )
     val windows by viewModel.windows.collectAsState()
     val positions by viewModel.windowPositions.collectAsState()
     val windowColors by viewModel.windowColors.collectAsState()
@@ -67,17 +70,23 @@ fun CockpitMVPScreen(
             WorkspaceView(
                 windows = windows,
                 positions = positions,
+                selectedWindowId = selectedWindowId,
                 onRemoveWindow = { viewModel.removeWindow(it) },
+                onMinimizeWindow = { viewModel.minimizeWindow(it) },
+                onToggleWindowSize = { viewModel.toggleWindowSize(it) },
+                onSelectWindow = { viewModel.selectWindow(it) },
+                onUpdateWindowContent = { windowId, content -> viewModel.updateWindowContent(windowId, content) },
                 modifier = Modifier.fillMaxSize()
             )
         }
 
-        // Top navigation bar
-        // TODO: Add spatial mode toggle and layout cycling to TopNavigationBar
+        // Top navigation bar with spatial mode toggle
         TopNavigationBar(
             windowCount = windows.size,
             onToggleHeadCursor = { viewModel.toggleHeadCursor() },
             isHeadCursorEnabled = isHeadCursorEnabled,
+            onToggleSpatialMode = { viewModel.toggleSpatialMode() },
+            isSpatialMode = isSpatialMode,
             workspaceName = if (isSpatialMode) {
                 "Spatial - ${viewModel.getLayoutPresetName()}"
             } else {
@@ -90,8 +99,8 @@ fun CockpitMVPScreen(
         ControlPanel(
             windowCount = windows.size,
             maxWindows = 6,
-            onAddWindow = { title, type, color ->
-                viewModel.addWindow(title, type, color)
+            onAddWindow = { title, type, color, content ->
+                viewModel.addWindow(title, type, color, content)
             },
             onReset = { viewModel.resetWorkspace() },
             modifier = Modifier.align(Alignment.BottomCenter)
