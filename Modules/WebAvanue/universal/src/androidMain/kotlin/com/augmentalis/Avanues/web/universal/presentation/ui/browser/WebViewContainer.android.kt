@@ -193,6 +193,9 @@ actual fun WebViewContainer(
     val sessionKey = "$tabId-${sessionData?.hashCode() ?: 0}"
     var hasRestoredState by remember(sessionKey) { mutableStateOf(false) }
 
+    // PERFORMANCE: Track last applied settings to avoid redundant reapplication
+    var lastAppliedSettings by remember(tabId) { mutableStateOf<BrowserSettings?>(null) }
+
     // File upload support - callback from onShowFileChooser
     // FIX L17: Track callback per tabId to cleanup on tab switch
     var filePathCallback by remember(tabId) { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
@@ -877,13 +880,19 @@ actual fun WebViewContainer(
                 view.loadUrl(url)
             }
 
-            // Apply settings if they changed (incremental updates to avoid full reload)
+            // PERFORMANCE: Apply settings only if changed (avoid redundant reapplication)
             settings?.let { browserSettings ->
-                val settingsApplicator = SettingsApplicator()
-                val result = settingsApplicator.applySettings(view, browserSettings)
+                if (browserSettings != lastAppliedSettings) {
+                    val settingsApplicator = SettingsApplicator()
+                    val result = settingsApplicator.applySettings(view, browserSettings)
 
-                result.onFailure { exception ->
-                    println("⚠️ Failed to apply updated settings: ${exception.message}")
+                    result.onSuccess {
+                        lastAppliedSettings = browserSettings
+                    }
+
+                    result.onFailure { exception ->
+                        println("⚠️ Failed to apply updated settings: ${exception.message}")
+                    }
                 }
             }
 
