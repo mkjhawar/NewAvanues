@@ -189,10 +189,10 @@ class TabViewModel(
                 when (_settings.value?.newTabPage) {
                     BrowserSettings.NewTabPage.BLANK -> "about:blank"
                     BrowserSettings.NewTabPage.HOME_PAGE -> _settings.value?.homePage ?: Tab.DEFAULT_URL
-                    BrowserSettings.NewTabPage.TOP_SITES -> "avanues://newtab?mode=top_sites"
-                    BrowserSettings.NewTabPage.MOST_VISITED -> "avanues://newtab?mode=most_visited"
-                    BrowserSettings.NewTabPage.SPEED_DIAL -> "avanues://newtab?mode=speed_dial"
-                    BrowserSettings.NewTabPage.NEWS_FEED -> "avanues://newtab?mode=news_feed"
+                    BrowserSettings.NewTabPage.TOP_SITES -> NewTabUrls.TOP_SITES
+                    BrowserSettings.NewTabPage.MOST_VISITED -> NewTabUrls.MOST_VISITED
+                    BrowserSettings.NewTabPage.SPEED_DIAL -> NewTabUrls.SPEED_DIAL
+                    BrowserSettings.NewTabPage.NEWS_FEED -> NewTabUrls.NEWS_FEED
                     null -> _settings.value?.homePage ?: Tab.DEFAULT_URL
                 }
             } else {
