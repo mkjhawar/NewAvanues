@@ -8,7 +8,6 @@ import android.util.Base64
 import android.webkit.WebView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * WebViewLifecycle - Manages WebView lifecycle, pooling, and memory management
@@ -116,16 +115,45 @@ class WebViewLifecycle {
 /**
  * WebViewPool - Internal pool manager for WebView instances
  *
- * Thread-safe pool implementation using ConcurrentHashMap.
+ * Thread-safe pool implementation with LRU eviction.
  * Maintains WebView instances across tab switches to preserve navigation history.
  *
- * FIX: Race condition - Use ConcurrentHashMap + @Synchronized for thread safety
+ * FIX: Race condition - @Synchronized for thread safety
+ * FIX: Memory Leak - LRU eviction prevents unbounded growth causing OOM on <4GB devices
  */
 private class WebViewPool {
-    private val webViews = ConcurrentHashMap<String, WebView>()
+    /**
+     * Maximum number of WebViews to cache (prevents OOM)
+     * Each WebView ~50-100MB, so 5 WebViews = ~250-500MB max memory
+     */
+    private val MAX_CACHED_WEBVIEWS = 5
 
     /**
-     * Get or create WebView for a tab ID (thread-safe)
+     * LRU cache using LinkedHashMap with access-order mode
+     * FIX: Memory Leak - Prevents unbounded growth causing OOM on <4GB devices
+     */
+    private val webViews = object : LinkedHashMap<String, WebView>(
+        16,          // Initial capacity
+        0.75f,       // Load factor
+        true         // Access-order mode for LRU behavior
+    ) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, WebView>): Boolean {
+            val shouldRemove = size > MAX_CACHED_WEBVIEWS
+            if (shouldRemove) {
+                // Destroy evicted WebView to free memory
+                Handler(Looper.getMainLooper()).post {
+                    eldest.value.onPause()
+                    eldest.value.pauseTimers()
+                    eldest.value.destroy()
+                }
+                println("🗑️ WebViewLifecycle: Evicting LRU WebView (tab: ${eldest.key}) - pool size: $size")
+            }
+            return shouldRemove
+        }
+    }
+
+    /**
+     * Get or create WebView for a tab ID (thread-safe with LRU eviction)
      *
      * @param tabId Unique tab identifier
      * @param context Android context
@@ -134,9 +162,18 @@ private class WebViewPool {
      */
     @Synchronized
     fun getOrCreate(tabId: String, context: Context, factory: (Context) -> WebView): WebView {
-        return webViews.getOrPut(tabId) {
-            factory(context)
+        // Access existing WebView (updates LRU order)
+        val existing = webViews[tabId]
+        if (existing != null) {
+            return existing
         }
+
+        // Create new WebView (may trigger LRU eviction if pool full)
+        val newWebView = factory(context)
+        webViews[tabId] = newWebView
+        println("✅ WebViewLifecycle: Created WebView for tab $tabId - pool size: ${webViews.size}")
+
+        return newWebView
     }
 
     /**

@@ -23,6 +23,7 @@ import com.augmentalis.Avanues.web.universal.presentation.ui.security.Certificat
 import com.augmentalis.Avanues.web.universal.presentation.ui.security.HttpAuthRequest
 import com.augmentalis.Avanues.web.universal.presentation.ui.security.PermissionType
 import com.augmentalis.Avanues.web.universal.platform.SettingsApplicator
+import com.augmentalis.Avanues.web.universal.platform.webview.WebViewLifecycle
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import com.augmentalis.webavanue.domain.state.SettingsStateMachine
 import kotlinx.coroutines.CoroutineScope
@@ -31,165 +32,21 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
+ * Global WebViewLifecycle singleton for managing WebView instances across the app
+ */
+private val globalWebViewLifecycle = WebViewLifecycle()
+
+/**
  * WebViewPoolManager - Android implementation
- * Provides access to the internal WebViewPool for cleanup operations.
+ * Provides access to the WebViewLifecycle for cleanup operations.
  */
 actual object WebViewPoolManager {
     actual fun removeWebView(tabId: String) {
-        WebViewPool.remove(tabId)
+        globalWebViewLifecycle.removeWebView(tabId)
     }
 
     actual fun clearAllWebViews() {
-        WebViewPool.clear()
-    }
-}
-
-/**
- * WebViewPool - Manages WebView instances per tab ID
- *
- * Maintains WebView instances across tab switches to preserve navigation history.
- * This prevents the recreation of WebViews when switching between tabs.
- *
- * FIX: Issue #1 - Tab History Lost When Switching Tabs
- * Previously, key(tabState.tab.id) in BrowserScreen caused WebView recreation on every tab switch.
- * Now we cache WebView instances by tab ID, preserving navigation history.
- *
- * FIX: Race condition - Use ConcurrentHashMap + @Synchronized for thread safety
- */
-private object WebViewPool {
-    /**
-     * Maximum number of WebViews to cache (prevents OOM)
-     * Each WebView ~50-100MB, so 5 WebViews = ~250-500MB max memory
-     */
-    private const val MAX_CACHED_WEBVIEWS = 5
-
-    /**
-     * LRU cache using LinkedHashMap with access-order mode
-     * FIX: Memory Leak - Prevents unbounded growth causing OOM on <4GB devices
-     */
-    private val webViews = object : LinkedHashMap<String, WebView>(
-        16,          // Initial capacity
-        0.75f,       // Load factor
-        true         // Access-order mode for LRU behavior
-    ) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, WebView>): Boolean {
-            val shouldRemove = size > MAX_CACHED_WEBVIEWS
-            if (shouldRemove) {
-                // Destroy evicted WebView to free memory
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    eldest.value.onPause()
-                    eldest.value.pauseTimers()
-                    eldest.value.destroy()
-                }
-                println("🗑️ WebViewPool: Evicting LRU WebView (tab: ${eldest.key}) - pool size: $size")
-            }
-            return shouldRemove
-        }
-    }
-
-    /**
-     * Get or create WebView for a tab ID (thread-safe with LRU eviction)
-     */
-    @Synchronized
-    fun getOrCreate(tabId: String, context: Context, factory: (Context) -> WebView): WebView {
-        // Access existing WebView (updates LRU order)
-        val existing = webViews[tabId]
-        if (existing != null) {
-            return existing
-        }
-
-        // Create new WebView (may trigger LRU eviction if pool full)
-        val newWebView = factory(context)
-        webViews[tabId] = newWebView
-        println("✅ WebViewPool: Created WebView for tab $tabId - pool size: ${webViews.size}")
-
-        return newWebView
-    }
-
-    /**
-     * Remove and destroy WebView for a tab ID
-     * Call this when a tab is closed (thread-safe)
-     */
-    @Synchronized
-    fun remove(tabId: String) {
-        webViews.remove(tabId)?.let { webView ->
-            // Ensure Main thread for WebView operations
-            android.os.Handler(android.os.Looper.getMainLooper()).post {
-                webView.onPause()
-                webView.pauseTimers()
-                webView.destroy()
-            }
-        }
-    }
-
-    /**
-     * Clear all WebViews (for cleanup on Activity.onDestroy)
-     * Thread-safe with snapshot iteration
-     */
-    @Synchronized
-    fun clear() {
-        val snapshot = webViews.values.toList()
-        webViews.clear()
-        // Ensure Main thread for WebView operations
-        android.os.Handler(android.os.Looper.getMainLooper()).post {
-            snapshot.forEach { webView ->
-                webView.onPause()
-                webView.pauseTimers()
-                webView.destroy()
-            }
-        }
-    }
-
-    /**
-     * Get existing WebView for a tab ID (without creating)
-     */
-    fun get(tabId: String): WebView? {
-        return webViews[tabId]
-    }
-}
-
-/**
- * Helper functions for WebView state serialization
- */
-private fun WebView.saveStateToString(): String? {
-    return try {
-        val bundle = Bundle()
-        saveState(bundle)
-
-        // Serialize bundle to Base64 string
-        val parcel = android.os.Parcel.obtain()
-        parcel.writeBundle(bundle)
-        val bytes = parcel.marshall()
-        parcel.recycle()
-
-        Base64.encodeToString(bytes, Base64.DEFAULT)
-    } catch (e: Exception) {
-        println("WebView: Failed to save state: ${e.message}")
-        null
-    }
-}
-
-private fun WebView.restoreStateFromString(stateString: String?): Boolean {
-    if (stateString.isNullOrBlank()) return false
-
-    return try {
-        // Deserialize Base64 string to bundle
-        val bytes = Base64.decode(stateString, Base64.DEFAULT)
-        val parcel = android.os.Parcel.obtain()
-        parcel.unmarshall(bytes, 0, bytes.size)
-        parcel.setDataPosition(0)
-        val bundle = parcel.readBundle(WebView::class.java.classLoader)
-        parcel.recycle()
-
-        if (bundle != null) {
-            restoreState(bundle)
-            true
-        } else {
-            false
-        }
-    } catch (e: Exception) {
-        println("WebView: Failed to restore state: ${e.message}")
-        false
+        globalWebViewLifecycle.clearAllWebViews()
     }
 }
 
@@ -296,7 +153,7 @@ actual fun WebViewContainer(
     }
 
     // FIX ISSUE #1: Use key(tabId) to force AndroidView recreation when tab changes
-    // This ensures WebViewPool.getOrCreate is called for each tab, preserving navigation history
+    // This ensures WebViewLifecycle.acquireWebView is called for each tab, preserving navigation history
     // Without key(), the factory lambda only runs once and never switches to other tab's WebView
     key(tabId) {
         // FIX: Handle WebView lifecycle to prevent crashes when Home button is pressed
@@ -311,7 +168,7 @@ actual fun WebViewContainer(
 
                         // FIX BUG #2: Save WebView state to persist navigation history
                         webView?.let { wv ->
-                            val stateString = wv.saveStateToString()
+                            val stateString = globalWebViewLifecycle.saveState(wv)
                             onSessionDataChange(stateString)
                         }
                     }
@@ -329,19 +186,19 @@ actual fun WebViewContainer(
                 lifecycleOwner.lifecycle.removeObserver(observer)
                 // Save state one final time on dispose
                 webView?.let { wv ->
-                    val stateString = wv.saveStateToString()
+                    val stateString = globalWebViewLifecycle.saveState(wv)
                     onSessionDataChange(stateString)
                 }
-                // NOTE: We don't destroy the WebView here - it's managed by the pool
-                // WebView will be destroyed when the tab is closed (via WebViewPool.remove())
+                // NOTE: We don't destroy the WebView here - it's managed by the lifecycle
+                // WebView will be destroyed when the tab is closed (via WebViewLifecycle.removeWebView())
             }
         }
 
         AndroidView(
         factory = { factoryContext ->
-            // FIX: Use WebViewPool to get or create WebView for this tab
+            // FIX: Use WebViewLifecycle to get or create WebView for this tab
             // This preserves navigation history when switching between tabs
-            WebViewPool.getOrCreate(tabId, factoryContext) { ctx ->
+            globalWebViewLifecycle.acquireWebView(tabId, factoryContext) { ctx ->
                 WebView(ctx).apply {
                     // Set layout params to respect parent constraints
                     layoutParams = ViewGroup.LayoutParams(
@@ -902,7 +759,7 @@ actual fun WebViewContainer(
                 // FIX BUG #2 (original): Restore WebView state if available (navigation history)
                 // Only restore once per tab instance
                 if (!hasRestoredState && sessionData != null) {
-                    val restored = restoreStateFromString(sessionData)
+                    val restored = globalWebViewLifecycle.restoreState(this, sessionData)
                     if (restored) {
                         println("WebView: Restored state for tab $tabId (navigation history)")
                         hasRestoredState = true
