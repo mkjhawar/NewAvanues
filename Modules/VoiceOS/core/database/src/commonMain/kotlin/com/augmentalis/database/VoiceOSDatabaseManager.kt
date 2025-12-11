@@ -9,6 +9,8 @@
 
 package com.augmentalis.database
 
+import app.cash.sqldelight.db.QueryResult
+import app.cash.sqldelight.db.SqlDriver
 import com.augmentalis.database.repositories.ICommandRepository
 import com.augmentalis.database.repositories.ICommandHistoryRepository
 import com.augmentalis.database.repositories.IUserPreferenceRepository
@@ -84,7 +86,8 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
         }
     }
 
-    private val database: VoiceOSDatabase = createDatabase(driverFactory)
+    private val driver: SqlDriver = driverFactory.createDriver()
+    private val database: VoiceOSDatabase = VoiceOSDatabase(driver)
 
     // Repository interfaces (use these for abstraction)
     val commands: ICommandRepository = SQLDelightCommandRepository(database)
@@ -234,10 +237,7 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
      */
     suspend fun vacuum() = withContext(Dispatchers.Default) {
         // Note: VACUUM cannot run inside a transaction, execute directly
-        database.transaction {
-            // Execute VACUUM via raw SQL - note this runs outside transaction scope
-            database.commandHistoryQueries.driver.execute(null, "VACUUM", 0)
-        }
+        driver.execute(null, "VACUUM", 0)
     }
 
     /**
@@ -252,16 +252,18 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
     suspend fun checkIntegrity(): Boolean = withContext(Dispatchers.Default) {
         database.transactionWithResult {
             val query = "PRAGMA integrity_check"
-            val result = database.commandHistoryQueries.driver.executeQuery(
+            driver.executeQuery(
                 identifier = null,
                 sql = query,
                 mapper = { cursor ->
-                    cursor.next().value
-                    cursor.getString(0) == "ok"
+                    QueryResult.Value(if (cursor.next().value) {
+                        cursor.getString(0) == "ok"
+                    } else {
+                        false
+                    })
                 },
                 parameters = 0
-            )
-            result.value
+            ).value
         }
     }
 
@@ -272,16 +274,17 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
         database.transactionWithResult {
             val results = mutableListOf<String>()
             val query = "PRAGMA integrity_check"
-            database.commandHistoryQueries.driver.executeQuery(
+            driver.executeQuery(
                 identifier = null,
                 sql = query,
                 mapper = { cursor ->
                     while (cursor.next().value) {
                         results.add(cursor.getString(0) ?: "")
                     }
+                    QueryResult.Value(Unit)
                 },
                 parameters = 0
-            )
+            ).value
             results
         }
     }
@@ -291,14 +294,15 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
      */
     suspend fun getDatabaseInfo(): DatabaseInfo = withContext(Dispatchers.Default) {
         database.transactionWithResult {
-            val driver = database.commandHistoryQueries.driver
-
             val pageCount = driver.executeQuery(
                 identifier = null,
                 sql = "PRAGMA page_count",
                 mapper = { cursor ->
-                    cursor.next().value
-                    cursor.getLong(0) ?: 0L
+                    QueryResult.Value(if (cursor.next().value) {
+                        cursor.getLong(0) ?: 0L
+                    } else {
+                        0L
+                    })
                 },
                 parameters = 0
             ).value
@@ -307,8 +311,11 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
                 identifier = null,
                 sql = "PRAGMA page_size",
                 mapper = { cursor ->
-                    cursor.next().value
-                    cursor.getLong(0) ?: 0L
+                    QueryResult.Value(if (cursor.next().value) {
+                        cursor.getLong(0) ?: 0L
+                    } else {
+                        0L
+                    })
                 },
                 parameters = 0
             ).value
@@ -317,8 +324,11 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
                 identifier = null,
                 sql = "PRAGMA freelist_count",
                 mapper = { cursor ->
-                    cursor.next().value
-                    cursor.getLong(0) ?: 0L
+                    QueryResult.Value(if (cursor.next().value) {
+                        cursor.getLong(0) ?: 0L
+                    } else {
+                        0L
+                    })
                 },
                 parameters = 0
             ).value
