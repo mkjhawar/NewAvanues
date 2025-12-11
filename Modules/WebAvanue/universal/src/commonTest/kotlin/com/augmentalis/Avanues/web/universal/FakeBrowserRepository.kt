@@ -14,13 +14,14 @@ class FakeBrowserRepository : BrowserRepository {
     private val _favorites = MutableStateFlow<List<Favorite>>(emptyList())
     private val _history = MutableStateFlow<List<HistoryEntry>>(emptyList())
     private val _settings = MutableStateFlow(BrowserSettings())
+    private val _downloads = MutableStateFlow<List<Download>>(emptyList())
 
     // Test helpers
     fun setTabs(tabs: List<Tab>) { _tabs.value = tabs }
     fun setFavorites(favorites: List<Favorite>) { _favorites.value = favorites }
     fun setHistory(history: List<HistoryEntry>) { _history.value = history }
     fun setSettings(settings: BrowserSettings) { _settings.value = settings }
-    fun setDownloads(downloads: List<Download>) { /* No-op for test compatibility */ }
+    fun setDownloads(downloads: List<Download>) { _downloads.value = downloads }
 
     // Tab Operations
     override suspend fun createTab(tab: Tab): Result<Tab> {
@@ -268,5 +269,98 @@ class FakeBrowserRepository : BrowserRepository {
 
     override suspend fun optimizeDatabase(): Result<Unit> {
         return Result.success(Unit)
+    }
+
+    // Download Operations
+    override fun observeDownloads(): Flow<List<Download>> = _downloads.asStateFlow()
+
+    override suspend fun addDownload(download: Download): Result<Download> {
+        _downloads.value = _downloads.value + download
+        return Result.success(download)
+    }
+
+    override suspend fun getDownload(downloadId: String): Result<Download?> {
+        return Result.success(_downloads.value.find { it.id == downloadId })
+    }
+
+    override suspend fun getDownloadByManagerId(managerId: Long): Download? {
+        return _downloads.value.find { it.downloadManagerId == managerId }
+    }
+
+    override suspend fun getAllDownloads(limit: Int, offset: Int): Result<List<Download>> {
+        return Result.success(_downloads.value.drop(offset).take(limit))
+    }
+
+    override suspend fun getDownloadsByStatus(status: DownloadStatus): Result<List<Download>> {
+        return Result.success(_downloads.value.filter { it.status == status })
+    }
+
+    override suspend fun updateDownload(download: Download): Result<Unit> {
+        _downloads.value = _downloads.value.map { if (it.id == download.id) download else it }
+        return Result.success(Unit)
+    }
+
+    override suspend fun updateDownloadProgress(
+        downloadId: String,
+        downloadedSize: Long,
+        status: DownloadStatus
+    ): Result<Unit> {
+        _downloads.value = _downloads.value.map {
+            if (it.id == downloadId) {
+                it.copy(downloadedSize = downloadedSize, status = status)
+            } else it
+        }
+        return Result.success(Unit)
+    }
+
+    override suspend fun setDownloadManagerId(downloadId: String, managerId: Long): Result<Unit> {
+        _downloads.value = _downloads.value.map {
+            if (it.id == downloadId) it.copy(downloadManagerId = managerId) else it
+        }
+        return Result.success(Unit)
+    }
+
+    override suspend fun completeDownload(
+        downloadId: String,
+        filepath: String,
+        downloadedSize: Long
+    ): Result<Unit> {
+        _downloads.value = _downloads.value.map {
+            if (it.id == downloadId) {
+                it.copy(status = DownloadStatus.COMPLETED, filepath = filepath, downloadedSize = downloadedSize)
+            } else it
+        }
+        return Result.success(Unit)
+    }
+
+    override suspend fun failDownload(downloadId: String, errorMessage: String): Result<Unit> {
+        _downloads.value = _downloads.value.map {
+            if (it.id == downloadId) {
+                it.copy(status = DownloadStatus.FAILED, errorMessage = errorMessage)
+            } else it
+        }
+        return Result.success(Unit)
+    }
+
+    override suspend fun deleteDownload(downloadId: String): Result<Unit> {
+        _downloads.value = _downloads.value.filterNot { it.id == downloadId }
+        return Result.success(Unit)
+    }
+
+    override suspend fun clearAllDownloads(): Result<Unit> {
+        _downloads.value = emptyList()
+        return Result.success(Unit)
+    }
+
+    override suspend fun searchDownloads(query: String): Result<List<Download>> {
+        return Result.success(_downloads.value.filter {
+            it.filename.contains(query, ignoreCase = true) ||
+            it.url.contains(query, ignoreCase = true)
+        })
+    }
+
+    // Cleanup
+    override fun cleanup() {
+        // No-op for test repository - no resources to cleanup
     }
 }
