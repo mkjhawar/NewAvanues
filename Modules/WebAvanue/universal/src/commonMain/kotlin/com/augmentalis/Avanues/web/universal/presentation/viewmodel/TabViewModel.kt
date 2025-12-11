@@ -184,8 +184,20 @@ class TabViewModel(
             // FIX: Use homepage from settings if URL is empty, not hardcoded Google
             // Root cause: Tabs with empty URLs were loading hardcoded DEFAULT_URL (google.com)
             // Solution: Use user's configured homepage from settings
-            val homepage = _settings.value?.homePage ?: Tab.DEFAULT_URL
-            val finalUrl = if (url.isBlank()) homepage else url
+            // ENHANCEMENT: Respect newTabPage setting for different new tab behaviors
+            val finalUrl = if (url.isBlank()) {
+                when (_settings.value?.newTabPage) {
+                    BrowserSettings.NewTabPage.BLANK -> "about:blank"
+                    BrowserSettings.NewTabPage.HOME_PAGE -> _settings.value?.homePage ?: Tab.DEFAULT_URL
+                    BrowserSettings.NewTabPage.TOP_SITES -> "avanues://newtab?mode=top_sites"
+                    BrowserSettings.NewTabPage.MOST_VISITED -> "avanues://newtab?mode=most_visited"
+                    BrowserSettings.NewTabPage.SPEED_DIAL -> "avanues://newtab?mode=speed_dial"
+                    BrowserSettings.NewTabPage.NEWS_FEED -> "avanues://newtab?mode=news_feed"
+                    null -> _settings.value?.homePage ?: Tab.DEFAULT_URL
+                }
+            } else {
+                url
+            }
             val finalTitle = if (url.isBlank()) "New Tab" else title
 
             // FIX BUG #4: Apply desktop mode from settings when creating new tabs
