@@ -161,6 +161,11 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     @Volatile
     private var learnAppInitialized = false  // Keep for backward compatibility with debug logs
 
+    // FIX (2025-12-10): Event queue to buffer events during initialization
+    // Prevents event loss in first 500-1000ms after service starts
+    private val pendingEvents = java.util.concurrent.ConcurrentLinkedQueue<android.view.accessibility.AccessibilityEvent>()
+    private val MAX_QUEUED_EVENTS = 50
+
     // PHASE 3 (2025-12-08): Command Discovery integration
     // Auto-observes ExplorationEngine.state() and triggers discovery flow on completion
     private var discoveryIntegration: CommandDiscoveryIntegration? = null
@@ -740,6 +745,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         // This ensures FLAG_RETRIEVE_INTERACTIVE_WINDOWS has been fully processed by Android
         // FIX (2025-11-30): Use atomic state to prevent race condition where events arrive
         // before initialization completes. State: 0=not started, 1=in progress, 2=complete
+        // FIX (2025-12-10): Queue events during initialization instead of dropping them
         val initState = learnAppInitState.get()
         if (initState == 0) {
             // Try to claim initialization (atomic compare-and-set)
@@ -753,21 +759,27 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                         Log.i(TAG, "LearnApp initialization complete (event-driven)")
                         learnAppInitState.set(2)  // Mark complete AFTER init done
                         Log.i(TAG, "LEARNAPP_DEBUG: learnAppIntegration is now ${if (learnAppIntegration != null) "SET" else "STILL NULL"}")
+
+                        // FIX (2025-12-10): Process queued events after initialization completes
+                        processQueuedEvents()
                     } catch (e: Exception) {
                         Log.e(TAG, "LEARNAPP_DEBUG: Initialization failed, allowing retry", e)
                         learnAppInitState.set(0)  // Allow retry on next event
                     }
                 }
             }
-            // Don't forward events during initialization - they'd hit null integration
-            Log.d(TAG, "LEARNAPP_DEBUG: Init in progress, skipping event forwarding")
+            // Queue event during initialization instead of dropping it
+            queueEvent(event)
             return
         } else if (initState == 1) {
-            // Initialization in progress by another call - skip this event
-            Log.d(TAG, "LEARNAPP_DEBUG: Init in progress by other thread, skipping event")
+            // Initialization in progress - queue this event for later processing
+            queueEvent(event)
             return
         }
         // initState == 2: Fully initialized, proceed with event forwarding
+
+        // FIX (2025-12-10): Process any queued events first (in case of race)
+        processQueuedEvents()
 
         try {
             // Forward to hash-based scraping integration FIRST (base scraping)
@@ -1096,6 +1108,55 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             learnAppIntegration = null
         }
         Log.i(TAG, "=== LearnApp Integration Initialization Complete ===")
+    }
+
+    /**
+     * Queue an accessibility event for later processing.
+     * Called during LearnApp initialization to prevent event loss.
+     *
+     * FIX (2025-12-10): Implements event queue solution from spec Section 2.1
+     */
+    private fun queueEvent(event: android.view.accessibility.AccessibilityEvent) {
+        if (pendingEvents.size < MAX_QUEUED_EVENTS) {
+            // Create a copy of the event to avoid recycling issues
+            val eventCopy = android.view.accessibility.AccessibilityEvent.obtain(event)
+            pendingEvents.offer(eventCopy)
+            Log.d(TAG, "LEARNAPP_DEBUG: Queued event (type=${event.eventType}, queue size=${pendingEvents.size})")
+        } else {
+            Log.w(TAG, "LEARNAPP_DEBUG: Event queue full ($MAX_QUEUED_EVENTS), dropping event")
+        }
+    }
+
+    /**
+     * Process all queued events after initialization completes.
+     * Ensures no events are lost during the initialization window.
+     *
+     * FIX (2025-12-10): Implements event queue solution from spec Section 2.1
+     */
+    private fun processQueuedEvents() {
+        val queueSize = pendingEvents.size
+        if (queueSize > 0) {
+            Log.i(TAG, "LEARNAPP_DEBUG: Processing $queueSize queued events")
+            var processedCount = 0
+
+            while (pendingEvents.isNotEmpty()) {
+                val queuedEvent = pendingEvents.poll()
+                if (queuedEvent != null) {
+                    try {
+                        // Forward to LearnApp integration
+                        learnAppIntegration?.onAccessibilityEvent(queuedEvent)
+                        processedCount++
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error processing queued event", e)
+                    } finally {
+                        // Recycle the event copy to free memory
+                        queuedEvent.recycle()
+                    }
+                }
+            }
+
+            Log.i(TAG, "LEARNAPP_DEBUG: Processed $processedCount queued events")
+        }
     }
 
     /**

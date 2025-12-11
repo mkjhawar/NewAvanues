@@ -96,13 +96,23 @@ private class LearnAppDaoAdapter(
      * Using Dispatchers.Unconfined allows the inner suspend operations to run immediately
      * on the current thread without competing for the IO thread pool.
      *
+     * FIX (2025-12-10): Removed outer withContext(Dispatchers.IO) wrapper to prevent thread pool
+     * exhaustion. The VoiceOSDatabaseManager.transaction() already uses Dispatchers.Default
+     * (line 177 in VoiceOSDatabaseManager.kt), so the outer wrapper was causing nested dispatcher
+     * switches and potential IO thread starvation under high transaction volume.
+     *
+     * This change implements Option 1 from spec Section 2.2: Remove outer wrapper and rely on
+     * VoiceOSDatabaseManager's threading model. The inner runBlocking(Dispatchers.Unconfined)
+     * is kept to bridge suspend/non-suspend contexts.
+     *
      * NOTE (2025-11-30): All DAO methods use withContext(Dispatchers.IO) even though they are
      * typically called from coroutines. This is INTENTIONAL - it ensures thread safety regardless
      * of the caller's dispatcher context. The overhead of dispatcher switches is negligible
      * compared to database I/O, and this pattern provides a defensive layer of thread safety.
      */
-    override suspend fun <R> transaction(block: suspend LearnAppDao.() -> R): R = withContext(Dispatchers.IO) {
-        databaseManager.transaction {
+    override suspend fun <R> transaction(block: suspend LearnAppDao.() -> R): R {
+        // Remove outer withContext wrapper - databaseManager.transaction handles threading
+        return databaseManager.transaction {
             runBlocking(Dispatchers.Unconfined) {
                 this@LearnAppDaoAdapter.block()
             }

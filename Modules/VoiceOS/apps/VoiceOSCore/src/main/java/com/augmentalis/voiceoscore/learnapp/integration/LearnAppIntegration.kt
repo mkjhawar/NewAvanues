@@ -46,6 +46,7 @@ import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import com.augmentalis.database.VoiceOSDatabaseManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -1210,10 +1211,53 @@ class LearnAppIntegration private constructor(
     fun getExplorationEngine(): ExplorationEngine = explorationEngine
 
     /**
+     * Shutdown integration and cancel all background jobs
+     * FIX (2025-12-10): Added shutdown() method per spec Section 2.5
+     *
+     * Immediately cancels all coroutines without waiting.
+     * Use shutdownGracefully() if you need to wait for pending operations.
+     */
+    fun shutdown() {
+        Log.i(TAG, "Shutting down LearnApp integration")
+        scope.cancel()
+    }
+
+    /**
+     * Gracefully shutdown integration with timeout
+     * FIX (2025-12-10): Added per spec Section 2.5
+     *
+     * Waits for current operations to complete before cancelling.
+     *
+     * @param timeoutMs Maximum time to wait for operations (default 5000ms)
+     */
+    suspend fun shutdownGracefully(timeoutMs: Long = 5000) {
+        Log.i(TAG, "Graceful shutdown initiated")
+
+        try {
+            withTimeout(timeoutMs) {
+                // Wait for current operations
+                scope.coroutineContext[kotlinx.coroutines.Job]?.children?.forEach { job ->
+                    try {
+                        job.join()
+                    } catch (e: CancellationException) {
+                        // Expected during cancellation
+                    }
+                }
+            }
+        } catch (e: TimeoutCancellationException) {
+            Log.w(TAG, "Graceful shutdown timed out after ${timeoutMs}ms, forcing cancellation")
+        }
+
+        scope.cancel()
+        Log.i(TAG, "Shutdown complete")
+    }
+
+    /**
      * Cleanup (call in onDestroy)
      * FIX (2025-11-30): Added scope.cancel() to prevent coroutine leaks
      * FIX (2025-12-04): Enhanced cleanup to fix overlay memory leak
      * FIX (2025-12-07): Updated to use FloatingProgressWidget instead of ProgressOverlayManager
+     * FIX (2025-12-10): Now calls shutdown() to cancel scope
      *
      * Root cause: Memory leak chain:
      *   VoiceOSService → learnAppIntegration → floatingProgressWidget → widgetView (retained)
@@ -1237,7 +1281,7 @@ class LearnAppIntegration private constructor(
             if (developerSettings.isVerboseLoggingEnabled()) {
                 Log.d(TAG, "Cancelling coroutine scope...")
             }
-            scope.cancel()
+            shutdown()  // FIX (2025-12-10): Use shutdown() method
             if (developerSettings.isVerboseLoggingEnabled()) {
                 Log.d(TAG, "✓ Coroutine scope cancelled")
             }

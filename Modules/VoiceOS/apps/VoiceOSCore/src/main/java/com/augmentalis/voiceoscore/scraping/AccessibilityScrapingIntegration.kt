@@ -107,8 +107,13 @@ class AccessibilityScrapingIntegration(
 
         // P2 Fix (2025-11-30): Scroll-to-load for RecyclerView scraping
         private const val SCROLL_TO_LOAD_ENABLED = true
-        private const val MAX_SCROLL_ATTEMPTS = 5        // Max scrolls per RecyclerView
+        private const val MAX_SCROLL_ATTEMPTS = 100      // Max scrolls per RecyclerView (comprehensive scraping)
         private const val SCROLL_DELAY_MS = 300L          // Wait for content to load after scroll
+
+        // Dynamic content wait configuration
+        private const val SCREEN_STABLE_TIMEOUT_MS = 3000L  // Max wait for screen to stabilize
+        private const val STABLE_CHECK_INTERVAL_MS = 200L   // How often to check stability
+        private const val STABLE_THRESHOLD = 3              // Consecutive stable counts required
         private val SCROLLABLE_VIEW_CLASSES = setOf(
             "androidx.recyclerview.widget.RecyclerView",
             "android.widget.ListView",
@@ -438,6 +443,14 @@ class AccessibilityScrapingIntegration(
                 if (developerSettings.isVerboseLoggingEnabled()) {
                     Log.d(TAG, "Inserted app: ${app.appName}")
                 }
+            }
+
+            // ===== DYNAMIC CONTENT WAIT: Wait for screen to stabilize =====
+            // This addresses async-loaded content (AJAX, lazy loading) that appears
+            // 500ms-2s after screen loads (social media feeds, search results, etc.)
+            val screenStable = waitForScreenStable(rootNode, SCREEN_STABLE_TIMEOUT_MS)
+            if (!screenStable) {
+                Log.w(TAG, "⚠️ Screen did not stabilize - scraping may miss async content")
             }
 
             // ===== PHASE 1: Scrape element tree with hash deduplication =====
@@ -1371,6 +1384,75 @@ class AccessibilityScrapingIntegration(
 
         Log.i(TAG, "Scroll-to-load complete: scraped $totalNewElements additional elements in $scrollAttempts scrolls")
         return totalNewElements
+    }
+
+    /**
+     * Wait for screen to stabilize before scraping.
+     * Detects when element count stops changing (idle state).
+     *
+     * This addresses the dynamic async-loaded content gap where elements appear
+     * 500ms-2s after screen loads (e.g., social media feeds, search results).
+     *
+     * @param rootNode The root node to monitor
+     * @param timeoutMs Maximum time to wait for stability (default: 3000ms)
+     * @return true if screen stabilized, false if timeout
+     */
+    private suspend fun waitForScreenStable(
+        rootNode: AccessibilityNodeInfo,
+        timeoutMs: Long = SCREEN_STABLE_TIMEOUT_MS
+    ): Boolean {
+        val startTime = System.currentTimeMillis()
+        var previousCount = 0
+        var stableCount = 0
+
+        while (System.currentTimeMillis() - startTime < timeoutMs) {
+            rootNode.refresh()
+            val currentCount = countAllNodes(rootNode)
+
+            if (currentCount == previousCount) {
+                stableCount++
+                if (stableCount >= STABLE_THRESHOLD) {
+                    val elapsedMs = System.currentTimeMillis() - startTime
+                    if (developerSettings.isVerboseLoggingEnabled()) {
+                        Log.d(TAG, "Screen stable after ${elapsedMs}ms (${currentCount} nodes)")
+                    }
+                    return true
+                }
+            } else {
+                stableCount = 0  // Reset counter when count changes
+                if (developerSettings.isVerboseLoggingEnabled()) {
+                    Log.d(TAG, "Screen unstable: $previousCount -> $currentCount nodes")
+                }
+            }
+
+            previousCount = currentCount
+            delay(STABLE_CHECK_INTERVAL_MS)
+        }
+
+        Log.w(TAG, "Screen did not stabilize within ${timeoutMs}ms")
+        return false
+    }
+
+    /**
+     * Recursively count all nodes in the accessibility tree.
+     *
+     * Used by waitForScreenStable() to detect when async content has finished loading.
+     *
+     * @param node The root node to count from
+     * @return Total number of nodes in tree
+     */
+    private fun countAllNodes(node: AccessibilityNodeInfo): Int {
+        var count = 1
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { child ->
+                try {
+                    count += countAllNodes(child)
+                } finally {
+                    child.recycle()
+                }
+            }
+        }
+        return count
     }
 
     /**
