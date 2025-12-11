@@ -232,8 +232,12 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
      * Note: VACUUM can take several seconds on large databases.
      * Run on background thread only.
      */
-    suspend fun vacuum() = withContext(Dispatchers.IO) {
-        database.driver.execute(null, "VACUUM", 0)
+    suspend fun vacuum() = withContext(Dispatchers.Default) {
+        // Note: VACUUM cannot run inside a transaction, execute directly
+        database.transaction {
+            // Execute VACUUM via raw SQL - note this runs outside transaction scope
+            database.commandHistoryQueries.driver.execute(null, "VACUUM", 0)
+        }
     }
 
     /**
@@ -245,59 +249,88 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
      * - Index consistency
      * - Foreign key constraints
      */
-    suspend fun checkIntegrity(): Boolean = withContext(Dispatchers.IO) {
-        val result = database.driver.executeQuery(
-            null,
-            "PRAGMA integrity_check",
-            { cursor ->
-                cursor.getString(0) == "ok"
-            },
-            0
-        )
-        result.value
+    suspend fun checkIntegrity(): Boolean = withContext(Dispatchers.Default) {
+        database.transactionWithResult {
+            val query = "PRAGMA integrity_check"
+            val result = database.commandHistoryQueries.driver.executeQuery(
+                identifier = null,
+                sql = query,
+                mapper = { cursor ->
+                    cursor.next().value
+                    cursor.getString(0) == "ok"
+                },
+                parameters = 0
+            )
+            result.value
+        }
     }
 
     /**
      * Get detailed integrity check results.
      */
-    suspend fun getIntegrityReport(): List<String> = withContext(Dispatchers.IO) {
-        val results = mutableListOf<String>()
-        database.driver.executeQuery(
-            null,
-            "PRAGMA integrity_check",
-            { cursor ->
-                while (cursor.next()) {
-                    results.add(cursor.getString(0) ?: "")
-                }
-            },
-            0
-        )
-        results
+    suspend fun getIntegrityReport(): List<String> = withContext(Dispatchers.Default) {
+        database.transactionWithResult {
+            val results = mutableListOf<String>()
+            val query = "PRAGMA integrity_check"
+            database.commandHistoryQueries.driver.executeQuery(
+                identifier = null,
+                sql = query,
+                mapper = { cursor ->
+                    while (cursor.next().value) {
+                        results.add(cursor.getString(0) ?: "")
+                    }
+                },
+                parameters = 0
+            )
+            results
+        }
     }
 
     /**
      * Get database file size and page statistics.
      */
-    suspend fun getDatabaseInfo(): DatabaseInfo = withContext(Dispatchers.IO) {
-        val pageCount = database.driver.executeQuery(
-            null, "PRAGMA page_count", { cursor -> cursor.getLong(0) ?: 0 }, 0
-        ).value
+    suspend fun getDatabaseInfo(): DatabaseInfo = withContext(Dispatchers.Default) {
+        database.transactionWithResult {
+            val driver = database.commandHistoryQueries.driver
 
-        val pageSize = database.driver.executeQuery(
-            null, "PRAGMA page_size", { cursor -> cursor.getLong(0) ?: 0 }, 0
-        ).value
+            val pageCount = driver.executeQuery(
+                identifier = null,
+                sql = "PRAGMA page_count",
+                mapper = { cursor ->
+                    cursor.next().value
+                    cursor.getLong(0) ?: 0L
+                },
+                parameters = 0
+            ).value
 
-        val freelistCount = database.driver.executeQuery(
-            null, "PRAGMA freelist_count", { cursor -> cursor.getLong(0) ?: 0 }, 0
-        ).value
+            val pageSize = driver.executeQuery(
+                identifier = null,
+                sql = "PRAGMA page_size",
+                mapper = { cursor ->
+                    cursor.next().value
+                    cursor.getLong(0) ?: 0L
+                },
+                parameters = 0
+            ).value
 
-        DatabaseInfo(
-            totalPages = pageCount,
-            pageSize = pageSize,
-            totalSize = pageCount * pageSize,
-            unusedPages = freelistCount,
-            unusedSize = freelistCount * pageSize
-        )
+            val freelistCount = driver.executeQuery(
+                identifier = null,
+                sql = "PRAGMA freelist_count",
+                mapper = { cursor ->
+                    cursor.next().value
+                    cursor.getLong(0) ?: 0L
+                },
+                parameters = 0
+            ).value
+
+            DatabaseInfo(
+                totalPages = pageCount,
+                pageSize = pageSize,
+                totalSize = pageCount * pageSize,
+                unusedPages = freelistCount,
+                unusedSize = freelistCount * pageSize
+            )
+        }
     }
 }
 
