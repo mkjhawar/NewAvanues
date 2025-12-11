@@ -24,6 +24,10 @@ import com.augmentalis.Avanues.web.universal.presentation.ui.security.HttpAuthRe
 import com.augmentalis.Avanues.web.universal.presentation.ui.security.PermissionType
 import com.augmentalis.Avanues.web.universal.platform.SettingsApplicator
 import com.augmentalis.webavanue.domain.model.BrowserSettings
+import com.augmentalis.webavanue.domain.state.SettingsStateMachine
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 
 /**
  * WebViewPoolManager - Android implementation
@@ -196,6 +200,21 @@ actual fun WebViewContainer(
     // PERFORMANCE: Track last applied settings to avoid redundant reapplication
     var lastAppliedSettings by remember(tabId) { mutableStateOf<BrowserSettings?>(null) }
 
+    // FIX L3: Thread-safe settings state machine (prevents race conditions)
+    // Create coroutine scope for state machine
+    val settingsScope = remember(tabId) { CoroutineScope(SupervisorJob() + kotlinx.coroutines.Dispatchers.Main) }
+    val settingsStateMachine = remember(tabId) { SettingsStateMachine(settingsScope) }
+
+    // Observe settings state for UI feedback
+    val settingsState by settingsStateMachine.state.collectAsState()
+
+    // Cleanup state machine on dispose
+    DisposableEffect(tabId) {
+        onDispose {
+            settingsScope.cancel()
+        }
+    }
+
     // File upload support - callback from onShowFileChooser
     // FIX L17: Track callback per tabId to cleanup on tab switch
     var filePathCallback by remember(tabId) { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
@@ -216,6 +235,26 @@ actual fun WebViewContainer(
         filePathCallback?.onReceiveValue(uris.toTypedArray())
         filePathCallback = null
         println("📎 File upload: ${uris.size} file(s) selected")
+    }
+
+    // FIX L3: Apply settings through state machine when settings change
+    LaunchedEffect(settings) {
+        settings?.let { browserSettings ->
+            if (browserSettings != lastAppliedSettings) {
+                webView?.let { view ->
+                    settingsStateMachine.requestUpdate(browserSettings) { settingsToApply ->
+                        val settingsApplicator = SettingsApplicator()
+                        val result = settingsApplicator.applySettings(view, settingsToApply)
+
+                        result.onSuccess {
+                            lastAppliedSettings = settingsToApply
+                        }
+
+                        result
+                    }
+                }
+            }
+        }
     }
 
     // FIX ISSUE #1: Use key(tabId) to force AndroidView recreation when tab changes
@@ -880,21 +919,9 @@ actual fun WebViewContainer(
                 view.loadUrl(url)
             }
 
-            // PERFORMANCE: Apply settings only if changed (avoid redundant reapplication)
-            settings?.let { browserSettings ->
-                if (browserSettings != lastAppliedSettings) {
-                    val settingsApplicator = SettingsApplicator()
-                    val result = settingsApplicator.applySettings(view, browserSettings)
-
-                    result.onSuccess {
-                        lastAppliedSettings = browserSettings
-                    }
-
-                    result.onFailure { exception ->
-                        println("⚠️ Failed to apply updated settings: ${exception.message}")
-                    }
-                }
-            }
+            // FIX L3: Settings updates handled by LaunchedEffect (see below)
+            // This avoids applying settings twice (once here, once in LaunchedEffect)
+            // The update block only updates controller and navigation state
 
             // Update controller reference (in case it changed)
             controller?.setWebView(view)

@@ -1,8 +1,12 @@
 package com.augmentalis.Avanues.web.universal.presentation.viewmodel
 
+import com.augmentalis.webavanue.domain.errors.TabError
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import com.augmentalis.webavanue.domain.model.Tab
 import com.augmentalis.webavanue.domain.repository.BrowserRepository
+import com.augmentalis.webavanue.domain.state.SettingsStateMachine
+import com.augmentalis.webavanue.domain.utils.RetryPolicy
+import com.augmentalis.webavanue.domain.validation.UrlValidation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,7 +18,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.Volatile
 
 /**
  * UI state wrapper for Tab with additional transient UI properties
@@ -52,8 +56,10 @@ class TabViewModel(
     // FIX: Mutex for thread-safe StateFlow updates
     private val stateMutex = Mutex()
 
-    // FIX P0-C1: AtomicBoolean for thread-safe check-and-set (prevents race condition)
-    private val isObservingTabs = AtomicBoolean(false)
+    // FIX P0-C1: Volatile Boolean for thread-safe check-and-set (prevents race condition)
+    // KMP-compatible alternative to Java's AtomicBoolean
+    @Volatile
+    private var isObservingTabs = false
 
     // State: All tabs with UI state
     private val _tabs = MutableStateFlow<List<TabUiState>>(emptyList())
@@ -74,6 +80,12 @@ class TabViewModel(
     // State: Settings
     private val _settings = MutableStateFlow<BrowserSettings?>(null)
     val settings: StateFlow<BrowserSettings?> = _settings.asStateFlow()
+
+    // FIX L3: Thread-safe state machine for settings updates (prevents race conditions)
+    private val settingsStateMachine = SettingsStateMachine(viewModelScope)
+
+    // Expose settings state machine state for UI feedback
+    val settingsState = settingsStateMachine.state
 
     init {
         loadTabs()
@@ -96,14 +108,56 @@ class TabViewModel(
     }
 
     /**
+     * Request settings update through state machine.
+     *
+     * FIX L3: Use state machine to prevent race conditions during settings updates.
+     * This ensures atomic transitions and queues rapid changes.
+     *
+     * @param newSettings Settings to apply
+     * @param applyFunction Suspend function that applies settings (e.g., to WebView)
+     */
+    suspend fun requestSettingsUpdate(
+        newSettings: BrowserSettings,
+        applyFunction: suspend (BrowserSettings) -> Result<Unit>
+    ) {
+        settingsStateMachine.requestUpdate(newSettings, applyFunction)
+    }
+
+    /**
+     * Retry failed settings update with exponential backoff.
+     *
+     * @param applyFunction Function to apply settings
+     * @param maxRetries Maximum number of retries (default 3)
+     * @return true if retry started, false if max retries reached
+     */
+    suspend fun retrySettingsUpdate(
+        applyFunction: suspend (BrowserSettings) -> Result<Unit>,
+        maxRetries: Int = 3
+    ): Boolean {
+        return settingsStateMachine.retryError(applyFunction, maxRetries)
+    }
+
+    /**
+     * Reset settings state machine (clear any queued updates).
+     *
+     * Call when navigating away from settings or closing tab.
+     */
+    suspend fun resetSettingsStateMachine() {
+        settingsStateMachine.reset()
+    }
+
+    /**
      * Load all tabs from repository
      *
      * Observes tab changes reactively via Flow
      * FIX: Prevents multiple collectors with isObservingTabs flag
      */
     fun loadTabs() {
-        // FIX P0-C1: Atomic check-and-set prevents race condition
-        if (!isObservingTabs.compareAndSet(false, true)) return
+        // FIX P0-C1: Synchronized check-and-set prevents race condition (KMP-compatible)
+        synchronized(this) {
+            if (isObservingTabs) return
+            isObservingTabs = true
+        }
 
         viewModelScope.launch {
             _isLoading.value = true
@@ -113,7 +167,7 @@ class TabViewModel(
                 .catch { e ->
                     _error.value = "Failed to load tabs: ${e.message}"
                     _isLoading.value = false
-                    isObservingTabs.set(false)
+                    synchronized(this@TabViewModel) { isObservingTabs = false }
                 }
                 .collect { tabList ->
                     // FIX: Wrap entire collect block in try-catch to prevent crashes
@@ -169,7 +223,13 @@ class TabViewModel(
     }
 
     /**
-     * Create a new tab
+     * Create a new tab with comprehensive error handling and URL validation.
+     *
+     * Features:
+     * - URL validation with specific error types
+     * - Tab capacity check
+     * - Retry mechanism for database operations
+     * - User-friendly error messages
      *
      * @param url Initial URL (can be empty for blank tab)
      * @param title Initial title (defaults to "New Tab")
@@ -181,39 +241,86 @@ class TabViewModel(
             _isLoading.value = true
             _error.value = null
 
-            // FIX: Use homepage from settings if URL is empty, not hardcoded Google
-            // Root cause: Tabs with empty URLs were loading hardcoded DEFAULT_URL (google.com)
-            // Solution: Use user's configured homepage from settings
-            // ENHANCEMENT: Respect newTabPage setting for different new tab behaviors
-            val finalUrl = if (url.isBlank()) {
-                when (_settings.value?.newTabPage) {
-                    BrowserSettings.NewTabPage.BLANK -> "about:blank"
-                    BrowserSettings.NewTabPage.HOME_PAGE -> _settings.value?.homePage ?: Tab.DEFAULT_URL
-                    BrowserSettings.NewTabPage.TOP_SITES -> NewTabUrls.TOP_SITES
-                    BrowserSettings.NewTabPage.MOST_VISITED -> NewTabUrls.MOST_VISITED
-                    BrowserSettings.NewTabPage.SPEED_DIAL -> NewTabUrls.SPEED_DIAL
-                    BrowserSettings.NewTabPage.NEWS_FEED -> NewTabUrls.NEWS_FEED
-                    null -> _settings.value?.homePage ?: Tab.DEFAULT_URL
+            try {
+                // Step 1: Validate tab capacity (max 100 tabs)
+                val currentTabCount = _tabs.value.size
+                if (currentTabCount >= MAX_TABS) {
+                    val error = TabError.DatabaseFull(
+                        maxTabs = MAX_TABS,
+                        currentTabs = currentTabCount
+                    )
+                    _error.value = error.userMessage
+                    _isLoading.value = false
+                    println("TabViewModel: ${error.technicalDetails}")
+                    return@launch
                 }
-            } else {
-                url
-            }
-            val finalTitle = if (url.isBlank()) "New Tab" else title
 
-            // FIX BUG #4: Apply desktop mode from settings when creating new tabs
-            val newTab = Tab.create(url = finalUrl, title = finalTitle, isDesktopMode = isDesktopMode)
-            repository.createTab(newTab)
-                .onSuccess { createdTab ->
+                // Step 2: Determine final URL based on user settings
+                val finalUrl = if (url.isBlank()) {
+                    when (_settings.value?.newTabPage) {
+                        BrowserSettings.NewTabPage.BLANK -> "about:blank"
+                        BrowserSettings.NewTabPage.HOME_PAGE -> _settings.value?.homePage ?: Tab.DEFAULT_URL
+                        BrowserSettings.NewTabPage.TOP_SITES -> NewTabUrls.TOP_SITES
+                        BrowserSettings.NewTabPage.MOST_VISITED -> NewTabUrls.MOST_VISITED
+                        BrowserSettings.NewTabPage.SPEED_DIAL -> NewTabUrls.SPEED_DIAL
+                        BrowserSettings.NewTabPage.NEWS_FEED -> NewTabUrls.NEWS_FEED
+                        null -> _settings.value?.homePage ?: Tab.DEFAULT_URL
+                    }
+                } else {
+                    url
+                }
+
+                // Step 3: Validate URL format
+                val validationResult = UrlValidation.validate(finalUrl, allowBlank = true)
+                if (validationResult is UrlValidation.ValidationResult.Invalid) {
+                    _error.value = validationResult.error.userMessage
+                    _isLoading.value = false
+                    println("TabViewModel: ${validationResult.error.technicalDetails}")
+                    return@launch
+                }
+
+                val normalizedUrl = (validationResult as UrlValidation.ValidationResult.Valid).normalizedUrl
+                val finalTitle = if (url.isBlank()) "New Tab" else title
+
+                // Step 4: Create tab with retry logic for database operations
+                val newTab = Tab.create(url = normalizedUrl, title = finalTitle, isDesktopMode = isDesktopMode)
+
+                val retryPolicy = RetryPolicy.STANDARD
+                retryPolicy.execute { attempt ->
+                    if (attempt > 1) {
+                        println("TabViewModel: Retrying tab creation (attempt $attempt)")
+                    }
+                    repository.createTab(newTab)
+                }.onSuccess { createdTab ->
                     if (setActive) {
                         _activeTab.value = TabUiState(tab = createdTab)
                     }
                     _isLoading.value = false
-                }
-                .onFailure { e ->
-                    _error.value = "Failed to create tab: ${e.message}"
+                    println("TabViewModel: Tab created successfully: ${createdTab.id}")
+                }.onFailure { e ->
+                    val error = TabError.DatabaseOperationFailed(
+                        operation = "createTab",
+                        cause = e
+                    )
+                    _error.value = error.userMessage
                     _isLoading.value = false
+                    println("TabViewModel: ${error.technicalDetails}")
                 }
+            } catch (e: Exception) {
+                // Catch any unexpected errors
+                val error = TabError.WebViewCreationFailed(cause = e)
+                _error.value = error.userMessage
+                _isLoading.value = false
+                println("TabViewModel: Unexpected error in createTab: ${error.technicalDetails}")
+            }
         }
+    }
+
+    companion object {
+        /**
+         * Maximum number of tabs allowed (prevents database overflow)
+         */
+        private const val MAX_TABS = 100
     }
 
     /**
@@ -276,7 +383,7 @@ class TabViewModel(
     }
 
     /**
-     * Switch to a different tab
+     * Switch to a different tab with error handling
      *
      * @param tabId Tab ID to switch to
      */
@@ -289,8 +396,15 @@ class TabViewModel(
                     // FIX: Update lastAccessedAt timestamp when switching tabs
                     val updatedTab = tabState.tab.copy(lastAccessedAt = kotlinx.datetime.Clock.System.now())
                     repository.updateTab(updatedTab)
+                        .onFailure { e ->
+                            // Non-critical error - tab switch succeeded but timestamp update failed
+                            println("TabViewModel: Failed to update tab timestamp: ${e.message}")
+                        }
                 } else {
-                    _error.value = "Tab not found: $tabId"
+                    // Tab not found - provide specific error
+                    val error = TabError.TabNotFound(tabId = tabId)
+                    _error.value = error.userMessage
+                    println("TabViewModel: ${error.technicalDetails}")
                 }
             }
         }
@@ -320,16 +434,25 @@ class TabViewModel(
     }
 
     /**
-     * Navigate active tab to URL
+     * Navigate active tab to URL with validation
      *
-     * Automatically handles:
-     * - Adding https:// scheme if missing
-     * - Upgrading http:// to https:// for security
-     * - Search queries (if input doesn't look like a URL)
+     * Features:
+     * - URL validation with specific error types
+     * - Automatic URL normalization
+     * - Search query handling
+     * - Creates new tab if none active
      *
      * @param url URL to navigate to
      */
     fun navigateToUrl(url: String) {
+        // Validate URL first
+        val validationResult = UrlValidation.validate(url, allowBlank = false)
+        if (validationResult is UrlValidation.ValidationResult.Invalid) {
+            _error.value = validationResult.error.userMessage
+            println("TabViewModel: ${validationResult.error.technicalDetails}")
+            return
+        }
+
         val normalizedUrl = normalizeUrl(url)
         _activeTab.value?.let { state ->
             val updated = state.tab.copy(url = normalizedUrl)
