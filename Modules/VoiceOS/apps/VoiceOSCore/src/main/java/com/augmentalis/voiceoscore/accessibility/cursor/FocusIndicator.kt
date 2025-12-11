@@ -21,6 +21,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.ComposeView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.cos
@@ -106,6 +114,33 @@ data class FocusIndicatorConfig(
  * indicator.hide()
  * ```
  */
+/**
+ * Custom LifecycleOwner for FocusIndicator ComposeView
+ */
+private class FocusIndicatorLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    private val savedStateRegistryController = SavedStateRegistryController.create(this)
+
+    override val lifecycle: Lifecycle
+        get() = lifecycleRegistry
+
+    override val savedStateRegistry: SavedStateRegistry
+        get() = savedStateRegistryController.savedStateRegistry
+
+    fun onCreate() {
+        savedStateRegistryController.performRestore(null)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+    }
+
+    fun onDestroy() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    }
+}
+
 class FocusIndicator(
     private val context: Context,
     private val windowManager: WindowManager
@@ -123,6 +158,9 @@ class FocusIndicator(
 
     // Overlay view
     private var overlayView: ComposeView? = null
+
+    // Lifecycle owner for ComposeView
+    private var lifecycleOwner: FocusIndicatorLifecycleOwner? = null
 
     // Current configuration
     private var currentConfig: FocusIndicatorConfig? = null
@@ -182,7 +220,17 @@ class FocusIndicator(
     private fun createOverlayView() {
         Log.d(TAG, "Creating focus indicator overlay")
 
+        // Create lifecycle owner
+        val owner = FocusIndicatorLifecycleOwner().also {
+            lifecycleOwner = it
+            it.onCreate()
+        }
+
         val composeView = ComposeView(context).apply {
+            // Set ViewTreeLifecycleOwner and ViewTreeSavedStateRegistryOwner
+            setViewTreeLifecycleOwner(owner)
+            setViewTreeSavedStateRegistryOwner(owner)
+
             setContent {
                 currentConfig?.let { config ->
                     FocusIndicatorContent(config)
@@ -241,6 +289,8 @@ class FocusIndicator(
      */
     fun dispose() {
         hide()
+        lifecycleOwner?.onDestroy()
+        lifecycleOwner = null
         Log.d(TAG, "FocusIndicator disposed")
     }
 }
