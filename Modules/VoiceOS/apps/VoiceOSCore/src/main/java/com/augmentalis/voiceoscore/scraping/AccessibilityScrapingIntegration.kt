@@ -486,13 +486,15 @@ class AccessibilityScrapingIntegration(
             val maxCommands = if (isLauncher) MAX_COMMANDS_LAUNCHER else MAX_COMMANDS_NORMAL
             if (elements.size > maxCommands) {
                 Log.w(TAG, "⚠️ Command limit exceeded: ${elements.size} > $maxCommands, trimming to most important elements")
-                // Sort by importance score (higher is better) and keep top N
-                elements.sortByDescending { it.importance_score ?: 0.0 }
+                // Sort by importance (clickable + shallow depth + has text = more important)
+                elements.sortWith(compareByDescending<ScrapedElementEntity> { it.isClickable }
+                    .thenBy { it.depth }  // Shallower depth = more prominent
+                    .thenByDescending { !it.text.isNullOrEmpty() || !it.contentDescription.isNullOrEmpty() })
                 // Remove elements beyond limit
                 while (elements.size > maxCommands) {
                     elements.removeAt(elements.size - 1)
                 }
-                Log.i(TAG, "✂️ Trimmed to $maxCommands elements")
+                Log.i(TAG, "✂️ Trimmed to $maxCommands elements (prioritized clickable, shallow, labeled)")
             }
 
             // ===== PHASE 2: Clean up old hierarchy and insert elements =====

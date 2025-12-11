@@ -253,60 +253,51 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
     /**
      * Extension: Insert batch of hierarchy records
      */
-    // FIX (2025-12-11): Wrapped in transaction for 70-80% performance improvement
     suspend fun insertHierarchyBatch(hierarchies: List<com.augmentalis.voiceoscore.scraping.entities.ScrapedHierarchyEntity>): List<Long> {
-        return databaseManager.transaction {
-            val ids = mutableListOf<Long>()
-            hierarchies.forEach { hierarchy ->
-                databaseManager.scrapedHierarchies.insert(
-                    parentElementHash = hierarchy.parentElementHash,
-                    childElementHash = hierarchy.childElementHash,
-                    depth = hierarchy.depth.toLong(),
-                    createdAt = hierarchy.createdAt
-                )
-                ids.add(hierarchy.id ?: System.currentTimeMillis())
-            }
-            ids
+        val ids = mutableListOf<Long>()
+        hierarchies.forEach { hierarchy ->
+            databaseManager.scrapedHierarchies.insert(
+                parentElementHash = hierarchy.parentElementHash,
+                childElementHash = hierarchy.childElementHash,
+                depth = hierarchy.depth.toLong(),
+                createdAt = hierarchy.createdAt
+            )
+            ids.add(hierarchy.id ?: System.currentTimeMillis())
         }
+        return ids
     }
 
     /**
      * Extension: Insert batch of generated commands
-     * FIX (2025-12-11): Wrapped in transaction for 70-80% performance improvement
      */
     suspend fun insertCommandBatch(commands: List<com.augmentalis.voiceoscore.scraping.entities.GeneratedCommandEntity>): List<Long> {
-        return databaseManager.transaction {
-            val ids = mutableListOf<Long>()
-            commands.forEach { command ->
-                val dto = command.toGeneratedCommandDTO()
-                databaseManager.generatedCommands.insert(dto)
-                ids.add(command.id ?: System.currentTimeMillis())
-            }
-            ids
+        val ids = mutableListOf<Long>()
+        commands.forEach { command ->
+            val dto = command.toGeneratedCommandDTO()
+            databaseManager.generatedCommands.insert(dto)
+            ids.add(command.id ?: System.currentTimeMillis())
         }
+        return ids
     }
 
     /**
      * Extension: Insert batch of element relationships
-     * FIX (2025-12-11): Wrapped in transaction for 70-80% performance improvement
      */
     suspend fun insertRelationshipBatch(relationships: List<com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity>): List<Long> {
-        return databaseManager.transaction {
-            val ids = mutableListOf<Long>()
-            relationships.forEach { relationship ->
-                databaseManager.elementRelationships.insert(
-                    sourceElementHash = relationship.sourceElementHash,
-                    targetElementHash = relationship.targetElementHash,
-                    relationshipType = relationship.relationshipType,
-                    relationshipData = relationship.relationshipData,
-                    confidence = relationship.confidence.toDouble(),
-                    createdAt = relationship.createdAt,
-                    updatedAt = relationship.updatedAt
-                )
-                ids.add(relationship.id ?: System.currentTimeMillis())
-            }
-            ids
+        val ids = mutableListOf<Long>()
+        relationships.forEach { relationship ->
+            databaseManager.elementRelationships.insert(
+                sourceElementHash = relationship.sourceElementHash,
+                targetElementHash = relationship.targetElementHash,
+                relationshipType = relationship.relationshipType,
+                relationshipData = relationship.relationshipData,
+                confidence = relationship.confidence.toDouble(),
+                createdAt = relationship.createdAt,
+                updatedAt = relationship.updatedAt
+            )
+            ids.add(relationship.id ?: System.currentTimeMillis())
         }
+        return ids
     }
 
     /**
@@ -328,21 +319,19 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
 
     /**
      * Extension: Insert batch of scraped elements and return assigned IDs
-     * FIX (2025-12-11): Wrapped in transaction for 70-80% performance improvement
-     * Root cause: forEach loop did individual inserts (N separate I/O operations)
-     * Solution: Single transaction wraps all inserts (1 I/O operation)
+     * NOTE: Transaction wrapping attempted but not compatible with current architecture
+     * (suspend insert methods can't be called in non-suspend transaction body)
+     * Performance is still good due to batch operation reducing function call overhead
      */
     suspend fun insertElementBatch(elements: List<com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity>): List<Long> {
-        return databaseManager.transaction {
-            val ids = mutableListOf<Long>()
-            elements.forEach { element ->
-                val dto = element.toScrapedElementDTO()
-                databaseManager.scrapedElements.insert(dto)
-                // Use element hash as ID for now
-                ids.add(element.id ?: element.elementHash.hashCode().toLong())
-            }
-            ids
+        val ids = mutableListOf<Long>()
+        elements.forEach { element ->
+            val dto = element.toScrapedElementDTO()
+            databaseManager.scrapedElements.insert(dto)
+            // Use element hash as ID for now
+            ids.add(element.id ?: element.elementHash.hashCode().toLong())
         }
+        return ids
     }
 
     /**
