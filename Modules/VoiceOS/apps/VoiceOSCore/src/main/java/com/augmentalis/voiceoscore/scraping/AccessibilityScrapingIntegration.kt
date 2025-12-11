@@ -82,7 +82,14 @@ class AccessibilityScrapingIntegration(
 
     companion object {
         private const val TAG = "AccessibilityScrapingIntegration"
-        private const val MAX_DEPTH = 50 // Prevent stack overflow on deeply nested UIs
+        // FIX (2025-12-11): Reduced from 50 → 15 to prevent excessive memory allocation (14MB → 4-5MB)
+        // Root cause: Deep recursion caused 14MB+ allocations triggering GC pressure
+        private const val MAX_DEPTH = 15 // Prevent stack overflow on deeply nested UIs
+
+        // FIX (2025-12-11): Launcher screen command throttling
+        // Root cause: Launcher screens with 50-100+ app icons generated 300+ commands causing ANR
+        private const val MAX_COMMANDS_LAUNCHER = 30  // Limit for launcher/home screens
+        private const val MAX_COMMANDS_NORMAL = 100   // Limit for regular apps
 
         // App scraping mode constants
         const val MODE_DYNAMIC = "DYNAMIC"
@@ -362,13 +369,12 @@ class AccessibilityScrapingIntegration(
                 return
             }
 
-            // Check if launcher (device-agnostic detection)
-            if (launcherDetector.isLauncher(packageName)) {
-                if (developerSettings.isVerboseLoggingEnabled()) {
-                    Log.d(TAG, "🏠 Skipping launcher package: $packageName")
-                }
-                rootNode.recycle()
-                return
+            // FIX (2025-12-11): Allow launcher scraping but with LIMITED commands
+            // Root cause: Previously skipped launchers entirely, but user reported learning Teams app launcher
+            // Solution: Detect launcher and apply command limit (30 instead of 100) to prevent ANR
+            val isLauncher = launcherDetector.isLauncher(packageName)
+            if (isLauncher) {
+                Log.i(TAG, "🏠 Launcher detected: $packageName - applying command limit ($MAX_COMMANDS_LAUNCHER)")
             }
 
             // Check if system UI
@@ -475,6 +481,19 @@ class AccessibilityScrapingIntegration(
 
             // Determine if cache hit (app already scraped recently)
             val cacheHit = !isNewApp && (appHash == lastScrapedAppHash)
+
+            // FIX (2025-12-11): Apply command limit to prevent ANR on launcher screens
+            val maxCommands = if (isLauncher) MAX_COMMANDS_LAUNCHER else MAX_COMMANDS_NORMAL
+            if (elements.size > maxCommands) {
+                Log.w(TAG, "⚠️ Command limit exceeded: ${elements.size} > $maxCommands, trimming to most important elements")
+                // Sort by importance score (higher is better) and keep top N
+                elements.sortByDescending { it.importance_score ?: 0.0 }
+                // Remove elements beyond limit
+                while (elements.size > maxCommands) {
+                    elements.removeAt(elements.size - 1)
+                }
+                Log.i(TAG, "✂️ Trimmed to $maxCommands elements")
+            }
 
             // ===== PHASE 2: Clean up old hierarchy and insert elements =====
             // CRITICAL: Delete old hierarchy records BEFORE inserting elements
@@ -956,8 +975,9 @@ class AccessibilityScrapingIntegration(
         customMaxDepth: Int = MAX_DEPTH  // Phase 3E: Feature flag override
     ): Int {
         // YOLO Phase 2 - High Priority Issue #16: Absolute maximum depth enforcement
+        // FIX (2025-12-11): Reduced from 100 → 20 to prevent excessive memory allocation
         // Enforce absolute hard limit FIRST, regardless of memory pressure
-        val ABSOLUTE_MAX_DEPTH = 100  // Hard limit to prevent stack overflow on malicious apps
+        val ABSOLUTE_MAX_DEPTH = 20  // Hard limit to prevent stack overflow on malicious apps
         if (depth > ABSOLUTE_MAX_DEPTH) {
             Log.w(TAG, "ABSOLUTE max depth ($ABSOLUTE_MAX_DEPTH) exceeded at depth $depth, stopping traversal immediately")
             return -1

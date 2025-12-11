@@ -146,7 +146,10 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     // Service state
     @JvmField
     internal var isServiceReady = false  // Phase 3: Exposed for IPC companion service (Java-accessible)
-    private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    // FIX (2025-12-11): Changed from Dispatchers.Main to Dispatchers.Default to prevent ANR
+    // Root cause: Command cache operations (300+ items) blocked main thread for >5 seconds
+    // Solution: Move all non-UI operations off main thread
+    private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val coroutineScopeCommands = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     @Volatile
@@ -867,9 +870,12 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                 }
 
                 AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                    // FIX (2025-12-11): Use coroutineScopeCommands (Dispatchers.IO) to prevent ANR
+                    // Previously used serviceScope (Dispatchers.Main) which blocked main thread with 300+ commands
+
                     // Forward to ScreenActivityDetector for rename hint display
                     screenActivityDetector?.let { detector ->
-                        serviceScope.launch {
+                        coroutineScopeCommands.launch {
                             try {
                                 Log.v(TAG, "Forwarding WINDOW_STATE_CHANGED to ScreenActivityDetector")
                                 detector.onWindowStateChanged(event)
@@ -880,15 +886,18 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                     }
 
                     // Update app context and trigger scraping for new windows
-                    serviceScope.launch {
+                    coroutineScopeCommands.launch {
                         // Also trigger UI scraping for window state changes
                         val commands = uiScrapingEngine.extractUIElementsAsync(event)
+                        val normalizedCommand = commands.map { element -> element.normalizedText }
+
+                        // Update caches on background thread (prevents ANR)
                         nodeCache.clear()
                         nodeCache.addAll(commands)
-                        val normalizedCommand = commands.map { element -> element.normalizedText }
                         commandCache.clear()
                         commandCache.addAll(normalizedCommand)
-                        Log.d(TAG, "SPEECH_TEST: TYPE_WINDOW_STATE_CHANGED commandsStr = $commandCache")
+
+                        Log.d(TAG, "SPEECH_TEST: TYPE_WINDOW_STATE_CHANGED commandsStr (${normalizedCommand.size} commands) = $commandCache")
                         if (config.verboseLogging) {
                             Log.d(TAG, "Scraped commands for $packageName: $commandCache")
                         }
