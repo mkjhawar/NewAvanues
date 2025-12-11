@@ -27,6 +27,8 @@ actual fun WebViewContainer(
     onSessionDataChange: (String?) -> Unit,
     securityViewModel: com.augmentalis.Avanues.web.universal.presentation.viewmodel.SecurityViewModel?,
     onDownloadStart: ((DownloadRequest) -> Unit)?,
+    initialScale: Float,
+    settings: com.augmentalis.webavanue.domain.model.BrowserSettings?,
     modifier: Modifier
 ) {
     // Placeholder for iOS - WKWebView implementation in Phase 2

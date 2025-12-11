@@ -22,6 +22,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.augmentalis.Avanues.web.universal.presentation.ui.security.CertificateUtils
 import com.augmentalis.Avanues.web.universal.presentation.ui.security.HttpAuthRequest
 import com.augmentalis.Avanues.web.universal.presentation.ui.security.PermissionType
+import com.augmentalis.Avanues.web.universal.platform.SettingsApplicator
+import com.augmentalis.webavanue.domain.model.BrowserSettings
 
 /**
  * WebViewPoolManager - Android implementation
@@ -180,6 +182,7 @@ actual fun WebViewContainer(
     securityViewModel: com.augmentalis.Avanues.web.universal.presentation.viewmodel.SecurityViewModel?,
     onDownloadStart: ((DownloadRequest) -> Unit)?,
     initialScale: Float,
+    settings: BrowserSettings?,
     modifier: Modifier
 ) {
     val context = LocalContext.current
@@ -276,47 +279,24 @@ actual fun WebViewContainer(
                         setInitialScale(scalePercent)
                     }
 
-                    // FIX: WebView settings - ensure proper initialization for Android 16
-                    settings.apply {
-                    javaScriptEnabled = true
-                    domStorageEnabled = true
-                    databaseEnabled = true
-                    setSupportZoom(true)
-                    builtInZoomControls = true
-                    displayZoomControls = false
-                    loadWithOverviewMode = true
-                    useWideViewPort = true
-                    cacheMode = WebSettings.LOAD_DEFAULT
+                    // Apply BrowserSettings using SettingsApplicator
+                    // This replaces hardcoded settings with user-configurable values
+                    val settingsApplicator = SettingsApplicator()
 
-                    // Additional settings for compatibility
-                    allowFileAccess = false // Security: disable file access
-                    allowContentAccess = true
-                    javaScriptCanOpenWindowsAutomatically = false
-                    mediaPlaybackRequiresUserGesture = false
+                    // Use provided settings or fallback to defaults
+                    val browserSettings = settings ?: BrowserSettings()
 
-                    // PHASE 1: Mixed Content Security (CWE-319)
-                    // SECURITY FIX: Block all mixed content (HTTP on HTTPS pages)
-                    @Suppress("DEPRECATION")
-                    mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                    // Apply all settings (privacy, display, performance, WebXR)
+                    val result = settingsApplicator.applySettings(this, browserSettings)
 
-                    // ========== WebXR Support ==========
-                    // REQ-XR-001: Enable WebXR Device API support
-                    // REQ-XR-006: WebGL 2.0 Support for XR Rendering
+                    // Log any errors during settings application
+                    result.onFailure { exception ->
+                        println("⚠️ Failed to apply settings: ${exception.message}")
+                        exception.printStackTrace()
+                    }
 
-                    // WebGL/OpenGL ES support (required for WebXR)
-                    // Note: WebGL 2.0 maps to OpenGL ES 3.0 on Android
-                    setRenderPriority(WebSettings.RenderPriority.HIGH)
-
-                    // Enable hardware acceleration for GPU-accelerated rendering
-                    // This is critical for maintaining 60fps in XR sessions
-                    // Hardware acceleration uses OpenGL ES for rendering
-
-                    // Storage APIs (required for WebXR session persistence)
-                    // DOM storage already enabled above, but critical for XR
-
-                    // Allow auto-play for XR sessions (no user gesture required)
-                    // Already set to false above (mediaPlaybackRequiresUserGesture = false)
-                }
+                    // Security: Always override file access (regardless of settings)
+                    // No action needed - SettingsApplicator already handles this
 
                 // WebViewClient (handles page navigation)
                 webViewClient = object : WebViewClient() {
@@ -896,6 +876,17 @@ actual fun WebViewContainer(
                 println("WebView update: Loading new URL - old='${view.url}' new='$url'")
                 view.loadUrl(url)
             }
+
+            // Apply settings if they changed (incremental updates to avoid full reload)
+            settings?.let { browserSettings ->
+                val settingsApplicator = SettingsApplicator()
+                val result = settingsApplicator.applySettings(view, browserSettings)
+
+                result.onFailure { exception ->
+                    println("⚠️ Failed to apply updated settings: ${exception.message}")
+                }
+            }
+
             // Update controller reference (in case it changed)
             controller?.setWebView(view)
             // Update navigation state

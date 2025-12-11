@@ -380,6 +380,7 @@ fun BrowserScreen(
                             }
                         },
                         initialScale = settings?.initialScale ?: 0.75f,
+                        settings = settings,
                         modifier = Modifier.fillMaxSize()
                     )
                 } ?: EmptyBrowserState(

@@ -67,6 +67,7 @@ expect fun WebViewContainer(
     securityViewModel: com.augmentalis.Avanues.web.universal.presentation.viewmodel.SecurityViewModel? = null,
     onDownloadStart: ((DownloadRequest) -> Unit)? = null,
     initialScale: Float = 0.75f,  // Initial page scale (0.0 = auto, 0.75 = 75%, 1.0 = 100%)
+    settings: com.augmentalis.webavanue.domain.model.BrowserSettings? = null,  // Browser settings to apply
     modifier: Modifier
 )
 
