@@ -575,9 +575,12 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 //                        val objectCommand = prettyGson.toJson(allCommands)
 //                        Log.d(TAG, "RegisterVoiceCmd allCommands = $objectCommand")
 //                    }
-                    speechEngineManager?.updateCommands(allCommands)  // TEMPORARY: Null-safe for standalone
+                    // FIX (2025-12-11): updateCommands is now suspend, launch in coroutine
+                    coroutineScopeCommands.launch {
+                        speechEngineManager?.updateCommands(allCommands)  // TEMPORARY: Null-safe for standalone
+                    }
 
-                    Log.i(TAG, "✓ Database commands registered successfully with speech engine")
+                    Log.i(TAG, "✓ Database commands registered successfully with speech engine (async)")
                     Log.i(TAG, "  Total commands in speech vocabulary: ${allCommands.toSet().size}")
 
                 } catch (e: Exception) {
@@ -954,6 +957,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 //                                val objectCommand = prettyGson.toJson(allCommands)
 //                                Log.d(TAG, "RegisterVoiceCmd allCommands = $objectCommand")
 //                            }
+                            // FIX (2025-12-11): updateCommands is now suspend, call directly in coroutine
                             speechEngineManager?.updateCommands(allCommands)
                             allRegisteredDynamicCommands.clear()
                             allRegisteredDynamicCommands.addAll(commandCache)

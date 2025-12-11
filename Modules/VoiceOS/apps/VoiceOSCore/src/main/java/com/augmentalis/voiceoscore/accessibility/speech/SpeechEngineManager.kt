@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
@@ -568,17 +569,25 @@ class SpeechEngineManager(private val context: Context) {
         }
     }
 
-    fun updateCommands(commands: List<String>) {
-        when (currentEngine) {
-            is VivokaEngine -> {
-                Log.d(TAG, "SPEECH_TEST: updateCommands commands = $commands")
-                (currentEngine as VivokaEngine).setDynamicCommands(commands)
-            }
-            else -> {
-
+    // FIX (2025-12-11): Made async to prevent blocking caller (100-500ms operation)
+    // Root cause: Synchronous speech engine update blocked caller thread
+    // Solution: Launch in engineScope with Dispatchers.IO to run in background
+    suspend fun updateCommands(commands: List<String>) = withContext(Dispatchers.IO) {
+        engineMutex.withLock {
+            try {
+                when (currentEngine) {
+                    is VivokaEngine -> {
+                        Log.d(TAG, "SPEECH_TEST: updateCommands commands (${commands.size} total) = $commands")
+                        (currentEngine as VivokaEngine).setDynamicCommands(commands)
+                    }
+                    else -> {
+                        Log.w(TAG, "updateCommands called but no engine is active")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating commands", e)
             }
         }
-
     }
 
     /**
