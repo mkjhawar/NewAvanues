@@ -39,6 +39,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.augmentalis.voiceoscore.accessibility.ui.overlays.ComposeViewLifecycleOwner
 import androidx.compose.ui.window.Dialog
 import com.augmentalis.voiceos.accessibility.AnchorPoint
 import com.augmentalis.voiceos.accessibility.BadgeStyle
@@ -62,6 +65,7 @@ class NumberedSelectionOverlay(
     private val windowManager: WindowManager
 ) {
     private var overlayView: ComposeView? = null
+    private var lifecycleOwner: ComposeViewLifecycleOwner? = null
     private var isShowing = false
 
     // Mutable state for items
@@ -129,6 +133,8 @@ class NumberedSelectionOverlay(
      */
     fun dispose() {
         hide()
+        lifecycleOwner?.onDestroy()
+        lifecycleOwner = null
         overlayView = null
     }
 
@@ -136,7 +142,14 @@ class NumberedSelectionOverlay(
      * Create the compose view for the overlay
      */
     private fun createOverlayView(): ComposeView {
+        val owner = ComposeViewLifecycleOwner().also {
+            lifecycleOwner = it
+            it.onCreate()
+        }
+
         return ComposeView(context).apply {
+            setViewTreeLifecycleOwner(owner)
+            setViewTreeSavedStateRegistryOwner(owner)
             setContent {
                 val items by remember { itemsState }
 
