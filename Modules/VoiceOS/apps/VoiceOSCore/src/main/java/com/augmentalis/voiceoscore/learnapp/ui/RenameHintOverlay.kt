@@ -106,6 +106,7 @@ class RenameHintOverlay(
      * Currently displayed view (if any)
      */
     private var currentView: ComposeView? = null
+    private var lifecycleOwner: ComposeViewLifecycleOwner? = null
 
     /**
      * Set of screen identifiers where hint has been shown this session
@@ -216,8 +217,16 @@ class RenameHintOverlay(
             "rename_hint"
         )
 
+        // Create lifecycle owner for ComposeView
+        val owner = ComposeViewLifecycleOwner().also {
+            lifecycleOwner = it
+            it.onCreate()
+        }
+
         // Create ComposeView
         val composeView = ComposeView(context).apply {
+            setViewTreeLifecycleOwner(owner)
+            setViewTreeSavedStateRegistryOwner(owner)
             setContent {
                 RenameHintCard(
                     exampleCommand = buttonName,
@@ -265,6 +274,8 @@ class RenameHintOverlay(
             }
             currentView = null
         }
+        lifecycleOwner?.onDestroy()
+        lifecycleOwner = null
     }
 
     /**
