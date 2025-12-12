@@ -203,14 +203,12 @@ class SafetyManager(
      * @return SafetyCheckResult with recommendation
      */
     fun checkElement(element: ElementInfo): SafetyCheckResult {
-        // 1. Check Do Not Click list
-        val dncReason = DoNotClickList.shouldNotClick(element)
-        if (dncReason != null) {
-            callback?.onDangerousElement(element, dncReason)
+        // 1. Check password field FIRST (highest priority, specific category)
+        if (element.isPassword) {
             return SafetyCheckResult.unsafe(
-                reason = "Do Not Click: ${dncReason.description}",
-                category = SafetyCategory.DO_NOT_CLICK,
-                recommendation = SafetyRecommendation.LOG_ONLY
+                reason = "Password input field",
+                category = SafetyCategory.PASSWORD_FIELD,
+                recommendation = SafetyRecommendation.SKIP_ELEMENT
             )
         }
 
@@ -223,12 +221,14 @@ class SafetyManager(
             )
         }
 
-        // 3. Check password field
-        if (element.isPassword) {
+        // 3. Check Do Not Click list (excludes password - already checked above)
+        val dncReason = DoNotClickList.shouldNotClick(element)
+        if (dncReason != null && dncReason != DoNotClickReason.PASSWORD_FIELD) {
+            callback?.onDangerousElement(element, dncReason)
             return SafetyCheckResult.unsafe(
-                reason = "Password input field",
-                category = SafetyCategory.PASSWORD_FIELD,
-                recommendation = SafetyRecommendation.SKIP_ELEMENT
+                reason = "Do Not Click: ${dncReason.description}",
+                category = SafetyCategory.DO_NOT_CLICK,
+                recommendation = SafetyRecommendation.LOG_ONLY
             )
         }
 

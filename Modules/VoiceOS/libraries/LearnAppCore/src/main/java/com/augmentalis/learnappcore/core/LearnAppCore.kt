@@ -232,16 +232,19 @@ class LearnAppCore(
      *
      * Creates GeneratedCommandDTO with command text, synonyms, and metadata.
      *
-     * Enhanced for cross-platform apps:
+     * CRITICAL: ALL actionable elements MUST get commands - NEVER skip them.
+     * The app's entire purpose is voice control - skipping elements defeats this.
+     *
+     * Enhanced for ALL apps (native and cross-platform):
      * - Label priority: text > contentDescription > resourceId > FALLBACK
-     * - Fallback generation for unlabeled elements (Flutter, React Native)
-     * - Lower thresholds for cross-platform frameworks
+     * - Fallback generation for ALL unlabeled actionable elements
+     * - Position-based fallback as last resort (type_x_y format)
      * - Command format: "{actionType} {label}" (lowercase)
      *
      * @param element Element to generate command for
      * @param uuid Pre-generated UUID for this element
      * @param packageName Package name for framework detection
-     * @return GeneratedCommandDTO or null if no label found
+     * @return GeneratedCommandDTO or null ONLY for non-actionable elements with poor labels
      */
     private fun generateVoiceCommand(
         element: ElementInfo,
@@ -257,35 +260,51 @@ class LearnAppCore(
             AppFramework.NATIVE
         }
 
+        // CRITICAL: Check if element is actionable (must ALWAYS get a command)
+        val isActionable = element.isClickable ||
+                          element.isLongClickable ||
+                          element.isScrollable ||
+                          element.isEditText()
+
         // Extract label (text > contentDescription > resourceId > FALLBACK)
-        val label = element.text.takeIf { it.isNotBlank() }
+        var label = element.text.takeIf { it.isNotBlank() }
             ?: element.contentDescription.takeIf { it.isNotBlank() }
             ?: element.resourceId.substringAfterLast("/").takeIf { it.isNotBlank() }
-            ?: generateFallbackLabel(element, framework)  // NEW: Fallback generation
+            ?: generateFallbackLabel(element, framework)
 
         // Get framework-adjusted minimum label length
         val minLabelLength = framework.getMinLabelLength(
             developerSettings.getMinGeneratedLabelLength()
         )
 
-        // For clickable elements in cross-platform apps, ALWAYS generate labels
-        // (even if label is short/numeric)
-        val isClickableInCrossPlatform = element.isClickable &&
-                (framework.needsAggressiveFallback() || framework.needsModerateFallback())
+        // CRITICAL FIX: Actionable elements MUST get commands - generate last-resort fallback
+        if (isActionable && (label.isBlank() || label == "unlabeled" || label.length < minLabelLength || label.all { it.isDigit() })) {
+            // Generate positional last-resort label for actionable elements
+            label = generateLastResortLabel(element)
+            Log.d(TAG, "Generated last-resort label for actionable element: $label")
+        }
 
-        if (isClickableInCrossPlatform) {
-            // Generate command even for short labels
+        // For clickable elements in any framework, ALWAYS generate labels
+        if (isActionable) {
             val actionType = determineActionType(element)
             val commandText = "$actionType $label".lowercase()
             val synonyms = generateSynonyms(actionType, label)
             val elementHash = calculateElementHash(element)
+
+            // Confidence based on label quality
+            val confidence = when {
+                element.text.isNotBlank() || element.contentDescription.isNotBlank() -> 0.95  // Semantic label
+                element.resourceId.isNotBlank() -> 0.85  // Resource ID
+                label.contains("_") && label.matches(Regex(".*_\\d+_\\d+$")) -> 0.5  // Coordinate fallback
+                else -> 0.7  // Position/context fallback
+            }
 
             return GeneratedCommandDTO(
                 id = 0L,
                 elementHash = elementHash,
                 commandText = commandText,
                 actionType = actionType,
-                confidence = if (label.length >= minLabelLength) 0.85 else 0.6,
+                confidence = confidence,
                 synonyms = synonyms,
                 isUserApproved = 0L,
                 usageCount = 0L,
@@ -294,7 +313,7 @@ class LearnAppCore(
             )
         }
 
-        // For non-clickable or native apps, apply quality filters
+        // For NON-actionable elements, apply quality filters (OK to skip display-only elements)
         if (label.length < minLabelLength || label.all { it.isDigit() }) {
             return null
         }
@@ -327,6 +346,32 @@ class LearnAppCore(
     }
 
     /**
+     * Generate last-resort label for actionable elements
+     *
+     * CRITICAL: This ensures ALL actionable elements get voice commands.
+     * Uses element type + center coordinates for unique identification.
+     *
+     * Format: "{elementType}_{centerX}_{centerY}"
+     * Examples: "button_540_1200", "imageview_270_800"
+     *
+     * @param element Element to generate label for
+     * @return Coordinate-based unique label
+     */
+    private fun generateLastResortLabel(element: ElementInfo): String {
+        val elementType = element.className
+            .substringAfterLast(".")
+            .lowercase()
+            .replace("view", "")
+            .replace("layout", "")
+            .takeIf { it.isNotBlank() } ?: "element"
+
+        val centerX = element.bounds.centerX()
+        val centerY = element.bounds.centerY()
+
+        return "${elementType}_${centerX}_${centerY}"
+    }
+
+    /**
      * Determine action type for element
      *
      * @param element Element to analyze
@@ -344,34 +389,32 @@ class LearnAppCore(
     /**
      * Generate fallback labels for unlabeled elements
      *
-     * Used for cross-platform apps (Flutter, React Native, Unity, Unreal) that lack semantic labels.
+     * CRITICAL: Applies to ALL apps (native AND cross-platform).
+     * Native Android apps with poor metadata MUST also get fallback labels.
      *
      * Strategies (in priority order):
-     * 1. Game engines (Unity/Unreal): Spatial grid labeling
+     * 1. Game engines (Unity/Unreal/Godot/Cocos2d/Defold): Spatial grid labeling
      * 2. Position-based: "Tab 1", "Button 2", "Card 3"
      * 3. Context-aware: "Top button", "Bottom card"
      * 4. Type + index fallback: "View 1", "Element 2"
      *
      * @param element Element to generate label for
      * @param framework Detected app framework
-     * @return Generated label string
+     * @return Generated label string (NEVER returns "unlabeled" for actionable elements)
      */
     private fun generateFallbackLabel(element: ElementInfo, framework: AppFramework): String {
-        // Only generate fallback for cross-platform apps
-        if (framework == AppFramework.NATIVE) {
-            return "unlabeled"
-        }
-
         // Special handling for game engines (spatial coordinate-based)
-        if (framework == AppFramework.UNITY) {
-            return generateUnityLabel(element)
+        when (framework) {
+            AppFramework.UNITY, AppFramework.GODOT, AppFramework.COCOS2D, AppFramework.DEFOLD -> {
+                return generateUnityLabel(element)  // 3x3 grid
+            }
+            AppFramework.UNREAL -> {
+                return generateUnrealLabel(element)  // 4x4 grid
+            }
+            else -> { /* Continue to general fallback strategies */ }
         }
 
-        if (framework == AppFramework.UNREAL) {
-            return generateUnrealLabel(element)
-        }
-
-        // Strategy 1: Position-based labels
+        // Strategy 1: Position-based labels (works for ALL frameworks including NATIVE)
         val positionLabel = generatePositionLabel(element)
         if (positionLabel != null) return positionLabel
 
@@ -379,9 +422,14 @@ class LearnAppCore(
         val contextLabel = generateContextLabel(element)
         if (contextLabel != null) return contextLabel
 
-        // Strategy 3: Type + index fallback
+        // Strategy 3: Type + index fallback (universal)
         val elementType = element.className.substringAfterLast(".").lowercase()
-        return "$elementType ${element.index + 1}"
+            .replace("view", "")
+            .replace("layout", "")
+            .takeIf { it.isNotBlank() } ?: "element"
+
+        val index = element.index.takeIf { it >= 0 } ?: 0
+        return "$elementType ${index + 1}"
     }
 
     /**

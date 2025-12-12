@@ -14,6 +14,11 @@
  * - **Flutter**: Google's UI toolkit (FlutterView, io.flutter packages)
  * - **React Native**: Facebook's React framework (ReactRootView)
  * - **Xamarin**: Microsoft's .NET framework (mono.android packages)
+ * - **Unity**: Unity game engine (UnityPlayer)
+ * - **Unreal**: Unreal Engine (UE4/UE5, GameActivity)
+ * - **Godot**: Godot Engine (GodotView, org.godotengine packages)
+ * - **Cocos2D**: Cocos2d-x Engine (Cocos2dxGLSurfaceView)
+ * - **Defold**: Defold Engine (DefoldActivity, NativeActivity)
  * - **Native**: Standard Android SDK
  *
  * ## Detection Strategy
@@ -91,6 +96,24 @@ object CrossPlatformDetector {
             if (hasCordovaSignatures(rootNode, packageName)) {
                 Log.i(TAG, "Detected CORDOVA framework for $packageName")
                 return AppFramework.CORDOVA
+            }
+
+            // Check for Godot Engine
+            if (hasGodotSignatures(rootNode, packageName)) {
+                Log.i(TAG, "Detected GODOT framework for $packageName")
+                return AppFramework.GODOT
+            }
+
+            // Check for Cocos2d-x Engine
+            if (hasCocos2dSignatures(rootNode, packageName)) {
+                Log.i(TAG, "Detected COCOS2D framework for $packageName")
+                return AppFramework.COCOS2D
+            }
+
+            // Check for Defold Engine
+            if (hasDefoldSignatures(rootNode, packageName)) {
+                Log.i(TAG, "Detected DEFOLD framework for $packageName")
+                return AppFramework.DEFOLD
             }
 
             Log.d(TAG, "No cross-platform framework detected for $packageName, assuming NATIVE")
@@ -402,6 +425,122 @@ object CrossPlatformDetector {
     }
 
     /**
+     * Check if app uses Godot Engine
+     *
+     * Godot is an open-source game engine similar to Unity:
+     * 1. UI rendered to OpenGL/Vulkan surface
+     * 2. Minimal accessibility support
+     * 3. Individual UI elements not exposed to accessibility
+     * 4. Uses custom rendering pipeline (not Android native views)
+     *
+     * Detection signatures:
+     * - className contains "GodotView", "GodotApp", or "GodotActivity"
+     * - packageName contains ".godot.", "org.godotengine.", or "godot_"
+     * - View hierarchy with Godot-specific classes
+     *
+     * @param node Root or current accessibility node
+     * @param packageName App package name
+     * @return true if Godot detected
+     */
+    private fun hasGodotSignatures(node: AccessibilityNodeInfo, packageName: String): Boolean {
+        // Signature 1: GodotView or GodotApp classes
+        val className = node.className?.toString() ?: ""
+        if (className.contains("GodotView") || className.contains("GodotApp") ||
+            className.contains("GodotActivity")) {
+            return true
+        }
+
+        // Signature 2: Package name patterns
+        val godotPatterns = listOf(".godot.", "org.godotengine.", "godot_")
+        if (godotPatterns.any { packageName.contains(it, ignoreCase = true) }) {
+            return true
+        }
+
+        // Signature 3: Check children recursively for Godot signatures
+        return checkChildrenForSignature(node, depth = 0, maxDepth = 3) { childNode ->
+            val childClassName = childNode.className?.toString() ?: ""
+            childClassName.contains("Godot", ignoreCase = true)
+        }
+    }
+
+    /**
+     * Check if app uses Cocos2d-x Engine
+     *
+     * Cocos2d-x is a popular 2D game engine:
+     * 1. Renders to OpenGL surface (Cocos2dxGLSurfaceView)
+     * 2. Minimal accessibility support
+     * 3. Uses custom Activity and view classes
+     * 4. Popular in mobile 2D games and casual games
+     *
+     * Detection signatures:
+     * - className contains "Cocos2dxGLSurfaceView", "Cocos2dxActivity"
+     * - packageName contains "cocos"
+     * - Characteristic view hierarchy with Cocos classes
+     *
+     * @param node Root or current accessibility node
+     * @param packageName App package name
+     * @return true if Cocos2d-x detected
+     */
+    private fun hasCocos2dSignatures(node: AccessibilityNodeInfo, packageName: String): Boolean {
+        // Signature 1: Cocos2d-x view classes
+        val className = node.className?.toString() ?: ""
+        if (className.contains("Cocos2dxGLSurfaceView") ||
+            className.contains("Cocos2dxActivity") ||
+            className.contains("Cocos2d", ignoreCase = false)) {
+            return true
+        }
+
+        // Signature 2: Package name contains cocos
+        if (packageName.contains("cocos", ignoreCase = true)) {
+            return true
+        }
+
+        // Signature 3: Check children recursively for Cocos signatures
+        return checkChildrenForSignature(node, depth = 0, maxDepth = 3) { childNode ->
+            val childClassName = childNode.className?.toString() ?: ""
+            childClassName.contains("Cocos", ignoreCase = true)
+        }
+    }
+
+    /**
+     * Check if app uses Defold Engine
+     *
+     * Defold is a lightweight game engine optimized for mobile:
+     * 1. Uses NativeActivity for direct rendering
+     * 2. Minimal Android framework usage
+     * 3. Renders to graphics surface (OpenGL/Vulkan)
+     * 4. Very shallow view hierarchy
+     *
+     * Detection signatures:
+     * - className contains "DefoldActivity"
+     * - NativeActivity + packageName contains "defold"
+     * - Characteristic minimal hierarchy pattern
+     *
+     * @param node Root or current accessibility node
+     * @param packageName App package name
+     * @return true if Defold detected
+     */
+    private fun hasDefoldSignatures(node: AccessibilityNodeInfo, packageName: String): Boolean {
+        // Signature 1: DefoldActivity class
+        val className = node.className?.toString() ?: ""
+        if (className.contains("DefoldActivity")) {
+            return true
+        }
+
+        // Signature 2: NativeActivity + defold in package name
+        if (className.contains("NativeActivity") &&
+            packageName.contains("defold", ignoreCase = true)) {
+            return true
+        }
+
+        // Signature 3: Check children recursively for Defold signatures
+        return checkChildrenForSignature(node, depth = 0, maxDepth = 3) { childNode ->
+            val childClassName = childNode.className?.toString() ?: ""
+            childClassName.contains("Defold", ignoreCase = true)
+        }
+    }
+
+    /**
      * Recursively check children for framework signatures
      *
      * Limits depth to avoid performance impact.
@@ -513,7 +652,34 @@ enum class AppFramework {
      * Uses 4x4 spatial grid (finer than Unity) due to more complex UI.
      * Common in AAA mobile games (PUBG Mobile, Fortnite, Dead by Daylight Mobile).
      */
-    UNREAL;
+    UNREAL,
+
+    /**
+     * Godot Engine
+     *
+     * Open-source game engine similar to Unity.
+     * Renders UI to graphics surface with minimal accessibility support.
+     * Uses 3x3 spatial grid (same as Unity) for coordinate-based interaction.
+     */
+    GODOT,
+
+    /**
+     * Cocos2d-x Engine
+     *
+     * Popular 2D game engine, especially for mobile games.
+     * Renders to OpenGL surface with minimal accessibility support.
+     * Uses 3x3 spatial grid for spatial labeling.
+     */
+    COCOS2D,
+
+    /**
+     * Defold Engine
+     *
+     * Lightweight game engine optimized for mobile and web.
+     * Uses NativeActivity with direct graphics rendering.
+     * Uses 3x3 spatial grid for coordinate-based interaction.
+     */
+    DEFOLD;
 
     /**
      * Check if framework needs aggressive fallback label generation
@@ -521,7 +687,8 @@ enum class AppFramework {
      * @return true if framework typically lacks semantic labels
      */
     fun needsAggressiveFallback(): Boolean {
-        return this == FLUTTER || this == CORDOVA || this == UNITY || this == UNREAL
+        return this == FLUTTER || this == CORDOVA || this == UNITY || this == UNREAL ||
+                this == GODOT || this == COCOS2D || this == DEFOLD
     }
 
     /**
@@ -544,7 +711,7 @@ enum class AppFramework {
      */
     fun getMinLabelLength(defaultLength: Int): Int {
         return when (this) {
-            FLUTTER, CORDOVA, UNITY, UNREAL -> 1  // Accept even single-character labels
+            FLUTTER, CORDOVA, UNITY, UNREAL, GODOT, COCOS2D, DEFOLD -> 1  // Accept even single-character labels
             REACT_NATIVE, XAMARIN -> maxOf(1, defaultLength - 1)  // Slightly lower threshold
             NATIVE -> defaultLength  // Use standard threshold
         }
@@ -553,12 +720,13 @@ enum class AppFramework {
     /**
      * Check if framework needs spatial coordinate-based interaction
      *
-     * Unity renders to OpenGL surface with no accessible elements,
+     * Game engines render to OpenGL/Vulkan surface with no accessible elements,
      * requiring coordinate-based tapping instead of accessibility actions.
      *
      * @return true if framework requires coordinate tapping
      */
     fun needsCoordinateTapping(): Boolean {
-        return this == UNITY
+        return this == UNITY || this == UNREAL || this == GODOT ||
+                this == COCOS2D || this == DEFOLD
     }
 }
