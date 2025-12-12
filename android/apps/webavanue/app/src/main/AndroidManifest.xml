@@ -37,6 +37,11 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:hardwareAccelerated="true">
 
+        <!-- Sentry: Disable auto-init (manual init in WebAvanueApp) -->
+        <meta-data
+            android:name="io.sentry.auto-init"
+            android:value="false" />
+
         <!-- Main Activity -->
         <activity
             android:name=".app.MainActivity"

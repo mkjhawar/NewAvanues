@@ -23,38 +23,19 @@ SECURITY: Network Security Configuration (CWE-295, CWE-319)
     </debug-overrides>
 
     <!--
-    Certificate Pinning for Critical Domains
+    Certificate Pinning: DISABLED
 
-    NOTE: WebAvanue is a browser app - it doesn't have a specific backend API.
-    This configuration demonstrates pinning for potential future services:
-    - Content Delivery Networks (CDN)
-    - Analytics/Telemetry services
+    WebAvanue is a browser app without dedicated backend infrastructure.
+    Certificate pinning would be added here for:
+    - CDN/API endpoints (when implemented)
     - Update servers
-    - Authentication providers
+    - Analytics/Telemetry services
 
-    For production deployment, update pins for your actual infrastructure.
+    To enable pinning, generate certificate hashes with:
+    $ echo | openssl s_client -connect api.example.com:443 2>/dev/null | \
+        openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | \
+        openssl dgst -sha256 -binary | base64
     -->
-
-    <!-- Example: Pin for future CDN/API infrastructure -->
-    <domain-config>
-        <domain includeSubdomains="true">api.webavanue.com</domain>
-        <pin-set expiration="2026-12-31">
-            <!-- Primary certificate pin (SHA-256 of public key) -->
-            <!-- PLACEHOLDER: Replace with actual certificate fingerprint -->
-            <pin digest="SHA-256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
-            <!-- Backup certificate pin (for certificate rotation) -->
-            <pin digest="SHA-256">BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
-        </pin-set>
-    </domain-config>
-
-    <!-- Example: Pin for future telemetry/analytics service -->
-    <domain-config>
-        <domain includeSubdomains="true">telemetry.webavanue.com</domain>
-        <pin-set expiration="2026-12-31">
-            <pin digest="SHA-256">CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC=</pin>
-            <pin digest="SHA-256">DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD=</pin>
-        </pin-set>
-    </domain-config>
 
     <!-- Allow localhost for development/testing -->
     <domain-config cleartextTrafficPermitted="true">
