@@ -1,0 +1,2525 @@
+# VoiceOS P2 Features - Developer Manual
+
+**Version:** 1.0
+**Date:** 2025-12-11
+**Author:** Manoj Jhawar (with Claude AI assistance)
+**Audience:** Developers, Contributors
+**Status:** Published
+**Related Spec:** VoiceOS-LearnApp-DualEdition-Spec-51211-V1.md
+
+---
+
+# Book Contents
+
+| Chapter | Title | Description |
+|---------|-------|-------------|
+| 1 | [Introduction](#chapter-1-introduction) | Overview of P2 features |
+| 2 | [Visual Architecture](#chapter-2-visual-architecture) | Flow charts, sequence diagrams, system diagrams |
+| 3 | [Architecture Decision Records](#chapter-3-architecture-decision-records) | ADRs for each feature |
+| 4 | [getLearnedScreenHashes Feature](#chapter-4-getlearnedscreenhashes-feature) | Screen hash query implementation |
+| 5 | [Neo4j Graph Export Feature](#chapter-5-neo4j-graph-export-feature) | Graph database integration |
+| 6 | [Exploration Sync Feature](#chapter-6-exploration-sync-feature) | IPC exploration coordination |
+| 7 | [UI/UX Design](#chapter-7-uiux-design) | User interface specifications |
+| 8 | [Class Reference](#chapter-8-class-reference) | Detailed class documentation |
+| 9 | [Integration Guide](#chapter-9-integration-guide) | How to integrate with P2 features |
+| A | [API Quick Reference](#appendix-a-api-quick-reference) | API summary |
+| B | [Code Examples](#appendix-b-code-examples) | Usage examples |
+| C | [Testing Guide](#appendix-c-testing-guide) | How to test P2 features |
+
+---
+
+# Chapter 1: Introduction
+
+## 1.1 Purpose
+
+This manual documents the P2 (Priority 2) features implemented for VoiceOS LearnApp separation. These features enable:
+
+1. **Screen Hash Queries**: LearnApp can check which screens are already learned
+2. **Neo4j Graph Export**: Export learned app data to graph database for visualization
+3. **Exploration Sync**: Coordinate exploration between LearnApp and VoiceOS
+
+## 1.2 Feature Summary
+
+| Feature | Purpose | Use Case |
+|---------|---------|----------|
+| getLearnedScreenHashes() | Query learned screens | Skip already-learned screens during exploration |
+| Neo4j Graph Export | Export to graph database | Visualize app navigation graph in Neo4j |
+| Exploration Sync | IPC exploration control | Remote start/stop/pause exploration from LearnApp |
+
+## 1.3 Related Documents
+
+- **Spec:** VoiceOS-LearnApp-DualEdition-Spec-51211-V1.md
+- **Architecture:** VoiceOS-JIT-Developer-Manual-51211-V1.md
+- **User Guide:** VoiceOS-P2-Features-User-Manual-51211-V1.md
+
+## 1.4 Prerequisites
+
+- Understanding of JIT Learning Service architecture
+- AIDL IPC knowledge
+- SQLDelight database familiarity
+- Neo4j/Cypher basics (for graph export)
+
+---
+
+# Chapter 2: Visual Architecture
+
+## 2.1 System Overview Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           VoiceOS P2 Features                                │
+│                         System Architecture v2.1                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        LEARNAPP PROCESS (Standalone App)                     │
+│  ┌─────────────────────┐  ┌─────────────────────┐  ┌──────────────────────┐ │
+│  │   LearnAppActivity  │  │  GraphViewerActivity │  │   ExplorationUI     │ │
+│  │   ┌─────────────┐   │  │   ┌─────────────┐   │  │   ┌─────────────┐   │ │
+│  │   │ Screen List │   │  │   │ Neo4j View  │   │  │   │Progress Bar │   │ │
+│  │   │ JIT Status  │   │  │   │ Query Input │   │  │   │ Start/Stop  │   │ │
+│  │   │ Hash Query  │   │  │   │ Export Btn  │   │  │   │ Pause/Resume│   │ │
+│  │   └─────────────┘   │  │   └─────────────┘   │  │   └─────────────┘   │ │
+│  └──────────┬──────────┘  └──────────┬──────────┘  └──────────┬──────────┘ │
+│             │                        │                        │             │
+│             └────────────────────────┼────────────────────────┘             │
+│                                      │                                       │
+│  ┌───────────────────────────────────┼─────────────────────────────────────┐│
+│  │              IElementCaptureService.Stub.asInterface()                  ││
+│  │                    (AIDL Proxy - Binder IPC)                            ││
+│  └───────────────────────────────────┼─────────────────────────────────────┘│
+└──────────────────────────────────────┼──────────────────────────────────────┘
+                                       │
+                              ═════════╪═════════ AIDL IPC Boundary
+                                       │
+┌──────────────────────────────────────┼──────────────────────────────────────┐
+│                      VOICEOSCORE PROCESS (Accessibility Service)             │
+│  ┌───────────────────────────────────┼─────────────────────────────────────┐│
+│  │                        JITLearningService                               ││
+│  │         (Foreground Service + IElementCaptureService.Stub)              ││
+│  │  ┌─────────────────────────────────────────────────────────────────┐   ││
+│  │  │                    IElementCaptureService.Stub                   │   ││
+│  │  │  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌─────────────┐  │   ││
+│  │  │  │pauseCapture│ │queryState  │ │getScreens  │ │startExplore │  │   ││
+│  │  │  │resumeCapture││getProgress │ │performClick│ │stopExplore  │  │   ││
+│  │  │  └────────────┘ └────────────┘ └────────────┘ └─────────────┘  │   ││
+│  │  └─────────────────────────────────────────────────────────────────┘   ││
+│  │                                      │                                  ││
+│  │                         JITLearnerProvider                              ││
+│  └──────────────────────────────────────┼──────────────────────────────────┘│
+│                                         │                                    │
+│  ┌──────────────────────────────────────┼──────────────────────────────────┐│
+│  │                       LearnAppIntegration                               ││
+│  │                  (implements JITLearnerProvider)                        ││
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   ││
+│  │  │JustInTime   │  │Exploration  │  │Database     │  │AVUQuantizer │   ││
+│  │  │Learner      │  │Engine       │  │Manager      │  │Integration  │   ││
+│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   ││
+│  └──────────────────────────────────────┬──────────────────────────────────┘│
+│                                         │                                    │
+│  ┌──────────────────────────────────────┼──────────────────────────────────┐│
+│  │                        SQLDelight Database                               ││
+│  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────┐    ││
+│  │  │ScreenContext   │  │ LearnedElement │  │ NavigationEdge         │    ││
+│  │  │Repository      │  │ Repository     │  │ Repository             │    ││
+│  │  │                │  │                │  │                        │    ││
+│  │  │ getByPackage() │  │ getByScreen()  │  │ getNavigations()       │    ││
+│  │  └────────────────┘  └────────────────┘  └────────────────────────┘    ││
+│  └──────────────────────────────────────────────────────────────────────────┘│
+└──────────────────────────────────────────────────────────────────────────────┘
+                                       │
+                              ═════════╪═════════ Network Boundary (Optional)
+                                       │
+┌──────────────────────────────────────┼──────────────────────────────────────┐
+│                       NEO4J SERVER (External - Optional)                     │
+│  ┌───────────────────────────────────┴─────────────────────────────────────┐│
+│  │                        Neo4j Graph Database                              ││
+│  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────┐    ││
+│  │  │   (:Screen)    │──│(:HAS_ELEMENT)──│──│    (:Element)          │    ││
+│  │  │  screenHash    │  └────────────────┘  │   stableId, vuid       │    ││
+│  │  │  activityName  │                      │   voiceCommand         │    ││
+│  │  └───────┬────────┘                      └────────────────────────┘    ││
+│  │          │[:NAVIGATES_TO]                                               ││
+│  │          ▼                                                              ││
+│  │  ┌────────────────┐                                                     ││
+│  │  │   (:Screen)    │                                                     ││
+│  │  └────────────────┘                                                     ││
+│  └──────────────────────────────────────────────────────────────────────────┘│
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+## 2.2 Sequence Diagrams
+
+### 2.2.1 getLearnedScreenHashes Sequence
+
+```
+┌─────────┐        ┌────────────────┐        ┌────────────────┐        ┌─────────────┐        ┌──────────┐
+│LearnApp │        │JITLearningServ │        │LearnApp        │        │ScreenContext│        │SQLDelight│
+│Activity │        │    (Binder)    │        │Integration     │        │ Repository  │        │ Database │
+└────┬────┘        └───────┬────────┘        └───────┬────────┘        └──────┬──────┘        └────┬─────┘
+     │                     │                         │                        │                     │
+     │  getLearnedScreenHashes("com.google.photos") │                        │                     │
+     │─────────────────────►                        │                        │                     │
+     │                     │                         │                        │                     │
+     │                     │  provider.getLearnedScreenHashes()              │                     │
+     │                     │─────────────────────────►                        │                     │
+     │                     │                         │                        │                     │
+     │                     │                         │  runBlocking {         │                     │
+     │                     │                         │    getByPackage()      │                     │
+     │                     │                         │─────────────────────────►                    │
+     │                     │                         │                        │                     │
+     │                     │                         │                        │ SELECT * FROM       │
+     │                     │                         │                        │ screen_context      │
+     │                     │                         │                        │ WHERE packageName=? │
+     │                     │                         │                        │─────────────────────►
+     │                     │                         │                        │                     │
+     │                     │                         │                        │    List<Row>        │
+     │                     │                         │                        │◄─────────────────────
+     │                     │                         │                        │                     │
+     │                     │                         │    List<ScreenDTO>     │                     │
+     │                     │                         │◄─────────────────────────                    │
+     │                     │                         │                        │                     │
+     │                     │                         │  map { it.screenHash } │                     │
+     │                     │                         │  }                     │                     │
+     │                     │                         │                        │                     │
+     │                     │  List<String>            │                        │                     │
+     │                     │◄─────────────────────────                        │                     │
+     │                     │                         │                        │                     │
+     │  ["abc123", "def456", ...]                   │                        │                     │
+     │◄─────────────────────                        │                        │                     │
+     │                     │                         │                        │                     │
+     ▼                     ▼                         ▼                        ▼                     ▼
+```
+
+### 2.2.2 Exploration Sync Sequence
+
+```
+┌─────────┐     ┌────────────────┐     ┌────────────────┐     ┌────────────────┐     ┌────────────┐
+│LearnApp │     │JITLearningServ │     │LearnApp        │     │Exploration     │     │Accessibility│
+│Activity │     │    (Binder)    │     │Integration     │     │Engine          │     │Service      │
+└────┬────┘     └───────┬────────┘     └───────┬────────┘     └───────┬────────┘     └──────┬─────┘
+     │                  │                      │                      │                      │
+     │  registerExplorationListener(listener)  │                      │                      │
+     │──────────────────►                      │                      │                      │
+     │                  │                      │                      │                      │
+     │                  │  explorationListeners.add(listener)         │                      │
+     │                  │──────────────────────►                      │                      │
+     │                  │                      │                      │                      │
+     │  startExploration("com.google.photos")  │                      │                      │
+     │──────────────────►                      │                      │                      │
+     │                  │                      │                      │                      │
+     │                  │  provider.startExploration()                │                      │
+     │                  │──────────────────────►                      │                      │
+     │                  │                      │                      │                      │
+     │                  │                      │  scope.launch {      │                      │
+     │                  │                      │    startExploration() │                     │
+     │                  │                      │─────────────────────►│                      │
+     │                  │                      │                      │                      │
+     │                  │                      │                      │  getRootInActiveWindow
+     │                  │                      │                      │─────────────────────►│
+     │                  │                      │                      │                      │
+     │                  │                      │                      │  AccessibilityNodeInfo
+     │                  │                      │                      │◄──────────────────────
+     │                  │                      │                      │                      │
+     │                  │                      │  explorationState.emit(Running)             │
+     │                  │                      │◄──────────────────────                      │
+     │                  │                      │                      │                      │
+     │                  │  callback.onProgressUpdate()                │                      │
+     │                  │◄──────────────────────                      │                      │
+     │                  │                      │                      │                      │
+     │  listener.onProgressUpdate(progress)    │                      │                      │
+     │◄──────────────────                      │                      │                      │
+     │                  │                      │                      │                      │
+     │  [Update UI with progress]              │                      │                      │
+     │                  │                      │                      │                      │
+     │                  │                      │  ... exploration continues ...             │
+     │                  │                      │                      │                      │
+     │                  │                      │  explorationState.emit(Completed)          │
+     │                  │                      │◄──────────────────────                      │
+     │                  │                      │                      │                      │
+     │                  │  callback.onCompleted()                     │                      │
+     │                  │◄──────────────────────                      │                      │
+     │                  │                      │                      │                      │
+     │  listener.onCompleted(progress)         │                      │                      │
+     │◄──────────────────                      │                      │                      │
+     │                  │                      │                      │                      │
+     │  [Show completion dialog]               │                      │                      │
+     ▼                  ▼                      ▼                      ▼                      ▼
+```
+
+### 2.2.3 Neo4j Export Sequence
+
+```
+┌─────────────────┐     ┌────────────────┐     ┌────────────────┐     ┌──────────────┐
+│GraphViewer      │     │Neo4jService    │     │LearnApp        │     │Neo4j Server  │
+│Activity         │     │                │     │Repository      │     │              │
+└────────┬────────┘     └───────┬────────┘     └───────┬────────┘     └──────┬───────┘
+         │                      │                      │                      │
+         │  connect(uri, user, password)               │                      │
+         │──────────────────────►                      │                      │
+         │                      │                      │                      │
+         │                      │  GraphDatabase.driver(uri)                  │
+         │                      │─────────────────────────────────────────────►
+         │                      │                      │                      │
+         │                      │  session.verifyConnectivity()               │
+         │                      │─────────────────────────────────────────────►
+         │                      │                      │                      │
+         │                      │  Connected(serverVersion)                   │
+         │◄──────────────────────                      │◄──────────────────────
+         │                      │                      │                      │
+         │  exportAll()         │                      │                      │
+         │──────────────────────►                      │                      │
+         │                      │                      │                      │
+         │                      │  getAllScreenContexts()                     │
+         │                      │──────────────────────►                      │
+         │                      │                      │                      │
+         │                      │  List<ScreenDTO>     │                      │
+         │                      │◄──────────────────────                      │
+         │                      │                      │                      │
+         │                      │  MERGE (s:Screen {screenHash: $hash})       │
+         │                      │  SET s.activityName = ...                   │
+         │                      │─────────────────────────────────────────────►
+         │                      │                      │                      │
+         │  progressUpdate(33%) │                      │  [Nodes created]     │
+         │◄──────────────────────                      │◄──────────────────────
+         │                      │                      │                      │
+         │                      │  getAllElements()    │                      │
+         │                      │──────────────────────►                      │
+         │                      │                      │                      │
+         │                      │  List<ElementDTO>    │                      │
+         │                      │◄──────────────────────                      │
+         │                      │                      │                      │
+         │                      │  MERGE (e:Element {stableId: $id})          │
+         │                      │  MERGE (s)-[:HAS_ELEMENT]->(e)              │
+         │                      │─────────────────────────────────────────────►
+         │                      │                      │                      │
+         │  progressUpdate(66%) │                      │  [Relationships]     │
+         │◄──────────────────────                      │◄──────────────────────
+         │                      │                      │                      │
+         │                      │  getAllNavigations() │                      │
+         │                      │──────────────────────►                      │
+         │                      │                      │                      │
+         │                      │  List<NavDTO>        │                      │
+         │                      │◄──────────────────────                      │
+         │                      │                      │                      │
+         │                      │  MERGE (s1)-[:NAVIGATES_TO]->(s2)           │
+         │                      │─────────────────────────────────────────────►
+         │                      │                      │                      │
+         │  progressUpdate(100%)│                      │  [Nav edges]         │
+         │◄──────────────────────                      │◄──────────────────────
+         │                      │                      │                      │
+         ▼                      ▼                      ▼                      ▼
+```
+
+## 2.3 Flow Charts
+
+### 2.3.1 Screen Hash Query Flow
+
+```
+                    ┌─────────────────┐
+                    │     START       │
+                    └────────┬────────┘
+                             │
+                             ▼
+                    ┌─────────────────┐
+                    │ LearnApp binds  │
+                    │ to JITLearning  │
+                    │    Service      │
+                    └────────┬────────┘
+                             │
+                             ▼
+               ┌─────────────────────────┐
+               │ Call getLearnedScreen   │
+               │ Hashes(packageName)     │
+               └────────────┬────────────┘
+                            │
+                            ▼
+               ┌─────────────────────────┐
+               │ AIDL binder dispatches  │
+               │ to JITLearnerProvider   │
+               └────────────┬────────────┘
+                            │
+                            ▼
+               ┌─────────────────────────┐
+               │ LearnAppIntegration     │
+               │ receives call           │
+               └────────────┬────────────┘
+                            │
+                            ▼
+               ┌─────────────────────────┐
+               │ runBlocking { ... }     │
+               │ (AIDL must be sync)     │
+               └────────────┬────────────┘
+                            │
+                            ▼
+               ┌─────────────────────────┐
+               │ Repository.getByPackage │
+               │ (suspend function)      │
+               └────────────┬────────────┘
+                            │
+                            ▼
+               ┌─────────────────────────┐
+               │ SQLDelight executes     │
+               │ SELECT query            │
+               └────────────┬────────────┘
+                            │
+                            ▼
+               ┌─────────────────────────┐
+               │ Map results to          │
+               │ List<ScreenDTO>         │
+               └────────────┬────────────┘
+                            │
+                            ▼
+               ┌─────────────────────────┐
+               │ Extract screenHash      │
+               │ from each DTO           │
+               └────────────┬────────────┘
+                            │
+                            ▼
+               ┌─────────────────────────┐
+               │ Return List<String>     │
+               │ via AIDL                │
+               └────────────┬────────────┘
+                            │
+                            ▼
+                    ┌─────────────────┐
+                    │      END        │
+                    └─────────────────┘
+```
+
+### 2.3.2 Exploration Sync State Machine
+
+```
+                                    ┌────────────────────────────────────┐
+                                    │                                    │
+                                    ▼                                    │
+                           ┌───────────────┐                             │
+               ┌───────────│     IDLE      │◄──────────┐                │
+               │           └───────┬───────┘           │                │
+               │                   │                   │                │
+               │   startExploration()                  │                │
+               │                   │                   │                │
+               │                   ▼                   │                │
+               │           ┌───────────────┐           │                │
+               │           │   RUNNING     │           │                │
+               │           └───────┬───────┘           │                │
+               │                   │                   │                │
+               │    ┌──────────────┼──────────────┐    │                │
+               │    │              │              │    │                │
+               │    ▼              ▼              ▼    │                │
+               │ pauseExp()   complete()      fail()  │                │
+               │    │              │              │    │                │
+               │    ▼              ▼              ▼    │                │
+               │ ┌──────────┐ ┌──────────┐ ┌──────────┐                │
+               │ │  PAUSED  │ │COMPLETED │ │  FAILED  │                │
+               │ └────┬─────┘ └────┬─────┘ └────┬─────┘                │
+               │      │            │            │                       │
+               │      │            │            │                       │
+               │ resumeExp()       │       retry()                      │
+               │      │            │            │                       │
+               │      ▼            │            │                       │
+               │ ┌──────────┐      │            │                       │
+               │ │ RUNNING  │      │            │                       │
+               │ └────┬─────┘      │            │                       │
+               │      │            │            │                       │
+               └──────┴────────────┴────────────┴───────────────────────┘
+                                   │
+                             stopExploration()
+                                   │
+                                   ▼
+                           ┌───────────────┐
+                           │     IDLE      │
+                           └───────────────┘
+
+State Transitions:
+─────────────────────────────────────────────────────────────────────────
+│ Current State │ Event              │ New State  │ Action               │
+├───────────────┼────────────────────┼────────────┼──────────────────────┤
+│ IDLE          │ startExploration() │ RUNNING    │ Begin exploration    │
+│ RUNNING       │ pauseExploration() │ PAUSED     │ Pause exploration    │
+│ RUNNING       │ complete()         │ COMPLETED  │ Save results         │
+│ RUNNING       │ fail()             │ FAILED     │ Log error            │
+│ RUNNING       │ stopExploration()  │ IDLE       │ Cancel exploration   │
+│ PAUSED        │ resumeExploration()│ RUNNING    │ Resume exploration   │
+│ PAUSED        │ stopExploration()  │ IDLE       │ Cancel exploration   │
+│ COMPLETED     │ startExploration() │ RUNNING    │ New exploration      │
+│ FAILED        │ retry()            │ RUNNING    │ Retry exploration    │
+│ FAILED        │ startExploration() │ RUNNING    │ New exploration      │
+─────────────────────────────────────────────────────────────────────────
+```
+
+### 2.3.3 Neo4j Export Flow
+
+```
+                    ┌─────────────────┐
+                    │     START       │
+                    └────────┬────────┘
+                             │
+                             ▼
+               ┌─────────────────────────┐
+               │ User clicks "Connect"   │
+               └────────────┬────────────┘
+                            │
+                            ▼
+               ┌─────────────────────────┐
+               │ Neo4jService.connect()  │
+               │ (uri, user, password)   │
+               └────────────┬────────────┘
+                            │
+                            ▼
+                  ┌─────────────────────┐
+                  │   Connection OK?    │
+                  └─────────┬───────────┘
+                            │
+              ┌─────────────┴─────────────┐
+              │                           │
+              ▼ YES                       ▼ NO
+    ┌─────────────────┐         ┌─────────────────┐
+    │ state = Connected│        │ state = Error   │
+    └────────┬────────┘         │ Show error msg  │
+             │                  └─────────────────┘
+             ▼
+    ┌─────────────────────┐
+    │ User clicks "Export"│
+    └────────┬────────────┘
+             │
+             ▼
+    ┌─────────────────────┐
+    │ Load screens from   │
+    │ repository          │──────► progress = 0%
+    └────────┬────────────┘
+             │
+             ▼
+    ┌─────────────────────┐
+    │ exportScreens()     │
+    │ MERGE (:Screen)     │──────► progress = 33%
+    └────────┬────────────┘
+             │
+             ▼
+    ┌─────────────────────┐
+    │ Load elements       │
+    │ from repository     │
+    └────────┬────────────┘
+             │
+             ▼
+    ┌─────────────────────┐
+    │ exportElements()    │
+    │ MERGE (:Element)    │──────► progress = 66%
+    │ [:HAS_ELEMENT]      │
+    └────────┬────────────┘
+             │
+             ▼
+    ┌─────────────────────┐
+    │ Load navigations    │
+    │ from repository     │
+    └────────┬────────────┘
+             │
+             ▼
+    ┌─────────────────────┐
+    │ exportNavigations() │
+    │ [:NAVIGATES_TO]     │──────► progress = 100%
+    └────────┬────────────┘
+             │
+             ▼
+    ┌─────────────────────┐
+    │ Refresh stats       │
+    │ Display summary     │
+    └────────┬────────────┘
+             │
+             ▼
+       ┌─────────────────┐
+       │      END        │
+       └─────────────────┘
+```
+
+## 2.4 Data Flow Diagrams
+
+### 2.4.1 Complete P2 Features Data Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           DATA FLOW OVERVIEW                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                              ┌─────────────┐
+                              │   User      │
+                              │ Interaction │
+                              └──────┬──────┘
+                                     │
+          ┌──────────────────────────┼──────────────────────────┐
+          │                          │                          │
+          ▼                          ▼                          ▼
+┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
+│   LearnApp UI    │    │GraphViewer UI    │    │  VoiceOS UI      │
+│   (Exploration)  │    │  (Neo4j)         │    │  (Settings)      │
+└────────┬─────────┘    └────────┬─────────┘    └────────┬─────────┘
+         │                       │                       │
+         ▼                       ▼                       │
+┌──────────────────────────────────────────────┐        │
+│           AIDL IPC Layer                      │        │
+│  IElementCaptureService / IExplorListener     │        │
+└────────────────────┬─────────────────────────┘        │
+                     │                                   │
+                     ▼                                   ▼
+         ┌───────────────────────────────────────────────────────┐
+         │                 LearnAppIntegration                    │
+         │              (Central Coordinator)                     │
+         └─────────────────────────┬─────────────────────────────┘
+                                   │
+          ┌────────────────────────┼────────────────────────┐
+          │                        │                        │
+          ▼                        ▼                        ▼
+┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
+│JustInTimeLearner │    │ExplorationEngine │    │  AVUQuantizer    │
+│ (Passive Learn)  │    │ (Active Learn)   │    │  (AI Format)     │
+└────────┬─────────┘    └────────┬─────────┘    └────────┬─────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+                                 ▼
+                    ┌────────────────────────┐
+                    │   VoiceOSDatabaseManager│
+                    └────────────┬───────────┘
+                                 │
+          ┌──────────────────────┼──────────────────────┐
+          │                      │                      │
+          ▼                      ▼                      ▼
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│ScreenContext     │  │ LearnedElement   │  │ NavigationEdge   │
+│ Repository       │  │ Repository       │  │ Repository       │
+└────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘
+         │                     │                     │
+         └─────────────────────┼─────────────────────┘
+                               │
+                               ▼
+                    ┌────────────────────────┐
+                    │   SQLDelight Database  │
+                    │   (voiceos.db)         │
+                    └────────────────────────┘
+                               │
+                               │ Optional Export
+                               ▼
+                    ┌────────────────────────┐
+                    │   Neo4j Database       │
+                    │   (Graph View)         │
+                    └────────────────────────┘
+```
+
+---
+
+# Chapter 3: Architecture Decision Records
+
+## ADR-001: Screen Hash Query via Repository Pattern
+
+### Context
+
+LearnApp needs to know which screens have already been learned to avoid redundant exploration. The previous implementation returned an empty list stub.
+
+### Decision
+
+We decided to:
+1. Add `getByPackage()` method to `IScreenContextRepository` interface
+2. Implement query in `SQLDelightScreenContextRepository`
+3. Wire through `JITLearnerProvider` interface
+4. Use `runBlocking` for synchronous AIDL call
+
+### Rationale
+
+**Why Repository Pattern?**
+- Maintains SOLID principles (Single Responsibility)
+- Database access stays in repository layer
+- Easier to test with mock repositories
+
+**Why not direct database access in LearnAppIntegration?**
+- Would violate separation of concerns
+- Repository already handles SQLDelight queries
+- Consistency with existing architecture
+
+**Why runBlocking?**
+- AIDL calls must return synchronously
+- Screen hash queries are fast (~5-15ms)
+- Alternative would require callback complexity
+
+### Consequences
+
+**Positive:**
+- Clean repository API
+- Easy to add caching later
+- Testable with mocks
+
+**Negative:**
+- Blocking call on AIDL thread
+- Must keep query fast (<50ms)
+
+### Code Impact
+
+```kotlin
+// IScreenContextRepository.kt
+suspend fun getByPackage(packageName: String): List<ScreenContextDTO>
+
+// LearnAppIntegration.kt
+override fun getLearnedScreenHashes(packageName: String): List<String> {
+    return runBlocking {
+        databaseManager.screenContexts.getByPackage(packageName)
+            .map { it.screenHash }
+    }
+}
+```
+
+---
+
+## ADR-002: Neo4j Integration via Service Class
+
+### Context
+
+LearnAppPro (developer edition) needs graph visualization of learned app navigation. Options considered:
+1. Direct Neo4j driver usage in Activity
+2. Dedicated service class
+3. Repository pattern like database
+
+### Decision
+
+We decided to create a dedicated `Neo4jService` class with:
+- ConnectionState sealed class for state management
+- Async export methods with coroutines
+- Cypher query execution support
+- Statistics retrieval
+
+### Rationale
+
+**Why dedicated service class?**
+- Neo4j is optional (not core functionality)
+- Connection state management is complex
+- Keeps Activity code clean
+- Reusable across multiple UIs
+
+**Why not in Repository?**
+- Neo4j is external visualization tool
+- Not part of core data storage
+- Different lifecycle (connect/disconnect)
+- Optional feature (not all builds include it)
+
+**Why sealed class for state?**
+- Type-safe state handling
+- Exhaustive when expressions
+- Clear state transitions
+
+### Consequences
+
+**Positive:**
+- Clean separation of concerns
+- Easy to disable in release builds
+- Testable service class
+- Clear connection state
+
+**Negative:**
+- Additional class to maintain
+- Neo4j driver dependency
+- Network connectivity requirements
+
+### Code Structure
+
+```kotlin
+sealed class ConnectionState {
+    object Disconnected : ConnectionState()
+    object Connecting : ConnectionState()
+    data class Connected(val serverVersion: String) : ConnectionState()
+    data class Error(val message: String) : ConnectionState()
+}
+
+class Neo4jService {
+    suspend fun connect(uri: String, user: String, password: String): Result<Unit>
+    suspend fun exportScreens(screens: List<ScreenExport>): Result<Int>
+    suspend fun executeQuery(cypher: String): Result<List<Map<String, Any>>>
+    // ...
+}
+```
+
+---
+
+## ADR-003: Exploration Sync via AIDL Callbacks
+
+### Context
+
+LearnApp (standalone app) needs to control exploration running in VoiceOSCore. Options:
+1. Broadcast intents (loosely coupled)
+2. Content provider queries
+3. AIDL with callbacks (strongly typed)
+
+### Decision
+
+We decided to use AIDL with callback interfaces:
+1. Add exploration methods to `IElementCaptureService.aidl`
+2. Create `IExplorationProgressListener.aidl` callback
+3. Create `ExplorationProgress.kt` Parcelable
+4. Implement in `JITLearningService` binder
+
+### Rationale
+
+**Why AIDL over Broadcasts?**
+- Strongly typed interface
+- Reliable delivery (bound service)
+- Return values supported
+- Existing AIDL infrastructure
+
+**Why callback interface?**
+- Progress updates need push mechanism
+- Multiple listeners supported
+- Clean unsubscribe pattern
+- Type-safe progress data
+
+**Why Parcelable for progress?**
+- Efficient IPC serialization
+- No reflection overhead
+- Custom factory methods (idle, running, paused, completed)
+- Full state representation
+
+### Consequences
+
+**Positive:**
+- Type-safe IPC
+- Progress streaming
+- Clean API
+- Reuses existing service
+
+**Negative:**
+- More AIDL files to maintain
+- Binder thread considerations
+- DeathRecipient needed for cleanup
+
+### AIDL Structure
+
+```aidl
+// IElementCaptureService.aidl - New methods
+boolean startExploration(in String packageName);
+void stopExploration();
+void pauseExploration();
+void resumeExploration();
+ExplorationProgress getExplorationProgress();
+void registerExplorationListener(IExplorationProgressListener listener);
+void unregisterExplorationListener(IExplorationProgressListener listener);
+
+// IExplorationProgressListener.aidl
+interface IExplorationProgressListener {
+    void onProgressUpdate(in ExplorationProgress progress);
+    void onCompleted(in ExplorationProgress progress);
+    void onFailed(in ExplorationProgress progress, String errorMessage);
+}
+```
+
+---
+
+## ADR-004: State Conversion Pattern
+
+### Context
+
+VoiceOSCore uses `ExplorationState` sealed class internally. LearnApp needs `ExplorationProgress` Parcelable via AIDL. How to bridge?
+
+### Decision
+
+Implement conversion in `LearnAppIntegration.getExplorationProgress()`:
+- Map each ExplorationState variant to ExplorationProgress
+- Use factory methods for clean construction
+- Handle all state variants exhaustively
+
+### Rationale
+
+**Why conversion in LearnAppIntegration?**
+- Bridge between internal and IPC representations
+- JITLearnerProvider interface location
+- Access to ExplorationEngine.explorationState
+
+**Why factory methods?**
+- Clean construction without all params
+- Self-documenting (idle(), running(), paused(), completed())
+- Consistent default values
+
+### Code Pattern
+
+```kotlin
+override fun getExplorationProgress(): ExplorationProgress {
+    val state = explorationEngine.explorationState.value
+    return when (state) {
+        is ExplorationState.Idle -> ExplorationProgress.idle()
+        is ExplorationState.Running -> ExplorationProgress.running(
+            packageName = state.packageName,
+            screensExplored = state.progress.screensExplored,
+            // ...
+        )
+        is ExplorationState.Paused -> ExplorationProgress.paused(...)
+        is ExplorationState.Completed -> ExplorationProgress.completed(...)
+        is ExplorationState.Failed -> ExplorationProgress(state = "failed", ...)
+        else -> ExplorationProgress.idle()
+    }
+}
+```
+
+---
+
+# Chapter 3: getLearnedScreenHashes Feature
+
+## 3.1 Purpose
+
+Allows LearnApp to query which screens have already been learned for a given package. This enables:
+- Skip learned screens during exploration
+- Show learning progress
+- Detect version changes requiring re-learning
+
+## 3.2 Architecture
+
+```
+LearnApp ─── AIDL ───► JITLearningService
+                              │
+                              ▼ (via JITLearnerProvider)
+                       LearnAppIntegration
+                              │
+                              ▼ (runBlocking)
+                       IScreenContextRepository
+                              │
+                              ▼
+                       SQLDelight Database
+```
+
+## 3.3 Implementation Details
+
+### 3.3.1 IScreenContextRepository Interface
+
+**File:** `Modules/VoiceOS/core/database/src/commonMain/kotlin/com/augmentalis/database/repositories/IScreenContextRepository.kt`
+
+```kotlin
+/**
+ * Get all screens by package name.
+ *
+ * Returns all ScreenContextDTO records for a given package,
+ * allowing callers to extract screen hashes.
+ *
+ * @param packageName App package name (e.g., "com.google.photos")
+ * @return List of ScreenContextDTO, empty if package not found
+ */
+suspend fun getByPackage(packageName: String): List<ScreenContextDTO>
+```
+
+**Design Notes:**
+- Returns full DTO (not just hashes) for flexibility
+- Caller can extract whatever fields needed
+- Suspend function for coroutine integration
+
+### 3.3.2 SQLDelightScreenContextRepository Implementation
+
+**File:** `Modules/VoiceOS/core/database/src/commonMain/kotlin/com/augmentalis/database/repositories/impl/SQLDelightScreenContextRepository.kt`
+
+```kotlin
+override suspend fun getByPackage(packageName: String): List<ScreenContextDTO> =
+    withContext(Dispatchers.Default) {
+        queries.getByPackage(packageName)
+            .executeAsList()
+            .map { it.toScreenContextDTO() }
+    }
+```
+
+**Design Notes:**
+- Uses Dispatchers.Default for database work
+- Maps SQLDelight entities to DTOs
+- Relies on generated `getByPackage` query
+
+### 3.3.3 LearnAppIntegration Implementation
+
+**File:** `Modules/VoiceOS/apps/VoiceOSCore/src/main/java/com/augmentalis/voiceoscore/learnapp/integration/LearnAppIntegration.kt`
+
+```kotlin
+/**
+ * Get all learned screen hashes for a package
+ * FIX (2025-12-11): P2 feature implementation
+ *
+ * @param packageName Package to query
+ * @return List of 12-character MD5 screen hashes
+ */
+override fun getLearnedScreenHashes(packageName: String): List<String> {
+    return kotlinx.coroutines.runBlocking {
+        try {
+            databaseManager.screenContexts.getByPackage(packageName)
+                .map { it.screenHash }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting learned screen hashes for $packageName", e)
+            emptyList()
+        }
+    }
+}
+```
+
+**Design Notes:**
+- Uses `runBlocking` because AIDL calls are synchronous
+- Maps DTOs to just screen hashes
+- Error handling returns empty list (graceful degradation)
+- Performance: ~5-15ms typical
+
+## 3.4 Usage
+
+```kotlin
+// In LearnApp
+val service: IElementCaptureService = // bound service
+val learnedHashes = service.getLearnedScreenHashes("com.google.photos")
+
+// During exploration
+if (currentScreenHash in learnedHashes) {
+    Log.d(TAG, "Skipping already-learned screen: $currentScreenHash")
+    return
+}
+```
+
+---
+
+# Chapter 4: Neo4j Graph Export Feature
+
+## 4.1 Purpose
+
+Export learned app data to Neo4j graph database for visualization and analysis:
+- Screen nodes with activity names
+- Element nodes with voice commands
+- Navigation relationships
+
+## 4.2 Architecture
+
+```
+GraphViewerActivity
+        │
+        ▼
+   Neo4jService ────► Neo4j Database
+        │                   │
+        │                   ▼
+        │              (:Screen)-[:HAS_ELEMENT]->(:Element)
+        │              (:Screen)-[:NAVIGATES_TO]->(:Screen)
+        │
+        ▼
+   Repository (read learned data)
+```
+
+## 4.3 Neo4jService Class
+
+**File:** `Modules/VoiceOS/apps/LearnAppDev/src/main/java/com/augmentalis/learnappdev/neo4j/Neo4jService.kt`
+
+### 4.3.1 Connection State
+
+```kotlin
+/**
+ * Represents Neo4j connection state
+ *
+ * Sealed class ensures exhaustive handling in when expressions
+ */
+sealed class ConnectionState {
+    /** Not connected to any server */
+    object Disconnected : ConnectionState()
+
+    /** Connection attempt in progress */
+    object Connecting : ConnectionState()
+
+    /** Successfully connected */
+    data class Connected(val serverVersion: String) : ConnectionState()
+
+    /** Connection failed */
+    data class Error(val message: String) : ConnectionState()
+}
+```
+
+**Design Notes:**
+- Sealed class for type-safe state handling
+- Connected includes server version for display
+- Error includes message for debugging
+
+### 4.3.2 Data Classes for Export
+
+```kotlin
+/**
+ * Screen data for Neo4j export
+ */
+data class ScreenExport(
+    val screenHash: String,
+    val packageName: String,
+    val activityName: String,
+    val elementCount: Int,
+    val exploredAt: Long
+)
+
+/**
+ * Element data for Neo4j export
+ */
+data class ElementExport(
+    val stableId: String,
+    val screenHash: String,
+    val vuid: String?,
+    val className: String,
+    val voiceCommand: String?,
+    val bounds: String
+)
+
+/**
+ * Navigation relationship for Neo4j export
+ */
+data class NavigationExport(
+    val fromScreenHash: String,
+    val toScreenHash: String,
+    val triggerElement: String,
+    val timestamp: Long
+)
+```
+
+### 4.3.3 Core Methods
+
+```kotlin
+class Neo4jService {
+    private var driver: Driver? = null
+    private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    val state: StateFlow<ConnectionState> = _state.asStateFlow()
+
+    /**
+     * Connect to Neo4j server
+     *
+     * @param uri Bolt URI (e.g., "bolt://localhost:7687")
+     * @param user Username
+     * @param password Password
+     * @return Result success/failure
+     */
+    suspend fun connect(uri: String, user: String, password: String): Result<Unit>
+
+    /**
+     * Export screens as nodes
+     *
+     * Creates (:Screen) nodes with properties:
+     * - screenHash (primary key)
+     * - packageName
+     * - activityName
+     * - elementCount
+     * - exploredAt
+     *
+     * Uses MERGE for idempotent imports
+     */
+    suspend fun exportScreens(screens: List<ScreenExport>): Result<Int>
+
+    /**
+     * Export elements as nodes with relationships
+     *
+     * Creates (:Element) nodes and [:HAS_ELEMENT] relationships
+     */
+    suspend fun exportElements(elements: List<ElementExport>): Result<Int>
+
+    /**
+     * Export navigation relationships
+     *
+     * Creates [:NAVIGATES_TO] relationships between screens
+     */
+    suspend fun exportNavigations(navigations: List<NavigationExport>): Result<Int>
+
+    /**
+     * Execute arbitrary Cypher query
+     *
+     * For developer queries and debugging
+     */
+    suspend fun executeQuery(cypher: String): Result<List<Map<String, Any>>>
+
+    /**
+     * Get graph statistics
+     */
+    suspend fun getStats(): Result<GraphStats>
+}
+```
+
+### 4.3.4 Cypher Queries Used
+
+**Screen Export:**
+```cypher
+MERGE (s:Screen {screenHash: $screenHash})
+SET s.packageName = $packageName,
+    s.activityName = $activityName,
+    s.elementCount = $elementCount,
+    s.exploredAt = $exploredAt
+```
+
+**Element Export:**
+```cypher
+MATCH (s:Screen {screenHash: $screenHash})
+MERGE (e:Element {stableId: $stableId})
+SET e.vuid = $vuid,
+    e.className = $className,
+    e.voiceCommand = $voiceCommand,
+    e.bounds = $bounds
+MERGE (s)-[:HAS_ELEMENT]->(e)
+```
+
+**Navigation Export:**
+```cypher
+MATCH (from:Screen {screenHash: $fromHash})
+MATCH (to:Screen {screenHash: $toHash})
+MERGE (from)-[r:NAVIGATES_TO]->(to)
+SET r.triggerElement = $triggerElement,
+    r.timestamp = $timestamp
+```
+
+## 4.4 GraphViewerActivity
+
+**File:** `Modules/VoiceOS/apps/LearnAppDev/src/main/java/com/augmentalis/learnappdev/neo4j/GraphViewerActivity.kt`
+
+### 4.4.1 UI Components
+
+```kotlin
+@Composable
+fun GraphViewerScreen(viewModel: GraphViewerViewModel) {
+    Column {
+        // Connection status card
+        ConnectionStatusCard(
+            state = viewModel.connectionState,
+            onConnect = { viewModel.connect() },
+            onDisconnect = { viewModel.disconnect() }
+        )
+
+        // Graph statistics
+        GraphStatsCard(stats = viewModel.stats)
+
+        // Export controls
+        ExportControlsCard(
+            onExportAll = { viewModel.exportAll() },
+            exportProgress = viewModel.exportProgress
+        )
+
+        // Cypher query input
+        QueryInputCard(
+            query = viewModel.query,
+            onQueryChange = { viewModel.query = it },
+            onExecute = { viewModel.executeQuery() },
+            results = viewModel.queryResults
+        )
+
+        // Example queries
+        ExampleQueriesCard(
+            examples = listOf(
+                "MATCH (s:Screen) RETURN s LIMIT 10" to "List screens",
+                "MATCH (s:Screen)-[:HAS_ELEMENT]->(e) RETURN s,e LIMIT 20" to "Screens with elements",
+                "MATCH path = (s1:Screen)-[:NAVIGATES_TO*1..3]->(s2) RETURN path" to "Navigation paths"
+            ),
+            onSelect = { viewModel.query = it }
+        )
+    }
+}
+```
+
+### 4.4.2 ViewModel Pattern
+
+```kotlin
+class GraphViewerViewModel : ViewModel() {
+    private val neo4jService = Neo4jService()
+    private val repository: LearnAppRepository = // injected
+
+    val connectionState: StateFlow<ConnectionState> = neo4jService.state
+
+    var exportProgress by mutableStateOf(0f)
+    var stats by mutableStateOf<GraphStats?>(null)
+    var queryResults by mutableStateOf<List<Map<String, Any>>>(emptyList())
+
+    fun connect() {
+        viewModelScope.launch {
+            neo4jService.connect(uri, user, password)
+        }
+    }
+
+    fun exportAll() {
+        viewModelScope.launch {
+            exportProgress = 0f
+
+            // Export screens (33%)
+            val screens = repository.getAllScreenContexts()
+            neo4jService.exportScreens(screens.map { it.toExport() })
+            exportProgress = 0.33f
+
+            // Export elements (66%)
+            val elements = repository.getAllElements()
+            neo4jService.exportElements(elements.map { it.toExport() })
+            exportProgress = 0.66f
+
+            // Export navigations (100%)
+            val navs = repository.getAllNavigations()
+            neo4jService.exportNavigations(navs.map { it.toExport() })
+            exportProgress = 1f
+
+            // Refresh stats
+            stats = neo4jService.getStats().getOrNull()
+        }
+    }
+}
+```
+
+---
+
+# Chapter 5: Exploration Sync Feature
+
+## 5.1 Purpose
+
+Enable LearnApp (standalone app) to control exploration running in VoiceOSCore:
+- Start exploration of specific package
+- Stop, pause, resume exploration
+- Monitor progress in real-time
+- Receive completion/failure notifications
+
+## 5.2 Architecture
+
+```
+LearnApp Process                    VoiceOSCore Process
+┌─────────────────┐                ┌────────────────────────┐
+│ LearnAppActivity│                │    VoiceOSService      │
+│        │        │                │          │             │
+│        ▼        │                │          ▼             │
+│ IElementCapture │◄── AIDL IPC ──►│  JITLearningService   │
+│  Service.Proxy  │                │          │             │
+│        │        │                │          ▼             │
+│        ▼        │                │  LearnAppIntegration  │
+│ IExploration    │◄─ callbacks ───│ (JITLearnerProvider)  │
+│ ProgressListener│                │          │             │
+│                 │                │          ▼             │
+└─────────────────┘                │  ExplorationEngine    │
+                                   └────────────────────────┘
+```
+
+## 5.3 AIDL Interfaces
+
+### 5.3.1 IElementCaptureService Extensions
+
+**File:** `Modules/VoiceOS/libraries/JITLearning/src/main/aidl/com/augmentalis/jitlearning/IElementCaptureService.aidl`
+
+```aidl
+// ================================================================
+// EXPLORATION SYNC (v2.1 - P2 Feature)
+// ================================================================
+
+/**
+ * Start automated exploration of an app
+ *
+ * Triggers full automated exploration of the specified package.
+ * Progress updates sent via IExplorationProgressListener.
+ *
+ * @param packageName Package name to explore
+ * @return true if exploration started successfully
+ */
+boolean startExploration(in String packageName);
+
+/**
+ * Stop current exploration
+ *
+ * Cancels ongoing exploration immediately.
+ */
+void stopExploration();
+
+/**
+ * Pause current exploration
+ */
+void pauseExploration();
+
+/**
+ * Resume paused exploration
+ */
+void resumeExploration();
+
+/**
+ * Get current exploration progress
+ *
+ * @return ExplorationProgress with current state
+ */
+ExplorationProgress getExplorationProgress();
+
+/**
+ * Register exploration progress listener
+ *
+ * @param listener IExplorationProgressListener callback
+ */
+void registerExplorationListener(IExplorationProgressListener listener);
+
+/**
+ * Unregister exploration progress listener
+ *
+ * @param listener Previously registered listener
+ */
+void unregisterExplorationListener(IExplorationProgressListener listener);
+```
+
+### 5.3.2 IExplorationProgressListener
+
+**File:** `Modules/VoiceOS/libraries/JITLearning/src/main/aidl/com/augmentalis/jitlearning/IExplorationProgressListener.aidl`
+
+```aidl
+package com.augmentalis.jitlearning;
+
+import com.augmentalis.jitlearning.ExplorationProgress;
+
+/**
+ * Exploration Progress Listener
+ *
+ * Receives exploration progress updates from VoiceOS.
+ */
+interface IExplorationProgressListener {
+
+    /**
+     * Called when exploration progress changes
+     *
+     * @param progress Current exploration progress
+     */
+    void onProgressUpdate(in ExplorationProgress progress);
+
+    /**
+     * Called when exploration completes
+     *
+     * @param progress Final exploration progress with state="completed"
+     */
+    void onCompleted(in ExplorationProgress progress);
+
+    /**
+     * Called when exploration fails
+     *
+     * @param progress Progress at time of failure with state="failed"
+     * @param errorMessage Description of the error
+     */
+    void onFailed(in ExplorationProgress progress, String errorMessage);
+}
+```
+
+### 5.3.3 ExplorationProgress Parcelable
+
+**File:** `Modules/VoiceOS/libraries/JITLearning/src/main/java/com/augmentalis/jitlearning/ExplorationProgress.kt`
+
+```kotlin
+/**
+ * Exploration progress data
+ *
+ * Contains progress metrics for an ongoing exploration session.
+ * Implements Parcelable for AIDL IPC transmission.
+ */
+data class ExplorationProgress(
+    /** Number of screens explored */
+    val screensExplored: Int = 0,
+
+    /** Number of elements discovered */
+    val elementsDiscovered: Int = 0,
+
+    /** Current exploration depth */
+    val currentDepth: Int = 0,
+
+    /** Package being explored */
+    val packageName: String = "",
+
+    /** Current exploration state (idle, running, paused, completed, failed) */
+    val state: String = "idle",
+
+    /** Pause reason if paused */
+    val pauseReason: String? = null,
+
+    /** Progress percentage (0-100) */
+    val progressPercent: Int = 0,
+
+    /** Time elapsed in milliseconds */
+    val elapsedMs: Long = 0
+) : Parcelable {
+
+    // Parcelable implementation...
+
+    companion object CREATOR : Parcelable.Creator<ExplorationProgress> {
+        // Factory methods for clean construction
+
+        fun idle() = ExplorationProgress(state = "idle")
+
+        fun running(
+            packageName: String,
+            screensExplored: Int,
+            elementsDiscovered: Int,
+            currentDepth: Int,
+            progressPercent: Int,
+            elapsedMs: Long
+        ) = ExplorationProgress(
+            screensExplored = screensExplored,
+            elementsDiscovered = elementsDiscovered,
+            currentDepth = currentDepth,
+            packageName = packageName,
+            state = "running",
+            progressPercent = progressPercent,
+            elapsedMs = elapsedMs
+        )
+
+        fun paused(
+            packageName: String,
+            screensExplored: Int,
+            elementsDiscovered: Int,
+            pauseReason: String
+        ) = ExplorationProgress(
+            screensExplored = screensExplored,
+            elementsDiscovered = elementsDiscovered,
+            packageName = packageName,
+            state = "paused",
+            pauseReason = pauseReason
+        )
+
+        fun completed(
+            packageName: String,
+            screensExplored: Int,
+            elementsDiscovered: Int
+        ) = ExplorationProgress(
+            screensExplored = screensExplored,
+            elementsDiscovered = elementsDiscovered,
+            packageName = packageName,
+            state = "completed",
+            progressPercent = 100
+        )
+    }
+}
+```
+
+## 5.4 JITLearningService Implementation
+
+**File:** `Modules/VoiceOS/libraries/JITLearning/src/main/java/com/augmentalis/jitlearning/JITLearningService.kt`
+
+### 5.4.1 Listener Management
+
+```kotlin
+class JITLearningService : Service() {
+
+    /** Exploration progress listeners (thread-safe) */
+    private val explorationListeners = CopyOnWriteArrayList<IExplorationProgressListener>()
+
+    /**
+     * Dispatch exploration progress to all registered listeners
+     *
+     * Called when exploration state changes. Handles binder death
+     * gracefully by removing dead listeners.
+     */
+    private fun dispatchExplorationProgress(progress: ExplorationProgress) {
+        val deadListeners = mutableListOf<IExplorationProgressListener>()
+
+        explorationListeners.forEach { listener ->
+            try {
+                listener.onProgressUpdate(progress)
+            } catch (e: RemoteException) {
+                Log.w(TAG, "Listener died, removing", e)
+                deadListeners.add(listener)
+            }
+        }
+
+        // Clean up dead listeners
+        explorationListeners.removeAll(deadListeners)
+    }
+}
+```
+
+### 5.4.2 Binder Implementation
+
+```kotlin
+private val binder = object : IElementCaptureService.Stub() {
+
+    // Existing methods...
+
+    override fun startExploration(packageName: String): Boolean {
+        Log.i(TAG, "Start exploration requested for: $packageName")
+        return learnerProvider?.startExploration(packageName) ?: false
+    }
+
+    override fun stopExploration() {
+        Log.i(TAG, "Stop exploration requested")
+        learnerProvider?.stopExploration()
+    }
+
+    override fun pauseExploration() {
+        Log.i(TAG, "Pause exploration requested")
+        learnerProvider?.pauseExploration()
+    }
+
+    override fun resumeExploration() {
+        Log.i(TAG, "Resume exploration requested")
+        learnerProvider?.resumeExploration()
+    }
+
+    override fun getExplorationProgress(): ExplorationProgress {
+        return learnerProvider?.getExplorationProgress()
+            ?: ExplorationProgress.idle()
+    }
+
+    override fun registerExplorationListener(listener: IExplorationProgressListener) {
+        Log.d(TAG, "Registering exploration listener")
+        explorationListeners.add(listener)
+
+        // Send current state immediately
+        val currentProgress = learnerProvider?.getExplorationProgress()
+            ?: ExplorationProgress.idle()
+        try {
+            listener.onProgressUpdate(currentProgress)
+        } catch (e: RemoteException) {
+            Log.w(TAG, "Failed to send initial progress", e)
+            explorationListeners.remove(listener)
+        }
+    }
+
+    override fun unregisterExplorationListener(listener: IExplorationProgressListener) {
+        Log.d(TAG, "Unregistering exploration listener")
+        explorationListeners.remove(listener)
+    }
+}
+```
+
+## 5.5 LearnAppIntegration Implementation
+
+**File:** `Modules/VoiceOS/apps/VoiceOSCore/src/main/java/com/augmentalis/voiceoscore/learnapp/integration/LearnAppIntegration.kt`
+
+### 5.5.1 JITLearnerProvider Implementation
+
+```kotlin
+class LearnAppIntegration : JITLearnerProvider {
+
+    // Exploration progress callback reference
+    private var explorationProgressCallback: ExplorationProgressCallback? = null
+
+    /**
+     * Start automated exploration (v2.1 - P2 Feature)
+     * Note: pauseExploration, resumeExploration, stopExploration are defined above
+     */
+    override fun startExploration(packageName: String): Boolean {
+        Log.i(TAG, "Start exploration requested via IPC for: $packageName")
+        return try {
+            scope.launch {
+                explorationEngine.startExploration(packageName, null)
+            }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start exploration", e)
+            false
+        }
+    }
+
+    /**
+     * Get current exploration progress (v2.1 - P2 Feature)
+     *
+     * Converts internal ExplorationState to IPC-safe ExplorationProgress
+     */
+    override fun getExplorationProgress(): ExplorationProgress {
+        val state = explorationEngine.explorationState.value
+        return when (state) {
+            is ExplorationState.Idle -> ExplorationProgress.idle()
+
+            is ExplorationState.Running -> ExplorationProgress.running(
+                packageName = state.packageName,
+                screensExplored = state.progress.screensExplored,
+                elementsDiscovered = state.progress.elementsDiscovered,
+                currentDepth = state.progress.currentDepth,
+                progressPercent = (state.progress.calculatePercentage() * 100).toInt(),
+                elapsedMs = state.progress.elapsedTimeMs
+            )
+
+            is ExplorationState.Paused -> ExplorationProgress.paused(
+                packageName = state.packageName,
+                screensExplored = state.progress.screensExplored,
+                elementsDiscovered = state.progress.elementsDiscovered,
+                pauseReason = state.reason
+            )
+
+            is ExplorationState.PausedForLogin -> ExplorationProgress.paused(
+                packageName = state.packageName,
+                screensExplored = state.progress.screensExplored,
+                elementsDiscovered = state.progress.elementsDiscovered,
+                pauseReason = "Login screen detected"
+            )
+
+            is ExplorationState.PausedByUser -> ExplorationProgress.paused(
+                packageName = state.packageName,
+                screensExplored = state.progress.screensExplored,
+                elementsDiscovered = state.progress.elementsDiscovered,
+                pauseReason = "User paused"
+            )
+
+            is ExplorationState.Completed -> ExplorationProgress.completed(
+                packageName = state.packageName,
+                screensExplored = state.stats.totalScreens,
+                elementsDiscovered = state.stats.totalElements
+            )
+
+            is ExplorationState.Failed -> ExplorationProgress(
+                packageName = state.packageName,
+                state = "failed",
+                screensExplored = state.partialProgress?.screensExplored ?: 0,
+                elementsDiscovered = state.partialProgress?.elementsDiscovered ?: 0
+            )
+
+            else -> ExplorationProgress.idle()
+        }
+    }
+
+    /**
+     * Set exploration progress callback (v2.1 - P2 Feature)
+     *
+     * Observes ExplorationEngine state and forwards to callback
+     */
+    override fun setExplorationCallback(callback: ExplorationProgressCallback?) {
+        explorationProgressCallback = callback
+
+        if (callback != null) {
+            scope.launch {
+                explorationEngine.explorationState.collect { state ->
+                    val progress = getExplorationProgress()
+                    when (state) {
+                        is ExplorationState.Completed -> callback.onCompleted(progress)
+                        is ExplorationState.Failed -> callback.onFailed(
+                            progress,
+                            state.error.message ?: "Unknown error"
+                        )
+                        else -> callback.onProgressUpdate(progress)
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+---
+
+# Chapter 7: UI/UX Design
+
+## 7.1 GraphViewer Activity UI Specification
+
+### 7.1.1 Screen Layout (ASCII Wireframe)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ◀ Graph Viewer                                    ⋮ Menu   │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  CONNECTION STATUS                                      │ │
+│  │  ┌──────────────────────────────────────────────────┐  │ │
+│  │  │  ● Status: Disconnected                           │  │ │
+│  │  │  URI: bolt://localhost:7687                       │  │ │
+│  │  │  User: neo4j                                      │  │ │
+│  │  │                                                   │  │ │
+│  │  │  [    Connect    ]  [  Disconnect  ]              │  │ │
+│  │  └──────────────────────────────────────────────────┘  │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  GRAPH STATISTICS                                       │ │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────────┐   │ │
+│  │  │  Screens   │  │  Elements  │  │  Navigations   │   │ │
+│  │  │    127     │  │   2,458    │  │      89        │   │ │
+│  │  └────────────┘  └────────────┘  └────────────────┘   │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  EXPORT CONTROLS                                        │ │
+│  │                                                         │ │
+│  │  [====================] 66%                             │ │
+│  │  Exporting elements...                                  │ │
+│  │                                                         │ │
+│  │  [  Export All  ]  [  Clear DB  ]                      │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  CYPHER QUERY                                           │ │
+│  │  ┌──────────────────────────────────────────────────┐  │ │
+│  │  │  MATCH (s:Screen) RETURN s LIMIT 10              │  │ │
+│  │  │                                                   │  │ │
+│  │  └──────────────────────────────────────────────────┘  │ │
+│  │  [  Execute Query  ]                                   │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  QUERY RESULTS                                          │ │
+│  │  ┌──────────────────────────────────────────────────┐  │ │
+│  │  │  Row 1: {screenHash: "abc123", activity: "Main"} │  │ │
+│  │  │  Row 2: {screenHash: "def456", activity: "List"} │  │ │
+│  │  │  Row 3: {screenHash: "ghi789", activity: "Detail"}│  │ │
+│  │  └──────────────────────────────────────────────────┘  │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  EXAMPLE QUERIES                                        │ │
+│  │  • List all screens                                     │ │
+│  │  • Screens with elements                                │ │
+│  │  • Navigation paths                                     │ │
+│  │  • Elements with voice commands                         │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 7.1.2 Connection States UI
+
+```
+STATE: DISCONNECTED
+┌────────────────────────────────────────┐
+│  ○ Disconnected                        │
+│  URI: [bolt://localhost:7687     ]     │
+│  User: [neo4j                    ]     │
+│  Pass: [••••••••                 ]     │
+│  [      Connect      ]                 │
+└────────────────────────────────────────┘
+
+STATE: CONNECTING
+┌────────────────────────────────────────┐
+│  ◐ Connecting...                       │
+│  URI: bolt://localhost:7687            │
+│  [    Cancel    ]                      │
+└────────────────────────────────────────┘
+
+STATE: CONNECTED
+┌────────────────────────────────────────┐
+│  ● Connected                           │
+│  Server: Neo4j 5.x                     │
+│  URI: bolt://localhost:7687            │
+│  [   Disconnect   ]                    │
+└────────────────────────────────────────┘
+
+STATE: ERROR
+┌────────────────────────────────────────┐
+│  ⚠ Connection Failed                   │
+│  Error: Unable to connect              │
+│  [    Retry    ] [   Cancel   ]        │
+└────────────────────────────────────────┘
+```
+
+### 7.1.3 Export Progress States
+
+```
+IDLE:
+┌────────────────────────────────────────┐
+│  Export Learned Data to Neo4j          │
+│  [      Export All      ]              │
+└────────────────────────────────────────┘
+
+EXPORTING SCREENS (33%):
+┌────────────────────────────────────────┐
+│  [=========                    ] 33%   │
+│  Exporting screens (127 of 127)...     │
+│  [      Cancel      ]                  │
+└────────────────────────────────────────┘
+
+EXPORTING ELEMENTS (66%):
+┌────────────────────────────────────────┐
+│  [==================           ] 66%   │
+│  Exporting elements (1,642 of 2,458)...│
+│  [      Cancel      ]                  │
+└────────────────────────────────────────┘
+
+EXPORTING NAVIGATIONS (100%):
+┌────────────────────────────────────────┐
+│  [=============================] 100%  │
+│  Export complete!                      │
+│  127 screens, 2,458 elements, 89 navs  │
+│  [        OK        ]                  │
+└────────────────────────────────────────┘
+```
+
+## 7.2 Exploration Sync UI Specification
+
+### 7.2.1 LearnApp Exploration Control UI
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ◀ Explore App                                     ⋮ Menu   │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  SELECT APP TO EXPLORE                                  │ │
+│  │  ┌──────────────────────────────────────────────────┐  │ │
+│  │  │  📱 Google Photos                                 │  │ │
+│  │  │     com.google.android.apps.photos               │  │ │
+│  │  │     Last explored: Never                          │  │ │
+│  │  │  ──────────────────────────────────────────────  │  │ │
+│  │  │  📱 Gmail                                         │  │ │
+│  │  │     com.google.android.gm                        │  │ │
+│  │  │     Last explored: 2 hours ago (42 screens)      │  │ │
+│  │  │  ──────────────────────────────────────────────  │  │ │
+│  │  │  📱 Chrome                                        │  │ │
+│  │  │     com.android.chrome                           │  │ │
+│  │  │     Last explored: Yesterday (128 screens)       │  │ │
+│  │  └──────────────────────────────────────────────────┘  │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  EXPLORATION STATUS                                     │ │
+│  │                                                         │ │
+│  │  State: Running                                         │ │
+│  │  Package: com.google.android.apps.photos                │ │
+│  │                                                         │ │
+│  │  [====================                    ] 45%         │ │
+│  │                                                         │ │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │ │
+│  │  │   Screens    │  │   Elements   │  │    Depth     │  │ │
+│  │  │      23      │  │     412      │  │      3       │  │ │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘  │ │
+│  │                                                         │ │
+│  │  Elapsed: 2m 34s                                        │ │
+│  │                                                         │ │
+│  │  [  Pause  ]  [  Stop  ]                               │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  LIVE LOG                                               │ │
+│  │  ┌──────────────────────────────────────────────────┐  │ │
+│  │  │ 14:32:05 Exploring: PhotoGridActivity            │  │ │
+│  │  │ 14:32:06 Found 24 clickable elements             │  │ │
+│  │  │ 14:32:08 Clicking: "Albums" button               │  │ │
+│  │  │ 14:32:10 Navigated to: AlbumsActivity            │  │ │
+│  │  │ 14:32:11 Found 18 clickable elements             │  │ │
+│  │  └──────────────────────────────────────────────────┘  │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 7.2.2 Exploration State Visual Indicators
+
+```
+STATE: IDLE
+┌────────────────────────────────────────┐
+│  ○ Idle - Ready to explore             │
+│                                        │
+│  [    Start Exploration    ]           │
+└────────────────────────────────────────┘
+
+STATE: RUNNING
+┌────────────────────────────────────────┐
+│  ◉ Running - Exploring app             │
+│  [========            ] 40%            │
+│  23 screens, 412 elements              │
+│                                        │
+│  [  Pause  ]  [  Stop  ]               │
+└────────────────────────────────────────┘
+
+STATE: PAUSED
+┌────────────────────────────────────────┐
+│  ⏸ Paused - User paused                │
+│  [========            ] 40%            │
+│  23 screens, 412 elements              │
+│                                        │
+│  [  Resume  ]  [  Stop  ]              │
+└────────────────────────────────────────┘
+
+STATE: PAUSED_FOR_LOGIN
+┌────────────────────────────────────────┐
+│  🔐 Paused - Login screen detected     │
+│  Please log in to continue             │
+│  [========            ] 40%            │
+│                                        │
+│  [  Resume  ]  [  Skip Login  ]        │
+└────────────────────────────────────────┘
+
+STATE: COMPLETED
+┌────────────────────────────────────────┐
+│  ✓ Completed!                          │
+│  [============================] 100%   │
+│  52 screens, 1,248 elements            │
+│  89 navigation paths                   │
+│                                        │
+│  [  View Results  ]  [  Export  ]      │
+└────────────────────────────────────────┘
+
+STATE: FAILED
+┌────────────────────────────────────────┐
+│  ✗ Failed - Connection lost            │
+│  Error: Service disconnected           │
+│  [========            ] 40%            │
+│  Progress saved: 23 screens            │
+│                                        │
+│  [  Retry  ]  [  Cancel  ]             │
+└────────────────────────────────────────┘
+```
+
+## 7.3 Screen Hash Query UI
+
+### 7.3.1 Learned Screens Display
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Learned Screens for: com.google.android.apps.photos        │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Total: 52 screens learned                                   │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  SCREEN LIST                                            │ │
+│  │                                                         │ │
+│  │  abc123def456 │ MainActivity          │ 24 elements    │ │
+│  │  def456ghi789 │ PhotoGridActivity     │ 18 elements    │ │
+│  │  ghi789jkl012 │ AlbumsActivity        │ 12 elements    │ │
+│  │  jkl012mno345 │ PhotoDetailActivity   │ 8 elements     │ │
+│  │  mno345pqr678 │ SettingsActivity      │ 32 elements    │ │
+│  │  ...                                                    │ │
+│  │                                                         │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  [  Refresh  ]  [  Export CSV  ]  [  Clear All  ]          │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## 7.4 Color Palette and Theming
+
+### 7.4.1 Status Colors
+
+| State | Color | Hex Code | Usage |
+|-------|-------|----------|-------|
+| Idle | Gray | #9E9E9E | Default state indicator |
+| Running | Blue | #2196F3 | Active operation |
+| Paused | Orange | #FF9800 | User-paused state |
+| Completed | Green | #4CAF50 | Success state |
+| Failed | Red | #F44336 | Error state |
+| Warning | Amber | #FFC107 | Login required, etc. |
+
+### 7.4.2 Neo4j Brand Colors
+
+| Element | Color | Hex Code |
+|---------|-------|----------|
+| Primary | Neo4j Blue | #018BFF |
+| Secondary | Neo4j Green | #00CCBB |
+| Background | Dark | #1A1A1A |
+| Text | Light | #FFFFFF |
+
+## 7.5 Component Specifications
+
+### 7.5.1 Progress Bar Component
+
+```kotlin
+@Composable
+fun ExplorationProgressBar(
+    progress: Float,        // 0.0 to 1.0
+    state: ExplorationState,
+    screensExplored: Int,
+    elementsDiscovered: Int
+) {
+    Column {
+        LinearProgressIndicator(
+            progress = progress,
+            color = when (state) {
+                is Running -> MaterialTheme.colorScheme.primary
+                is Paused -> MaterialTheme.colorScheme.tertiary
+                is Failed -> MaterialTheme.colorScheme.error
+                else -> MaterialTheme.colorScheme.surfaceVariant
+            }
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("${(progress * 100).toInt()}%")
+            Text("$screensExplored screens, $elementsDiscovered elements")
+        }
+    }
+}
+```
+
+### 7.5.2 Connection Status Card
+
+```kotlin
+@Composable
+fun ConnectionStatusCard(
+    state: ConnectionState,
+    uri: String,
+    onConnect: () -> Unit,
+    onDisconnect: () -> Unit
+) {
+    Card {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Status indicator
+            Icon(
+                painter = when (state) {
+                    is Connected -> painterResource(R.drawable.ic_check_circle)
+                    is Connecting -> painterResource(R.drawable.ic_sync)
+                    is Error -> painterResource(R.drawable.ic_error)
+                    else -> painterResource(R.drawable.ic_circle)
+                },
+                tint = when (state) {
+                    is Connected -> Color.Green
+                    is Connecting -> Color.Blue
+                    is Error -> Color.Red
+                    else -> Color.Gray
+                }
+            )
+
+            Column {
+                Text(
+                    text = when (state) {
+                        is Connected -> "Connected"
+                        is Connecting -> "Connecting..."
+                        is Error -> "Connection Failed"
+                        else -> "Disconnected"
+                    }
+                )
+                Text(text = uri, style = MaterialTheme.typography.bodySmall)
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            when (state) {
+                is Connected -> Button(onClick = onDisconnect) { Text("Disconnect") }
+                is Disconnected -> Button(onClick = onConnect) { Text("Connect") }
+                else -> {}
+            }
+        }
+    }
+}
+```
+
+### 7.5.3 Statistics Grid Component
+
+```kotlin
+@Composable
+fun StatsGrid(stats: GraphStats?) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        StatCard(
+            label = "Screens",
+            value = stats?.screenCount?.toString() ?: "--",
+            icon = R.drawable.ic_screen
+        )
+        StatCard(
+            label = "Elements",
+            value = stats?.elementCount?.toString() ?: "--",
+            icon = R.drawable.ic_element
+        )
+        StatCard(
+            label = "Navigations",
+            value = stats?.navigationCount?.toString() ?: "--",
+            icon = R.drawable.ic_navigation
+        )
+    }
+}
+
+@Composable
+fun StatCard(label: String, value: String, icon: Int) {
+    Card {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(painterResource(icon), contentDescription = label)
+            Text(text = value, style = MaterialTheme.typography.headlineMedium)
+            Text(text = label, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+```
+
+## 7.6 Accessibility Considerations
+
+### 7.6.1 Screen Reader Support
+
+| Element | Content Description |
+|---------|---------------------|
+| Status indicator | "Connection status: {state}" |
+| Progress bar | "Exploration progress: {percent} percent, {screens} screens explored" |
+| Connect button | "Connect to Neo4j database" |
+| Export button | "Export all learned data to Neo4j" |
+| Stats card | "{value} {label}" (e.g., "127 screens") |
+
+### 7.6.2 Keyboard Navigation
+
+| Key | Action |
+|-----|--------|
+| Tab | Navigate between interactive elements |
+| Enter/Space | Activate buttons |
+| Escape | Cancel operation / Close dialog |
+| Arrow keys | Navigate within lists |
+
+---
+
+# Chapter 8: Class Reference
+
+## 8.1 Database Classes
+
+| Class | File | Purpose |
+|-------|------|---------|
+| `IScreenContextRepository` | database/repositories/ | Screen context repository interface |
+| `SQLDelightScreenContextRepository` | database/repositories/impl/ | SQLDelight implementation |
+| `ScreenContextDTO` | database/dto/ | Screen context data transfer object |
+
+## 6.2 Neo4j Classes
+
+| Class | File | Purpose |
+|-------|------|---------|
+| `Neo4jService` | learnappdev/neo4j/ | Neo4j connection and export |
+| `ConnectionState` | learnappdev/neo4j/ | Connection state sealed class |
+| `ScreenExport` | learnappdev/neo4j/ | Screen export data |
+| `ElementExport` | learnappdev/neo4j/ | Element export data |
+| `NavigationExport` | learnappdev/neo4j/ | Navigation export data |
+| `GraphViewerActivity` | learnappdev/neo4j/ | Neo4j UI |
+
+## 6.3 AIDL Interfaces
+
+| Interface | File | Purpose |
+|-----------|------|---------|
+| `IElementCaptureService` | jitlearning/ | Main service interface |
+| `IExplorationProgressListener` | jitlearning/ | Progress callback |
+| `ExplorationProgress` | jitlearning/ | Progress parcelable |
+
+## 6.4 Provider Classes
+
+| Class | File | Purpose |
+|-------|------|---------|
+| `JITLearnerProvider` | jitlearning/ | Provider interface |
+| `ExplorationProgressCallback` | jitlearning/ | Progress callback interface |
+| `JITLearningService` | jitlearning/ | Service implementation |
+| `LearnAppIntegration` | voiceoscore/learnapp/ | Provider implementation |
+
+---
+
+# Chapter 7: Integration Guide
+
+## 7.1 Adding Screen Hash Query Support
+
+### Step 1: Add Repository Method
+
+```kotlin
+// In your repository interface
+suspend fun getByPackage(packageName: String): List<YourDTO>
+```
+
+### Step 2: Implement in SQLDelight Repository
+
+```kotlin
+override suspend fun getByPackage(packageName: String): List<YourDTO> =
+    withContext(Dispatchers.Default) {
+        queries.getByPackage(packageName)
+            .executeAsList()
+            .map { it.toDTO() }
+    }
+```
+
+### Step 3: Wire Through JITLearnerProvider
+
+```kotlin
+override fun getLearnedScreenHashes(packageName: String): List<String> {
+    return runBlocking {
+        repository.getByPackage(packageName).map { it.screenHash }
+    }
+}
+```
+
+## 7.2 Adding Neo4j Export
+
+### Step 1: Create Export Data Classes
+
+```kotlin
+data class YourExport(
+    val id: String,
+    val properties: Map<String, Any>
+)
+```
+
+### Step 2: Add Export Method to Neo4jService
+
+```kotlin
+suspend fun exportYourData(data: List<YourExport>): Result<Int> {
+    return withContext(Dispatchers.IO) {
+        try {
+            session.executeWrite { tx ->
+                data.forEach { item ->
+                    tx.run("""
+                        MERGE (n:YourLabel {id: ${'$'}id})
+                        SET n += ${'$'}props
+                    """.trimIndent(), mapOf(
+                        "id" to item.id,
+                        "props" to item.properties
+                    ))
+                }
+            }
+            Result.success(data.size)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+}
+```
+
+## 7.3 Adding Exploration Sync Listener
+
+### In LearnApp:
+
+```kotlin
+class ExplorationListener : IExplorationProgressListener.Stub() {
+    override fun onProgressUpdate(progress: ExplorationProgress) {
+        Log.d(TAG, "Progress: ${progress.screensExplored} screens")
+        updateUI(progress)
+    }
+
+    override fun onCompleted(progress: ExplorationProgress) {
+        Log.i(TAG, "Exploration complete!")
+        showCompletionNotification(progress)
+    }
+
+    override fun onFailed(progress: ExplorationProgress, error: String) {
+        Log.e(TAG, "Exploration failed: $error")
+        showErrorDialog(error)
+    }
+}
+
+// Register listener
+val listener = ExplorationListener()
+elementCaptureService.registerExplorationListener(listener)
+
+// Start exploration
+val success = elementCaptureService.startExploration("com.example.app")
+
+// Control exploration
+elementCaptureService.pauseExploration()
+elementCaptureService.resumeExploration()
+elementCaptureService.stopExploration()
+
+// Query progress
+val progress = elementCaptureService.getExplorationProgress()
+
+// Cleanup
+elementCaptureService.unregisterExplorationListener(listener)
+```
+
+---
+
+# Appendix A: API Quick Reference
+
+## Screen Hash Query
+
+```kotlin
+// AIDL
+List<String> getLearnedScreenHashes(String packageName);
+
+// Usage
+val hashes = service.getLearnedScreenHashes("com.google.photos")
+```
+
+## Exploration Sync
+
+```kotlin
+// Start/Stop/Control
+boolean startExploration(String packageName);
+void stopExploration();
+void pauseExploration();
+void resumeExploration();
+
+// Query
+ExplorationProgress getExplorationProgress();
+
+// Callbacks
+void registerExplorationListener(IExplorationProgressListener listener);
+void unregisterExplorationListener(IExplorationProgressListener listener);
+```
+
+## Neo4j Service
+
+```kotlin
+// Connection
+suspend fun connect(uri: String, user: String, password: String): Result<Unit>
+fun disconnect()
+
+// Export
+suspend fun exportScreens(screens: List<ScreenExport>): Result<Int>
+suspend fun exportElements(elements: List<ElementExport>): Result<Int>
+suspend fun exportNavigations(navigations: List<NavigationExport>): Result<Int>
+
+// Query
+suspend fun executeQuery(cypher: String): Result<List<Map<String, Any>>>
+suspend fun getStats(): Result<GraphStats>
+```
+
+---
+
+# Appendix B: Code Examples
+
+## B.1 Complete LearnApp Integration
+
+```kotlin
+class LearnAppExplorationActivity : AppCompatActivity() {
+
+    private var service: IElementCaptureService? = null
+    private val listener = ExplorationProgressListenerImpl()
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+            service = IElementCaptureService.Stub.asInterface(binder)
+            service?.registerExplorationListener(listener)
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            service = null
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Bind to service
+        Intent().apply {
+            component = ComponentName(
+                "com.augmentalis.voiceoscore",
+                "com.augmentalis.jitlearning.JITLearningService"
+            )
+        }.also { intent ->
+            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
+    }
+
+    fun startExploration(packageName: String) {
+        val success = service?.startExploration(packageName) ?: false
+        if (success) {
+            showProgress()
+        } else {
+            showError("Failed to start exploration")
+        }
+    }
+
+    override fun onDestroy() {
+        service?.unregisterExplorationListener(listener)
+        unbindService(connection)
+        super.onDestroy()
+    }
+
+    inner class ExplorationProgressListenerImpl : IExplorationProgressListener.Stub() {
+        override fun onProgressUpdate(progress: ExplorationProgress) {
+            runOnUiThread {
+                updateProgressUI(progress)
+            }
+        }
+
+        override fun onCompleted(progress: ExplorationProgress) {
+            runOnUiThread {
+                showCompletionDialog(progress)
+            }
+        }
+
+        override fun onFailed(progress: ExplorationProgress, error: String) {
+            runOnUiThread {
+                showErrorDialog(error)
+            }
+        }
+    }
+}
+```
+
+## B.2 Neo4j Full Export
+
+```kotlin
+class GraphExporter(
+    private val neo4jService: Neo4jService,
+    private val repository: LearnAppRepository
+) {
+    suspend fun exportAll(packageName: String): Result<ExportStats> {
+        return try {
+            // Connect
+            neo4jService.connect(uri, user, password).getOrThrow()
+
+            // Clear existing data for package
+            neo4jService.executeQuery(
+                "MATCH (n) WHERE n.packageName = '$packageName' DETACH DELETE n"
+            )
+
+            // Export screens
+            val screens = repository.getScreensForPackage(packageName)
+            val screenCount = neo4jService.exportScreens(
+                screens.map { ScreenExport(it.hash, packageName, it.activity, it.elementCount, it.timestamp) }
+            ).getOrThrow()
+
+            // Export elements
+            val elements = repository.getElementsForPackage(packageName)
+            val elementCount = neo4jService.exportElements(
+                elements.map { ElementExport(it.stableId, it.screenHash, it.vuid, it.className, it.voiceCommand, it.bounds) }
+            ).getOrThrow()
+
+            // Export navigations
+            val navs = repository.getNavigationsForPackage(packageName)
+            val navCount = neo4jService.exportNavigations(
+                navs.map { NavigationExport(it.fromHash, it.toHash, it.trigger, it.timestamp) }
+            ).getOrThrow()
+
+            Result.success(ExportStats(screenCount, elementCount, navCount))
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            neo4jService.disconnect()
+        }
+    }
+}
+```
+
+---
+
+# Appendix C: Testing Guide
+
+## C.1 Testing Screen Hash Queries
+
+```kotlin
+@Test
+fun `getLearnedScreenHashes returns correct hashes`() = runBlocking {
+    // Setup
+    val repository = FakeScreenContextRepository()
+    repository.insert(ScreenContextDTO(
+        screenHash = "abc123def456",
+        packageName = "com.test.app",
+        activityName = "MainActivity"
+    ))
+
+    // Execute
+    val integration = LearnAppIntegration(repository)
+    val hashes = integration.getLearnedScreenHashes("com.test.app")
+
+    // Verify
+    assertEquals(listOf("abc123def456"), hashes)
+}
+```
+
+## C.2 Testing Exploration Progress
+
+```kotlin
+@Test
+fun `exploration progress converts correctly`() {
+    // Setup
+    val engine = FakeExplorationEngine()
+    engine.setState(ExplorationState.Running(
+        packageName = "com.test.app",
+        progress = ExplorationProgress(
+            screensExplored = 5,
+            elementsDiscovered = 42
+        )
+    ))
+
+    val integration = LearnAppIntegration(engine)
+
+    // Execute
+    val progress = integration.getExplorationProgress()
+
+    // Verify
+    assertEquals("running", progress.state)
+    assertEquals(5, progress.screensExplored)
+    assertEquals(42, progress.elementsDiscovered)
+    assertEquals("com.test.app", progress.packageName)
+}
+```
+
+## C.3 Testing Neo4j Export
+
+```kotlin
+@Test
+fun `exportScreens creates correct nodes`() = runBlocking {
+    // Setup
+    val neo4j = TestNeo4jService()
+
+    // Execute
+    val result = neo4j.exportScreens(listOf(
+        ScreenExport("hash1", "com.test", "MainActivity", 10, 12345L)
+    ))
+
+    // Verify
+    assertTrue(result.isSuccess)
+    assertEquals(1, result.getOrNull())
+
+    val nodes = neo4j.executeQuery("MATCH (s:Screen) RETURN s")
+    assertEquals(1, nodes.getOrNull()?.size)
+}
+```
+
+---
+
+# Document History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0 | 2025-12-11 | Initial release with P2 features |
+
+---
+
+**End of Developer Manual**
