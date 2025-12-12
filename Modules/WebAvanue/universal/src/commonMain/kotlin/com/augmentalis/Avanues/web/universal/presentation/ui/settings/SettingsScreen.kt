@@ -2539,3 +2539,136 @@ fun XRPerformanceModeSettingItem(
         modifier = modifier
     )
 }
+// ==================== Search & Collapsible Section Composables ====================
+
+/**
+ * Settings search bar with expand/collapse controls
+ *
+ * Provides:
+ * - Search input for filtering settings (case-insensitive)
+ * - Clear button when query is active
+ * - Expand All / Collapse All buttons when not searching
+ *
+ * @param searchQuery Current search query
+ * @param onSearchQueryChange Callback when search query changes
+ * @param onExpandAll Callback to expand all sections
+ * @param onCollapseAll Callback to collapse all sections
+ * @param modifier Modifier for customization
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsSearchBar(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onExpandAll: () -> Unit,
+    onCollapseAll: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = OceanTheme.surface,
+        shadowElevation = 4.dp
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search settings...") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search"
+                    )
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onSearchQueryChange("") }) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Clear search",
+                                modifier = Modifier.graphicsLayer(rotationZ = 180f)
+                            )
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = OceanTheme.primary,
+                    unfocusedBorderColor = OceanTheme.textSecondary.copy(alpha = 0.3f)
+                )
+            )
+
+            // Expand/Collapse all buttons (hidden when searching)
+            if (searchQuery.isEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onExpandAll) {
+                        Text("Expand All", color = OceanTheme.primary)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(onClick = onCollapseAll) {
+                        Text("Collapse All", color = OceanTheme.primary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Collapsible section header with expand/collapse indicator
+ *
+ * Features:
+ * - Expand/collapse icon (chevron up/down)
+ * - Highlight when section matches search
+ * - Click to toggle expansion
+ *
+ * @param title Section title
+ * @param isExpanded Whether section is currently expanded
+ * @param onToggle Callback when header is clicked
+ * @param matchesSearch Whether this section matches current search
+ * @param modifier Modifier for customization
+ */
+@Composable
+private fun CollapsibleSectionHeader(
+    title: String,
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    matchesSearch: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onToggle() }
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        color = if (matchesSearch) OceanTheme.primary.copy(alpha = 0.15f) else Color.Transparent,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = if (matchesSearch) OceanTheme.primary else MaterialTheme.colorScheme.primary
+            )
+            Icon(
+                imageVector = if (isExpanded) Icons.Default.Info else Icons.Default.ChevronRight,
+                contentDescription = if (isExpanded) "Collapse" else "Expand",
+                tint = if (matchesSearch) OceanTheme.primary else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.graphicsLayer(
+                    rotationZ = if (isExpanded && title.isNotEmpty()) 90f else 0f
+                )
+            )
+        }
+    }
+}

@@ -58,6 +58,18 @@ class MainActivity : ComponentActivity() {
         // Initialize secure storage for encrypted credential storage
         val secureStorage = SecureStorage(applicationContext)
 
+        // Initialize download queue for file downloads with settings callback
+        val downloadQueue = com.augmentalis.Avanues.web.universal.download.AndroidDownloadQueue(
+            context = applicationContext,
+            getDownloadPath = {
+                // Get download path from settings synchronously
+                // Note: This runs on IO dispatcher from AndroidDownloadQueue
+                runBlocking {
+                    repository.getSettings().getOrNull()?.downloadPath
+                }
+            }
+        )
+
         // Initialize XR Manager with lifecycle awareness
         xrManager = XRManager(this, lifecycle)
 
@@ -69,6 +81,7 @@ class MainActivity : ComponentActivity() {
             BrowserApp(
                 repository = repository,
                 secureStorage = secureStorage,
+                downloadQueue = downloadQueue,
                 xrManager = xrManager,
                 xrState = xrState,
                 modifier = Modifier.fillMaxSize()

@@ -1042,91 +1042,122 @@ class BrowserRepositoryImpl(
 
     override suspend fun saveSession(session: Session, tabs: List<SessionTab>): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            // TODO: Implement session persistence when session table is added to schema
-            Napier.d("Session save not implemented yet - awaiting database schema", tag = "BrowserRepository")
+            // Insert session
+            queries.insertSession(
+                id = session.id,
+                timestamp = session.timestamp.toEpochMilliseconds(),
+                active_tab_id = session.activeTabId,
+                tab_count = session.tabCount.toLong(),
+                is_crash_recovery = if (session.isCrashRecovery) 1L else 0L
+            )
+
+            // Insert all session tabs
+            tabs.forEach { sessionTab ->
+                queries.insertSessionTab(sessionTab.toDbModel())
+            }
+
+            Napier.d("Saved session ${session.id} with ${tabs.size} tabs", tag = "BrowserRepository")
             Result.success(Unit)
         } catch (e: Exception) {
+            Napier.e("Failed to save session: ${e.message}", e, tag = "BrowserRepository")
             Result.failure(e)
         }
     }
 
     override suspend fun getSession(sessionId: String): Result<Session?> = withContext(Dispatchers.IO) {
         try {
-            // TODO: Implement session retrieval when session table is added to schema
-            Result.success(null)
+            val dbSession = queries.selectSessionById(sessionId).executeAsOneOrNull()
+            Result.success(dbSession?.toDomainModel())
         } catch (e: Exception) {
+            Napier.e("Failed to get session $sessionId: ${e.message}", e, tag = "BrowserRepository")
             Result.failure(e)
         }
     }
 
     override suspend fun getLatestSession(): Result<Session?> = withContext(Dispatchers.IO) {
         try {
-            // TODO: Implement latest session retrieval when session table is added to schema
-            Result.success(null)
+            val dbSession = queries.selectLatestSession().executeAsOneOrNull()
+            Result.success(dbSession?.toDomainModel())
         } catch (e: Exception) {
+            Napier.e("Failed to get latest session: ${e.message}", e, tag = "BrowserRepository")
             Result.failure(e)
         }
     }
 
     override suspend fun getLatestCrashSession(): Result<Session?> = withContext(Dispatchers.IO) {
         try {
-            // TODO: Implement crash session retrieval when session table is added to schema
-            Result.success(null)
+            val dbSession = queries.selectLatestCrashSession().executeAsOneOrNull()
+            Result.success(dbSession?.toDomainModel())
         } catch (e: Exception) {
+            Napier.e("Failed to get latest crash session: ${e.message}", e, tag = "BrowserRepository")
             Result.failure(e)
         }
     }
 
     override suspend fun getAllSessions(limit: Int, offset: Int): Result<List<Session>> = withContext(Dispatchers.IO) {
         try {
-            // TODO: Implement session history retrieval when session table is added to schema
-            Result.success(emptyList())
+            val dbSessions = queries.selectAllSessions(limit.toLong(), offset.toLong()).executeAsList()
+            Result.success(dbSessions.map { it.toDomainModel() })
         } catch (e: Exception) {
+            Napier.e("Failed to get all sessions: ${e.message}", e, tag = "BrowserRepository")
             Result.failure(e)
         }
     }
 
     override suspend fun getSessionTabs(sessionId: String): Result<List<SessionTab>> = withContext(Dispatchers.IO) {
         try {
-            // TODO: Implement session tabs retrieval when session table is added to schema
-            Result.success(emptyList())
+            val dbTabs = queries.selectSessionTabs(sessionId).executeAsList()
+            Result.success(dbTabs.map { it.toDomainModel() })
         } catch (e: Exception) {
+            Napier.e("Failed to get session tabs for $sessionId: ${e.message}", e, tag = "BrowserRepository")
             Result.failure(e)
         }
     }
 
     override suspend fun getActiveSessionTab(sessionId: String): Result<SessionTab?> = withContext(Dispatchers.IO) {
         try {
-            // TODO: Implement active session tab retrieval when session table is added to schema
-            Result.success(null)
+            val dbTabs = queries.selectSessionTabs(sessionId).executeAsList()
+            val activeTab = dbTabs.firstOrNull { it.is_active != 0L }
+            Result.success(activeTab?.toDomainModel())
         } catch (e: Exception) {
+            Napier.e("Failed to get active session tab for $sessionId: ${e.message}", e, tag = "BrowserRepository")
             Result.failure(e)
         }
     }
 
     override suspend fun deleteSession(sessionId: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            // TODO: Implement session deletion when session table is added to schema
+            queries.deleteSession(sessionId)
+            Napier.d("Deleted session $sessionId", tag = "BrowserRepository")
             Result.success(Unit)
         } catch (e: Exception) {
+            Napier.e("Failed to delete session $sessionId: ${e.message}", e, tag = "BrowserRepository")
             Result.failure(e)
         }
     }
 
     override suspend fun deleteAllSessions(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            // TODO: Implement all sessions deletion when session table is added to schema
+            // Get all sessions first
+            val sessions = queries.selectAllSessions(1000, 0).executeAsList()
+            sessions.forEach { session ->
+                queries.deleteSession(session.id)
+            }
+            Napier.d("Deleted all sessions", tag = "BrowserRepository")
             Result.success(Unit)
         } catch (e: Exception) {
+            Napier.e("Failed to delete all sessions: ${e.message}", e, tag = "BrowserRepository")
             Result.failure(e)
         }
     }
 
     override suspend fun deleteOldSessions(timestamp: Instant): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            // TODO: Implement old sessions cleanup when session table is added to schema
+            queries.deleteOldSessions(timestamp.toEpochMilliseconds())
+            Napier.d("Deleted sessions older than $timestamp", tag = "BrowserRepository")
             Result.success(Unit)
         } catch (e: Exception) {
+            Napier.e("Failed to delete old sessions: ${e.message}", e, tag = "BrowserRepository")
             Result.failure(e)
         }
     }
@@ -1271,4 +1302,53 @@ private fun com.augmentalis.webavanue.data.Download.toDomainModel() = Download(
     completedAt = completed_at?.let { Instant.fromEpochMilliseconds(it) },
     sourcePageUrl = source_page_url,
     sourcePageTitle = source_page_title
+)
+
+// Session mapper functions
+private fun Session.toDbModel() = com.augmentalis.webavanue.data.Session(
+    id = id,
+    timestamp = timestamp.toEpochMilliseconds(),
+    active_tab_id = activeTabId,
+    tab_count = tabCount.toLong(),
+    is_crash_recovery = if (isCrashRecovery) 1L else 0L
+)
+
+private fun com.augmentalis.webavanue.data.Session.toDomainModel() = Session(
+    id = id,
+    timestamp = Instant.fromEpochMilliseconds(timestamp),
+    activeTabId = active_tab_id,
+    tabCount = tab_count.toInt(),
+    isCrashRecovery = is_crash_recovery != 0L
+)
+
+private fun SessionTab.toDbModel() = com.augmentalis.webavanue.data.Session_tab(
+    session_id = sessionId,
+    tab_id = tabId,
+    url = url,
+    title = title,
+    favicon = favicon,
+    position = position.toLong(),
+    is_pinned = if (isPinned) 1L else 0L,
+    is_active = if (isActive) 1L else 0L,
+    scroll_x = scrollX.toLong(),
+    scroll_y = scrollY.toLong(),
+    zoom_level = zoomLevel.toLong(),
+    is_desktop_mode = if (isDesktopMode) 1L else 0L,
+    is_loaded = if (isLoaded) 1L else 0L
+)
+
+private fun com.augmentalis.webavanue.data.Session_tab.toDomainModel() = SessionTab(
+    sessionId = session_id,
+    tabId = tab_id,
+    url = url,
+    title = title,
+    favicon = favicon,
+    position = position.toInt(),
+    isPinned = is_pinned != 0L,
+    isActive = is_active != 0L,
+    scrollX = scroll_x.toInt(),
+    scrollY = scroll_y.toInt(),
+    zoomLevel = zoom_level.toInt(),
+    isDesktopMode = is_desktop_mode != 0L,
+    isLoaded = is_loaded != 0L
 )

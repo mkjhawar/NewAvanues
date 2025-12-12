@@ -67,13 +67,14 @@ import kotlinx.datetime.toLocalDateTime
 fun BrowserApp(
     repository: BrowserRepository,
     secureStorage: SecureStorageProvider? = null,  // SecureStorage on Android, null on other platforms
+    downloadQueue: com.augmentalis.Avanues.web.universal.download.DownloadQueue? = null,  // AndroidDownloadQueue on Android, null on other platforms
     xrManager: Any? = null,  // XRManager on Android, null on other platforms
     xrState: Any? = null,    // XRManager.XRState on Android, null on other platforms
     modifier: Modifier = Modifier
 ) {
     // FIX: Use remember to ensure ViewModels are created only once and persist across recompositions
     // ViewModels should only be cleared when BrowserApp is disposed (app termination)
-    val viewModels = remember { ViewModelHolder.create(repository, secureStorage) }
+    val viewModels = remember { ViewModelHolder.create(repository, secureStorage, downloadQueue) }
 
     // FIX BUG #3: Observe settings for theme changes
     val settings by viewModels.settingsViewModel.settings.collectAsState()

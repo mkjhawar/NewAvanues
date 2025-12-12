@@ -104,6 +104,8 @@ fun AddressBar(
     canGoBack: Boolean = false,
     canGoForward: Boolean = false,
     isDesktopMode: Boolean = false,
+    isReadingMode: Boolean = false,            // Phase 4: Reading Mode
+    isArticleAvailable: Boolean = false,        // Phase 4: Reading Mode
     isFavorite: Boolean = false,
     tabCount: Int = 0,
     tabs: List<TabUiState> = emptyList(),
@@ -115,6 +117,7 @@ fun AddressBar(
     onForward: () -> Unit = {},
     onRefresh: () -> Unit = {},
     onDesktopModeToggle: () -> Unit = {},
+    onReadingModeToggle: () -> Unit = {},       // Phase 4: Reading Mode
     onFavoriteClick: () -> Unit = {},
     onTabClick: (String) -> Unit = {},
     onTabClose: (String) -> Unit = {},
@@ -363,6 +366,21 @@ fun AddressBar(
                                 variant = IconVariant.Primary,
                                 modifier = Modifier.size(16.dp)
                             )
+                        }
+
+                        // Reading Mode button - only show if article detected (Phase 4)
+                        if (isArticleAvailable) {
+                            OceanComponents.IconButton(
+                                onClick = onReadingModeToggle,
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                OceanComponents.Icon(
+                                    imageVector = Icons.Default.MenuBook,
+                                    contentDescription = "Reading Mode",
+                                    variant = if (isReadingMode) IconVariant.Primary else IconVariant.Secondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
 
                         // Desktop mode toggle - small

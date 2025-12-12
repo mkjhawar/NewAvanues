@@ -471,6 +471,78 @@ SELECT DISTINCT domain FROM site_permission ORDER BY domain;
 getAllSitePermissions:
 SELECT * FROM site_permission ORDER BY domain, permission_type;
 
+-- Session tables (Phase 4: Session Restore)
+-- Stores browser session snapshots for crash recovery and session restore
+CREATE TABLE IF NOT EXISTS session (
+    id TEXT PRIMARY KEY NOT NULL,
+    timestamp INTEGER NOT NULL,
+    active_tab_id TEXT,
+    tab_count INTEGER NOT NULL DEFAULT 0,
+    is_crash_recovery INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS session_tab (
+    session_id TEXT NOT NULL,
+    tab_id TEXT NOT NULL,
+    url TEXT NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
+    favicon TEXT,
+    position INTEGER NOT NULL DEFAULT 0,
+    is_pinned INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 0,
+    scroll_x INTEGER NOT NULL DEFAULT 0,
+    scroll_y INTEGER NOT NULL DEFAULT 0,
+    zoom_level INTEGER NOT NULL DEFAULT 100,
+    is_desktop_mode INTEGER NOT NULL DEFAULT 0,
+    is_loaded INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (session_id, tab_id),
+    FOREIGN KEY (session_id) REFERENCES session(id) ON DELETE CASCADE
+);
+
+-- Session indexes
+CREATE INDEX IF NOT EXISTS idx_session_timestamp ON session(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_session_crash_recovery ON session(is_crash_recovery);
+CREATE INDEX IF NOT EXISTS idx_session_tab_session ON session_tab(session_id);
+CREATE INDEX IF NOT EXISTS idx_session_tab_position ON session_tab(position);
+
+-- Session queries
+insertSession:
+INSERT OR REPLACE INTO session (id, timestamp, active_tab_id, tab_count, is_crash_recovery)
+VALUES (?, ?, ?, ?, ?);
+
+selectLatestSession:
+SELECT * FROM session ORDER BY timestamp DESC LIMIT 1;
+
+selectLatestCrashSession:
+SELECT * FROM session WHERE is_crash_recovery = 1 ORDER BY timestamp DESC LIMIT 1;
+
+selectSessionById:
+SELECT * FROM session WHERE id = ?;
+
+selectAllSessions:
+SELECT * FROM session ORDER BY timestamp DESC LIMIT ? OFFSET ?;
+
+deleteSession:
+DELETE FROM session WHERE id = ?;
+
+deleteOldSessions:
+DELETE FROM session WHERE timestamp < ? AND is_crash_recovery = 0;
+
+insertSessionTab:
+INSERT OR REPLACE INTO session_tab VALUES ?;
+
+selectSessionTabs:
+SELECT * FROM session_tab WHERE session_id = ? ORDER BY position;
+
+selectSessionTab:
+SELECT * FROM session_tab WHERE session_id = ? AND tab_id = ? LIMIT 1;
+
+deleteSessionTabs:
+DELETE FROM session_tab WHERE session_id = ?;
+
+countSessionTabs:
+SELECT COUNT(*) FROM session_tab WHERE session_id = ?;
+
 -- Database maintenance
 -- Note: getDatabaseSize removed - pragma functions not supported in SQLDelight
 -- Use native SQLite pragma queries directly if needed

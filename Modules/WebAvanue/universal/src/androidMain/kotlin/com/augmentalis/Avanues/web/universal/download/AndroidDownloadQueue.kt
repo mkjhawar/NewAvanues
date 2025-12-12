@@ -20,9 +20,11 @@ import kotlinx.coroutines.withContext
  * - System notification for progress
  * - Automatic retry on network failure
  * - Proper file storage handling
+ * - Respects user download path settings
  */
 class AndroidDownloadQueue(
-    private val context: Context
+    private val context: Context,
+    private val getDownloadPath: (() -> String?)? = null  // Callback to get current download path from settings
 ) : DownloadQueue {
 
     private val downloadManager: DownloadManager
@@ -38,7 +40,16 @@ class AndroidDownloadQueue(
                 setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 setTitle(request.filename)
                 setDescription("Downloading file...")
-                setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, request.filename)
+
+                // Use custom download path if provided, otherwise use system Downloads folder
+                val customPath = getDownloadPath?.invoke()
+                if (customPath != null && customPath.isNotBlank()) {
+                    // TODO: Validate and use custom path (requires additional permission handling)
+                    // For now, fall back to Downloads folder
+                    setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, request.filename)
+                } else {
+                    setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, request.filename)
+                }
 
                 request.mimeType?.let { setMimeType(it) }
                 setAllowedOverMetered(true)

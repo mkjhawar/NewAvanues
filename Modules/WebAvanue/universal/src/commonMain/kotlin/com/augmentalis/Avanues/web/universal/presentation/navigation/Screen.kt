@@ -30,7 +30,8 @@ data class ViewModelHolder(
     companion object {
         fun create(
             repository: BrowserRepository,
-            secureStorage: SecureStorageProvider? = null
+            secureStorage: SecureStorageProvider? = null,
+            downloadQueue: com.augmentalis.Avanues.web.universal.download.DownloadQueue? = null
         ): ViewModelHolder {
             val securityViewModel = SecurityViewModel(repository, secureStorage)
 
@@ -38,7 +39,7 @@ data class ViewModelHolder(
                 repository = repository,
                 tabViewModel = TabViewModel(repository),
                 favoriteViewModel = FavoriteViewModel(repository),
-                downloadViewModel = DownloadViewModel(repository),
+                downloadViewModel = DownloadViewModel(repository, downloadQueue),
                 historyViewModel = HistoryViewModel(repository),
                 settingsViewModel = SettingsViewModel(repository),
                 securityViewModel = securityViewModel // PHASE 3

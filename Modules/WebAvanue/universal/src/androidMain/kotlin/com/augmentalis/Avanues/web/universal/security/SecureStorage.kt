@@ -8,17 +8,18 @@ import com.augmentalis.Avanues.web.universal.presentation.ui.security.HttpAuthCr
 import com.augmentalis.Avanues.web.universal.presentation.viewmodel.SecureStorageProvider
 
 /**
- * SecureStorage - Android implementation of encrypted credential storage
+ * SecureStorage - Android implementation of credential storage with optional encryption
  *
- * Security Features:
+ * Security Features (when encryption enabled):
  * - AES256-GCM encryption for values
  * - AES256-SIV encryption for keys
  * - Master key stored in Android Keystore (hardware-backed if available)
  * - No plaintext credentials in memory or storage
  *
- * Phase 1 Security Fix:
- * - CWE-311: Missing encryption for sensitive data
- * - CWE-798: Use of hardcoded credentials
+ * Phase 4 Update:
+ * - Encryption is now optional (controlled by user setting)
+ * - Default: UNENCRYPTED for performance
+ * - User can enable encryption in settings
  *
  * Usage:
  * ```kotlin
@@ -34,6 +35,7 @@ class SecureStorage(context: Context) : SecureStorageProvider {
     companion object {
         private const val PREFS_NAME = "webavanue_secure_prefs"
         private const val MASTER_KEY_ALIAS = "webavanue_master_key"
+        private const val BOOTSTRAP_PREFS = "webavanue_bootstrap"
 
         // Key suffixes for credential storage
         private const val USERNAME_SUFFIX = ":username"
@@ -41,19 +43,31 @@ class SecureStorage(context: Context) : SecureStorageProvider {
         private const val REMEMBER_SUFFIX = ":remember"
     }
 
-    // Master key for encryption (stored in Android Keystore)
-    private val masterKey: MasterKey = MasterKey.Builder(context.applicationContext)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
+    // Check if encryption is enabled from bootstrap preferences
+    private val useEncryption: Boolean = run {
+        val bootstrapPrefs = context.applicationContext.getSharedPreferences(BOOTSTRAP_PREFS, Context.MODE_PRIVATE)
+        bootstrapPrefs.getBoolean("secure_storage_encryption", false) // Default: unencrypted
+    }
 
-    // Encrypted SharedPreferences
-    private val encryptedPrefs: SharedPreferences = EncryptedSharedPreferences.create(
-        context.applicationContext,
-        PREFS_NAME,
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    // SharedPreferences (encrypted or plain based on setting)
+    private val prefs: SharedPreferences = if (useEncryption) {
+        // Master key for encryption (stored in Android Keystore)
+        val masterKey = MasterKey.Builder(context.applicationContext)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        // Encrypted SharedPreferences
+        EncryptedSharedPreferences.create(
+            context.applicationContext,
+            PREFS_NAME,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    } else {
+        // Plain SharedPreferences
+        context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
 
     /**
      * Store HTTP authentication credentials securely
@@ -68,14 +82,15 @@ class SecureStorage(context: Context) : SecureStorageProvider {
             // Normalize URL (remove trailing slashes, lowercase)
             val normalizedUrl = normalizeUrl(url)
 
-            encryptedPrefs.edit().apply {
+            prefs.edit().apply {
                 putString(normalizedUrl + USERNAME_SUFFIX, username)
                 putString(normalizedUrl + PASSWORD_SUFFIX, password)
                 putBoolean(normalizedUrl + REMEMBER_SUFFIX, remember)
                 apply()
             }
 
-            println("✅ SecureStorage: Credentials stored for $normalizedUrl (remember: $remember)")
+            val encStatus = if (useEncryption) "encrypted" else "unencrypted"
+            println("✅ SecureStorage: Credentials stored ($encStatus) for $normalizedUrl (remember: $remember)")
         } catch (e: Exception) {
             println("⚠️  SecureStorage: Failed to store credentials: ${e.message}")
             throw SecureStorageException("Failed to store credentials", e)
@@ -92,9 +107,9 @@ class SecureStorage(context: Context) : SecureStorageProvider {
         return try {
             val normalizedUrl = normalizeUrl(url)
 
-            val username = encryptedPrefs.getString(normalizedUrl + USERNAME_SUFFIX, null)
-            val password = encryptedPrefs.getString(normalizedUrl + PASSWORD_SUFFIX, null)
-            val remember = encryptedPrefs.getBoolean(normalizedUrl + REMEMBER_SUFFIX, false)
+            val username = prefs.getString(normalizedUrl + USERNAME_SUFFIX, null)
+            val password = prefs.getString(normalizedUrl + PASSWORD_SUFFIX, null)
+            val remember = prefs.getBoolean(normalizedUrl + REMEMBER_SUFFIX, false)
 
             if (username != null && password != null) {
                 println("✅ SecureStorage: Credentials retrieved for $normalizedUrl")
@@ -117,7 +132,7 @@ class SecureStorage(context: Context) : SecureStorageProvider {
     override fun hasCredential(url: String): Boolean {
         return try {
             val normalizedUrl = normalizeUrl(url)
-            encryptedPrefs.contains(normalizedUrl + USERNAME_SUFFIX)
+            prefs.contains(normalizedUrl + USERNAME_SUFFIX)
         } catch (e: Exception) {
             println("⚠️  SecureStorage: Failed to check credentials: ${e.message}")
             false
@@ -133,7 +148,7 @@ class SecureStorage(context: Context) : SecureStorageProvider {
         try {
             val normalizedUrl = normalizeUrl(url)
 
-            encryptedPrefs.edit().apply {
+            prefs.edit().apply {
                 remove(normalizedUrl + USERNAME_SUFFIX)
                 remove(normalizedUrl + PASSWORD_SUFFIX)
                 remove(normalizedUrl + REMEMBER_SUFFIX)
@@ -152,7 +167,7 @@ class SecureStorage(context: Context) : SecureStorageProvider {
      */
     override fun clearAll() {
         try {
-            encryptedPrefs.edit().clear().apply()
+            prefs.edit().clear().apply()
             println("✅ SecureStorage: All credentials cleared")
         } catch (e: Exception) {
             println("⚠️  SecureStorage: Failed to clear credentials: ${e.message}")
@@ -167,7 +182,7 @@ class SecureStorage(context: Context) : SecureStorageProvider {
      */
     override fun getStoredUrls(): List<String> {
         return try {
-            encryptedPrefs.all.keys
+            prefs.all.keys
                 .filter { it.endsWith(USERNAME_SUFFIX) }
                 .map { it.removeSuffix(USERNAME_SUFFIX) }
         } catch (e: Exception) {

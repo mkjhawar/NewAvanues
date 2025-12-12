@@ -15,14 +15,16 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory as SQLCipherSuppo
 /**
  * Creates an Android-specific SQLDelight driver for the browser database.
  *
- * SECURITY: Database is encrypted using SQLCipher with AES-256 encryption.
- * Encryption keys are stored in Android Keystore (hardware-backed when available).
+ * SECURITY: Encryption is optional and controlled by user settings.
+ * - When enabled: AES-256 encryption via SQLCipher
+ * - Encryption keys stored in Android Keystore (hardware-backed when available)
+ * - Default: UNENCRYPTED for performance (user can enable in settings)
  *
  * @param context The Android application context
- * @param useEncryption Whether to enable database encryption (default: true)
- * @return A SqlDriver configured for Android with encryption
+ * @param useEncryption Whether to enable database encryption (default: false)
+ * @return A SqlDriver configured for Android with optional encryption
  */
-fun createAndroidDriver(context: Context, useEncryption: Boolean = true): SqlDriver {
+fun createAndroidDriver(context: Context, useEncryption: Boolean = false): SqlDriver {
     return if (useEncryption) {
         createEncryptedDriver(context)
     } else {

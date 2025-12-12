@@ -40,6 +40,7 @@ import com.augmentalis.Avanues.web.universal.presentation.ui.spatial.SpatialFavo
 import com.augmentalis.Avanues.web.universal.presentation.ui.components.NetworkStatusIndicator
 import com.augmentalis.Avanues.web.universal.presentation.ui.components.NetworkStatus
 import com.augmentalis.Avanues.web.universal.presentation.ui.components.rememberNetworkStatusMonitor
+import com.augmentalis.Avanues.web.universal.presentation.ui.dialogs.SessionRestoreDialog
 import com.augmentalis.Avanues.web.universal.presentation.viewmodel.TabViewModel
 import com.augmentalis.Avanues.web.universal.presentation.viewmodel.SettingsViewModel
 import com.augmentalis.webavanue.domain.model.BrowserSettings
@@ -101,6 +102,23 @@ fun BrowserScreen(
             )
             // Clear error after showing
             tabViewModel.clearError()
+        }
+    }
+
+    // Check for crash recovery session on startup (Phase 4: Session Restore)
+    LaunchedEffect(Unit) {
+        val crashSession = tabViewModel.getLatestCrashSession()
+        if (crashSession != null && crashSession.tabCount > 0) {
+            showSessionRestoreDialog = true
+            sessionRestoreTabCount = crashSession.tabCount
+        }
+    }
+
+    // Save session on screen dispose (Phase 4: Session Restore - Normal exit)
+    DisposableEffect(Unit) {
+        onDispose {
+            // Save current session as crash recovery (will be cleared on next normal startup)
+            tabViewModel.saveCurrentSession(isCrashRecovery = true)
         }
     }
 
@@ -180,6 +198,10 @@ fun BrowserScreen(
     var showTabGroupDialog by rememberSaveable { mutableStateOf(false) }
     var showTabGroupAssignmentDialog by rememberSaveable { mutableStateOf(false) }
     var selectedTabForGroupAssignment by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // Session restore dialog state (Phase 4: Session Restore)
+    var showSessionRestoreDialog by rememberSaveable { mutableStateOf(false) }
+    var sessionRestoreTabCount by rememberSaveable { mutableStateOf(0) }
 
     // Coroutine scope for async operations
     val scope = rememberCoroutineScope()
@@ -264,6 +286,31 @@ fun BrowserScreen(
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
+            .onPreviewKeyEvent { keyEvent ->
+                // Phase 4: Keyboard shortcuts for Find in Page
+                if (keyEvent.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
+                    when {
+                        // Ctrl+F / Cmd+F - Open Find in Page
+                        (keyEvent.isCtrlPressed || keyEvent.isMetaPressed) &&
+                        keyEvent.key == androidx.compose.ui.input.key.Key.F -> {
+                            tabViewModel.showFindInPage()
+                            true
+                        }
+                        // Escape - Close Find bar
+                        keyEvent.key == androidx.compose.ui.input.key.Key.Escape &&
+                        findInPageState.isVisible -> {
+                            scope.launch {
+                                webViewController.clearFindMatches()
+                            }
+                            tabViewModel.hideFindInPage()
+                            true
+                        }
+                        else -> false
+                    }
+                } else {
+                    false
+                }
+            }
     ) {
         // Detect landscape orientation based on constraints
         isLandscape = maxWidth > maxHeight
@@ -300,6 +347,8 @@ fun BrowserScreen(
                 canGoBack = activeTab?.canGoBack ?: false,
                 canGoForward = activeTab?.canGoForward ?: false,
                 isDesktopMode = isDesktopMode,
+                isReadingMode = activeTab?.isReadingMode ?: false,
+                isArticleAvailable = activeTab?.readingModeArticle != null,
                 isFavorite = isFavorite,
                 tabCount = tabs.size,
                 tabs = tabs,
@@ -328,6 +377,9 @@ fun BrowserScreen(
                     tabViewModel.setDesktopMode(newMode)
                     // Reload current page to apply new user agent
                     webViewController.reload()
+                },
+                onReadingModeToggle = {
+                    tabViewModel.toggleReadingMode()
                 },
                 onFavoriteClick = {
                     // Legacy callback - now handled by dropdown
@@ -777,6 +829,31 @@ fun BrowserScreen(
                 onDismiss = { securityViewModel.dismissHttpAuthDialog() }
             )
         }
+
+        // PHASE 4: Session Restore Dialog
+        // Shows on startup if crash recovery session is detected
+        SessionRestoreDialog(
+            visible = showSessionRestoreDialog,
+            tabCount = sessionRestoreTabCount,
+            onRestore = {
+                scope.launch {
+                    val restored = tabViewModel.restoreCrashRecoverySession()
+                    if (!restored) {
+                        snackbarHostState.showSnackbar(
+                            message = "Failed to restore session",
+                            duration = androidx.compose.material3.SnackbarDuration.Short
+                        )
+                    }
+                    showSessionRestoreDialog = false
+                }
+            },
+            onDismiss = {
+                scope.launch {
+                    tabViewModel.dismissCrashRecovery()
+                    showSessionRestoreDialog = false
+                }
+            }
+        )
 
         // Help FAB (?) - positioned above command bar with higher z-level
         // Shows voice commands help when tapped

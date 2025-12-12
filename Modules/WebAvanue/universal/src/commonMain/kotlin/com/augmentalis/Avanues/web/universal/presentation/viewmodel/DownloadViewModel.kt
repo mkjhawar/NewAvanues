@@ -26,7 +26,8 @@ import kotlinx.coroutines.flow.asStateFlow
  * - error: String? - Error message
  */
 class DownloadViewModel(
-    private val repository: BrowserRepository
+    private val repository: BrowserRepository,
+    private val downloadQueue: com.augmentalis.Avanues.web.universal.download.DownloadQueue? = null
 ) {
     // Coroutine scope
     private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -175,11 +176,33 @@ class DownloadViewModel(
         _downloads.value = currentDownloads
         updateActiveDownloads()
 
-        // Save to repository (async)
+        // Save to repository and enqueue download (async)
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 repository.addDownload(download)
                 Logger.info("DownloadViewModel", "Download saved to repository: ${download.id}")
+
+                // Enqueue actual download to platform download queue
+                downloadQueue?.let { queue ->
+                    val request = com.augmentalis.Avanues.web.universal.download.DownloadRequest(
+                        url = url,
+                        filename = sanitizedFilename,
+                        mimeType = mimeType,
+                        expectedSize = fileSize,
+                        sourcePageUrl = sourcePageUrl,
+                        sourcePageTitle = sourcePageTitle
+                    )
+
+                    val queueId = queue.enqueue(request)
+                    if (queueId != null) {
+                        Logger.info("DownloadViewModel", "Download enqueued to platform queue: $queueId")
+                    } else {
+                        Logger.error("DownloadViewModel", "Failed to enqueue download to platform queue", null)
+                        _error.value = "Failed to start download"
+                    }
+                } ?: run {
+                    Logger.warn("DownloadViewModel", "No download queue available - download will not be executed")
+                }
             } catch (e: Exception) {
                 Logger.error("DownloadViewModel", "Failed to save download to repository: ${e.message}", e)
             }

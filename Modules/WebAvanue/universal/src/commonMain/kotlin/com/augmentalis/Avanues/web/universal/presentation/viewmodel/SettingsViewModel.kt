@@ -100,6 +100,14 @@ class SettingsViewModel(
     private val _saveSuccess = MutableStateFlow(false)
     val saveSuccess: StateFlow<Boolean> = _saveSuccess.asStateFlow()
 
+    // State: Search query for filtering settings
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    // State: Expanded sections (General expanded by default for better UX)
+    private val _expandedSections = MutableStateFlow(setOf("General"))
+    val expandedSections: StateFlow<Set<String>> = _expandedSections.asStateFlow()
+
     init {
         observeSettings()
     }
@@ -392,6 +400,71 @@ class SettingsViewModel(
      */
     fun clearError() {
         _error.value = null
+    }
+
+    // ==================== Search & Section Management ====================
+
+    /**
+     * Set search query for filtering settings
+     *
+     * When a query is provided, automatically expands all sections to show matches.
+     * When query is cleared, maintains current expansion state.
+     *
+     * @param query Search query text (case-insensitive matching)
+     */
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+        // Auto-expand all sections when searching
+        if (query.isNotBlank()) {
+            expandAllSections()
+        }
+    }
+
+    /**
+     * Toggle expansion state of a section
+     *
+     * Adds section to expanded set if collapsed, removes if expanded.
+     *
+     * @param sectionName Name of section to toggle (e.g., "General", "Privacy & Security")
+     */
+    fun toggleSection(sectionName: String) {
+        val current = _expandedSections.value.toMutableSet()
+        if (current.contains(sectionName)) {
+            current.remove(sectionName)
+        } else {
+            current.add(sectionName)
+        }
+        _expandedSections.value = current
+    }
+
+    /**
+     * Expand all sections
+     *
+     * Useful when searching to show all matches, or for power users who want to see everything.
+     */
+    fun expandAllSections() {
+        _expandedSections.value = setOf(
+            "General",
+            "Appearance",
+            "Privacy & Security",
+            "Downloads",
+            "Performance",
+            "Sync",
+            "Bookmarks",
+            "Voice & AI",
+            "Command Bar",
+            "WebXR",
+            "Advanced"
+        )
+    }
+
+    /**
+     * Collapse all sections
+     *
+     * Reduces cognitive load by hiding all settings. Useful after finding what you need.
+     */
+    fun collapseAllSections() {
+        _expandedSections.value = emptySet()
     }
 
     /**

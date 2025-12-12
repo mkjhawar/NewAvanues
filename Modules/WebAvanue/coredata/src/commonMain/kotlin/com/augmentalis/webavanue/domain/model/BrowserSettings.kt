@@ -66,6 +66,10 @@ data class BrowserSettings(
     val autoPlay: AutoPlay = AutoPlay.WIFI_ONLY,
     val textReflow: Boolean = true,
 
+    // Security Settings (Phase 4)
+    val enableDatabaseEncryption: Boolean = false,  // Default: unencrypted for performance
+    val enableSecureStorage: Boolean = false,  // Default: unencrypted SharedPreferences
+
     // Voice & AI Settings
     val enableVoiceCommands: Boolean = true,
     val aiSummaries: Boolean = false,

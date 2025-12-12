@@ -65,7 +65,12 @@ class WebAvanueApp : Application() {
 
     // Shared instances (lazy initialization)
     private val database: BrowserDatabase by lazy {
-        val driver = createAndroidDriver(applicationContext)
+        // Read encryption setting from bootstrap preferences
+        // This is stored separately from BrowserSettings to avoid chicken-and-egg problem
+        val bootstrapPrefs = applicationContext.getSharedPreferences("webavanue_bootstrap", Context.MODE_PRIVATE)
+        val useEncryption = bootstrapPrefs.getBoolean("database_encryption", false) // Default: unencrypted
+
+        val driver = createAndroidDriver(applicationContext, useEncryption)
         BrowserDatabase(driver)
     }
 
