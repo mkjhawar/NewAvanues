@@ -229,6 +229,14 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
         count
     }
 
+    suspend fun deleteByCategory(category: String): Int = withContext(Dispatchers.IO) {
+        // First count commands in this category
+        val allCommands = getAllCommands()
+        val count = allCommands.count { it.category == category }
+        queries.deleteByCategory(category)
+        count
+    }
+
     // ==================== UTILITY ====================
 
     suspend fun getDatabaseStats(): List<LocaleStats> = withContext(Dispatchers.IO) {

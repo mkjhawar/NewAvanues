@@ -40,6 +40,7 @@ include(":Modules:VoiceOS:core:validation")
 
 // VoiceOS Apps
 include(":Modules:VoiceOS:apps:LearnApp")  // Standalone app exploration tool
+include(":Modules:VoiceOS:apps:LearnAppDev")  // Developer edition with Neo4j debugging
 include(":Modules:VoiceOS:apps:VoiceRecognition")
 include(":Modules:VoiceOS:apps:VoiceOSCore")
 include(":Modules:VoiceOS:apps:VoiceCursor")

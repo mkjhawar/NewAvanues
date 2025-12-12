@@ -73,6 +73,39 @@ enum class ExplorationBehavior(val priority: Int) {
 }
 
 /**
+ * Element category for AVU export.
+ *
+ * Used in ELM IPC lines: ELM:uuid:label:type:actions:bounds:category
+ *
+ * @since 2.0.0 (LearnApp Dual-Edition)
+ */
+enum class ElementCategory(val ipcCode: String) {
+    /** Navigation elements (bottom nav, tabs, back buttons) */
+    NAVIGATION("NAV"),
+
+    /** Action elements (submit, save, confirm buttons) */
+    ACTION("ACT"),
+
+    /** Input elements (text fields, search boxes) */
+    INPUT("INP"),
+
+    /** Display elements (labels, images, status text) */
+    DISPLAY("DSP"),
+
+    /** Contact elements (contact list items) */
+    CONTACT("CNT"),
+
+    /** Menu elements (overflow menus, dropdowns) */
+    MENU("MNU"),
+
+    /** Dangerous elements (excluded via Do Not Click) */
+    DANGEROUS("DNG"),
+
+    /** Unknown/uncategorized */
+    UNKNOWN("UNK")
+}
+
+/**
  * Element Info
  *
  * Represents complete information about a UI element.
@@ -105,6 +138,9 @@ enum class ExplorationBehavior(val priority: Int) {
  * @property node Reference to AccessibilityNodeInfo (for actions)
  * @property uuid Generated UUID (set after registration)
  * @property explorationBehavior How the exploration engine should interact with this element
+ * @property category Element category for AVU export (added in 2.0.0)
+ * @property safetyFlags Safety-related flags (added in 2.0.0)
+ * @property actions Available actions on this element (added in 2.0.0)
  *
  * @since 1.0.0
  */
@@ -126,7 +162,16 @@ data class ElementInfo(
     val screenHeight: Int = 0,
     val parent: ElementInfo? = null,
     val children: List<ElementInfo>? = null,
-    val index: Int = 0
+    val index: Int = 0,
+    // Safety fields (added in 2.0.0)
+    val category: ElementCategory = ElementCategory.UNKNOWN,
+    val safetyFlags: Set<String> = emptySet(),
+    val actions: Set<String> = emptySet(),
+    val isLongClickable: Boolean = false,
+    val isEditable: Boolean = false,
+    val isCheckable: Boolean = false,
+    val isChecked: Boolean = false,
+    val isFocusable: Boolean = false
 ) {
 
     /**
@@ -305,6 +350,109 @@ data class ElementInfo(
         else -> 0
     }
 
+    /**
+     * Infer element category based on class name, resource ID, and capabilities.
+     *
+     * Used for AVU export ELM lines.
+     *
+     * @return Inferred ElementCategory
+     * @since 2.0.0 (LearnApp Dual-Edition)
+     */
+    fun inferCategory(): ElementCategory {
+        val lowerClass = className.lowercase()
+        val lowerResource = resourceId.lowercase()
+        val lowerLabel = getDisplayName().lowercase()
+
+        return when {
+            // Input fields
+            isEditText() || isEditable -> ElementCategory.INPUT
+
+            // Navigation elements
+            lowerClass.contains("bottomnavigation") ||
+            lowerClass.contains("tabview") ||
+            lowerResource.contains("nav_") ||
+            lowerResource.contains("tab_") ||
+            lowerLabel.contains("back") -> ElementCategory.NAVIGATION
+
+            // Menu elements
+            lowerClass.contains("menuitem") ||
+            lowerClass.contains("overflow") ||
+            lowerResource.contains("menu") -> ElementCategory.MENU
+
+            // Contact elements
+            lowerResource.contains("contact") ||
+            lowerResource.contains("person") ||
+            (lowerClass.contains("textview") && lowerLabel.matches(Regex("^[A-Z][a-z]+ [A-Z][a-z]+$"))) ->
+                ElementCategory.CONTACT
+
+            // Action buttons
+            isButton() && (isClickable || isLongClickable) -> ElementCategory.ACTION
+
+            // Display elements
+            !isClickable && !isLongClickable &&
+            (lowerClass.contains("textview") || lowerClass.contains("imageview")) ->
+                ElementCategory.DISPLAY
+
+            // Clickable but not a button
+            isClickable -> ElementCategory.ACTION
+
+            else -> ElementCategory.UNKNOWN
+        }
+    }
+
+    /**
+     * Generate available actions string for AVU export.
+     *
+     * Format: action1+action2+action3
+     *
+     * @return Actions string
+     * @since 2.0.0 (LearnApp Dual-Edition)
+     */
+    fun getActionsString(): String {
+        val actionList = mutableListOf<String>()
+
+        if (isClickable) actionList.add("click")
+        if (isLongClickable) actionList.add("longClick")
+        if (isEditable || isEditText()) actionList.add("edit")
+        if (isScrollable) actionList.add("scroll")
+        if (isCheckable) actionList.add("check")
+        if (isFocusable) actionList.add("focus")
+
+        // Add custom actions from the actions set
+        actionList.addAll(actions)
+
+        return if (actionList.isEmpty()) "none" else actionList.joinToString("+")
+    }
+
+    /**
+     * Generate AVU ELM line for export.
+     *
+     * Format: ELM:uuid:label:type:actions:bounds:category
+     *
+     * @return ELM IPC line
+     * @since 2.0.0 (LearnApp Dual-Edition)
+     */
+    fun toElmLine(): String {
+        val elementId = uuid ?: stableId().take(20)
+        val label = getDisplayName().take(30).replace(":", "_")
+        val type = className.substringAfterLast(".")
+        val actionsStr = getActionsString()
+        val boundsStr = "${bounds.left},${bounds.top},${bounds.right},${bounds.bottom}"
+        val categoryCode = (if (category != ElementCategory.UNKNOWN) category else inferCategory()).ipcCode
+
+        return "ELM:$elementId:$label:$type:$actionsStr:$boundsStr:$categoryCode"
+    }
+
+    /**
+     * Create copy with inferred category.
+     *
+     * @return ElementInfo with category set
+     * @since 2.0.0 (LearnApp Dual-Edition)
+     */
+    fun withInferredCategory(): ElementInfo {
+        return copy(category = inferCategory())
+    }
+
     companion object {
         /**
          * Create ElementInfo from AccessibilityNodeInfo
@@ -321,6 +469,21 @@ data class ElementInfo(
             // Default exploration behavior (caller can override after creation)
             val explorationBehavior = ExplorationBehavior.SKIP
 
+            // Extract available actions
+            val availableActions = mutableSetOf<String>()
+            for (action in node.actionList) {
+                when (action.id) {
+                    AccessibilityNodeInfo.ACTION_CLICK -> availableActions.add("click")
+                    AccessibilityNodeInfo.ACTION_LONG_CLICK -> availableActions.add("longClick")
+                    AccessibilityNodeInfo.ACTION_SCROLL_FORWARD -> availableActions.add("scrollForward")
+                    AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD -> availableActions.add("scrollBackward")
+                    AccessibilityNodeInfo.ACTION_FOCUS -> availableActions.add("focus")
+                    AccessibilityNodeInfo.ACTION_SET_TEXT -> availableActions.add("setText")
+                    AccessibilityNodeInfo.ACTION_COPY -> availableActions.add("copy")
+                    AccessibilityNodeInfo.ACTION_PASTE -> availableActions.add("paste")
+                }
+            }
+
             return ElementInfo(
                 className = node.className?.toString() ?: "",
                 text = node.text?.toString() ?: "",
@@ -332,7 +495,73 @@ data class ElementInfo(
                 isScrollable = node.isScrollable,
                 bounds = bounds,
                 node = node,
-                explorationBehavior = explorationBehavior
+                explorationBehavior = explorationBehavior,
+                // New safety-related fields
+                isLongClickable = node.isLongClickable,
+                isEditable = node.isEditable,
+                isCheckable = node.isCheckable,
+                isChecked = node.isChecked,
+                isFocusable = node.isFocusable,
+                actions = availableActions
+            )
+        }
+
+        /**
+         * Parse ElementInfo from AVU ELM line.
+         *
+         * Input: "ELM:btn-001:Calls:BottomNavigationItemView:click:0,1800,270,1920:NAV"
+         *
+         * @param line ELM IPC line
+         * @return ElementInfo or null if invalid
+         * @since 2.0.0 (LearnApp Dual-Edition)
+         */
+        fun fromAvuLine(line: String): ElementInfo? {
+            if (!line.startsWith("ELM:")) return null
+            val parts = line.split(":")
+            if (parts.size < 7) return null
+
+            val uuid = parts[1]
+            val label = parts[2]
+            val type = parts[3]
+            val actionsStr = parts[4]
+            val boundsStr = parts[5]
+            val categoryCode = parts[6]
+
+            // Parse bounds
+            val boundsParts = boundsStr.split(",")
+            val bounds = if (boundsParts.size == 4) {
+                Rect(
+                    boundsParts[0].toIntOrNull() ?: 0,
+                    boundsParts[1].toIntOrNull() ?: 0,
+                    boundsParts[2].toIntOrNull() ?: 0,
+                    boundsParts[3].toIntOrNull() ?: 0
+                )
+            } else {
+                Rect()
+            }
+
+            // Parse actions
+            val actions = actionsStr.split("+").toSet()
+            val isClickable = actions.contains("click")
+            val isLongClickable = actions.contains("longClick")
+            val isEditable = actions.contains("edit")
+            val isScrollable = actions.contains("scroll")
+
+            // Parse category
+            val category = ElementCategory.entries.find { it.ipcCode == categoryCode }
+                ?: ElementCategory.UNKNOWN
+
+            return ElementInfo(
+                className = "android.widget.$type",
+                text = label.replace("_", " "),
+                uuid = uuid,
+                bounds = bounds,
+                isClickable = isClickable,
+                isLongClickable = isLongClickable,
+                isEditable = isEditable,
+                isScrollable = isScrollable,
+                actions = actions,
+                category = category
             )
         }
     }
