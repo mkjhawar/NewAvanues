@@ -14,7 +14,7 @@
 |---------|-------|-------------|
 | [01](./01-Introduction.md) | Introduction & Architecture | System overview, design decisions, module structure |
 | [02](./02-AIDL-Interface.md) | AIDL Interface Reference | Complete IPC interface documentation |
-| [03](./03-Core-Classes.md) | Core Classes & Data Models | All classes, data structures, enums |
+| [03](./03-Core-Classes.md) | Core Classes & Data Models | All classes, screen fingerprinting, VUID generation, dynamic content tracking |
 | [04](./04-UI-Components.md) | UI Components & Theme | Jetpack Compose components, Ocean Blue Dark theme |
 | [05](./05-Event-Streaming.md) | Event Streaming System | Real-time event capture and processing |
 | [06](./06-Safety-Implementation.md) | Safety System Implementation | DoNotClick, Login Detection, Loop Prevention |

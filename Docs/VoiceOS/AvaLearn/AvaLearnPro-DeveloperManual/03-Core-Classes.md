@@ -716,9 +716,993 @@ enum class LoginType {
 
 ---
 
-## 3.6 Export Classes
+## 3.6 Screen & Element Identification System
 
-### 3.6.1 AVUExporter
+JIT uses a sophisticated identification system to uniquely track screens (pages) and elements across exploration sessions.
+
+### 3.6.1 ScreenFingerprint
+
+Creates unique fingerprints for screen identification using structural and content analysis.
+
+```kotlin
+package com.augmentalis.jitlearning.identification
+
+/**
+ * Creates unique screen fingerprints for page identification.
+ * Uses structural layout and content hashing to identify screens
+ * even when content changes dynamically.
+ */
+class ScreenFingerprint {
+
+    data class Fingerprint(
+        val screenHash: String,      // Primary identifier: activityName + structuralHash
+        val structuralHash: String,  // Layout-based hash (element types + positions)
+        val contentHash: String,     // Text-based hash (element display text)
+        val activityName: String,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+
+    /**
+     * Create a fingerprint for a screen.
+     * @param activityName The activity class name
+     * @param elements List of elements on the screen
+     * @return Screen fingerprint with all hash components
+     */
+    fun create(activityName: String, elements: List<ElementInfo>): Fingerprint {
+        val structuralHash = createStructuralHash(elements)
+        val contentHash = createContentHash(elements)
+        val screenHash = createScreenHash(activityName, structuralHash)
+
+        return Fingerprint(
+            screenHash = screenHash,
+            structuralHash = structuralHash,
+            contentHash = contentHash,
+            activityName = activityName
+        )
+    }
+
+    /**
+     * Creates the primary screen hash from activity name and structure.
+     * Format: 8-character hex string
+     */
+    private fun createScreenHash(activityName: String, structuralHash: String): String {
+        val combined = "$activityName:$structuralHash"
+        return combined.hashCode().toString(16).padStart(8, '0')
+    }
+
+    /**
+     * Creates structural hash from element types and positions.
+     * Uses top 50 elements sorted by screen position.
+     * Each element contributes: "ClassName:Quadrant"
+     */
+    private fun createStructuralHash(elements: List<ElementInfo>): String {
+        val structureSignature = elements
+            .sortedBy { it.bounds.top * 10000 + it.bounds.left }  // Sort by position
+            .take(50)  // Top 50 elements for performance
+            .joinToString("|") { element ->
+                val shortClass = element.className.substringAfterLast(".")
+                val quadrant = getQuadrant(element)
+                "$shortClass:$quadrant"
+            }
+        return structureSignature.hashCode().toString(16).padStart(8, '0')
+    }
+
+    /**
+     * Creates content hash from element text.
+     * Uses top 30 text-containing elements.
+     */
+    private fun createContentHash(elements: List<ElementInfo>): String {
+        val contentSignature = elements
+            .filter { it.text.isNotBlank() || it.contentDescription.isNotBlank() }
+            .sortedBy { it.bounds.top }  // Sort by vertical position
+            .take(30)  // Top 30 text elements
+            .joinToString("|") { element ->
+                element.displayName.take(20)  // Truncate long text
+            }
+        return contentSignature.hashCode().toString(16).padStart(8, '0')
+    }
+
+    /**
+     * Determines which screen quadrant an element is in.
+     * Divides screen into: TL (top-left), TR (top-right), BL (bottom-left), BR (bottom-right)
+     */
+    private fun getQuadrant(element: ElementInfo): String {
+        val centerX = element.bounds.centerX
+        val centerY = element.bounds.centerY
+
+        // Assuming standard screen dimensions (adjusted dynamically in real implementation)
+        val screenCenterX = 540  // Half of 1080
+        val screenCenterY = 960  // Half of 1920
+
+        return when {
+            centerX < screenCenterX && centerY < screenCenterY -> "TL"
+            centerX >= screenCenterX && centerY < screenCenterY -> "TR"
+            centerX < screenCenterX && centerY >= screenCenterY -> "BL"
+            else -> "BR"
+        }
+    }
+
+    /**
+     * Calculate similarity between two fingerprints.
+     * @return Similarity score 0.0 to 1.0
+     */
+    fun calculateSimilarity(fp1: Fingerprint, fp2: Fingerprint): Float {
+        // Same activity is required for similarity
+        if (fp1.activityName != fp2.activityName) return 0f
+
+        // Exact structural match
+        if (fp1.structuralHash == fp2.structuralHash) return 1f
+
+        // Partial match based on content
+        if (fp1.contentHash == fp2.contentHash) return 0.8f
+
+        // Different structure and content
+        return 0.3f
+    }
+
+    companion object {
+        // Thresholds for screen matching
+        const val SIMILARITY_EXACT = 1.0f
+        const val SIMILARITY_HIGH = 0.8f
+        const val SIMILARITY_MEDIUM = 0.5f
+        const val SIMILARITY_THRESHOLD = 0.7f  // Minimum to consider "same screen"
+    }
+}
+```
+
+### 3.6.2 UUIDGenerator
+
+Generates unique identifiers for elements with multiple strategies.
+
+```kotlin
+package com.augmentalis.jitlearning.identification
+
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
+
+/**
+ * Generates unique identifiers (VUIDs) for elements.
+ * Supports multiple strategies for different use cases.
+ */
+object UUIDGenerator {
+
+    private val sequenceCounter = AtomicLong(0)
+
+    /**
+     * Standard random UUID.
+     * Use for: General elements, one-time identifiers
+     * Format: "550e8400-e29b-41d4-a716-446655440000"
+     */
+    fun generate(): String = UUID.randomUUID().toString()
+
+    /**
+     * UUID with prefix for categorization.
+     * Use for: Categorized elements (btn, txt, img)
+     * Format: "btn-550e8400-e29b-41d4-a716-446655440000"
+     */
+    fun generateWithPrefix(prefix: String): String {
+        return "${prefix}-${UUID.randomUUID()}"
+    }
+
+    /**
+     * Sequential UUID for ordered elements.
+     * Use for: Elements that need ordering preserved
+     * Format: "seq-1-1733875234567"
+     */
+    fun generateSequential(prefix: String = "seq"): String {
+        val sequence = sequenceCounter.incrementAndGet()
+        return "${prefix}-${sequence}-${System.currentTimeMillis()}"
+    }
+
+    /**
+     * Content-based UUID derived from element content.
+     * Use for: Elements with stable text content
+     * Format: "content-4c6f67696e-1733875234567"
+     * Note: Same content produces same hash portion
+     */
+    fun generateFromContent(content: String): String {
+        val hash = content.hashCode().toString(16).padStart(8, '0')
+        return "content-${hash}-${System.currentTimeMillis()}"
+    }
+
+    /**
+     * Type-based UUID with optional name.
+     * Use for: Typed elements like buttons, inputs
+     * Format: "button-submit-44655440"
+     */
+    fun generateForType(type: String, name: String? = null): String {
+        val suffix = name?.let {
+            "-${it.replace(" ", "-").lowercase()}"
+        } ?: ""
+        return "${type.lowercase()}${suffix}-${UUID.randomUUID().toString().takeLast(8)}"
+    }
+
+    /**
+     * Deterministic UUID from multiple inputs.
+     * Use for: Stable identification across sessions
+     * Format: "elm-a3f7b2c1-1234"
+     */
+    fun generateDeterministic(
+        screenHash: String,
+        className: String,
+        resourceId: String,
+        bounds: Bounds
+    ): String {
+        val signature = "$screenHash:$className:$resourceId:${bounds.toAVU()}"
+        val hash = signature.hashCode().toString(16).padStart(8, '0')
+        val posHash = (bounds.left + bounds.top).toString(16).padStart(4, '0')
+        return "elm-${hash}-${posHash}"
+    }
+
+    /**
+     * Reset sequence counter (for testing)
+     */
+    fun resetSequence() {
+        sequenceCounter.set(0)
+    }
+}
+```
+
+### 3.6.3 ScreenTracker
+
+Tracks visited screens and detects navigation patterns.
+
+```kotlin
+package com.augmentalis.jitlearning.identification
+
+/**
+ * Tracks screen visits and detects navigation patterns.
+ * Used for loop prevention and exploration coverage.
+ */
+class ScreenTracker {
+
+    data class ScreenVisit(
+        val screenHash: String,
+        val fingerprint: ScreenFingerprint.Fingerprint,
+        val visitCount: Int,
+        val firstVisit: Long,
+        val lastVisit: Long
+    )
+
+    private val visitedScreens = mutableMapOf<String, ScreenVisit>()
+    private val navigationHistory = mutableListOf<String>()
+    private val fingerprinter = ScreenFingerprint()
+
+    /**
+     * Record a screen visit.
+     * @return ScreenVisit with updated count
+     */
+    fun recordVisit(fingerprint: ScreenFingerprint.Fingerprint): ScreenVisit {
+        val hash = fingerprint.screenHash
+        navigationHistory.add(hash)
+
+        val existing = visitedScreens[hash]
+        val visit = if (existing != null) {
+            existing.copy(
+                visitCount = existing.visitCount + 1,
+                lastVisit = System.currentTimeMillis()
+            )
+        } else {
+            ScreenVisit(
+                screenHash = hash,
+                fingerprint = fingerprint,
+                visitCount = 1,
+                firstVisit = System.currentTimeMillis(),
+                lastVisit = System.currentTimeMillis()
+            )
+        }
+
+        visitedScreens[hash] = visit
+        return visit
+    }
+
+    /**
+     * Check if a screen has been visited.
+     */
+    fun hasVisited(screenHash: String): Boolean = screenHash in visitedScreens
+
+    /**
+     * Get visit count for a screen.
+     */
+    fun getVisitCount(screenHash: String): Int = visitedScreens[screenHash]?.visitCount ?: 0
+
+    /**
+     * Detect if we're in a navigation loop.
+     * Checks last N navigation entries for repetition.
+     */
+    fun detectLoop(windowSize: Int = 10): LoopDetection? {
+        if (navigationHistory.size < windowSize) return null
+
+        val recent = navigationHistory.takeLast(windowSize)
+        val frequency = recent.groupingBy { it }.eachCount()
+        val maxFreq = frequency.maxByOrNull { it.value }
+
+        return if (maxFreq != null && maxFreq.value >= 3) {
+            LoopDetection(
+                screenHash = maxFreq.key,
+                occurrences = maxFreq.value,
+                windowSize = windowSize,
+                severity = when {
+                    maxFreq.value >= 5 -> LoopSeverity.CRITICAL
+                    maxFreq.value >= 4 -> LoopSeverity.WARNING
+                    else -> LoopSeverity.INFO
+                }
+            )
+        } else null
+    }
+
+    /**
+     * Find similar screens to a given fingerprint.
+     */
+    fun findSimilar(fingerprint: ScreenFingerprint.Fingerprint): List<ScreenVisit> {
+        return visitedScreens.values.filter { visit ->
+            fingerprinter.calculateSimilarity(fingerprint, visit.fingerprint) >=
+                ScreenFingerprint.SIMILARITY_THRESHOLD
+        }
+    }
+
+    /**
+     * Get exploration coverage statistics.
+     */
+    fun getCoverage(): CoverageStats {
+        return CoverageStats(
+            uniqueScreens = visitedScreens.size,
+            totalVisits = navigationHistory.size,
+            avgVisitsPerScreen = if (visitedScreens.isNotEmpty()) {
+                navigationHistory.size.toFloat() / visitedScreens.size
+            } else 0f
+        )
+    }
+
+    fun reset() {
+        visitedScreens.clear()
+        navigationHistory.clear()
+    }
+
+    data class LoopDetection(
+        val screenHash: String,
+        val occurrences: Int,
+        val windowSize: Int,
+        val severity: LoopSeverity
+    )
+
+    enum class LoopSeverity { INFO, WARNING, CRITICAL }
+
+    data class CoverageStats(
+        val uniqueScreens: Int,
+        val totalVisits: Int,
+        val avgVisitsPerScreen: Float
+    )
+}
+```
+
+### 3.6.4 Identification Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      SCREEN CHANGE EVENT                                │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  1. EXTRACT ACTIVITY NAME                                               │
+│     ActivityName = "com.example.app.MainActivity" → "MainActivity"      │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  2. COLLECT ELEMENTS from AccessibilityNodeInfo tree                    │
+│     └─ Traverse tree, extract: className, text, bounds, resourceId      │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  3. CREATE STRUCTURAL HASH                                              │
+│     a. Sort elements by position (top*10000 + left)                     │
+│     b. Take top 50 elements                                             │
+│     c. For each: "ClassName:Quadrant" (e.g., "Button:TL|TextView:TR")   │
+│     d. Join with "|", hash to 8-char hex → "a3f7b2c1"                   │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  4. CREATE CONTENT HASH                                                 │
+│     a. Filter elements with text/contentDescription                     │
+│     b. Take top 30 by vertical position                                 │
+│     c. Join display names (truncated to 20 chars)                       │
+│     d. Hash to 8-char hex → "b2c1d3e4"                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  5. CREATE SCREEN HASH                                                  │
+│     Combined = "MainActivity:a3f7b2c1"                                  │
+│     Hash to 8-char hex → "f5e6d7c8"                                     │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  6. GENERATE ELEMENT VUIDs                                              │
+│     For each element:                                                   │
+│     ├─ Deterministic: "elm-{hash}-{posHash}" (stable across sessions)   │
+│     ├─ Type-based: "button-submit-44655440"                             │
+│     └─ Content-based: "content-4c6f67696e-timestamp"                    │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  7. SCREEN TRACKER LOOKUP                                               │
+│     ├─ If NEW screen → Add to visited map, visitCount = 1               │
+│     ├─ If EXISTING → Increment visitCount                               │
+│     └─ Check for LOOPS → If same screen 3+ times in last 10 → Warning   │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 3.6.5 Hash Examples
+
+| Screen State | Activity | Structural Hash | Content Hash | Screen Hash |
+|-------------|----------|-----------------|--------------|-------------|
+| Login page | LoginActivity | `a1b2c3d4` | `e5f6g7h8` | `f1a2b3c4` |
+| Same login, different error | LoginActivity | `a1b2c3d4` | `i9j0k1l2` | `f1a2b3c4` |
+| Home page | MainActivity | `m3n4o5p6` | `q7r8s9t0` | `d5e6f7g8` |
+| Home scrolled | MainActivity | `m3n4o5p6` | `u1v2w3x4` | `d5e6f7g8` |
+| Settings page | SettingsActivity | `y5z6a7b8` | `c9d0e1f2` | `a9b8c7d6` |
+
+**Key observations:**
+- Same structural hash + activity → Same screen hash (ignores content changes)
+- Scrolling doesn't change screen identity (structural layout preserved)
+- Different activities always produce different screen hashes
+
+### 3.6.6 VUID Strategy Selection
+
+| Scenario | Strategy | Example Output |
+|----------|----------|----------------|
+| General element | `generate()` | `550e8400-e29b-41d4-a716-446655440000` |
+| Button with label | `generateForType("button", "Submit")` | `button-submit-44655440` |
+| Text element | `generateFromContent("Login")` | `content-4c6f67696e-1733875234567` |
+| Stable ID needed | `generateDeterministic(...)` | `elm-a3f7b2c1-0540` |
+| Ordered list items | `generateSequential("item")` | `item-1-1733875234567` |
+
+---
+
+## 3.7 Dynamic Content & Scroll Tracking
+
+JIT efficiently handles scrollable containers and dynamic content without full rescans.
+
+### 3.7.1 The Challenge
+
+| Scenario | Problem |
+|----------|---------|
+| RecyclerView with 100+ items | Can't scan all items at once |
+| Cards with dynamic content | Content changes between visits |
+| Infinite scroll feeds | New items continuously added |
+| ViewPager/TabLayout | Content changes on swipe |
+
+### 3.7.2 ScrollableContainerTracker
+
+```kotlin
+package com.augmentalis.jitlearning.tracking
+
+/**
+ * Tracks scrollable containers and their visible content.
+ * Enables incremental updates without full rescans.
+ */
+class ScrollableContainerTracker {
+
+    data class Container(
+        val containerId: String,
+        val className: String,           // RecyclerView, ScrollView, etc.
+        val bounds: Bounds,
+        val scrollState: ScrollState,
+        val visibleItems: List<String>,  // VUIDs of visible elements
+        val estimatedTotalItems: Int,
+        val scrollPosition: Float        // 0.0 to 1.0
+    )
+
+    data class ScrollState(
+        val canScrollUp: Boolean,
+        val canScrollDown: Boolean,
+        val canScrollLeft: Boolean,
+        val canScrollRight: Boolean
+    )
+
+    private val containers = mutableMapOf<String, Container>()
+    private val elementToContainer = mutableMapOf<String, String>()
+
+    // Scrollable container class patterns
+    private val SCROLLABLE_CLASSES = listOf(
+        "RecyclerView", "ListView", "ScrollView", "HorizontalScrollView",
+        "NestedScrollView", "ViewPager", "ViewPager2", "LazyColumn", "LazyRow"
+    )
+
+    /**
+     * Detect if an element is a scrollable container.
+     */
+    fun isScrollableContainer(element: ElementInfo): Boolean {
+        return SCROLLABLE_CLASSES.any {
+            element.className.contains(it, ignoreCase = true)
+        } || element.actions.contains(ElementAction.SCROLL)
+    }
+
+    /**
+     * Register a scrollable container for tracking.
+     */
+    fun registerContainer(element: ElementInfo, children: List<ElementInfo>): Container {
+        val containerId = generateContainerId(element)
+
+        val scrollState = ScrollState(
+            canScrollUp = element.className.contains("RecyclerView") ||
+                         element.className.contains("ScrollView"),
+            canScrollDown = true,  // Determined from AccessibilityNodeInfo
+            canScrollLeft = element.className.contains("Horizontal") ||
+                           element.className.contains("ViewPager"),
+            canScrollRight = element.className.contains("Horizontal")
+        )
+
+        val container = Container(
+            containerId = containerId,
+            className = element.shortClassName,
+            bounds = element.bounds,
+            scrollState = scrollState,
+            visibleItems = children.map { it.uuid },
+            estimatedTotalItems = estimateItemCount(element, children.size),
+            scrollPosition = 0f
+        )
+
+        containers[containerId] = container
+        children.forEach { child ->
+            elementToContainer[child.uuid] = containerId
+        }
+
+        return container
+    }
+
+    /**
+     * Update container after scroll event.
+     * Only processes NEW elements that scrolled into view.
+     */
+    fun onScrollEvent(
+        containerId: String,
+        newVisibleElements: List<ElementInfo>,
+        scrollDelta: Int
+    ): ScrollUpdate {
+        val container = containers[containerId] ?: return ScrollUpdate.empty()
+
+        val previousVUIDs = container.visibleItems.toSet()
+        val currentVUIDs = newVisibleElements.map { it.uuid }.toSet()
+
+        // Find elements that are NEW (scrolled into view)
+        val addedVUIDs = currentVUIDs - previousVUIDs
+        val removedVUIDs = previousVUIDs - currentVUIDs
+
+        // Update container state
+        val newScrollPosition = calculateScrollPosition(container, scrollDelta)
+        containers[containerId] = container.copy(
+            visibleItems = newVisibleElements.map { it.uuid },
+            scrollPosition = newScrollPosition
+        )
+
+        // Only return the NEW elements for processing
+        val addedElements = newVisibleElements.filter { it.uuid in addedVUIDs }
+
+        return ScrollUpdate(
+            containerId = containerId,
+            addedElements = addedElements,
+            removedVUIDs = removedVUIDs.toList(),
+            scrollPosition = newScrollPosition,
+            isIncremental = true  // Not a full rescan
+        )
+    }
+
+    /**
+     * Create container-aware structural hash.
+     * Hashes container TYPE + approximate item count, not individual items.
+     */
+    fun createContainerHash(element: ElementInfo, visibleItemCount: Int): String {
+        // Use container type and approximate count instead of item content
+        val signature = "${element.shortClassName}:~${roundToNearest(visibleItemCount, 10)}items"
+        return signature.hashCode().toString(16).padStart(8, '0')
+    }
+
+    private fun generateContainerId(element: ElementInfo): String {
+        return if (element.resourceId.isNotEmpty()) {
+            "container-${element.resourceId.hashCode().toString(16)}"
+        } else {
+            "container-${element.bounds.toAVU().hashCode().toString(16)}"
+        }
+    }
+
+    private fun estimateItemCount(container: ElementInfo, visibleCount: Int): Int {
+        // Heuristic: if we can scroll, assume more items exist
+        return if (container.actions.contains(ElementAction.SCROLL)) {
+            visibleCount * 3  // Estimate 3x visible as total
+        } else {
+            visibleCount
+        }
+    }
+
+    private fun calculateScrollPosition(container: Container, delta: Int): Float {
+        val estimatedHeight = container.estimatedTotalItems * 100  // ~100px per item
+        return (container.scrollPosition + delta.toFloat() / estimatedHeight)
+            .coerceIn(0f, 1f)
+    }
+
+    private fun roundToNearest(value: Int, nearest: Int): Int {
+        return ((value + nearest / 2) / nearest) * nearest
+    }
+
+    data class ScrollUpdate(
+        val containerId: String,
+        val addedElements: List<ElementInfo>,
+        val removedVUIDs: List<String>,
+        val scrollPosition: Float,
+        val isIncremental: Boolean
+    ) {
+        companion object {
+            fun empty() = ScrollUpdate("", emptyList(), emptyList(), 0f, false)
+        }
+    }
+}
+```
+
+### 3.7.3 DynamicContentDetector
+
+```kotlin
+package com.augmentalis.jitlearning.tracking
+
+/**
+ * Detects and tracks dynamic content regions (ads, feeds, notifications).
+ * Avoids re-learning content that changes frequently.
+ */
+class DynamicContentDetector {
+
+    data class DynamicRegion(
+        val regionId: String,
+        val bounds: Bounds,
+        val changeFrequency: ChangeFrequency,
+        val contentType: DynamicContentType,
+        val lastContent: String,
+        val changeCount: Int
+    )
+
+    enum class ChangeFrequency { STATIC, LOW, MEDIUM, HIGH, REALTIME }
+
+    enum class DynamicContentType {
+        ADVERTISEMENT,      // Ad banners, promoted content
+        LIVE_FEED,          // Social feeds, news
+        NOTIFICATION,       // Toast, snackbar, badges
+        TIMER,              // Countdown, elapsed time
+        ANIMATION,          // Loading spinners, progress
+        USER_CONTENT        // User-generated, frequently updated
+    }
+
+    private val regions = mutableMapOf<String, DynamicRegion>()
+    private val changeHistory = mutableMapOf<String, MutableList<Long>>()
+
+    // Patterns that indicate dynamic content
+    private val DYNAMIC_INDICATORS = mapOf(
+        "ad" to DynamicContentType.ADVERTISEMENT,
+        "banner" to DynamicContentType.ADVERTISEMENT,
+        "promoted" to DynamicContentType.ADVERTISEMENT,
+        "feed" to DynamicContentType.LIVE_FEED,
+        "timeline" to DynamicContentType.LIVE_FEED,
+        "notification" to DynamicContentType.NOTIFICATION,
+        "toast" to DynamicContentType.NOTIFICATION,
+        "snackbar" to DynamicContentType.NOTIFICATION,
+        "timer" to DynamicContentType.TIMER,
+        "countdown" to DynamicContentType.TIMER,
+        "progress" to DynamicContentType.ANIMATION,
+        "loading" to DynamicContentType.ANIMATION,
+        "spinner" to DynamicContentType.ANIMATION
+    )
+
+    /**
+     * Compare two screen snapshots to detect dynamic regions.
+     */
+    fun detectDynamicRegions(
+        previous: List<ElementInfo>,
+        current: List<ElementInfo>,
+        timeDelta: Long
+    ): List<DynamicRegion> {
+        val previousMap = previous.associateBy { it.uuid }
+        val detected = mutableListOf<DynamicRegion>()
+
+        current.forEach { element ->
+            val prev = previousMap[element.uuid]
+            if (prev != null && hasContentChanged(prev, element)) {
+                val region = trackChange(element, timeDelta)
+                if (region.changeFrequency != ChangeFrequency.STATIC) {
+                    detected.add(region)
+                }
+            }
+        }
+
+        return detected
+    }
+
+    /**
+     * Check if an element's content has changed.
+     */
+    private fun hasContentChanged(prev: ElementInfo, current: ElementInfo): Boolean {
+        return prev.text != current.text ||
+               prev.contentDescription != current.contentDescription
+    }
+
+    /**
+     * Track content change and update frequency classification.
+     */
+    private fun trackChange(element: ElementInfo, timeDelta: Long): DynamicRegion {
+        val regionId = element.uuid
+        val now = System.currentTimeMillis()
+
+        // Record change timestamp
+        val history = changeHistory.getOrPut(regionId) { mutableListOf() }
+        history.add(now)
+
+        // Keep only last 10 changes for frequency calculation
+        while (history.size > 10) history.removeAt(0)
+
+        val frequency = calculateFrequency(history)
+        val contentType = detectContentType(element)
+
+        val region = DynamicRegion(
+            regionId = regionId,
+            bounds = element.bounds,
+            changeFrequency = frequency,
+            contentType = contentType,
+            lastContent = element.displayName,
+            changeCount = history.size
+        )
+
+        regions[regionId] = region
+        return region
+    }
+
+    /**
+     * Calculate change frequency from history.
+     */
+    private fun calculateFrequency(history: List<Long>): ChangeFrequency {
+        if (history.size < 2) return ChangeFrequency.STATIC
+
+        val intervals = history.zipWithNext { a, b -> b - a }
+        val avgInterval = intervals.average()
+
+        return when {
+            avgInterval < 1000 -> ChangeFrequency.REALTIME    // < 1 second
+            avgInterval < 5000 -> ChangeFrequency.HIGH        // < 5 seconds
+            avgInterval < 30000 -> ChangeFrequency.MEDIUM     // < 30 seconds
+            avgInterval < 300000 -> ChangeFrequency.LOW       // < 5 minutes
+            else -> ChangeFrequency.STATIC
+        }
+    }
+
+    /**
+     * Detect content type from element properties.
+     */
+    private fun detectContentType(element: ElementInfo): DynamicContentType {
+        val identifiers = listOf(
+            element.resourceId.lowercase(),
+            element.className.lowercase(),
+            element.contentDescription.lowercase()
+        ).joinToString(" ")
+
+        DYNAMIC_INDICATORS.forEach { (pattern, type) ->
+            if (identifiers.contains(pattern)) return type
+        }
+
+        return DynamicContentType.USER_CONTENT
+    }
+
+    /**
+     * Check if an element should be excluded from learning due to high dynamism.
+     */
+    fun shouldExcludeFromLearning(elementId: String): Boolean {
+        val region = regions[elementId] ?: return false
+        return region.changeFrequency in listOf(
+            ChangeFrequency.HIGH,
+            ChangeFrequency.REALTIME
+        )
+    }
+
+    /**
+     * Get all detected dynamic regions.
+     */
+    fun getDynamicRegions(): List<DynamicRegion> = regions.values.toList()
+}
+```
+
+### 3.7.4 ElementAnchor System
+
+```kotlin
+package com.augmentalis.jitlearning.tracking
+
+/**
+ * Creates stable anchors for elements to enable re-identification
+ * across scroll positions and screen revisits.
+ */
+class ElementAnchor {
+
+    data class Anchor(
+        val primaryKey: String,          // Most stable identifier
+        val fallbackKeys: List<String>,  // Alternative identifiers
+        val confidence: Float,           // 0.0 to 1.0
+        val anchorType: AnchorType
+    )
+
+    enum class AnchorType {
+        RESOURCE_ID,        // Android resource ID (most stable)
+        CONTENT_HASH,       // Hash of text content
+        STRUCTURAL,         // Class + relative position
+        COMPOSITE           // Multiple signals combined
+    }
+
+    /**
+     * Create an anchor for element re-identification.
+     */
+    fun createAnchor(element: ElementInfo, parent: ElementInfo?): Anchor {
+        val keys = mutableListOf<String>()
+        var primaryKey: String
+        var anchorType: AnchorType
+        var confidence: Float
+
+        // Priority 1: Resource ID (most stable)
+        if (element.resourceId.isNotEmpty()) {
+            primaryKey = "res:${element.resourceId}"
+            anchorType = AnchorType.RESOURCE_ID
+            confidence = 0.95f
+            keys.add(primaryKey)
+        }
+        // Priority 2: Content description (stable for accessibility-aware apps)
+        else if (element.contentDescription.isNotEmpty()) {
+            primaryKey = "desc:${element.contentDescription.hashCode().toString(16)}"
+            anchorType = AnchorType.CONTENT_HASH
+            confidence = 0.85f
+            keys.add(primaryKey)
+        }
+        // Priority 3: Text content (less stable, may change)
+        else if (element.text.isNotEmpty()) {
+            primaryKey = "text:${element.text.take(50).hashCode().toString(16)}"
+            anchorType = AnchorType.CONTENT_HASH
+            confidence = 0.7f
+            keys.add(primaryKey)
+        }
+        // Priority 4: Structural position (fallback)
+        else {
+            val relativePos = parent?.let {
+                calculateRelativePosition(element, it)
+            } ?: "root"
+            primaryKey = "struct:${element.shortClassName}:$relativePos"
+            anchorType = AnchorType.STRUCTURAL
+            confidence = 0.5f
+            keys.add(primaryKey)
+        }
+
+        // Add fallback keys
+        if (element.text.isNotEmpty() && anchorType != AnchorType.CONTENT_HASH) {
+            keys.add("text:${element.text.take(50).hashCode().toString(16)}")
+        }
+        keys.add("class:${element.shortClassName}:${element.bounds.centerX},${element.bounds.centerY}")
+
+        return Anchor(
+            primaryKey = primaryKey,
+            fallbackKeys = keys.drop(1),
+            confidence = confidence,
+            anchorType = anchorType
+        )
+    }
+
+    /**
+     * Match an element to existing anchors.
+     */
+    fun findMatch(
+        element: ElementInfo,
+        existingAnchors: Map<String, Anchor>
+    ): MatchResult? {
+        val newAnchor = createAnchor(element, null)
+
+        // Try primary key match
+        existingAnchors.forEach { (vuid, anchor) ->
+            if (anchor.primaryKey == newAnchor.primaryKey) {
+                return MatchResult(vuid, anchor.confidence, MatchType.PRIMARY)
+            }
+        }
+
+        // Try fallback key matches
+        existingAnchors.forEach { (vuid, anchor) ->
+            val fallbackMatch = newAnchor.fallbackKeys.intersect(anchor.fallbackKeys.toSet())
+            if (fallbackMatch.isNotEmpty()) {
+                return MatchResult(vuid, anchor.confidence * 0.8f, MatchType.FALLBACK)
+            }
+        }
+
+        return null
+    }
+
+    private fun calculateRelativePosition(element: ElementInfo, parent: ElementInfo): String {
+        val relX = ((element.bounds.centerX - parent.bounds.left).toFloat() /
+                   parent.bounds.width * 10).toInt()
+        val relY = ((element.bounds.centerY - parent.bounds.top).toFloat() /
+                   parent.bounds.height * 10).toInt()
+        return "${relX}x${relY}"
+    }
+
+    data class MatchResult(
+        val matchedVUID: String,
+        val confidence: Float,
+        val matchType: MatchType
+    )
+
+    enum class MatchType { PRIMARY, FALLBACK }
+}
+```
+
+### 3.7.5 Incremental Update Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    SCROLL EVENT RECEIVED                                │
+│                AccessibilityEvent.TYPE_VIEW_SCROLLED                    │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  1. IDENTIFY CONTAINER                                                  │
+│     └─ Find scrollable parent (RecyclerView, ScrollView, etc.)          │
+│     └─ Get containerId from ScrollableContainerTracker                  │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  2. GET VISIBLE VIEWPORT                                                │
+│     └─ Only query elements within container bounds                      │
+│     └─ Skip elements outside visible viewport                           │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  3. DIFFERENTIAL COMPARISON                                             │
+│     ├─ Previous visible: [A, B, C, D, E]                                │
+│     ├─ Current visible:  [C, D, E, F, G]                                │
+│     ├─ REMOVED (scrolled out): [A, B] → Cache, don't delete             │
+│     └─ ADDED (scrolled in): [F, G] → Process these ONLY                 │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  4. ANCHOR MATCHING for NEW elements                                    │
+│     └─ Check if F, G were previously seen (different scroll position)   │
+│     └─ Match by resourceId → contentDescription → text → structure      │
+│     └─ If match found: reuse existing VUID, merge data                  │
+│     └─ If no match: assign new VUID                                     │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  5. UPDATE TRACKING STATE                                               │
+│     └─ Update container.visibleItems = [C, D, E, F, G]                  │
+│     └─ Update container.scrollPosition                                  │
+│     └─ Keep A, B in cache (may scroll back)                             │
+│     └─ Screen hash UNCHANGED (container structure same)                 │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 3.7.6 Dynamic Content Handling Summary
+
+| Content Type | Detection | Handling |
+|--------------|-----------|----------|
+| **Static Content** | No changes between scans | Full learning, high confidence |
+| **Scrollable Lists** | `RecyclerView`, `ScrollView` | Incremental viewport tracking |
+| **Dynamic Cards** | Content changes within bounds | Anchor by resourceId, not content |
+| **Live Feeds** | High change frequency detected | Mark region, lower confidence |
+| **Ads/Promotions** | resourceId contains "ad", "banner" | Exclude from command learning |
+| **Animations** | Rapid changes (<1s interval) | Exclude from element tracking |
+| **User Input** | EditText content changes | Track field, not content |
+
+---
+
+## 3.8 Export Classes
+
+### 3.8.1 AVUExporter
 
 ```kotlin
 package com.augmentalis.learnappcore.export
