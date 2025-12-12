@@ -271,12 +271,13 @@ fun BottomCommandBar(
                     .background(OceanTheme.surface),
                 color = OceanTheme.surface,
                 shape = RoundedCornerShape(27.dp),
-                shadowElevation = 8.dp
+                shadowElevation = 0.dp,  // FIX: Remove shadow artifacts
+                border = BorderStroke(1.dp, OceanTheme.border)  // FIX: Use border instead
             ) {
                 Row(
                     modifier = Modifier
                         .padding(horizontal = 10.dp, vertical = 8.dp),  // FIX: Reduced padding, no scroll
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),  // FIX: Reduced spacing from 6dp to 4dp
+                    horizontalArrangement = Arrangement.SpaceEvenly,  // FIX: Center-align buttons, no scrolling
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     when (currentLevel) {

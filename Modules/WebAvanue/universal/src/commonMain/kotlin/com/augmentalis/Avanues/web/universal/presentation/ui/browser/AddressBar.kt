@@ -149,6 +149,17 @@ fun AddressBar(
         }
     }
 
+    // FIX Issue #4: Clear focus and update URL when tab changes
+    // This ensures the address bar shows the correct URL when switching tabs
+    LaunchedEffect(activeTabId) {
+        if (hasFocus) {
+            focusManager.clearFocus()  // Clear focus to trigger URL update
+            hasFocus = false
+        }
+        textFieldValue = TextFieldValue(text = url, selection = TextRange(0, 0))
+        lastSyncedUrl = url
+    }
+
     // Detect WebGL-intensive sites that may cause ANR on AOSP devices
     val isWebGLSite = remember(url) {
         val lowerUrl = url.lowercase()
