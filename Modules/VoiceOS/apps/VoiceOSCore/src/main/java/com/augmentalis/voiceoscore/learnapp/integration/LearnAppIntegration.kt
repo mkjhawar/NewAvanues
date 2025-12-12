@@ -34,6 +34,9 @@ import com.augmentalis.voiceoscore.learnapp.overlays.LoginPromptAction
 import com.augmentalis.voiceoscore.learnapp.overlays.LoginPromptConfig
 import com.augmentalis.voiceoscore.learnapp.overlays.LoginPromptOverlay
 import com.augmentalis.voiceoscore.learnapp.jit.JustInTimeLearner
+import com.augmentalis.jitlearning.JITLearnerProvider
+import com.augmentalis.jitlearning.JITEventCallback
+import com.augmentalis.jitlearning.JITLearningService
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppPreferences
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 import com.augmentalis.voiceoscore.learnapp.ui.ConsentDialogManager
@@ -115,7 +118,7 @@ enum class BlockedState {
 class LearnAppIntegration private constructor(
     private val context: Context,
     private val accessibilityService: AccessibilityService
-) {
+) : JITLearnerProvider {
 
     /**
      * Coroutine scope
@@ -244,6 +247,10 @@ class LearnAppIntegration private constructor(
 
         // Set up event listeners
         setupEventListeners()
+
+        // FIX (2025-12-11): Wire JITLearningService to this provider
+        // This connects the AIDL service to the actual JustInTimeLearner
+        wireJITLearningService()
     }
 
     /**
@@ -1210,6 +1217,148 @@ class LearnAppIntegration private constructor(
      * @since 1.0.0 (Phase 3: Command Discovery integration)
      */
     fun getExplorationEngine(): ExplorationEngine = explorationEngine
+
+    /**
+     * Get JustInTimeLearner instance for JITLearningService integration
+     *
+     * FIX (2025-12-11): Added for JITLearningService AIDL integration
+     * Allows JITLearningService to access the actual learning engine for:
+     * - Pause/resume control
+     * - State queries (screens learned, elements discovered)
+     * - Event callback registration
+     *
+     * @return JustInTimeLearner instance
+     * @since 2.0.0 (JIT-LearnApp Separation)
+     */
+    fun getJustInTimeLearner(): JustInTimeLearner = justInTimeLearner
+
+    /**
+     * Get current root accessibility node
+     *
+     * FIX (2025-12-11): Added for JITLearningService getCurrentScreenInfo()
+     * Provides access to the current screen's accessibility tree.
+     *
+     * @return Root AccessibilityNodeInfo, or null if not available
+     */
+    override fun getCurrentRootNode(): android.view.accessibility.AccessibilityNodeInfo? {
+        return try {
+            accessibilityService.rootInActiveWindow
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get root node", e)
+            null
+        }
+    }
+
+    // ========== JITLearnerProvider Implementation (2025-12-11) ==========
+
+    /** JIT event callback storage */
+    private var jitEventCallback: JITEventCallback? = null
+
+    /**
+     * Pause JIT learning
+     */
+    override fun pauseLearning() {
+        justInTimeLearner.pause()
+    }
+
+    /**
+     * Resume JIT learning
+     */
+    override fun resumeLearning() {
+        justInTimeLearner.resume()
+    }
+
+    /**
+     * Check if learning is paused
+     */
+    override fun isLearningPaused(): Boolean {
+        return justInTimeLearner.isPausedState()
+    }
+
+    /**
+     * Check if learning is actively running
+     */
+    override fun isLearningActive(): Boolean {
+        return justInTimeLearner.isLearningActive()
+    }
+
+    /**
+     * Get stats: screens learned count
+     */
+    override fun getScreensLearnedCount(): Int {
+        return justInTimeLearner.getStats().screensLearned
+    }
+
+    /**
+     * Get stats: elements discovered count
+     */
+    override fun getElementsDiscoveredCount(): Int {
+        return justInTimeLearner.getStats().elementsDiscovered
+    }
+
+    /**
+     * Get current package being learned
+     */
+    override fun getCurrentPackage(): String? {
+        return justInTimeLearner.getStats().currentPackage
+    }
+
+    /**
+     * Check if screen has been learned
+     */
+    override fun hasScreen(screenHash: String): Boolean {
+        return kotlinx.coroutines.runBlocking {
+            justInTimeLearner.hasScreen(screenHash)
+        }
+    }
+
+    /**
+     * Set event callback for JIT events
+     */
+    override fun setEventCallback(callback: JITEventCallback?) {
+        jitEventCallback = callback
+
+        // Wire callback to JustInTimeLearner
+        if (callback != null) {
+            justInTimeLearner.setEventCallback(object : JustInTimeLearner.JITEventCallback {
+                override fun onScreenLearned(packageName: String, screenHash: String, elementCount: Int) {
+                    callback.onScreenLearned(packageName, screenHash, elementCount)
+                }
+
+                override fun onElementDiscovered(stableId: String, vuid: String?) {
+                    callback.onElementDiscovered(stableId, vuid)
+                }
+
+                override fun onLoginDetected(packageName: String, screenHash: String) {
+                    callback.onLoginDetected(packageName, screenHash)
+                }
+            })
+        } else {
+            justInTimeLearner.setEventCallback(null)
+        }
+    }
+
+    /**
+     * Wire JITLearningService to this provider
+     *
+     * Call this after LearnAppIntegration is initialized to connect
+     * JITLearningService to JustInTimeLearner via this provider interface.
+     */
+    private fun wireJITLearningService() {
+        try {
+            val service = JITLearningService.getInstance()
+            if (service != null) {
+                service.setLearnerProvider(this)
+                Log.i(TAG, "JITLearningService wired to LearnAppIntegration")
+            } else {
+                Log.d(TAG, "JITLearningService not running yet")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to wire JITLearningService", e)
+        }
+    }
+
+    // ========== End JITLearnerProvider Implementation ==========
 
     /**
      * Shutdown integration and cancel all background jobs

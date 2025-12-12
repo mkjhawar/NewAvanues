@@ -89,6 +89,34 @@ class JustInTimeLearner(
     private var isActive = true  // Changed from false to true
     private var currentPackageName: String? = null
 
+    // FIX (2025-12-11): Add pause state for JITLearningService control
+    private var isPaused = false
+
+    // FIX (2025-12-11): Track stats for queryState()
+    private var screensLearnedCount = 0
+    private var elementsDiscoveredCount = 0
+
+    // FIX (2025-12-11): Event callback for JITLearningService
+    private var eventCallback: JITEventCallback? = null
+
+    /**
+     * Event callback interface for JITLearningService integration
+     * FIX (2025-12-11): Enables real-time event streaming to LearnApp
+     */
+    interface JITEventCallback {
+        fun onScreenLearned(packageName: String, screenHash: String, elementCount: Int)
+        fun onElementDiscovered(stableId: String, vuid: String?)
+        fun onLoginDetected(packageName: String, screenHash: String)
+    }
+
+    /**
+     * Set event callback for JITLearningService
+     * FIX (2025-12-11): Enables event streaming to registered listeners
+     */
+    fun setEventCallback(callback: JITEventCallback?) {
+        eventCallback = callback
+    }
+
     // FIX (2025-12-01): Element capture for JIT (command generation is inlined)
     // Phase 1 of Voice Command Element Persistence feature
     private var elementCapture: JitElementCapture? = null
@@ -208,6 +236,8 @@ class JustInTimeLearner(
      */
     fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (!isActive) return
+        // FIX (2025-12-11): Check pause state
+        if (isPaused) return
 
         val packageName = event.packageName?.toString() ?: return
 
@@ -384,6 +414,13 @@ class JustInTimeLearner(
                 // Save via repository
                 repository.saveScreenState(screenState)
                 Log.i(TAG, "Screen saved: $packageName - Hash: $screenHash - Elements: $capturedElementCount")
+
+                // FIX (2025-12-11): Update stats for queryState()
+                screensLearnedCount++
+                elementsDiscoveredCount += capturedElementCount
+
+                // FIX (2025-12-11): Dispatch event to JITLearningService
+                eventCallback?.onScreenLearned(packageName, screenHash, capturedElementCount)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to save screen state for $packageName", e)
             }
@@ -577,6 +614,86 @@ class JustInTimeLearner(
      */
     fun destroy() {
         deactivate()
+        eventCallback = null
         // Coroutine scope will be cancelled automatically
     }
+
+    // ================================================================
+    // FIX (2025-12-11): Methods for JITLearningService integration
+    // ================================================================
+
+    /**
+     * Pause JIT learning (called from JITLearningService)
+     */
+    fun pause() {
+        isPaused = true
+        Log.i(TAG, "JIT learning paused")
+    }
+
+    /**
+     * Resume JIT learning (called from JITLearningService)
+     */
+    fun resume() {
+        isPaused = false
+        Log.i(TAG, "JIT learning resumed")
+    }
+
+    /**
+     * Check if JIT is currently paused
+     */
+    fun isPausedState(): Boolean = isPaused
+
+    /**
+     * Check if JIT is actively learning
+     */
+    fun isLearningActive(): Boolean = isActive && !isPaused
+
+    /**
+     * Get current stats for queryState()
+     */
+    fun getStats(): JITStats {
+        return JITStats(
+            screensLearned = screensLearnedCount,
+            elementsDiscovered = elementsDiscoveredCount,
+            currentPackage = currentPackageName,
+            isActive = isActive && !isPaused
+        )
+    }
+
+    /**
+     * Check if a screen has already been learned
+     */
+    suspend fun hasScreen(screenHash: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val count = databaseManager.scrapedElements.countByScreenHash(
+                    currentPackageName ?: "",
+                    screenHash
+                )
+                count > 0
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking screen hash", e)
+                false
+            }
+        }
+    }
+
+    /**
+     * Get menu items for a specific menu (for LearnAppPro)
+     */
+    suspend fun getMenuItems(menuId: String): List<ElementInfo> {
+        // Query database for elements that are part of the menu
+        // For now, return empty list as menu detection is handled by ExplorationEngine
+        return emptyList()
+    }
+
+    /**
+     * JIT statistics data class
+     */
+    data class JITStats(
+        val screensLearned: Int,
+        val elementsDiscovered: Int,
+        val currentPackage: String?,
+        val isActive: Boolean
+    )
 }
