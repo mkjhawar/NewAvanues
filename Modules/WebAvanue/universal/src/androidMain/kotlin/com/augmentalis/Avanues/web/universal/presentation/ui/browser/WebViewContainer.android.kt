@@ -1193,4 +1193,90 @@ actual class WebViewController {
             upEvent2.recycle()
         }
     }
+
+    // ========== Find in Page ==========
+
+    private var findListener: WebView.FindListener? = null
+    private var currentFindQuery: String = ""
+
+    /**
+     * Find all occurrences of text in the page
+     *
+     * Uses Android WebView.findAllAsync() for efficient text search with highlighting.
+     * Automatically highlights all matches and tracks the current match position.
+     *
+     * @param query Search query string
+     * @param caseSensitive Whether to match case (currently not supported by Android WebView)
+     * @param onResultsFound Callback with (currentMatch, totalMatches)
+     */
+    actual fun findInPage(
+        query: String,
+        caseSensitive: Boolean,
+        onResultsFound: (Int, Int) -> Unit
+    ) {
+        webView?.let { view ->
+            currentFindQuery = query
+
+            if (query.isEmpty()) {
+                // Clear highlights if query is empty
+                clearFindMatches()
+                onResultsFound(0, 0)
+                return
+            }
+
+            // Set up find listener to get results
+            findListener = WebView.FindListener { activeMatchOrdinal, numberOfMatches, isDoneCounting ->
+                if (isDoneCounting) {
+                    // Update results (WebView uses 0-based indexing)
+                    onResultsFound(activeMatchOrdinal, numberOfMatches)
+                    println("Find in page: $numberOfMatches matches found, current match: $activeMatchOrdinal")
+                }
+            }
+            view.setFindListener(findListener)
+
+            // Note: Android WebView doesn't support case-sensitive search via API
+            // All searches are case-insensitive by default
+            if (caseSensitive) {
+                println("Find in page: Case-sensitive search requested but not supported on Android WebView")
+            }
+
+            // Start async search - highlights all matches
+            @Suppress("DEPRECATION")
+            view.findAllAsync(query)
+        }
+    }
+
+    /**
+     * Find next match in the page
+     *
+     * Navigates to the next occurrence of the current search query.
+     * Wraps around from last to first match automatically.
+     */
+    actual fun findNext() {
+        webView?.findNext(true) // true = forward direction
+    }
+
+    /**
+     * Find previous match in the page
+     *
+     * Navigates to the previous occurrence of the current search query.
+     * Wraps around from first to last match automatically.
+     */
+    actual fun findPrevious() {
+        webView?.findNext(false) // false = backward direction
+    }
+
+    /**
+     * Clear find in page highlights
+     *
+     * Removes all search highlights from the page and resets find state.
+     */
+    actual fun clearFindMatches() {
+        webView?.let { view ->
+            view.clearMatches()
+            view.setFindListener(null)
+            findListener = null
+            currentFindQuery = ""
+        }
+    }
 }

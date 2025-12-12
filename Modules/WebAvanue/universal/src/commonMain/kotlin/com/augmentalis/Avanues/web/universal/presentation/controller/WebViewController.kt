@@ -200,4 +200,52 @@ interface WebViewController {
         y: Float,
         modifiers: Int = 0
     ): ActionResult
+
+    // ========== Find in Page ==========
+
+    /**
+     * Find all occurrences of text in the page
+     *
+     * Searches the page content for the given text and highlights all matches.
+     * Returns the total number of matches found.
+     *
+     * @param query Search query string
+     * @param caseSensitive Whether to match case
+     * @param onResultsFound Callback with (currentMatch, totalMatches)
+     * @return ActionResult indicating success/failure
+     */
+    suspend fun findInPage(
+        query: String,
+        caseSensitive: Boolean,
+        onResultsFound: (currentMatch: Int, totalMatches: Int) -> Unit
+    ): ActionResult
+
+    /**
+     * Find next match in the page
+     *
+     * Navigates to the next occurrence of the current search query.
+     * Wraps around from last to first match.
+     *
+     * @return ActionResult indicating success/failure
+     */
+    suspend fun findNext(): ActionResult
+
+    /**
+     * Find previous match in the page
+     *
+     * Navigates to the previous occurrence of the current search query.
+     * Wraps around from first to last match.
+     *
+     * @return ActionResult indicating success/failure
+     */
+    suspend fun findPrevious(): ActionResult
+
+    /**
+     * Clear find in page highlights
+     *
+     * Removes all search highlights from the page.
+     *
+     * @return ActionResult indicating success/failure
+     */
+    suspend fun clearFindMatches(): ActionResult
 }

@@ -19,6 +19,9 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.ViewInAr
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -69,6 +72,8 @@ fun SettingsScreen(
     onNavigateToXRSettings: () -> Unit = {},
     onNavigateToSitePermissions: () -> Unit = {},
     onNavigateToARPreview: () -> Unit = {},
+    onImportBookmarks: () -> Unit = {},
+    onExportBookmarks: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val settings by viewModel.settings.collectAsState()
@@ -120,6 +125,8 @@ fun SettingsScreen(
                 onNavigateToXRSettings = onNavigateToXRSettings,
                 onNavigateToSitePermissions = onNavigateToSitePermissions,
                 onNavigateToARPreview = onNavigateToARPreview,
+                onImportBookmarks = onImportBookmarks,
+                onExportBookmarks = onExportBookmarks,
                 viewModel = viewModel
             )
         } else {
@@ -132,6 +139,8 @@ fun SettingsScreen(
                 onNavigateToXRSettings = onNavigateToXRSettings,
                 onNavigateToSitePermissions = onNavigateToSitePermissions,
                 onNavigateToARPreview = onNavigateToARPreview,
+                onImportBookmarks = onImportBookmarks,
+                onExportBookmarks = onExportBookmarks,
                 viewModel = viewModel
             )
         }
@@ -165,6 +174,8 @@ private fun PortraitSettingsLayout(
     onNavigateToXRSettings: () -> Unit,
     onNavigateToSitePermissions: () -> Unit,
     onNavigateToARPreview: () -> Unit,
+    onImportBookmarks: () -> Unit,
+    onExportBookmarks: () -> Unit,
     viewModel: SettingsViewModel
 ) {
     Scaffold(
@@ -759,6 +770,27 @@ private fun PortraitSettingsLayout(
                             }
                         }
 
+                        // Bookmarks section
+                        item {
+                            SettingsSectionHeader("Bookmarks")
+                        }
+
+                        item {
+                            NavigationSettingItem(
+                                title = "Import Bookmarks",
+                                subtitle = "Import from HTML bookmark file",
+                                onClick = onImportBookmarks
+                            )
+                        }
+
+                        item {
+                            NavigationSettingItem(
+                                title = "Export Bookmarks",
+                                subtitle = "Export all bookmarks to HTML file",
+                                onClick = onExportBookmarks
+                            )
+                        }
+
                         // Voice & AI section
                         item {
                             SettingsSectionHeader("Voice & AI")
@@ -956,6 +988,8 @@ private fun LandscapeSettingsLayout(
     onNavigateToXRSettings: () -> Unit,
     onNavigateToSitePermissions: () -> Unit,
     onNavigateToARPreview: () -> Unit,
+    onImportBookmarks: () -> Unit,
+    onExportBookmarks: () -> Unit,
     viewModel: SettingsViewModel
 ) {
     Row(
@@ -1072,7 +1106,9 @@ private fun LandscapeSettingsLayout(
                         viewModel = viewModel,
                         onNavigateToXRSettings = onNavigateToXRSettings,
                         onNavigateToSitePermissions = onNavigateToSitePermissions,
-                        onNavigateToARPreview = onNavigateToARPreview
+                        onNavigateToARPreview = onNavigateToARPreview,
+                        onImportBookmarks = onImportBookmarks,
+                        onExportBookmarks = onExportBookmarks
                     )
                 }
             }
@@ -1139,7 +1175,9 @@ private fun CategorySettingsContent(
     viewModel: SettingsViewModel,
     onNavigateToXRSettings: () -> Unit,
     onNavigateToSitePermissions: () -> Unit,
-    onNavigateToARPreview: () -> Unit
+    onNavigateToARPreview: () -> Unit,
+    onImportBookmarks: () -> Unit,
+    onExportBookmarks: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -1729,6 +1767,25 @@ private fun CategorySettingsContent(
                             title = "AR Layout Preview",
                             subtitle = "Test spatial arc layout and glassmorphic design",
                             onClick = onNavigateToARPreview
+                        )
+                    }
+                }
+                // Bookmarks import/export
+                item {
+                    ARXRSettingCard {
+                        NavigationSettingItem(
+                            title = "Import Bookmarks",
+                            subtitle = "Import from HTML bookmark file",
+                            onClick = onImportBookmarks
+                        )
+                    }
+                }
+                item {
+                    ARXRSettingCard {
+                        NavigationSettingItem(
+                            title = "Export Bookmarks",
+                            subtitle = "Export all bookmarks to HTML file",
+                            onClick = onExportBookmarks
                         )
                     }
                 }

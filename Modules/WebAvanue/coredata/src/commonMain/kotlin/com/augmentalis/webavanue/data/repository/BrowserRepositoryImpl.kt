@@ -473,6 +473,12 @@ class BrowserRepositoryImpl(
 
     override suspend fun addHistoryEntry(entry: HistoryEntry): Result<HistoryEntry> = withContext(Dispatchers.IO) {
         try {
+            // PRIVATE BROWSING: Skip history for incognito/private tabs
+            if (entry.isIncognito) {
+                Napier.d("Skipping history entry for private browsing: ${entry.url}", tag = "BrowserRepository")
+                return@withContext Result.success(entry)
+            }
+
             queries.insertHistoryEntry(entry.toDbModel())
             refreshHistory()
             Result.success(entry)
@@ -1029,6 +1035,99 @@ class BrowserRepositoryImpl(
             Napier.d("initScope cancelled", tag = "BrowserRepository")
         } catch (e: Exception) {
             Napier.e("Error in cleanup: ${e.message}", e, tag = "BrowserRepository")
+        }
+    }
+
+    // ==================== Session Restore Operations ====================
+
+    override suspend fun saveSession(session: Session, tabs: List<SessionTab>): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            // TODO: Implement session persistence when session table is added to schema
+            Napier.d("Session save not implemented yet - awaiting database schema", tag = "BrowserRepository")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getSession(sessionId: String): Result<Session?> = withContext(Dispatchers.IO) {
+        try {
+            // TODO: Implement session retrieval when session table is added to schema
+            Result.success(null)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getLatestSession(): Result<Session?> = withContext(Dispatchers.IO) {
+        try {
+            // TODO: Implement latest session retrieval when session table is added to schema
+            Result.success(null)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getLatestCrashSession(): Result<Session?> = withContext(Dispatchers.IO) {
+        try {
+            // TODO: Implement crash session retrieval when session table is added to schema
+            Result.success(null)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getAllSessions(limit: Int, offset: Int): Result<List<Session>> = withContext(Dispatchers.IO) {
+        try {
+            // TODO: Implement session history retrieval when session table is added to schema
+            Result.success(emptyList())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getSessionTabs(sessionId: String): Result<List<SessionTab>> = withContext(Dispatchers.IO) {
+        try {
+            // TODO: Implement session tabs retrieval when session table is added to schema
+            Result.success(emptyList())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getActiveSessionTab(sessionId: String): Result<SessionTab?> = withContext(Dispatchers.IO) {
+        try {
+            // TODO: Implement active session tab retrieval when session table is added to schema
+            Result.success(null)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteSession(sessionId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            // TODO: Implement session deletion when session table is added to schema
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteAllSessions(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            // TODO: Implement all sessions deletion when session table is added to schema
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteOldSessions(timestamp: Instant): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            // TODO: Implement old sessions cleanup when session table is added to schema
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }

@@ -3,6 +3,8 @@ package com.augmentalis.Avanues.web.universal.presentation.viewmodel
 import com.augmentalis.webavanue.domain.model.Favorite
 import com.augmentalis.webavanue.domain.model.FavoriteFolder
 import com.augmentalis.webavanue.domain.repository.BrowserRepository
+import com.augmentalis.Avanues.web.universal.util.BookmarkImportExport
+import com.augmentalis.Avanues.web.universal.util.parseHtmlWithData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -355,6 +357,109 @@ class FavoriteViewModel(
      */
     fun clearError() {
         _error.value = null
+    }
+
+    // ==================== Import/Export Operations ====================
+
+    /**
+     * Export all bookmarks to Netscape HTML format.
+     *
+     * Generates a standard HTML bookmark file compatible with all major browsers
+     * (Chrome, Firefox, Safari, Edge).
+     *
+     * @return HTML string containing all bookmarks and folders
+     *
+     * @sample
+     * ```kotlin
+     * val html = viewModel.exportBookmarks()
+     * // Save html to file...
+     * ```
+     */
+    fun exportBookmarks(): String {
+        return BookmarkImportExport.exportToHtml(
+            favorites = _favorites.value,
+            folders = _folders.value
+        )
+    }
+
+    /**
+     * Import bookmarks from Netscape HTML format.
+     *
+     * Parses an HTML bookmark file and adds all bookmarks to the database.
+     * Automatically detects and skips duplicate URLs.
+     *
+     * @param html HTML content in Netscape bookmark format
+     * @param skipDuplicates If true (default), skip bookmarks with existing URLs
+     * @return ImportResult containing statistics about the import operation
+     *
+     * @sample
+     * ```kotlin
+     * val html = readBookmarkFile()
+     * val result = viewModel.importBookmarks(html)
+     * println("Imported: ${result.imported}, Skipped: ${result.skipped}")
+     * ```
+     */
+    suspend fun importBookmarks(
+        html: String,
+        skipDuplicates: Boolean = true
+    ): BookmarkImportExport.ImportResult {
+        return try {
+            _isLoading.value = true
+            _error.value = null
+
+            // Get existing URLs for duplicate detection
+            val existingUrls = _favorites.value.map { it.url }.toSet()
+
+            // Parse HTML to extract bookmarks and folders
+            val importData = BookmarkImportExport.parseHtmlWithData(
+                html = html,
+                existingUrls = existingUrls,
+                skipDuplicates = skipDuplicates
+            )
+
+            // Import folders first (so bookmarks can reference them)
+            for (folder in importData.folders) {
+                repository.createFolder(folder)
+                    .onFailure { e ->
+                        println("Failed to import folder ${folder.name}: ${e.message}")
+                    }
+            }
+
+            // Import bookmarks
+            var imported = 0
+            for (favorite in importData.favorites) {
+                repository.addFavorite(favorite)
+                    .onSuccess { imported++ }
+                    .onFailure { e ->
+                        println("Failed to import bookmark ${favorite.title}: ${e.message}")
+                    }
+            }
+
+            _isLoading.value = false
+
+            // Return result with actual imported count
+            importData.result.copy(imported = imported)
+        } catch (e: Exception) {
+            _error.value = "Import failed: ${e.message}"
+            _isLoading.value = false
+            BookmarkImportExport.ImportResult(
+                imported = 0,
+                skipped = 0,
+                folders = 0,
+                errors = listOf(e.message ?: "Unknown error")
+            )
+        }
+    }
+
+    /**
+     * Generate a timestamped filename for bookmark export.
+     *
+     * Format: `bookmarks_YYYYMMDD_HHMMSS.html`
+     *
+     * @return Filename string
+     */
+    fun generateExportFilename(): String {
+        return BookmarkImportExport.generateExportFilename()
     }
 
     /**

@@ -84,6 +84,7 @@ fun BrowserScreen(
     val tabs by tabViewModel.tabs.collectAsState()
     val settings by settingsViewModel.settings.collectAsState()
     val favorites by favoriteViewModel.favorites.collectAsState()
+    val findInPageState by tabViewModel.findInPageState.collectAsState()
 
     // Error state for user feedback
     val error by tabViewModel.error.collectAsState()
@@ -192,6 +193,14 @@ fun BrowserScreen(
         }
     }
 
+    // Helper to trigger find in page (for keyboard shortcuts like Ctrl+F)
+    // Can be called from Activity level keyboard event handlers
+    fun triggerFindInPage() {
+        if (!findInPageState.isVisible) {
+            tabViewModel.showFindInPage()
+        }
+    }
+
     // NOTE: Do NOT call onCleared() on ViewModels here!
     // ViewModels are shared across Voyager screens via ViewModelHolder.
     // Calling onCleared() when BrowserScreen leaves composition (e.g., navigating to Settings)
@@ -211,6 +220,39 @@ fun BrowserScreen(
     // Update URL input when active tab changes
     LaunchedEffect(activeTab?.tab?.url) {
         urlInput = activeTab?.tab?.url ?: ""
+    }
+
+    // Find in page: Trigger search when query changes (with debouncing)
+    LaunchedEffect(findInPageState.query, findInPageState.caseSensitive) {
+        if (findInPageState.isVisible && findInPageState.query.isNotEmpty()) {
+            // Debounce search - wait 300ms after user stops typing
+            kotlinx.coroutines.delay(300)
+            webViewController.findInPage(
+                query = findInPageState.query,
+                caseSensitive = findInPageState.caseSensitive
+            ) { currentMatch, totalMatches ->
+                tabViewModel.updateFindResults(currentMatch, totalMatches)
+            }
+        } else if (findInPageState.query.isEmpty()) {
+            // Clear highlights when query is empty
+            webViewController.clearFindMatches()
+        }
+    }
+
+    // Note: Keyboard shortcuts for find in page:
+    // - Ctrl+F / Cmd+F: Open find bar (handled at activity level or via hardware keyboard)
+    // - Enter: Next match (handled in FindInPageBar KeyboardActions)
+    // - Shift+Enter: Previous match (would need KeyEvent interception)
+    // - Escape: Close find bar (would need KeyEvent interception)
+    // For full keyboard support, implement onPreviewKeyEvent at activity level
+
+    // Find in page: Navigate when currentMatch changes
+    LaunchedEffect(findInPageState.currentMatch) {
+        // Skip first emission (initial state)
+        if (findInPageState.totalMatches > 0 && findInPageState.currentMatch > 0) {
+            // User changed match manually via next/prev buttons
+            // Note: WebView automatically scrolls to match via findNext/findPrevious
+        }
     }
 
     // Command bar at bottom, overlays on webpage, auto-hides in voice mode
@@ -474,6 +516,81 @@ fun BrowserScreen(
                             .padding(horizontal = 8.dp, vertical = 8.dp)
                     )
                 }
+
+                // Reading Mode Overlay (when enabled, covers entire WebView)
+                activeTab?.let { tabState ->
+                    if (tabState.isReadingMode && tabState.readingModeArticle != null) {
+                        ReadingModeView(
+                            article = tabState.readingModeArticle,
+                            theme = when (settings?.readingModeTheme) {
+                                BrowserSettings.ReadingModeTheme.LIGHT -> ReadingModeTheme.LIGHT
+                                BrowserSettings.ReadingModeTheme.DARK -> ReadingModeTheme.DARK
+                                BrowserSettings.ReadingModeTheme.SEPIA -> ReadingModeTheme.SEPIA
+                                else -> ReadingModeTheme.LIGHT
+                            },
+                            fontSize = settings?.readingModeFontSize ?: 1.0f,
+                            fontFamily = when (settings?.readingModeFontFamily) {
+                                BrowserSettings.ReadingModeFontFamily.SYSTEM -> ReadingModeFontFamily.SYSTEM
+                                BrowserSettings.ReadingModeFontFamily.SERIF -> ReadingModeFontFamily.SERIF
+                                BrowserSettings.ReadingModeFontFamily.SANS_SERIF -> ReadingModeFontFamily.SANS_SERIF
+                                BrowserSettings.ReadingModeFontFamily.MONOSPACE -> ReadingModeFontFamily.MONOSPACE
+                                else -> ReadingModeFontFamily.SYSTEM
+                            },
+                            lineHeight = settings?.readingModeLineHeight ?: 1.5f,
+                            onClose = {
+                                tabViewModel.toggleReadingMode()
+                            },
+                            onThemeChange = { theme ->
+                                val newSettings = settings?.copy(
+                                    readingModeTheme = when (theme) {
+                                        ReadingModeTheme.LIGHT -> BrowserSettings.ReadingModeTheme.LIGHT
+                                        ReadingModeTheme.DARK -> BrowserSettings.ReadingModeTheme.DARK
+                                        ReadingModeTheme.SEPIA -> BrowserSettings.ReadingModeTheme.SEPIA
+                                    }
+                                )
+                                if (newSettings != null) {
+                                    scope.launch {
+                                        settingsViewModel.updateSettings(newSettings)
+                                    }
+                                }
+                            },
+                            onFontSizeChange = { fontSize ->
+                                val newSettings = settings?.copy(readingModeFontSize = fontSize)
+                                if (newSettings != null) {
+                                    scope.launch {
+                                        settingsViewModel.updateSettings(newSettings)
+                                    }
+                                }
+                            },
+                            onFontFamilyChange = { fontFamily ->
+                                val newSettings = settings?.copy(
+                                    readingModeFontFamily = when (fontFamily) {
+                                        ReadingModeFontFamily.SYSTEM -> BrowserSettings.ReadingModeFontFamily.SYSTEM
+                                        ReadingModeFontFamily.SERIF -> BrowserSettings.ReadingModeFontFamily.SERIF
+                                        ReadingModeFontFamily.SANS_SERIF -> BrowserSettings.ReadingModeFontFamily.SANS_SERIF
+                                        ReadingModeFontFamily.MONOSPACE -> BrowserSettings.ReadingModeFontFamily.MONOSPACE
+                                    }
+                                )
+                                if (newSettings != null) {
+                                    scope.launch {
+                                        settingsViewModel.updateSettings(newSettings)
+                                    }
+                                }
+                            },
+                            onLineHeightChange = { lineHeight ->
+                                val newSettings = settings?.copy(readingModeLineHeight = lineHeight)
+                                if (newSettings != null) {
+                                    scope.launch {
+                                        settingsViewModel.updateSettings(newSettings)
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .zIndex(30f)  // Above command bar
+                        )
+                    }
+                }
             }
         }
 
@@ -499,6 +616,44 @@ fun BrowserScreen(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 90.dp)
         )
+
+        // Find in page bar (above command bar)
+        androidx.compose.animation.AnimatedVisibility(
+            visible = findInPageState.isVisible,
+            enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }) + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) + androidx.compose.animation.fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .zIndex(21f)  // Above command bar
+        ) {
+            FindInPageBar(
+                query = findInPageState.query,
+                currentMatch = findInPageState.currentMatch,
+                totalMatches = findInPageState.totalMatches,
+                caseSensitive = findInPageState.caseSensitive,
+                onQueryChange = { query ->
+                    tabViewModel.updateFindQuery(query)
+                },
+                onNext = {
+                    webViewController.findNext()
+                    tabViewModel.findNext()
+                },
+                onPrevious = {
+                    webViewController.findPrevious()
+                    tabViewModel.findPrevious()
+                },
+                onCaseSensitiveToggle = {
+                    tabViewModel.toggleFindCaseSensitive()
+                },
+                onClose = {
+                    webViewController.clearFindMatches()
+                    tabViewModel.hideFindInPage()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+            )
+        }
 
         // XR UI Overlay (Android only) - shows session indicator and warnings
         XROverlay(
@@ -696,7 +851,23 @@ fun BrowserScreen(
                             tabViewModel.setDesktopMode(false)
                             webViewController.reload()
                         }
-                        "reader mode" -> {} // TODO: implement reader mode
+                        "reader mode" -> {
+                            // Extract article and enter reading mode
+                            scope.launch {
+                                // Execute JavaScript to extract article
+                                val extractScript = com.augmentalis.Avanues.web.universal.util.ReadingModeExtractor.getExtractionScript()
+                                webViewController.evaluateJavaScript(extractScript) { result ->
+                                    // Parse JSON result and set article
+                                    try {
+                                        // TODO: Parse JSON and create ReadingModeArticle
+                                        // For now, toggle reading mode without article (will show error)
+                                        tabViewModel.toggleReadingMode()
+                                    } catch (e: Exception) {
+                                        println("Failed to parse article: ${e.message}")
+                                    }
+                                }
+                            }
+                        }
                         "fullscreen" -> {} // TODO: implement fullscreen
 
                         // Feature commands

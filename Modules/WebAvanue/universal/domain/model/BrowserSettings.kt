@@ -67,7 +67,14 @@ data class BrowserSettings(
     val readAloud: Boolean = false,
 
     // UI Mode Settings
-    val headlessMode: Boolean = false  // Hide address bar, all controls in command bar
+    val headlessMode: Boolean = false,  // Hide address bar, all controls in command bar
+
+    // Reading Mode Settings
+    val readingModeTheme: ReadingModeTheme = ReadingModeTheme.LIGHT,
+    val readingModeFontSize: Float = 1.0f,  // Font size multiplier (0.75 - 2.0)
+    val readingModeLineHeight: Float = 1.5f,  // Line height multiplier (1.0 - 2.0)
+    val readingModeFontFamily: ReadingModeFontFamily = ReadingModeFontFamily.SYSTEM,
+    val autoDetectArticles: Boolean = true  // Auto-show reader view available indicator
 ) {
     /**
      * Theme options
@@ -122,6 +129,25 @@ data class BrowserSettings(
         WIFI_ONLY,
         NEVER,
         ASK
+    }
+
+    /**
+     * Reading mode theme options
+     */
+    enum class ReadingModeTheme {
+        LIGHT,
+        DARK,
+        SEPIA
+    }
+
+    /**
+     * Reading mode font family options
+     */
+    enum class ReadingModeFontFamily {
+        SYSTEM,
+        SERIF,
+        SANS_SERIF,
+        MONOSPACE
     }
 
     companion object {

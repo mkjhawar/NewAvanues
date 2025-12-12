@@ -67,9 +67,10 @@ class WebViewLifecycle {
      * Called when tab is permanently closed.
      *
      * @param tabId Tab identifier
+     * @param isPrivate Whether this is a private/incognito tab (clears all data)
      */
-    fun removeWebView(tabId: String) {
-        pool.remove(tabId)
+    fun removeWebView(tabId: String, isPrivate: Boolean = false) {
+        pool.remove(tabId, isPrivate)
     }
 
     /**
@@ -192,12 +193,22 @@ private class WebViewPool {
      * Call this when a tab is closed (thread-safe)
      *
      * @param tabId Tab identifier
+     * @param isPrivate Whether this is a private/incognito tab (clears all data)
      */
     @Synchronized
-    fun remove(tabId: String) {
+    fun remove(tabId: String, isPrivate: Boolean = false) {
         webViews.remove(tabId)?.let { webView ->
             // Ensure Main thread for WebView operations
             Handler(Looper.getMainLooper()).post {
+                // PRIVATE BROWSING: Clear all data for incognito tabs
+                if (isPrivate) {
+                    webView.clearCache(true)  // Clear cache including disk files
+                    webView.clearFormData()   // Clear form data
+                    webView.clearHistory()    // Clear navigation history
+                    android.webkit.CookieManager.getInstance().removeAllCookies(null)  // Clear cookies
+                    println("🔒 WebViewLifecycle: Cleared private browsing data for tab $tabId")
+                }
+
                 webView.onPause()
                 webView.pauseTimers()
                 webView.destroy()

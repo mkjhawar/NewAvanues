@@ -3,6 +3,7 @@ package com.augmentalis.Avanues.web.universal.presentation.viewmodel
 import com.augmentalis.Avanues.web.universal.util.encodeUrl
 import com.augmentalis.Avanues.web.universal.utils.Logger
 import com.augmentalis.webavanue.domain.errors.TabError
+import com.augmentalis.webavanue.domain.manager.PrivateBrowsingManager
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import com.augmentalis.webavanue.domain.model.Tab
 import com.augmentalis.webavanue.domain.repository.BrowserRepository
@@ -30,7 +31,29 @@ data class TabUiState(
     val tab: Tab,
     val isLoading: Boolean = false,
     val canGoBack: Boolean = false,
-    val canGoForward: Boolean = false
+    val canGoForward: Boolean = false,
+    val isReadingMode: Boolean = false,
+    val readingModeArticle: com.augmentalis.Avanues.web.universal.util.ReadingModeArticle? = null,
+    val isArticleAvailable: Boolean = false
+)
+
+/**
+ * Find in page state for text search functionality
+ *
+ * @property isVisible Whether the find bar is visible
+ * @property query Current search query
+ * @property currentMatch Index of current match (0-based)
+ * @property totalMatches Total number of matches found
+ * @property caseSensitive Whether search is case-sensitive
+ * @property highlightAll Whether to highlight all matches (always true for better UX)
+ */
+data class FindInPageState(
+    val isVisible: Boolean = false,
+    val query: String = "",
+    val currentMatch: Int = 0,
+    val totalMatches: Int = 0,
+    val caseSensitive: Boolean = false,
+    val highlightAll: Boolean = true
 )
 
 /**
@@ -50,7 +73,8 @@ data class TabUiState(
  * - error: String? - Error message if operation fails
  */
 class TabViewModel(
-    private val repository: BrowserRepository
+    private val repository: BrowserRepository,
+    private val privateBrowsingManager: PrivateBrowsingManager = PrivateBrowsingManager()
 ) {
     // Coroutine scope for ViewModel - use SupervisorJob for proper error isolation
     private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -82,6 +106,14 @@ class TabViewModel(
     // State: Settings
     private val _settings = MutableStateFlow<BrowserSettings?>(null)
     val settings: StateFlow<BrowserSettings?> = _settings.asStateFlow()
+
+    // State: Find in Page
+    private val _findInPageState = MutableStateFlow(FindInPageState())
+    val findInPageState: StateFlow<FindInPageState> = _findInPageState.asStateFlow()
+
+    // State: Private Browsing (exposed from PrivateBrowsingManager)
+    val isPrivateModeActive: StateFlow<Boolean> = privateBrowsingManager.isPrivateModeActive
+    val privateTabCount: StateFlow<Int> = privateBrowsingManager.privateTabCount
 
     // PERFORMANCE OPTIMIZATION Phase 2: Combined UI state for efficient recomposition
     // This StateFlow combines tabs + activeTab + error for batched UI updates
@@ -292,7 +324,7 @@ class TabViewModel(
      * @param setActive Whether to set this tab as active immediately
      * @param isDesktopMode Whether to use desktop mode (FIX BUG #4: apply global setting)
      */
-    fun createTab(url: String = "", title: String = "New Tab", setActive: Boolean = true, isDesktopMode: Boolean = false) {
+    fun createTab(url: String = "", title: String = "New Tab", setActive: Boolean = true, isDesktopMode: Boolean = false, isIncognito: Boolean = false) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
@@ -339,7 +371,7 @@ class TabViewModel(
                 val finalTitle = if (url.isBlank()) "New Tab" else title
 
                 // Step 4: Create tab with retry logic for database operations
-                val newTab = Tab.create(url = normalizedUrl, title = finalTitle, isDesktopMode = isDesktopMode)
+                val newTab = Tab.create(url = normalizedUrl, title = finalTitle, isDesktopMode = isDesktopMode, isIncognito = isIncognito)
 
                 val retryPolicy = RetryPolicy.STANDARD
                 retryPolicy.execute { attempt ->
@@ -348,11 +380,16 @@ class TabViewModel(
                     }
                     repository.createTab(newTab)
                 }.onSuccess { createdTab ->
+                    // Register private tab with manager if incognito
+                    if (createdTab.isIncognito) {
+                        privateBrowsingManager.registerPrivateTab(createdTab)
+                    }
+
                     if (setActive) {
                         _activeTab.value = TabUiState(tab = createdTab)
                     }
                     _isLoading.value = false
-                    Logger.info("TabViewModel", "Tab created successfully: ${createdTab.id}")
+                    Logger.info("TabViewModel", "Tab created successfully: ${createdTab.id} (incognito: ${createdTab.isIncognito})")
                 }.onFailure { e ->
                     val error = TabError.DatabaseOperationFailed(
                         operation = "createTab",
@@ -387,6 +424,11 @@ class TabViewModel(
     fun closeTab(tabId: String) {
         viewModelScope.launch {
             _error.value = null
+
+            // Unregister from private browsing manager if it's a private tab
+            if (privateBrowsingManager.isPrivateTab(tabId)) {
+                privateBrowsingManager.unregisterPrivateTab(tabId)
+            }
 
             repository.closeTab(tabId)
                 .onSuccess {
@@ -874,12 +916,443 @@ class TabViewModel(
         // This toggles the frozen state
     }
 
+    // ========== Reading Mode Controls ==========
+
+    /**
+     * Toggle reading mode for the active tab
+     *
+     * When enabled:
+     * - Extracts article content using JavaScript injection
+     * - Shows ReadingModeView overlay with cleaned content
+     * - Hides web content and browser UI
+     *
+     * When disabled:
+     * - Returns to normal browsing view
+     * - Preserves scroll position and state
+     */
+    fun toggleReadingMode() {
+        viewModelScope.launch {
+            stateMutex.withLock {
+                _activeTab.value?.let { state ->
+                    val newReadingMode = !state.isReadingMode
+                    val updatedState = state.copy(isReadingMode = newReadingMode)
+                    _activeTab.value = updatedState
+
+                    // Update in tabs list
+                    _tabs.value = _tabs.value.map {
+                        if (it.tab.id == state.tab.id) updatedState else it
+                    }
+
+                    Logger.info("TabViewModel", "Reading mode ${if (newReadingMode) "enabled" else "disabled"} for tab ${state.tab.id}")
+                }
+            }
+        }
+    }
+
+    /**
+     * Set reading mode article content for the active tab
+     *
+     * Called after JavaScript extraction completes
+     *
+     * @param article Extracted article content
+     */
+    fun setReadingModeArticle(article: com.augmentalis.Avanues.web.universal.util.ReadingModeArticle?) {
+        viewModelScope.launch {
+            stateMutex.withLock {
+                _activeTab.value?.let { state ->
+                    val updatedState = state.copy(
+                        readingModeArticle = article,
+                        isArticleAvailable = article != null
+                    )
+                    _activeTab.value = updatedState
+
+                    // Update in tabs list
+                    _tabs.value = _tabs.value.map {
+                        if (it.tab.id == state.tab.id) updatedState else it
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Set article availability indicator for the active tab
+     *
+     * Called after article detection script runs
+     *
+     * @param isAvailable Whether an article was detected on the page
+     */
+    fun setArticleAvailable(isAvailable: Boolean) {
+        viewModelScope.launch {
+            stateMutex.withLock {
+                _activeTab.value?.let { state ->
+                    val updatedState = state.copy(isArticleAvailable = isAvailable)
+                    _activeTab.value = updatedState
+
+                    // Update in tabs list
+                    _tabs.value = _tabs.value.map {
+                        if (it.tab.id == state.tab.id) updatedState else it
+                    }
+                }
+            }
+        }
+    }
+
+    // ========== Find in Page ==========
+
+    /**
+     * Show find in page bar with optional initial query
+     *
+     * @param initialQuery Optional initial search query
+     */
+    fun showFindInPage(initialQuery: String = "") {
+        _findInPageState.value = _findInPageState.value.copy(
+            isVisible = true,
+            query = initialQuery
+        )
+    }
+
+    /**
+     * Hide find in page bar and clear search
+     */
+    fun hideFindInPage() {
+        _findInPageState.value = FindInPageState(isVisible = false)
+    }
+
+    /**
+     * Update find in page query
+     * This will trigger a new search via WebViewController
+     *
+     * @param query Search query string
+     */
+    fun updateFindQuery(query: String) {
+        _findInPageState.value = _findInPageState.value.copy(
+            query = query,
+            currentMatch = 0,
+            totalMatches = 0
+        )
+    }
+
+    /**
+     * Update find in page results from WebView
+     * Called by WebViewController after search completes
+     *
+     * @param currentMatch Current match index (0-based)
+     * @param totalMatches Total number of matches
+     */
+    fun updateFindResults(currentMatch: Int, totalMatches: Int) {
+        _findInPageState.value = _findInPageState.value.copy(
+            currentMatch = currentMatch,
+            totalMatches = totalMatches
+        )
+    }
+
+    /**
+     * Toggle case sensitivity for find in page
+     */
+    fun toggleFindCaseSensitive() {
+        _findInPageState.value = _findInPageState.value.copy(
+            caseSensitive = !_findInPageState.value.caseSensitive
+        )
+    }
+
+    /**
+     * Navigate to next match
+     * Wraps around from last to first
+     */
+    fun findNext() {
+        val state = _findInPageState.value
+        if (state.totalMatches > 0) {
+            val nextMatch = (state.currentMatch + 1) % state.totalMatches
+            _findInPageState.value = state.copy(currentMatch = nextMatch)
+        }
+    }
+
+    /**
+     * Navigate to previous match
+     * Wraps around from first to last
+     */
+    fun findPrevious() {
+        val state = _findInPageState.value
+        if (state.totalMatches > 0) {
+            val prevMatch = if (state.currentMatch == 0) {
+                state.totalMatches - 1
+            } else {
+                state.currentMatch - 1
+            }
+            _findInPageState.value = state.copy(currentMatch = prevMatch)
+        }
+    }
+
+    /**
+     * Clear find in page highlights and reset state
+     */
+    fun clearFind() {
+        _findInPageState.value = _findInPageState.value.copy(
+            query = "",
+            currentMatch = 0,
+            totalMatches = 0
+        )
+    }
+
+    // ========== Screenshot Capture ==========
+
+    /**
+     * Capture a screenshot of the active tab
+     *
+     * This method provides a ViewModel-level interface for screenshot capture.
+     * The actual capture logic is handled by the UI layer with platform-specific WebView access.
+     *
+     * @param type Screenshot type (VISIBLE_AREA or FULL_PAGE)
+     * @param quality JPEG quality (0-100, default 80)
+     * @param saveToGallery Whether to save to gallery (default true)
+     * @param onProgress Callback for progress updates (progress: Float, message: String)
+     * @param onComplete Callback when screenshot is complete (data, filepath)
+     * @param onError Callback when screenshot fails (error message)
+     */
+    fun captureScreenshot(
+        type: com.augmentalis.Avanues.web.universal.screenshot.ScreenshotType,
+        quality: Int = 80,
+        saveToGallery: Boolean = true,
+        onProgress: (Float, String) -> Unit = { _, _ -> },
+        onComplete: (com.augmentalis.Avanues.web.universal.screenshot.ScreenshotData, String?) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        _activeTab.value?.let { state ->
+            Logger.info(
+                "TabViewModel",
+                "Screenshot capture requested for tab ${state.tab.id}: $type, quality=$quality, save=$saveToGallery"
+            )
+            // UI layer will handle actual capture with WebView reference
+            // This method exists to coordinate state updates and provide callback structure
+        } ?: run {
+            Logger.error("TabViewModel", "Cannot capture screenshot: no active tab")
+            onError("No active tab to capture")
+        }
+    }
+
+    // ========== Session Management ==========
+
+    /**
+     * Save current browsing session.
+     * Called automatically on app pause/background.
+     *
+     * Saves all open tabs (except private tabs) to database for restoration later.
+     */
+    fun saveSession() {
+        viewModelScope.launch {
+            try {
+                val tabs = _tabs.value.map { it.tab }
+                val activeTabId = _activeTab.value?.tab?.id
+
+                // Filter out private tabs
+                val tabsToSave = tabs.filter { !it.isIncognito }
+
+                if (tabsToSave.isEmpty()) {
+                    Logger.info("TabViewModel", "No tabs to save (all private)")
+                    return@launch
+                }
+
+                // Save through repository
+                val session = com.augmentalis.webavanue.domain.model.Session.create(
+                    activeTabId = activeTabId,
+                    tabCount = tabsToSave.size,
+                    isCrashRecovery = false
+                )
+
+                val sessionTabs = tabsToSave.map { tab ->
+                    com.augmentalis.webavanue.domain.model.SessionTab.fromTab(
+                        sessionId = session.id,
+                        tab = tab,
+                        isActive = tab.id == activeTabId
+                    )
+                }
+
+                repository.saveSession(session, sessionTabs)
+                    .onSuccess {
+                        Logger.info("TabViewModel", "Session saved: ${session.id} with ${sessionTabs.size} tabs")
+                    }
+                    .onFailure { e ->
+                        Logger.error("TabViewModel", "Failed to save session: ${e.message}", e)
+                    }
+            } catch (e: Exception) {
+                Logger.error("TabViewModel", "Error saving session: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * Restore the most recent browsing session.
+     *
+     * Loads tabs from the last saved session.
+     * Only the active tab is fully loaded initially (lazy loading).
+     *
+     * @return true if session was restored, false if no session available
+     */
+    suspend fun restoreSession(): Boolean {
+        return try {
+            // Check settings
+            val settings = _settings.value
+            if (settings?.restoreTabsOnStartup == false) {
+                Logger.info("TabViewModel", "Session restore disabled in settings")
+                return false
+            }
+
+            // Get latest session
+            val sessionResult = repository.getLatestSession()
+            if (sessionResult.isFailure || sessionResult.getOrNull() == null) {
+                Logger.info("TabViewModel", "No session to restore")
+                return false
+            }
+
+            val session = sessionResult.getOrNull()!!
+
+            // Skip crash recovery sessions
+            if (session.isCrashRecovery) {
+                Logger.info("TabViewModel", "Skipping crash recovery session (use restoreCrashRecoverySession)")
+                return false
+            }
+
+            // Get session tabs
+            val sessionTabsResult = repository.getSessionTabs(session.id)
+            if (sessionTabsResult.isFailure || sessionTabsResult.getOrNull()?.isEmpty() != false) {
+                Logger.info("TabViewModel", "Session has no tabs to restore")
+                return false
+            }
+
+            val sessionTabs = sessionTabsResult.getOrNull()!!
+
+            // Close all current tabs
+            repository.closeAllTabs()
+
+            // Restore tabs from session
+            val restoredTabs = sessionTabs.map { sessionTab ->
+                sessionTab.toTab()
+            }
+
+            // Create tabs in repository
+            restoredTabs.forEach { tab ->
+                repository.createTab(tab)
+            }
+
+            // Set active tab
+            val activeTab = restoredTabs.find { it.isActive } ?: restoredTabs.firstOrNull()
+            if (activeTab != null) {
+                repository.setActiveTab(activeTab.id)
+            }
+
+            Logger.info("TabViewModel", "Session restored: ${session.id} with ${restoredTabs.size} tabs")
+            true
+        } catch (e: Exception) {
+            Logger.error("TabViewModel", "Failed to restore session: ${e.message}", e)
+            false
+        }
+    }
+
+    /**
+     * Check if there's a crash recovery session available.
+     *
+     * @return true if crash recovery session exists
+     */
+    suspend fun hasCrashRecoverySession(): Boolean {
+        return try {
+            val result = repository.getLatestCrashSession()
+            result.isSuccess && result.getOrNull() != null
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Restore crash recovery session.
+     *
+     * @return true if restored successfully
+     */
+    suspend fun restoreCrashRecoverySession(): Boolean {
+        return try {
+            val sessionResult = repository.getLatestCrashSession()
+            if (sessionResult.isFailure || sessionResult.getOrNull() == null) {
+                return false
+            }
+
+            val session = sessionResult.getOrNull()!!
+
+            // Get session tabs
+            val sessionTabsResult = repository.getSessionTabs(session.id)
+            if (sessionTabsResult.isFailure || sessionTabsResult.getOrNull()?.isEmpty() != false) {
+                return false
+            }
+
+            val sessionTabs = sessionTabsResult.getOrNull()!!
+
+            // Close all current tabs
+            repository.closeAllTabs()
+
+            // Restore tabs
+            val restoredTabs = sessionTabs.map { it.toTab() }
+            restoredTabs.forEach { tab ->
+                repository.createTab(tab)
+            }
+
+            // Set active tab
+            val activeTab = restoredTabs.find { it.isActive } ?: restoredTabs.firstOrNull()
+            if (activeTab != null) {
+                repository.setActiveTab(activeTab.id)
+            }
+
+            Logger.info("TabViewModel", "Crash recovery session restored: ${session.id}")
+            true
+        } catch (e: Exception) {
+            Logger.error("TabViewModel", "Failed to restore crash recovery session: ${e.message}", e)
+            false
+        }
+    }
+
+    /**
+     * Dismiss crash recovery session (user chose not to restore).
+     */
+    suspend fun dismissCrashRecovery() {
+        try {
+            val crashSessionResult = repository.getLatestCrashSession()
+            if (crashSessionResult.isSuccess) {
+                val crashSession = crashSessionResult.getOrNull()
+                if (crashSession != null) {
+                    repository.deleteSession(crashSession.id)
+                    Logger.info("TabViewModel", "Crash recovery session dismissed")
+                }
+            }
+        } catch (e: Exception) {
+            Logger.error("TabViewModel", "Failed to dismiss crash recovery: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Handle app pause - save current session.
+     * Call from Activity.onPause() or similar.
+     */
+    fun onAppPause() {
+        saveSession()
+    }
+
+    /**
+     * Handle app resume - check for crash recovery.
+     * Call from Activity.onResume() or similar.
+     *
+     * @return true if crash recovery session is available
+     */
+    suspend fun onAppResume(): Boolean {
+        return hasCrashRecoverySession()
+    }
+
     /**
      * Clean up resources
      *
      * Call this when ViewModel is no longer needed
      */
     fun onCleared() {
+        // Save session one last time
+        saveSession()
+
         // Cancel all coroutines
         viewModelScope.cancel()
     }

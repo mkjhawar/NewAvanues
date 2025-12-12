@@ -145,6 +145,10 @@ interface BrowserRepository {
 
     /**
      * Adds a history entry
+     *
+     * Note: If the entry is from an incognito/private tab (isIncognito = true),
+     * the history entry should NOT be persisted to the database.
+     * Implementations should check this flag and return success without storing.
      */
     suspend fun addHistoryEntry(entry: HistoryEntry): Result<HistoryEntry>
 
@@ -346,6 +350,82 @@ interface BrowserRepository {
      * Gets all site permissions
      */
     suspend fun getAllSitePermissions(): Result<List<SitePermission>>
+
+    // ==================== Session Operations ====================
+
+    /**
+     * Saves a browsing session with its tabs
+     *
+     * @param session Session metadata
+     * @param tabs List of tabs in this session
+     */
+    suspend fun saveSession(session: Session, tabs: List<SessionTab>): Result<Unit>
+
+    /**
+     * Gets a specific session by ID
+     *
+     * @param sessionId Session ID
+     * @return Session or null if not found
+     */
+    suspend fun getSession(sessionId: String): Result<Session?>
+
+    /**
+     * Gets the most recent session
+     *
+     * @return Latest session or null if no sessions exist
+     */
+    suspend fun getLatestSession(): Result<Session?>
+
+    /**
+     * Gets the most recent crash recovery session
+     *
+     * @return Latest crash session or null if none exists
+     */
+    suspend fun getLatestCrashSession(): Result<Session?>
+
+    /**
+     * Gets all sessions (for session history)
+     *
+     * @param limit Maximum number of sessions
+     * @param offset Offset for pagination
+     * @return List of sessions
+     */
+    suspend fun getAllSessions(limit: Int = 20, offset: Int = 0): Result<List<Session>>
+
+    /**
+     * Gets all tabs for a specific session
+     *
+     * @param sessionId Session ID
+     * @return List of session tabs
+     */
+    suspend fun getSessionTabs(sessionId: String): Result<List<SessionTab>>
+
+    /**
+     * Gets the active tab for a session
+     *
+     * @param sessionId Session ID
+     * @return Active session tab or null
+     */
+    suspend fun getActiveSessionTab(sessionId: String): Result<SessionTab?>
+
+    /**
+     * Deletes a specific session and its tabs
+     *
+     * @param sessionId Session ID to delete
+     */
+    suspend fun deleteSession(sessionId: String): Result<Unit>
+
+    /**
+     * Deletes all sessions
+     */
+    suspend fun deleteAllSessions(): Result<Unit>
+
+    /**
+     * Deletes sessions older than a specific timestamp
+     *
+     * @param timestamp Cutoff timestamp
+     */
+    suspend fun deleteOldSessions(timestamp: Instant): Result<Unit>
 
     // ==================== Data Management ====================
 

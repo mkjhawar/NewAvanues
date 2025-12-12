@@ -235,4 +235,34 @@ expect class WebViewController() {
      * Perform a double click at the center of the WebView
      */
     fun performDoubleClick()
+
+    // ========== Find in Page ==========
+
+    /**
+     * Find all occurrences of text in the page
+     *
+     * @param query Search query string
+     * @param caseSensitive Whether to match case
+     * @param onResultsFound Callback with (currentMatch, totalMatches)
+     */
+    fun findInPage(
+        query: String,
+        caseSensitive: Boolean,
+        onResultsFound: (Int, Int) -> Unit
+    )
+
+    /**
+     * Find next match in the page
+     */
+    fun findNext()
+
+    /**
+     * Find previous match in the page
+     */
+    fun findPrevious()
+
+    /**
+     * Clear find in page highlights
+     */
+    fun clearFindMatches()
 }

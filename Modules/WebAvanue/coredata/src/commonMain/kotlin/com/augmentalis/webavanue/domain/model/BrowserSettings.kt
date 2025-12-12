@@ -43,6 +43,7 @@ data class BrowserSettings(
     val homePage: String = "https://www.google.com",
     val newTabPage: NewTabPage = NewTabPage.TOP_SITES,
     val restoreTabsOnStartup: Boolean = true,
+    val showRestoreDialog: Boolean = true, // Show "Restore previous session?" dialog
     val openLinksInBackground: Boolean = false,
     val openLinksInNewTab: Boolean = false,
 
@@ -87,7 +88,14 @@ data class BrowserSettings(
     val xrPerformanceMode: XRPerformanceMode = XRPerformanceMode.BALANCED, // Performance vs battery
     val xrAutoPauseTimeout: Int = 30, // Minutes before auto-pause (battery protection)
     val xrShowFPSIndicator: Boolean = false, // Show frame rate indicator in XR sessions
-    val xrRequireWiFi: Boolean = false // Only allow XR on WiFi (data usage protection)
+    val xrRequireWiFi: Boolean = false, // Only allow XR on WiFi (data usage protection)
+
+    // Reading Mode Settings
+    val readingModeTheme: ReadingModeTheme = ReadingModeTheme.LIGHT,
+    val readingModeFontSize: Float = 1.0f,  // Font size multiplier (0.75 - 2.0)
+    val readingModeLineHeight: Float = 1.5f,  // Line height multiplier (1.0 - 2.0)
+    val readingModeFontFamily: ReadingModeFontFamily = ReadingModeFontFamily.SYSTEM,
+    val autoDetectArticles: Boolean = true  // Auto-show reader view available indicator
 ) {
     /**
      * Theme options
@@ -157,6 +165,25 @@ data class BrowserSettings(
 
         /** Battery-saving mode (45fps target, reduced effects) */
         BATTERY_SAVER
+    }
+
+    /**
+     * Reading mode theme options
+     */
+    enum class ReadingModeTheme {
+        LIGHT,
+        DARK,
+        SEPIA
+    }
+
+    /**
+     * Reading mode font family options
+     */
+    enum class ReadingModeFontFamily {
+        SYSTEM,
+        SERIF,
+        SANS_SERIF,
+        MONOSPACE
     }
 
     companion object {
