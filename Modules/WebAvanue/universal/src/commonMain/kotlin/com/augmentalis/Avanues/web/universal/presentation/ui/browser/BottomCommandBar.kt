@@ -1269,7 +1269,8 @@ fun VerticalCommandBarLayout(
                 .glassBar(cornerRadius = 8.dp),
             color = OceanTheme.surface,
             shape = RoundedCornerShape(8.dp),
-            shadowElevation = 8.dp
+            shadowElevation = 0.dp,  // FIX: Remove shadow artifacts in landscape mode
+            border = BorderStroke(1.dp, OceanTheme.border)  // FIX: Use border instead
         ) {
             Column(
                 modifier = Modifier
@@ -2004,7 +2005,8 @@ private fun VerticalCommandBar(
                 .glassBar(cornerRadius = 27.dp),
             color = OceanTheme.surface,
             shape = RoundedCornerShape(27.dp),
-            shadowElevation = 8.dp
+            shadowElevation = 0.dp,  // FIX: Remove shadow artifacts in landscape mode
+            border = BorderStroke(1.dp, OceanTheme.border)  // FIX: Use border instead
         ) {
             Column(
                 modifier = Modifier
