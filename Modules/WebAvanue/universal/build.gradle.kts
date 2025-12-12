@@ -22,14 +22,6 @@ tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>().configureEach {
             skipEmptyPackages.set(true)
             skipDeprecated.set(false)
             reportUndocumented.set(true)
-
-            // Link to external documentation
-            externalDocumentationLink {
-                url.set(java.net.URL("https://kotlinlang.org/api/kotlinx.coroutines/"))
-            }
-            externalDocumentationLink {
-                url.set(java.net.URL("https://developer.android.com/reference/"))
-            }
         }
     }
 }
