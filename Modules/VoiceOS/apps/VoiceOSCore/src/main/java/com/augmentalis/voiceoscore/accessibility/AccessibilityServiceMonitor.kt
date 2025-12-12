@@ -208,7 +208,7 @@ class AccessibilityServiceMonitor(private val context: Context) {
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_warning)
+            .setSmallIcon(R.drawable.learnapp_ic_warning)
             .setContentTitle("VoiceOS Service Disconnected")
             .setContentText("Tap to enable VoiceOS accessibility service")
             .setStyle(
@@ -221,7 +221,7 @@ class AccessibilityServiceMonitor(private val context: Context) {
             .setAutoCancel(false)
             .setContentIntent(pendingIntent)
             .addAction(
-                R.drawable.ic_settings,
+                android.R.drawable.ic_menu_manage,
                 "Enable Service",
                 pendingIntent
             )
