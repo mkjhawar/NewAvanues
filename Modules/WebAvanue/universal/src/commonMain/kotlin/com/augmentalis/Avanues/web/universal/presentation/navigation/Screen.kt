@@ -28,7 +28,12 @@ data class ViewModelHolder(
     val securityViewModel: SecurityViewModel // PHASE 3
 ) {
     companion object {
-        fun create(repository: BrowserRepository): ViewModelHolder {
+        fun create(
+            repository: BrowserRepository,
+            secureStorage: SecureStorageProvider? = null
+        ): ViewModelHolder {
+            val securityViewModel = SecurityViewModel(repository, secureStorage)
+
             return ViewModelHolder(
                 repository = repository,
                 tabViewModel = TabViewModel(repository),
@@ -36,7 +41,7 @@ data class ViewModelHolder(
                 downloadViewModel = DownloadViewModel(repository),
                 historyViewModel = HistoryViewModel(repository),
                 settingsViewModel = SettingsViewModel(repository),
-                securityViewModel = SecurityViewModel(repository) // PHASE 3
+                securityViewModel = securityViewModel // PHASE 3
             )
         }
     }

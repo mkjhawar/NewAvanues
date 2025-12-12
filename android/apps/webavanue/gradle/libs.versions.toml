@@ -1,0 +1,141 @@
+# WebAvanue Version Catalog
+# Central dependency management for consistent versioning across modules
+
+[versions]
+# Build Tools
+agp = "8.7.3"
+kotlin = "2.0.21"
+dokka = "1.9.20"
+
+# Compose
+compose = "1.7.0"
+composeMaterial = "1.7.5"
+composeUi = "1.7.5"
+
+# Kotlin Libraries
+coroutines = "1.9.0"
+serialization = "1.6.3"
+datetime = "0.6.1"
+
+# AndroidX Core
+core = "1.15.0"
+lifecycle = "2.8.7"
+navigation = "2.8.5"
+activity = "1.9.3"
+webkit = "1.12.1"
+
+# Database
+sqldelight = "2.0.1"
+sqlcipher = "4.5.4"
+sqlite = "2.4.0"
+
+# Dependency Injection
+koin = "3.5.0"
+koinCompose = "1.1.0"
+
+# Navigation
+voyager = "1.0.0"
+
+# Utilities
+napier = "2.6.1"
+uuid = "0.8.1"
+
+# Monitoring & Security
+sentry = "7.16.0"
+securityCrypto = "1.1.0-alpha06"
+
+# Testing
+junit = "4.13.2"
+androidxTestJunit = "1.1.5"
+androidxTestCore = "1.5.0"
+androidxTestRunner = "1.5.2"
+androidxTestRules = "1.5.0"
+espresso = "3.5.1"
+robolectric = "4.11.1"
+
+[libraries]
+# AndroidX Core
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "core" }
+androidx-webkit = { module = "androidx.webkit:webkit", version.ref = "webkit" }
+
+# AndroidX Lifecycle
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+
+# AndroidX Activity
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
+
+# AndroidX Navigation
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
+
+# Compose Material
+compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "composeMaterial" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "composeUi" }
+compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "composeUi" }
+compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "composeUi" }
+
+# Kotlin Coroutines
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
+
+# Kotlin Serialization & DateTime
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
+
+# SQLDelight
+sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
+sqldelight-coroutines-extensions = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+sqldelight-sqlite-dialect = { module = "app.cash.sqldelight:sqlite-3-38-dialect", version.ref = "sqldelight" }
+
+# SQLCipher & SQLite
+sqlcipher-android = { module = "net.zetetic:sqlcipher-android", version.ref = "sqlcipher" }
+androidx-sqlite-ktx = { module = "androidx.sqlite:sqlite-ktx", version.ref = "sqlite" }
+androidx-sqlite-framework = { module = "androidx.sqlite:sqlite-framework", version.ref = "sqlite" }
+
+# Koin DI
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koinCompose" }
+
+# Voyager Navigation
+voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.ref = "voyager" }
+voyager-screenmodel = { module = "cafe.adriel.voyager:voyager-screenmodel", version.ref = "voyager" }
+voyager-tab-navigator = { module = "cafe.adriel.voyager:voyager-tab-navigator", version.ref = "voyager" }
+voyager-transitions = { module = "cafe.adriel.voyager:voyager-transitions", version.ref = "voyager" }
+
+# Utilities
+napier = { module = "io.github.aakira:napier", version.ref = "napier" }
+uuid = { module = "com.benasher44:uuid", version.ref = "uuid" }
+
+# Monitoring & Security
+sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentry" }
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
+
+# Testing
+junit = { module = "junit:junit", version.ref = "junit" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
+androidx-test-junit = { module = "androidx.test.ext:junit", version.ref = "androidxTestJunit" }
+androidx-test-junit-ktx = { module = "androidx.test.ext:junit-ktx", version.ref = "androidxTestJunit" }
+androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
+androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidxTestRules" }
+androidx-test-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+compose = { id = "org.jetbrains.compose", version.ref = "compose" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+sentry = { id = "io.sentry.android.gradle", version = "4.14.1" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }

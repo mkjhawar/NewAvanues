@@ -1,6 +1,7 @@
 package com.augmentalis.Avanues.web.universal.presentation.viewmodel
 
 import com.augmentalis.Avanues.web.universal.presentation.ui.security.*
+import com.augmentalis.Avanues.web.universal.utils.Logger
 import com.augmentalis.webavanue.domain.repository.BrowserRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,14 +22,17 @@ import kotlinx.datetime.Clock
  * - Show/hide JavaScript dialogs (alert/confirm/prompt)
  * - Prevent dialog spam (max 3 per 10 seconds)
  * - Persist permission choices to database
+ * - Securely store and retrieve HTTP authentication credentials
  *
  * Phase 1 Security Fixes:
  * - CWE-295: SSL certificate validation
  * - CWE-276: User consent for permissions
  * - CWE-1021: JavaScript dialog restrictions
+ * - CWE-311: Encrypted credential storage (EncryptedSharedPreferences)
  */
 class SecurityViewModel(
-    private val repository: BrowserRepository
+    private val repository: BrowserRepository,
+    private var secureStorage: SecureStorageProvider? = null
 ) {
     // Coroutine scope for ViewModel
     private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -80,7 +84,7 @@ class SecurityViewModel(
         onProceedAnyway: () -> Unit
     ) {
         if (isDialogSpamDetected()) {
-            println("⚠️  Dialog spam detected! Blocking SSL error dialog.")
+            Logger.warn("SecurityViewModel", "Dialog spam detected! Blocking SSL error dialog")
             onGoBack() // Default to safe action
             return
         }
@@ -121,7 +125,7 @@ class SecurityViewModel(
         onDeny: () -> Unit
     ) {
         if (isDialogSpamDetected()) {
-            println("⚠️  Dialog spam detected! Blocking permission request dialog.")
+            Logger.warn("SecurityViewModel", "Dialog spam detected! Blocking permission request dialog")
             onDeny() // Default to safe action
             return
         }
@@ -165,7 +169,7 @@ class SecurityViewModel(
             val result = repository.getSitePermission(domain, permission.name)
             result.getOrNull()?.granted ?: false
         } catch (e: Exception) {
-            println("⚠️  Error checking remembered permission: ${e.message}")
+            Logger.error("SecurityViewModel", "Error checking remembered permission: ${e.message}", e)
             false
         }
     }
@@ -183,9 +187,9 @@ class SecurityViewModel(
                         granted = granted
                     )
                 }
-                println("✅ Persisted permissions for $domain: ${permissions.joinToString { it.name }} = $granted")
+                Logger.info("SecurityViewModel", "Persisted permissions for $domain: ${permissions.joinToString { it.name }} = $granted")
             } catch (e: Exception) {
-                println("⚠️  Error persisting permissions: ${e.message}")
+                Logger.error("SecurityViewModel", "Error persisting permissions: ${e.message}", e)
             }
         }
     }
@@ -201,7 +205,7 @@ class SecurityViewModel(
         onDismiss: () -> Unit
     ) {
         if (isDialogSpamDetected()) {
-            println("⚠️  Dialog spam detected! Blocking JS alert dialog.")
+            Logger.warn("SecurityViewModel", "Dialog spam detected! Blocking JS alert dialog")
             onDismiss()
             return
         }
@@ -232,7 +236,7 @@ class SecurityViewModel(
         onCancel: () -> Unit
     ) {
         if (isDialogSpamDetected()) {
-            println("⚠️  Dialog spam detected! Blocking JS confirm dialog.")
+            Logger.warn("SecurityViewModel", "Dialog spam detected! Blocking JS confirm dialog")
             onCancel() // Default to safe action
             return
         }
@@ -268,7 +272,7 @@ class SecurityViewModel(
         onCancel: () -> Unit
     ) {
         if (isDialogSpamDetected()) {
-            println("⚠️  Dialog spam detected! Blocking JS prompt dialog.")
+            Logger.warn("SecurityViewModel", "Dialog spam detected! Blocking JS prompt dialog")
             onCancel() // Default to safe action
             return
         }
@@ -309,24 +313,39 @@ class SecurityViewModel(
         onCancel: () -> Unit
     ) {
         if (isDialogSpamDetected()) {
-            println("⚠️  Dialog spam detected! Blocking HTTP auth dialog.")
+            Logger.warn("SecurityViewModel", "Dialog spam detected! Blocking HTTP auth dialog")
             onCancel() // Default to safe action
             return
         }
 
-        _httpAuthState.value = HttpAuthDialogState(
-            authRequest = authRequest,
-            onAuthenticate = { credentials ->
-                onAuthenticate(credentials)
-                dismissHttpAuthDialog()
-            },
-            onCancel = {
-                onCancel()
-                dismissHttpAuthDialog()
+        // Check if we have stored credentials for this host
+        viewModelScope.launch {
+            val storedCredentials = getStoredCredentials(authRequest.host)
+            if (storedCredentials != null) {
+                println("✅ Using stored credentials for ${authRequest.host}")
+                onAuthenticate(storedCredentials)
+                return@launch
             }
-        )
 
-        recordDialogShown()
+            // No stored credentials - show dialog
+            _httpAuthState.value = HttpAuthDialogState(
+                authRequest = authRequest,
+                onAuthenticate = { credentials ->
+                    // Store credentials if user checked "remember"
+                    if (credentials.remember) {
+                        storeCredentials(authRequest.host, credentials)
+                    }
+                    onAuthenticate(credentials)
+                    dismissHttpAuthDialog()
+                },
+                onCancel = {
+                    onCancel()
+                    dismissHttpAuthDialog()
+                }
+            )
+
+            recordDialogShown()
+        }
     }
 
     fun dismissHttpAuthDialog() {
@@ -370,7 +389,79 @@ class SecurityViewModel(
 
         // Log spam prevention status
         if (dialogTimestamps.size >= maxDialogsPerWindow - 1) {
-            println("Dialog spam warning: ${dialogTimestamps.size}/$maxDialogsPerWindow dialogs in last 10s")
+            Logger.warn("SecurityViewModel", "Dialog spam warning: ${dialogTimestamps.size}/$maxDialogsPerWindow dialogs in last 10s")
+        }
+    }
+
+    // ========== Secure Credential Storage ==========
+
+    /**
+     * Set the secure storage provider (Android-only)
+     * Must be called after initialization with Android context
+     */
+    fun setSecureStorage(storage: SecureStorageProvider) {
+        this.secureStorage = storage
+    }
+
+    /**
+     * Store HTTP authentication credentials securely
+     *
+     * @param url URL/host for which to store credentials
+     * @param credentials Credentials to store
+     */
+    private fun storeCredentials(url: String, credentials: HttpAuthCredentials) {
+        viewModelScope.launch {
+            try {
+                secureStorage?.storeCredential(url, credentials.username, credentials.password, credentials.remember)
+                println("✅ Credentials stored securely for $url")
+            } catch (e: Exception) {
+                println("⚠️  Failed to store credentials: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Retrieve stored HTTP authentication credentials
+     *
+     * @param url URL/host for which to retrieve credentials
+     * @return Stored credentials or null if not found
+     */
+    private suspend fun getStoredCredentials(url: String): HttpAuthCredentials? {
+        return try {
+            secureStorage?.getCredential(url)
+        } catch (e: Exception) {
+            println("⚠️  Failed to retrieve credentials: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * Remove stored credentials for a URL
+     *
+     * @param url URL/host for which to remove credentials
+     */
+    fun removeStoredCredentials(url: String) {
+        viewModelScope.launch {
+            try {
+                secureStorage?.removeCredential(url)
+                println("✅ Credentials removed for $url")
+            } catch (e: Exception) {
+                println("⚠️  Failed to remove credentials: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Clear all stored credentials
+     */
+    fun clearAllStoredCredentials() {
+        viewModelScope.launch {
+            try {
+                secureStorage?.clearAll()
+                println("✅ All credentials cleared")
+            } catch (e: Exception) {
+                println("⚠️  Failed to clear credentials: ${e.message}")
+            }
         }
     }
 
@@ -422,3 +513,44 @@ data class HttpAuthDialogState(
     val onAuthenticate: (HttpAuthCredentials) -> Unit,
     val onCancel: () -> Unit
 )
+
+// ========== Secure Storage Provider Interface ==========
+
+/**
+ * Platform-agnostic interface for secure credential storage
+ *
+ * Android implementation uses EncryptedSharedPreferences with AES256-GCM
+ * iOS implementation would use Keychain
+ * Desktop implementation would use OS-specific secure storage
+ */
+interface SecureStorageProvider {
+    /**
+     * Store HTTP authentication credentials
+     */
+    fun storeCredential(url: String, username: String, password: String, remember: Boolean)
+
+    /**
+     * Retrieve HTTP authentication credentials
+     */
+    fun getCredential(url: String): HttpAuthCredentials?
+
+    /**
+     * Check if credentials exist for a URL
+     */
+    fun hasCredential(url: String): Boolean
+
+    /**
+     * Remove stored credentials
+     */
+    fun removeCredential(url: String)
+
+    /**
+     * Clear all stored credentials
+     */
+    fun clearAll()
+
+    /**
+     * Get all stored URLs
+     */
+    fun getStoredUrls(): List<String>
+}

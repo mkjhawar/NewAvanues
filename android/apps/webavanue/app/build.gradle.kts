@@ -1,8 +1,9 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.compose")
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.sentry)
 }
 
 android {
@@ -38,6 +39,15 @@ android {
         }
     }
 
+    // Sentry Configuration
+    configure<io.sentry.android.gradle.extensions.SentryPluginExtension> {
+        autoUploadProguardMapping.set(true)
+        autoUploadNativeSymbols.set(true)
+        tracingInstrumentation {
+            enabled.set(true)
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -64,8 +74,8 @@ dependencies {
     implementation(project(":coredata"))
 
     // Voyager Navigation (KMP-compatible)
-    implementation("cafe.adriel.voyager:voyager-navigator:1.0.0")
-    implementation("cafe.adriel.voyager:voyager-transitions:1.0.0")
+    implementation(libs.voyager.navigator)
+    implementation(libs.voyager.transitions)
 
     // Compose Multiplatform
     implementation(compose.runtime)
@@ -75,41 +85,50 @@ dependencies {
     implementation(compose.uiTooling)
 
     // Material Icons Extended - provides additional icons (Tab, Bookmark, Mic, etc.)
-    implementation("androidx.compose.material:material-icons-extended:1.5.4")
+    implementation(libs.compose.material.icons.extended)
 
     // Activity Compose
-    implementation("androidx.activity:activity-compose:1.8.2")
+    implementation(libs.androidx.activity.compose)
 
     // Navigation Compose
-    implementation("androidx.navigation:navigation-compose:2.7.6")
+    implementation(libs.androidx.navigation.compose)
 
     // Lifecycle
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.coroutines.core)
 
     // DateTime
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+    implementation(libs.kotlinx.datetime)
 
     // Core AndroidX
-    implementation("androidx.core:core-ktx:1.12.0")
+    implementation(libs.androidx.core.ktx)
 
     // WebView
-    implementation("androidx.webkit:webkit:1.9.0")
+    implementation(libs.androidx.webkit)
+
+    // Security - Encrypted credential storage
+    implementation(libs.androidx.security.crypto)
+
+    // Logging - Napier (KMP structured logging)
+    implementation(libs.napier)
+
+    // Sentry - Crash Reporting & Performance Monitoring
+    implementation(libs.sentry.android)
 
     // Testing
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.21")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.5.4")
-    androidTestImplementation("org.jetbrains.kotlin:kotlin-test:1.9.21")
-    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlin.test)
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.kotlin.test)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
 
     // Debug tooling
-    debugImplementation("androidx.compose.ui:ui-tooling:1.5.4")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.5.4")
+    debugImplementation(libs.compose.ui.tooling)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

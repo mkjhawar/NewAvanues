@@ -2,12 +2,36 @@
 // 95% shared code across Android, iOS, and Desktop
 
 plugins {
-    id("org.jetbrains.kotlin.multiplatform")
-    id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.android.library")
-    id("org.jetbrains.compose")
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.compose)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.dokka)
     // SQLDelight plugin removed - using BrowserCoreData for database access
+}
+
+// Dokka Configuration
+tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>().configureEach {
+    moduleName.set("WebAvanue Universal")
+    moduleVersion.set("4.0.0-alpha")
+
+    dokkaSourceSets {
+        configureEach {
+            includeNonPublic.set(false)
+            skipEmptyPackages.set(true)
+            skipDeprecated.set(false)
+            reportUndocumented.set(true)
+
+            // Link to external documentation
+            externalDocumentationLink {
+                url.set(java.net.URL("https://kotlinlang.org/api/kotlinx.coroutines/"))
+            }
+            externalDocumentationLink {
+                url.set(java.net.URL("https://developer.android.com/reference/"))
+            }
+        }
+    }
 }
 
 kotlin {
@@ -48,13 +72,16 @@ kotlin {
                 implementation(project(":coredata"))
 
                 // Kotlin
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.datetime)
+
+                // Logging - Napier (KMP structured logging)
+                implementation(libs.napier)
 
                 // SQLDelight - Cross-platform database (inherited from BrowserCoreData)
-                implementation("app.cash.sqldelight:runtime:2.0.1")
-                implementation("app.cash.sqldelight:coroutines-extensions:2.0.1")
+                implementation(libs.sqldelight.runtime)
+                implementation(libs.sqldelight.coroutines.extensions)
 
                 // Compose Multiplatform
                 implementation(compose.runtime)
@@ -64,17 +91,17 @@ kotlin {
                 implementation(compose.materialIconsExtended) // For Mic, Laptop, FileDownload, TouchApp icons
 
                 // Voyager - KMP Navigation
-                implementation("cafe.adriel.voyager:voyager-navigator:1.0.0")
-                implementation("cafe.adriel.voyager:voyager-screenmodel:1.0.0")
-                implementation("cafe.adriel.voyager:voyager-tab-navigator:1.0.0")
-                implementation("cafe.adriel.voyager:voyager-transitions:1.0.0")
+                implementation(libs.voyager.navigator)
+                implementation(libs.voyager.screenmodel)
+                implementation(libs.voyager.tab.navigator)
+                implementation(libs.voyager.transitions)
             }
         }
 
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
@@ -82,26 +109,32 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 // Android WebView
-                implementation("androidx.webkit:webkit:1.9.0")
+                implementation(libs.androidx.webkit)
 
                 // SQLDelight Android Driver
-                implementation("app.cash.sqldelight:android-driver:2.0.1")
+                implementation(libs.sqldelight.android.driver)
 
                 // Android specific
-                implementation("androidx.core:core-ktx:1.12.0")
-                implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
-                implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+                implementation(libs.androidx.core.ktx)
+                implementation(libs.androidx.lifecycle.runtime.ktx)
+                implementation(libs.androidx.lifecycle.viewmodel.compose)
 
                 // Activity Compose - For rememberLauncherForActivityResult (file upload support)
-                implementation("androidx.activity:activity-compose:1.8.2")
+                implementation(libs.androidx.activity.compose)
+
+                // Security - EncryptedSharedPreferences
+                implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+                // Crash reporting - Sentry
+                implementation("io.sentry:sentry-android:7.0.0")
             }
         }
 
         val androidUnitTest by getting {
             dependencies {
-                implementation("junit:junit:4.13.2")
-                implementation("org.robolectric:robolectric:4.11.1")
-                implementation("app.cash.sqldelight:sqlite-driver:2.0.1")
+                implementation(libs.junit)
+                implementation(libs.robolectric)
+                implementation(libs.sqldelight.sqlite.driver)
             }
         }
 
@@ -109,24 +142,24 @@ kotlin {
             dependencies {
                 // Kotlin test
                 implementation(kotlin("test"))
-                implementation(kotlin("test-junit"))
+                implementation(libs.kotlin.test.junit)
 
                 // Android test core
-                implementation("androidx.test:core:1.5.0")
-                implementation("androidx.test:runner:1.5.2")
-                implementation("androidx.test:rules:1.5.0")
-                implementation("androidx.test.ext:junit:1.1.5")
-                implementation("androidx.test.ext:junit-ktx:1.1.5")
+                implementation(libs.androidx.test.core)
+                implementation(libs.androidx.test.runner)
+                implementation(libs.androidx.test.rules)
+                implementation(libs.androidx.test.junit)
+                implementation(libs.androidx.test.junit.ktx)
 
                 // Compose test
-                implementation("androidx.compose.ui:ui-test-junit4:1.5.4")
-                implementation("androidx.compose.ui:ui-test-manifest:1.5.4")
+                implementation(libs.compose.ui.test.junit4)
+                implementation(libs.compose.ui.test.manifest)
 
                 // SQLDelight Android Driver for tests
-                implementation("app.cash.sqldelight:android-driver:2.0.1")
+                implementation(libs.sqldelight.android.driver)
 
                 // Coroutines test
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 

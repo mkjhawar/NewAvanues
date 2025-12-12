@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.augmentalis.Avanues.web.universal.presentation.BrowserApp
 import com.augmentalis.Avanues.web.universal.presentation.ui.theme.initializeThemeSystem
+import com.augmentalis.Avanues.web.universal.security.SecureStorage
 import com.augmentalis.Avanues.web.universal.xr.XRManager
 
 /**
@@ -54,6 +55,9 @@ class MainActivity : ComponentActivity() {
         val app = application as WebAvanueApp
         val repository = app.provideRepository()
 
+        // Initialize secure storage for encrypted credential storage
+        val secureStorage = SecureStorage(applicationContext)
+
         // Initialize XR Manager with lifecycle awareness
         xrManager = XRManager(this, lifecycle)
 
@@ -64,6 +68,7 @@ class MainActivity : ComponentActivity() {
             // BrowserApp includes AppTheme and Voyager Navigator
             BrowserApp(
                 repository = repository,
+                secureStorage = secureStorage,
                 xrManager = xrManager,
                 xrState = xrState,
                 modifier = Modifier.fillMaxSize()

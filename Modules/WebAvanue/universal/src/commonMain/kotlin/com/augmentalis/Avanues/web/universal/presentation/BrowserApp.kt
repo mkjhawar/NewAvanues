@@ -16,6 +16,7 @@ import com.augmentalis.Avanues.web.universal.presentation.navigation.BrowserScre
 import com.augmentalis.Avanues.web.universal.presentation.navigation.ViewModelHolder
 import com.augmentalis.Avanues.web.universal.presentation.ui.theme.AppTheme
 import com.augmentalis.Avanues.web.universal.presentation.ui.theme.ThemeType
+import com.augmentalis.Avanues.web.universal.presentation.viewmodel.SecureStorageProvider
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -57,6 +58,7 @@ import kotlinx.datetime.toLocalDateTime
  * ```
  *
  * @param repository BrowserRepository instance
+ * @param secureStorage SecureStorage instance for encrypted credentials (Android only, nullable for other platforms)
  * @param xrManager XRManager instance (Android only, nullable for other platforms)
  * @param xrState Current XR state (null for non-Android platforms)
  * @param modifier Modifier for customization
@@ -64,13 +66,14 @@ import kotlinx.datetime.toLocalDateTime
 @Composable
 fun BrowserApp(
     repository: BrowserRepository,
+    secureStorage: SecureStorageProvider? = null,  // SecureStorage on Android, null on other platforms
     xrManager: Any? = null,  // XRManager on Android, null on other platforms
     xrState: Any? = null,    // XRManager.XRState on Android, null on other platforms
     modifier: Modifier = Modifier
 ) {
     // FIX: Use remember to ensure ViewModels are created only once and persist across recompositions
     // ViewModels should only be cleared when BrowserApp is disposed (app termination)
-    val viewModels = remember { ViewModelHolder.create(repository) }
+    val viewModels = remember { ViewModelHolder.create(repository, secureStorage) }
 
     // FIX BUG #3: Observe settings for theme changes
     val settings by viewModels.settingsViewModel.settings.collectAsState()

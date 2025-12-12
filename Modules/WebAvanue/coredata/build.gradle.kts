@@ -3,12 +3,12 @@
 // Migrated from browser-plugin
 
 plugins {
-    id("org.jetbrains.kotlin.multiplatform")
-    id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.android.library")
-    id("org.jetbrains.compose")
-    id("org.jetbrains.kotlin.plugin.compose")
-    id("app.cash.sqldelight")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.compose)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.sqldelight)
 }
 
 kotlin {
@@ -38,16 +38,19 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // Kotlin
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.datetime)
 
                 // UUID
-                implementation("com.benasher44:uuid:0.8.1")
+                implementation(libs.uuid)
+
+                // Logging
+                implementation(libs.napier)
 
                 // SQLDelight - Cross-platform database
-                implementation("app.cash.sqldelight:runtime:2.0.1")
-                implementation("app.cash.sqldelight:coroutines-extensions:2.0.1")
+                implementation(libs.sqldelight.runtime)
+                implementation(libs.sqldelight.coroutines.extensions)
 
                 // Compose Multiplatform
                 implementation(compose.runtime)
@@ -56,38 +59,43 @@ kotlin {
                 implementation(compose.ui)
 
                 // Koin for Dependency Injection
-                implementation("io.insert-koin:koin-core:3.5.0")
-                implementation("io.insert-koin:koin-compose:1.1.0")
+                implementation(libs.koin.core)
+                implementation(libs.koin.compose)
             }
         }
 
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
         val androidMain by getting {
             dependencies {
                 // Android WebView
-                implementation("androidx.webkit:webkit:1.9.0")
+                implementation(libs.androidx.webkit)
 
                 // SQLDelight Android Driver
-                implementation("app.cash.sqldelight:android-driver:2.0.1")
+                implementation(libs.sqldelight.android.driver)
+
+                // SQLCipher for database encryption
+                implementation(libs.sqlcipher.android)
+                implementation(libs.androidx.sqlite.ktx)
+                implementation(libs.androidx.sqlite.framework)
 
                 // Android specific
-                implementation("androidx.core:core-ktx:1.12.0")
-                implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
-                implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+                implementation(libs.androidx.core.ktx)
+                implementation(libs.androidx.lifecycle.runtime.ktx)
+                implementation(libs.androidx.lifecycle.viewmodel.compose)
             }
         }
 
         val androidUnitTest by getting {
             dependencies {
-                implementation("junit:junit:4.13.2")
-                implementation("org.robolectric:robolectric:4.11.1")
-                implementation("app.cash.sqldelight:sqlite-driver:2.0.1")
+                implementation(libs.junit)
+                implementation(libs.robolectric)
+                implementation(libs.sqldelight.sqlite.driver)
             }
         }
 
@@ -138,7 +146,7 @@ sqldelight {
     databases {
         create("BrowserDatabase") {
             packageName.set("com.augmentalis.webavanue.data.db")
-            dialect("app.cash.sqldelight:sqlite-3-38-dialect:2.0.1")
+            dialect(libs.sqldelight.sqlite.dialect)
             deriveSchemaFromMigrations.set(false)
             verifyMigrations.set(false)
         }

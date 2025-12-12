@@ -241,9 +241,11 @@ data class HttpAuthRequest(
  *
  * @property username Username for authentication
  * @property password Password for authentication
+ * @property remember Whether to remember credentials in secure storage
  */
 data class HttpAuthCredentials(
     val username: String,
-    val password: String
+    val password: String,
+    val remember: Boolean = false
 )
 

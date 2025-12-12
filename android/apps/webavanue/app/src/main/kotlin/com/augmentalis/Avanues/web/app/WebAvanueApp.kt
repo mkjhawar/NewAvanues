@@ -7,6 +7,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
 import com.augmentalis.Avanues.web.universal.commands.WebAvanueActionMapper
+import com.augmentalis.Avanues.web.universal.telemetry.SentryManager
+import com.augmentalis.Avanues.web.universal.utils.Logger
+import io.github.aakira.napier.DebugAntilog
+import io.github.aakira.napier.Napier
 import com.augmentalis.Avanues.web.universal.presentation.controller.AndroidWebViewController
 import com.augmentalis.Avanues.web.universal.presentation.viewmodel.TabViewModel
 import com.augmentalis.webavanue.data.db.BrowserDatabase
@@ -85,13 +89,30 @@ class WebAvanueApp : Application() {
 
         Log.d(TAG, "WebAvanueApp initializing...")
 
+        // Initialize Napier logging framework
+        Napier.base(DebugAntilog())
+        Logger.info(TAG, "Napier logging initialized")
+
+        // Initialize Sentry crash reporting
+        // TODO: Replace with actual Sentry DSN from https://sentry.io dashboard
+        // Get DSN: Sentry.io → Project Settings → Client Keys (DSN)
+        val sentryDsn = "https://YOUR_PUBLIC_KEY@sentry.io/YOUR_PROJECT_ID"
+        if (sentryDsn.contains("YOUR_")) {
+            Logger.warn(TAG, "Sentry DSN not configured - crash reporting disabled")
+        } else {
+            SentryManager.init(applicationContext, sentryDsn)
+            Logger.info(TAG, "Sentry crash reporting initialized")
+        }
+
         // Initialize database (triggers migration if needed)
         database
+        SentryManager.addBreadcrumb("app", "Database initialized")
 
         // Register IPC receiver for VoiceOS commands
         registerIPCReceiver()
+        SentryManager.addBreadcrumb("app", "IPC receiver registered")
 
-        Log.i(TAG, "✅ WebAvanueApp initialized successfully")
+        Logger.info(TAG, "WebAvanueApp initialized successfully")
     }
 
     override fun onTerminate() {
@@ -190,6 +211,9 @@ class WebAvanueApp : Application() {
                     // Execute action via ActionMapper
                     applicationScope.launch {
                         try {
+                            // Add breadcrumb for voice command
+                            SentryManager.addBreadcrumb("voice_command", "Executing: $action")
+
                             val result = actionMapper.executeAction(action, params)
 
                             // Send IPC response
@@ -201,10 +225,10 @@ class WebAvanueApp : Application() {
 
                             sendIPCResponse(response, sourceApp)
 
-                            Log.i(TAG, "Command executed: $action (${if (result.success) "success" else "failed"})")
+                            Logger.info(TAG, "Command executed: $action (${if (result.success) "success" else "failed"})")
 
                         } catch (e: Exception) {
-                            Log.e(TAG, "Command execution failed", e)
+                            Logger.error(TAG, "Command execution failed: ${e.message}", e)
                             val response = "ERR:${escape(commandId)}:${escape(e.message ?: "Exception")}"
                             sendIPCResponse(response, sourceApp)
                         }

@@ -1,5 +1,6 @@
 package com.augmentalis.Avanues.web.universal.presentation.viewmodel
 
+import com.augmentalis.Avanues.web.universal.utils.Logger
 import com.augmentalis.webavanue.domain.errors.TabError
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import com.augmentalis.webavanue.domain.model.Tab
@@ -81,6 +82,23 @@ class TabViewModel(
     private val _settings = MutableStateFlow<BrowserSettings?>(null)
     val settings: StateFlow<BrowserSettings?> = _settings.asStateFlow()
 
+    // PERFORMANCE OPTIMIZATION Phase 2: Combined UI state for efficient recomposition
+    // This StateFlow combines tabs + activeTab + error for batched UI updates
+    // Use this in UI instead of collecting tabs/activeTab/error separately
+    private val _combinedUiState = MutableStateFlow(CombinedTabUiState())
+    val combinedUiState: StateFlow<CombinedTabUiState> = _combinedUiState.asStateFlow()
+
+    /**
+     * Combined UI state for efficient recomposition
+     * Reduces recompositions by batching tab state updates
+     */
+    data class CombinedTabUiState(
+        val tabs: List<TabUiState> = emptyList(),
+        val activeTab: TabUiState? = null,
+        val error: String? = null,
+        val isLoading: Boolean = false
+    )
+
     // FIX L3: Thread-safe state machine for settings updates (prevents race conditions)
     private val settingsStateMachine = SettingsStateMachine(viewModelScope)
 
@@ -90,6 +108,32 @@ class TabViewModel(
     init {
         loadTabs()
         loadSettings()
+        observeCombinedState()
+    }
+
+    /**
+     * PERFORMANCE OPTIMIZATION Phase 2: Observe and combine state changes
+     * Updates combinedUiState whenever tabs, activeTab, error, or isLoading changes
+     */
+    private fun observeCombinedState() {
+        viewModelScope.launch {
+            // Combine multiple state flows into one
+            kotlinx.coroutines.flow.combine(
+                _tabs,
+                _activeTab,
+                _error,
+                _isLoading
+            ) { tabs, activeTab, error, isLoading ->
+                CombinedTabUiState(
+                    tabs = tabs,
+                    activeTab = activeTab,
+                    error = error,
+                    isLoading = isLoading
+                )
+            }.collect { combined ->
+                _combinedUiState.value = combined
+            }
+        }
     }
 
     /**
@@ -99,7 +143,7 @@ class TabViewModel(
         viewModelScope.launch {
             repository.observeSettings()
                 .catch { e ->
-                    println("Failed to observe settings: ${e.message}")
+                    Logger.error("TabViewModel", "Failed to observe settings: ${e.message}", e)
                 }
                 .collect { settings ->
                     _settings.value = settings
@@ -189,14 +233,14 @@ class TabViewModel(
                             _activeTab.value = lastActiveTab ?: updatedTabs.first()
 
                             // Log for debugging
-                            println("TabViewModel: Restored active tab: ${_activeTab.value?.tab?.title} (${_activeTab.value?.tab?.url})")
+                            Logger.info("TabViewModel", "Restored active tab: ${_activeTab.value?.tab?.title} (${Logger.sanitizeUrl(_activeTab.value?.tab?.url ?: "")})")
                         }
 
                         // FIX: Create default tab on first launch
                         // If no tabs exist (first launch or after closing all tabs), create a default tab
                         // This ensures users never see "No tabs open" on startup
                         if (updatedTabs.isEmpty()) {
-                            println("TabViewModel: No tabs found, creating default tab with startup URL")
+                            Logger.info("TabViewModel", "No tabs found, creating default tab with startup URL")
                             val settings = _settings.value
                             val startupUrl = settings?.homePage ?: Tab.DEFAULT_URL
                             createTab(
@@ -216,7 +260,7 @@ class TabViewModel(
                         }
                     } catch (e: Exception) {
                         _error.value = "Failed to process tabs: ${e.message}"
-                        println("TabViewModel: Error in collect: ${e.message}")
+                        Logger.error("TabViewModel", "Error in collect: ${e.message}", e)
                     }
                 }
         }
@@ -251,7 +295,7 @@ class TabViewModel(
                     )
                     _error.value = error.userMessage
                     _isLoading.value = false
-                    println("TabViewModel: ${error.technicalDetails}")
+                    Logger.error("TabViewModel", error.technicalDetails)
                     return@launch
                 }
 
@@ -275,7 +319,7 @@ class TabViewModel(
                 if (validationResult is UrlValidation.ValidationResult.Invalid) {
                     _error.value = validationResult.error.userMessage
                     _isLoading.value = false
-                    println("TabViewModel: ${validationResult.error.technicalDetails}")
+                    Logger.error("TabViewModel", validationResult.error.technicalDetails)
                     return@launch
                 }
 
@@ -288,7 +332,7 @@ class TabViewModel(
                 val retryPolicy = RetryPolicy.STANDARD
                 retryPolicy.execute { attempt ->
                     if (attempt > 1) {
-                        println("TabViewModel: Retrying tab creation (attempt $attempt)")
+                        Logger.info("TabViewModel", "Retrying tab creation (attempt $attempt)")
                     }
                     repository.createTab(newTab)
                 }.onSuccess { createdTab ->
@@ -296,7 +340,7 @@ class TabViewModel(
                         _activeTab.value = TabUiState(tab = createdTab)
                     }
                     _isLoading.value = false
-                    println("TabViewModel: Tab created successfully: ${createdTab.id}")
+                    Logger.info("TabViewModel", "Tab created successfully: ${createdTab.id}")
                 }.onFailure { e ->
                     val error = TabError.DatabaseOperationFailed(
                         operation = "createTab",
@@ -304,14 +348,14 @@ class TabViewModel(
                     )
                     _error.value = error.userMessage
                     _isLoading.value = false
-                    println("TabViewModel: ${error.technicalDetails}")
+                    Logger.error("TabViewModel", error.technicalDetails, e)
                 }
             } catch (e: Exception) {
                 // Catch any unexpected errors
                 val error = TabError.WebViewCreationFailed(cause = e)
                 _error.value = error.userMessage
                 _isLoading.value = false
-                println("TabViewModel: Unexpected error in createTab: ${error.technicalDetails}")
+                Logger.error("TabViewModel", "Unexpected error in createTab: ${error.technicalDetails}", e)
             }
         }
     }
@@ -398,13 +442,13 @@ class TabViewModel(
                     repository.updateTab(updatedTab)
                         .onFailure { e ->
                             // Non-critical error - tab switch succeeded but timestamp update failed
-                            println("TabViewModel: Failed to update tab timestamp: ${e.message}")
+                            Logger.warn("TabViewModel", "Failed to update tab timestamp: ${e.message}", e)
                         }
                 } else {
                     // Tab not found - provide specific error
                     val error = TabError.TabNotFound(tabId = tabId)
                     _error.value = error.userMessage
-                    println("TabViewModel: ${error.technicalDetails}")
+                    Logger.error("TabViewModel", error.technicalDetails)
                 }
             }
         }
@@ -449,7 +493,7 @@ class TabViewModel(
         val validationResult = UrlValidation.validate(url, allowBlank = false)
         if (validationResult is UrlValidation.ValidationResult.Invalid) {
             _error.value = validationResult.error.userMessage
-            println("TabViewModel: ${validationResult.error.technicalDetails}")
+            Logger.error("TabViewModel", validationResult.error.technicalDetails)
             return
         }
 

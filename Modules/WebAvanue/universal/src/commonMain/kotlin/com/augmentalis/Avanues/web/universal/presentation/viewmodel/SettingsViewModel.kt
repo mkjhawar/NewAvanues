@@ -16,16 +16,67 @@ import kotlinx.coroutines.launch
 /**
  * SettingsViewModel - Manages browser settings state and operations
  *
- * Responsibilities:
- * - Load browser settings
- * - Update settings (desktop mode, JavaScript, cookies, etc.)
- * - Toggle individual settings
- * - Apply presets (privacy, performance)
+ * ## Overview
+ * Provides reactive state management for all browser configuration settings including
+ * display preferences, privacy controls, search engine selection, and advanced features.
+ * Automatically persists changes to the database via [BrowserRepository].
  *
- * State:
- * - settings: BrowserSettings? - Current browser settings
- * - isLoading: Boolean - Loading state
- * - error: String? - Error message
+ * ## State Management
+ * All state exposed through Kotlin Flows for reactive UI updates:
+ * - [settings]: `StateFlow<BrowserSettings?>` - Current browser settings (null during initial load)
+ * - [isLoading]: `StateFlow<Boolean>` - Loading state for async operations
+ * - [error]: `StateFlow<String?>` - Error message for failed operations
+ * - [saveSuccess]: `StateFlow<Boolean>` - Success indicator for save operations
+ *
+ * ## Threading Model
+ * - **UI updates**: Main dispatcher (via StateFlow)
+ * - **Repository calls**: IO dispatcher (repository handles threading)
+ * - **Lifecycle**: ViewModel-scoped coroutines (cleaned up via [onCleared])
+ *
+ * ## Key Responsibilities
+ * - **Load settings**: Reactive observation of settings changes via [observeSettings]
+ * - **Update settings**: Individual setting updates or bulk settings replacement
+ * - **Apply presets**: Quick application of common configurations (Privacy, Performance, Accessibility)
+ * - **Validation**: Ensures setting values are within valid ranges (zoom 50-200%, window dimensions, etc.)
+ * - **Error handling**: Graceful failure with user-friendly error messages
+ *
+ * ## Usage Example
+ * ```kotlin
+ * val viewModel = SettingsViewModel(repository)
+ *
+ * // Observe settings reactively
+ * val settings by viewModel.settings.collectAsState()
+ *
+ * // Update individual setting
+ * viewModel.setDesktopMode(enabled = true)
+ *
+ * // Apply preset configuration
+ * viewModel.applyPreset(SettingsPreset.PRIVACY)
+ *
+ * // Reset to defaults
+ * viewModel.resetToDefaults()
+ *
+ * // Clean up when done
+ * viewModel.onCleared()
+ * ```
+ *
+ * ## Desktop Mode Settings
+ * Specialized controls for desktop user agent mode:
+ * - [setDesktopModeDefaultZoom]: Adjust zoom level (50-200%)
+ * - [setDesktopModeWindowWidth]: Set simulated screen width (800-1920px)
+ * - [setDesktopModeWindowHeight]: Set simulated screen height (600-1200px)
+ * - [setDesktopModeAutoFitZoom]: Toggle automatic zoom adjustment
+ *
+ * ## Settings Presets
+ * Quick-apply common configurations via [applyPreset]:
+ * - **DEFAULT**: Balanced settings for most users
+ * - **PRIVACY**: Maximum privacy protection (all blockers enabled, clear on exit)
+ * - **PERFORMANCE**: Optimized for speed (hardware acceleration, preloading)
+ * - **ACCESSIBILITY**: Enhanced readability (force zoom, large fonts, text reflow)
+ *
+ * @param repository Data access layer for persisting settings
+ * @see BrowserSettings for available settings and their defaults
+ * @see SettingsPreset for preset configurations
  */
 class SettingsViewModel(
     private val repository: BrowserRepository

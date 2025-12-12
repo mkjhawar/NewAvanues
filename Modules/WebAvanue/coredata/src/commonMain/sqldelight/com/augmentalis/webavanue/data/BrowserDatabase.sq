@@ -147,11 +147,12 @@ CREATE TABLE IF NOT EXISTS browser_settings (
 CREATE INDEX IF NOT EXISTS idx_tab_active ON tab(is_active);
 CREATE INDEX IF NOT EXISTS idx_tab_position ON tab(position);
 CREATE INDEX IF NOT EXISTS idx_tab_group ON tab(group_id);
+CREATE INDEX IF NOT EXISTS idx_tab_last_accessed ON tab(last_accessed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tab_group_position ON tab_group(position);
 CREATE INDEX IF NOT EXISTS idx_favorite_url ON favorite(url);
 CREATE INDEX IF NOT EXISTS idx_favorite_folder ON favorite(folder_id);
 CREATE INDEX IF NOT EXISTS idx_history_url ON history_entry(url);
-CREATE INDEX IF NOT EXISTS idx_history_visited ON history_entry(visited_at);
+CREATE INDEX IF NOT EXISTS idx_history_visited ON history_entry(visited_at DESC);
 CREATE INDEX IF NOT EXISTS idx_history_search ON history_entry(search_terms);
 CREATE INDEX IF NOT EXISTS idx_download_status ON download(status);
 CREATE INDEX IF NOT EXISTS idx_download_created ON download(created_at);
@@ -199,6 +200,11 @@ SELECT * FROM tab WHERE id = ?;
 
 selectActiveTab:
 SELECT * FROM tab WHERE is_active = 1 LIMIT 1;
+
+selectRecentTabs:
+SELECT * FROM tab
+ORDER BY last_accessed_at DESC
+LIMIT :limit;
 
 updateTab:
 UPDATE tab SET

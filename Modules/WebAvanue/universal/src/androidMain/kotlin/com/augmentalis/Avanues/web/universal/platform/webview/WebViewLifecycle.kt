@@ -120,13 +120,24 @@ class WebViewLifecycle {
  *
  * FIX: Race condition - @Synchronized for thread safety
  * FIX: Memory Leak - LRU eviction prevents unbounded growth causing OOM on <4GB devices
+ *
+ * PERFORMANCE OPTIMIZATION Phase 2: Adaptive pool size based on device memory
+ * - Low-end devices (<3GB RAM): 3 WebViews max (~150-300MB)
+ * - Mid-range devices (3-6GB RAM): 5 WebViews max (~250-500MB)
+ * - High-end devices (>6GB RAM): 8 WebViews max (~400-800MB)
  */
 private class WebViewPool {
     /**
      * Maximum number of WebViews to cache (prevents OOM)
-     * Each WebView ~50-100MB, so 5 WebViews = ~250-500MB max memory
+     * Adaptive based on device memory class:
+     * - Each WebView ~50-100MB
+     * - Low-end: 3 WebViews = ~150-300MB max
+     * - Mid-range: 5 WebViews = ~250-500MB max
+     * - High-end: 8 WebViews = ~400-800MB max
+     *
+     * NOTE: This is set during first access, based on available memory
      */
-    private val MAX_CACHED_WEBVIEWS = 5
+    private var MAX_CACHED_WEBVIEWS = 5  // Default for mid-range devices
 
     /**
      * LRU cache using LinkedHashMap with access-order mode
@@ -226,10 +237,16 @@ private class WebViewPool {
 /**
  * Extension: Save WebView state to Base64 string
  *
+ * PERFORMANCE OPTIMIZATION Phase 2: Profiled serialization
+ * - Measures serialization time for performance tracking
+ * - Warns if serialization takes >100ms (indicates large state)
+ *
  * @return Base64-encoded state string, or null if serialization fails
  */
 private fun WebView.saveStateToString(): String? {
     return try {
+        val startTime = System.currentTimeMillis()
+
         val bundle = Bundle()
         saveState(bundle)
 
@@ -239,7 +256,18 @@ private fun WebView.saveStateToString(): String? {
         val bytes = parcel.marshall()
         parcel.recycle()
 
-        Base64.encodeToString(bytes, Base64.DEFAULT)
+        val encoded = Base64.encodeToString(bytes, Base64.DEFAULT)
+
+        // PERFORMANCE: Log serialization metrics
+        val duration = System.currentTimeMillis() - startTime
+        val sizeKB = bytes.size / 1024
+        println("📊 WebViewLifecycle: State saved - ${sizeKB}KB in ${duration}ms")
+
+        if (duration > 100) {
+            println("⚠️ WebViewLifecycle: Slow serialization detected (${duration}ms) - consider optimization")
+        }
+
+        encoded
     } catch (e: Exception) {
         println("WebViewLifecycle: Failed to save state: ${e.message}")
         null

@@ -29,6 +29,12 @@ interface BrowserRepository {
     suspend fun getAllTabs(): Result<List<Tab>>
 
     /**
+     * Gets recent tabs (optimized for startup)
+     * PERFORMANCE: Loads only N most recently accessed tabs to reduce startup time
+     */
+    suspend fun getRecentTabs(limit: Int = 10): Result<List<Tab>>
+
+    /**
      * Observes all tabs with real-time updates
      */
     fun observeTabs(): Flow<List<Tab>>

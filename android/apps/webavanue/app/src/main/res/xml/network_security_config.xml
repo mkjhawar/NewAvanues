@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-SECURITY FIX: Network Security Configuration (CWE-295)
-Enforces HTTPS for all connections by default.
-Cleartext (HTTP) traffic is blocked except for localhost during development.
+SECURITY: Network Security Configuration (CWE-295, CWE-319)
+- Enforces HTTPS for all connections by default
+- Implements certificate pinning for critical infrastructure
+- Cleartext (HTTP) traffic blocked except localhost during development
+- Pin expiration: 2026-12-31 (renew annually)
 -->
 <network-security-config>
     <!-- Base configuration: Block cleartext traffic by default -->
@@ -12,17 +14,54 @@ Cleartext (HTTP) traffic is blocked except for localhost during development.
         </trust-anchors>
     </base-config>
 
-    <!-- Debug configuration: Allow cleartext for localhost only -->
+    <!-- Debug configuration: Allow user certificates for testing -->
     <debug-overrides>
         <trust-anchors>
             <certificates src="user" />
+            <certificates src="system" />
         </trust-anchors>
     </debug-overrides>
+
+    <!--
+    Certificate Pinning for Critical Domains
+
+    NOTE: WebAvanue is a browser app - it doesn't have a specific backend API.
+    This configuration demonstrates pinning for potential future services:
+    - Content Delivery Networks (CDN)
+    - Analytics/Telemetry services
+    - Update servers
+    - Authentication providers
+
+    For production deployment, update pins for your actual infrastructure.
+    -->
+
+    <!-- Example: Pin for future CDN/API infrastructure -->
+    <domain-config>
+        <domain includeSubdomains="true">api.webavanue.com</domain>
+        <pin-set expiration="2026-12-31">
+            <!-- Primary certificate pin (SHA-256 of public key) -->
+            <!-- PLACEHOLDER: Replace with actual certificate fingerprint -->
+            <pin digest="SHA-256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
+            <!-- Backup certificate pin (for certificate rotation) -->
+            <pin digest="SHA-256">BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
+        </pin-set>
+    </domain-config>
+
+    <!-- Example: Pin for future telemetry/analytics service -->
+    <domain-config>
+        <domain includeSubdomains="true">telemetry.webavanue.com</domain>
+        <pin-set expiration="2026-12-31">
+            <pin digest="SHA-256">CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC=</pin>
+            <pin digest="SHA-256">DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD=</pin>
+        </pin-set>
+    </domain-config>
 
     <!-- Allow localhost for development/testing -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">127.0.0.1</domain>
         <domain includeSubdomains="true">10.0.2.2</domain>
+        <!-- Android Emulator host -->
+        <domain includeSubdomains="true">10.0.2.15</domain>
     </domain-config>
 </network-security-config>

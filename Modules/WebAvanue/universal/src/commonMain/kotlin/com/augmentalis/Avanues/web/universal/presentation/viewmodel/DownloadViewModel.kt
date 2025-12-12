@@ -1,5 +1,6 @@
 package com.augmentalis.Avanues.web.universal.presentation.viewmodel
 
+import com.augmentalis.Avanues.web.universal.utils.Logger
 import com.augmentalis.webavanue.domain.model.Download
 import com.augmentalis.webavanue.domain.model.DownloadStatus
 import com.augmentalis.webavanue.domain.repository.BrowserRepository
@@ -72,7 +73,7 @@ class DownloadViewModel(
         // FIX P1-P9: Validate URL - only allow HTTP(S)
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             _error.value = "Only HTTP(S) downloads allowed"
-            println("⛔ Download rejected: Invalid URL scheme - $url")
+            Logger.warn("DownloadViewModel", "Download rejected: Invalid URL scheme - ${Logger.sanitizeUrl(url)}")
             return false
         }
 
@@ -86,7 +87,7 @@ class DownloadViewModel(
 
         if (sanitizedFilename.isEmpty() || sanitizedFilename.length > 255) {
             _error.value = "Invalid filename"
-            println("⛔ Download rejected: Invalid filename - $filename")
+            Logger.warn("DownloadViewModel", "Download rejected: Invalid filename")
             return false
         }
 
@@ -95,11 +96,11 @@ class DownloadViewModel(
         val blockedExtensions = setOf("apk", "exe", "sh", "bat", "cmd", "dll", "msi", "scr", "vbs", "js")
         if (extension in blockedExtensions) {
             _error.value = "Dangerous file type blocked: $extension"
-            println("⛔ Download rejected: Blocked extension - $extension")
+            Logger.warn("DownloadViewModel", "Download rejected: Blocked extension - $extension")
             return false
         }
 
-        println("✅ Download accepted: $sanitizedFilename from $url")
+        Logger.info("DownloadViewModel", "Download accepted: ${Logger.sanitizeFilename(sanitizedFilename)} from ${Logger.sanitizeUrl(url)}")
         val download = Download.create(url = url, filename = sanitizedFilename)
         val currentDownloads = _downloads.value.toMutableList()
         currentDownloads.add(0, download)
@@ -130,7 +131,7 @@ class DownloadViewModel(
         // FIX P1-P9: Validate URL - only allow HTTP(S)
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             _error.value = "Only HTTP(S) downloads allowed"
-            println("⛔ Download rejected: Invalid URL scheme - $url")
+            Logger.warn("DownloadViewModel", "Download rejected: Invalid URL scheme - ${Logger.sanitizeUrl(url)}")
             return null
         }
 
@@ -144,7 +145,7 @@ class DownloadViewModel(
 
         if (sanitizedFilename.isEmpty() || sanitizedFilename.length > 255) {
             _error.value = "Invalid filename"
-            println("⛔ Download rejected: Invalid filename - $filename")
+            Logger.warn("DownloadViewModel", "Download rejected: Invalid filename")
             return null
         }
 
@@ -153,11 +154,12 @@ class DownloadViewModel(
         val blockedExtensions = setOf("apk", "exe", "sh", "bat", "cmd", "dll", "msi", "scr", "vbs", "js")
         if (extension in blockedExtensions) {
             _error.value = "Dangerous file type blocked: $extension"
-            println("⛔ Download rejected: Blocked extension - $extension")
+            Logger.warn("DownloadViewModel", "Download rejected: Blocked extension - $extension")
             return null
         }
 
-        println("✅ Download started: $sanitizedFilename from $url")
+        Logger.info("DownloadViewModel", "Download started: ${Logger.sanitizeFilename(sanitizedFilename)} from ${Logger.sanitizeUrl(url)}")
+
         val download = Download.create(
             url = url,
             filename = sanitizedFilename,
@@ -177,9 +179,9 @@ class DownloadViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 repository.addDownload(download)
-                println("✅ Download saved to repository: ${download.id}")
+                Logger.info("DownloadViewModel", "Download saved to repository: ${download.id}")
             } catch (e: Exception) {
-                println("⚠️ Failed to save download to repository: ${e.message}")
+                Logger.error("DownloadViewModel", "Failed to save download to repository: ${e.message}", e)
             }
         }
 
