@@ -8,6 +8,8 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.augmentalis.webavanue.data.db.BrowserDatabase
 import com.augmentalis.webavanue.security.EncryptionManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory as SQLCipherSupportFactory
 
 /**
@@ -52,7 +54,19 @@ private fun createEncryptedDriver(context: Context): SqlDriver {
 
     if (plaintextDbFile.exists() && !encryptedDbFile.exists()) {
         println("DatabaseDriver: Migrating plaintext database to encrypted format...")
-        migratePlaintextToEncrypted(context, passphrase)
+        // Run migration on IO dispatcher to avoid blocking main thread (ANR risk for large databases)
+        // Using runBlocking is acceptable here as this is a one-time migration that must complete
+        // before the app can use the database. Alternative would be to defer app startup,
+        // but that adds complexity without benefit for a one-time operation.
+        runBlocking(Dispatchers.IO) {
+            try {
+                migratePlaintextToEncrypted(context, passphrase)
+            } catch (e: Exception) {
+                println("DatabaseDriver: Migration failed - will retry on next launch: ${e.message}")
+                // Don't rethrow - let app continue with plaintext DB if migration fails
+                // User can retry by restarting app
+            }
+        }
     }
 
     // Create SQLCipher support factory

@@ -27,7 +27,8 @@ import kotlinx.coroutines.launch
  *
  * Usage:
  * ```kotlin
- * val memoryMonitor = MemoryMonitor(context)
+ * // In your ViewModel or Component with lifecycle
+ * val memoryMonitor = MemoryMonitor(context, viewModelScope)
  * memoryMonitor.start()
  *
  * // Observe memory state
@@ -35,9 +36,19 @@ import kotlinx.coroutines.launch
  * if (memoryState.pressureLevel == MemoryPressureLevel.CRITICAL) {
  *     // Take action: clear caches, close tabs, etc.
  * }
+ *
+ * // Monitoring automatically stops when the provided scope is cancelled
  * ```
+ *
+ * @param context Android context for accessing system services
+ * @param scope CoroutineScope that controls the lifecycle of monitoring.
+ *              When this scope is cancelled, monitoring stops automatically.
+ *              Use viewModelScope, lifecycleScope, or another appropriate lifecycle-aware scope.
  */
-class MemoryMonitor(private val context: Context) {
+class MemoryMonitor(
+    private val context: Context,
+    private val scope: CoroutineScope
+) {
 
     private val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
     private var monitoringJob: Job? = null
@@ -52,7 +63,7 @@ class MemoryMonitor(private val context: Context) {
     fun start(intervalMs: Long = 5000) {
         stop() // Stop any existing monitoring
 
-        monitoringJob = CoroutineScope(Dispatchers.Default).launch {
+        monitoringJob = scope.launch(Dispatchers.Default) {
             while (isActive) {
                 updateMemoryState()
                 delay(intervalMs)

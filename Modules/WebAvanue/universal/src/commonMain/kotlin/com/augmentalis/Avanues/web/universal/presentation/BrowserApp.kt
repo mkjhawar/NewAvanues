@@ -79,12 +79,13 @@ fun BrowserApp(
     val settings by viewModels.settingsViewModel.settings.collectAsState()
     val systemDarkTheme = isSystemInDarkTheme()
 
-    // FIX: Cleanup ALL resources when BrowserApp is disposed (Activity.onDestroy)
+    // FIX C3: Cleanup ALL resources when BrowserApp is disposed (Activity.onDestroy)
     // This is the ONLY place where ViewModels should be cleared - not in individual screens!
+    // CRITICAL: clearHistory() MUST be called BEFORE onCleared() because it uses viewModelScope
     DisposableEffect(Unit) {
         onDispose {
             // FIX Issue #3: Check if "Clear History on Exit" is enabled
-            // Must be done BEFORE onCleared() to ensure the coroutine scope is still active
+            // CRITICAL: Must be done BEFORE onCleared() to ensure the coroutine scope is still active
             val currentSettings = viewModels.settingsViewModel.settings.value
             if (currentSettings?.clearHistoryOnExit == true) {
                 println("BrowserApp: Clearing history on exit (setting enabled)")
@@ -101,7 +102,8 @@ fun BrowserApp(
             WebViewPoolManager.clearAllWebViews()
             println("BrowserApp: WebViewPool cleared on dispose")
 
-            // Clear ViewModels - cancels coroutine scopes to prevent memory leaks
+            // FIX C3: Clear ViewModels - cancels coroutine scopes to prevent memory leaks
+            // CRITICAL: This MUST be called LAST, after all coroutine operations complete
             viewModels.tabViewModel.onCleared()
             viewModels.settingsViewModel.onCleared()
             viewModels.historyViewModel.onCleared()

@@ -1,5 +1,6 @@
 package com.augmentalis.Avanues.web.universal.presentation.viewmodel
 
+import com.augmentalis.Avanues.web.universal.util.encodeUrl
 import com.augmentalis.Avanues.web.universal.utils.Logger
 import com.augmentalis.webavanue.domain.errors.TabError
 import com.augmentalis.webavanue.domain.model.BrowserSettings
@@ -156,6 +157,7 @@ class TabViewModel(
      *
      * FIX L3: Use state machine to prevent race conditions during settings updates.
      * This ensures atomic transitions and queues rapid changes.
+     * FIX C5: Wrap in mutex to prevent concurrent settings updates.
      *
      * @param newSettings Settings to apply
      * @param applyFunction Suspend function that applies settings (e.g., to WebView)
@@ -164,11 +166,15 @@ class TabViewModel(
         newSettings: BrowserSettings,
         applyFunction: suspend (BrowserSettings) -> Result<Unit>
     ) {
-        settingsStateMachine.requestUpdate(newSettings, applyFunction)
+        stateMutex.withLock {
+            settingsStateMachine.requestUpdate(newSettings, applyFunction)
+        }
     }
 
     /**
      * Retry failed settings update with exponential backoff.
+     *
+     * FIX C5: Wrap in mutex to prevent concurrent settings updates.
      *
      * @param applyFunction Function to apply settings
      * @param maxRetries Maximum number of retries (default 3)
@@ -178,16 +184,22 @@ class TabViewModel(
         applyFunction: suspend (BrowserSettings) -> Result<Unit>,
         maxRetries: Int = 3
     ): Boolean {
-        return settingsStateMachine.retryError(applyFunction, maxRetries)
+        return stateMutex.withLock {
+            settingsStateMachine.retryError(applyFunction, maxRetries)
+        }
     }
 
     /**
      * Reset settings state machine (clear any queued updates).
      *
+     * FIX C5: Wrap in mutex to prevent concurrent settings updates.
+     *
      * Call when navigating away from settings or closing tab.
      */
     suspend fun resetSettingsStateMachine() {
-        settingsStateMachine.reset()
+        stateMutex.withLock {
+            settingsStateMachine.reset()
+        }
     }
 
     /**
@@ -535,7 +547,7 @@ class TabViewModel(
 
             // Treat as search query - use configured search engine
             else -> {
-                val encoded = java.net.URLEncoder.encode(trimmed, "UTF-8")
+                val encoded = encodeUrl(trimmed)
                 val searchEngine = _settings.value?.defaultSearchEngine ?: BrowserSettings.SearchEngine.GOOGLE
                 "${searchEngine.baseUrl}?${searchEngine.queryParam}=$encoded"
             }
