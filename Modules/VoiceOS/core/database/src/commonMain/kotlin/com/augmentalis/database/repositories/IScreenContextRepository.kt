@@ -33,6 +33,11 @@ interface IScreenContextRepository {
     suspend fun getByApp(appId: String): List<ScreenContextDTO>
 
     /**
+     * Get all screens by package name.
+     */
+    suspend fun getByPackage(packageName: String): List<ScreenContextDTO>
+
+    /**
      * Get screens by activity name.
      */
     suspend fun getByActivity(activityName: String): List<ScreenContextDTO>

@@ -26,8 +26,10 @@ package com.augmentalis.jitlearning;
 
 import com.augmentalis.jitlearning.JITState;
 import com.augmentalis.jitlearning.IAccessibilityEventListener;
+import com.augmentalis.jitlearning.IExplorationProgressListener;
 import com.augmentalis.jitlearning.ParcelableNodeInfo;
 import com.augmentalis.jitlearning.ExplorationCommand;
+import com.augmentalis.jitlearning.ExplorationProgress;
 import com.augmentalis.jitlearning.ScreenChangeEvent;
 
 /**
@@ -264,4 +266,99 @@ interface IElementCaptureService {
      * @since 2.0.0
      */
     void clearRegisteredElements();
+
+    // ================================================================
+    // EXPLORATION SYNC (v2.1 - P2 Feature)
+    // ================================================================
+
+    /**
+     * Start automated exploration of an app
+     *
+     * Triggers full automated exploration of the specified package.
+     * Progress updates sent via IExplorationProgressListener.
+     *
+     * Thread-safe: Can be called from any thread
+     * Performance: Async - returns immediately
+     *
+     * @param packageName Package name to explore
+     * @return true if exploration started successfully
+     * @since 2.1.0
+     */
+    boolean startExploration(in String packageName);
+
+    /**
+     * Stop current exploration
+     *
+     * Cancels ongoing exploration immediately.
+     * Final progress sent via listener's onCompleted or onFailed.
+     *
+     * Thread-safe: Can be called from any thread
+     * Performance: ~5-10ms
+     *
+     * @since 2.1.0
+     */
+    void stopExploration();
+
+    /**
+     * Pause current exploration
+     *
+     * Temporarily pauses exploration. Can be resumed with resumeExploration().
+     *
+     * Thread-safe: Can be called from any thread
+     * Performance: ~2-5ms
+     *
+     * @since 2.1.0
+     */
+    void pauseExploration();
+
+    /**
+     * Resume paused exploration
+     *
+     * Resumes a previously paused exploration.
+     *
+     * Thread-safe: Can be called from any thread
+     * Performance: ~2-5ms
+     *
+     * @since 2.1.0
+     */
+    void resumeExploration();
+
+    /**
+     * Get current exploration progress
+     *
+     * Returns current exploration state and progress.
+     *
+     * Thread-safe: Can be called from any thread
+     * Performance: ~2-5ms
+     *
+     * @return ExplorationProgress with current state
+     * @since 2.1.0
+     */
+    ExplorationProgress getExplorationProgress();
+
+    /**
+     * Register exploration progress listener
+     *
+     * Receive exploration progress updates.
+     *
+     * Thread-safe: Can be called from any thread
+     * Performance: ~2-5ms
+     *
+     * @param listener IExplorationProgressListener callback
+     * @since 2.1.0
+     */
+    void registerExplorationListener(IExplorationProgressListener listener);
+
+    /**
+     * Unregister exploration progress listener
+     *
+     * Stop receiving exploration progress updates.
+     *
+     * Thread-safe: Can be called from any thread
+     * Performance: ~2-5ms
+     *
+     * @param listener Previously registered listener
+     * @since 2.1.0
+     */
+    void unregisterExplorationListener(IExplorationProgressListener listener);
 }

@@ -37,6 +37,7 @@ import com.augmentalis.voiceoscore.learnapp.jit.JustInTimeLearner
 import com.augmentalis.jitlearning.JITLearnerProvider
 import com.augmentalis.jitlearning.JITEventCallback
 import com.augmentalis.jitlearning.JITLearningService
+import com.augmentalis.jitlearning.ExplorationProgressCallback
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppPreferences
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 import com.augmentalis.voiceoscore.learnapp.ui.ConsentDialogManager
@@ -169,12 +170,19 @@ class LearnAppIntegration private constructor(
      */
     private val avuQuantizerIntegration: com.augmentalis.voiceoscore.learnapp.ai.quantized.AVUQuantizerIntegration
 
+    /**
+     * Database manager reference for direct screen context queries
+     * FIX (2025-12-11): Stored for getLearnedScreenHashes() implementation
+     */
+    private lateinit var databaseManager: com.augmentalis.database.VoiceOSDatabaseManager
+
     init {
         // Initialize preferences
         preferences = LearnAppPreferences(context)
 
         // Initialize database manager (singleton for SQLDelight)
-        val databaseManager = com.augmentalis.database.VoiceOSDatabaseManager.getInstance(
+        // FIX (2025-12-11): Store reference for getLearnedScreenHashes()
+        databaseManager = com.augmentalis.database.VoiceOSDatabaseManager.getInstance(
             com.augmentalis.database.DatabaseDriverFactory(context)
         )
 
@@ -354,7 +362,7 @@ class LearnAppIntegration private constructor(
                             when (response) {
                                 is com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse.Approved -> {
                                     // Start exploration
-                                    startExploration(response.packageName)
+                                    startExplorationInternal(response.packageName)
                                 }
 
                                 is com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse.Declined -> {
@@ -499,13 +507,14 @@ class LearnAppIntegration private constructor(
     }
 
     /**
-     * Start exploration of app
+     * Start exploration of app (internal)
      *
      * FIX (2025-12-02): Added timeout protection to prevent infinite spinning
+     * FIX (2025-12-11): Renamed to startExplorationInternal to avoid conflict with JITLearnerProvider
      *
      * @param packageName Package name to explore
      */
-    private fun startExploration(packageName: String) {
+    private fun startExplorationInternal(packageName: String) {
         scope.launch {
             try {
                 // FIX: Add timeout protection (30 seconds max for initialization)
@@ -735,22 +744,28 @@ class LearnAppIntegration private constructor(
 
     /**
      * Pause exploration
+     * FIX (2025-12-11): Added override for JITLearnerProvider interface
      */
-    fun pauseExploration() {
+    override fun pauseExploration() {
+        Log.d(TAG, "Pause exploration requested")
         explorationEngine.pauseExploration()
     }
 
     /**
      * Resume exploration
+     * FIX (2025-12-11): Added override for JITLearnerProvider interface
      */
-    fun resumeExploration() {
+    override fun resumeExploration() {
+        Log.d(TAG, "Resume exploration requested")
         explorationEngine.resumeExploration()
     }
 
     /**
      * Stop exploration
+     * FIX (2025-12-11): Added override for JITLearnerProvider interface
      */
-    fun stopExploration() {
+    override fun stopExploration() {
+        Log.d(TAG, "Stop exploration requested")
         explorationEngine.stopExploration()
     }
 
@@ -1313,6 +1328,111 @@ class LearnAppIntegration private constructor(
     }
 
     /**
+     * Get all learned screen hashes for a package
+     * FIX (2025-12-11): P2 feature implementation
+     */
+    override fun getLearnedScreenHashes(packageName: String): List<String> {
+        return kotlinx.coroutines.runBlocking {
+            try {
+                databaseManager.screenContexts.getByPackage(packageName)
+                    .map { it.screenHash }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting learned screen hashes for $packageName", e)
+                emptyList()
+            }
+        }
+    }
+
+    /**
+     * Start automated exploration (v2.1 - P2 Feature)
+     * Note: pauseExploration, resumeExploration, stopExploration are defined above
+     */
+    override fun startExploration(packageName: String): Boolean {
+        Log.i(TAG, "Start exploration requested via IPC for: $packageName")
+        return try {
+            scope.launch {
+                explorationEngine.startExploration(packageName, null)
+            }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start exploration", e)
+            false
+        }
+    }
+
+    /**
+     * Get current exploration progress (v2.1 - P2 Feature)
+     */
+    override fun getExplorationProgress(): com.augmentalis.jitlearning.ExplorationProgress {
+        val state = explorationEngine.explorationState.value
+        return when (state) {
+            is ExplorationState.Idle -> com.augmentalis.jitlearning.ExplorationProgress.idle()
+            is ExplorationState.Running -> com.augmentalis.jitlearning.ExplorationProgress.running(
+                packageName = state.packageName,
+                screensExplored = state.progress.screensExplored,
+                elementsDiscovered = state.progress.elementsDiscovered,
+                currentDepth = state.progress.currentDepth,
+                progressPercent = (state.progress.calculatePercentage() * 100).toInt(),
+                elapsedMs = state.progress.elapsedTimeMs
+            )
+            is ExplorationState.Paused -> com.augmentalis.jitlearning.ExplorationProgress.paused(
+                packageName = state.packageName,
+                screensExplored = state.progress.screensExplored,
+                elementsDiscovered = state.progress.elementsDiscovered,
+                pauseReason = state.reason
+            )
+            is ExplorationState.PausedForLogin -> com.augmentalis.jitlearning.ExplorationProgress.paused(
+                packageName = state.packageName,
+                screensExplored = state.progress.screensExplored,
+                elementsDiscovered = state.progress.elementsDiscovered,
+                pauseReason = "Login screen detected"
+            )
+            is ExplorationState.PausedByUser -> com.augmentalis.jitlearning.ExplorationProgress.paused(
+                packageName = state.packageName,
+                screensExplored = state.progress.screensExplored,
+                elementsDiscovered = state.progress.elementsDiscovered,
+                pauseReason = "User paused"
+            )
+            is ExplorationState.Completed -> com.augmentalis.jitlearning.ExplorationProgress.completed(
+                packageName = state.packageName,
+                screensExplored = state.stats.totalScreens,
+                elementsDiscovered = state.stats.totalElements
+            )
+            is ExplorationState.Failed -> com.augmentalis.jitlearning.ExplorationProgress(
+                packageName = state.packageName,
+                state = "failed",
+                screensExplored = state.partialProgress?.screensExplored ?: 0,
+                elementsDiscovered = state.partialProgress?.elementsDiscovered ?: 0
+            )
+            else -> com.augmentalis.jitlearning.ExplorationProgress.idle()
+        }
+    }
+
+    /**
+     * Set exploration progress callback (v2.1 - P2 Feature)
+     */
+    override fun setExplorationCallback(callback: ExplorationProgressCallback?) {
+        explorationProgressCallback = callback
+
+        if (callback != null) {
+            // Observe exploration state changes and forward to callback
+            scope.launch {
+                explorationEngine.explorationState.collect { state ->
+                    val progress = getExplorationProgress()
+                    when (state) {
+                        is ExplorationState.Completed -> callback.onCompleted(progress)
+                        is ExplorationState.Failed -> callback.onFailed(progress, state.error.message ?: "Unknown error")
+                        else -> callback.onProgressUpdate(progress)
+                    }
+                }
+            }
+        }
+    }
+
+    // Exploration progress callback reference
+    private var explorationProgressCallback: ExplorationProgressCallback? = null
+
+    /**
      * Set event callback for JIT events
      */
     override fun setEventCallback(callback: JITEventCallback?) {
@@ -1525,7 +1645,7 @@ class LearnAppIntegration private constructor(
         if (developerSettings.isVerboseLoggingEnabled()) {
             Log.d("LearnAppIntegration", "Triggering LearnApp for package: $packageName")
         }
-        startExploration(packageName)
+        startExplorationInternal(packageName)
     }
 
     // ========== AVU Quantized Context API (2025-12-08) ==========

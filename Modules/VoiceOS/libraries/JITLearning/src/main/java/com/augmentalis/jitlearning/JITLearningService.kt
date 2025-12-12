@@ -97,8 +97,31 @@ interface JITLearnerProvider {
     /** Check if screen has been learned */
     fun hasScreen(screenHash: String): Boolean
 
+    /** Get all learned screen hashes for a package */
+    fun getLearnedScreenHashes(packageName: String): List<String>
+
     /** Set event callback for JIT events */
     fun setEventCallback(callback: JITEventCallback?)
+
+    // Exploration Sync (v2.1 - P2 Feature)
+
+    /** Start automated exploration */
+    fun startExploration(packageName: String): Boolean
+
+    /** Stop current exploration */
+    fun stopExploration()
+
+    /** Pause current exploration */
+    fun pauseExploration()
+
+    /** Resume paused exploration */
+    fun resumeExploration()
+
+    /** Get current exploration progress */
+    fun getExplorationProgress(): ExplorationProgress
+
+    /** Set exploration progress callback */
+    fun setExplorationCallback(callback: ExplorationProgressCallback?)
 }
 
 /**
@@ -109,6 +132,16 @@ interface JITEventCallback {
     fun onScreenLearned(packageName: String, screenHash: String, elementCount: Int)
     fun onElementDiscovered(stableId: String, vuid: String?)
     fun onLoginDetected(packageName: String, screenHash: String)
+}
+
+/**
+ * Callback interface for exploration progress.
+ * Allows ExplorationEngine to notify service of progress updates.
+ */
+interface ExplorationProgressCallback {
+    fun onProgressUpdate(progress: ExplorationProgress)
+    fun onCompleted(progress: ExplorationProgress)
+    fun onFailed(progress: ExplorationProgress, errorMessage: String)
 }
 
 /**
@@ -153,6 +186,9 @@ class JITLearningService : Service() {
 
     // Event listeners (v2.0)
     private val eventListeners = CopyOnWriteArrayList<IAccessibilityEventListener>()
+
+    // Exploration progress listeners (v2.1 - P2 Feature)
+    private val explorationListeners = CopyOnWriteArrayList<IExplorationProgressListener>()
 
     // Registered elements for click actions (uuid -> node)
     private val registeredElements = mutableMapOf<String, AccessibilityNodeInfo>()
@@ -241,6 +277,24 @@ class JITLearningService : Service() {
     }
 
     /**
+     * Dispatch exploration progress to all listeners (v2.1 - P2 Feature)
+     */
+    private fun dispatchExplorationProgress(progress: ExplorationProgress) {
+        val deadListeners = mutableListOf<IExplorationProgressListener>()
+
+        for (listener in explorationListeners) {
+            try {
+                listener.onProgressUpdate(progress)
+            } catch (e: RemoteException) {
+                Log.w(TAG, "Exploration listener disconnected", e)
+                deadListeners.add(listener)
+            }
+        }
+
+        explorationListeners.removeAll(deadListeners.toSet())
+    }
+
+    /**
      * AIDL Binder Implementation
      *
      * Implements IElementCaptureService interface for IPC.
@@ -296,9 +350,8 @@ class JITLearningService : Service() {
 
         override fun getLearnedScreenHashes(packageName: String): List<String> {
             Log.d(TAG, "Get learned screen hashes for: $packageName")
-            // FIX (2025-12-11): Could query from database via provider
-            // For now, return empty - full implementation would add method to provider
-            return emptyList()
+            // FIX (2025-12-11): Query from database via provider
+            return learnerProvider?.getLearnedScreenHashes(packageName) ?: emptyList()
         }
 
         // ================================================================
@@ -534,6 +587,78 @@ class JITLearningService : Service() {
                 }
             }
             registeredElements.clear()
+        }
+
+        // ================================================================
+        // EXPLORATION SYNC (v2.1 - P2 Feature)
+        // ================================================================
+
+        override fun startExploration(packageName: String): Boolean {
+            Log.i(TAG, "Start exploration request for: $packageName")
+            return learnerProvider?.startExploration(packageName) ?: false
+        }
+
+        override fun stopExploration() {
+            Log.i(TAG, "Stop exploration request")
+            learnerProvider?.stopExploration()
+        }
+
+        override fun pauseExploration() {
+            Log.i(TAG, "Pause exploration request")
+            learnerProvider?.pauseExploration()
+        }
+
+        override fun resumeExploration() {
+            Log.i(TAG, "Resume exploration request")
+            learnerProvider?.resumeExploration()
+        }
+
+        override fun getExplorationProgress(): ExplorationProgress {
+            return learnerProvider?.getExplorationProgress() ?: ExplorationProgress.idle()
+        }
+
+        override fun registerExplorationListener(listener: IExplorationProgressListener) {
+            Log.i(TAG, "Registering exploration listener")
+            explorationListeners.add(listener)
+
+            // Wire callback to provider if first listener
+            if (explorationListeners.size == 1) {
+                learnerProvider?.setExplorationCallback(object : ExplorationProgressCallback {
+                    override fun onProgressUpdate(progress: ExplorationProgress) {
+                        dispatchExplorationProgress(progress)
+                    }
+
+                    override fun onCompleted(progress: ExplorationProgress) {
+                        for (l in explorationListeners) {
+                            try {
+                                l.onCompleted(progress)
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Error dispatching onCompleted", e)
+                            }
+                        }
+                    }
+
+                    override fun onFailed(progress: ExplorationProgress, errorMessage: String) {
+                        for (l in explorationListeners) {
+                            try {
+                                l.onFailed(progress, errorMessage)
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Error dispatching onFailed", e)
+                            }
+                        }
+                    }
+                })
+            }
+        }
+
+        override fun unregisterExplorationListener(listener: IExplorationProgressListener) {
+            Log.i(TAG, "Unregistering exploration listener")
+            explorationListeners.remove(listener)
+
+            // Clear callback if no more listeners
+            if (explorationListeners.isEmpty()) {
+                learnerProvider?.setExplorationCallback(null)
+            }
         }
     }
 

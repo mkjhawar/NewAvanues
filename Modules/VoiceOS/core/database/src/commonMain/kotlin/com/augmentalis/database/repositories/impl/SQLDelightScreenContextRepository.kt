@@ -52,6 +52,10 @@ class SQLDelightScreenContextRepository(
         queries.getByApp(appId).executeAsList().map { it.toScreenContextDTO() }
     }
 
+    override suspend fun getByPackage(packageName: String): List<ScreenContextDTO> = withContext(Dispatchers.Default) {
+        queries.getByPackage(packageName).executeAsList().map { it.toScreenContextDTO() }
+    }
+
     override suspend fun getByActivity(activityName: String): List<ScreenContextDTO> = withContext(Dispatchers.Default) {
         queries.getByActivity(activityName).executeAsList().map { it.toScreenContextDTO() }
     }
