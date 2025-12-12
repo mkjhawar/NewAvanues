@@ -19,6 +19,8 @@ package com.augmentalis.learnappcore.safety
 
 import android.graphics.Rect
 import com.augmentalis.learnappcore.models.ElementInfo
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Result of safety check for an element.
@@ -143,8 +145,9 @@ class SafetyManager(
 ) {
     // ============================================================
     // Screen visit tracking (loop detection)
+    // Thread-safe with ConcurrentHashMap + AtomicInteger
     // ============================================================
-    private val screenVisits = mutableMapOf<String, Int>()
+    private val screenVisits = ConcurrentHashMap<String, AtomicInteger>()
     private val maxVisitsPerScreen = 3
 
     // ============================================================
@@ -176,9 +179,10 @@ class SafetyManager(
         currentScreenHash = screenHash
         currentActivityName = activityName
 
-        // Track screen visits
-        val visits = screenVisits.getOrPut(screenHash) { 0 } + 1
-        screenVisits[screenHash] = visits
+        // Track screen visits (atomic increment)
+        val visits = screenVisits.computeIfAbsent(screenHash) {
+            AtomicInteger(0)
+        }.incrementAndGet()
 
         // Check for loop
         if (visits > maxVisitsPerScreen) {
@@ -360,7 +364,7 @@ class SafetyManager(
      * @return true if loop detected
      */
     fun isLoopDetected(screenHash: String): Boolean {
-        return (screenVisits[screenHash] ?: 0) > maxVisitsPerScreen
+        return (screenVisits[screenHash]?.get() ?: 0) > maxVisitsPerScreen
     }
 
     /**
@@ -370,7 +374,7 @@ class SafetyManager(
      * @return Number of visits
      */
     fun getScreenVisits(screenHash: String): Int {
-        return screenVisits[screenHash] ?: 0
+        return screenVisits[screenHash]?.get() ?: 0
     }
 
     /**

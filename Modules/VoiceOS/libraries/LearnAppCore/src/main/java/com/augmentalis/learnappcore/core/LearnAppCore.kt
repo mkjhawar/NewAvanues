@@ -72,20 +72,32 @@ class LearnAppCore(
     }
 
     /**
-     * Framework detection cache
+     * Framework detection cache with LRU eviction
      *
      * Caches detected framework per package name to avoid repeated detection.
      * Key: package name, Value: detected framework
+     *
+     * LRU eviction prevents unbounded growth (max 50 frameworks cached).
      */
-    private val frameworkCache = mutableMapOf<String, AppFramework>()
+    private val frameworkCache = object : LinkedHashMap<String, AppFramework>(
+        16, 0.75f, true  // LRU access order
+    ) {
+        override fun removeEldestEntry(eldest: Map.Entry<String, AppFramework>): Boolean {
+            return size > 50  // Max 50 frameworks cached
+        }
+    }
 
     /**
      * Batch queue for BATCH mode
      *
      * Commands are queued during exploration and flushed as single transaction.
      * Memory: ~1.5KB per command × 100 = ~150KB peak
+     *
+     * Uses ArrayBlockingQueue to prevent unbounded growth.
+     * Auto-flushes when queue reaches capacity.
      */
-    private val batchQueue = mutableListOf<GeneratedCommandDTO>()
+    private val maxBatchSize = 100
+    private val batchQueue = java.util.concurrent.ArrayBlockingQueue<GeneratedCommandDTO>(maxBatchSize)
 
     /**
      * Process element and generate UUID + voice command
@@ -133,15 +145,17 @@ class LearnAppCore(
                 }
                 ProcessingMode.BATCH -> {
                     // Exploration Mode: Queue for batch
-                    batchQueue.add(command)
-                    Log.v(TAG, "Queued command for batch: ${command.commandText}")
-
-                    // Auto-flush if queue too large
-                    val maxBatchSize = developerSettings.getMaxCommandBatchSize()
-                    if (batchQueue.size >= maxBatchSize) {
+                    // Try to add to queue (non-blocking)
+                    if (!batchQueue.offer(command)) {
+                        // Queue full, flush immediately
                         Log.w(TAG, "Batch queue full ($maxBatchSize), auto-flushing")
-                        // Note: flushBatch() is suspend, so this will need to be called from suspend context
-                        // For now, just log warning - caller should flush regularly
+                        flushBatch()
+                        // Try again after flush (should succeed)
+                        if (!batchQueue.offer(command)) {
+                            Log.e(TAG, "Failed to queue command even after flush!")
+                        }
+                    } else {
+                        Log.v(TAG, "Queued command for batch: ${command.commandText}")
                     }
                 }
             }
@@ -752,19 +766,20 @@ class LearnAppCore(
         val count = batchQueue.size
 
         try {
+            // Convert queue to list for batch insert
+            val commandsList = mutableListOf<GeneratedCommandDTO>()
+            batchQueue.drainTo(commandsList)
+
             // Use batch insert with transaction wrapping for optimal performance
-            database.generatedCommands.insertBatch(batchQueue)
+            database.generatedCommands.insertBatch(commandsList)
 
             val elapsedMs = System.currentTimeMillis() - startTime
             val rate = count * 1000 / elapsedMs.coerceAtLeast(1)
             Log.i(TAG, "Flushed $count commands in ${elapsedMs}ms (~$rate commands/sec)")
 
-            // Clear queue
-            batchQueue.clear()
-
         } catch (e: Exception) {
             Log.e(TAG, "Failed to flush batch queue", e)
-            // Keep queue intact for retry
+            // Commands already drained from queue, cannot retry
             throw e
         }
     }
@@ -791,4 +806,14 @@ class LearnAppCore(
      * @return Number of commands queued
      */
     fun getBatchQueueSize(): Int = batchQueue.size
+
+    /**
+     * Clear framework cache
+     *
+     * Clears all cached framework detections.
+     * Useful for testing or when packages are updated.
+     */
+    fun clearCache() {
+        frameworkCache.clear()
+    }
 }

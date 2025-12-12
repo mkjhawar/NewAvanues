@@ -27,6 +27,11 @@
     <!-- LearnApp: System alert window for visual debugging overlays -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
+    <!-- JIT Learning: Control permission (signature-level) -->
+    <!-- Required to bind to JITLearningService and control passive learning -->
+    <!-- Granted automatically because VoiceOSCore and JITLearning share same signature -->
+    <uses-permission android:name="com.augmentalis.voiceos.permission.JIT_CONTROL" />
+
     <!-- Storage permissions for speech recognition models -->
     <!-- Allows models to be deployed via ADB to shared folder (.voiceos) -->
     <!-- Falls back to internal storage if denied -->

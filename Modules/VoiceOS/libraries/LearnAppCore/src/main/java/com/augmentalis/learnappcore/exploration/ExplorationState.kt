@@ -197,6 +197,9 @@ class ExplorationState(
     // Callbacks
     private var stateCallback: ExplorationStateCallback? = null
 
+    // Statistics calculator
+    private val statisticsCalculator = ExplorationStatistics()
+
     /**
      * Set state callback.
      */
@@ -401,49 +404,46 @@ class ExplorationState(
 
     /**
      * Get exploration statistics.
+     *
+     * Delegates to ExplorationStatistics calculator for metric computation.
      */
     fun getStats(): ExplorationStats {
-        val duration = if (startTimestamp > 0) {
-            System.currentTimeMillis() - startTimestamp
-        } else 0
-
-        val avgDepth = if (depthHistory.isNotEmpty()) {
-            depthHistory.average().toFloat()
-        } else {
-            currentDepth.toFloat()
-        }
-
-        return ExplorationStats(
-            screensExplored = screenFingerprints.size,
-            elementsDiscovered = discoveredElements.size,
-            elementsClicked = clickedElements.size,
-            commandsGenerated = generatedCommands.size,
-            navigationCount = navigationHistory.size,
-            dangerousElementsSkipped = dangerousElements.size,
-            dynamicRegionsDetected = dynamicRegions.size,
-            avgDepth = avgDepth,
+        return statisticsCalculator.calculateStats(
+            startTimestamp = startTimestamp,
+            discoveredElements = discoveredElements,
+            clickedElements = clickedElements,
+            dangerousElements = dangerousElements,
+            screenFingerprints = screenFingerprints,
+            navigationHistory = navigationHistory,
+            dynamicRegions = dynamicRegions,
+            generatedCommands = generatedCommands,
+            currentDepth = currentDepth,
             maxDepth = maxDepth,
-            durationMs = duration,
-            coverage = calculateCoverage()
+            depthHistory = depthHistory
         )
     }
 
     /**
      * Calculate exploration coverage.
+     *
+     * Delegates to ExplorationStatistics calculator.
      */
-    private fun calculateCoverage(): Float {
-        if (discoveredElements.isEmpty()) return 0f
+    fun calculateCoverage(): Float {
+        return statisticsCalculator.calculateCoverage(
+            discoveredElements.values.toList(),
+            clickedElements,
+            dangerousElements
+        )
+    }
 
-        val clickedCount = clickedElements.size.toFloat()
-        val clickableCount = discoveredElements.values.count {
-            it.isClickable && !dangerousElements.any { (e, _) -> e.stableId() == it.stableId() }
-        }.toFloat()
-
-        return if (clickableCount > 0) {
-            (clickedCount / clickableCount) * 100f
-        } else {
-            100f
-        }
+    /**
+     * Calculate exploration progress.
+     *
+     * @param estimatedTotalScreens Estimated total screens in app
+     * @return Progress percentage (0.0 - 100.0)
+     */
+    fun calculateProgress(estimatedTotalScreens: Int = 20): Float {
+        return statisticsCalculator.calculateProgress(getStats(), estimatedTotalScreens)
     }
 
     /**
