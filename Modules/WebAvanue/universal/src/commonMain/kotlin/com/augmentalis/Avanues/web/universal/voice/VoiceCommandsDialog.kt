@@ -228,6 +228,7 @@ private fun CategoryButton(
 
 /**
  * Commands view - Shows all commands in selected category
+ * Uses 2-column grid in landscape mode for better space utilization
  */
 @Composable
 private fun CommandsView(
@@ -235,38 +236,60 @@ private fun CommandsView(
     onBack: () -> Unit,
     onCommandClick: (String) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // Back button and title
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = OceanDesignTokens.Text.secondary
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val isLandscape = maxWidth > maxHeight
+
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Back button and title
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = OceanDesignTokens.Text.secondary
+                    )
+                }
+                Text(
+                    text = category.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = OceanDesignTokens.Text.primary
                 )
             }
-            Text(
-                text = category.title,
-                style = MaterialTheme.typography.titleLarge,
-                color = OceanDesignTokens.Text.primary
-            )
-        }
 
-        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-        // Commands list
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            items(category.commands) { command ->
-                CommandItemCard(
-                    command = command,
-                    onClick = { onCommandClick(command.command) }
-                )
+            // Commands list - use grid in landscape, column in portrait
+            if (isLandscape) {
+                // Landscape: 2-column grid
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(category.commands) { command ->
+                        CommandItemCard(
+                            command = command,
+                            onClick = { onCommandClick(command.command) }
+                        )
+                    }
+                }
+            } else {
+                // Portrait: single column
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(category.commands) { command ->
+                        CommandItemCard(
+                            command = command,
+                            onClick = { onCommandClick(command.command) }
+                        )
+                    }
+                }
             }
         }
     }
