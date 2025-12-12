@@ -39,6 +39,10 @@ fun createAndroidDriver(context: Context, useEncryption: Boolean = true): SqlDri
  * CWE-311 Mitigation: Encrypts all sensitive browser data at rest.
  */
 private fun createEncryptedDriver(context: Context): SqlDriver {
+    // Load SQLCipher native library before ANY database operations
+    // This MUST be called before creating SQLCipherSupportFactory or opening database
+    System.loadLibrary("sqlcipher")
+
     val encryptionManager = EncryptionManager(context)
     val passphrase = encryptionManager.getOrCreateDatabasePassphrase()
 
