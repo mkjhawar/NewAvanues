@@ -104,6 +104,8 @@ data class DeviceAdaptiveParameters(
     val headerSpacingLandscape: Dp,
 
     // Grid columns
+    val categoriesColumnsPortrait: Int,
+    val commandsColumnsPortrait: Int,
     val categoriesColumnsLandscape: Int,
     val commandsColumnsLandscape: Int,
 
@@ -143,6 +145,8 @@ data class DeviceAdaptiveParameters(
             contentPaddingLandscape = 16.dp,
             headerSpacingPortrait = 24.dp,
             headerSpacingLandscape = 16.dp,
+            categoriesColumnsPortrait = 2,
+            commandsColumnsPortrait = 2,
             categoriesColumnsLandscape = 3,
             commandsColumnsLandscape = 2,
             gridHorizontalSpacing = 6.dp,
@@ -172,6 +176,8 @@ data class DeviceAdaptiveParameters(
             contentPaddingLandscape = 24.dp,
             headerSpacingPortrait = 32.dp,
             headerSpacingLandscape = 24.dp,
+            categoriesColumnsPortrait = 2,
+            commandsColumnsPortrait = 2,
             categoriesColumnsLandscape = 3,
             commandsColumnsLandscape = 3, // 3 columns on tablet
             gridHorizontalSpacing = 8.dp,
@@ -207,6 +213,8 @@ data class DeviceAdaptiveParameters(
             contentPaddingLandscape = 14.dp, // Reduced for compact layout
             headerSpacingPortrait = 20.dp,
             headerSpacingLandscape = 14.dp,
+            categoriesColumnsPortrait = 2,
+            commandsColumnsPortrait = 2,
             categoriesColumnsLandscape = 3, // Keep 3 columns
             commandsColumnsLandscape = 2,
             gridHorizontalSpacing = 8.dp, // More spacing for clarity
@@ -243,6 +251,8 @@ data class DeviceAdaptiveParameters(
             contentPaddingLandscape = 12.dp,
             headerSpacingPortrait = 16.dp,
             headerSpacingLandscape = 12.dp,
+            categoriesColumnsPortrait = 1, // Single column for readability
+            commandsColumnsPortrait = 1,
             categoriesColumnsLandscape = 2, // Reduce to 2 for readability
             commandsColumnsLandscape = 2,
             gridHorizontalSpacing = 10.dp, // More spacing

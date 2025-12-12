@@ -145,12 +145,13 @@ class FavoriteViewModel(
      *
      * FIX: Added duplicate prevention - checks if URL already exists before adding
      * FIX: Added comprehensive try-catch to prevent crashes from unhandled exceptions
+     * FIX: Use currently selected folder when folderId not explicitly provided
      *
      * @param url Favorite URL
      * @param title Favorite title
      * @param favicon Optional favicon URL or data
      * @param description Optional description/notes
-     * @param folderId Optional folder ID (null = root)
+     * @param folderId Optional folder ID (null = use selected folder, or root if none selected)
      * @return Boolean - true if added successfully, false if duplicate detected or error
      */
     suspend fun addFavorite(
@@ -158,7 +159,7 @@ class FavoriteViewModel(
         title: String,
         favicon: String? = null,
         description: String? = null,
-        folderId: String? = null
+        folderId: String? = _selectedFolderId.value
     ): Boolean {
         return try {
             // FIX Issue #2: Check for duplicates before adding

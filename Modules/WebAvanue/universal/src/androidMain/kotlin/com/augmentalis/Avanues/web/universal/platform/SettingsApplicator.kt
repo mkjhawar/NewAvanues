@@ -148,9 +148,8 @@ class SettingsApplicator {
                 loadWithOverviewMode = false
                 useWideViewPort = false
 
-                // Apply initial scale (constrained to 50-200%)
+                // Apply mobile initial scale (constrained to 50-200%)
                 val scale = (settings.initialScale * 100).toInt().coerceIn(50, 200)
-                // initialScale is set on WebView, not settings
                 webView.setInitialScale(scale)
 
                 // Reset to mobile user agent

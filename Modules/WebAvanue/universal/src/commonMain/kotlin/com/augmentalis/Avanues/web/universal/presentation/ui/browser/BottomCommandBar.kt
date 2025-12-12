@@ -1249,8 +1249,7 @@ fun VerticalCommandBarLayout(
         ) {
             Surface(
                 modifier = Modifier
-                    .glassBar(cornerRadius = 8.dp)
-                    .background(OceanTheme.surface),
+                    .glassBar(cornerRadius = 8.dp),
                 color = OceanTheme.surface,
                 shape = RoundedCornerShape(8.dp)
             ) {
@@ -1266,8 +1265,7 @@ fun VerticalCommandBarLayout(
         // Vertical command bar container - radius matches URL bar (8.dp)
         Surface(
             modifier = Modifier
-                .glassBar(cornerRadius = 8.dp)
-                .background(OceanTheme.surface),
+                .glassBar(cornerRadius = 8.dp),
             color = OceanTheme.surface,
             shape = RoundedCornerShape(8.dp),
             shadowElevation = 8.dp
@@ -1652,9 +1650,8 @@ fun HorizontalCommandBarLayout(
         ) {
             Row(
                 modifier = Modifier
-                    .horizontalScroll(scrollState)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Hide button
@@ -1987,8 +1984,7 @@ private fun VerticalCommandBar(
         ) {
             Surface(
                 modifier = Modifier
-                    .glassBar(cornerRadius = 8.dp)
-                    .background(OceanTheme.surface),
+                    .glassBar(cornerRadius = 8.dp),
                 color = OceanTheme.surface,
                 shape = RoundedCornerShape(8.dp)
             ) {
@@ -2004,8 +2000,7 @@ private fun VerticalCommandBar(
         // Vertical command bar container
         Surface(
             modifier = Modifier
-                .glassBar(cornerRadius = 27.dp)
-                .background(OceanTheme.surface),
+                .glassBar(cornerRadius = 27.dp),
             color = OceanTheme.surface,
             shape = RoundedCornerShape(27.dp),
             shadowElevation = 8.dp

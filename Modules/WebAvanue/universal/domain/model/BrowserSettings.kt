@@ -14,7 +14,8 @@ data class BrowserSettings(
     val forceZoom: Boolean = false,
     val showImages: Boolean = true,
     val useDesktopMode: Boolean = false,
-    val initialScale: Float = 0.75f,  // Initial page scale (default 75%)
+    val initialScale: Float = 1.0f,  // Initial page scale for mobile (default 100%)
+    val desktopModeDefaultZoom: Int = 75,  // Desktop mode zoom percentage (default 75%)
 
     // Privacy Settings
     val blockPopups: Boolean = true,
