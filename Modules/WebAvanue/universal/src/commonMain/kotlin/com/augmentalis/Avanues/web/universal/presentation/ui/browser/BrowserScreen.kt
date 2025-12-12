@@ -655,58 +655,56 @@ fun BrowserScreen(
         // Interactive - clicking commands executes them
         if (showVoiceHelp && settings != null) {
             com.augmentalis.Avanues.web.universal.voice.VoiceCommandsDialog(
-                settings = settings!!,
                 onDismiss = { showVoiceHelp = false },
-                onVoiceCommand = lastVoiceCommand,
                 onCommandExecute = { command ->
-                    // Execute the command and return whether to dismiss dialog
-                    when {
-                        // Navigation commands - execute and dismiss
-                        command == "go back" -> { webViewController.goBack(); true }
-                        command == "go forward" -> { webViewController.goForward(); true }
-                        command == "go home" -> { tabViewModel.navigateToUrl(settings!!.homePage); true }
-                        command == "refresh" -> { webViewController.reload(); true }
+                    // Execute the command
+                    when (command) {
+                        // Navigation commands
+                        "go back" -> webViewController.goBack()
+                        "go forward" -> webViewController.goForward()
+                        "go home" -> tabViewModel.navigateToUrl(settings!!.homePage)
+                        "refresh" -> webViewController.reload()
 
-                        // Scrolling commands - execute and dismiss
-                        command == "scroll up" -> { webViewController.scrollToTop(); true }
-                        command == "scroll down" -> { webViewController.scrollToBottom(); true }
-                        command == "scroll to top" -> { webViewController.scrollToTop(); true }
-                        command == "scroll to bottom" -> { webViewController.scrollToBottom(); true }
-                        command == "freeze scroll" -> { isScrollFrozen = !isScrollFrozen; true }
+                        // Scrolling commands
+                        "scroll up" -> webViewController.scrollToTop()
+                        "scroll down" -> webViewController.scrollToBottom()
+                        "scroll to top" -> webViewController.scrollToTop()
+                        "scroll to bottom" -> webViewController.scrollToBottom()
+                        "page up" -> webViewController.scrollToTop()
+                        "page down" -> webViewController.scrollToBottom()
 
-                        // Tab commands - execute and dismiss
-                        command == "new tab" -> { tabViewModel.createTab(); true }
-                        command == "close tab" -> { tabViewModel.closeTab(activeTab?.tab?.id ?: ""); true }
-                        command == "show tabs" -> { showSpatialTabSwitcher = true; true }
+                        // Tab commands
+                        "new tab" -> tabViewModel.createTab()
+                        "close tab" -> tabViewModel.closeTab(activeTab?.tab?.id ?: "")
+                        "next tab" -> {} // TODO: implement tab switching
+                        "previous tab" -> {} // TODO: implement tab switching
+                        "reopen tab" -> {} // TODO: implement reopen tab
 
-                        // Zoom commands - keep dialog open for more adjustments
-                        command == "zoom in" -> { webViewController.zoomIn(); tabViewModel.zoomIn(); false }
-                        command == "zoom out" -> { webViewController.zoomOut(); tabViewModel.zoomOut(); false }
-                        command == "reset zoom" -> { webViewController.setZoomLevel(100); tabViewModel.setZoomLevel(100); false }
+                        // Zoom commands
+                        "zoom in" -> { webViewController.zoomIn(); tabViewModel.zoomIn() }
+                        "zoom out" -> { webViewController.zoomOut(); tabViewModel.zoomOut() }
+                        "reset zoom" -> { webViewController.setZoomLevel(100); tabViewModel.setZoomLevel(100) }
 
-                        // Mode commands - execute and dismiss
-                        command == "desktop mode" -> {
+                        // Mode commands
+                        "desktop mode" -> {
                             webViewController.setDesktopMode(true)
                             tabViewModel.setDesktopMode(true)
                             webViewController.reload()
-                            true
                         }
-                        command == "mobile mode" -> {
+                        "mobile mode" -> {
                             webViewController.setDesktopMode(false)
                             tabViewModel.setDesktopMode(false)
                             webViewController.reload()
-                            true
                         }
+                        "reader mode" -> {} // TODO: implement reader mode
+                        "fullscreen" -> {} // TODO: implement fullscreen
 
-                        // Feature commands - execute and dismiss (except ones needing input)
-                        command == "show favorites" -> { showSpatialFavorites = !showSpatialFavorites; true }
-                        command == "bookmark this" -> { showAddToFavoritesDialog = true; true }
-                        command == "show help" -> { showVoiceHelp = true; false } // Keep open
-
-                        // Commands that need input - keep dialog open
-                        command.contains("[") -> false // Contains placeholder like [query] or [url]
-
-                        else -> false // Unknown command - keep dialog open
+                        // Feature commands
+                        "bookmark" -> showAddToFavoritesDialog = true
+                        "history" -> {} // TODO: show history
+                        "downloads" -> {} // TODO: show downloads
+                        "settings" -> {} // TODO: show settings
+                        "help" -> showVoiceHelp = true
                     }
                 }
             )

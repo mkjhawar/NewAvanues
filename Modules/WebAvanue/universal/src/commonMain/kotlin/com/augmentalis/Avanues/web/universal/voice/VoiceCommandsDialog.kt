@@ -1,9 +1,11 @@
 package com.augmentalis.Avanues.web.universal.voice
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -12,14 +14,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.window.Dialog
 import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
-import com.augmentalis.Avanues.web.universal.presentation.design.OceanComponents
 import com.augmentalis.Avanues.web.universal.presentation.design.OceanDesignTokens
-import com.augmentalis.Avanues.web.universal.presentation.design.IconVariant
-import com.augmentalis.webavanue.domain.model.BrowserSettings
 
 /**
  * Voice command category
@@ -33,202 +35,147 @@ enum class VoiceCommandCategory(
         title = "Navigation",
         icon = Icons.Default.Navigation,
         commands = listOf(
-            CommandItem("go back", "Navigate back", Icons.Default.ArrowBack),
-            CommandItem("go forward", "Navigate forward", Icons.Default.ArrowForward),
-            CommandItem("go home", "Go to home page", Icons.Default.Home),
-            CommandItem("refresh", "Reload page", Icons.Default.Refresh),
-            CommandItem("go to [url]", "Navigate to URL", Icons.Default.Link)
+            CommandItem("go back", "Navigate back"),
+            CommandItem("go forward", "Navigate forward"),
+            CommandItem("go home", "Go to home page"),
+            CommandItem("refresh", "Reload page"),
+            CommandItem("go to [url]", "Navigate to URL")
         )
     ),
     SCROLLING(
         title = "Scrolling",
-        icon = Icons.Default.Swipe,
+        icon = Icons.Default.UnfoldMore,
         commands = listOf(
-            CommandItem("scroll up", "Scroll page up", Icons.Default.ArrowUpward),
-            CommandItem("scroll down", "Scroll page down", Icons.Default.ArrowDownward),
-            CommandItem("scroll to top", "Scroll to page top", Icons.Default.VerticalAlignTop),
-            CommandItem("scroll to bottom", "Scroll to page bottom", Icons.Default.VerticalAlignBottom),
-            CommandItem("freeze scroll", "Toggle scroll freeze", Icons.Default.Lock)
+            CommandItem("scroll up", "Scroll up"),
+            CommandItem("scroll down", "Scroll down"),
+            CommandItem("scroll to top", "Scroll to page top"),
+            CommandItem("scroll to bottom", "Scroll to page bottom"),
+            CommandItem("page up", "Scroll one page up"),
+            CommandItem("page down", "Scroll one page down")
         )
     ),
     TABS(
         title = "Tabs",
         icon = Icons.Default.Tab,
         commands = listOf(
-            CommandItem("new tab", "Open new tab", Icons.Default.Add),
-            CommandItem("close tab", "Close current tab", Icons.Default.Close),
-            CommandItem("next tab", "Switch to next tab", Icons.Default.NavigateNext),
-            CommandItem("previous tab", "Switch to previous tab", Icons.Default.NavigateBefore),
-            CommandItem("show tabs", "Show 3D tabs view", Icons.Default.Dashboard)
+            CommandItem("new tab", "Open new tab"),
+            CommandItem("close tab", "Close current tab"),
+            CommandItem("next tab", "Switch to next tab"),
+            CommandItem("previous tab", "Switch to previous tab"),
+            CommandItem("reopen tab", "Reopen closed tab")
         )
     ),
     ZOOM(
         title = "Zoom",
         icon = Icons.Default.ZoomIn,
         commands = listOf(
-            CommandItem("zoom in", "Increase zoom level", Icons.Default.ZoomIn),
-            CommandItem("zoom out", "Decrease zoom level", Icons.Default.ZoomOut),
-            CommandItem("reset zoom", "Reset to default zoom", Icons.Default.ZoomOutMap)
+            CommandItem("zoom in", "Zoom in"),
+            CommandItem("zoom out", "Zoom out"),
+            CommandItem("reset zoom", "Reset zoom to 100%")
         )
     ),
     MODES(
         title = "Modes",
-        icon = Icons.Default.DesktopWindows,
+        icon = Icons.Default.Monitor,
         commands = listOf(
-            CommandItem("desktop mode", "Switch to desktop mode", Icons.Default.DesktopWindows),
-            CommandItem("mobile mode", "Switch to mobile mode", Icons.Default.PhoneAndroid)
+            CommandItem("desktop mode", "Enable desktop mode"),
+            CommandItem("mobile mode", "Enable mobile mode"),
+            CommandItem("reader mode", "Enable reader mode"),
+            CommandItem("fullscreen", "Enter fullscreen")
         )
     ),
     FEATURES(
         title = "Features",
         icon = Icons.Default.Star,
         commands = listOf(
-            CommandItem("show favorites", "Show favorites shelf", Icons.Default.Favorite),
-            CommandItem("bookmark this", "Bookmark current page", Icons.Default.BookmarkAdd),
-            CommandItem("open bookmarks", "Open bookmarks list", Icons.Default.Bookmarks),
-            CommandItem("downloads", "Open downloads", Icons.Default.Download),
-            CommandItem("history", "Open history", Icons.Default.History),
-            CommandItem("settings", "Open settings", Icons.Default.Settings),
-            CommandItem("search [query]", "Search for query", Icons.Default.Search),
-            CommandItem("show help", "Show voice commands", Icons.Default.HelpOutline)
+            CommandItem("bookmark", "Add to bookmarks"),
+            CommandItem("history", "Show history"),
+            CommandItem("downloads", "Show downloads"),
+            CommandItem("settings", "Open settings"),
+            CommandItem("help", "Show help")
         )
     )
 }
 
 /**
- * Individual command item
+ * Command item data
  */
 data class CommandItem(
     val command: String,
-    val description: String,
-    val icon: ImageVector
+    val description: String
 )
 
 /**
- * VoiceCommandsDialog - Interactive voice commands reference
- *
- * FR-011: Voice Commands UI
- * - Shows all available voice commands grouped by category
- * - Each category has a submenu with specific commands
- * - Commands are clickable and execute when tapped
- * - Auto-dismiss for action commands, stay open for input commands
- * - Voice navigation: Say category name to view its commands
- * - Say "back" to return to categories view
- *
- * @param settings Browser settings for auto-close configuration
- * @param onDismiss Callback when dialog is dismissed
- * @param onVoiceCommand Optional voice command text for navigation
- * @param onCommandExecute Callback to execute a command (command text) -> should dismiss
+ * Voice Commands Dialog
+ * Shows available voice commands in a clean 2-column grid
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VoiceCommandsDialog(
-    settings: BrowserSettings,
     onDismiss: () -> Unit,
-    onVoiceCommand: String? = null,
-    onCommandExecute: (String) -> Boolean = { false }
+    onCommandExecute: (String) -> Unit
 ) {
     var selectedCategory by remember { mutableStateOf<VoiceCommandCategory?>(null) }
 
-    // Handle voice-based navigation
-    LaunchedEffect(onVoiceCommand) {
-        onVoiceCommand?.lowercase()?.let { command ->
-            when {
-                command == "back" -> selectedCategory = null
-                command.contains("navigation") -> selectedCategory = VoiceCommandCategory.NAVIGATION
-                command.contains("scroll") -> selectedCategory = VoiceCommandCategory.SCROLLING
-                command.contains("tab") -> selectedCategory = VoiceCommandCategory.TABS
-                command.contains("zoom") -> selectedCategory = VoiceCommandCategory.ZOOM
-                command.contains("mode") -> selectedCategory = VoiceCommandCategory.MODES
-                command.contains("feature") -> selectedCategory = VoiceCommandCategory.FEATURES
-            }
-        }
-    }
-
     Dialog(onDismissRequest = onDismiss) {
-        BoxWithConstraints {
-            // Detect landscape orientation
-            val isLandscape = maxWidth > maxHeight
-
-            // Device-adaptive parameters for smart glasses, tablets, and phones
-            val deviceType = remember { DeviceDetector.detectDeviceType() }
-            val isTabletDevice = remember { DeviceDetector.isTablet() }
-            val params = remember(deviceType, isTabletDevice) {
-                DeviceAdaptiveParameters.forDeviceType(deviceType, isTabletDevice)
-            }
-
-            // Apply device-specific sizing
-            val dialogWidth = if (isLandscape) params.dialogWidthLandscape else params.dialogWidthPortrait
-            val dialogHeight = if (isLandscape) params.dialogHeightLandscape else params.dialogHeightPortrait
-            val contentPadding = if (isLandscape) params.contentPaddingLandscape else params.contentPaddingPortrait
-            val headerSpacing = if (isLandscape) params.headerSpacingLandscape else params.headerSpacingPortrait
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth(dialogWidth)
-                    .fillMaxHeight(dialogHeight),
-                color = OceanDesignTokens.Surface.elevated,
-                shape = RoundedCornerShape(OceanDesignTokens.CornerRadius.xxl),
-                tonalElevation = OceanDesignTokens.Elevation.lg,
-                shadowElevation = OceanDesignTokens.Elevation.xxl
+        Surface(
+            modifier = Modifier
+                .widthIn(min = 320.dp, max = 480.dp)
+                .heightIn(max = 600.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = OceanDesignTokens.Surface.default,
+            tonalElevation = 8.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(contentPadding)
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Current category snapshot
-                    val currentCategory = selectedCategory
-
-                    // Header
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = currentCategory?.title ?: "Voice Commands",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontSize = params.headerTextSize,
-                            color = OceanDesignTokens.Text.primary
+                    Text(
+                        text = "Voice Commands",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = OceanDesignTokens.Text.primary
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = OceanDesignTokens.Text.secondary
                         )
+                    }
+                }
 
-                        OceanComponents.IconButton(onClick = onDismiss) {
-                            OceanComponents.Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                                variant = IconVariant.Secondary
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Content
+                if (selectedCategory == null) {
+                    // Categories grid - Always 2 columns
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(VoiceCommandCategory.entries.toList()) { category ->
+                            CategoryButton(
+                                category = category,
+                                onClick = { selectedCategory = category }
                             )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(headerSpacing))
-
-                    // Content with navigation animation
-                    Box(modifier = Modifier.weight(1f)) {
-                        if (currentCategory == null) {
-                            CategoriesView(
-                                isLandscape = isLandscape,
-                                params = params,
-                                onCategorySelected = { category ->
-                                    selectedCategory = category
-                                }
-                            )
-                        } else {
-                            CommandsView(
-                                category = currentCategory,
-                                isLandscape = isLandscape,
-                                params = params,
-                                onBack = { selectedCategory = null },
-                                onCommandClick = { command ->
-                                    val shouldDismiss = onCommandExecute(command)
-                                    if (shouldDismiss) {
-                                        onDismiss()
-                                    }
-                                }
-                            )
+                } else {
+                    // Commands view with back button
+                    CommandsView(
+                        category = selectedCategory!!,
+                        onBack = { selectedCategory = null },
+                        onCommandClick = { command ->
+                            onCommandExecute(command)
+                            onDismiss()
                         }
-                    }
+                    )
                 }
             }
         }
@@ -236,133 +183,88 @@ fun VoiceCommandsDialog(
 }
 
 /**
- * Categories view - Shows all command categories
- * Adapts to landscape with multi-column grid layout
- */
-@Composable
-private fun CategoriesView(
-    isLandscape: Boolean,
-    params: DeviceAdaptiveParameters,
-    onCategorySelected: (VoiceCommandCategory) -> Unit
-) {
-    val columns = if (isLandscape) params.categoriesColumnsLandscape else 1
-
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(columns),
-        horizontalArrangement = Arrangement.spacedBy(params.gridHorizontalSpacing),
-        verticalArrangement = Arrangement.spacedBy(params.gridVerticalSpacing),
-        modifier = Modifier.fillMaxSize()
-    ) {
-        items(VoiceCommandCategory.entries.toList()) { category ->
-            CategoryButton(
-                category = category,
-                params = params,
-                onClick = { onCategorySelected(category) }
-            )
-        }
-    }
-}
-
-/**
- * Category button - Shows category with icon and arrow
+ * Category button - Clean, simple, fixed 2-column layout
  */
 @Composable
 private fun CategoryButton(
     category: VoiceCommandCategory,
-    params: DeviceAdaptiveParameters,
     onClick: () -> Unit
 ) {
-    Button(
+    OutlinedButton(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(params.categoryButtonHeight),
-        colors = ButtonDefaults.buttonColors(
+            .height(72.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
             containerColor = OceanDesignTokens.Surface.elevated,
             contentColor = OceanDesignTokens.Text.primary
         ),
-        shape = MaterialTheme.shapes.medium
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(params.itemSpacing),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OceanComponents.Icon(
-                    imageVector = category.icon,
-                    contentDescription = null,
-                    variant = IconVariant.Primary,
-                    modifier = Modifier.size(params.iconSize)
-                )
-
-                Text(
-                    text = category.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontSize = params.categoryTextSize
-                )
-            }
-
-            OceanComponents.Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = "View commands",
-                variant = IconVariant.Secondary
+            Icon(
+                imageVector = category.icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = OceanDesignTokens.Icon.primary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = category.title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
             )
         }
     }
 }
 
 /**
- * Commands view - Shows all commands for a category
- * Adapts to landscape with multi-column grid layout
- * Commands are clickable and execute when tapped
+ * Commands view - Shows all commands in selected category
  */
 @Composable
 private fun CommandsView(
     category: VoiceCommandCategory,
-    isLandscape: Boolean,
-    params: DeviceAdaptiveParameters,
     onBack: () -> Unit,
     onCommandClick: (String) -> Unit
 ) {
-    val columns = if (isLandscape) params.commandsColumnsLandscape else 1
-
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Back button
-        TextButton(
-            onClick = onBack,
-            modifier = Modifier.padding(bottom = params.itemSpacing)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Back button and title
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            OceanComponents.Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                variant = IconVariant.Primary,
-                modifier = Modifier.size(params.backButtonIconSize)
-            )
-            Spacer(modifier = Modifier.width(OceanDesignTokens.Spacing.sm))
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = OceanDesignTokens.Text.secondary
+                )
+            }
             Text(
-                text = "Back to categories",
-                style = MaterialTheme.typography.bodyLarge,
-                fontSize = params.categoryTextSize
+                text = category.title,
+                style = MaterialTheme.typography.titleLarge,
+                color = OceanDesignTokens.Text.primary
             )
         }
 
-        // Commands grid - adaptive columns for landscape
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
-            horizontalArrangement = Arrangement.spacedBy(params.gridHorizontalSpacing),
-            verticalArrangement = Arrangement.spacedBy(params.gridVerticalSpacing),
-            modifier = Modifier.fillMaxSize()
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Commands list
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
             items(category.commands) { command ->
                 CommandItemCard(
                     command = command,
-                    params = params,
                     onClick = { onCommandClick(command.command) }
                 )
             }
@@ -371,57 +273,51 @@ private fun CommandsView(
 }
 
 /**
- * Command item card - Shows individual command with description
- * Clickable - tapping executes the command
+ * Command item card - Clickable command with description
  */
 @Composable
 private fun CommandItemCard(
     command: CommandItem,
-    params: DeviceAdaptiveParameters,
     onClick: () -> Unit
 ) {
-    Surface(
+    OutlinedCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        color = OceanDesignTokens.Surface.elevated,
-        shape = MaterialTheme.shapes.small,
-        tonalElevation = OceanDesignTokens.Elevation.sm,
-        shadowElevation = OceanDesignTokens.Elevation.md
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = OceanDesignTokens.Surface.elevated
+        ),
+        shape = RoundedCornerShape(8.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(params.cardPadding),
-            horizontalArrangement = Arrangement.spacedBy(params.itemSpacing),
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Command badge - fixed minimum width for consistency
-            Surface(
-                color = OceanDesignTokens.Surface.primary,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.widthIn(min = params.badgeMinWidth)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = command.command,
-                    modifier = Modifier.padding(
-                        horizontal = OceanDesignTokens.Spacing.sm,
-                        vertical = 6.dp
-                    ),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = OceanDesignTokens.Icon.primary,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = command.description,
                     style = MaterialTheme.typography.bodySmall,
-                    fontSize = params.commandTextSize,
-                    color = OceanDesignTokens.Text.onPrimary,
-                    maxLines = 1
+                    color = OceanDesignTokens.Text.secondary,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-
-            // Description
-            Text(
-                text = command.description,
-                style = MaterialTheme.typography.bodySmall,
-                fontSize = params.descriptionTextSize,
-                color = OceanDesignTokens.Text.secondary,
-                modifier = Modifier.weight(1f),
-                maxLines = 1
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = OceanDesignTokens.Text.secondary,
+                modifier = Modifier.size(20.dp)
             )
         }
     }
