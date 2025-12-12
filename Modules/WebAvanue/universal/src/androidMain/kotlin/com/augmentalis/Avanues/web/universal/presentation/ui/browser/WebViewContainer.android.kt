@@ -92,9 +92,6 @@ actual fun WebViewContainer(
     val sessionKey = "$tabId-${sessionData?.hashCode() ?: 0}"
     var hasRestoredState by remember(sessionKey) { mutableStateOf(false) }
 
-    // PERFORMANCE: Track last applied settings to avoid redundant reapplication
-    var lastAppliedSettings by remember(tabId) { mutableStateOf<BrowserSettings?>(null) }
-
     // FIX L3: Thread-safe settings state machine (prevents race conditions)
     // Create coroutine scope for state machine
     val settingsScope = remember(tabId) { CoroutineScope(SupervisorJob() + kotlinx.coroutines.Dispatchers.Main) }
@@ -133,20 +130,13 @@ actual fun WebViewContainer(
     }
 
     // FIX L3: Apply settings through state machine when settings change
+    // LaunchedEffect dependency on 'settings' ensures this only runs when settings actually change
     LaunchedEffect(settings) {
         settings?.let { browserSettings ->
-            if (browserSettings != lastAppliedSettings) {
-                webView?.let { view ->
-                    settingsStateMachine.requestUpdate(browserSettings) { settingsToApply ->
-                        val settingsApplicator = SettingsApplicator()
-                        val result = settingsApplicator.applySettings(view, settingsToApply)
-
-                        result.onSuccess {
-                            lastAppliedSettings = settingsToApply
-                        }
-
-                        result
-                    }
+            webView?.let { view ->
+                settingsStateMachine.requestUpdate(browserSettings) { settingsToApply ->
+                    val settingsApplicator = SettingsApplicator()
+                    settingsApplicator.applySettings(view, settingsToApply)
                 }
             }
         }
