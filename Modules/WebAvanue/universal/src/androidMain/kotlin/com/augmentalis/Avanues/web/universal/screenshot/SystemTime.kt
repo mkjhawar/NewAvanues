@@ -8,7 +8,7 @@ import kotlinx.datetime.toLocalDateTime
  * Get current time formatted for filename
  * Format: YYYYMMDD_HHMMSS
  */
-internal fun currentFormattedTime(): String {
+internal actual fun currentFormattedTime(): String {
     val now = Clock.System.now()
     val localDateTime = now.toLocalDateTime(TimeZone.currentSystemDefault())
 

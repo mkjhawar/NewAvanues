@@ -41,6 +41,8 @@ import com.augmentalis.Avanues.web.universal.presentation.ui.components.NetworkS
 import com.augmentalis.Avanues.web.universal.presentation.ui.components.NetworkStatus
 import com.augmentalis.Avanues.web.universal.presentation.ui.components.rememberNetworkStatusMonitor
 import com.augmentalis.Avanues.web.universal.presentation.viewmodel.TabViewModel
+import com.augmentalis.Avanues.web.universal.presentation.viewmodel.SettingsViewModel
+import com.augmentalis.webavanue.domain.model.BrowserSettings
 import kotlinx.coroutines.launch
 
 /**

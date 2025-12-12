@@ -146,8 +146,16 @@ object ScreenshotFilenameUtils {
      * Get the default screenshot directory path
      * Platform-specific implementation will provide actual path
      */
-    expect fun getScreenshotDirectory(): String
+    fun getScreenshotDirectory(): String {
+        return getScreenshotDirectoryPath()
+    }
 }
+
+/**
+ * Get the default screenshot directory path
+ * Platform-specific implementation
+ */
+expect fun getScreenshotDirectoryPath(): String
 
 /**
  * Get current time formatted for filename

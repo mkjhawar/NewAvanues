@@ -2,6 +2,7 @@ package com.augmentalis.Avanues.web.universal.presentation.controller
 
 import android.util.Log
 import android.webkit.CookieManager
+import com.augmentalis.Avanues.web.universal.commands.ActionResult
 import com.augmentalis.Avanues.web.universal.presentation.viewmodel.TabViewModel
 import com.augmentalis.webavanue.platform.WebView
 import kotlinx.coroutines.flow.firstOrNull
@@ -137,5 +138,147 @@ class AndroidWebViewController(
 
     override fun getCurrentTitle(): String {
         return webView?.pageTitle?.value ?: ""
+    }
+
+    // ========== Find in Page ==========
+
+    override suspend fun findInPage(
+        query: String,
+        caseSensitive: Boolean,
+        onResultsFound: (currentMatch: Int, totalMatches: Int) -> Unit
+    ): ActionResult {
+        val view = webView
+        if (view == null) {
+            return ActionResult.error("No active page")
+        }
+
+        if (query.isEmpty()) {
+            return ActionResult.error("Empty search query")
+        }
+
+        try {
+            // Android WebView findAllAsync doesn't support case sensitivity directly
+            // We use JavaScript for better control
+            val script = """
+                (function() {
+                    if (!window.find) return 0;
+
+                    // Clear previous highlights
+                    if (window.getSelection) {
+                        window.getSelection().removeAllRanges();
+                    }
+
+                    // Find all matches
+                    let count = 0;
+                    while (window.find('$query', ${!caseSensitive}, false, true, false, false, false)) {
+                        count++;
+                        if (count > 1000) break; // Safety limit
+                    }
+
+                    // Return to first match
+                    window.find('$query', ${!caseSensitive}, false, false, false, false, false);
+
+                    return count;
+                })();
+            """.trimIndent()
+
+            val result = view.evaluateJavaScript(script)
+            val matchCount = result?.toIntOrNull() ?: 0
+
+            onResultsFound(if (matchCount > 0) 1 else 0, matchCount)
+
+            return if (matchCount > 0) {
+                ActionResult.success("Found $matchCount matches")
+            } else {
+                ActionResult.success("No matches found")
+            }
+        } catch (e: Exception) {
+            logError(TAG, "Find in page failed", e)
+            return ActionResult.error("Search failed: ${e.message}")
+        }
+    }
+
+    override suspend fun findNext(): ActionResult {
+        val view = webView
+        if (view == null) {
+            return ActionResult.error("No active page")
+        }
+
+        try {
+            // Use JavaScript window.find to navigate to next match
+            val script = """
+                (function() {
+                    if (!window.find) return false;
+                    return window.find(null, false, false, true, false, false, false);
+                })();
+            """.trimIndent()
+
+            val result = view.evaluateJavaScript(script)
+            val found = result == "true"
+
+            return if (found) {
+                ActionResult.success("Next match")
+            } else {
+                ActionResult.success("No more matches")
+            }
+        } catch (e: Exception) {
+            logError(TAG, "Find next failed", e)
+            return ActionResult.error("Failed: ${e.message}")
+        }
+    }
+
+    override suspend fun findPrevious(): ActionResult {
+        val view = webView
+        if (view == null) {
+            return ActionResult.error("No active page")
+        }
+
+        try {
+            // Use JavaScript window.find to navigate to previous match (backwards=true)
+            val script = """
+                (function() {
+                    if (!window.find) return false;
+                    return window.find(null, false, true, true, false, false, false);
+                })();
+            """.trimIndent()
+
+            val result = view.evaluateJavaScript(script)
+            val found = result == "true"
+
+            return if (found) {
+                ActionResult.success("Previous match")
+            } else {
+                ActionResult.success("No more matches")
+            }
+        } catch (e: Exception) {
+            logError(TAG, "Find previous failed", e)
+            return ActionResult.error("Failed: ${e.message}")
+        }
+    }
+
+    override suspend fun clearFindMatches(): ActionResult {
+        val view = webView
+        if (view == null) {
+            return ActionResult.error("No active page")
+        }
+
+        try {
+            // Clear selection and highlights
+            val script = """
+                (function() {
+                    if (window.getSelection) {
+                        window.getSelection().removeAllRanges();
+                    }
+                    return true;
+                })();
+            """.trimIndent()
+
+            view.evaluateJavaScript(script)
+
+            return ActionResult.success("Cleared find highlights")
+        } catch (e: Exception) {
+            logError(TAG, "Clear find matches failed", e)
+            return ActionResult.error("Failed: ${e.message}")
+        }
     }
 }
