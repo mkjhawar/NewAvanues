@@ -40,6 +40,24 @@ class SQLDelightGeneratedCommandRepository(
         queries.count().executeAsOne() // Return last inserted ID (approximation)
     }
 
+    override suspend fun insertBatch(commands: List<GeneratedCommandDTO>) = withContext(Dispatchers.Default) {
+        database.transaction {
+            commands.forEach { command ->
+                queries.insert(
+                    elementHash = command.elementHash,
+                    commandText = command.commandText,
+                    actionType = command.actionType,
+                    confidence = command.confidence,
+                    synonyms = command.synonyms,
+                    isUserApproved = command.isUserApproved,
+                    usageCount = command.usageCount,
+                    lastUsed = command.lastUsed,
+                    createdAt = command.createdAt
+                )
+            }
+        }
+    }
+
     override suspend fun getById(id: Long): GeneratedCommandDTO? = withContext(Dispatchers.Default) {
         queries.getById(id).executeAsOneOrNull()?.toGeneratedCommandDTO()
     }

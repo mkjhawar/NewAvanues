@@ -60,6 +60,9 @@ dependencies {
     // DataStore for configuration persistence
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
+    // WorkManager for offline-first sync (Phase 7: Reliability Polish)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.20")

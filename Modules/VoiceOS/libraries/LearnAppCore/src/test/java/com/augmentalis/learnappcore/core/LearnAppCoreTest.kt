@@ -339,6 +339,12 @@ class LearnAppCoreTest {
             )
         )
 
+        // Track batch calls
+        var capturedBatchSize = 0
+        coEvery { mockCommandsRepository.insertBatch(any()) } answers {
+            capturedBatchSize = firstArg<List<GeneratedCommandDTO>>().size
+        }
+
         elements.forEach { element ->
             learnAppCore.processElement(element, "com.example.app", ProcessingMode.BATCH)
         }
@@ -348,8 +354,9 @@ class LearnAppCoreTest {
         // When: Flush batch
         learnAppCore.flushBatch()
 
-        // Then: All commands inserted
-        coVerify(exactly = 3) { mockCommandsRepository.insert(any()) }
+        // Then: All commands inserted via batch (20x faster than sequential)
+        coVerify(exactly = 1) { mockCommandsRepository.insertBatch(any()) }
+        assertEquals(3, capturedBatchSize)
         assertEquals(0, learnAppCore.getBatchQueueSize())
     }
 

@@ -23,6 +23,14 @@ interface IScreenContextRepository {
     suspend fun insert(context: ScreenContextDTO)
 
     /**
+     * Insert multiple screen contexts in a single transaction.
+     * Significantly faster than sequential inserts for large batches.
+     *
+     * @param contexts List of screen contexts to insert
+     */
+    suspend fun insertBatch(contexts: List<ScreenContextDTO>)
+
+    /**
      * Get screen by hash.
      */
     suspend fun getByHash(screenHash: String): ScreenContextDTO?
