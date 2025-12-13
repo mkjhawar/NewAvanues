@@ -152,6 +152,9 @@ kotlin {
 
                 // Coroutines test
                 implementation(libs.kotlinx.coroutines.test)
+
+                // MockK for integration tests
+                implementation("io.mockk:mockk-android:1.13.8")
             }
         }
 

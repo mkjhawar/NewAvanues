@@ -194,11 +194,34 @@ fun DownloadItem(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Text(
-                    text = "${(progress * 100).toInt()}%",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Speed and ETA row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Download speed
+                    Text(
+                        text = formatSpeed(download.downloadSpeed),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    // Progress percentage
+                    Text(
+                        text = "${(progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // ETA
+                    if (download.estimatedTimeRemaining > 0) {
+                        Text(
+                            text = "${formatETA(download.estimatedTimeRemaining)} remaining",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
 
             // Error message (for failed downloads)
@@ -275,5 +298,29 @@ private fun formatStatus(status: DownloadStatus): String {
         DownloadStatus.COMPLETED -> "Completed"
         DownloadStatus.FAILED -> "Failed"
         DownloadStatus.CANCELLED -> "Cancelled"
+    }
+}
+
+/**
+ * Format download speed in human-readable format
+ */
+private fun formatSpeed(bytesPerSec: Long): String {
+    return when {
+        bytesPerSec == 0L -> "0 B/s"
+        bytesPerSec < 1024 -> "$bytesPerSec B/s"
+        bytesPerSec < 1024 * 1024 -> "${bytesPerSec / 1024} KB/s"
+        else -> "%.1f MB/s".format(bytesPerSec / (1024.0 * 1024.0))
+    }
+}
+
+/**
+ * Format estimated time remaining in human-readable format
+ */
+private fun formatETA(seconds: Long): String {
+    return when {
+        seconds == 0L -> "calculating..."
+        seconds < 60 -> "${seconds}s"
+        seconds < 3600 -> "${seconds / 60}m ${seconds % 60}s"
+        else -> "${seconds / 3600}h ${(seconds % 3600) / 60}m"
     }
 }

@@ -4,9 +4,11 @@ import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
+import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.MimeTypeMap
 import android.webkit.URLUtil
+import androidx.documentfile.provider.DocumentFile
 
 /**
  * DownloadHelper - Android-specific helper for managing file downloads
@@ -28,6 +30,7 @@ object DownloadHelper {
      * @param contentDisposition Content-Disposition header (for filename)
      * @param mimeType MIME type of the file
      * @param contentLength File size in bytes (-1 if unknown)
+     * @param customPath Optional custom download path (content:// URI from SAF)
      * @return DownloadManager ID for tracking, or -1 if failed
      */
     fun startDownload(
@@ -36,9 +39,17 @@ object DownloadHelper {
         userAgent: String?,
         contentDisposition: String?,
         mimeType: String?,
-        contentLength: Long
+        contentLength: Long,
+        customPath: String? = null
     ): Long {
         try {
+            // Check storage permission if required
+            val permissionManager = com.augmentalis.webavanue.platform.DownloadPermissionManager(context)
+            if (permissionManager.isPermissionRequired() && !permissionManager.isPermissionGranted()) {
+                // Permission required but not granted
+                println("DownloadHelper: Storage permission required but not granted. Using default Downloads folder.")
+                // Fall through to use default Downloads folder
+            }
             // Generate filename from URL or content-disposition
             val filename = guessFileName(url, contentDisposition, mimeType)
 
@@ -51,8 +62,47 @@ object DownloadHelper {
                 setTitle(filename)
                 setDescription("Downloading file...")
 
-                // Set destination to Downloads folder
-                setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename)
+                // Set destination based on custom path or default
+                if (customPath != null && customPath.isNotBlank() && customPath.startsWith("content://")) {
+                    try {
+                        // Parse custom URI from file picker (SAF)
+                        val customUri = Uri.parse(customPath)
+
+                        // Validate the URI using DocumentFile
+                        val documentFile = DocumentFile.fromTreeUri(context, customUri)
+                        if (documentFile != null && documentFile.exists() && documentFile.canWrite()) {
+                            // Create a file in the selected directory with the download filename
+                            val targetFile = documentFile.createFile(
+                                mimeType ?: "application/octet-stream",
+                                filename
+                            )
+
+                            if (targetFile != null && targetFile.uri != null) {
+                                // Use the created file URI as destination
+                                setDestinationUri(targetFile.uri)
+                                Log.i("DownloadHelper", "Using custom download path: ${targetFile.uri}")
+                            } else {
+                                // Failed to create file - use default
+                                setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename)
+                                Log.w("DownloadHelper", "Failed to create file in custom path. Using default Downloads folder.")
+                            }
+                        } else {
+                            // Invalid or inaccessible custom path - use default
+                            setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename)
+                            Log.w("DownloadHelper", "Custom path is not accessible. Using default Downloads folder.")
+                        }
+                    } catch (e: Exception) {
+                        // Invalid custom path - use default and log error
+                        setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename)
+                        Log.e("DownloadHelper", "Error using custom path: ${e.message}. Falling back to default Downloads folder.", e)
+                    }
+                } else {
+                    // Use default Downloads folder (no custom path or not a content:// URI)
+                    setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename)
+                    if (customPath != null && customPath.isNotBlank()) {
+                        Log.w("DownloadHelper", "Custom path provided but not a content:// URI. Using default Downloads folder.")
+                    }
+                }
 
                 // Set MIME type if available
                 mimeType?.let { setMimeType(it) }

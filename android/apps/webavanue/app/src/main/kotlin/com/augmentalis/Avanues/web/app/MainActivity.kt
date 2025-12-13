@@ -46,6 +46,9 @@ class MainActivity : ComponentActivity() {
         // Initialize theme system
         initializeThemeSystem(applicationContext)
 
+        // Initialize NetworkChecker for WiFi-only download enforcement
+        com.augmentalis.webavanue.platform.NetworkChecker.initialize(applicationContext)
+
         // Enable edge-to-edge display
         enableEdgeToEdge()
 

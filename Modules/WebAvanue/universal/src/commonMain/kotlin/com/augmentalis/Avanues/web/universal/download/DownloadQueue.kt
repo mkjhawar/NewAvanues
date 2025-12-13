@@ -60,7 +60,8 @@ data class DownloadRequest(
     val cookies: String? = null,
     val expectedSize: Long = -1,
     val sourcePageUrl: String? = null,
-    val sourcePageTitle: String? = null
+    val sourcePageTitle: String? = null,
+    val customPath: String? = null  // Optional custom download path (content:// URI from file picker)
 )
 
 /**

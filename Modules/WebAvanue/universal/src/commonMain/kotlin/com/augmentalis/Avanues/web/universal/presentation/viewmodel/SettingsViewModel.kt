@@ -3,6 +3,8 @@ package com.augmentalis.Avanues.web.universal.presentation.viewmodel
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import com.augmentalis.webavanue.domain.repository.BrowserRepository
 import com.augmentalis.webavanue.domain.repository.SettingsPreset
+import com.augmentalis.webavanue.platform.DownloadPathValidator
+import com.augmentalis.webavanue.platform.ValidationResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -79,7 +81,8 @@ import kotlinx.coroutines.launch
  * @see SettingsPreset for preset configurations
  */
 class SettingsViewModel(
-    private val repository: BrowserRepository
+    private val repository: BrowserRepository,
+    private val pathValidator: DownloadPathValidator? = null
 ) {
     // Coroutine scope
     private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -108,8 +111,13 @@ class SettingsViewModel(
     private val _expandedSections = MutableStateFlow(setOf("General"))
     val expandedSections: StateFlow<Set<String>> = _expandedSections.asStateFlow()
 
+    // State: Download path validation result
+    private val _pathValidation = MutableStateFlow<ValidationResult?>(null)
+    val pathValidation: StateFlow<ValidationResult?> = _pathValidation.asStateFlow()
+
     init {
         observeSettings()
+        validateSavedPathOnStartup()
     }
 
     /**
@@ -465,6 +473,72 @@ class SettingsViewModel(
      */
     fun collapseAllSections() {
         _expandedSections.value = emptySet()
+    }
+
+    // ==================== Download Path Validation ====================
+
+    /**
+     * Validate saved download path on app startup
+     *
+     * Runs validation on the saved download path (if any) when the app starts.
+     * If the path is no longer valid (e.g., permission revoked, path deleted),
+     * automatically reverts to default download location.
+     *
+     * This ensures users don't encounter download failures due to stale paths.
+     */
+    private fun validateSavedPathOnStartup() {
+        viewModelScope.launch {
+            // Wait for settings to load
+            settings.collect { currentSettings ->
+                if (currentSettings != null) {
+                    val downloadPath = currentSettings.downloadPath
+                    if (downloadPath != null && pathValidator != null) {
+                        val result = pathValidator.validate(downloadPath)
+                        _pathValidation.value = result
+
+                        // Auto-revert to default if path is invalid
+                        if (!result.isValid) {
+                            updateSettings(currentSettings.copy(downloadPath = null))
+                        }
+                    }
+                    // Only validate once on startup
+                    return@collect
+                }
+            }
+        }
+    }
+
+    /**
+     * Validate download path
+     *
+     * Performs comprehensive validation on the provided download path:
+     * - Path exists and is accessible
+     * - Path is writable
+     * - Available storage space calculation
+     * - Low space warning (< 100MB)
+     *
+     * Results are exposed via [pathValidation] StateFlow for UI to display.
+     *
+     * @param path Download path to validate (content:// URI on Android)
+     */
+    fun validateDownloadPath(path: String) {
+        if (pathValidator == null) {
+            _pathValidation.value = ValidationResult.failure("Path validation not available on this platform")
+            return
+        }
+
+        viewModelScope.launch {
+            _pathValidation.value = pathValidator.validate(path)
+        }
+    }
+
+    /**
+     * Clear path validation state
+     *
+     * Resets validation result to null. Useful for dismissing validation messages.
+     */
+    fun clearPathValidation() {
+        _pathValidation.value = null
     }
 
     /**

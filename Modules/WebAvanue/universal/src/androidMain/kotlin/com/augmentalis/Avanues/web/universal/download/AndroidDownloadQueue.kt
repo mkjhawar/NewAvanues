@@ -41,12 +41,19 @@ class AndroidDownloadQueue(
                 setTitle(request.filename)
                 setDescription("Downloading file...")
 
-                // Use custom download path if provided, otherwise use system Downloads folder
-                val customPath = getDownloadPath?.invoke()
-                if (customPath != null && customPath.isNotBlank()) {
-                    // TODO: Validate and use custom path (requires additional permission handling)
-                    // For now, fall back to Downloads folder
-                    setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, request.filename)
+                // Use custom download path from request if provided, otherwise check settings callback
+                val customPath = request.customPath ?: getDownloadPath?.invoke()
+                if (customPath != null && customPath.isNotBlank() && customPath.startsWith("content://")) {
+                    try {
+                        // Use SAF URI for custom path
+                        val customUri = Uri.parse(customPath)
+                        setDestinationUri(customUri)
+                        println("AndroidDownloadQueue: Using custom path: $customPath")
+                    } catch (e: Exception) {
+                        // Invalid custom path - use default
+                        setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, request.filename)
+                        println("AndroidDownloadQueue: Invalid custom path ($customPath), using default Downloads folder: ${e.message}")
+                    }
                 } else {
                     setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, request.filename)
                 }

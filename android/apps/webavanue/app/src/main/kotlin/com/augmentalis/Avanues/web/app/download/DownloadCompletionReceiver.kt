@@ -20,8 +20,14 @@ import kotlinx.coroutines.launch
  * Updates the repository with:
  * - Completion status and file path (on success)
  * - Failure status and error message (on failure)
+ * - Stops progress monitoring for completed downloads
  */
 class DownloadCompletionReceiver : BroadcastReceiver() {
+
+    companion object {
+        // Callback to notify progress monitor
+        var onDownloadComplete: ((String) -> Unit)? = null
+    }
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
@@ -72,6 +78,9 @@ class DownloadCompletionReceiver : BroadcastReceiver() {
                             downloadedSize = progress.bytesDownloaded
                         )
                         println("DownloadCompletionReceiver: Download completed: ${download.filename}")
+
+                        // Stop progress monitoring
+                        onDownloadComplete?.invoke(download.id)
                     }
 
                     progress.isFailed -> {
@@ -82,6 +91,9 @@ class DownloadCompletionReceiver : BroadcastReceiver() {
                             errorMessage = errorMessage
                         )
                         println("DownloadCompletionReceiver: Download failed: ${download.filename} - $errorMessage")
+
+                        // Stop progress monitoring
+                        onDownloadComplete?.invoke(download.id)
                     }
 
                     else -> {

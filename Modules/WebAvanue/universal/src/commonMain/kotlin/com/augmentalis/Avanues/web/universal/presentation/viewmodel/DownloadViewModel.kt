@@ -27,7 +27,8 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class DownloadViewModel(
     private val repository: BrowserRepository,
-    private val downloadQueue: com.augmentalis.Avanues.web.universal.download.DownloadQueue? = null
+    private val downloadQueue: com.augmentalis.Avanues.web.universal.download.DownloadQueue? = null,
+    private val progressMonitor: com.augmentalis.Avanues.web.universal.download.DownloadProgressMonitor? = null
 ) {
     // Coroutine scope
     private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -50,6 +51,32 @@ class DownloadViewModel(
 
     init {
         loadDownloads()
+        setupProgressMonitoring()
+    }
+
+    /**
+     * Setup progress monitoring
+     */
+    private fun setupProgressMonitoring() {
+        progressMonitor?.let { monitor ->
+            viewModelScope.launch {
+                monitor.progressFlow.collect { progressMap ->
+                    val updatedDownloads = _downloads.value.map { download ->
+                        progressMap[download.id]?.let { progress ->
+                            download.copy(
+                                downloadedSize = progress.bytesDownloaded,
+                                fileSize = progress.bytesTotal,
+                                downloadSpeed = progress.downloadSpeed,
+                                estimatedTimeRemaining = progress.estimatedTimeRemaining,
+                                lastProgressUpdate = System.currentTimeMillis()
+                            )
+                        } ?: download
+                    }
+                    _downloads.value = updatedDownloads
+                    updateActiveDownloads()
+                }
+            }
+        }
     }
 
     /**
@@ -119,6 +146,7 @@ class DownloadViewModel(
      * @param fileSize Expected file size
      * @param sourcePageUrl URL of the page that initiated the download
      * @param sourcePageTitle Title of the page that initiated the download
+     * @param customPath Optional custom download path (content:// URI from file picker)
      * @return Download ID if successful, null if validation failed
      */
     fun startDownload(
@@ -127,7 +155,8 @@ class DownloadViewModel(
         mimeType: String? = null,
         fileSize: Long = 0,
         sourcePageUrl: String? = null,
-        sourcePageTitle: String? = null
+        sourcePageTitle: String? = null,
+        customPath: String? = null
     ): String? {
         // FIX P1-P9: Validate URL - only allow HTTP(S)
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
@@ -190,12 +219,23 @@ class DownloadViewModel(
                         mimeType = mimeType,
                         expectedSize = fileSize,
                         sourcePageUrl = sourcePageUrl,
-                        sourcePageTitle = sourcePageTitle
+                        sourcePageTitle = sourcePageTitle,
+                        customPath = customPath
                     )
 
                     val queueId = queue.enqueue(request)
                     if (queueId != null) {
                         Logger.info("DownloadViewModel", "Download enqueued to platform queue: $queueId")
+
+                        // Start progress monitoring (if downloadManagerId is available)
+                        // Note: downloadManagerId should be stored in the download object
+                        // when DownloadQueue.enqueue returns it
+                        // For now, we assume queueId is the downloadManagerId
+                        val downloadManagerId = queueId.toLongOrNull()
+                        if (downloadManagerId != null) {
+                            progressMonitor?.startMonitoring(download.id, downloadManagerId)
+                            Logger.info("DownloadViewModel", "Started progress monitoring for download: ${download.id}")
+                        }
                     } else {
                         Logger.error("DownloadViewModel", "Failed to enqueue download to platform queue", null)
                         _error.value = "Failed to start download"
@@ -239,6 +279,9 @@ class DownloadViewModel(
      * @param downloadId Download ID
      */
     fun cancelDownload(downloadId: String) {
+        // Stop progress monitoring
+        progressMonitor?.stopMonitoring(downloadId)
+
         val currentDownloads = _downloads.value.toMutableList()
         val index = currentDownloads.indexOfFirst { it.id == downloadId }
         if (index >= 0) {
@@ -308,6 +351,7 @@ class DownloadViewModel(
      * Clean up resources
      */
     fun onCleared() {
+        progressMonitor?.stopAll()
         viewModelScope.cancel()
     }
 }

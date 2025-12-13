@@ -41,7 +41,11 @@ data class Download(
     val createdAt: Instant,
     val completedAt: Instant? = null,
     val sourcePageUrl: String? = null,
-    val sourcePageTitle: String? = null
+    val sourcePageTitle: String? = null,
+    // Progress tracking fields
+    val downloadSpeed: Long = 0,           // Bytes per second
+    val estimatedTimeRemaining: Long = 0,  // Seconds
+    val lastProgressUpdate: Long = 0       // Timestamp (ms)
 ) {
     /**
      * Progress as a percentage (0.0 to 1.0)

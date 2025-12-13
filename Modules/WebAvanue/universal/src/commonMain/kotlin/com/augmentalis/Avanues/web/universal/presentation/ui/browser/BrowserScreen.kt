@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.ui.platform.LocalContext
 import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
 import com.augmentalis.Avanues.web.universal.presentation.design.OceanComponents
 import com.augmentalis.Avanues.web.universal.presentation.design.IconVariant
@@ -203,8 +205,32 @@ fun BrowserScreen(
     var showSessionRestoreDialog by rememberSaveable { mutableStateOf(false) }
     var sessionRestoreTabCount by rememberSaveable { mutableStateOf(0) }
 
+    // Download location dialog state (Phase 4: Download Management)
+    var showDownloadLocationDialog by rememberSaveable { mutableStateOf(false) }
+    var pendingDownloadRequest by remember { mutableStateOf<DownloadRequest?>(null) }
+    var pendingDownloadSourceUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingDownloadSourceTitle by rememberSaveable { mutableStateOf<String?>(null) }
+    var customDownloadPath by rememberSaveable { mutableStateOf<String?>(null) }
+
     // Coroutine scope for async operations
     val scope = rememberCoroutineScope()
+
+    // Get platform-specific file picker launcher (Phase 4: Download Location Picker)
+    val context = LocalContext.current
+    val filePickerLauncher = remember { com.augmentalis.webavanue.platform.DownloadFilePickerLauncher(context) }
+
+    // File picker result launcher for download location selection
+    val filePickerResultLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+    ) { uri: android.net.Uri? ->
+        uri?.let {
+            // Take persistable permission for the selected directory
+            filePickerLauncher.takePersistablePermission(it.toString())
+            // Update custom path state (dialog will show this path)
+            customDownloadPath = it.toString()
+        }
+        // If user cancels (uri == null), don't update path
+    }
 
     // Helper to show command bar briefly (for voice commands feedback)
     fun showCommandBarBriefly() {
@@ -488,7 +514,48 @@ fun BrowserScreen(
                         securityViewModel = securityViewModel,
                         onDownloadStart = downloadViewModel?.let { vm ->
                             { request: DownloadRequest ->
-                                vm.startDownload(url = request.url, filename = request.filename, mimeType = request.mimeType, fileSize = request.contentLength, sourcePageUrl = tabState.tab.url, sourcePageTitle = tabState.tab.title)
+                                // Check WiFi-only setting
+                                if (settings?.downloadOverWiFiOnly == true) {
+                                    try {
+                                        val networkChecker = com.augmentalis.webavanue.platform.NetworkChecker()
+                                        val wifiMessage = networkChecker.getWiFiRequiredMessage()
+
+                                        if (wifiMessage != null) {
+                                            // WiFi not connected - block download and show error
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar(
+                                                    message = wifiMessage,
+                                                    duration = androidx.compose.material3.SnackbarDuration.Long
+                                                )
+                                            }
+                                            return@let  // Don't start download
+                                        }
+                                    } catch (e: Exception) {
+                                        // NetworkChecker not initialized or platform-specific error
+                                        // Log and proceed with download (fail-open for compatibility)
+                                        println("BrowserScreen: WiFi check failed: ${e.message}")
+                                    }
+                                }
+
+                                // Check if we should ask for download location
+                                if (settings?.askDownloadLocation == true) {
+                                    // Show dialog to select location
+                                    pendingDownloadRequest = request
+                                    pendingDownloadSourceUrl = tabState.tab.url
+                                    pendingDownloadSourceTitle = tabState.tab.title
+                                    showDownloadLocationDialog = true
+                                } else {
+                                    // Start download directly with default or saved path from settings
+                                    vm.startDownload(
+                                        url = request.url,
+                                        filename = request.filename,
+                                        mimeType = request.mimeType,
+                                        fileSize = request.contentLength,
+                                        sourcePageUrl = tabState.tab.url,
+                                        sourcePageTitle = tabState.tab.title,
+                                        customPath = settings?.downloadPath?.ifBlank { null }
+                                    )
+                                }
                             }
                         },
                         initialScale = settings?.initialScale ?: 0.75f,
@@ -854,6 +921,93 @@ fun BrowserScreen(
                 }
             }
         )
+
+        // PHASE 4: Download Location Dialog
+        // Shows when askDownloadLocation setting is enabled
+        if (showDownloadLocationDialog && pendingDownloadRequest != null && downloadViewModel != null) {
+            com.augmentalis.Avanues.web.universal.presentation.ui.download.AskDownloadLocationDialog(
+                filename = pendingDownloadRequest!!.filename,
+                defaultPath = settings?.downloadPath,
+                selectedPath = customDownloadPath,
+                onLaunchFilePicker = {
+                    // Launch Android Storage Access Framework picker
+                    // User can select any accessible directory (internal, SD card, cloud storage)
+                    // Passing current customDownloadPath as initial URI to start navigation there
+                    filePickerResultLauncher.launch(customDownloadPath?.let { android.net.Uri.parse(it) })
+                },
+                onPathSelected = { selectedPath, rememberChoice ->
+                    // Re-check WiFi-only setting (network may have changed while dialog was open)
+                    if (settings?.downloadOverWiFiOnly == true) {
+                        try {
+                            val networkChecker = com.augmentalis.webavanue.platform.NetworkChecker()
+                            val wifiMessage = networkChecker.getWiFiRequiredMessage()
+
+                            if (wifiMessage != null) {
+                                // WiFi not connected - block download and show error
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = wifiMessage,
+                                        duration = androidx.compose.material3.SnackbarDuration.Long
+                                    )
+                                }
+                                // Clear pending and close dialog
+                                pendingDownloadRequest = null
+                                pendingDownloadSourceUrl = null
+                                pendingDownloadSourceTitle = null
+                                showDownloadLocationDialog = false
+                                return@AskDownloadLocationDialog
+                            }
+                        } catch (e: Exception) {
+                            // NetworkChecker not initialized or platform-specific error
+                            // Log and proceed with download (fail-open for compatibility)
+                            println("BrowserScreen: WiFi check in dialog failed: ${e.message}")
+                        }
+                    }
+
+                    // If user wants to remember the choice, update settings
+                    if (rememberChoice && selectedPath.isNotEmpty()) {
+                        settings?.let { currentSettings ->
+                            scope.launch {
+                                settingsViewModel.updateSettings(
+                                    currentSettings.copy(
+                                        downloadPath = selectedPath,
+                                        askDownloadLocation = false  // Don't ask again
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // Start the download with selected path
+                    pendingDownloadRequest?.let { request ->
+                        downloadViewModel.startDownload(
+                            url = request.url,
+                            filename = request.filename,
+                            mimeType = request.mimeType,
+                            fileSize = request.contentLength,
+                            sourcePageUrl = pendingDownloadSourceUrl,
+                            sourcePageTitle = pendingDownloadSourceTitle,
+                            customPath = selectedPath.ifBlank { null }
+                        )
+                    }
+
+                    // Clear pending request, custom path, and hide dialog
+                    pendingDownloadRequest = null
+                    pendingDownloadSourceUrl = null
+                    pendingDownloadSourceTitle = null
+                    customDownloadPath = null
+                    showDownloadLocationDialog = false
+                },
+                onCancel = {
+                    // User cancelled - don't start download
+                    pendingDownloadRequest = null
+                    pendingDownloadSourceUrl = null
+                    pendingDownloadSourceTitle = null
+                    customDownloadPath = null
+                    showDownloadLocationDialog = false
+                }
+            )
+        }
 
         // Help FAB (?) - positioned above command bar with higher z-level
         // Shows voice commands help when tapped

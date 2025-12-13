@@ -1,5 +1,10 @@
 package com.augmentalis.Avanues.web.universal.presentation.ui.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,7 +27,17 @@ import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.DeveloperMode
 import androidx.compose.material3.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,11 +47,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
 import com.augmentalis.Avanues.web.universal.presentation.ui.theme.ThemeType
 import com.augmentalis.Avanues.web.universal.presentation.viewmodel.SettingsViewModel
+import com.augmentalis.Avanues.web.universal.presentation.ui.settings.components.CollapsibleSectionHeader
 
 /**
  * Settings category for two-pane AR/XR layout
@@ -45,8 +62,22 @@ enum class SettingsCategory(val title: String, val icon: ImageVector) {
     GENERAL("General", Icons.Default.Settings),
     APPEARANCE("Appearance", Icons.Default.Palette),
     PRIVACY("Privacy & Security", Icons.Default.Shield),
-    ADVANCED("Advanced", Icons.Default.Build),
-    XR("AR/XR", Icons.Default.ViewInAr)
+    DESKTOP("Desktop Mode", Icons.Default.Computer),
+    DOWNLOADS("Downloads", Icons.Default.Download),
+    VOICE("Voice & Commands", Icons.Default.Mic),
+    PERFORMANCE("Performance", Icons.Default.Speed),
+    SYNC("Sync", Icons.Default.Sync),
+    AI("AI Features", Icons.Default.AutoAwesome),
+    WEBXR("WebXR", Icons.Default.ViewInAr),
+    ADVANCED("Advanced", Icons.Default.DeveloperMode)
+}
+
+/**
+ * Helper function to check if section title matches search query
+ */
+private fun matchesSearchQuery(sectionTitle: String, query: String): Boolean {
+    if (query.isBlank()) return false
+    return sectionTitle.contains(query, ignoreCase = true)
 }
 
 /**
@@ -212,16 +243,32 @@ private fun PortraitSettingsLayout(
         },
         containerColor = Color.Transparent
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Collect search and expansion state
+            val searchQuery by viewModel.searchQuery.collectAsState()
+            val expandedSections by viewModel.expandedSections.collectAsState()
+
+            // Search bar with expand/collapse controls
+            SettingsSearchBar(
+                searchQuery = searchQuery,
+                onSearchQueryChange = { viewModel.setSearchQuery(it) },
+                onExpandAll = { viewModel.expandAllSections() },
+                onCollapseAll = { viewModel.collapseAllSections() },
+                modifier = Modifier.fillMaxWidth()
+            )
+
             when {
                 isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
 
                 error != null -> {
@@ -251,28 +298,51 @@ private fun PortraitSettingsLayout(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
-                        // General section
+                        // ==================== General Section ====================
                         item {
-                            SettingsSectionHeader("General")
-                        }
+                            val generalExpanded = expandedSections.contains("General")
+                            val generalMatchesSearch = matchesSearchQuery("General", searchQuery) ||
+                                listOf("home", "search", "tab", "startup", "links", "restore", "background", "voice").any {
+                                    it.contains(searchQuery, ignoreCase = true)
+                                }
 
-                        item {
-                            SearchEngineSettingItem(
-                                currentEngine = settings!!.defaultSearchEngine,
-                                onEngineSelected = { viewModel.setDefaultSearchEngine(it) }
+                            CollapsibleSectionHeader(
+                                title = "General",
+                                isExpanded = generalExpanded,
+                                onToggle = { viewModel.toggleSection("General") },
+                                matchesSearch = generalMatchesSearch,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
 
                         item {
-                            HomepageSettingItem(
-                                currentHomepage = settings!!.homePage,
-                                onHomepageChanged = { viewModel.setHomepage(it) }
-                            )
-                        }
+                            val generalExpanded = expandedSections.contains("General")
+                            val generalMatchesSearch = matchesSearchQuery("General", searchQuery) ||
+                                listOf("home", "search", "tab", "startup", "links", "restore", "background", "voice").any {
+                                    it.contains(searchQuery, ignoreCase = true)
+                                }
 
-                        item {
-                            SwitchSettingItem(
-                                title = "Search Suggestions",
+                            AnimatedVisibility(
+                                visible = generalExpanded || generalMatchesSearch,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut()
+                            ) {
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                ) {
+                                    SearchEngineSettingItem(
+                                        currentEngine = settings!!.defaultSearchEngine,
+                                        onEngineSelected = { viewModel.setDefaultSearchEngine(it) }
+                                    )
+
+                                    HomepageSettingItem(
+                                        currentHomepage = settings!!.homePage,
+                                        onHomepageChanged = { viewModel.setHomepage(it) }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Search Suggestions",
                                 subtitle = "Show suggestions as you type",
                                 checked = settings!!.searchSuggestions,
                                 onCheckedChange = {
@@ -334,275 +404,343 @@ private fun PortraitSettingsLayout(
                             )
                         }
 
-                        // Theme section
+                        // ==================== Appearance Section ====================
                         item {
-                            SettingsSectionHeader("Appearance")
-                        }
-
-                        item {
-                            ThemeSettingItem(
-                                currentTheme = settings!!.theme,
-                                onThemeSelected = { viewModel.setTheme(it) }
-                            )
-                        }
-
-                        item {
-                            FontSizeSettingItem(
-                                currentFontSize = settings!!.fontSize,
-                                onFontSizeSelected = {
-                                    viewModel.updateSettings(settings!!.copy(fontSize = it))
+                            val appearanceExpanded = expandedSections.contains("Appearance")
+                            val appearanceMatchesSearch = matchesSearchQuery("Appearance", searchQuery) ||
+                                listOf("theme", "font", "image", "zoom", "scale", "dark", "light", "size").any {
+                                    it.contains(searchQuery, ignoreCase = true)
                                 }
+
+                            CollapsibleSectionHeader(
+                                title = "Appearance",
+                                isExpanded = appearanceExpanded,
+                                onToggle = { viewModel.toggleSection("Appearance") },
+                                matchesSearch = appearanceMatchesSearch,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
 
                         item {
-                            SwitchSettingItem(
-                                title = "Show Images",
-                                subtitle = "Display images on web pages",
-                                checked = settings!!.showImages,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(showImages = it))
+                            val appearanceExpanded = expandedSections.contains("Appearance")
+                            val appearanceMatchesSearch = matchesSearchQuery("Appearance", searchQuery) ||
+                                listOf("theme", "font", "image", "zoom", "scale", "dark", "light", "size").any {
+                                    it.contains(searchQuery, ignoreCase = true)
                                 }
-                            )
-                        }
 
-                        item {
-                            SwitchSettingItem(
-                                title = "Force Zoom",
-                                subtitle = "Allow zooming on all pages",
-                                checked = settings!!.forceZoom,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(forceZoom = it))
-                                }
-                            )
-                        }
+                            AnimatedVisibility(
+                                visible = appearanceExpanded || appearanceMatchesSearch,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut()
+                            ) {
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                ) {
+                                    ThemeSettingItem(
+                                        currentTheme = settings!!.theme,
+                                        onThemeSelected = { viewModel.setTheme(it) }
+                                    )
 
-                        item {
-                            SliderSettingItem(
-                                title = "Initial Page Scale",
-                                subtitle = "Scale: ${(settings!!.initialScale * 100).toInt()}%",
-                                value = settings!!.initialScale,
-                                valueRange = 0.5f..2.0f,
-                                steps = 29,
-                                onValueChange = {
-                                    viewModel.updateSettings(settings!!.copy(initialScale = it))
-                                }
-                            )
-                        }
-
-                        // Privacy section
-                        item {
-                            SettingsSectionHeader("Privacy & Security")
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Enable JavaScript",
-                                subtitle = "Required for most modern websites",
-                                checked = settings!!.enableJavaScript,
-                                onCheckedChange = { viewModel.setEnableJavaScript(it) }
-                            )
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Enable Cookies",
-                                subtitle = "Allow websites to store data",
-                                checked = settings!!.enableCookies,
-                                onCheckedChange = { viewModel.setEnableCookies(it) }
-                            )
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Block Pop-ups",
-                                subtitle = "Prevent pop-up windows",
-                                checked = settings!!.blockPopups,
-                                onCheckedChange = { viewModel.setBlockPopups(it) }
-                            )
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Block Ads",
-                                subtitle = "Block advertisements on web pages",
-                                checked = settings!!.blockAds,
-                                onCheckedChange = { viewModel.setBlockAds(it) }
-                            )
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Block Trackers",
-                                subtitle = "Prevent cross-site tracking",
-                                checked = settings!!.blockTrackers,
-                                onCheckedChange = { viewModel.setBlockTrackers(it) }
-                            )
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Do Not Track",
-                                subtitle = "Send Do Not Track header with requests",
-                                checked = settings!!.doNotTrack,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(doNotTrack = it))
-                                }
-                            )
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Enable WebRTC",
-                                subtitle = "Allow real-time communication features",
-                                checked = settings!!.enableWebRTC,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(enableWebRTC = it))
-                                }
-                            )
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Clear Cache on Exit",
-                                subtitle = "Automatically clear browser cache",
-                                checked = settings!!.clearCacheOnExit,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(clearCacheOnExit = it))
-                                }
-                            )
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Clear History on Exit",
-                                subtitle = "Automatically clear browsing history",
-                                checked = settings!!.clearHistoryOnExit,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(clearHistoryOnExit = it))
-                                }
-                            )
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Clear Cookies on Exit",
-                                subtitle = "Automatically clear all cookies",
-                                checked = settings!!.clearCookiesOnExit,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(clearCookiesOnExit = it))
-                                }
-                            )
-                        }
-
-                        item {
-                            NavigationSettingItem(
-                                title = "Site Permissions",
-                                subtitle = "Manage camera, microphone, and location permissions",
-                                onClick = onNavigateToSitePermissions
-                            )
-                        }
-
-                        // Advanced section
-                        item {
-                            SettingsSectionHeader("Advanced")
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Desktop Mode",
-                                subtitle = "Request desktop version of websites",
-                                checked = settings!!.useDesktopMode,
-                                onCheckedChange = { viewModel.setDesktopMode(it) }
-                            )
-                        }
-
-                        // Desktop Mode sub-settings (only visible when desktop mode is enabled)
-                        if (settings!!.useDesktopMode) {
-                            item {
-                                SliderSettingItem(
-                                    title = "Default Zoom Level",
-                                    subtitle = "Zoom: ${settings!!.desktopModeDefaultZoom}%",
-                                    value = settings!!.desktopModeDefaultZoom.toFloat(),
-                                    valueRange = 50f..200f,
-                                    steps = 29, // 5% increments
-                                    onValueChange = { viewModel.setDesktopModeDefaultZoom(it.toInt()) }
-                                )
-                            }
-
-                            item {
-                                SliderSettingItem(
-                                    title = "Window Width",
-                                    subtitle = "Width: ${settings!!.desktopModeWindowWidth}px",
-                                    value = settings!!.desktopModeWindowWidth.toFloat(),
-                                    valueRange = 800f..1920f,
-                                    steps = 22, // ~50px increments
-                                    onValueChange = { viewModel.setDesktopModeWindowWidth(it.toInt()) }
-                                )
-                            }
-
-                            item {
-                                SliderSettingItem(
-                                    title = "Window Height",
-                                    subtitle = "Height: ${settings!!.desktopModeWindowHeight}px",
-                                    value = settings!!.desktopModeWindowHeight.toFloat(),
-                                    valueRange = 600f..1200f,
-                                    steps = 11, // ~50px increments
-                                    onValueChange = { viewModel.setDesktopModeWindowHeight(it.toInt()) }
-                                )
-                            }
-
-                            item {
-                                SwitchSettingItem(
-                                    title = "Auto-fit Zoom",
-                                    subtitle = "Automatically adjust zoom to fit content in viewport",
-                                    checked = settings!!.desktopModeAutoFitZoom,
-                                    onCheckedChange = { viewModel.setDesktopModeAutoFitZoom(it) }
-                                )
-                            }
-                        }
-
-                        item {
-                            AutoPlaySettingItem(
-                                currentAutoPlay = settings!!.autoPlay,
-                                onAutoPlaySelected = { viewModel.setAutoPlay(it) }
-                            )
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Voice Commands",
-                                subtitle = "Control browser with voice",
-                                checked = settings!!.enableVoiceCommands,
-                                onCheckedChange = { viewModel.setEnableVoiceCommands(it) }
-                            )
-                        }
-
-                        // Voice Dialog Auto-Close settings (only visible when voice commands enabled)
-                        if (settings!!.enableVoiceCommands) {
-                            item {
-                                SwitchSettingItem(
-                                    title = "Auto-close Voice Dialog",
-                                    subtitle = "Automatically close after command execution",
-                                    checked = settings!!.voiceDialogAutoClose,
-                                    onCheckedChange = {
-                                        viewModel.updateSettings(settings!!.copy(voiceDialogAutoClose = it))
-                                    }
-                                )
-                            }
-
-                            if (settings!!.voiceDialogAutoClose) {
-                                item {
-                                    SliderSettingItem(
-                                        title = "Auto-close Delay",
-                                        subtitle = "Delay: ${settings!!.voiceDialogAutoCloseDelayMs}ms",
-                                        value = settings!!.voiceDialogAutoCloseDelayMs.toFloat(),
-                                        valueRange = 500f..5000f,
-                                        steps = 9,  // 500ms increments
-                                        onValueChange = {
-                                            viewModel.updateSettings(settings!!.copy(voiceDialogAutoCloseDelayMs = it.toLong()))
+                                    FontSizeSettingItem(
+                                        currentFontSize = settings!!.fontSize,
+                                        onFontSizeSelected = {
+                                            viewModel.updateSettings(settings!!.copy(fontSize = it))
                                         }
                                     )
+
+                                    SwitchSettingItem(
+                                        title = "Show Images",
+                                        subtitle = "Display images on web pages",
+                                        checked = settings!!.showImages,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(showImages = it))
+                                        }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Force Zoom",
+                                        subtitle = "Allow zooming on all pages",
+                                        checked = settings!!.forceZoom,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(forceZoom = it))
+                                        }
+                                    )
+
+                                    SliderSettingItem(
+                                        title = "Initial Page Scale",
+                                        subtitle = "Scale: ${(settings!!.initialScale * 100).toInt()}%",
+                                        value = settings!!.initialScale,
+                                        valueRange = 0.5f..2.0f,
+                                        steps = 29,
+                                        onValueChange = {
+                                            viewModel.updateSettings(settings!!.copy(initialScale = it))
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // ==================== Privacy & Security Section ====================
+                        item {
+                            val privacyExpanded = expandedSections.contains("Privacy & Security")
+                            val privacyMatchesSearch = matchesSearchQuery("Privacy & Security", searchQuery) ||
+                                listOf("javascript", "cookie", "popup", "ad", "tracker", "track", "webrtc", "cache", "history", "security", "privacy", "dnt", "permission").any {
+                                    it.contains(searchQuery, ignoreCase = true)
+                                }
+
+                            CollapsibleSectionHeader(
+                                title = "Privacy & Security",
+                                isExpanded = privacyExpanded,
+                                onToggle = { viewModel.toggleSection("Privacy & Security") },
+                                matchesSearch = privacyMatchesSearch,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        item {
+                            val privacyExpanded = expandedSections.contains("Privacy & Security")
+                            val privacyMatchesSearch = matchesSearchQuery("Privacy & Security", searchQuery) ||
+                                listOf("javascript", "cookie", "popup", "ad", "tracker", "track", "webrtc", "cache", "history", "security", "privacy", "dnt", "permission").any {
+                                    it.contains(searchQuery, ignoreCase = true)
+                                }
+
+                            AnimatedVisibility(
+                                visible = privacyExpanded || privacyMatchesSearch,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut()
+                            ) {
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                ) {
+                                    SwitchSettingItem(
+                                        title = "Enable JavaScript",
+                                        subtitle = "Required for most modern websites",
+                                        checked = settings!!.enableJavaScript,
+                                        onCheckedChange = { viewModel.setEnableJavaScript(it) }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Enable Cookies",
+                                        subtitle = "Allow websites to store data",
+                                        checked = settings!!.enableCookies,
+                                        onCheckedChange = { viewModel.setEnableCookies(it) }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Block Pop-ups",
+                                        subtitle = "Prevent pop-up windows",
+                                        checked = settings!!.blockPopups,
+                                        onCheckedChange = { viewModel.setBlockPopups(it) }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Block Ads",
+                                        subtitle = "Block advertisements on web pages",
+                                        checked = settings!!.blockAds,
+                                        onCheckedChange = { viewModel.setBlockAds(it) }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Block Trackers",
+                                        subtitle = "Prevent cross-site tracking",
+                                        checked = settings!!.blockTrackers,
+                                        onCheckedChange = { viewModel.setBlockTrackers(it) }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Do Not Track",
+                                        subtitle = "Send Do Not Track header with requests",
+                                        checked = settings!!.doNotTrack,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(doNotTrack = it))
+                                        }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Enable WebRTC",
+                                        subtitle = "Allow real-time communication features",
+                                        checked = settings!!.enableWebRTC,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(enableWebRTC = it))
+                                        }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Clear Cache on Exit",
+                                        subtitle = "Automatically clear browser cache",
+                                        checked = settings!!.clearCacheOnExit,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(clearCacheOnExit = it))
+                                        }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Clear History on Exit",
+                                        subtitle = "Automatically clear browsing history",
+                                        checked = settings!!.clearHistoryOnExit,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(clearHistoryOnExit = it))
+                                        }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Clear Cookies on Exit",
+                                        subtitle = "Automatically clear all cookies",
+                                        checked = settings!!.clearCookiesOnExit,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(clearCookiesOnExit = it))
+                                        }
+                                    )
+
+                                    NavigationSettingItem(
+                                        title = "Site Permissions",
+                                        subtitle = "Manage camera, microphone, and location permissions",
+                                        onClick = onNavigateToSitePermissions
+                                    )
+                                }
+                            }
+                        }
+
+                        // ==================== Desktop Mode Section ====================
+                        item {
+                            val desktopExpanded = expandedSections.contains("Desktop Mode")
+                            val desktopMatchesSearch = matchesSearchQuery("Desktop Mode", searchQuery) ||
+                                listOf("desktop", "agent", "viewport", "scale", "window", "emulation", "zoom", "width", "height").any {
+                                    it.contains(searchQuery, ignoreCase = true)
+                                }
+
+                            CollapsibleSectionHeader(
+                                title = "Desktop Mode",
+                                isExpanded = desktopExpanded,
+                                onToggle = { viewModel.toggleSection("Desktop Mode") },
+                                matchesSearch = desktopMatchesSearch,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        item {
+                            val desktopExpanded = expandedSections.contains("Desktop Mode")
+                            val desktopMatchesSearch = matchesSearchQuery("Desktop Mode", searchQuery) ||
+                                listOf("desktop", "agent", "viewport", "scale", "window", "emulation", "zoom", "width", "height").any {
+                                    it.contains(searchQuery, ignoreCase = true)
+                                }
+
+                            AnimatedVisibility(
+                                visible = desktopExpanded || desktopMatchesSearch,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut()
+                            ) {
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                ) {
+                                    SwitchSettingItem(
+                                        title = "Enable Desktop Mode",
+                                        subtitle = "Request desktop version of websites",
+                                        checked = settings!!.useDesktopMode,
+                                        onCheckedChange = { viewModel.setDesktopMode(it) }
+                                    )
+
+                                    // Desktop Mode sub-settings (only visible when desktop mode is enabled)
+                                    if (settings!!.useDesktopMode) {
+                                        SliderSettingItem(
+                                            title = "Default Zoom Level",
+                                            subtitle = "Zoom: ${settings!!.desktopModeDefaultZoom}%",
+                                            value = settings!!.desktopModeDefaultZoom.toFloat(),
+                                            valueRange = 50f..200f,
+                                            steps = 29,
+                                            onValueChange = { viewModel.setDesktopModeDefaultZoom(it.toInt()) }
+                                        )
+
+                                        SliderSettingItem(
+                                            title = "Window Width",
+                                            subtitle = "Width: ${settings!!.desktopModeWindowWidth}px",
+                                            value = settings!!.desktopModeWindowWidth.toFloat(),
+                                            valueRange = 800f..1920f,
+                                            steps = 22,
+                                            onValueChange = { viewModel.setDesktopModeWindowWidth(it.toInt()) }
+                                        )
+
+                                        SliderSettingItem(
+                                            title = "Window Height",
+                                            subtitle = "Height: ${settings!!.desktopModeWindowHeight}px",
+                                            value = settings!!.desktopModeWindowHeight.toFloat(),
+                                            valueRange = 600f..1200f,
+                                            steps = 11,
+                                            onValueChange = { viewModel.setDesktopModeWindowHeight(it.toInt()) }
+                                        )
+
+                                        SwitchSettingItem(
+                                            title = "Auto-fit Zoom",
+                                            subtitle = "Automatically adjust zoom to fit content in viewport",
+                                            checked = settings!!.desktopModeAutoFitZoom,
+                                            onCheckedChange = { viewModel.setDesktopModeAutoFitZoom(it) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Note: AutoPlaySettingItem moved to Advanced section (already wrapped with CollapsibleSectionHeader later in file)
+
+                        // Voice & Commands section
+                        item {
+                            val voiceExpanded = expandedSections.contains("Voice & Commands")
+                            val voiceMatchesSearch = matchesSearchQuery("Voice & Commands", searchQuery) ||
+                                listOf("voice", "command", "speech", "mic", "microphone", "recognize", "listen", "dialog").any {
+                                    it.contains(searchQuery, ignoreCase = true)
+                                }
+
+                            CollapsibleSectionHeader(
+                                title = "Voice & Commands",
+                                isExpanded = voiceExpanded,
+                                onToggle = { viewModel.toggleSection("Voice & Commands") },
+                                matchesSearch = voiceMatchesSearch
+                            )
+                        }
+
+                        item {
+                            val voiceExpanded = expandedSections.contains("Voice & Commands")
+                            val voiceMatchesSearch = matchesSearchQuery("Voice & Commands", searchQuery) ||
+                                listOf("voice", "command", "speech", "mic", "microphone", "recognize", "listen", "dialog").any {
+                                    it.contains(searchQuery, ignoreCase = true)
+                                }
+
+                            AnimatedVisibility(visible = voiceExpanded || voiceMatchesSearch) {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    SwitchSettingItem(
+                                        title = "Voice Commands",
+                                        subtitle = "Control browser with voice",
+                                        checked = settings!!.enableVoiceCommands,
+                                        onCheckedChange = { viewModel.setEnableVoiceCommands(it) }
+                                    )
+
+                                    // Voice Dialog Auto-Close settings (only visible when voice commands enabled)
+                                    if (settings!!.enableVoiceCommands) {
+                                        SwitchSettingItem(
+                                            title = "Auto-close Voice Dialog",
+                                            subtitle = "Automatically close after command execution",
+                                            checked = settings!!.voiceDialogAutoClose,
+                                            onCheckedChange = {
+                                                viewModel.updateSettings(settings!!.copy(voiceDialogAutoClose = it))
+                                            }
+                                        )
+
+                                        if (settings!!.voiceDialogAutoClose) {
+                                            SliderSettingItem(
+                                                title = "Auto-close Delay",
+                                                subtitle = "Delay: ${settings!!.voiceDialogAutoCloseDelayMs}ms",
+                                                value = settings!!.voiceDialogAutoCloseDelayMs.toFloat(),
+                                                valueRange = 500f..5000f,
+                                                steps = 9,  // 500ms increments
+                                                onValueChange = {
+                                                    viewModel.updateSettings(settings!!.copy(voiceDialogAutoCloseDelayMs = it.toLong()))
+                                                }
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -625,148 +763,198 @@ private fun PortraitSettingsLayout(
 
                         // Downloads section
                         item {
-                            SettingsSectionHeader("Downloads")
-                        }
-
-                        item {
-                            DownloadPathSettingItem(
-                                currentPath = settings!!.downloadPath,
-                                onPathChanged = {
-                                    viewModel.updateSettings(settings!!.copy(downloadPath = it))
+                            val downloadsExpanded = expandedSections.contains("Downloads")
+                            val downloadsMatchesSearch = matchesSearchQuery("Downloads", searchQuery) ||
+                                listOf("download", "path", "wifi", "location", "folder", "save", "file").any {
+                                    it.contains(searchQuery, ignoreCase = true)
                                 }
+
+                            CollapsibleSectionHeader(
+                                title = "Downloads",
+                                isExpanded = downloadsExpanded,
+                                onToggle = { viewModel.toggleSection("Downloads") },
+                                matchesSearch = downloadsMatchesSearch
                             )
                         }
 
                         item {
-                            SwitchSettingItem(
-                                title = "Ask Download Location",
-                                subtitle = "Prompt for location before downloading",
-                                checked = settings!!.askDownloadLocation,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(askDownloadLocation = it))
+                            val downloadsExpanded = expandedSections.contains("Downloads")
+                            val downloadsMatchesSearch = matchesSearchQuery("Downloads", searchQuery) ||
+                                listOf("download", "path", "wifi", "location", "folder", "save", "file").any {
+                                    it.contains(searchQuery, ignoreCase = true)
                                 }
-                            )
-                        }
 
-                        item {
-                            SwitchSettingItem(
-                                title = "Download Over Wi-Fi Only",
-                                subtitle = "Prevent downloads on cellular data",
-                                checked = settings!!.downloadOverWiFiOnly,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(downloadOverWiFiOnly = it))
+                            AnimatedVisibility(visible = downloadsExpanded || downloadsMatchesSearch) {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    val pathValidation by viewModel.pathValidation.collectAsState()
+                                    DownloadPathSettingItem(
+                                        currentPath = settings!!.downloadPath,
+                                        onPathChanged = {
+                                            viewModel.updateSettings(settings!!.copy(downloadPath = it))
+                                        },
+                                        pathValidation = pathValidation,
+                                        onValidatePath = { path ->
+                                            viewModel.validateDownloadPath(path)
+                                        }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Ask Download Location",
+                                        subtitle = "Prompt for location before downloading",
+                                        checked = settings!!.askDownloadLocation,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(askDownloadLocation = it))
+                                        }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Download Over Wi-Fi Only",
+                                        subtitle = "Prevent downloads on cellular data",
+                                        checked = settings!!.downloadOverWiFiOnly,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(downloadOverWiFiOnly = it))
+                                        }
+                                    )
                                 }
-                            )
+                            }
                         }
 
                         // Performance section
                         item {
-                            SettingsSectionHeader("Performance")
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Hardware Acceleration",
-                                subtitle = "Use GPU for faster rendering",
-                                checked = settings!!.hardwareAcceleration,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(hardwareAcceleration = it))
+                            val performanceExpanded = expandedSections.contains("Performance")
+                            val performanceMatchesSearch = matchesSearchQuery("Performance", searchQuery) ||
+                                listOf("performance", "speed", "cache", "memory", "gpu", "acceleration", "hardware", "preload", "data", "saver").any {
+                                    it.contains(searchQuery, ignoreCase = true)
                                 }
+
+                            CollapsibleSectionHeader(
+                                title = "Performance",
+                                isExpanded = performanceExpanded,
+                                onToggle = { viewModel.toggleSection("Performance") },
+                                matchesSearch = performanceMatchesSearch
                             )
                         }
 
                         item {
-                            SwitchSettingItem(
-                                title = "Preload Pages",
-                                subtitle = "Load pages in background for faster access",
-                                checked = settings!!.preloadPages,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(preloadPages = it))
+                            val performanceExpanded = expandedSections.contains("Performance")
+                            val performanceMatchesSearch = matchesSearchQuery("Performance", searchQuery) ||
+                                listOf("performance", "speed", "cache", "memory", "gpu", "acceleration", "hardware", "preload", "data", "saver").any {
+                                    it.contains(searchQuery, ignoreCase = true)
                                 }
-                            )
-                        }
 
-                        item {
-                            SwitchSettingItem(
-                                title = "Data Saver",
-                                subtitle = "Reduce data usage by compressing pages",
-                                checked = settings!!.dataSaver,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(dataSaver = it))
-                                }
-                            )
-                        }
+                            AnimatedVisibility(visible = performanceExpanded || performanceMatchesSearch) {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    SwitchSettingItem(
+                                        title = "Hardware Acceleration",
+                                        subtitle = "Use GPU for faster rendering",
+                                        checked = settings!!.hardwareAcceleration,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(hardwareAcceleration = it))
+                                        }
+                                    )
 
-                        item {
-                            SwitchSettingItem(
-                                title = "Text Reflow",
-                                subtitle = "Automatically reformat text when zooming",
-                                checked = settings!!.textReflow,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(textReflow = it))
+                                    SwitchSettingItem(
+                                        title = "Preload Pages",
+                                        subtitle = "Load pages in background for faster access",
+                                        checked = settings!!.preloadPages,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(preloadPages = it))
+                                        }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Data Saver",
+                                        subtitle = "Reduce data usage by compressing pages",
+                                        checked = settings!!.dataSaver,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(dataSaver = it))
+                                        }
+                                    )
+
+                                    SwitchSettingItem(
+                                        title = "Text Reflow",
+                                        subtitle = "Automatically reformat text when zooming",
+                                        checked = settings!!.textReflow,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(textReflow = it))
+                                        }
+                                    )
                                 }
-                            )
+                            }
                         }
 
                         // Sync section
                         item {
-                            SettingsSectionHeader("Sync")
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Sync Enabled",
-                                subtitle = "Sync data across devices",
-                                checked = settings!!.syncEnabled,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(syncEnabled = it))
+                            val syncExpanded = expandedSections.contains("Sync")
+                            val syncMatchesSearch = matchesSearchQuery("Sync", searchQuery) ||
+                                listOf("sync", "cloud", "backup", "restore", "account", "server", "upload", "bookmarks", "history", "passwords").any {
+                                    it.contains(searchQuery, ignoreCase = true)
                                 }
+
+                            CollapsibleSectionHeader(
+                                title = "Sync",
+                                isExpanded = syncExpanded,
+                                onToggle = { viewModel.toggleSection("Sync") },
+                                matchesSearch = syncMatchesSearch
                             )
                         }
 
-                        if (settings!!.syncEnabled) {
-                            item {
-                                SwitchSettingItem(
-                                    title = "Sync Bookmarks",
-                                    subtitle = "Sync bookmarks across devices",
-                                    checked = settings!!.syncBookmarks,
-                                    onCheckedChange = {
-                                        viewModel.updateSettings(settings!!.copy(syncBookmarks = it))
-                                    }
-                                )
-                            }
+                        item {
+                            val syncExpanded = expandedSections.contains("Sync")
+                            val syncMatchesSearch = matchesSearchQuery("Sync", searchQuery) ||
+                                listOf("sync", "cloud", "backup", "restore", "account", "server", "upload", "bookmarks", "history", "passwords").any {
+                                    it.contains(searchQuery, ignoreCase = true)
+                                }
 
-                            item {
-                                SwitchSettingItem(
-                                    title = "Sync History",
-                                    subtitle = "Sync browsing history across devices",
-                                    checked = settings!!.syncHistory,
-                                    onCheckedChange = {
-                                        viewModel.updateSettings(settings!!.copy(syncHistory = it))
-                                    }
-                                )
-                            }
+                            AnimatedVisibility(visible = syncExpanded || syncMatchesSearch) {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    SwitchSettingItem(
+                                        title = "Sync Enabled",
+                                        subtitle = "Sync data across devices",
+                                        checked = settings!!.syncEnabled,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(syncEnabled = it))
+                                        }
+                                    )
 
-                            item {
-                                SwitchSettingItem(
-                                    title = "Sync Passwords",
-                                    subtitle = "Sync saved passwords across devices",
-                                    checked = settings!!.syncPasswords,
-                                    onCheckedChange = {
-                                        viewModel.updateSettings(settings!!.copy(syncPasswords = it))
-                                    }
-                                )
-                            }
+                                    if (settings!!.syncEnabled) {
+                                        SwitchSettingItem(
+                                            title = "Sync Bookmarks",
+                                            subtitle = "Sync bookmarks across devices",
+                                            checked = settings!!.syncBookmarks,
+                                            onCheckedChange = {
+                                                viewModel.updateSettings(settings!!.copy(syncBookmarks = it))
+                                            }
+                                        )
 
-                            item {
-                                SwitchSettingItem(
-                                    title = "Sync Settings",
-                                    subtitle = "Sync browser settings across devices",
-                                    checked = settings!!.syncSettings,
-                                    onCheckedChange = {
-                                        viewModel.updateSettings(settings!!.copy(syncSettings = it))
+                                        SwitchSettingItem(
+                                            title = "Sync History",
+                                            subtitle = "Sync browsing history across devices",
+                                            checked = settings!!.syncHistory,
+                                            onCheckedChange = {
+                                                viewModel.updateSettings(settings!!.copy(syncHistory = it))
+                                            }
+                                        )
+
+                                        SwitchSettingItem(
+                                            title = "Sync Passwords",
+                                            subtitle = "Sync saved passwords across devices",
+                                            checked = settings!!.syncPasswords,
+                                            onCheckedChange = {
+                                                viewModel.updateSettings(settings!!.copy(syncPasswords = it))
+                                            }
+                                        )
+
+                                        SwitchSettingItem(
+                                            title = "Sync Settings",
+                                            subtitle = "Sync browser settings across devices",
+                                            checked = settings!!.syncSettings,
+                                            onCheckedChange = {
+                                                viewModel.updateSettings(settings!!.copy(syncSettings = it))
+                                            }
+                                        )
                                     }
-                                )
+                                }
                             }
                         }
 
@@ -791,42 +979,52 @@ private fun PortraitSettingsLayout(
                             )
                         }
 
-                        // Voice & AI section
+                        // AI Features section
                         item {
-                            SettingsSectionHeader("Voice & AI")
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "AI Summaries",
-                                subtitle = "Generate AI-powered page summaries",
-                                checked = settings!!.aiSummaries,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(aiSummaries = it))
-                                }
+                            CollapsibleSectionHeader(
+                                title = "AI Features",
+                                isExpanded = expandedSections.contains("ai_features"),
+                                onToggle = { viewModel.toggleSection("ai_features") },
+                                matchesSearch = searchQuery.isNotEmpty() && listOf(
+                                    "ai", "artificial", "intelligence", "smart", "assistant",
+                                    "auto", "completion", "summaries", "translation", "read aloud"
+                                ).any { it.contains(searchQuery, ignoreCase = true) }
                             )
                         }
 
-                        item {
-                            SwitchSettingItem(
-                                title = "AI Translation",
-                                subtitle = "Translate pages with AI",
-                                checked = settings!!.aiTranslation,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(aiTranslation = it))
-                                }
-                            )
-                        }
+                        if (expandedSections.contains("ai_features")) {
+                            item {
+                                SwitchSettingItem(
+                                    title = "AI Summaries",
+                                    subtitle = "Generate AI-powered page summaries",
+                                    checked = settings!!.aiSummaries,
+                                    onCheckedChange = {
+                                        viewModel.updateSettings(settings!!.copy(aiSummaries = it))
+                                    }
+                                )
+                            }
 
-                        item {
-                            SwitchSettingItem(
-                                title = "Read Aloud",
-                                subtitle = "Text-to-speech for web content",
-                                checked = settings!!.readAloud,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(readAloud = it))
-                                }
-                            )
+                            item {
+                                SwitchSettingItem(
+                                    title = "AI Translation",
+                                    subtitle = "Translate pages with AI",
+                                    checked = settings!!.aiTranslation,
+                                    onCheckedChange = {
+                                        viewModel.updateSettings(settings!!.copy(aiTranslation = it))
+                                    }
+                                )
+                            }
+
+                            item {
+                                SwitchSettingItem(
+                                    title = "Read Aloud",
+                                    subtitle = "Text-to-speech for web content",
+                                    checked = settings!!.readAloud,
+                                    onCheckedChange = {
+                                        viewModel.updateSettings(settings!!.copy(readAloud = it))
+                                    }
+                                )
+                            }
                         }
 
                         // Command Bar section
@@ -862,109 +1060,133 @@ private fun PortraitSettingsLayout(
 
                         // WebXR section
                         item {
-                            SettingsSectionHeader("WebXR")
-                        }
-
-                        item {
-                            SwitchSettingItem(
-                                title = "Enable WebXR",
-                                subtitle = "Master switch for WebXR functionality",
-                                checked = settings!!.enableWebXR,
-                                onCheckedChange = {
-                                    viewModel.updateSettings(settings!!.copy(enableWebXR = it))
-                                }
+                            CollapsibleSectionHeader(
+                                title = "WebXR",
+                                isExpanded = expandedSections.contains("webxr"),
+                                onToggle = { viewModel.toggleSection("webxr") },
+                                matchesSearch = searchQuery.isNotEmpty() && listOf(
+                                    "xr", "vr", "ar", "virtual", "augmented", "reality",
+                                    "3d", "immersive", "headset", "webxr"
+                                ).any { it.contains(searchQuery, ignoreCase = true) }
                             )
                         }
 
-                        if (settings!!.enableWebXR) {
+                        if (expandedSections.contains("webxr")) {
                             item {
                                 SwitchSettingItem(
-                                    title = "Enable AR",
-                                    subtitle = "Allow immersive augmented reality sessions",
-                                    checked = settings!!.enableAR,
+                                    title = "Enable WebXR",
+                                    subtitle = "Master switch for WebXR functionality",
+                                    checked = settings!!.enableWebXR,
                                     onCheckedChange = {
-                                        viewModel.updateSettings(settings!!.copy(enableAR = it))
+                                        viewModel.updateSettings(settings!!.copy(enableWebXR = it))
                                     }
                                 )
                             }
 
-                            item {
-                                SwitchSettingItem(
-                                    title = "Enable VR",
-                                    subtitle = "Allow immersive virtual reality sessions",
-                                    checked = settings!!.enableVR,
-                                    onCheckedChange = {
-                                        viewModel.updateSettings(settings!!.copy(enableVR = it))
-                                    }
-                                )
-                            }
+                            if (settings!!.enableWebXR) {
+                                item {
+                                    SwitchSettingItem(
+                                        title = "Enable AR",
+                                        subtitle = "Allow immersive augmented reality sessions",
+                                        checked = settings!!.enableAR,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(enableAR = it))
+                                        }
+                                    )
+                                }
 
-                            item {
-                                XRPerformanceModeSettingItem(
-                                    currentMode = settings!!.xrPerformanceMode,
-                                    onModeSelected = {
-                                        viewModel.updateSettings(settings!!.copy(xrPerformanceMode = it))
-                                    }
-                                )
-                            }
+                                item {
+                                    SwitchSettingItem(
+                                        title = "Enable VR",
+                                        subtitle = "Allow immersive virtual reality sessions",
+                                        checked = settings!!.enableVR,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(enableVR = it))
+                                        }
+                                    )
+                                }
 
-                            item {
-                                SliderSettingItem(
-                                    title = "XR Auto-Pause Timeout",
-                                    subtitle = "Auto-pause after ${settings!!.xrAutoPauseTimeout} minutes",
-                                    value = settings!!.xrAutoPauseTimeout.toFloat(),
-                                    valueRange = 10f..120f,
-                                    steps = 21,
-                                    onValueChange = {
-                                        viewModel.updateSettings(settings!!.copy(xrAutoPauseTimeout = it.toInt()))
-                                    }
-                                )
-                            }
+                                item {
+                                    XRPerformanceModeSettingItem(
+                                        currentMode = settings!!.xrPerformanceMode,
+                                        onModeSelected = {
+                                            viewModel.updateSettings(settings!!.copy(xrPerformanceMode = it))
+                                        }
+                                    )
+                                }
 
-                            item {
-                                SwitchSettingItem(
-                                    title = "Show FPS Indicator",
-                                    subtitle = "Display frame rate in XR sessions",
-                                    checked = settings!!.xrShowFPSIndicator,
-                                    onCheckedChange = {
-                                        viewModel.updateSettings(settings!!.copy(xrShowFPSIndicator = it))
-                                    }
-                                )
-                            }
+                                item {
+                                    SliderSettingItem(
+                                        title = "XR Auto-Pause Timeout",
+                                        subtitle = "Auto-pause after ${settings!!.xrAutoPauseTimeout} minutes",
+                                        value = settings!!.xrAutoPauseTimeout.toFloat(),
+                                        valueRange = 10f..120f,
+                                        steps = 21,
+                                        onValueChange = {
+                                            viewModel.updateSettings(settings!!.copy(xrAutoPauseTimeout = it.toInt()))
+                                        }
+                                    )
+                                }
 
-                            item {
-                                SwitchSettingItem(
-                                    title = "Require Wi-Fi for XR",
-                                    subtitle = "Only allow XR on Wi-Fi connections",
-                                    checked = settings!!.xrRequireWiFi,
-                                    onCheckedChange = {
-                                        viewModel.updateSettings(settings!!.copy(xrRequireWiFi = it))
-                                    }
-                                )
+                                item {
+                                    SwitchSettingItem(
+                                        title = "Show FPS Indicator",
+                                        subtitle = "Display frame rate in XR sessions",
+                                        checked = settings!!.xrShowFPSIndicator,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(xrShowFPSIndicator = it))
+                                        }
+                                    )
+                                }
+
+                                item {
+                                    SwitchSettingItem(
+                                        title = "Require Wi-Fi for XR",
+                                        subtitle = "Only allow XR on Wi-Fi connections",
+                                        checked = settings!!.xrRequireWiFi,
+                                        onCheckedChange = {
+                                            viewModel.updateSettings(settings!!.copy(xrRequireWiFi = it))
+                                        }
+                                    )
+                                }
                             }
                         }
 
-                        // Reset section
+                        // Advanced section
                         item {
-                            Spacer(modifier = Modifier.height(24.dp))
+                            CollapsibleSectionHeader(
+                                title = "Advanced",
+                                isExpanded = expandedSections.contains("advanced"),
+                                onToggle = { viewModel.toggleSection("advanced") },
+                                matchesSearch = searchQuery.isNotEmpty() && listOf(
+                                    "advanced", "developer", "debug", "experimental",
+                                    "flags", "reset", "clear", "defaults"
+                                ).any { it.contains(searchQuery, ignoreCase = true) }
+                            )
                         }
 
-                        item {
-                            TextButton(
-                                onClick = { viewModel.resetToDefaults() },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                            ) {
-                                Text(
-                                    "Reset to Defaults",
-                                    color = MaterialTheme.colorScheme.error
-                                )
+                        if (expandedSections.contains("advanced")) {
+                            item {
+                                Spacer(modifier = Modifier.height(8.dp))
                             }
-                        }
 
-                        item {
-                            Spacer(modifier = Modifier.height(16.dp))
+                            item {
+                                TextButton(
+                                    onClick = { viewModel.resetToDefaults() },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp)
+                                ) {
+                                    Text(
+                                        "Reset to Defaults",
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+
+                            item {
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
                         }
                     }
                 }
@@ -1550,11 +1772,16 @@ private fun CategorySettingsContent(
                 }
                 // Downloads
                 item {
+                    val pathValidation by viewModel.pathValidation.collectAsState()
                     ARXRSettingCard {
                         DownloadPathSettingItem(
                             currentPath = settings.downloadPath,
                             onPathChanged = {
                                 viewModel.updateSettings(settings.copy(downloadPath = it))
+                            },
+                            pathValidation = pathValidation,
+                            onValidatePath = { path ->
+                                viewModel.validateDownloadPath(path)
                             }
                         )
                     }
@@ -2426,50 +2653,201 @@ fun NewTabPageSettingItem(
 }
 
 /**
- * DownloadPathSettingItem - Download path configuration
+ * DownloadPathSettingItem - Download path configuration with file picker
  */
 @Composable
 fun DownloadPathSettingItem(
     currentPath: String?,
     onPathChanged: (String?) -> Unit,
+    pathValidation: com.augmentalis.webavanue.platform.ValidationResult? = null,
+    onValidatePath: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var showDialog by remember { mutableStateOf(false) }
+    // Get platform-specific file picker and permission manager
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val filePickerLauncher = remember { com.augmentalis.webavanue.platform.DownloadFilePickerLauncher(context) }
+    val permissionManager = remember { com.augmentalis.webavanue.platform.DownloadPermissionManager(context) }
 
-    ListItem(
-        headlineContent = { Text("Download Location") },
-        supportingContent = { Text(currentPath ?: "Default system path") },
-        modifier = modifier.clickable { showDialog = true }
-    )
+    // Permission request state
+    var showPermissionDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
 
-    if (showDialog) {
-        var tempPath by remember { mutableStateOf(currentPath ?: "") }
+    // Snackbar state for validation errors
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text("Set Download Location") },
-            text = {
-                OutlinedTextField(
-                    value = tempPath,
-                    onValueChange = { tempPath = it },
-                    label = { Text("Path") },
-                    placeholder = { Text("Leave empty for default") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+    // Trigger validation when path changes
+    LaunchedEffect(currentPath) {
+        currentPath?.let { path ->
+            onValidatePath(path)
+        }
+    }
+
+    // Show validation error/warning via Snackbar
+    LaunchedEffect(pathValidation) {
+        pathValidation?.let { validation ->
+            when {
+                !validation.isValid && validation.errorMessage != null -> {
+                    // Show error
+                    val result = snackbarHostState.showSnackbar(
+                        message = validation.errorMessage,
+                        actionLabel = "Use Default",
+                        duration = androidx.compose.material3.SnackbarDuration.Long
+                    )
+                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                        onPathChanged(null)
+                    }
+                }
+                validation.isLowSpace -> {
+                    // Show warning
+                    snackbarHostState.showSnackbar(
+                        message = "Low storage space: ${validation.availableSpaceMB} MB available",
+                        actionLabel = "OK",
+                        duration = androidx.compose.material3.SnackbarDuration.Short
+                    )
+                }
+            }
+        }
+    }
+
+    // File picker result launcher
+    val filePickerResultLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+    ) { uri: android.net.Uri? ->
+        uri?.let {
+            // Take persistable permission
+            filePickerLauncher.takePersistablePermission(it.toString())
+            // Update path
+            onPathChanged(it.toString())
+        }
+    }
+
+    // Permission result launcher
+    val permissionResultLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            // Permission granted, launch file picker
+            filePickerResultLauncher.launch(currentPath?.let { android.net.Uri.parse(it) })
+        } else {
+            // Permission denied - show settings dialog
+            if (permissionManager.isPermanentlyDenied()) {
+                showSettingsDialog = true
+            }
+        }
+    }
+
+    androidx.compose.material3.Scaffold(
+        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        ListItem(
+            headlineContent = { Text("Download Location") },
+            supportingContent = {
+                Column {
+                    Text(
+                        currentPath?.let { filePickerLauncher.getDisplayPath(it) } ?: "Default system path",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    // Show validation info
+                    pathValidation?.let { validation ->
+                        if (validation.isValid) {
+                            Text(
+                                "${validation.availableSpaceMB} MB available",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (validation.isLowSpace) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+                        }
+                    }
+                }
             },
+        trailingContent = {
+            Row {
+                // Browse button
+                IconButton(
+                    onClick = {
+                        // Check if permission is required and not granted
+                        if (permissionManager.isPermissionRequired() && !permissionManager.isPermissionGranted()) {
+                            // Show rationale or request permission
+                            if (permissionManager.shouldShowRationale()) {
+                                showPermissionDialog = true
+                            } else {
+                                // First request - just ask
+                                permissionResultLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            }
+                        } else {
+                            // Permission granted or not required - launch picker
+                            filePickerResultLauncher.launch(currentPath?.let { android.net.Uri.parse(it) })
+                        }
+                    }
+                ) {
+                    Icon(androidx.compose.material.icons.Icons.Default.FolderOpen, contentDescription = "Browse")
+                }
+
+                // Use Default button (only show if custom path is set)
+                if (currentPath != null) {
+                    IconButton(
+                        onClick = {
+                            // Release persistable permission
+                            filePickerLauncher.releasePersistablePermission(currentPath)
+                            // Clear path
+                            onPathChanged(null)
+                        }
+                    ) {
+                        Icon(androidx.compose.material.icons.Icons.Default.Delete, contentDescription = "Use default")
+                    }
+                }
+            }
+        },
+            modifier = modifier.padding(paddingValues)
+        )
+    }
+
+    // Permission rationale dialog
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            title = { Text("Storage Permission Required") },
+            text = { Text("WebAvanue needs storage permission to save downloads to custom locations. The default Downloads folder will be used if permission is not granted.") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        onPathChanged(tempPath.ifBlank { null })
-                        showDialog = false
+                        showPermissionDialog = false
+                        permissionResultLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     }
                 ) {
-                    Text("Save")
+                    Text("Grant Permission")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
+                TextButton(onClick = { showPermissionDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Settings dialog (for permanently denied permission)
+    if (showSettingsDialog) {
+        AlertDialog(
+            onDismissRequest = { showSettingsDialog = false },
+            title = { Text("Permission Denied") },
+            text = { Text("Storage permission was denied. Please enable it in Settings > Permissions to use custom download locations.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showSettingsDialog = false
+                        permissionManager.openPermissionSettings()
+                    }
+                ) {
+                    Text("Open Settings")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSettingsDialog = false }) {
                     Text("Cancel")
                 }
             }
@@ -2573,7 +2951,9 @@ private fun SettingsSearchBar(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("search_bar"),
                 placeholder = { Text("Search settings...") },
                 leadingIcon = {
                     Icon(
@@ -2617,6 +2997,17 @@ private fun SettingsSearchBar(
             }
         }
     }
+}
+
+/**
+ * Helper function to check if content matches search query
+ *
+ * @param title Section title
+ * @param query Search query
+ * @return True if title contains query (case-insensitive)
+ */
+private fun matchesSearchQuery(title: String, query: String): Boolean {
+    return title.contains(query, ignoreCase = true)
 }
 
 /**
