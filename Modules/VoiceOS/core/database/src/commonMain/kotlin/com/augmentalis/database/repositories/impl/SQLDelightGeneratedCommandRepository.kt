@@ -18,6 +18,9 @@ import kotlinx.coroutines.withContext
 
 /**
  * SQLDelight implementation of IGeneratedCommandRepository.
+ *
+ * NOTE: Uses Dispatchers.Default instead of Dispatchers.IO for KMP compatibility.
+ * Dispatchers.IO is JVM-only and not available in common code.
  */
 class SQLDelightGeneratedCommandRepository(
     private val database: VoiceOSDatabase
@@ -26,21 +29,26 @@ class SQLDelightGeneratedCommandRepository(
     private val queries = database.generatedCommandQueries
 
     override suspend fun insert(command: GeneratedCommandDTO): Long = withContext(Dispatchers.Default) {
-        queries.insert(
-            elementHash = command.elementHash,
-            commandText = command.commandText,
-            actionType = command.actionType,
-            confidence = command.confidence,
-            synonyms = command.synonyms,
-            isUserApproved = command.isUserApproved,
-            usageCount = command.usageCount,
-            lastUsed = command.lastUsed,
-            createdAt = command.createdAt
-        )
-        queries.count().executeAsOne() // Return last inserted ID (approximation)
+        var insertedId: Long = 0
+        database.transaction {
+            queries.insert(
+                elementHash = command.elementHash,
+                commandText = command.commandText,
+                actionType = command.actionType,
+                confidence = command.confidence,
+                synonyms = command.synonyms,
+                isUserApproved = command.isUserApproved,
+                usageCount = command.usageCount,
+                lastUsed = command.lastUsed,
+                createdAt = command.createdAt
+            )
+            insertedId = queries.lastInsertRowId().executeAsOne()
+        }
+        insertedId
     }
 
     override suspend fun insertBatch(commands: List<GeneratedCommandDTO>) = withContext(Dispatchers.Default) {
+        require(commands.isNotEmpty()) { "Cannot insert empty batch of commands" }
         database.transaction {
             commands.forEach { command ->
                 queries.insert(
@@ -87,6 +95,7 @@ class SQLDelightGeneratedCommandRepository(
     }
 
     override suspend fun fuzzySearch(searchText: String): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
+        require(searchText.length <= 1000) { "Search text must not exceed 1000 characters (got ${searchText.length})" }
         queries.fuzzySearch(searchText).executeAsList().map { it.toGeneratedCommandDTO() }
     }
 
@@ -99,6 +108,8 @@ class SQLDelightGeneratedCommandRepository(
     }
 
     override suspend fun updateConfidence(id: Long, confidence: Double) = withContext(Dispatchers.Default) {
+        require(id > 0) { "ID must be positive (got $id)" }
+        require(confidence in 0.0..1.0) { "Confidence must be between 0.0 and 1.0 (got $confidence)" }
         queries.updateConfidence(confidence, id)
     }
 
@@ -111,6 +122,7 @@ class SQLDelightGeneratedCommandRepository(
     }
 
     override suspend fun deleteLowQuality(minConfidence: Double) = withContext(Dispatchers.Default) {
+        require(minConfidence in 0.0..1.0) { "Minimum confidence must be between 0.0 and 1.0 (got $minConfidence)" }
         queries.deleteLowQuality(minConfidence)
     }
 
@@ -138,5 +150,30 @@ class SQLDelightGeneratedCommandRepository(
             lastUsed = command.lastUsed,
             id = command.id
         )
+    }
+
+    override suspend fun getAllPaginated(limit: Int, offset: Int): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
+        require(limit in 1..1000) { "Limit must be between 1 and 1000 (got $limit)" }
+        require(offset >= 0) { "Offset must be non-negative (got $offset)" }
+        queries.getAllPaginated(limit.toLong(), offset.toLong())
+            .executeAsList()
+            .map { it.toGeneratedCommandDTO() }
+    }
+
+    override suspend fun getByPackagePaginated(packageName: String, limit: Int, offset: Int): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
+        require(limit in 1..1000) { "Limit must be between 1 and 1000 (got $limit)" }
+        require(offset >= 0) { "Offset must be non-negative (got $offset)" }
+        // Note: This requires appId field in GeneratedCommand table
+        // For now, returning empty list as appId is not in the current schema
+        // TODO: Add appId to GeneratedCommand table schema
+        emptyList()
+    }
+
+    override suspend fun getByActionTypePaginated(actionType: String, limit: Int, offset: Int): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
+        require(limit in 1..1000) { "Limit must be between 1 and 1000 (got $limit)" }
+        require(offset >= 0) { "Offset must be non-negative (got $offset)" }
+        queries.getByActionTypePaginated(actionType, limit.toLong(), offset.toLong())
+            .executeAsList()
+            .map { it.toGeneratedCommandDTO() }
     }
 }

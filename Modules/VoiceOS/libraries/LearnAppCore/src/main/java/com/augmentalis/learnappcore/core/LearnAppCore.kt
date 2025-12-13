@@ -15,13 +15,17 @@ package com.augmentalis.learnappcore.core
 
 import android.content.Context
 import android.util.Log
-import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.GeneratedCommandDTO
+import com.augmentalis.database.repositories.IGeneratedCommandRepository
 import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import com.augmentalis.learnappcore.detection.AppFramework
 import com.augmentalis.learnappcore.detection.CrossPlatformDetector
 import com.augmentalis.learnappcore.models.ElementInfo
 import com.augmentalis.learnappcore.settings.LearnAppDeveloperSettings
+import com.augmentalis.learnappcore.utils.DatabaseRetryUtil
+import java.util.Collections
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * LearnApp Core - Shared Business Logic
@@ -54,14 +58,14 @@ import com.augmentalis.learnappcore.settings.LearnAppDeveloperSettings
  * - IMMEDIATE mode: ~10ms per element
  * - BATCH mode: ~50ms for 100 elements (20x faster)
  *
- * @param database Database manager for command persistence
+ * @param commandRepository Repository for command persistence
  * @param uuidGenerator Third-party UUID generator for element identification
  */
 class LearnAppCore(
     context: Context,
-    private val database: VoiceOSDatabaseManager,
+    private val commandRepository: IGeneratedCommandRepository,
     private val uuidGenerator: ThirdPartyUuidGenerator
-) {
+) : IElementProcessorInterface, IBatchManagerInterface {
     companion object {
         private const val TAG = "LearnAppCore"
     }
@@ -78,14 +82,15 @@ class LearnAppCore(
      * Key: package name, Value: detected framework
      *
      * LRU eviction prevents unbounded growth (max 50 frameworks cached).
+     * Thread-safe via Collections.synchronizedMap for concurrent access.
      */
-    private val frameworkCache = object : LinkedHashMap<String, AppFramework>(
+    private val frameworkCache = Collections.synchronizedMap(object : LinkedHashMap<String, AppFramework>(
         16, 0.75f, true  // LRU access order
     ) {
         override fun removeEldestEntry(eldest: Map.Entry<String, AppFramework>): Boolean {
             return size > 50  // Max 50 frameworks cached
         }
-    }
+    })
 
     /**
      * Batch queue for BATCH mode
@@ -115,7 +120,7 @@ class LearnAppCore(
         element: ElementInfo,
         packageName: String,
         mode: ProcessingMode
-    ): ElementProcessingResult {
+    ): ElementProcessingResult = withContext(Dispatchers.Default) {
         return try {
             // 1. Generate UUID
             val uuid = generateUUID(element, packageName)
@@ -137,8 +142,10 @@ class LearnAppCore(
             // 3. Store (mode-specific)
             when (mode) {
                 ProcessingMode.IMMEDIATE -> {
-                    // JIT Mode: Insert immediately
-                    database.generatedCommands.insert(command)
+                    // JIT Mode: Insert immediately with retry logic
+                    DatabaseRetryUtil.withRetry {
+                        commandRepository.insert(command)
+                    }
                     if (developerSettings.isVerboseLoggingEnabled()) {
                         Log.d(TAG, "Inserted command immediately: ${command.commandText}")
                     }
@@ -754,12 +761,12 @@ class LearnAppCore(
      * Performance: ~50ms for 100 commands (20x faster than sequential)
      * Memory freed: ~150KB
      */
-    suspend fun flushBatch() {
+    suspend fun flushBatch() = withContext(Dispatchers.IO) {
         if (batchQueue.isEmpty()) {
             if (developerSettings.isVerboseLoggingEnabled()) {
                 Log.d(TAG, "Batch queue empty, nothing to flush")
             }
-            return
+            return@withContext
         }
 
         val startTime = System.currentTimeMillis()
@@ -770,16 +777,32 @@ class LearnAppCore(
             val commandsList = mutableListOf<GeneratedCommandDTO>()
             batchQueue.drainTo(commandsList)
 
-            // Use batch insert with transaction wrapping for optimal performance
-            database.generatedCommands.insertBatch(commandsList)
+            // Keep backup to prevent data loss if insert fails
+            val backupCommands = commandsList.toList()
 
-            val elapsedMs = System.currentTimeMillis() - startTime
-            val rate = count * 1000 / elapsedMs.coerceAtLeast(1)
-            Log.i(TAG, "Flushed $count commands in ${elapsedMs}ms (~$rate commands/sec)")
+            try {
+                // Use batch insert with retry logic for transient database errors
+                DatabaseRetryUtil.withRetry {
+                    commandRepository.insertBatch(commandsList)
+                }
+
+                val elapsedMs = System.currentTimeMillis() - startTime
+                val rate = count * 1000 / elapsedMs.coerceAtLeast(1)
+                Log.i(TAG, "Flushed $count commands in ${elapsedMs}ms (~$rate commands/sec)")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to flush batch, re-queuing ${backupCommands.size} commands", e)
+                // Re-queue commands to prevent data loss
+                backupCommands.forEach { command ->
+                    if (!batchQueue.offer(command)) {
+                        Log.w(TAG, "Failed to re-queue command: ${command.commandText}")
+                    }
+                }
+                throw e
+            }
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to flush batch queue", e)
-            // Commands already drained from queue, cannot retry
             throw e
         }
     }
@@ -806,6 +829,42 @@ class LearnAppCore(
      * @return Number of commands queued
      */
     fun getBatchQueueSize(): Int = batchQueue.size
+
+    // ================================================================
+    // IBatchManagerInterface Implementation
+    // ================================================================
+
+    /**
+     * Add command to batch queue (IBatchManagerInterface)
+     */
+    override fun addCommand(command: GeneratedCommandDTO) {
+        if (!batchQueue.offer(command)) {
+            Log.w(TAG, "Batch queue full, command not added")
+        }
+    }
+
+    /**
+     * Get current batch size (IBatchManagerInterface)
+     */
+    override fun getBatchSize(): Int = batchQueue.size
+
+    // ================================================================
+    // IElementProcessorInterface Implementation
+    // ================================================================
+
+    /**
+     * Process batch of elements (IElementProcessorInterface)
+     *
+     * More efficient than processing individually.
+     */
+    override suspend fun processBatch(
+        elements: List<ElementInfo>,
+        packageName: String
+    ): List<ElementProcessingResult> {
+        return elements.map { element ->
+            processElement(element, packageName, ProcessingMode.BATCH)
+        }
+    }
 
     /**
      * Clear framework cache

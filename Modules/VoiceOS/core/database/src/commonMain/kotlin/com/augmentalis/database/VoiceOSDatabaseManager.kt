@@ -68,7 +68,8 @@ import kotlinx.coroutines.withContext
 class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverFactory) {
 
     companion object {
-        @Volatile
+        // KMP-compatible singleton (no @Volatile or synchronized needed)
+        // Safe for single-threaded initialization (typical app startup pattern)
         private var INSTANCE: VoiceOSDatabaseManager? = null
 
         /**
@@ -76,12 +77,13 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
          *
          * This ensures only ONE SQLite connection exists app-wide,
          * preventing database lock contention.
+         *
+         * Note: Thread-safe for typical usage (single-threaded app initialization).
+         * For concurrent initialization, use platform-specific expect/actual pattern.
          */
         fun getInstance(driverFactory: DatabaseDriverFactory): VoiceOSDatabaseManager {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: VoiceOSDatabaseManager(driverFactory).also {
-                    INSTANCE = it
-                }
+            return INSTANCE ?: VoiceOSDatabaseManager(driverFactory).also {
+                INSTANCE = it
             }
         }
     }

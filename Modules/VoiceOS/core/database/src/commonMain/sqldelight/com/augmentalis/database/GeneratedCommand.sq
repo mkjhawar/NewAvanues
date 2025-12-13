@@ -24,6 +24,9 @@ insert:
 INSERT OR REPLACE INTO commands_generated(elementHash, commandText, actionType, confidence, synonyms, isUserApproved, usageCount, lastUsed, createdAt)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 
+lastInsertRowId:
+SELECT last_insert_rowid();
+
 getById:
 SELECT * FROM commands_generated WHERE id = ?;
 
@@ -101,3 +104,15 @@ SET elementHash = ?,
     usageCount = ?,
     lastUsed = ?
 WHERE id = ?;
+
+-- Paginated queries (P1 enhancement - Phase 5)
+getAllPaginated:
+SELECT * FROM commands_generated
+ORDER BY usageCount DESC
+LIMIT ? OFFSET ?;
+
+getByActionTypePaginated:
+SELECT * FROM commands_generated
+WHERE actionType = ?
+ORDER BY confidence DESC
+LIMIT ? OFFSET ?;

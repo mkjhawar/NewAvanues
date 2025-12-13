@@ -126,4 +126,35 @@ interface IGeneratedCommandRepository {
      * @param command Command to update
      */
     suspend fun update(command: GeneratedCommandDTO)
+
+    /**
+     * Get all commands with pagination support.
+     *
+     * Prevents memory issues when retrieving large datasets.
+     *
+     * @param limit Maximum number of commands to return
+     * @param offset Number of commands to skip
+     * @return List of commands (up to limit)
+     */
+    suspend fun getAllPaginated(limit: Int, offset: Int): List<GeneratedCommandDTO>
+
+    /**
+     * Get commands by package with pagination support.
+     *
+     * @param packageName App package name
+     * @param limit Maximum number of commands to return
+     * @param offset Number of commands to skip
+     * @return List of commands (up to limit)
+     */
+    suspend fun getByPackagePaginated(packageName: String, limit: Int, offset: Int): List<GeneratedCommandDTO>
+
+    /**
+     * Get commands by action type with pagination support.
+     *
+     * @param actionType Action type filter
+     * @param limit Maximum number of commands to return
+     * @param offset Number of commands to skip
+     * @return List of commands (up to limit)
+     */
+    suspend fun getByActionTypePaginated(actionType: String, limit: Int, offset: Int): List<GeneratedCommandDTO>
 }
