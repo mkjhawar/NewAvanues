@@ -205,7 +205,7 @@ kotlin {
 
 // Android Configuration
 android {
-    namespace = "com.augmentalis.Avanues.web.universal"
+    namespace = "com.augmentalis.webavanue.ui"
     compileSdk = 34
 
     defaultConfig {
@@ -228,7 +228,7 @@ android {
 // universal module now depends on BrowserCoreData for all data persistence
 
 // Publishing Configuration
-group = "com.augmentalis.Avanues.web"
+group = "com.augmentalis.webavanue"
 version = "4.0.0-alpha"
 
 // Maven Publishing
