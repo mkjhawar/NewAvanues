@@ -2319,7 +2319,8 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                     isUserApproved = 1L,
                     usageCount = 0L,
                     lastUsed = null,
-                    createdAt = timestamp
+                    createdAt = timestamp,
+                    appId = ""  // Dynamic commands are global
                 )
 
                 database.databaseManager.generatedCommands.insert(command)

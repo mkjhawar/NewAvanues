@@ -374,7 +374,8 @@ class RenameCommandHandlerTest {
             isUserApproved = isUserApproved,
             usageCount = usageCount,
             lastUsed = null,
-            createdAt = System.currentTimeMillis()
+            createdAt = System.currentTimeMillis(),
+            appId = ""
         )
     }
 }

@@ -149,6 +149,19 @@ interface IGeneratedCommandRepository {
     suspend fun getByPackagePaginated(packageName: String, limit: Int, offset: Int): List<GeneratedCommandDTO>
 
     /**
+     * Get commands by package using keyset pagination (cursor-based).
+     *
+     * More efficient than offset-based pagination for large datasets.
+     * Uses the last ID from previous page as cursor.
+     *
+     * @param packageName App package name
+     * @param lastId ID of last command from previous page (0 for first page)
+     * @param limit Maximum number of commands to return
+     * @return List of commands (up to limit)
+     */
+    suspend fun getByPackageKeysetPaginated(packageName: String, lastId: Long, limit: Int): List<GeneratedCommandDTO>
+
+    /**
      * Get commands by action type with pagination support.
      *
      * @param actionType Action type filter

@@ -29,7 +29,8 @@ data class GeneratedCommandDTO(
     val isUserApproved: Long = 0,  // SQLite Boolean (0/1)
     val usageCount: Long = 0,
     val lastUsed: Long? = null,
-    val createdAt: Long
+    val createdAt: Long,
+    val appId: String = ""  // P2 Task 3: Package name for pagination
 )
 
 /**
@@ -47,6 +48,7 @@ fun Commands_generated.toGeneratedCommandDTO(): GeneratedCommandDTO {
         isUserApproved = isUserApproved,
         usageCount = usageCount,
         lastUsed = lastUsed,
-        createdAt = createdAt
+        createdAt = createdAt,
+        appId = appId
     )
 }

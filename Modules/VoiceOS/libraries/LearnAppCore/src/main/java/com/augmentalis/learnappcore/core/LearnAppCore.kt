@@ -330,7 +330,8 @@ class LearnAppCore(
                 isUserApproved = 0L,
                 usageCount = 0L,
                 lastUsed = null,
-                createdAt = System.currentTimeMillis()
+                createdAt = System.currentTimeMillis(),
+                appId = packageName
             )
         }
 
@@ -362,7 +363,8 @@ class LearnAppCore(
             isUserApproved = 0L,
             usageCount = 0L,
             lastUsed = null,
-            createdAt = System.currentTimeMillis()
+            createdAt = System.currentTimeMillis(),
+            appId = packageName
         )
     }
 

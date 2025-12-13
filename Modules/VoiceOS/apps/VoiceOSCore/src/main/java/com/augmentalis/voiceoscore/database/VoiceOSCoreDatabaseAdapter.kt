@@ -518,7 +518,8 @@ private fun com.augmentalis.voiceoscore.scraping.entities.GeneratedCommandEntity
         isUserApproved = if (this.isUserApproved) 1L else 0L,
         usageCount = this.usageCount.toLong(),
         lastUsed = this.lastUsed,
-        createdAt = this.generatedAt
+        createdAt = this.generatedAt,
+        appId = ""  // Legacy entities don't have appId
     )
 }
 

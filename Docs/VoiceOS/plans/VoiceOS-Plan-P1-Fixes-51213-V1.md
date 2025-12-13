@@ -42,7 +42,7 @@
 | Priority | Issue | Lines | Fix Time |
 |----------|-------|-------|----------|
 | P0 | Merge conflicts | 55-61, 109-129 | 15 min |
-| P1 | Wrong dispatcher (Default vs IO) | All methods | 30 min |
+| P1 | Missing dispatcher specification | All methods | 30 min |
 | P1 | insert() returns count() not ID | 40 | 30 min |
 | P1 | Missing input validation | All methods | 1 hour |
 | P2 | No transaction safety for multi-step | N/A | 30 min |
@@ -57,15 +57,17 @@
 // Lines 109-129: Choose correct version of getByPackage() and update()
 // Action: Manual merge resolution
 
-// FIX 2: Change dispatcher from Default to IO (P1)
+// FIX 2: Use Dispatchers.Default for KMP common code (P1)
+// IMPORTANT: This is commonMain code (KMP), so we MUST use Dispatchers.Default
+// Dispatchers.IO is JVM-only and not available in iOS/Native targets
 // BEFORE:
-override suspend fun insert(command: GeneratedCommandDTO): Long = withContext(Dispatchers.Default) {
+override suspend fun insert(command: GeneratedCommandDTO): Long {
     queries.insert(...)
     queries.count().executeAsOne()
 }
 
 // AFTER:
-override suspend fun insert(command: GeneratedCommandDTO): Long = withContext(Dispatchers.IO) {
+override suspend fun insert(command: GeneratedCommandDTO): Long = withContext(Dispatchers.Default) {
     database.transaction {
         queries.insert(
             elementHash = command.elementHash,
@@ -84,24 +86,24 @@ override suspend fun insert(command: GeneratedCommandDTO): Long = withContext(Di
 }
 
 // FIX 4: Add input validation (P1)
-override suspend fun updateConfidence(id: Long, confidence: Double) = withContext(Dispatchers.IO) {
+override suspend fun updateConfidence(id: Long, confidence: Double) = withContext(Dispatchers.Default) {
     require(id > 0) { "Invalid command ID: $id" }
     require(confidence in 0.0..1.0) { "Confidence must be between 0.0 and 1.0, got: $confidence" }
     queries.updateConfidence(confidence, id)
 }
 
-override suspend fun deleteLowQuality(minConfidence: Double) = withContext(Dispatchers.IO) {
+override suspend fun deleteLowQuality(minConfidence: Double) = withContext(Dispatchers.Default) {
     require(minConfidence in 0.0..1.0) { "minConfidence must be between 0.0 and 1.0, got: $minConfidence" }
     queries.deleteLowQuality(minConfidence)
 }
 
-override suspend fun fuzzySearch(searchText: String): List<GeneratedCommandDTO> = withContext(Dispatchers.IO) {
+override suspend fun fuzzySearch(searchText: String): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
     require(searchText.length <= 1000) { "Search text too long: ${searchText.length} chars (max 1000)" }
     queries.fuzzySearch(searchText).executeAsList().map { it.toGeneratedCommandDTO() }
 }
 
 // FIX 5: Add transaction safety for multi-step operations (P2)
-override suspend fun insertBatch(commands: List<GeneratedCommandDTO>) = withContext(Dispatchers.IO) {
+override suspend fun insertBatch(commands: List<GeneratedCommandDTO>) = withContext(Dispatchers.Default) {
     require(commands.isNotEmpty()) { "Cannot insert empty batch" }
     database.transaction {
         commands.forEach { command ->
@@ -120,11 +122,13 @@ override suspend fun insertBatch(commands: List<GeneratedCommandDTO>) = withCont
     }
 }
 
-// Apply Dispatchers.IO to ALL remaining methods:
+// Apply Dispatchers.Default to ALL remaining methods (KMP commonMain requirement):
 // - getById, getByElement, getAll, getAllCommands, getByActionType, getHighConfidence
 // - getUserApproved, fuzzySearch, incrementUsage, markApproved, updateConfidence
 // - deleteById, deleteByElement, deleteLowQuality, deleteAll, count
 // - getByPackage, update, getAllPaginated, getByPackagePaginated, getByActionTypePaginated
+//
+// NOTE: Never use Dispatchers.IO in KMP commonMain - it's JVM-only!
 ```
 
 **Verification:**
@@ -391,7 +395,7 @@ suspend fun flushBatch() {
 }
 
 // AFTER:
-suspend fun flushBatch() = withContext(Dispatchers.IO) {
+suspend fun flushBatch() = withContext(Dispatchers.Default) {
     if (batchQueue.isEmpty()) return@withContext
 
     val startTime = System.currentTimeMillis()
@@ -608,7 +612,7 @@ CREATE INDEX idx_gc_action_id ON commands_generated(actionType, id);
 
 ```kotlin
 // Add new keyset pagination methods
-override suspend fun getAllKeysetPaginated(lastId: Long, limit: Int): List<GeneratedCommandDTO> = withContext(Dispatchers.IO) {
+override suspend fun getAllKeysetPaginated(lastId: Long, limit: Int): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
     require(limit in 1..1000) { "Limit must be between 1 and 1000, got: $limit" }
     require(lastId >= 0) { "lastId must be >= 0, got: $lastId" }
 
@@ -621,7 +625,7 @@ override suspend fun getByActionTypeKeysetPaginated(
     actionType: String,
     lastId: Long,
     limit: Int
-): List<GeneratedCommandDTO> = withContext(Dispatchers.IO) {
+): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
     require(limit in 1..1000) { "Limit must be between 1 and 1000" }
     require(lastId >= 0) { "lastId must be >= 0" }
 
@@ -631,7 +635,7 @@ override suspend fun getByActionTypeKeysetPaginated(
 }
 
 // Add result size warnings to existing methods
-override suspend fun getAll(): List<GeneratedCommandDTO> = withContext(Dispatchers.IO) {
+override suspend fun getAll(): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
     val result = queries.getAll().executeAsList().map { it.toGeneratedCommandDTO() }
 
     if (result.size > 1000) {
@@ -969,9 +973,11 @@ class MemoryLeakTest {
 
 ## Thread Safety
 
-All repository operations use `Dispatchers.IO` for database I/O.
+All repository operations use `Dispatchers.Default` for database I/O (KMP commonMain requirement).
 Framework cache uses `Collections.synchronizedMap()` for thread safety.
 Batch queue uses `ArrayBlockingQueue` (thread-safe by default).
+
+**IMPORTANT**: Never use `Dispatchers.IO` in KMP commonMain code - it's JVM-only and will break iOS/Native builds!
 ```
 
 ---

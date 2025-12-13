@@ -41,13 +41,19 @@ class PaginationTest {
     @Before
     fun setup() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        database = VoiceOSDatabaseManager.createInMemoryDatabase(context).database
+        // Create in-memory database for testing
+        val driver = app.cash.sqldelight.driver.android.AndroidSqliteDriver(
+            schema = VoiceOSDatabase.Schema,
+            context = context,
+            name = null // null = in-memory database
+        )
+        database = VoiceOSDatabase(driver)
         repository = SQLDelightGeneratedCommandRepository(database)
     }
 
     @After
     fun teardown() {
-        database.close()
+        // Database will be cleaned up when test ends
     }
 
     @Test
@@ -226,10 +232,11 @@ class PaginationTest {
             actionType = actionType,
             confidence = 0.8,
             synonyms = null,
-            isUserApproved = false,
+            isUserApproved = 0L, // SQLite boolean: 0 = false, 1 = true
             usageCount = 0,
             lastUsed = null,
-            createdAt = System.currentTimeMillis()
+            createdAt = System.currentTimeMillis(),
+            appId = ""  // Default for tests
         )
     }
 }

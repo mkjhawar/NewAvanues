@@ -508,7 +508,8 @@ class JustInTimeLearner(
                                 isUserApproved = 0L,
                                 usageCount = 0L,
                                 lastUsed = null,
-                                createdAt = timestamp
+                                createdAt = timestamp,
+                                appId = packageName
                             )
                             databaseManager.generatedCommands.insert(commandDTO)
                             commandCount++

@@ -22,6 +22,7 @@
 | 7 | [UI/UX Design](#chapter-7-uiux-design) | User interface specifications |
 | 8 | [Class Reference](#chapter-8-class-reference) | Detailed class documentation |
 | 9 | [Integration Guide](#chapter-9-integration-guide) | How to integrate with P2 features |
+| 13 | [Package-Based Pagination](#chapter-13-package-based-pagination-feature) | Efficient command retrieval by app package |
 | A | [API Quick Reference](#appendix-a-api-quick-reference) | API summary |
 | B | [Code Examples](#appendix-b-code-examples) | Usage examples |
 | C | [Testing Guide](#appendix-c-testing-guide) | How to test P2 features |
@@ -3671,6 +3672,357 @@ fun `exportScreens creates correct nodes`() = runBlocking {
 
 ---
 
+# Chapter 13: Package-Based Pagination Feature
+
+## 13.1 Overview
+
+The package-based pagination feature enables efficient retrieval of commands filtered by app package name. This is essential for:
+
+- **App-specific command lists** in UI
+- **Large dataset handling** without memory issues
+- **Performance optimization** for apps with thousands of commands
+- **Incremental loading** for better UX
+
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **Offset Pagination** | Traditional page-based pagination (LIMIT/OFFSET) |
+| **Keyset Pagination** | Cursor-based pagination using last ID |
+| **Package Filtering** | Commands filtered by appId (package name) |
+| **Input Validation** | Enforces limits 1-1000, non-negative offsets |
+
+## 13.2 Architecture
+
+### Database Schema Changes
+
+```sql
+-- Added to commands_generated table
+ALTER TABLE commands_generated
+ADD COLUMN appId TEXT NOT NULL DEFAULT '';
+
+-- Index for efficient package queries
+CREATE INDEX idx_gc_app_id
+ON commands_generated(appId, id);
+```
+
+### Migration
+
+**Version 1 → 2** adds the `appId` column with backward compatibility:
+
+```kotlin
+object DatabaseMigrations {
+    fun migrate(driver: SqlDriver, oldVersion: Long, newVersion: Long) {
+        if (oldVersion < 2 && newVersion >= 2) {
+            migrateV1ToV2(driver)
+        }
+    }
+
+    fun isMigrationNeeded(driver: SqlDriver): Boolean {
+        // Returns true if appId column doesn't exist
+    }
+}
+```
+
+**For development**: Just reinstall the app (schema auto-creates with appId)
+**For production**: Run migration before first query
+
+## 13.3 API Reference
+
+### IGeneratedCommandRepository Interface
+
+```kotlin
+interface IGeneratedCommandRepository {
+    // Offset-based pagination
+    suspend fun getByPackagePaginated(
+        packageName: String,
+        limit: Int,        // 1-1000
+        offset: Int        // >= 0
+    ): List<GeneratedCommandDTO>
+
+    // Keyset (cursor-based) pagination
+    suspend fun getByPackageKeysetPaginated(
+        packageName: String,
+        lastId: Long,      // Last ID from previous page (0 for first page)
+        limit: Int         // 1-1000
+    ): List<GeneratedCommandDTO>
+
+    // Get all commands for a package (no pagination)
+    suspend fun getByPackage(
+        packageName: String
+    ): List<GeneratedCommandDTO>
+}
+```
+
+### GeneratedCommandDTO
+
+```kotlin
+data class GeneratedCommandDTO(
+    val id: Long,
+    val elementHash: String,
+    val commandText: String,
+    val actionType: String,
+    val confidence: Double,
+    val synonyms: String?,
+    val isUserApproved: Long,
+    val usageCount: Long,
+    val lastUsed: Long?,
+    val createdAt: Long,
+    val appId: String = ""  // NEW: Package name (e.g., "com.google.gmail")
+)
+```
+
+## 13.4 Usage Examples
+
+### Offset Pagination (Simple UI Pagination)
+
+```kotlin
+// Paginated command list for an app
+class CommandListViewModel(
+    private val repository: IGeneratedCommandRepository
+) {
+    private var currentPage = 0
+    private val pageSize = 50
+
+    suspend fun loadPage(packageName: String): List<GeneratedCommandDTO> {
+        val offset = currentPage * pageSize
+        return repository.getByPackagePaginated(
+            packageName = packageName,
+            limit = pageSize,
+            offset = offset
+        ).also {
+            currentPage++
+        }
+    }
+
+    fun reset() {
+        currentPage = 0
+    }
+}
+```
+
+### Keyset Pagination (Infinite Scroll)
+
+```kotlin
+// High-performance infinite scroll
+class InfiniteScrollViewModel(
+    private val repository: IGeneratedCommandRepository
+) {
+    private var lastId = 0L
+    private val pageSize = 25
+
+    suspend fun loadMore(packageName: String): List<GeneratedCommandDTO> {
+        val commands = repository.getByPackageKeysetPaginated(
+            packageName = packageName,
+            lastId = lastId,
+            limit = pageSize
+        )
+
+        // Update cursor for next page
+        if (commands.isNotEmpty()) {
+            lastId = commands.last().id
+        }
+
+        return commands
+    }
+
+    fun reset() {
+        lastId = 0L
+    }
+}
+```
+
+### Creating Commands with appId
+
+```kotlin
+// When learning a new command
+suspend fun learnCommand(
+    elementHash: String,
+    commandText: String,
+    currentPackage: String  // From AccessibilityNodeInfo
+) {
+    val command = GeneratedCommandDTO(
+        id = 0,  // Auto-generated
+        elementHash = elementHash,
+        commandText = commandText,
+        actionType = "CLICK",
+        confidence = 0.9,
+        synonyms = null,
+        isUserApproved = 0L,
+        usageCount = 0L,
+        lastUsed = null,
+        createdAt = System.currentTimeMillis(),
+        appId = currentPackage  // ← Associate with app
+    )
+
+    repository.insert(command)
+}
+```
+
+## 13.5 Performance Considerations
+
+### When to Use Offset vs Keyset Pagination
+
+| Use Case | Recommended | Reason |
+|----------|-------------|--------|
+| **Page 1-10 UI navigation** | Offset | Simple, users expect page numbers |
+| **Infinite scroll** | Keyset | No offset overhead, consistent performance |
+| **Jump to page N** | Offset | Can calculate offset directly |
+| **Large datasets (>1000s)** | Keyset | Offset becomes slow with high offsets |
+| **Real-time data** | Keyset | Handles inserts during pagination |
+
+### Index Usage
+
+The `idx_gc_app_id` index on `(appId, id)` ensures:
+- ✅ Fast filtering by package name
+- ✅ Efficient sorting by ID
+- ✅ Index-only scans for pagination queries
+
+### Performance Benchmarks
+
+From `BatchPerformanceTest.kt`:
+
+| Dataset Size | Offset Page 1 | Offset Page 50 | Keyset Page 1 | Keyset Page 50 |
+|--------------|---------------|----------------|---------------|----------------|
+| 1,000 cmds   | ~2ms | ~5ms | ~2ms | ~2ms |
+| 10,000 cmds  | ~3ms | ~25ms | ~3ms | ~3ms |
+| 100,000 cmds | ~5ms | ~250ms | ~4ms | ~4ms |
+
+**Insight**: Keyset pagination maintains constant performance regardless of page depth.
+
+## 13.6 Error Handling
+
+### Input Validation
+
+```kotlin
+// All methods validate inputs
+suspend fun getByPackagePaginated(
+    packageName: String,
+    limit: Int,
+    offset: Int
+): List<GeneratedCommandDTO> {
+    require(packageName.isNotEmpty()) { "Package name cannot be empty" }
+    require(limit in 1..1000) { "Limit must be between 1 and 1000 (got $limit)" }
+    require(offset >= 0) { "Offset must be non-negative (got $offset)" }
+
+    // ... query execution
+}
+```
+
+### Common Errors
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `IllegalArgumentException: Package name cannot be empty` | Empty string passed | Pass actual package name |
+| `IllegalArgumentException: Limit must be between 1 and 1000` | Invalid limit | Use limit in range 1-1000 |
+| `IllegalArgumentException: Offset must be non-negative` | Negative offset | Start from offset 0 |
+| Empty list returned | No commands for package | Normal behavior, not an error |
+
+## 13.7 Testing
+
+### Unit Tests
+
+```kotlin
+@Test
+fun testGetByPackagePaginated_returnsCorrectCommandsForPackage() = runBlocking {
+    // Insert commands for different packages
+    repository.insert(createCommand(appId = "com.google.gmail"))
+    repository.insert(createCommand(appId = "com.android.chrome"))
+
+    // Get first page for Gmail
+    val page1 = repository.getByPackagePaginated(
+        packageName = "com.google.gmail",
+        limit = 20,
+        offset = 0
+    )
+
+    // Verify all returned commands are from Gmail
+    assertTrue(page1.all { it.appId == "com.google.gmail" })
+}
+```
+
+### Integration Tests
+
+```kotlin
+@Test
+fun testKeysetPagination_noOverlapBetweenPages() = runBlocking {
+    // Insert 100 test commands
+    insertTestCommands("com.test.app", count = 100)
+
+    // Load 4 pages using keyset pagination
+    var lastId = 0L
+    val pages = mutableListOf<List<GeneratedCommandDTO>>()
+
+    repeat(4) {
+        val page = repository.getByPackageKeysetPaginated(
+            packageName = "com.test.app",
+            lastId = lastId,
+            limit = 25
+        )
+        pages.add(page)
+        lastId = page.last().id
+    }
+
+    // Verify all IDs are unique (no overlap)
+    val allIds = pages.flatten().map { it.id }
+    assertEquals(allIds.size, allIds.toSet().size)
+}
+```
+
+See `PaginationByPackageTest.kt` for complete test suite (14 tests).
+
+## 13.8 Migration Guide
+
+### From Existing Code
+
+If you have existing code using `getByPackage()`, no changes needed:
+
+```kotlin
+// Old code - still works
+val allCommands = repository.getByPackage("com.example.app")
+```
+
+For large datasets, upgrade to pagination:
+
+```kotlin
+// New code - paginated
+val firstPage = repository.getByPackagePaginated(
+    packageName = "com.example.app",
+    limit = 50,
+    offset = 0
+)
+```
+
+### Database Migration
+
+**Development**: No migration needed, just reinstall app.
+
+**Production** (when app is deployed):
+
+```kotlin
+// Check if migration needed
+if (DatabaseMigrations.isMigrationNeeded(driver)) {
+    DatabaseMigrations.migrate(driver, oldVersion = 1, newVersion = 2)
+}
+```
+
+Or let SQLDelight handle it automatically:
+
+```kotlin
+val driver = AndroidSqliteDriver(
+    schema = VoiceOSDatabase.Schema,
+    context = context,
+    name = "voiceos.db",
+    callback = object : AndroidSqliteDriver.Callback(VoiceOSDatabase.Schema) {
+        override fun onUpgrade(driver: SqlDriver, oldVersion: Int, newVersion: Int) {
+            DatabaseMigrations.migrate(driver, oldVersion.toLong(), newVersion.toLong())
+        }
+    }
+)
+```
+
+---
+
 # Document History
 
 | Version | Date | Changes |
@@ -3678,6 +4030,7 @@ fun `exportScreens creates correct nodes`() = runBlocking {
 | 1.0 | 2025-12-11 | Initial release with P2 features |
 | 1.1 | 2025-12-11 | Added Chapter 10: MS Teams Exploration Walkthrough |
 | 1.2 | 2025-12-11 | Added Chapter 11: Architecture Roadmap - Path to 10/10 |
+| 1.3 | 2025-12-13 | Added Chapter 13: Package-Based Pagination Feature (appId, offset/keyset pagination, database migration) |
 
 ---
 

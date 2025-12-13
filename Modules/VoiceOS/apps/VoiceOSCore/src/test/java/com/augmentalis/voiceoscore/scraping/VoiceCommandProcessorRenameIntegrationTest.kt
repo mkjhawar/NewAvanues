@@ -112,7 +112,8 @@ class VoiceCommandProcessorRenameIntegrationTest {
             synonyms = "button 1,save", // After rename
             isUserApproved = true,
             usageCount = 5,
-            lastUsed = System.currentTimeMillis()
+            lastUsed = System.currentTimeMillis(),
+            appId = ""
         )
 
         // The synonym "save" should match the command
@@ -181,7 +182,8 @@ class VoiceCommandProcessorRenameIntegrationTest {
             synonyms = "button 1,save,submit", // Accumulated synonyms
             isUserApproved = true,
             usageCount = 5,
-            lastUsed = System.currentTimeMillis()
+            lastUsed = System.currentTimeMillis(),
+            appId = ""
         )
 
         val synonyms = commandWithMultipleSynonyms.synonyms!!.split(",").map { it.trim() }

@@ -395,7 +395,8 @@ class ScreenActivityDetectorTest {
             isUserApproved = 0,
             usageCount = 0,
             lastUsed = null,
-            createdAt = System.currentTimeMillis()
+            createdAt = System.currentTimeMillis(),
+            appId = ""
         )
     }
 }

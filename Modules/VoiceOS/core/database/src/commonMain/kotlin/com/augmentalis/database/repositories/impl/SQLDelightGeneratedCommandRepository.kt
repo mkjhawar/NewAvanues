@@ -40,7 +40,8 @@ class SQLDelightGeneratedCommandRepository(
                 isUserApproved = command.isUserApproved,
                 usageCount = command.usageCount,
                 lastUsed = command.lastUsed,
-                createdAt = command.createdAt
+                createdAt = command.createdAt,
+                appId = command.appId
             )
             insertedId = queries.lastInsertRowId().executeAsOne()
         }
@@ -60,7 +61,8 @@ class SQLDelightGeneratedCommandRepository(
                     isUserApproved = command.isUserApproved,
                     usageCount = command.usageCount,
                     lastUsed = command.lastUsed,
-                    createdAt = command.createdAt
+                    createdAt = command.createdAt,
+                    appId = command.appId
                 )
             }
         }
@@ -148,6 +150,7 @@ class SQLDelightGeneratedCommandRepository(
             isUserApproved = command.isUserApproved,
             usageCount = command.usageCount,
             lastUsed = command.lastUsed,
+            appId = command.appId,
             id = command.id
         )
     }
@@ -161,12 +164,23 @@ class SQLDelightGeneratedCommandRepository(
     }
 
     override suspend fun getByPackagePaginated(packageName: String, limit: Int, offset: Int): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
+        require(packageName.isNotEmpty()) { "Package name cannot be empty" }
         require(limit in 1..1000) { "Limit must be between 1 and 1000 (got $limit)" }
         require(offset >= 0) { "Offset must be non-negative (got $offset)" }
-        // Note: This requires appId field in GeneratedCommand table
-        // For now, returning empty list as appId is not in the current schema
-        // TODO: Add appId to GeneratedCommand table schema
-        emptyList()
+
+        queries.getByPackagePaginated(packageName, limit.toLong(), offset.toLong())
+            .executeAsList()
+            .map { it.toGeneratedCommandDTO() }
+    }
+
+    override suspend fun getByPackageKeysetPaginated(packageName: String, lastId: Long, limit: Int): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
+        require(packageName.isNotEmpty()) { "Package name cannot be empty" }
+        require(lastId >= 0) { "Last ID must be non-negative (got $lastId)" }
+        require(limit in 1..1000) { "Limit must be between 1 and 1000 (got $limit)" }
+
+        queries.getByPackageKeysetPaginated(packageName, lastId, limit.toLong())
+            .executeAsList()
+            .map { it.toGeneratedCommandDTO() }
     }
 
     override suspend fun getByActionTypePaginated(actionType: String, limit: Int, offset: Int): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {

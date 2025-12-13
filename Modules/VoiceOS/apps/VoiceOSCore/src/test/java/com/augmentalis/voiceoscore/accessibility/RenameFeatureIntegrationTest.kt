@@ -83,7 +83,8 @@ class RenameFeatureIntegrationTest {
             isUserApproved = 1L,
             usageCount = 0L,
             lastUsed = null,
-            createdAt = System.currentTimeMillis()
+            createdAt = System.currentTimeMillis(),
+            appId = ""
         )
 
         // Check detection
@@ -116,7 +117,8 @@ class RenameFeatureIntegrationTest {
                 isUserApproved = 1L,
                 usageCount = 0L,
                 lastUsed = null,
-                createdAt = System.currentTimeMillis()
+                createdAt = System.currentTimeMillis(),
+                appId = ""
             )
         )
         `when`(mockDatabase.generatedCommands.getByPackage("com.test.app"))
