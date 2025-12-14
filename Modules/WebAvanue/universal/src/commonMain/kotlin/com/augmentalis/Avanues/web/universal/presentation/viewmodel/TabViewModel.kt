@@ -1,7 +1,9 @@
 package com.augmentalis.webavanue.ui.viewmodel
 
-import com.augmentalis.webavanue.ui.util.encodeUrl
+import com.augmentalis.webavanue.util.encodeUrl
 import com.augmentalis.webavanue.ui.util.Logger
+import com.augmentalis.webavanue.feature.screenshot.ScreenshotType
+import com.augmentalis.webavanue.feature.screenshot.ScreenshotData
 import com.augmentalis.webavanue.domain.errors.TabError
 import com.augmentalis.webavanue.domain.manager.PrivateBrowsingManager
 import com.augmentalis.webavanue.domain.model.BrowserSettings
@@ -360,14 +362,14 @@ class TabViewModel(
 
                 // Step 3: Validate URL format
                 val validationResult = UrlValidation.validate(finalUrl, allowBlank = true)
-                if (validationResult is UrlValidation.ValidationResult.Invalid) {
+                if (validationResult is UrlValidation.UrlValidationResult.Invalid) {
                     _error.value = validationResult.error.userMessage
                     _isLoading.value = false
                     Logger.error("TabViewModel", validationResult.error.technicalDetails)
                     return@launch
                 }
 
-                val normalizedUrl = (validationResult as UrlValidation.ValidationResult.Valid).normalizedUrl
+                val normalizedUrl = (validationResult as UrlValidation.UrlValidationResult.Valid).normalizedUrl
                 val finalTitle = if (url.isBlank()) "New Tab" else title
 
                 // Step 4: Create tab with retry logic for database operations
@@ -545,7 +547,7 @@ class TabViewModel(
     fun navigateToUrl(url: String) {
         // Validate URL first
         val validationResult = UrlValidation.validate(url, allowBlank = false)
-        if (validationResult is UrlValidation.ValidationResult.Invalid) {
+        if (validationResult is UrlValidation.UrlValidationResult.Invalid) {
             _error.value = validationResult.error.userMessage
             Logger.error("TabViewModel", validationResult.error.technicalDetails)
             return
@@ -1111,11 +1113,11 @@ class TabViewModel(
      * @param onError Callback when screenshot fails (error message)
      */
     fun captureScreenshot(
-        type: com.augmentalis.webavanue.screenshot.ScreenshotType,
+        type: ScreenshotType,
         quality: Int = 80,
         saveToGallery: Boolean = true,
         onProgress: (Float, String) -> Unit = { _, _ -> },
-        onComplete: (com.augmentalis.webavanue.screenshot.ScreenshotData, String?) -> Unit,
+        onComplete: (ScreenshotData, String?) -> Unit,
         onError: (String) -> Unit
     ) {
         _activeTab.value?.let { state ->

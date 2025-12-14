@@ -4,7 +4,7 @@ import com.augmentalis.webavanue.domain.model.BrowserSettings
 import com.augmentalis.webavanue.domain.repository.BrowserRepository
 import com.augmentalis.webavanue.domain.repository.SettingsPreset
 import com.augmentalis.webavanue.platform.DownloadPathValidator
-import com.augmentalis.webavanue.platform.ValidationResult
+import com.augmentalis.webavanue.platform.DownloadValidationResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -112,8 +112,8 @@ class SettingsViewModel(
     val expandedSections: StateFlow<Set<String>> = _expandedSections.asStateFlow()
 
     // State: Download path validation result
-    private val _pathValidation = MutableStateFlow<ValidationResult?>(null)
-    val pathValidation: StateFlow<ValidationResult?> = _pathValidation.asStateFlow()
+    private val _pathValidation = MutableStateFlow<DownloadValidationResult?>(null)
+    val pathValidation: StateFlow<DownloadValidationResult?> = _pathValidation.asStateFlow()
 
     init {
         observeSettings()
@@ -523,7 +523,7 @@ class SettingsViewModel(
      */
     fun validateDownloadPath(path: String) {
         if (pathValidator == null) {
-            _pathValidation.value = ValidationResult.failure("Path validation not available on this platform")
+            _pathValidation.value = DownloadValidationResult.failure("Path validation not available on this platform")
             return
         }
 

@@ -29,7 +29,7 @@ package com.augmentalis.webavanue.platform
  * - **iOS**: Uses FileManager for file:// paths
  * - **Desktop**: Uses java.io.File for standard paths
  *
- * @see ValidationResult for validation outcome
+ * @see DownloadValidationResult for validation outcome
  */
 expect class DownloadPathValidator {
     /**
@@ -45,59 +45,7 @@ expect class DownloadPathValidator {
      * Use `withContext(Dispatchers.IO)` when calling from UI.
      *
      * @param path Platform-specific path (content:// URI on Android, file:// on others)
-     * @return ValidationResult with status, error message, and space information
+     * @return DownloadValidationResult with status, error message, and space information
      */
-    suspend fun validate(path: String): ValidationResult
-}
-
-/**
- * ValidationResult - Result of path validation operation
- *
- * Contains validation status, error information, and storage space details.
- *
- * @property isValid True if path is valid and usable for downloads
- * @property errorMessage Human-readable error message (null if valid)
- * @property availableSpaceMB Available storage space in megabytes
- * @property isLowSpace True if available space is below threshold (< 100MB)
- */
-data class ValidationResult(
-    val isValid: Boolean,
-    val errorMessage: String? = null,
-    val availableSpaceMB: Long = 0,
-    val isLowSpace: Boolean = false
-) {
-    companion object {
-        /** Minimum recommended space for downloads (100MB) */
-        const val LOW_SPACE_THRESHOLD_MB = 100L
-
-        /**
-         * Create successful validation result
-         *
-         * @param availableSpaceMB Available space in megabytes
-         * @return ValidationResult with isValid=true and low space check
-         */
-        fun success(availableSpaceMB: Long): ValidationResult {
-            return ValidationResult(
-                isValid = true,
-                errorMessage = null,
-                availableSpaceMB = availableSpaceMB,
-                isLowSpace = availableSpaceMB < LOW_SPACE_THRESHOLD_MB
-            )
-        }
-
-        /**
-         * Create failed validation result
-         *
-         * @param errorMessage Reason for validation failure
-         * @return ValidationResult with isValid=false
-         */
-        fun failure(errorMessage: String): ValidationResult {
-            return ValidationResult(
-                isValid = false,
-                errorMessage = errorMessage,
-                availableSpaceMB = 0,
-                isLowSpace = false
-            )
-        }
-    }
+    suspend fun validate(path: String): DownloadValidationResult
 }

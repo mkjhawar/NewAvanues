@@ -3,8 +3,8 @@ package com.augmentalis.webavanue.ui.viewmodel
 import com.augmentalis.webavanue.domain.model.Favorite
 import com.augmentalis.webavanue.domain.model.FavoriteFolder
 import com.augmentalis.webavanue.domain.repository.BrowserRepository
-import com.augmentalis.webavanue.ui.util.BookmarkImportExport
-import com.augmentalis.webavanue.ui.util.parseHtmlWithData
+import com.augmentalis.webavanue.util.BookmarkImportExport
+import com.augmentalis.webavanue.util.parseHtmlWithData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

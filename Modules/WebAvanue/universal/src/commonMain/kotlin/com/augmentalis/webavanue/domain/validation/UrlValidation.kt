@@ -22,16 +22,16 @@ object UrlValidation {
     /**
      * URL validation result
      */
-    sealed class ValidationResult {
+    sealed class UrlValidationResult {
         /**
          * URL is valid and can be used
          */
-        data class Valid(val normalizedUrl: String) : ValidationResult()
+        data class Valid(val normalizedUrl: String) : UrlValidationResult()
 
         /**
          * URL is invalid with specific error
          */
-        data class Invalid(val error: TabError.InvalidUrl) : ValidationResult()
+        data class Invalid(val error: TabError.InvalidUrl) : UrlValidationResult()
     }
 
     /**
@@ -41,17 +41,17 @@ object UrlValidation {
      *
      * @param url URL to validate
      * @param allowBlank Whether blank URLs are allowed (for new blank tabs)
-     * @return ValidationResult with normalized URL or error
+     * @return UrlValidationResult with normalized URL or error
      */
-    fun validate(url: String, allowBlank: Boolean = false): ValidationResult {
+    fun validate(url: String, allowBlank: Boolean = false): UrlValidationResult {
         val trimmed = url.trim()
 
         // Empty/blank check
         if (trimmed.isEmpty() || trimmed.isBlank()) {
             return if (allowBlank) {
-                ValidationResult.Valid("about:blank")
+                UrlValidationResult.Valid("about:blank")
             } else {
-                ValidationResult.Invalid(
+                UrlValidationResult.Invalid(
                     TabError.InvalidUrl(
                         url = url,
                         reason = "URL cannot be empty"
@@ -63,9 +63,9 @@ object UrlValidation {
         // Special internal URLs (avanues://...)
         if (trimmed.startsWith("avanues://", ignoreCase = true)) {
             return if (isValidInternalUrl(trimmed)) {
-                ValidationResult.Valid(trimmed)
+                UrlValidationResult.Valid(trimmed)
             } else {
-                ValidationResult.Invalid(
+                UrlValidationResult.Invalid(
                     TabError.InvalidUrl(
                         url = url,
                         reason = "Invalid internal URL format"
@@ -76,7 +76,7 @@ object UrlValidation {
 
         // about: URLs
         if (trimmed.startsWith("about:", ignoreCase = true)) {
-            return ValidationResult.Valid(trimmed)
+            return UrlValidationResult.Valid(trimmed)
         }
 
         // file: URLs (require special validation)
@@ -86,7 +86,7 @@ object UrlValidation {
 
         // data: URLs (inline data)
         if (trimmed.startsWith("data:", ignoreCase = true)) {
-            return ValidationResult.Valid(trimmed)
+            return UrlValidationResult.Valid(trimmed)
         }
 
         // HTTP(S) URLs
@@ -123,10 +123,10 @@ object UrlValidation {
     /**
      * Validate file:// URLs
      */
-    private fun validateFileUrl(url: String): ValidationResult {
+    private fun validateFileUrl(url: String): UrlValidationResult {
         // File URLs must have path after file://
         if (url.length <= 7 || url.substring(7).isBlank()) {
-            return ValidationResult.Invalid(
+            return UrlValidationResult.Invalid(
                 TabError.InvalidUrl(
                     url = url,
                     reason = "File URL must specify a path"
@@ -136,13 +136,13 @@ object UrlValidation {
 
         // Additional security: warn about file access
         // In production, you might want to check permissions here
-        return ValidationResult.Valid(url)
+        return UrlValidationResult.Valid(url)
     }
 
     /**
      * Validate HTTP(S) URLs
      */
-    private fun validateHttpUrl(url: String): ValidationResult {
+    private fun validateHttpUrl(url: String): UrlValidationResult {
         // Extract domain part
         val schemeEnd = url.indexOf("://") + 3
         val pathStart = url.indexOf('/', schemeEnd)
@@ -154,7 +154,7 @@ object UrlValidation {
 
         // Domain must not be empty
         if (domain.isBlank()) {
-            return ValidationResult.Invalid(
+            return UrlValidationResult.Invalid(
                 TabError.InvalidUrl(
                     url = url,
                     reason = "Missing domain name"
@@ -164,7 +164,7 @@ object UrlValidation {
 
         // Domain validation: must contain valid characters
         if (!isValidDomain(domain)) {
-            return ValidationResult.Invalid(
+            return UrlValidationResult.Invalid(
                 TabError.InvalidUrl(
                     url = url,
                     reason = "Invalid domain name"
@@ -172,21 +172,21 @@ object UrlValidation {
             )
         }
 
-        return ValidationResult.Valid(url)
+        return UrlValidationResult.Valid(url)
     }
 
     /**
      * Validate domain-like strings or treat as search queries
      */
-    private fun validateDomainOrSearch(input: String): ValidationResult {
+    private fun validateDomainOrSearch(input: String): UrlValidationResult {
         // If contains dot and no spaces, treat as domain
         if (input.contains('.') && !input.contains(' ')) {
             // Check if it looks like a valid domain
             if (isValidDomain(input)) {
                 // Add https:// scheme
-                return ValidationResult.Valid("https://$input")
+                return UrlValidationResult.Valid("https://$input")
             } else {
-                return ValidationResult.Invalid(
+                return UrlValidationResult.Invalid(
                     TabError.InvalidUrl(
                         url = input,
                         reason = "Invalid domain format"
@@ -197,7 +197,7 @@ object UrlValidation {
 
         // Otherwise, treat as search query (always valid)
         // Search engine will be applied by TabViewModel
-        return ValidationResult.Valid(input)
+        return UrlValidationResult.Valid(input)
     }
 
     /**

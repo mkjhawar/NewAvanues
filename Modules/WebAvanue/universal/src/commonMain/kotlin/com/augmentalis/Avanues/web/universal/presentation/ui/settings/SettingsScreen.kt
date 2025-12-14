@@ -2659,7 +2659,7 @@ fun NewTabPageSettingItem(
 fun DownloadPathSettingItem(
     currentPath: String?,
     onPathChanged: (String?) -> Unit,
-    pathValidation: com.augmentalis.webavanue.platform.ValidationResult? = null,
+    pathValidation: com.augmentalis.webavanue.platform.DownloadValidationResult? = null,
     onValidatePath: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {

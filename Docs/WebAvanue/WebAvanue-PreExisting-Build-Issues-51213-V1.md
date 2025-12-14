@@ -4,7 +4,7 @@
 **Version:** V1
 **Date:** 2025-12-13
 **Severity:** HIGH
-**Status:** Documented (Out of scope for package refactoring)
+**Status:** Partially Resolved (1/18 files fixed)
 
 ---
 
@@ -119,3 +119,63 @@ actual class NetworkChecker {
 
 **Follow-up Task:**
 Create separate issue/plan for fixing universal → app dependency violations after package refactoring completes.
+
+---
+
+## Resolution Progress
+
+### Fixed (1/18)
+
+**File:** `/Modules/WebAvanue/universal/src/androidMain/kotlin/com/augmentalis/webavanue/platform/NetworkChecker.android.kt`
+
+**Resolution:**
+- Moved `NetworkHelper` from `android/apps/webavanue/app/.../download/` to `Modules/WebAvanue/universal/src/androidMain/kotlin/com/augmentalis/webavanue/platform/`
+- Updated package from `com.augmentalis.webavanue.app.download` to `com.augmentalis.webavanue.platform`
+- Removed broken import in NetworkChecker.android.kt (now same package)
+- Deleted old NetworkHelper from app module
+- Commit: `5e8ed7b2 fix(webavanue): resolve architectural violation - move NetworkHelper to universal`
+
+**Verification:** ✓ No app module import errors remain for NetworkChecker
+
+### Remaining (17/18)
+
+**Source Files:** 8 files still have app module import violations
+**Test Files:** 9 files still have app module import violations
+
+See "Affected Files" section above for complete list.
+
+---
+
+## Additional Build Errors Discovered
+
+During build verification, discovered 4 additional errors (NOT related to app module imports):
+
+### Error 1: BookmarkImportExport - Wrong Package Import
+**File:** `FavoriteViewModel.kt`
+**Issue:** Imports from `com.augmentalis.webavanue.ui.util` but class is in `com.augmentalis.webavanue.util`
+**Status:** FIXED (2025-12-14)
+**Fix:** Updated imports in FavoriteViewModel.kt from `com.augmentalis.webavanue.ui.util.BookmarkImportExport` to `com.augmentalis.webavanue.util.BookmarkImportExport`
+
+### Error 2: encodeUrl - Wrong Package Import
+**File:** `TabViewModel.kt`
+**Issue:** Imports from `com.augmentalis.webavanue.ui.util` but function is in `com.augmentalis.webavanue.util`
+**Status:** FIXED (2025-12-14)
+**Fix:** Updated import in TabViewModel.kt from `com.augmentalis.webavanue.ui.util.encodeUrl` to `com.augmentalis.webavanue.util.encodeUrl`
+
+### Error 3: screenshot - Wrong Package Import
+**File:** `TabViewModel.kt`
+**Issue:** Imports from `com.augmentalis.webavanue.screenshot` but classes are in `com.augmentalis.webavanue.feature.screenshot`
+**Status:** FIXED (2025-12-14)
+**Fix:** Added imports for `ScreenshotType` and `ScreenshotData` from `com.augmentalis.webavanue.feature.screenshot` and updated fully-qualified names to use imported classes
+
+### Error 4: ValidationResult - Class Name Collision
+**File:** `ValidationResult.kt`
+**Issue:** Two classes named `ValidationResult` in different packages cause redeclaration error
+**Status:** FIXED (2025-12-14)
+**Fix:**
+- Renamed `com.augmentalis.webavanue.platform.ValidationResult` → `DownloadValidationResult`
+- Renamed `com.augmentalis.webavanue.domain.validation.UrlValidation.ValidationResult` → `UrlValidationResult`
+- Removed duplicate `ValidationResult` definition from `DownloadPathValidator.kt`
+- Updated all usages across ViewModel, UI, and validation files
+
+**Note:** These are separate from the architectural violations documented above and require different fixes (import path corrections).
