@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.screenshot
+package com.augmentalis.webavanue.feature.screenshot
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -6,10 +6,10 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import com.augmentalis.Avanues.web.universal.presentation.ui.screenshot.ScreenshotTypeDialog
-import com.augmentalis.Avanues.web.universal.presentation.ui.screenshot.ScreenshotProgressDialog
-import com.augmentalis.Avanues.web.universal.presentation.ui.screenshot.ScreenshotPreviewDialog
-import com.augmentalis.Avanues.web.universal.presentation.ui.screenshot.ScreenshotErrorDialog
+import com.augmentalis.webavanue.ui.screen.screenshot.ScreenshotTypeDialog
+import com.augmentalis.webavanue.ui.screen.screenshot.ScreenshotProgressDialog
+import com.augmentalis.webavanue.ui.screen.screenshot.ScreenshotPreviewDialog
+import com.augmentalis.webavanue.ui.screen.screenshot.ScreenshotErrorDialog
 import kotlinx.coroutines.launch
 
 /**

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.settings
+package com.augmentalis.webavanue.ui.screen.settings
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -50,10 +50,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.augmentalis.webavanue.domain.model.BrowserSettings
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.ThemeType
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.SettingsViewModel
-import com.augmentalis.Avanues.web.universal.presentation.ui.settings.components.CollapsibleSectionHeader
+import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
+import com.augmentalis.webavanue.ui.screen.theme.ThemeType
+import com.augmentalis.webavanue.ui.viewmodel.SettingsViewModel
+import com.augmentalis.webavanue.ui.screen.settings.components.CollapsibleSectionHeader
 
 /**
  * Settings category for two-pane AR/XR layout

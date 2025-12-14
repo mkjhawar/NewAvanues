@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.xr
+package com.augmentalis.webavanue.feature.xr
 
 import android.content.Context
 import android.webkit.WebView
@@ -12,11 +12,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 // Import shared XR state models from commonMain
-import com.augmentalis.Avanues.web.universal.xr.XRState
-import com.augmentalis.Avanues.web.universal.xr.PerformanceMetrics
-import com.augmentalis.Avanues.web.universal.xr.PerformanceWarning
-import com.augmentalis.Avanues.web.universal.xr.SessionState
-import com.augmentalis.Avanues.web.universal.xr.SessionMode
+import com.augmentalis.webavanue.feature.xr.XRState
+import com.augmentalis.webavanue.feature.xr.PerformanceMetrics
+import com.augmentalis.webavanue.feature.xr.PerformanceWarning
+import com.augmentalis.webavanue.feature.xr.SessionState
+import com.augmentalis.webavanue.feature.xr.SessionMode
 
 /**
  * XRManager - Central coordinator for all WebXR components.

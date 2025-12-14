@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.app
+package com.augmentalis.webavanue.app
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -12,10 +12,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
-import com.augmentalis.Avanues.web.universal.presentation.BrowserApp
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.initializeThemeSystem
-import com.augmentalis.Avanues.web.universal.security.SecureStorage
-import com.augmentalis.Avanues.web.universal.xr.XRManager
+import com.augmentalis.webavanue.universal.presentation.BrowserApp
+import com.augmentalis.webavanue.universal.presentation.ui.theme.initializeThemeSystem
+import com.augmentalis.webavanue.universal.security.SecureStorage
+import com.augmentalis.webavanue.universal.xr.XRManager
 
 /**
  * MainActivity - Main entry point for WebAvanue browser
@@ -62,7 +62,7 @@ class MainActivity : ComponentActivity() {
         val secureStorage = SecureStorage(applicationContext)
 
         // Initialize download queue for file downloads with settings callback
-        val downloadQueue = com.augmentalis.Avanues.web.universal.download.AndroidDownloadQueue(
+        val downloadQueue = com.augmentalis.webavanue.universal.download.AndroidDownloadQueue(
             context = applicationContext,
             getDownloadPath = {
                 // Get download path from settings synchronously

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.network
+package com.augmentalis.webavanue.network
 
 import io.github.aakira.napier.Napier
 import java.security.cert.CertificateException

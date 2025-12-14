@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.voice
+package com.augmentalis.webavanue.feature.voice
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
@@ -20,7 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
+import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
 
 /**
  * VoiceCommandHandler - Composable that shows voice listening state and feedback

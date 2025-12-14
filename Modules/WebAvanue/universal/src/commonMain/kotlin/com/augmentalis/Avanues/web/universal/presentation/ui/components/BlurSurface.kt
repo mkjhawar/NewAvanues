@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.components
+package com.augmentalis.webavanue.ui.screen.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
@@ -10,9 +10,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.effects.glassmorphism
-import com.augmentalis.Avanues.web.universal.presentation.ui.effects.supportsBlur
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.LocalAppColors
+import com.augmentalis.webavanue.ui.screen.effects.glassmorphism
+import com.augmentalis.webavanue.ui.screen.effects.supportsBlur
+import com.augmentalis.webavanue.ui.screen.theme.LocalAppColors
 
 /**
  * BlurSurface - Glassmorphism surface with automatic API detection

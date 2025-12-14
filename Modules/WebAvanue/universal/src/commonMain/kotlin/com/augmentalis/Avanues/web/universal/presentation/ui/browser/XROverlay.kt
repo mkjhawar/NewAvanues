@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.browser
+package com.augmentalis.webavanue.ui.screen.browser
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier

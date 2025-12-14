@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.bookmark
+package com.augmentalis.webavanue.ui.screen.bookmark
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*

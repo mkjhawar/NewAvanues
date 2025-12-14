@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.components
+package com.augmentalis.webavanue.ui.screen.components
 
 import android.content.Context
 import android.net.ConnectivityManager

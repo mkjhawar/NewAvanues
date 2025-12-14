@@ -1,11 +1,11 @@
-package com.augmentalis.Avanues.web.universal.security
+package com.augmentalis.webavanue.security
 
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.augmentalis.Avanues.web.universal.presentation.ui.security.HttpAuthCredentials
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.SecureStorageProvider
+import com.augmentalis.webavanue.ui.screen.security.HttpAuthCredentials
+import com.augmentalis.webavanue.ui.viewmodel.SecureStorageProvider
 
 /**
  * SecureStorage - Android implementation of credential storage with optional encryption

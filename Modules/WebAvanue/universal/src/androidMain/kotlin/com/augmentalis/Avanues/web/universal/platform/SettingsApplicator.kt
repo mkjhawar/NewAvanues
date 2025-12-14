@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.platform
+package com.augmentalis.webavanue.platform
 
 import android.util.Log
 import android.webkit.CookieManager

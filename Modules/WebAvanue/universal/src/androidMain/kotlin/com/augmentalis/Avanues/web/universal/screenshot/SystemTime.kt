@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.screenshot
+package com.augmentalis.webavanue.feature.screenshot
 
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone

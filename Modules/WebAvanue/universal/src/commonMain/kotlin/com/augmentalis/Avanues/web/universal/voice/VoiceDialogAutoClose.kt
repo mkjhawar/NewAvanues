@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.voice
+package com.augmentalis.webavanue.feature.voice
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
@@ -11,7 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
+import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
 import kotlinx.coroutines.delay
 
 /**

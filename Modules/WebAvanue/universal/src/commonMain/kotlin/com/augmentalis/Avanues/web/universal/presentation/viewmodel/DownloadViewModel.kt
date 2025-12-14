@@ -1,6 +1,6 @@
-package com.augmentalis.Avanues.web.universal.presentation.viewmodel
+package com.augmentalis.webavanue.ui.viewmodel
 
-import com.augmentalis.Avanues.web.universal.utils.Logger
+import com.augmentalis.webavanue.ui.util.Logger
 import com.augmentalis.webavanue.domain.model.Download
 import com.augmentalis.webavanue.domain.model.DownloadStatus
 import com.augmentalis.webavanue.domain.repository.BrowserRepository
@@ -27,8 +27,8 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class DownloadViewModel(
     private val repository: BrowserRepository,
-    private val downloadQueue: com.augmentalis.Avanues.web.universal.download.DownloadQueue? = null,
-    private val progressMonitor: com.augmentalis.Avanues.web.universal.download.DownloadProgressMonitor? = null
+    private val downloadQueue: com.augmentalis.webavanue.download.DownloadQueue? = null,
+    private val progressMonitor: com.augmentalis.webavanue.download.DownloadProgressMonitor? = null
 ) {
     // Coroutine scope
     private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -213,7 +213,7 @@ class DownloadViewModel(
 
                 // Enqueue actual download to platform download queue
                 downloadQueue?.let { queue ->
-                    val request = com.augmentalis.Avanues.web.universal.download.DownloadRequest(
+                    val request = com.augmentalis.webavanue.download.DownloadRequest(
                         url = url,
                         filename = sanitizedFilename,
                         mimeType = mimeType,

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.layout
+package com.augmentalis.webavanue.ui.screen.layout
 
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures

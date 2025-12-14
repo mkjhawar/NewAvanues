@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.tab
+package com.augmentalis.webavanue.ui.screen.tab
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.browser
+package com.augmentalis.webavanue.ui.screen.browser
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
@@ -31,11 +31,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.glassBar
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
-import com.augmentalis.Avanues.web.universal.presentation.design.OceanComponents
-import com.augmentalis.Avanues.web.universal.presentation.design.OceanDesignTokens
-import com.augmentalis.Avanues.web.universal.presentation.design.IconVariant
+import com.augmentalis.webavanue.ui.screen.theme.glassBar
+import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
+import com.augmentalis.webavanue.ui.design.OceanComponents
+import com.augmentalis.webavanue.ui.design.OceanDesignTokens
+import com.augmentalis.webavanue.ui.design.IconVariant
 
 /**
  * Command bar menu levels - FLAT HIERARCHY (Max 2 Levels)

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.xr
+package com.augmentalis.webavanue.feature.xr
 
 import android.content.Context
 import android.content.Intent

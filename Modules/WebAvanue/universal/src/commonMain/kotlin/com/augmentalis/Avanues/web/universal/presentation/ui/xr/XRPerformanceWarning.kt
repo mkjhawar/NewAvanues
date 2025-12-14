@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.xr
+package com.augmentalis.webavanue.ui.screen.xr
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*

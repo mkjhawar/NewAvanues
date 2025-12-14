@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.screenshot
+package com.augmentalis.webavanue.feature.screenshot
 
 import android.os.Environment
 

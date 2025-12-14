@@ -1,7 +1,7 @@
-package com.augmentalis.Avanues.web.universal.presentation.viewmodel
+package com.augmentalis.webavanue.ui.viewmodel
 
-import com.augmentalis.Avanues.web.universal.FakeBrowserRepository
-import com.augmentalis.Avanues.web.universal.presentation.ui.security.*
+import com.augmentalis.webavanue.FakeBrowserRepository
+import com.augmentalis.webavanue.ui.screen.security.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.*

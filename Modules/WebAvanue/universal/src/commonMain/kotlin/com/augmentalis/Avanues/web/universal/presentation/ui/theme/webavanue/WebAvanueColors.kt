@@ -1,7 +1,7 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.theme.webavanue
+package com.augmentalis.webavanue.ui.screen.theme.webavanue
 
 import androidx.compose.ui.graphics.Color
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.abstraction.AppColors
+import com.augmentalis.webavanue.ui.screen.theme.abstraction.AppColors
 
 /**
  * WebAvanueColors - WebAvanue's Ocean Blue Glassmorphism theme

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.browser
+package com.augmentalis.webavanue.ui.screen.browser
 
 /**
  * WebViewPoolManager - Platform-specific WebView instance cleanup

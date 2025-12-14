@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.components
+package com.augmentalis.webavanue.ui.screen.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
+import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
 
 /**
  * Glassmorphic Components for Ocean Theme

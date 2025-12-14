@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.components
+package com.augmentalis.webavanue.ui.screen.components
 
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background

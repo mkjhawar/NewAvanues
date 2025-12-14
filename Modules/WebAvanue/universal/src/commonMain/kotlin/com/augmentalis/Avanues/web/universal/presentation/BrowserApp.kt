@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation
+package com.augmentalis.webavanue.presentation
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
@@ -8,15 +8,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import cafe.adriel.voyager.navigator.Navigator
-import com.augmentalis.Avanues.web.universal.presentation.ui.browser.WebViewPoolManager
+import com.augmentalis.webavanue.ui.screen.browser.WebViewPoolManager
 import cafe.adriel.voyager.transitions.SlideTransition
 import com.augmentalis.webavanue.domain.repository.BrowserRepository
 import com.augmentalis.webavanue.domain.model.BrowserSettings
-import com.augmentalis.Avanues.web.universal.presentation.navigation.BrowserScreenNav
-import com.augmentalis.Avanues.web.universal.presentation.navigation.ViewModelHolder
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.AppTheme
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.ThemeType
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.SecureStorageProvider
+import com.augmentalis.webavanue.ui.navigation.BrowserScreenNav
+import com.augmentalis.webavanue.ui.navigation.ViewModelHolder
+import com.augmentalis.webavanue.ui.screen.theme.AppTheme
+import com.augmentalis.webavanue.ui.screen.theme.ThemeType
+import com.augmentalis.webavanue.ui.viewmodel.SecureStorageProvider
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -67,7 +67,7 @@ import kotlinx.datetime.toLocalDateTime
 fun BrowserApp(
     repository: BrowserRepository,
     secureStorage: SecureStorageProvider? = null,  // SecureStorage on Android, null on other platforms
-    downloadQueue: com.augmentalis.Avanues.web.universal.download.DownloadQueue? = null,  // AndroidDownloadQueue on Android, null on other platforms
+    downloadQueue: com.augmentalis.webavanue.download.DownloadQueue? = null,  // AndroidDownloadQueue on Android, null on other platforms
     xrManager: Any? = null,  // XRManager on Android, null on other platforms
     xrState: Any? = null,    // XRManager.XRState on Android, null on other platforms
     modifier: Modifier = Modifier

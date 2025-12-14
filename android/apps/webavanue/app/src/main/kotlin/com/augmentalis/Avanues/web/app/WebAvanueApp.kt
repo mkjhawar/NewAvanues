@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.app
+package com.augmentalis.webavanue.app
 
 import android.app.Application
 import android.content.BroadcastReceiver
@@ -6,13 +6,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
-import com.augmentalis.Avanues.web.universal.commands.WebAvanueActionMapper
-import com.augmentalis.Avanues.web.universal.telemetry.SentryManager
-import com.augmentalis.Avanues.web.universal.utils.Logger
+import com.augmentalis.webavanue.universal.commands.WebAvanueActionMapper
+import com.augmentalis.webavanue.universal.telemetry.SentryManager
+import com.augmentalis.webavanue.universal.utils.Logger
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
-import com.augmentalis.Avanues.web.universal.presentation.controller.AndroidWebViewController
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.TabViewModel
+import com.augmentalis.webavanue.universal.presentation.controller.AndroidWebViewController
+import com.augmentalis.webavanue.universal.presentation.viewmodel.TabViewModel
 import com.augmentalis.webavanue.data.db.BrowserDatabase
 import com.augmentalis.webavanue.data.repository.BrowserRepositoryImpl
 import com.augmentalis.webavanue.platform.createAndroidDriver

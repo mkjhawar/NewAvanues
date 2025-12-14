@@ -1,6 +1,6 @@
-package com.augmentalis.Avanues.web.universal.presentation.controller
+package com.augmentalis.webavanue.ui.viewmodel
 
-import com.augmentalis.Avanues.web.universal.commands.ActionResult
+import com.augmentalis.webavanue.feature.commands.ActionResult
 
 /**
  * WebViewController - Coordinates WebView operations for VoiceOS commands

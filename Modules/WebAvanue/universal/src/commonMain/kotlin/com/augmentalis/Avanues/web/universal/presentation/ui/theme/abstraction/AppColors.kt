@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.theme.abstraction
+package com.augmentalis.webavanue.ui.screen.theme.abstraction
 
 import androidx.compose.ui.graphics.Color
 

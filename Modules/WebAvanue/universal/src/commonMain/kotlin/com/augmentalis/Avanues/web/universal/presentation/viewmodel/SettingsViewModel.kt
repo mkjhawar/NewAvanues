@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.viewmodel
+package com.augmentalis.webavanue.ui.viewmodel
 
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import com.augmentalis.webavanue.domain.repository.BrowserRepository

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.app.ui
+package com.augmentalis.webavanue.app.ui
 
 import android.Manifest
 import android.content.Context
@@ -8,7 +8,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
-import com.augmentalis.Avanues.web.universal.presentation.ui.settings.DownloadPathSettingItem
+import com.augmentalis.webavanue.universal.presentation.ui.settings.DownloadPathSettingItem
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test

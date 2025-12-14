@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.utils
+package com.augmentalis.webavanue.ui.util
 
 import io.github.aakira.napier.Napier
 

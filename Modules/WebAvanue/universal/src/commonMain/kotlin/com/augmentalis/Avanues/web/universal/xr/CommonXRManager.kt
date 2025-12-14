@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.xr
+package com.augmentalis.webavanue.feature.xr
 
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import kotlinx.coroutines.flow.StateFlow

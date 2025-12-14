@@ -1,9 +1,9 @@
-package com.augmentalis.Avanues.web.universal.presentation.controller
+package com.augmentalis.webavanue.ui.viewmodel
 
 import android.util.Log
 import android.webkit.CookieManager
-import com.augmentalis.Avanues.web.universal.commands.ActionResult
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.TabViewModel
+import com.augmentalis.webavanue.feature.commands.ActionResult
+import com.augmentalis.webavanue.ui.viewmodel.TabViewModel
 import com.augmentalis.webavanue.platform.WebView
 import kotlinx.coroutines.flow.firstOrNull
 

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.bookmark
+package com.augmentalis.webavanue.ui.screen.bookmark
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.viewmodel
+package com.augmentalis.webavanue.ui.viewmodel
 
 /**
  * Constants for new tab page URLs.

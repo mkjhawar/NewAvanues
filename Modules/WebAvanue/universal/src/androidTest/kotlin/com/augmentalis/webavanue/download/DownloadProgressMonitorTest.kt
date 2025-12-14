@@ -3,7 +3,7 @@ package com.augmentalis.webavanue.download
 import android.app.DownloadManager
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.augmentalis.Avanues.web.universal.download.DownloadProgressMonitor
+import com.augmentalis.webavanue.feature.download.DownloadProgressMonitor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.components
+package com.augmentalis.webavanue.ui.screen.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -14,10 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
-import com.augmentalis.Avanues.web.universal.presentation.design.OceanComponents
-import com.augmentalis.Avanues.web.universal.presentation.design.OceanDesignTokens
-import com.augmentalis.Avanues.web.universal.presentation.design.IconVariant
+import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
+import com.augmentalis.webavanue.ui.design.OceanComponents
+import com.augmentalis.webavanue.ui.design.OceanDesignTokens
+import com.augmentalis.webavanue.ui.design.IconVariant
 import kotlinx.coroutines.delay
 
 /**

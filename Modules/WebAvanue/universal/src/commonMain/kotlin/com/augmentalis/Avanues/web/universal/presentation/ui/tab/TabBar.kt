@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.tab
+package com.augmentalis.webavanue.ui.screen.tab
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -12,9 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.glassBar
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.TabUiState
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.TabViewModel
+import com.augmentalis.webavanue.ui.screen.theme.glassBar
+import com.augmentalis.webavanue.ui.viewmodel.TabUiState
+import com.augmentalis.webavanue.ui.viewmodel.TabViewModel
 import kotlinx.coroutines.launch
 
 /**

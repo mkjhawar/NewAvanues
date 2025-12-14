@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.download
+package com.augmentalis.webavanue.feature.download
 
 /**
  * Android implementation of system time

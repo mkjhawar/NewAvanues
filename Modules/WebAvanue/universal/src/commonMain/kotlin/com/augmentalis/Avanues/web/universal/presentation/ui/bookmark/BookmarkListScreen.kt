@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.bookmark
+package com.augmentalis.webavanue.ui.screen.bookmark
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.augmentalis.webavanue.domain.model.Favorite
 import com.augmentalis.webavanue.domain.model.FavoriteFolder
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.FavoriteViewModel
+import com.augmentalis.webavanue.ui.viewmodel.FavoriteViewModel
 import kotlinx.coroutines.launch
 
 // Type alias for backward compatibility

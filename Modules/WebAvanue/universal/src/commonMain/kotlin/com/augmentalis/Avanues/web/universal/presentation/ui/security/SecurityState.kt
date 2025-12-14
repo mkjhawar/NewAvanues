@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.security
+package com.augmentalis.webavanue.ui.screen.security
 
 /**
  * Security state for browser address bar indicator

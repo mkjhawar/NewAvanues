@@ -1,9 +1,9 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.theme.webavanue
+package com.augmentalis.webavanue.ui.screen.theme.webavanue
 
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.abstraction.AppTypography
+import com.augmentalis.webavanue.ui.screen.theme.abstraction.AppTypography
 
 /**
  * WebAvanueTypography - WebAvanue's unique typography

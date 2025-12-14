@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.settings
+package com.augmentalis.webavanue.ui.screen.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,7 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.security.PermissionType
+import com.augmentalis.webavanue.ui.screen.security.PermissionType
 import com.augmentalis.webavanue.domain.model.SitePermission
 import com.augmentalis.webavanue.domain.repository.BrowserRepository
 import kotlinx.coroutines.launch

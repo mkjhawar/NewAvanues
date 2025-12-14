@@ -1,14 +1,14 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.theme
+package com.augmentalis.webavanue.ui.screen.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.abstraction.AppColors
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.abstraction.AppTypography
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.avamagic.AvaMagicColors
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.avamagic.AvaMagicTypography
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.webavanue.WebAvanueColors
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.webavanue.WebAvanueTypography
+import com.augmentalis.webavanue.ui.screen.theme.abstraction.AppColors
+import com.augmentalis.webavanue.ui.screen.theme.abstraction.AppTypography
+import com.augmentalis.webavanue.ui.screen.theme.avamagic.AvaMagicColors
+import com.augmentalis.webavanue.ui.screen.theme.avamagic.AvaMagicTypography
+import com.augmentalis.webavanue.ui.screen.theme.webavanue.WebAvanueColors
+import com.augmentalis.webavanue.ui.screen.theme.webavanue.WebAvanueTypography
 
 /**
  * AppTheme - Main theme provider for WebAvanue

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.design
+package com.augmentalis.webavanue.ui.design
 
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable

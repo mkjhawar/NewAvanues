@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.browser
+package com.augmentalis.webavanue.ui.screen.browser
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -19,11 +19,11 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.augmentalis.Avanues.web.universal.presentation.ui.security.CertificateUtils
-import com.augmentalis.Avanues.web.universal.presentation.ui.security.HttpAuthRequest
-import com.augmentalis.Avanues.web.universal.presentation.ui.security.PermissionType
-import com.augmentalis.Avanues.web.universal.platform.SettingsApplicator
-import com.augmentalis.Avanues.web.universal.platform.webview.WebViewLifecycle
+import com.augmentalis.webavanue.ui.screen.security.CertificateUtils
+import com.augmentalis.webavanue.ui.screen.security.HttpAuthRequest
+import com.augmentalis.webavanue.ui.screen.security.PermissionType
+import com.augmentalis.webavanue.platform.SettingsApplicator
+import com.augmentalis.webavanue.platform.webview.WebViewLifecycle
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import com.augmentalis.webavanue.domain.state.SettingsStateMachine
 import kotlinx.coroutines.CoroutineScope
@@ -78,7 +78,7 @@ actual fun WebViewContainer(
     canGoForward: (Boolean) -> Unit,
     sessionData: String?,
     onSessionDataChange: (String?) -> Unit,
-    securityViewModel: com.augmentalis.Avanues.web.universal.presentation.viewmodel.SecurityViewModel?,
+    securityViewModel: com.augmentalis.webavanue.presentation.viewmodel.SecurityViewModel?,
     onDownloadStart: ((DownloadRequest) -> Unit)?,
     initialScale: Float,
     settings: BrowserSettings?,

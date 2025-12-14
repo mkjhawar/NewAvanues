@@ -1,6 +1,6 @@
-package com.augmentalis.Avanues.web.universal.presentation.state
+package com.augmentalis.webavanue.ui.state
 
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.TabUiState
+import com.augmentalis.webavanue.ui.viewmodel.TabUiState
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import com.augmentalis.webavanue.domain.model.Favorite
 

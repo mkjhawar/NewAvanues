@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.app.download
+package com.augmentalis.webavanue.app.download
 
 import android.app.DownloadManager
 import android.content.Context

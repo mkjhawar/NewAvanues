@@ -1,6 +1,6 @@
-package com.augmentalis.Avanues.web.universal.presentation.viewmodel
+package com.augmentalis.webavanue.ui.viewmodel
 
-import com.augmentalis.Avanues.web.universal.FakeBrowserRepository
+import com.augmentalis.webavanue.FakeBrowserRepository
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import com.augmentalis.webavanue.domain.model.Tab
 import kotlinx.coroutines.Dispatchers

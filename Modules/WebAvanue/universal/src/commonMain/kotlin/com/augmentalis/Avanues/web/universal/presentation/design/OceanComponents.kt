@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.design
+package com.augmentalis.webavanue.ui.design
 
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.size
@@ -11,9 +11,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.components.glass
-import com.augmentalis.Avanues.web.universal.presentation.ui.components.GlassLevel
-import com.augmentalis.Avanues.web.universal.presentation.ui.components.GlassBorder
+import com.augmentalis.webavanue.ui.screen.components.glass
+import com.augmentalis.webavanue.ui.screen.components.GlassLevel
+import com.augmentalis.webavanue.ui.screen.components.GlassBorder
 
 /**
  * Ocean Components (Material3 Implementation)

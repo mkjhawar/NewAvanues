@@ -1,7 +1,7 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.theme.avamagic
+package com.augmentalis.webavanue.ui.screen.theme.avamagic
 
 import androidx.compose.ui.graphics.Color
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.abstraction.AppColors
+import com.augmentalis.webavanue.ui.screen.theme.abstraction.AppColors
 
 /**
  * AvaMagicColors - Avanues system-wide theme colors

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.dialogs
+package com.augmentalis.webavanue.ui.screen.dialogs
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -7,7 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
+import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
 
 /**
  * Dialog shown on app startup if crash recovery session is detected

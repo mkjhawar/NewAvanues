@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.browser
+package com.augmentalis.webavanue.ui.screen.browser
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -22,9 +22,9 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.platform.LocalContext
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
-import com.augmentalis.Avanues.web.universal.presentation.design.OceanComponents
-import com.augmentalis.Avanues.web.universal.presentation.design.IconVariant
+import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
+import com.augmentalis.webavanue.ui.design.OceanComponents
+import com.augmentalis.webavanue.ui.design.IconVariant
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -34,17 +34,17 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 // FIX: Removed TabBar import - now using AddressBar dropdowns
-import com.augmentalis.Avanues.web.universal.presentation.ui.tab.TabSwitcherView
-import com.augmentalis.Avanues.web.universal.presentation.ui.tab.TabGroupDialog
-import com.augmentalis.Avanues.web.universal.presentation.ui.tab.TabGroupAssignmentDialog
-import com.augmentalis.Avanues.web.universal.presentation.ui.spatial.SpatialTabSwitcher
-import com.augmentalis.Avanues.web.universal.presentation.ui.spatial.SpatialFavoritesShelf
-import com.augmentalis.Avanues.web.universal.presentation.ui.components.NetworkStatusIndicator
-import com.augmentalis.Avanues.web.universal.presentation.ui.components.NetworkStatus
-import com.augmentalis.Avanues.web.universal.presentation.ui.components.rememberNetworkStatusMonitor
-import com.augmentalis.Avanues.web.universal.presentation.ui.dialogs.SessionRestoreDialog
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.TabViewModel
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.SettingsViewModel
+import com.augmentalis.webavanue.ui.screen.tab.TabSwitcherView
+import com.augmentalis.webavanue.ui.screen.tab.TabGroupDialog
+import com.augmentalis.webavanue.ui.screen.tab.TabGroupAssignmentDialog
+import com.augmentalis.webavanue.ui.screen.spatial.SpatialTabSwitcher
+import com.augmentalis.webavanue.ui.screen.spatial.SpatialFavoritesShelf
+import com.augmentalis.webavanue.ui.screen.components.NetworkStatusIndicator
+import com.augmentalis.webavanue.ui.screen.components.NetworkStatus
+import com.augmentalis.webavanue.ui.screen.components.rememberNetworkStatusMonitor
+import com.augmentalis.webavanue.ui.screen.dialogs.SessionRestoreDialog
+import com.augmentalis.webavanue.ui.viewmodel.TabViewModel
+import com.augmentalis.webavanue.ui.viewmodel.SettingsViewModel
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import kotlinx.coroutines.launch
 
@@ -71,11 +71,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun BrowserScreen(
     tabViewModel: TabViewModel,
-    settingsViewModel: com.augmentalis.Avanues.web.universal.presentation.viewmodel.SettingsViewModel,
-    historyViewModel: com.augmentalis.Avanues.web.universal.presentation.viewmodel.HistoryViewModel,
-    favoriteViewModel: com.augmentalis.Avanues.web.universal.presentation.viewmodel.FavoriteViewModel,
-    securityViewModel: com.augmentalis.Avanues.web.universal.presentation.viewmodel.SecurityViewModel,
-    downloadViewModel: com.augmentalis.Avanues.web.universal.presentation.viewmodel.DownloadViewModel? = null,
+    settingsViewModel: com.augmentalis.webavanue.presentation.viewmodel.SettingsViewModel,
+    historyViewModel: com.augmentalis.webavanue.presentation.viewmodel.HistoryViewModel,
+    favoriteViewModel: com.augmentalis.webavanue.presentation.viewmodel.FavoriteViewModel,
+    securityViewModel: com.augmentalis.webavanue.presentation.viewmodel.SecurityViewModel,
+    downloadViewModel: com.augmentalis.webavanue.presentation.viewmodel.DownloadViewModel? = null,
     xrManager: Any? = null,  // XRManager on Android, null on other platforms
     xrState: Any? = null,    // XRManager.XRState on Android, null on other platforms
     onNavigateToBookmarks: () -> Unit = {},
@@ -837,7 +837,7 @@ fun BrowserScreen(
 
         // SSL Error Dialog
         sslErrorState?.let { state ->
-            com.augmentalis.Avanues.web.universal.presentation.ui.security.SslErrorDialog(
+            com.augmentalis.webavanue.presentation.ui.security.SslErrorDialog(
                 sslErrorInfo = state.sslErrorInfo,
                 onGoBack = state.onGoBack,
                 onProceedAnyway = state.onProceedAnyway,
@@ -847,7 +847,7 @@ fun BrowserScreen(
 
         // Permission Request Dialog
         permissionRequestState?.let { state ->
-            com.augmentalis.Avanues.web.universal.presentation.ui.security.PermissionRequestDialog(
+            com.augmentalis.webavanue.presentation.ui.security.PermissionRequestDialog(
                 permissionRequest = state.permissionRequest,
                 onAllow = state.onAllow,
                 onDeny = state.onDeny,
@@ -857,7 +857,7 @@ fun BrowserScreen(
 
         // JavaScript Alert Dialog
         jsAlertState?.let { state ->
-            com.augmentalis.Avanues.web.universal.presentation.ui.security.JavaScriptAlertDialog(
+            com.augmentalis.webavanue.presentation.ui.security.JavaScriptAlertDialog(
                 domain = state.domain,
                 message = state.message,
                 onDismiss = state.onDismiss
@@ -866,7 +866,7 @@ fun BrowserScreen(
 
         // JavaScript Confirm Dialog
         jsConfirmState?.let { state ->
-            com.augmentalis.Avanues.web.universal.presentation.ui.security.JavaScriptConfirmDialog(
+            com.augmentalis.webavanue.presentation.ui.security.JavaScriptConfirmDialog(
                 domain = state.domain,
                 message = state.message,
                 onConfirm = state.onConfirm,
@@ -877,7 +877,7 @@ fun BrowserScreen(
 
         // JavaScript Prompt Dialog
         jsPromptState?.let { state ->
-            com.augmentalis.Avanues.web.universal.presentation.ui.security.JavaScriptPromptDialog(
+            com.augmentalis.webavanue.presentation.ui.security.JavaScriptPromptDialog(
                 domain = state.domain,
                 message = state.message,
                 defaultValue = state.defaultValue,
@@ -889,7 +889,7 @@ fun BrowserScreen(
 
         // HTTP Authentication Dialog
         httpAuthState?.let { state ->
-            com.augmentalis.Avanues.web.universal.presentation.ui.security.HttpAuthenticationDialog(
+            com.augmentalis.webavanue.presentation.ui.security.HttpAuthenticationDialog(
                 authRequest = state.authRequest,
                 onAuthenticate = state.onAuthenticate,
                 onCancel = state.onCancel,
@@ -925,7 +925,7 @@ fun BrowserScreen(
         // PHASE 4: Download Location Dialog
         // Shows when askDownloadLocation setting is enabled
         if (showDownloadLocationDialog && pendingDownloadRequest != null && downloadViewModel != null) {
-            com.augmentalis.Avanues.web.universal.presentation.ui.download.AskDownloadLocationDialog(
+            com.augmentalis.webavanue.presentation.ui.download.AskDownloadLocationDialog(
                 filename = pendingDownloadRequest!!.filename,
                 defaultPath = settings?.downloadPath,
                 selectedPath = customDownloadPath,
@@ -1042,7 +1042,7 @@ fun BrowserScreen(
         // Supports voice-based navigation: say category names to navigate
         // Interactive - clicking commands executes them
         if (showVoiceHelp && settings != null) {
-            com.augmentalis.Avanues.web.universal.voice.VoiceCommandsDialog(
+            com.augmentalis.webavanue.voice.VoiceCommandsDialog(
                 onDismiss = { showVoiceHelp = false },
                 onCommandExecute = { command ->
                     // Execute the command
@@ -1088,7 +1088,7 @@ fun BrowserScreen(
                             // Extract article and enter reading mode
                             scope.launch {
                                 // Execute JavaScript to extract article
-                                val extractScript = com.augmentalis.Avanues.web.universal.util.ReadingModeExtractor.getExtractionScript()
+                                val extractScript = com.augmentalis.webavanue.util.ReadingModeExtractor.getExtractionScript()
                                 webViewController.evaluateJavaScript(extractScript) { result ->
                                     // Parse JSON result and set article
                                     try {
@@ -1432,12 +1432,12 @@ fun AddPageDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    com.augmentalis.Avanues.web.universal.presentation.ui.components.OceanDialog(
+    com.augmentalis.webavanue.presentation.ui.components.OceanDialog(
         onDismissRequest = onDismiss,
         title = "Add New Page",
         modifier = modifier,
         confirmButton = {
-            com.augmentalis.Avanues.web.universal.presentation.ui.components.OceanTextButton(
+            com.augmentalis.webavanue.presentation.ui.components.OceanTextButton(
                 onClick = onConfirm,
                 isPrimary = true
             ) {
@@ -1445,7 +1445,7 @@ fun AddPageDialog(
             }
         },
         dismissButton = {
-            com.augmentalis.Avanues.web.universal.presentation.ui.components.OceanTextButton(
+            com.augmentalis.webavanue.presentation.ui.components.OceanTextButton(
                 onClick = onDismiss,
                 isPrimary = false
             ) {
@@ -1459,7 +1459,7 @@ fun AddPageDialog(
             Text(
                 text = "Enter a URL or leave blank for a new empty tab",
                 style = MaterialTheme.typography.bodyMedium,
-                color = com.augmentalis.Avanues.web.universal.presentation.ui.components.OceanDialogDefaults.textSecondary
+                color = com.augmentalis.webavanue.presentation.ui.components.OceanDialogDefaults.textSecondary
             )
 
             OutlinedTextField(
@@ -1472,7 +1472,7 @@ fun AddPageDialog(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { onConfirm() }),
-                colors = com.augmentalis.Avanues.web.universal.presentation.ui.components.OceanDialogDefaults.outlinedTextFieldColors()
+                colors = com.augmentalis.webavanue.presentation.ui.components.OceanDialogDefaults.outlinedTextFieldColors()
             )
         }
     }

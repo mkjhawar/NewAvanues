@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.download
+package com.augmentalis.webavanue.feature.download
 
 import com.augmentalis.webavanue.domain.model.DownloadStatus
 import kotlinx.coroutines.flow.Flow

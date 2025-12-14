@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.browser
+package com.augmentalis.webavanue.ui.screen.browser
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -25,7 +25,7 @@ actual fun WebViewContainer(
     canGoForward: (Boolean) -> Unit,
     sessionData: String?,
     onSessionDataChange: (String?) -> Unit,
-    securityViewModel: com.augmentalis.Avanues.web.universal.presentation.viewmodel.SecurityViewModel?,
+    securityViewModel: com.augmentalis.webavanue.presentation.viewmodel.SecurityViewModel?,
     onDownloadStart: ((DownloadRequest) -> Unit)?,
     initialScale: Float,
     settings: com.augmentalis.webavanue.domain.model.BrowserSettings?,

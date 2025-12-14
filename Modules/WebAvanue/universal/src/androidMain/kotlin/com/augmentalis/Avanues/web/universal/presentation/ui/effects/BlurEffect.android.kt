@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.effects
+package com.augmentalis.webavanue.ui.screen.effects
 
 import android.os.Build
 import androidx.compose.runtime.Composable

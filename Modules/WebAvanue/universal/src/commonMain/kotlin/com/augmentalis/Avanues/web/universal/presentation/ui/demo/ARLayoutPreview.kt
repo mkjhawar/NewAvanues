@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.demo
+package com.augmentalis.webavanue.ui.screen.demo
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -14,11 +14,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.components.*
-import com.augmentalis.Avanues.web.universal.presentation.ui.layout.ArcLayout
-import com.augmentalis.Avanues.web.universal.presentation.ui.layout.ArcOrientation
-import com.augmentalis.Avanues.web.universal.presentation.ui.layout.isLandscape
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
+import com.augmentalis.webavanue.ui.screen.components.*
+import com.augmentalis.webavanue.ui.screen.layout.ArcLayout
+import com.augmentalis.webavanue.ui.screen.layout.ArcOrientation
+import com.augmentalis.webavanue.ui.screen.layout.isLandscape
+import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
 
 /**
  * ARLayoutPreview - Interactive demo screen for testing spatial arc layout

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.browser
+package com.augmentalis.webavanue.ui.screen.browser
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.augmentalis.Avanues.web.universal.util.ReadingModeArticle
+import com.augmentalis.webavanue.ui.util.ReadingModeArticle
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 
 /**

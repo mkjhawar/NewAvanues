@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.download
+package com.augmentalis.webavanue.ui.screen.download
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.augmentalis.webavanue.domain.model.Download
 import com.augmentalis.webavanue.domain.model.DownloadStatus
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.DownloadViewModel
+import com.augmentalis.webavanue.ui.viewmodel.DownloadViewModel
 
 /**
  * DownloadListScreen - Main downloads screen

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.screenshot
+package com.augmentalis.webavanue.feature.screenshot
 
 import android.content.ContentValues
 import android.content.Context
@@ -11,7 +11,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.webkit.WebView
 import androidx.core.content.FileProvider
-import com.augmentalis.Avanues.web.universal.utils.Logger
+import com.augmentalis.webavanue.ui.util.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

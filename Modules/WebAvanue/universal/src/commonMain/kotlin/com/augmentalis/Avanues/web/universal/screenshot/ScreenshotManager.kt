@@ -1,6 +1,6 @@
-package com.augmentalis.Avanues.web.universal.screenshot
+package com.augmentalis.webavanue.feature.screenshot
 
-import com.augmentalis.Avanues.web.universal.utils.Logger
+import com.augmentalis.webavanue.ui.util.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.tab
+package com.augmentalis.webavanue.ui.screen.tab
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.glassTab
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.TabUiState
+import com.augmentalis.webavanue.ui.screen.theme.glassTab
+import com.augmentalis.webavanue.ui.viewmodel.TabUiState
 
 /**
  * TabItem - Individual tab in the TabBar (Chrome-like with glassmorphism)

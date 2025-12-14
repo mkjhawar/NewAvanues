@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.download
+package com.augmentalis.webavanue.ui.screen.download
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*

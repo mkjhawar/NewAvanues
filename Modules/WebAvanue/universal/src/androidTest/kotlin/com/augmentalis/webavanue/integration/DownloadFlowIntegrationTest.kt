@@ -5,9 +5,9 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.augmentalis.Avanues.web.universal.presentation.ui.download.AskDownloadLocationDialog
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.DownloadViewModel
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.SettingsViewModel
+import com.augmentalis.webavanue.ui.screen.download.AskDownloadLocationDialog
+import com.augmentalis.webavanue.ui.viewmodel.DownloadViewModel
+import com.augmentalis.webavanue.ui.viewmodel.SettingsViewModel
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import com.augmentalis.webavanue.domain.repository.BrowserRepository
 import com.augmentalis.webavanue.platform.DownloadPathValidator

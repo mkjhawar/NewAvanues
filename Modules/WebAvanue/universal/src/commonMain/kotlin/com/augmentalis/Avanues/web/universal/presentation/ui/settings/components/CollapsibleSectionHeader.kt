@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.settings.components
+package com.augmentalis.webavanue.ui.screen.settings.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
+import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
 
 /**
  * CollapsibleSectionHeader - Expandable/collapsible section header for settings

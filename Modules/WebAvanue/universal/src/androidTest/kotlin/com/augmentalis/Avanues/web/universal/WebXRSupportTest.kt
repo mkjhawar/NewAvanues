@@ -6,8 +6,8 @@ import android.content.pm.PackageManager
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
-import com.augmentalis.Avanues.web.universal.xr.XRPermissionManager
-import com.augmentalis.Avanues.web.universal.xr.XRSessionManager
+import com.augmentalis.webavanue.feature.xr.XRPermissionManager
+import com.augmentalis.webavanue.feature.xr.XRSessionManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*

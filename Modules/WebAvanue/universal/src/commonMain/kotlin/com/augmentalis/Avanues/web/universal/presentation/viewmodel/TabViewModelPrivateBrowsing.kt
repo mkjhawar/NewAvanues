@@ -1,6 +1,6 @@
-package com.augmentalis.Avanues.web.universal.presentation.viewmodel
+package com.augmentalis.webavanue.ui.viewmodel
 
-import com.augmentalis.Avanues.web.universal.utils.Logger
+import com.augmentalis.webavanue.ui.util.Logger
 import kotlinx.coroutines.launch
 
 /**

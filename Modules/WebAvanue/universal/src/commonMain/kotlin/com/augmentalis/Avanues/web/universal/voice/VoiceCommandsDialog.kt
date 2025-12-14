@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.voice
+package com.augmentalis.webavanue.feature.voice
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,8 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.window.Dialog
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
-import com.augmentalis.Avanues.web.universal.presentation.design.OceanDesignTokens
+import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
+import com.augmentalis.webavanue.ui.design.OceanDesignTokens
 
 /**
  * Voice command category

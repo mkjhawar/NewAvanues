@@ -6,7 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.lifecycle.Lifecycle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.TabViewModel
+import com.augmentalis.webavanue.ui.viewmodel.TabViewModel
 import com.augmentalis.webavanue.data.db.BrowserDatabase
 import com.augmentalis.webavanue.data.repository.BrowserRepositoryImpl
 import com.augmentalis.webavanue.domain.model.Tab

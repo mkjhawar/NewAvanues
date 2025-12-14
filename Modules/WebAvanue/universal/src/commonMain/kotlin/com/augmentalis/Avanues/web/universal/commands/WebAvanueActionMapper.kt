@@ -1,7 +1,7 @@
-package com.augmentalis.Avanues.web.universal.commands
+package com.augmentalis.webavanue.feature.commands
 
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.TabViewModel
-import com.augmentalis.Avanues.web.universal.presentation.controller.WebViewController
+import com.augmentalis.webavanue.ui.viewmodel.TabViewModel
+import com.augmentalis.webavanue.ui.viewmodel.WebViewController
 
 /**
  * Maps VoiceOS command IDs to WebAvanue browser actions

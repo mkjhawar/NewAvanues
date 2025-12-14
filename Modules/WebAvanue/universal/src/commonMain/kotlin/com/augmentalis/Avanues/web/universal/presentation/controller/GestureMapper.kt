@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.controller
+package com.augmentalis.webavanue.ui.viewmodel
 
 /**
  * GestureMapper - Maps gesture type strings to JavaScript function calls

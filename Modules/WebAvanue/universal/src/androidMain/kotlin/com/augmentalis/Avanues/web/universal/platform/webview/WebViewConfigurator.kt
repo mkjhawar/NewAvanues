@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.platform.webview
+package com.augmentalis.webavanue.platform.webview
 
 import android.annotation.SuppressLint
 import android.app.DownloadManager
@@ -14,12 +14,12 @@ import android.view.ViewGroup
 import android.webkit.*
 import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
-import com.augmentalis.Avanues.web.universal.platform.SettingsApplicator
-import com.augmentalis.Avanues.web.universal.presentation.ui.browser.DownloadRequest
-import com.augmentalis.Avanues.web.universal.presentation.ui.security.CertificateUtils
-import com.augmentalis.Avanues.web.universal.presentation.ui.security.HttpAuthRequest
-import com.augmentalis.Avanues.web.universal.presentation.ui.security.PermissionType
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.SecurityViewModel
+import com.augmentalis.webavanue.platform.SettingsApplicator
+import com.augmentalis.webavanue.ui.screen.browser.DownloadRequest
+import com.augmentalis.webavanue.ui.screen.security.CertificateUtils
+import com.augmentalis.webavanue.ui.screen.security.HttpAuthRequest
+import com.augmentalis.webavanue.ui.screen.security.PermissionType
+import com.augmentalis.webavanue.ui.viewmodel.SecurityViewModel
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 
 /**

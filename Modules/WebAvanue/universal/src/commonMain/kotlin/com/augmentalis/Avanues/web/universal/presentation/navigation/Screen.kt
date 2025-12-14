@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.navigation
+package com.augmentalis.webavanue.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -7,12 +7,12 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.augmentalis.webavanue.domain.repository.BrowserRepository
-import com.augmentalis.Avanues.web.universal.presentation.ui.bookmark.BookmarkListScreen
-import com.augmentalis.Avanues.web.universal.presentation.ui.browser.BrowserScreen
-import com.augmentalis.Avanues.web.universal.presentation.ui.download.DownloadListScreen
-import com.augmentalis.Avanues.web.universal.presentation.ui.history.HistoryScreen
-import com.augmentalis.Avanues.web.universal.presentation.ui.settings.SettingsScreen
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.*
+import com.augmentalis.webavanue.ui.screen.bookmark.BookmarkListScreen
+import com.augmentalis.webavanue.ui.screen.browser.BrowserScreen
+import com.augmentalis.webavanue.ui.screen.download.DownloadListScreen
+import com.augmentalis.webavanue.ui.screen.history.HistoryScreen
+import com.augmentalis.webavanue.ui.screen.settings.SettingsScreen
+import com.augmentalis.webavanue.ui.viewmodel.*
 
 /**
  * ViewModelHolder - Holds all ViewModels for the browser app
@@ -31,7 +31,7 @@ data class ViewModelHolder(
         fun create(
             repository: BrowserRepository,
             secureStorage: SecureStorageProvider? = null,
-            downloadQueue: com.augmentalis.Avanues.web.universal.download.DownloadQueue? = null
+            downloadQueue: com.augmentalis.webavanue.download.DownloadQueue? = null
         ): ViewModelHolder {
             val securityViewModel = SecurityViewModel(repository, secureStorage)
 
@@ -210,7 +210,7 @@ data class XRSettingsScreenNav(
 
         // Only show XR settings if settings are loaded
         settings?.let { currentSettings ->
-            com.augmentalis.Avanues.web.universal.presentation.ui.xr.XRSettingsScreen(
+            com.augmentalis.webavanue.presentation.ui.xr.XRSettingsScreen(
                 settings = currentSettings,
                 onSettingsChange = { newSettings ->
                     viewModels.settingsViewModel.updateSettings(newSettings)
@@ -251,7 +251,7 @@ data class ARPreviewScreenNav(
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
 
-        com.augmentalis.Avanues.web.universal.presentation.ui.demo.ARLayoutPreview(
+        com.augmentalis.webavanue.presentation.ui.demo.ARLayoutPreview(
             onBack = {
                 navigator.pop()
             }

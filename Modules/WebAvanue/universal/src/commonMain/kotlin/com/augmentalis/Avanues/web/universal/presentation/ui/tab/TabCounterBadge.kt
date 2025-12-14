@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.tab
+package com.augmentalis.webavanue.ui.screen.tab
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -15,7 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
+import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
 
 /**
  * TabCounterBadge - Chrome-like tab counter badge with Ocean theme

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.commands
+package com.augmentalis.webavanue.feature.commands
 
 /**
  * Result of action execution for VoiceOS commands

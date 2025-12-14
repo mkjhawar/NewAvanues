@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.util
+package com.augmentalis.webavanue.util
 
 import android.app.Activity
 import android.content.ContentValues

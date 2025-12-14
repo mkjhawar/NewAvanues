@@ -1,10 +1,10 @@
-package com.augmentalis.Avanues.web.app.download
+package com.augmentalis.webavanue.app.download
 
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.augmentalis.Avanues.web.app.WebAvanueApp
+import com.augmentalis.webavanue.app.WebAvanueApp
 import com.augmentalis.webavanue.domain.model.Download
 import com.augmentalis.webavanue.domain.model.DownloadStatus
 import kotlinx.coroutines.CoroutineScope

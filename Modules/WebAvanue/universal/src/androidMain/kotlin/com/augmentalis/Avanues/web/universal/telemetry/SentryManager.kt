@@ -1,7 +1,7 @@
-package com.augmentalis.Avanues.web.universal.telemetry
+package com.augmentalis.webavanue.telemetry
 
 import android.content.Context
-import com.augmentalis.Avanues.web.universal.utils.Logger
+import com.augmentalis.webavanue.ui.util.Logger
 import io.sentry.Breadcrumb
 import io.sentry.Sentry
 import io.sentry.SentryLevel

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.theme
+package com.augmentalis.webavanue.ui.screen.theme
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -8,8 +8,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.effects.glassmorphism as applyGlassmorphism
-import com.augmentalis.Avanues.web.universal.presentation.ui.effects.supportsBlur
+import com.augmentalis.webavanue.ui.screen.effects.glassmorphism as applyGlassmorphism
+import com.augmentalis.webavanue.ui.screen.effects.supportsBlur
 
 /**
  * Glassmorphism utility modifiers for WebAvanue browser

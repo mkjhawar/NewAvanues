@@ -1,8 +1,8 @@
-package com.augmentalis.Avanues.web.app.ui
+package com.augmentalis.webavanue.app.ui
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.augmentalis.Avanues.web.universal.presentation.ui.download.DownloadItem
+import com.augmentalis.webavanue.universal.presentation.ui.download.DownloadItem
 import com.augmentalis.webavanue.domain.model.Download
 import com.augmentalis.webavanue.domain.model.DownloadStatus
 import kotlinx.datetime.Clock

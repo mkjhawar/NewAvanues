@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.xr
+package com.augmentalis.webavanue.ui.screen.xr
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape

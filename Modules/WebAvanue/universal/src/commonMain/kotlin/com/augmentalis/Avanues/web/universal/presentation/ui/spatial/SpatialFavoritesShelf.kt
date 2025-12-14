@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.spatial
+package com.augmentalis.webavanue.ui.screen.spatial
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -25,7 +25,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.ui.theme.OceanTheme
+import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
 import com.augmentalis.webavanue.domain.model.Favorite
 import kotlin.math.abs
 

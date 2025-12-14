@@ -1,7 +1,7 @@
-package com.augmentalis.Avanues.web.universal.presentation.viewmodel
+package com.augmentalis.webavanue.ui.viewmodel
 
-import com.augmentalis.Avanues.web.universal.util.encodeUrl
-import com.augmentalis.Avanues.web.universal.utils.Logger
+import com.augmentalis.webavanue.ui.util.encodeUrl
+import com.augmentalis.webavanue.ui.util.Logger
 import com.augmentalis.webavanue.domain.errors.TabError
 import com.augmentalis.webavanue.domain.manager.PrivateBrowsingManager
 import com.augmentalis.webavanue.domain.model.BrowserSettings
@@ -33,7 +33,7 @@ data class TabUiState(
     val canGoBack: Boolean = false,
     val canGoForward: Boolean = false,
     val isReadingMode: Boolean = false,
-    val readingModeArticle: com.augmentalis.Avanues.web.universal.util.ReadingModeArticle? = null,
+    val readingModeArticle: com.augmentalis.webavanue.util.ReadingModeArticle? = null,
     val isArticleAvailable: Boolean = false
 )
 
@@ -956,7 +956,7 @@ class TabViewModel(
      *
      * @param article Extracted article content
      */
-    fun setReadingModeArticle(article: com.augmentalis.Avanues.web.universal.util.ReadingModeArticle?) {
+    fun setReadingModeArticle(article: com.augmentalis.webavanue.util.ReadingModeArticle?) {
         viewModelScope.launch {
             stateMutex.withLock {
                 _activeTab.value?.let { state ->
@@ -1111,11 +1111,11 @@ class TabViewModel(
      * @param onError Callback when screenshot fails (error message)
      */
     fun captureScreenshot(
-        type: com.augmentalis.Avanues.web.universal.screenshot.ScreenshotType,
+        type: com.augmentalis.webavanue.screenshot.ScreenshotType,
         quality: Int = 80,
         saveToGallery: Boolean = true,
         onProgress: (Float, String) -> Unit = { _, _ -> },
-        onComplete: (com.augmentalis.Avanues.web.universal.screenshot.ScreenshotData, String?) -> Unit,
+        onComplete: (com.augmentalis.webavanue.screenshot.ScreenshotData, String?) -> Unit,
         onError: (String) -> Unit
     ) {
         _activeTab.value?.let { state ->

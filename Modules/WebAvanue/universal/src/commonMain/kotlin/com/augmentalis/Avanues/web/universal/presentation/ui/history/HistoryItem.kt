@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.history
+package com.augmentalis.webavanue.ui.screen.history
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*

@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.voice
+package com.augmentalis.webavanue.feature.voice
 
 import kotlinx.coroutines.flow.StateFlow
 

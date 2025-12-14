@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.xr
+package com.augmentalis.webavanue.ui.screen.xr
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.xr.XRState
+import com.augmentalis.webavanue.feature.xr.XRState
 
 /**
  * XRBrowserOverlay - Android-specific XR UI overlay for BrowserScreen

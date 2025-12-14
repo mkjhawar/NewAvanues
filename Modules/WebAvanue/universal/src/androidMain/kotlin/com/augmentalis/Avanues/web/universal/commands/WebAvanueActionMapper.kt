@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.commands
+package com.augmentalis.webavanue.feature.commands
 
 import android.util.Log
 

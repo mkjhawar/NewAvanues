@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.platform.webview
+package com.augmentalis.webavanue.platform.webview
 
 import android.content.Context
 import android.os.Bundle

@@ -1,7 +1,7 @@
-package com.augmentalis.Avanues.web.universal.presentation.controller
+package com.augmentalis.webavanue.ui.viewmodel
 
-import com.augmentalis.Avanues.web.universal.commands.ActionResult
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.TabViewModel
+import com.augmentalis.webavanue.feature.commands.ActionResult
+import com.augmentalis.webavanue.ui.viewmodel.TabViewModel
 
 /**
  * CommonWebViewController - Platform-agnostic base implementation of WebViewController

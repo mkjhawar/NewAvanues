@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.controller
+package com.augmentalis.webavanue.ui.viewmodel
 
 /**
  * GestureCoordinateResolver - Resolves gesture coordinates with fallback logic

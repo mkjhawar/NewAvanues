@@ -1,4 +1,4 @@
-package com.augmentalis.Avanues.web.universal.presentation.ui.browser
+package com.augmentalis.webavanue.ui.screen.browser
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,10 +19,10 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import com.augmentalis.Avanues.web.universal.presentation.design.OceanComponents
-import com.augmentalis.Avanues.web.universal.presentation.design.OceanDesignTokens
-import com.augmentalis.Avanues.web.universal.presentation.design.IconVariant
-import com.augmentalis.Avanues.web.universal.presentation.design.SurfaceVariant
+import com.augmentalis.webavanue.ui.design.OceanComponents
+import com.augmentalis.webavanue.ui.design.OceanDesignTokens
+import com.augmentalis.webavanue.ui.design.IconVariant
+import com.augmentalis.webavanue.ui.design.SurfaceVariant
 
 /**
  * FindInPageBar - Text search UI for browser
