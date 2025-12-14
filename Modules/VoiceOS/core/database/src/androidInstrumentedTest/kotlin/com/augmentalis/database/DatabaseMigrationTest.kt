@@ -123,7 +123,11 @@ class DatabaseMigrationTest {
                 usageCount = 0,
                 lastUsed = null,
                 createdAt = System.currentTimeMillis(),
-                appId = ""
+                appId = "",
+                appVersion = "",
+                versionCode = 0,
+                lastVerified = null,
+                isDeprecated = 0
             )
 
             // Get row count before migration
@@ -170,7 +174,11 @@ class DatabaseMigrationTest {
                 usageCount = 0,
                 lastUsed = null,
                 createdAt = System.currentTimeMillis(),
-                appId = ""
+                appId = "",
+                appVersion = "",
+                versionCode = 0,
+                lastVerified = null,
+                isDeprecated = 0
             )
 
             // Query and verify default appId

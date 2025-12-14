@@ -99,6 +99,16 @@ interface IGeneratedCommandRepository {
     suspend fun deleteByElement(elementHash: String)
 
     /**
+     * Delete all commands for a specific app package.
+     *
+     * Used when app is uninstalled to cleanup all associated commands.
+     *
+     * @param packageName App package identifier (appId)
+     * @return Number of commands deleted
+     */
+    suspend fun deleteCommandsByPackage(packageName: String): Int
+
+    /**
      * Delete low-quality commands (unused, low confidence).
      */
     suspend fun deleteLowQuality(minConfidence: Double)
@@ -170,4 +180,66 @@ interface IGeneratedCommandRepository {
      * @return List of commands (up to limit)
      */
     suspend fun getByActionTypePaginated(actionType: String, limit: Int, offset: Int): List<GeneratedCommandDTO>
+
+    // ========== Version Management Methods (Schema v3) ==========
+
+    /**
+     * Mark all commands for a specific app version as deprecated.
+     * Used when an app updates to mark old commands for cleanup.
+     *
+     * @param packageName App package name (e.g., "com.google.android.gm")
+     * @param versionCode Version code to mark as deprecated
+     * @return Number of commands marked as deprecated
+     */
+    suspend fun markVersionDeprecated(packageName: String, versionCode: Long): Int
+
+    /**
+     * Update command version information after verification.
+     * Called when element is re-verified against current app version.
+     *
+     * @param id Command ID
+     * @param versionCode New version code
+     * @param appVersion New version string (e.g., "8.2024.11.123")
+     * @param lastVerified Timestamp of verification
+     * @param isDeprecated Whether command is deprecated (0=active, 1=deprecated)
+     */
+    suspend fun updateCommandVersion(id: Long, versionCode: Long, appVersion: String, lastVerified: Long, isDeprecated: Long)
+
+    /**
+     * Mark a single command as deprecated or active.
+     *
+     * @param id Command ID
+     * @param isDeprecated Whether command is deprecated (0=active, 1=deprecated)
+     */
+    suspend fun updateCommandDeprecated(id: Long, isDeprecated: Long)
+
+    /**
+     * Delete deprecated commands older than threshold.
+     * Respects grace period and user-approved status.
+     *
+     * @param olderThan Timestamp threshold (commands older than this are deleted)
+     * @param keepUserApproved If true, preserves user-approved commands
+     * @return Number of commands deleted
+     */
+    suspend fun deleteDeprecatedCommands(olderThan: Long, keepUserApproved: Boolean): Int
+
+    /**
+     * Get all deprecated commands for an app.
+     * Used to review commands before cleanup.
+     *
+     * @param packageName App package name
+     * @return List of deprecated commands, sorted by lastVerified (newest first)
+     */
+    suspend fun getDeprecatedCommands(packageName: String): List<GeneratedCommandDTO>
+
+    /**
+     * Get only active (non-deprecated) commands for a specific app version.
+     * Used for command execution to avoid using outdated commands.
+     *
+     * @param packageName App package name
+     * @param versionCode App version code
+     * @param limit Maximum number of commands to return
+     * @return List of active commands, sorted by usage
+     */
+    suspend fun getActiveCommands(packageName: String, versionCode: Long, limit: Int): List<GeneratedCommandDTO>
 }

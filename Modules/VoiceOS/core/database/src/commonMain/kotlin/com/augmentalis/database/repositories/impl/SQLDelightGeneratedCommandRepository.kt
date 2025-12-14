@@ -41,7 +41,11 @@ class SQLDelightGeneratedCommandRepository(
                 usageCount = command.usageCount,
                 lastUsed = command.lastUsed,
                 createdAt = command.createdAt,
-                appId = command.appId
+                appId = command.appId,
+                appVersion = command.appVersion,
+                versionCode = command.versionCode,
+                lastVerified = command.lastVerified,
+                isDeprecated = command.isDeprecated
             )
             insertedId = queries.lastInsertRowId().executeAsOne()
         }
@@ -62,7 +66,11 @@ class SQLDelightGeneratedCommandRepository(
                     usageCount = command.usageCount,
                     lastUsed = command.lastUsed,
                     createdAt = command.createdAt,
-                    appId = command.appId
+                    appId = command.appId,
+                    appVersion = command.appVersion,
+                    versionCode = command.versionCode,
+                    lastVerified = command.lastVerified,
+                    isDeprecated = command.isDeprecated
                 )
             }
         }
@@ -123,6 +131,19 @@ class SQLDelightGeneratedCommandRepository(
         queries.deleteByElement(elementHash)
     }
 
+    override suspend fun deleteCommandsByPackage(packageName: String): Int = withContext(Dispatchers.Default) {
+        require(packageName.isNotBlank()) { "packageName cannot be blank" }
+
+        var deletedCount = 0
+        database.transaction {
+            val countBefore = queries.count().executeAsOne()
+            queries.deleteByPackage(packageName)
+            val countAfter = queries.count().executeAsOne()
+            deletedCount = (countBefore - countAfter).toInt()
+        }
+        deletedCount
+    }
+
     override suspend fun deleteLowQuality(minConfidence: Double) = withContext(Dispatchers.Default) {
         require(minConfidence in 0.0..1.0) { "Minimum confidence must be between 0.0 and 1.0 (got $minConfidence)" }
         queries.deleteLowQuality(minConfidence)
@@ -151,6 +172,10 @@ class SQLDelightGeneratedCommandRepository(
             usageCount = command.usageCount,
             lastUsed = command.lastUsed,
             appId = command.appId,
+            appVersion = command.appVersion,
+            versionCode = command.versionCode,
+            lastVerified = command.lastVerified,
+            isDeprecated = command.isDeprecated,
             id = command.id
         )
     }
@@ -189,5 +214,90 @@ class SQLDelightGeneratedCommandRepository(
         queries.getByActionTypePaginated(actionType, limit.toLong(), offset.toLong())
             .executeAsList()
             .map { it.toGeneratedCommandDTO() }
+    }
+
+    // ========== Version Management Methods (Schema v3) ==========
+
+    override suspend fun markVersionDeprecated(packageName: String, versionCode: Long): Int = withContext(Dispatchers.Default) {
+        require(packageName.isNotEmpty()) { "Package name cannot be empty" }
+        require(versionCode >= 0) { "Version code must be non-negative (got $versionCode)" }
+
+        var rowsAffected = 0
+        database.transaction {
+            queries.markVersionDeprecated(appId = packageName, versionCode = versionCode)
+            // Get number of affected rows by counting before/after
+            rowsAffected = queries.getDeprecatedCommands(packageName).executeAsList().size
+        }
+        rowsAffected
+    }
+
+    override suspend fun updateCommandVersion(
+        id: Long,
+        versionCode: Long,
+        appVersion: String,
+        lastVerified: Long,
+        isDeprecated: Long
+    ) = withContext(Dispatchers.Default) {
+        require(id > 0) { "ID must be positive (got $id)" }
+        require(versionCode >= 0) { "Version code must be non-negative (got $versionCode)" }
+        require(appVersion.isNotEmpty()) { "App version cannot be empty" }
+        require(lastVerified > 0) { "Last verified timestamp must be positive (got $lastVerified)" }
+        require(isDeprecated in 0L..1L) { "isDeprecated must be 0 or 1 (got $isDeprecated)" }
+
+        queries.updateCommandVersion(
+            versionCode = versionCode,
+            appVersion = appVersion,
+            lastVerified = lastVerified,
+            isDeprecated = isDeprecated,
+            id = id
+        )
+    }
+
+    override suspend fun updateCommandDeprecated(id: Long, isDeprecated: Long) = withContext(Dispatchers.Default) {
+        require(id > 0) { "ID must be positive (got $id)" }
+        require(isDeprecated in 0L..1L) { "isDeprecated must be 0 or 1 (got $isDeprecated)" }
+
+        queries.updateCommandDeprecated(isDeprecated = isDeprecated, id = id)
+    }
+
+    override suspend fun deleteDeprecatedCommands(olderThan: Long, keepUserApproved: Boolean): Int = withContext(Dispatchers.Default) {
+        require(olderThan > 0) { "olderThan timestamp must be positive (got $olderThan)" }
+
+        var rowsAffected = 0
+        database.transaction {
+            // Count before deletion
+            val countBefore = queries.count().executeAsOne()
+
+            // Delete deprecated commands
+            // Parameters: lastVerified < ?, (? = 0 OR isUserApproved = 0)
+            queries.deleteDeprecatedCommands(
+                olderThan,  // First ? - lastVerified threshold
+                if (keepUserApproved) 1L else 0L  // Second ? - keep user approved flag
+            )
+
+            // Count after deletion
+            val countAfter = queries.count().executeAsOne()
+            rowsAffected = (countBefore - countAfter).toInt()
+        }
+        rowsAffected
+    }
+
+    override suspend fun getDeprecatedCommands(packageName: String): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
+        require(packageName.isNotEmpty()) { "Package name cannot be empty" }
+
+        queries.getDeprecatedCommands(packageName).executeAsList().map { it.toGeneratedCommandDTO() }
+    }
+
+    override suspend fun getActiveCommands(packageName: String, versionCode: Long, limit: Int): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
+        require(packageName.isNotEmpty()) { "Package name cannot be empty" }
+        require(versionCode >= 0) { "Version code must be non-negative (got $versionCode)" }
+        require(limit in 1..1000) { "Limit must be between 1 and 1000 (got $limit)" }
+
+        // Parameters: appId = ?, versionCode = ?, LIMIT ?
+        queries.getActiveCommands(
+            packageName,      // First ? - appId
+            versionCode,      // Second ? - versionCode
+            limit.toLong()    // Third ? - LIMIT
+        ).executeAsList().map { it.toGeneratedCommandDTO() }
     }
 }

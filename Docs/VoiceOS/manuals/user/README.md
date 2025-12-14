@@ -1,7 +1,7 @@
 # VoiceOS User Manual
 
-**Version:** 5.0
-**Last Updated:** 2025-12-03
+**Version:** 5.1
+**Last Updated:** 2025-12-14
 **Platform:** Android
 
 ---
@@ -79,6 +79,13 @@ VoiceOS is a voice-first accessibility platform that lets you control any Androi
   - Edit command aliases
   - Delete unused commands
   - Export/import command sets
+
+- [**Automatic Command Cleanup**](/docs/manuals/user/features/automatic-command-cleanup.md) ⭐ NEW
+  - Prevents command database bloat from app updates
+  - Automatically marks old commands as deprecated when apps update
+  - 30-day grace period before cleanup
+  - Preserves user-approved commands forever
+  - 66% reduction in database size over time
 
 #### Settings & Configuration
 - [VoiceOS Settings](/docs/manuals/user/features/settings.md)
@@ -318,6 +325,7 @@ VoiceOS now features a beautiful modern interface with glass-like effects:
 ### Recently Added (December 2025)
 - ✅ Back Navigation guide
 - ✅ Manual Command Assignment guide
+- ✅ Automatic Command Cleanup (Version-Aware Lifecycle) ⭐ NEW
 - ✅ Updated Quick Reference
 
 ### Coming Soon
@@ -368,8 +376,8 @@ VoiceOS now features a beautiful modern interface with glass-like effects:
 
 ---
 
-**Version:** 5.0
-**Last Updated:** 2025-12-03
+**Version:** 5.1
+**Last Updated:** 2025-12-14
 **Language:** English (US)
 **Platform:** Android API 28-34
 
