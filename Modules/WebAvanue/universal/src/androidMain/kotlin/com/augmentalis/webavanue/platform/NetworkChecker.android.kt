@@ -1,7 +1,6 @@
 package com.augmentalis.webavanue.platform
 
 import android.content.Context
-import com.augmentalis.Avanues.web.app.download.NetworkHelper
 
 /**
  * Android implementation of NetworkChecker
