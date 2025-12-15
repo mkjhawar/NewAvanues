@@ -82,7 +82,7 @@
 
         <!-- Download completion receiver for DownloadManager events -->
         <receiver
-            android:name=".app.download.DownloadCompletionReceiver"
+            android:name="com.augmentalis.webavanue.platform.DownloadCompletionReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />

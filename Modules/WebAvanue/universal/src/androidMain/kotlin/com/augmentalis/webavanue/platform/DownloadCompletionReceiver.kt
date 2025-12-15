@@ -1,12 +1,11 @@
-package com.augmentalis.webavanue.app.download
+package com.augmentalis.webavanue.platform
 
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.augmentalis.webavanue.app.WebAvanueApp
-import com.augmentalis.webavanue.domain.model.Download
 import com.augmentalis.webavanue.domain.model.DownloadStatus
+import com.augmentalis.webavanue.domain.repository.BrowserRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -21,11 +20,35 @@ import kotlinx.coroutines.launch
  * - Completion status and file path (on success)
  * - Failure status and error message (on failure)
  * - Stops progress monitoring for completed downloads
+ *
+ * ## Dependency Injection
+ * Since BroadcastReceivers are instantiated by Android system, we use a provider pattern:
+ * ```kotlin
+ * // In Application.onCreate()
+ * DownloadCompletionReceiver.repositoryProvider = { myRepository }
+ * ```
  */
 class DownloadCompletionReceiver : BroadcastReceiver() {
 
     companion object {
-        // Callback to notify progress monitor
+        /**
+         * Repository provider - must be set by Application class
+         *
+         * Example:
+         * ```kotlin
+         * class MyApp : Application() {
+         *     override fun onCreate() {
+         *         super.onCreate()
+         *         DownloadCompletionReceiver.repositoryProvider = { provideRepository() }
+         *     }
+         * }
+         * ```
+         */
+        var repositoryProvider: (() -> BrowserRepository)? = null
+
+        /**
+         * Callback to notify progress monitor when download completes
+         */
         var onDownloadComplete: ((String) -> Unit)? = null
     }
 
@@ -49,14 +72,12 @@ class DownloadCompletionReceiver : BroadcastReceiver() {
             return
         }
 
-        // Get repository from Application
-        val app = context.applicationContext as? WebAvanueApp
-        if (app == null) {
-            println("DownloadCompletionReceiver: Could not get WebAvanueApp")
+        // Get repository from provider
+        val repository = repositoryProvider?.invoke()
+        if (repository == null) {
+            println("DownloadCompletionReceiver: Repository provider not set. Call DownloadCompletionReceiver.repositoryProvider = { ... } in Application.onCreate()")
             return
         }
-
-        val repository = app.provideRepository()
 
         // Update repository based on status
         CoroutineScope(Dispatchers.IO).launch {

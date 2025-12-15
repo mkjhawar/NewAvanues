@@ -1,4 +1,4 @@
-package com.augmentalis.webavanue.app.download
+package com.augmentalis.webavanue.platform
 
 import android.app.DownloadManager
 import android.content.Context
@@ -44,12 +44,13 @@ object DownloadHelper {
     ): Long {
         try {
             // Check storage permission if required
-            val permissionManager = com.augmentalis.webavanue.platform.DownloadPermissionManager(context)
+            val permissionManager = DownloadPermissionManager(context)
             if (permissionManager.isPermissionRequired() && !permissionManager.isPermissionGranted()) {
                 // Permission required but not granted
                 println("DownloadHelper: Storage permission required but not granted. Using default Downloads folder.")
                 // Fall through to use default Downloads folder
             }
+
             // Generate filename from URL or content-disposition
             val filename = guessFileName(url, contentDisposition, mimeType)
 
@@ -268,7 +269,10 @@ object DownloadHelper {
 }
 
 /**
- * Data class for download progress information
+ * Data class for download progress information (Android-specific)
+ *
+ * Note: This is an Android-specific version that uses DownloadManager constants.
+ * For platform-agnostic download progress, use com.augmentalis.webavanue.feature.download.DownloadProgress
  */
 data class DownloadProgress(
     val bytesDownloaded: Long,

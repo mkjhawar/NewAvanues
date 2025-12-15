@@ -16,6 +16,7 @@ import com.augmentalis.webavanue.universal.presentation.viewmodel.TabViewModel
 import com.augmentalis.webavanue.data.db.BrowserDatabase
 import com.augmentalis.webavanue.data.repository.BrowserRepositoryImpl
 import com.augmentalis.webavanue.platform.createAndroidDriver
+import com.augmentalis.webavanue.platform.DownloadCompletionReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -116,6 +117,10 @@ class WebAvanueApp : Application() {
         // Register IPC receiver for VoiceOS commands
         registerIPCReceiver()
         SentryManager.addBreadcrumb("app", "IPC receiver registered")
+
+        // Inject repository provider for DownloadCompletionReceiver
+        DownloadCompletionReceiver.repositoryProvider = { repository }
+        Logger.info(TAG, "Download completion receiver repository provider configured")
 
         Logger.info(TAG, "WebAvanueApp initialized successfully")
     }
