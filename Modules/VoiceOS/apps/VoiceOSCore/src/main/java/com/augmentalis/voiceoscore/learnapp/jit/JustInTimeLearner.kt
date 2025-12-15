@@ -28,6 +28,8 @@ import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
 import com.augmentalis.voiceoscore.learnapp.models.ScreenState
 import com.augmentalis.voiceoscore.learnapp.fingerprinting.ScreenStateManager
 import com.augmentalis.voiceoscore.scraping.AccessibilityScrapingIntegration
+import com.augmentalis.voiceoscore.version.AppVersionDetector
+import com.augmentalis.voiceoscore.version.AppVersion
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -57,13 +59,15 @@ import kotlinx.coroutines.withContext
  * @param databaseManager Database manager for persistence
  * @param repository Repository for app data
  * @param voiceOSService Service reference for command registration (nullable for tests)
+ * @param versionDetector App version detector for version-aware command creation
  */
 class JustInTimeLearner(
     private val context: Context,
     private val databaseManager: VoiceOSDatabaseManager,
     private val repository: LearnAppRepository,
     private val voiceOSService: IVoiceOSServiceInternal? = null,  // FIX: Added for command registration
-    private val learnAppCore: com.augmentalis.voiceoscore.learnapp.core.LearnAppCore? = null  // Phase 2: LearnAppCore integration
+    private val learnAppCore: com.augmentalis.voiceoscore.learnapp.core.LearnAppCore? = null,  // Phase 2: LearnAppCore integration
+    private val versionDetector: AppVersionDetector? = null  // Version-aware command creation
 ) {
     companion object {
         private const val TAG = "JustInTimeLearner"
@@ -477,6 +481,10 @@ class JustInTimeLearner(
                 } else {
                     // Fallback to old logic if LearnAppCore not provided (backward compatibility)
                     val timestamp = System.currentTimeMillis()
+
+                    // Get app version for version-aware commands
+                    val appVersion = versionDetector?.getCurrentVersion(packageName) ?: AppVersion.UNKNOWN
+
                     for (element in elements) {
                         val label = element.text
                             ?: element.contentDescription
@@ -509,7 +517,12 @@ class JustInTimeLearner(
                                 usageCount = 0L,
                                 lastUsed = null,
                                 createdAt = timestamp,
-                                appId = packageName
+                                appId = packageName,
+                                // Version-aware fields (Schema v3)
+                                appVersion = appVersion.versionName,
+                                versionCode = appVersion.versionCode,
+                                lastVerified = timestamp,
+                                isDeprecated = 0L  // New commands are never deprecated
                             )
                             databaseManager.generatedCommands.insert(commandDTO)
                             commandCount++

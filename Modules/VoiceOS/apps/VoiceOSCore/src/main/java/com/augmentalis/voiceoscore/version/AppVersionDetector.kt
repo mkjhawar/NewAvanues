@@ -212,6 +212,19 @@ class AppVersionDetector(
     }
 
     /**
+     * Gets the currently installed version for a package (PUBLIC API).
+     *
+     * Convenience method to get version info for command creation.
+     * Returns AppVersion.UNKNOWN if app is not installed.
+     *
+     * @param packageName App package name
+     * @return AppVersion if installed, AppVersion.UNKNOWN if not
+     */
+    suspend fun getCurrentVersion(packageName: String): AppVersion = withContext(Dispatchers.Default) {
+        getInstalledVersion(packageName) ?: AppVersion.UNKNOWN
+    }
+
+    /**
      * Checks if an app is currently installed.
      *
      * Convenience method to check installation status without version details.

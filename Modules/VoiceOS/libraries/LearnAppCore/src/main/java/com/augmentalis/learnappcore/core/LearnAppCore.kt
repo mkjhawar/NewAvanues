@@ -116,12 +116,12 @@ class LearnAppCore(
      * @param mode Processing mode (IMMEDIATE or BATCH)
      * @return Processing result with UUID and command
      */
-    suspend fun processElement(
+    override suspend fun processElement(
         element: ElementInfo,
         packageName: String,
         mode: ProcessingMode
     ): ElementProcessingResult = withContext(Dispatchers.Default) {
-        return try {
+        try {
             // 1. Generate UUID
             val uuid = generateUUID(element, packageName)
             if (developerSettings.isVerboseLoggingEnabled()) {
@@ -129,7 +129,7 @@ class LearnAppCore(
             }
 
             // 2. Generate voice command
-            val command = generateVoiceCommand(element, uuid, packageName) ?: return ElementProcessingResult(
+            val command = generateVoiceCommand(element, uuid, packageName) ?: return@withContext ElementProcessingResult(
                 uuid = uuid,
                 command = null,
                 success = false,
@@ -763,7 +763,7 @@ class LearnAppCore(
      * Performance: ~50ms for 100 commands (20x faster than sequential)
      * Memory freed: ~150KB
      */
-    suspend fun flushBatch() = withContext(Dispatchers.IO) {
+    override suspend fun flushBatch() = withContext(Dispatchers.IO) {
         if (batchQueue.isEmpty()) {
             if (developerSettings.isVerboseLoggingEnabled()) {
                 Log.d(TAG, "Batch queue empty, nothing to flush")
@@ -815,7 +815,7 @@ class LearnAppCore(
      * Removes all queued commands without flushing to database.
      * Used for cleanup or error recovery.
      */
-    fun clearBatchQueue() {
+    override fun clearBatchQueue() {
         val count = batchQueue.size
         batchQueue.clear()
         if (count > 0) {

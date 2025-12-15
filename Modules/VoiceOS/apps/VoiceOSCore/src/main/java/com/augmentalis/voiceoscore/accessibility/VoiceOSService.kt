@@ -207,6 +207,9 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     @Inject
     lateinit var installedAppsManager: InstalledAppsManager
 
+    @Inject
+    lateinit var appVersionManager: com.augmentalis.voiceoscore.version.AppVersionManager
+
     // UIScrapingEngine requires AccessibilityService, so it's lazy-initialized (not injected)
     private val uiScrapingEngine by lazy {
         UIScrapingEngine(this).also {
@@ -390,6 +393,10 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             // register voice command
             registerVoiceCmd()
 
+            // Version-aware command management (2025-12-14)
+            // Initialize version tracking and cleanup scheduling
+            initializeVersionManagement()
+
             val filter = IntentFilter(Const.ACTION_CONFIG_UPDATE)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 Log.i(TAG, "onServiceConnected registerReceiver : CHANGE_LANG ")
@@ -434,6 +441,43 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             Log.e(TAG, "Failed to initialize CommandManager/ServiceMonitor", e)
             commandManagerInstance = null
             serviceMonitor = null
+        }
+    }
+
+    /**
+     * Initialize version-aware command lifecycle management.
+     *
+     * - Schedules weekly CleanupWorker for automatic deprecated command removal
+     * - Checks all installed apps and updates version tracking database
+     * - Enables version detection for future command generation
+     *
+     * @since 5.1 (Version-Aware Command Lifecycle)
+     */
+    private fun initializeVersionManagement() {
+        try {
+            Log.i(TAG, "Initializing version-aware command management...")
+
+            // Schedule weekly cleanup worker (runs when device is charging + battery not low)
+            com.augmentalis.voiceoscore.cleanup.CleanupWorker.schedulePeriodicCleanup(applicationContext)
+            Log.i(TAG, "Scheduled weekly command cleanup worker")
+
+            // Check all tracked apps and update version tracking database
+            // This runs in background to avoid blocking service startup
+            serviceScope.launch {
+                try {
+                    Log.d(TAG, "Checking versions for all tracked apps...")
+                    val processedCount = appVersionManager.checkAllTrackedApps()
+
+                    Log.i(TAG, "Version check complete: $processedCount apps processed")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to check tracked app versions", e)
+                }
+            }
+
+            Log.i(TAG, "Version management initialized successfully")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize version management", e)
         }
     }
 

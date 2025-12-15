@@ -48,6 +48,7 @@ import com.augmentalis.uuidcreator.alias.UuidAliasManager
 // TEMP DISABLED (Room migration): import com.augmentalis.uuidcreator.database.UUIDCreatorDatabase
 import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import com.augmentalis.database.VoiceOSDatabaseManager
+import com.augmentalis.voiceoscore.version.AppVersionDetector
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -201,12 +202,21 @@ class LearnAppIntegration private constructor(
         thirdPartyGenerator = ThirdPartyUuidGenerator(context)
         aliasManager = UuidAliasManager(databaseManager.uuids)
 
+        // Version-aware command management (2025-12-14)
+        // Create AppVersionDetector for tracking app versions in generated commands
+        val versionDetector = AppVersionDetector(
+            context = context,
+            appVersionRepository = databaseManager.appVersions
+        )
+
         // Phase 3 (2025-12-04): Initialize LearnAppCore for unified element processing
         // Create LearnAppCore with database and UUID generator (reuse thirdPartyGenerator)
+        // Version-aware: Pass versionDetector for version tracking in commands
         val learnAppCore = com.augmentalis.voiceoscore.learnapp.core.LearnAppCore(
             context = context,
             database = databaseManager,
-            uuidGenerator = thirdPartyGenerator
+            uuidGenerator = thirdPartyGenerator,
+            versionDetector = versionDetector  // Version-aware command creation
         )
 
         // Initialize LearnApp components
@@ -237,12 +247,14 @@ class LearnAppIntegration private constructor(
         // Initialize just-in-time learner
         // FIX (2025-11-30): Pass voiceOSService for command registration (P1-H4)
         // Phase 2 (2025-12-04): Pass LearnAppCore for unified command generation
+        // Version-aware (2025-12-14): Pass versionDetector for version tracking
         justInTimeLearner = JustInTimeLearner(
             context = context,
             databaseManager = databaseManager,
             repository = repository,
             voiceOSService = accessibilityService as? IVoiceOSServiceInternal,
-            learnAppCore = learnAppCore  // Phase 2: Use LearnAppCore
+            learnAppCore = learnAppCore,  // Phase 2: Use LearnAppCore
+            versionDetector = versionDetector  // Version-aware command creation
         )
 
         // FIX (2025-12-01): Initialize JIT element capture for Voice Command Element Persistence

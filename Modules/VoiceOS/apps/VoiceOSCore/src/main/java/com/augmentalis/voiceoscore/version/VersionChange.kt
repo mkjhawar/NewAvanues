@@ -140,18 +140,6 @@ sealed class VersionChange {
     }
 
     /**
-     * Get the package name for this version change.
-     * Convenience method to extract package name from all variants.
-     */
-    fun getPackageName(): String = when (this) {
-        is FirstInstall -> packageName
-        is Updated -> packageName
-        is Downgraded -> packageName
-        is NoChange -> packageName
-        is AppNotInstalled -> packageName
-    }
-
-    /**
      * Get the current version (if app is installed).
      * Returns null for AppNotInstalled.
      */

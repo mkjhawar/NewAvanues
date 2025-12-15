@@ -10,8 +10,16 @@
 package com.augmentalis.voiceoscore.accessibility.di
 
 import android.content.Context
+import com.augmentalis.database.DatabaseDriverFactory
+import com.augmentalis.database.VoiceOSDatabaseManager
+import com.augmentalis.database.repositories.IAppVersionRepository
+import com.augmentalis.database.repositories.IGeneratedCommandRepository
+import com.augmentalis.database.repositories.impl.SQLDelightAppVersionRepository
+import com.augmentalis.database.repositories.impl.SQLDelightGeneratedCommandRepository
 import com.augmentalis.voiceoscore.accessibility.managers.InstalledAppsManager
 import com.augmentalis.voiceoscore.accessibility.speech.SpeechEngineManager
+import com.augmentalis.voiceoscore.version.AppVersionDetector
+import com.augmentalis.voiceoscore.version.AppVersionManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -81,6 +89,85 @@ object AccessibilityModule {
         @ApplicationContext context: Context
     ): InstalledAppsManager {
         return InstalledAppsManager(context)
+    }
+
+    /**
+     * Provides IAppVersionRepository for app version tracking
+     *
+     * Repository for storing and retrieving last known versions of apps.
+     * Used by AppVersionDetector to detect app updates/downgrades/uninstalls.
+     *
+     * @param context Application context for database access
+     * @return IAppVersionRepository instance scoped to service lifecycle
+     */
+    @Provides
+    @ServiceScoped
+    fun provideAppVersionRepository(
+        @ApplicationContext context: Context
+    ): IAppVersionRepository {
+        return VoiceOSDatabaseManager.getInstance(DatabaseDriverFactory(context)).appVersions
+    }
+
+    /**
+     * Provides IGeneratedCommandRepository for generated command management
+     *
+     * Repository for CRUD operations on generated voice commands.
+     * Used by AppVersionManager to mark/delete commands during version changes.
+     *
+     * @param context Application context for database access
+     * @return IGeneratedCommandRepository instance scoped to service lifecycle
+     */
+    @Provides
+    @ServiceScoped
+    fun provideGeneratedCommandRepository(
+        @ApplicationContext context: Context
+    ): IGeneratedCommandRepository {
+        return VoiceOSDatabaseManager.getInstance(DatabaseDriverFactory(context)).generatedCommands
+    }
+
+    /**
+     * Provides AppVersionDetector for detecting app version changes
+     *
+     * Detects version changes by comparing PackageManager info with database records.
+     * Supports API 21-34 with compatibility handling for versionCode deprecation.
+     *
+     * @param context Application context for PackageManager access
+     * @param versionRepo Repository for database version lookups
+     * @return AppVersionDetector instance scoped to service lifecycle
+     */
+    @Provides
+    @ServiceScoped
+    fun provideAppVersionDetector(
+        @ApplicationContext context: Context,
+        versionRepo: IAppVersionRepository
+    ): AppVersionDetector {
+        return AppVersionDetector(context, versionRepo)
+    }
+
+    /**
+     * Provides AppVersionManager for version-aware command lifecycle
+     *
+     * Orchestrates the complete workflow for app version changes:
+     * - Detect version changes (via AppVersionDetector)
+     * - Update version database (via IAppVersionRepository)
+     * - Mark/delete commands (via IGeneratedCommandRepository)
+     * - Periodic cleanup of deprecated commands
+     *
+     * @param context Application context for PackageManager access
+     * @param detector Version change detector
+     * @param versionRepo Repository for app version tracking
+     * @param commandRepo Repository for generated commands
+     * @return AppVersionManager instance scoped to service lifecycle
+     */
+    @Provides
+    @ServiceScoped
+    fun provideAppVersionManager(
+        @ApplicationContext context: Context,
+        detector: AppVersionDetector,
+        versionRepo: IAppVersionRepository,
+        commandRepo: IGeneratedCommandRepository
+    ): AppVersionManager {
+        return AppVersionManager(context, detector, versionRepo, commandRepo)
     }
 
     // Note: ActionCoordinator is NOT provided by Hilt because it requires the VoiceOSService

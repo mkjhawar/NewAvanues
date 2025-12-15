@@ -20,6 +20,7 @@ import com.augmentalis.database.repositories.IAppVersionRepository
 import com.augmentalis.database.repositories.IGeneratedCommandRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 /**
  * Orchestrates app version change detection and command lifecycle management.
@@ -447,6 +448,6 @@ data class VersionStats(
 
     override fun toString(): String {
         return "VersionStats(trackedApps=$trackedApps, totalCommands=$totalCommands, " +
-                "deprecatedCommands=$deprecatedCommands, deprecationRate=${"%.2f".format(deprecationRate)}%)"
+                "deprecatedCommands=$deprecatedCommands, deprecationRate=${String.format(Locale.US, "%.2f", deprecationRate)}%)"
     }
 }

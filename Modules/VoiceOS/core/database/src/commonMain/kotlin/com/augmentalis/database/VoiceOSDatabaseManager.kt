@@ -31,6 +31,7 @@ import com.augmentalis.database.repositories.IElementRelationshipRepository
 import com.augmentalis.database.repositories.IAppConsentHistoryRepository
 import com.augmentalis.database.repositories.IElementCommandRepository
 import com.augmentalis.database.repositories.IQualityMetricRepository
+import com.augmentalis.database.repositories.IAppVersionRepository
 import com.augmentalis.database.repositories.impl.SQLDelightCommandRepository
 import com.augmentalis.database.repositories.impl.SQLDelightCommandHistoryRepository
 import com.augmentalis.database.repositories.impl.SQLDelightUserPreferenceRepository
@@ -51,6 +52,7 @@ import com.augmentalis.database.repositories.impl.SQLDelightElementRelationshipR
 import com.augmentalis.database.repositories.impl.SQLDelightAppConsentHistoryRepository
 import com.augmentalis.database.repositories.impl.SQLDelightElementCommandRepository
 import com.augmentalis.database.repositories.impl.SQLDelightQualityMetricRepository
+import com.augmentalis.database.repositories.impl.SQLDelightAppVersionRepository
 import com.augmentalis.database.repositories.plugin.IPluginRepository
 import com.augmentalis.database.repositories.plugin.SQLDelightPluginRepository
 import kotlinx.coroutines.Dispatchers
@@ -89,7 +91,7 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
     }
 
     private val driver: SqlDriver = driverFactory.createDriver()
-    private val database: VoiceOSDatabase = VoiceOSDatabase(driver)
+    internal val database: VoiceOSDatabase = VoiceOSDatabase(driver)
 
     // Repository interfaces (use these for abstraction)
     val commands: ICommandRepository = SQLDelightCommandRepository(database)
@@ -121,6 +123,9 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
     // Metadata Quality Overlay & Manual Command Assignment (VOS-META-001)
     val elementCommands: IElementCommandRepository = SQLDelightElementCommandRepository(database)
     val qualityMetrics: IQualityMetricRepository = SQLDelightQualityMetricRepository(database)
+
+    // Version-Aware Command Management (VOS4)
+    val appVersions: IAppVersionRepository = SQLDelightAppVersionRepository(database)
 
     // Direct query access for advanced operations
     val commandHistoryQueries get() = database.commandHistoryQueries
@@ -175,6 +180,9 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
 
     // Metadata Quality Overlay & Manual Command Assignment queries (VOS-META-001)
     val elementCommandQueries get() = database.elementCommandQueries
+
+    // Version-Aware Command Management queries (VOS4)
+    val appVersionQueries get() = database.appVersionQueries
 
     /**
      * Execute multiple operations in a transaction.

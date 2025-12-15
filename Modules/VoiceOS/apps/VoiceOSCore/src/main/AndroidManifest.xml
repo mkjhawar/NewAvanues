@@ -122,6 +122,21 @@
                 <action android:name="com.augmentalis.voiceos.LEARNAPP_START" />
             </intent-filter>
         </receiver>
+
+        <!-- Package update receiver for version-aware command management -->
+        <!-- Listens for app install/update/remove events to trigger command lifecycle management -->
+        <!-- Automatically receives broadcasts from Android system when any app changes -->
+        <receiver
+            android:name="com.augmentalis.voiceoscore.receivers.PackageUpdateReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_ADDED"/>
+                <action android:name="android.intent.action.PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.PACKAGE_REMOVED"/>
+                <data android:scheme="package"/>
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
