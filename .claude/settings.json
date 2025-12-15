@@ -6,55 +6,10 @@
           {
             "type": "command",
             "command": "bash .claude/startup-banner.sh"
-          },
-          {
-            "type": "command",
-            "command": "bash .claude/start-ideacode-api.sh"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "SlashCommand",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash scripts/validate-ideacode.sh"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash scripts/post-write-analyze.sh"
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "matcher": "auto",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/pre-compact.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "manual",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/pre-compact.sh"
           }
         ]
       }
     ]
-  }
+  },
+  "statusLine": "./.claude/statusline-command.sh"
 }

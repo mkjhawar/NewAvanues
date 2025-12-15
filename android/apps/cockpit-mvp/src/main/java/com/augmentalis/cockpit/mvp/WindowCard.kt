@@ -1,7 +1,7 @@
 package com.augmentalis.cockpit.mvp
 
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,13 +14,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.augmentalis.cockpit.mvp.components.GlassmorphicCard
 import com.augmentalis.cockpit.mvp.components.WindowControlBar
 import com.augmentalis.cockpit.mvp.content.*
+import com.augmentalis.cockpit.mvp.content.widgets.WidgetRenderer
 import com.avanues.cockpit.core.window.AppWindow
 import com.avanues.cockpit.core.window.WindowContent
 import com.avanues.cockpit.core.window.WindowType
+
+/**
+ * Safely parse color string with fallback
+ * @param colorString Color string (e.g., "#FF0000")
+ * @param fallback Fallback color if parsing fails (default: Ocean primary)
+ * @return Parsed Color or fallback
+ */
+private fun safeParseColor(colorString: String, fallback: Color = Color(0xFF4A90B8)): Color {
+    return try {
+        Color(android.graphics.Color.parseColor(colorString))
+    } catch (e: IllegalArgumentException) {
+        android.util.Log.w("WindowCard", "Invalid color: $colorString, using fallback")
+        fallback
+    }
+}
 
 @Composable
 fun WindowCard(
@@ -47,18 +64,26 @@ fun WindowCard(
     val maximizedWidth = screenWidth - 40.dp
     val maximizedHeight = screenHeight - 40.dp
 
-    // Animated window size based on isLarge state
+    // Animated window size based on isLarge state (Natural spring physics)
     // Normal: 300x400dp, Large: dynamic (screen - 40dp border)
     val animatedWidth by animateDpAsState(
         targetValue = if (window.isLarge) maximizedWidth else OceanTheme.windowWidthDefault,
-        animationSpec = tween(durationMillis = 300),
+        animationSpec = spring(
+            dampingRatio = OceanTheme.springDampingRatio,
+            stiffness = OceanTheme.springStiffnessMedium,
+            visibilityThreshold = 1.dp
+        ),
         label = "window_width"
     )
     val animatedHeight by animateDpAsState(
         targetValue = if (window.isHidden) 48.dp
             else if (window.isLarge) maximizedHeight
             else OceanTheme.windowHeightDefault,
-        animationSpec = tween(durationMillis = 300),
+        animationSpec = spring(
+            dampingRatio = OceanTheme.springDampingRatio,
+            stiffness = OceanTheme.springStiffnessMedium,
+            visibilityThreshold = 1.dp
+        ),
         label = "window_height"
     )
 
@@ -76,7 +101,7 @@ fun WindowCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(3.dp)
-                        .background(Color(android.graphics.Color.parseColor(color)))
+                        .background(safeParseColor(color))
                 )
                 Column(
                     modifier = Modifier
@@ -104,8 +129,12 @@ fun WindowCard(
                                 .padding(top = 8.dp)
                         ) {
                             WindowContentRouter(
+                                window = window,
                                 content = window.content,
                                 onContentStateChange = onContentStateChange,
+                                onMinimize = onMinimize,
+                                onToggleSize = onToggleSize,
+                                onClose = onClose,
                                 freeformManager = freeformManager,
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -122,6 +151,7 @@ fun WindowCard(
  * Dispatches based on WindowContent type:
  * - WebContent → WebViewContent
  * - DocumentContent → DocumentViewerContent
+ * - WidgetContent → WidgetRenderer (Calculator, Weather, etc.)
  * - FreeformAppContent → FreeformWindowContent
  * - MockContent → MockWindowContent (metadata display)
  *
@@ -129,8 +159,12 @@ fun WindowCard(
  */
 @Composable
 private fun WindowContentRouter(
+    window: AppWindow,
     content: WindowContent,
     onContentStateChange: (WindowContent) -> Unit,
+    onMinimize: () -> Unit,
+    onToggleSize: () -> Unit,
+    onClose: () -> Unit,
     freeformManager: FreeformWindowManager?,
     modifier: Modifier = Modifier
 ) {
@@ -142,12 +176,26 @@ private fun WindowContentRouter(
                     // Update content with new scroll position
                     onContentStateChange(content.copy(scrollX = scrollX, scrollY = scrollY))
                 },
+                windowId = window.id,
+                enableBridge = true,
+                onMinimize = onMinimize,
+                onMaximize = onToggleSize,
+                onClose = onClose,
                 modifier = modifier
             )
         }
         is WindowContent.DocumentContent -> {
             DocumentViewerContent(
                 documentContent = content,
+                modifier = modifier
+            )
+        }
+        is WindowContent.WidgetContent -> {
+            WidgetRenderer(
+                widgetContent = content,
+                onStateChanged = { newState ->
+                    onContentStateChange(content.copy(state = newState))
+                },
                 modifier = modifier
             )
         }

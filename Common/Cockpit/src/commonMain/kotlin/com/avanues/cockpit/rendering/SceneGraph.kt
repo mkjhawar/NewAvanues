@@ -17,7 +17,7 @@ class SceneGraph {
 
     fun removeNode(id: String) {
         // Recursive find and remove (simplified for now)
-        root.children.removeIf { it.id == id }
+        root.children.removeAll { it.id == id }
     }
     
     fun render(context: Any) {

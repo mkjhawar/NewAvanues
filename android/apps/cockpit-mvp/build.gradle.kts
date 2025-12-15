@@ -36,7 +36,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"
+        kotlinCompilerExtensionVersion = "1.5.5"  // Compatible with Kotlin 1.9.20
     }
 }
 
@@ -57,4 +57,7 @@ dependencies {
 
     // For WindowPreset JSON serialization (Phase 2)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+
+    // ViewPager2 for curved workspace implementation
+    implementation("androidx.viewpager2:viewpager2:1.0.0")
 }

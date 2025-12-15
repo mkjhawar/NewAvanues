@@ -20,7 +20,8 @@ import com.avanues.cockpit.core.window.AppWindow
 @Composable
 fun WorkspaceView(
     windows: List<AppWindow>,
-    positions: Map<String, com.avanues.cockpit.core.workspace.Vector3D>,
+    @Suppress("UNUSED_PARAMETER") positions: Map<String, com.avanues.cockpit.core.workspace.Vector3D>,
+    windowColors: Map<String, String>,
     selectedWindowId: String?,
     onRemoveWindow: (String) -> Unit,
     onMinimizeWindow: (String) -> Unit,
@@ -79,7 +80,7 @@ fun WorkspaceView(
                     )
                 ) {
                     windows.forEachIndexed { index, window ->
-                        val color = getWindowColor(index)
+                        val color = windowColors[window.id] ?: getWindowColor(index)
                         WindowCard(
                             window = window,
                             color = color,
@@ -109,7 +110,7 @@ fun WorkspaceView(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     windows.forEachIndexed { index, window ->
-                        val color = getWindowColor(index)
+                        val color = windowColors[window.id] ?: getWindowColor(index)
                         WindowCard(
                             window = window,
                             color = color,

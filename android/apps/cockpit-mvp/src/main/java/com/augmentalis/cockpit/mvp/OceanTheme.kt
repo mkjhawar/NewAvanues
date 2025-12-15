@@ -17,13 +17,19 @@ object OceanTheme {
     // ========================================
     // Glassmorphic Surface Tokens
     // ========================================
-    val glassSurface = Color.White.copy(alpha = 0.08f)
-    val glassSurfaceHover = Color.White.copy(alpha = 0.12f)
-    val glassSurfacePressed = Color.White.copy(alpha = 0.16f)
-    val glassBorder = Color.White.copy(alpha = 0.15f)
-    val glassBorderFocus = Color.White.copy(alpha = 0.30f)
-    val glassBlur = 20.dp
-    val glassShadow = Color.Black.copy(alpha = 0.25f)
+    val glassSurface = Color.White.copy(alpha = 0.03f)        // 3% - nearly transparent
+    val glassSurfaceHover = Color.White.copy(alpha = 0.05f)   // 5% - subtle hover
+    val glassSurfacePressed = Color.White.copy(alpha = 0.08f) // 8% - gentle press
+    val glassBorder = Color.White.copy(alpha = 0.10f)         // 10% - hair-thin
+    val glassBorderFocus = Color.White.copy(alpha = 0.25f)    // 25% (unchanged)
+    val glassBlur = 32.dp                                     // 32dp - stronger blur
+    val glassShadow = Color.Black.copy(alpha = 0.08f)         // 8% - soft shadow
+
+    // Advanced Glass Effects (XR Materials)
+    val glassRefraction = 0.12f                               // Refraction strength
+    val glassFresnelPower = 3.5f                             // Fresnel edge glow
+    val glassRimLight = Color.White.copy(alpha = 0.15f)      // Edge highlight
+    val glassAmbientOcclusion = Color.Black.copy(alpha = 0.20f) // Corner darkening
 
     // ========================================
     // Color Palette
@@ -39,6 +45,26 @@ object OceanTheme {
     val info = Color(0xFF60A5FA)
     val infoDark = Color(0xFF3B82F6)
 
+    // ========================================
+    // Deep Ocean Professional Palette
+    // ========================================
+    // Core ocean depths
+    val oceanDeep = Color(0xFF0A2540)        // Deep midnight blue
+    val oceanMid = Color(0xFF1A4D6F)         // Professional medium blue
+    val oceanLight = Color(0xFF2E5C7F)       // Muted light blue
+    val oceanAccent = Color(0xFF3A7CA5)      // Subtle accent blue
+    val oceanFrost = Color(0xFF4A90B8)       // Frosted glass highlight
+
+    // Chrome/Steel Metallics
+    val chromeLight = Color(0xFFB8C5D0)      // Light chrome
+    val chromeMid = Color(0xFF8A9BA8)        // Medium chrome
+    val chromeDark = Color(0xFF4A5A6A)       // Dark chrome shadow
+
+    // Bioluminescent Accents (subtle, not neon)
+    val biolumBlue = Color(0xFF2D5F7F)       // Deep bioluminescent blue
+    val biolumTeal = Color(0xFF2A6B6A)       // Muted teal glow
+    val biolumAqua = Color(0xFF3A7B8A)       // Subdued aqua
+
     // Text colors
     val textPrimary = Color.White.copy(alpha = 0.95f)
     val textSecondary = Color.White.copy(alpha = 0.80f)
@@ -53,12 +79,12 @@ object OceanTheme {
     // ========================================
     // Shapes
     // ========================================
-    val glassShapeDefault: Shape = RoundedCornerShape(16.dp)
-    val glassShapeSmall: Shape = RoundedCornerShape(12.dp)
-    val glassShapeLarge: Shape = RoundedCornerShape(20.dp)
-    val glassShapeButton: Shape = RoundedCornerShape(12.dp)
-    val glassShapeCard: Shape = RoundedCornerShape(16.dp)
-    val glassShapeDialog: Shape = RoundedCornerShape(24.dp)
+    val glassShapeDefault: Shape = RoundedCornerShape(6.dp)
+    val glassShapeSmall: Shape = RoundedCornerShape(4.dp)
+    val glassShapeLarge: Shape = RoundedCornerShape(8.dp)
+    val glassShapeButton: Shape = RoundedCornerShape(6.dp)
+    val glassShapeCard: Shape = RoundedCornerShape(8.dp)
+    val glassShapeDialog: Shape = RoundedCornerShape(10.dp)
 
     // ========================================
     // Elevations
@@ -103,9 +129,9 @@ object OceanTheme {
     // ========================================
     // Border Widths
     // ========================================
-    val borderWidthDefault: Dp = 1.dp
-    val borderWidthThick: Dp = 2.dp
-    val borderWidthFocus: Dp = 2.dp
+    val borderWidthDefault: Dp = 0.5.dp   // Hair-thin precision
+    val borderWidthThick: Dp = 1.dp       // Refined thick state
+    val borderWidthFocus: Dp = 1.5.dp     // Subtle focus glow
 
     // ========================================
     // Animation Durations (ms)
@@ -113,4 +139,24 @@ object OceanTheme {
     const val animationDurationFast = 150
     const val animationDurationDefault = 250
     const val animationDurationSlow = 350
+
+    // ========================================
+    // Physics-Based Animation
+    // ========================================
+    // Spring dynamics for natural XR motion
+    const val springStiffnessLow = 200f      // Gentle, floaty motion
+    const val springStiffnessMedium = 400f   // Balanced responsiveness
+    const val springStiffnessHigh = 800f     // Snappy, precise motion
+    const val springDampingRatio = 0.7f      // Slightly underdamped (natural bounce)
+
+    // Easing curves (for non-spring animations)
+    val easingDecelerate = androidx.compose.animation.core.CubicBezierEasing(
+        0.0f, 0.0f, 0.2f, 1.0f
+    )
+    val easingAccelerate = androidx.compose.animation.core.CubicBezierEasing(
+        0.4f, 0.0f, 1.0f, 1.0f
+    )
+    val easingStandard = androidx.compose.animation.core.CubicBezierEasing(
+        0.4f, 0.0f, 0.2f, 1.0f
+    )
 }

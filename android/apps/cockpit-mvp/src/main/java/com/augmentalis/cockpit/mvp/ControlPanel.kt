@@ -25,6 +25,18 @@ import com.avanues.cockpit.core.window.WindowType
 import com.augmentalis.cockpit.mvp.components.GlassmorphicSurface
 
 /**
+ * Safely parse color string with fallback
+ */
+private fun safeParseColor(colorString: String, fallback: Color = Color(0xFF4A90B8)): Color {
+    return try {
+        Color(android.graphics.Color.parseColor(colorString))
+    } catch (e: IllegalArgumentException) {
+        android.util.Log.w("ControlPanel", "Invalid color: $colorString, using fallback")
+        fallback
+    }
+}
+
+/**
  * Control panel with add and reset buttons
  * Includes haptic feedback for all interactions
  */
@@ -344,7 +356,7 @@ private fun PresetRow(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        color = Color(android.graphics.Color.parseColor(preset.color)).copy(alpha = 0.1f),
+        color = safeParseColor(preset.color).copy(alpha = 0.1f),
         shape = MaterialTheme.shapes.small
     ) {
         Row(
@@ -370,7 +382,7 @@ private fun PresetRow(
                 modifier = Modifier
                     .size(12.dp)
                     .background(
-                        color = Color(android.graphics.Color.parseColor(preset.color)),
+                        color = safeParseColor(preset.color),
                         shape = MaterialTheme.shapes.extraSmall
                     )
             )

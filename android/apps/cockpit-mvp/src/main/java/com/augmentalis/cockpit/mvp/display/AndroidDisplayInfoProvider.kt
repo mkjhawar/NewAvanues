@@ -8,7 +8,7 @@ import android.util.DisplayMetrics as AndroidDisplayMetrics
 import android.view.Display
 import android.view.WindowManager
 import com.avanues.cockpit.core.display.*
-import com.google.ar.core.ArCoreApk
+// import com.google.ar.core.ArCoreApk  // TODO: Add ARCore dependency
 import kotlin.math.sqrt
 
 /**
@@ -95,11 +95,15 @@ class AndroidDisplayInfoProvider(
         }
 
         // Detect AR capability
+        // TODO: Re-enable when ARCore dependency is added
+        val hasAR = false
+        /*
         val hasAR = try {
             ArCoreApk.getInstance().checkAvailability(context) == ArCoreApk.Availability.SUPPORTED_INSTALLED
         } catch (e: Exception) {
             false
         }
+        */
 
         // Auto-detect category from physical size
         val category = when {

@@ -22,6 +22,13 @@ sealed class WindowContent {
      * @param scrollY Vertical scroll position (Phase 3: State Persistence)
      * @param isDesktopMode Whether to use desktop user agent (Phase 4: FR-4.1)
      * @param pageTitle Dynamic page title from WebView (Phase 4: FR-4.2)
+     * @param isLoading Whether content is currently loading
+     * @param loadingProgress Loading progress percentage (0-100)
+     * @param error Error message if loading failed
+     * @param hasJavaScriptBridge Whether advanced JavaScript bridge is available
+     * @param pageLoadStartTime Timestamp when page load started (for telemetry)
+     * @param lastInteractionTime Timestamp of last user interaction (for lifecycle)
+     * @param errorCount Number of errors encountered (for reliability tracking)
      */
     data class WebContent(
         val url: String,
@@ -35,7 +42,20 @@ sealed class WindowContent {
 
         // Phase 4: WebView enhancements (FR-4.1, FR-4.2)
         val isDesktopMode: Boolean = true,  // Default: desktop mode for better AR glasses rendering
-        val pageTitle: String? = null  // Updated dynamically from page content
+        val pageTitle: String? = null,  // Updated dynamically from page content
+
+        // Phase 4: Loading states (FR-4.1)
+        val isLoading: Boolean = false,
+        val loadingProgress: Int = 0,
+        val error: String? = null,
+
+        // Phase 4: JavaScript bridge state (FR-4.2)
+        val hasJavaScriptBridge: Boolean = false,
+
+        // Phase 4: Telemetry (FR-4.3)
+        val pageLoadStartTime: Long = 0L,
+        val lastInteractionTime: Long = 0L,
+        val errorCount: Int = 0
     ) : WindowContent()
 
     /**
@@ -81,6 +101,19 @@ sealed class WindowContent {
     ) : WindowContent()
 
     /**
+     * Native widget content (Calculator, Weather, etc.)
+     *
+     * @param widgetType Type of widget to render
+     * @param state Widget-specific state as JSON string
+     * @param lastUpdated Timestamp of last state update
+     */
+    data class WidgetContent(
+        val widgetType: WidgetType,
+        val state: String = "{}",  // JSON string for widget-specific state
+        val lastUpdated: Long = 0L
+    ) : WindowContent()
+
+    /**
      * Mock/placeholder content for testing and development
      *
      * Shows window metadata (type, voice name, position) instead of real content.
@@ -98,4 +131,17 @@ enum class DocumentType {
     TEXT,
     VIDEO,  // Phase 3: Video playback support
     UNKNOWN
+}
+
+/**
+ * Widget types for WidgetContent renderer selection
+ */
+@Serializable
+enum class WidgetType {
+    CALCULATOR,      // Native calculator widget
+    WEATHER,         // Weather widget
+    CLOCK,           // Clock/timer widget
+    NOTES,           // Quick notes widget
+    SYSTEM_MONITOR,  // System stats widget
+    CUSTOM           // Custom widget type
 }

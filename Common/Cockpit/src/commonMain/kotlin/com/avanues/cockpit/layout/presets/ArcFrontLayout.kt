@@ -60,7 +60,8 @@ object ArcFrontLayout : LayoutPreset {
     override val minWindows = 1
 
     // Arc configuration constants
-    private const val ARC_RADIUS_METERS = 3.0f
+    // PSEUDO-SPATIAL: Reduced from 3.0m to 1.8m for better readability on LCD screens
+    private const val ARC_RADIUS_METERS = 1.8f  // Closer for phone/tablet displays
     private const val ARC_SPAN_DEGREES = 120f
     private const val DEG_TO_RAD = (PI / 180.0).toFloat()
     private const val RAD_TO_DEG = (180.0 / PI).toFloat()
@@ -122,11 +123,11 @@ object ArcFrontLayout : LayoutPreset {
         index: Int,
         totalWindows: Int
     ): WindowDimensions {
-        // Uniform dimensions for arc layout
-        // Slightly smaller than linear layout to accommodate arc curvature
+        // PSEUDO-SPATIAL: Larger dimensions for better readability on LCD screens
+        // Increased from 0.7×0.55m to match flat workspace visibility
         return WindowDimensions(
-            widthMeters = 0.7f,   // ~27 inches at 3m distance
-            heightMeters = 0.55f  // ~22 inches at 3m distance
+            widthMeters = 1.2f,   // ~47 inches at 1.8m distance (large and readable)
+            heightMeters = 0.9f   // ~35 inches at 1.8m distance
         )
     }
 
@@ -152,9 +153,10 @@ object ArcFrontLayout : LayoutPreset {
         return when (displayConfig.windowSizeMode) {
             WindowSizeMode.PHYSICAL_METERS -> {
                 // AR mode: Fixed physical dimensions at viewing distance
+                // PSEUDO-SPATIAL: Larger for LCD screens
                 WindowDimensions(
-                    widthMeters = 0.7f,
-                    heightMeters = 0.55f
+                    widthMeters = 1.2f,
+                    heightMeters = 0.9f
                 )
             }
 

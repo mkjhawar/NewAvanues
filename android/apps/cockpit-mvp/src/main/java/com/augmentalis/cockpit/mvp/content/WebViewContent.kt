@@ -13,22 +13,98 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import com.avanues.cockpit.core.window.WindowContent
+import com.augmentalis.cockpit.mvp.content.webview.WebViewRenderer
+import com.augmentalis.cockpit.mvp.content.loading.LoadingOverlay
+import com.augmentalis.cockpit.mvp.content.loading.WebViewErrorPage
 
 /**
  * WebView content renderer for WindowContent.WebContent
  *
  * Features:
- * - Full WebView with configurable settings
- * - Loading indicator during page load
+ * - Full WebView with telemetry and JavaScript bridge
+ * - Loading indicator with progress
  * - Error handling with retry capability
  * - Automatic URL reload on content update
  * - Scroll position persistence (Phase 3: FR-3.1)
+ * - JavaScript bridge integration (window.cockpit)
  *
  * @param webContent WebView configuration and state
  * @param onScrollChanged Callback when scroll position changes (for state persistence)
+ * @param windowId Window ID for telemetry (derived from content hash if not provided)
+ * @param enableBridge Whether to enable JavaScript bridge (default: true)
  */
 @Composable
 fun WebViewContent(
+    webContent: WindowContent.WebContent,
+    onScrollChanged: ((scrollX: Int, scrollY: Int) -> Unit)? = null,
+    windowId: String = webContent.url.hashCode().toString(),
+    enableBridge: Boolean = true,
+    onMinimize: (() -> Unit)? = null,
+    onMaximize: (() -> Unit)? = null,
+    onClose: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    // Track content state internally (initialize with loading=true)
+    var currentState by remember {
+        mutableStateOf(webContent.copy(isLoading = true, loadingProgress = 0))
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        // Render WebView with new infrastructure
+        WebViewRenderer(
+            windowId = windowId,
+            content = currentState,
+            onContentStateChanged = { newState ->
+                // Check BEFORE updating currentState to avoid comparison bug
+                if (newState.scrollX != currentState.scrollX || newState.scrollY != currentState.scrollY) {
+                    onScrollChanged?.invoke(newState.scrollX, newState.scrollY)
+                }
+                currentState = newState  // Update AFTER comparison
+            },
+            enableBridge = enableBridge,
+            onMinimize = onMinimize,
+            onMaximize = onMaximize,
+            onClose = onClose,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Show loading overlay when loading
+        if (currentState.isLoading) {
+            LoadingOverlay(
+                message = "Loading ${currentState.pageTitle ?: "page"}...",
+                progress = currentState.loadingProgress.takeIf { it > 0 },
+                url = currentState.url,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        // Show error page if error occurred
+        currentState.error?.let { error ->
+            WebViewErrorPage(
+                error = error,
+                url = currentState.url,
+                onRetry = {
+                    // Reset error and reload
+                    currentState = currentState.copy(
+                        error = null,
+                        isLoading = true,
+                        loadingProgress = 0
+                    )
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
+
+/**
+ * Legacy WebViewContent implementation (keeping for backwards compatibility)
+ * This version uses plain WebView without telemetry/bridge integration
+ *
+ * DEPRECATED: Use WebViewContent with new infrastructure instead
+ */
+@Composable
+fun LegacyWebViewContent(
     webContent: WindowContent.WebContent,
     onScrollChanged: ((scrollX: Int, scrollY: Int) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -58,13 +134,15 @@ fun WebViewContent(
                             hasError = false
 
                             // Phase 3: Restore scroll position after page load (FR-3.1)
-                            view?.post {
+                            // Use postDelayed to ensure DOM is fully rendered before scrolling
+                            view?.postDelayed({
                                 if (webContent.scrollX != 0 || webContent.scrollY != 0) {
                                     view.scrollTo(webContent.scrollX, webContent.scrollY)
                                 }
-                            }
+                            }, 300L)  // 300ms delay for DOM rendering
                         }
 
+                        @Deprecated("Deprecated in Android API")
                         override fun onReceivedError(
                             view: WebView?,
                             errorCode: Int,
@@ -94,13 +172,9 @@ fun WebViewContent(
                         override fun onReceivedTitle(view: WebView?, title: String?) {
                             // Update page title dynamically
                             title?.let {
-                                val truncatedTitle = if (it.length > 30) {
-                                    it.substring(0, 27) + "..."
-                                } else {
-                                    it
-                                }
+                                // Title is received but will be updated through ManagedWebView's content state change
+                                // Trigger scroll update to notify parent of any changes
                                 onScrollChanged?.invoke(view?.scrollX ?: 0, view?.scrollY ?: 0)
-                                // Title will be updated through content state change
                             }
                         }
 

@@ -2,11 +2,13 @@ package com.augmentalis.cockpit.mvp
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.mutableStateListOf
 import com.avanues.cockpit.core.window.AppWindow
 import com.avanues.cockpit.core.window.WindowContent
 import com.avanues.cockpit.core.window.WindowType
 import com.avanues.cockpit.core.window.DocumentType
+import com.avanues.cockpit.core.window.WidgetType
 import com.avanues.cockpit.core.workspace.Vector3D
 import com.avanues.cockpit.layout.presets.LayoutPreset
 import com.avanues.cockpit.layout.presets.WindowPosition
@@ -16,6 +18,13 @@ import com.avanues.cockpit.layout.presets.TheaterLayout
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import java.util.UUID
 
 /**
@@ -55,9 +64,13 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isHeadCursorEnabled = MutableStateFlow(false)
     val isHeadCursorEnabled: StateFlow<Boolean> = _isHeadCursorEnabled.asStateFlow()
 
-    // Spatial mode enabled state
-    private val _isSpatialMode = MutableStateFlow(false)
-    val isSpatialMode: StateFlow<Boolean> = _isSpatialMode.asStateFlow()
+    // Workspace mode (FLAT / SPATIAL / CURVED)
+    private val _workspaceMode = MutableStateFlow(WorkspaceMode.CURVED)  // Default to curved
+    val workspaceMode: StateFlow<WorkspaceMode> = _workspaceMode.asStateFlow()
+
+    // Legacy spatial mode (for backwards compatibility)
+    val isSpatialMode: StateFlow<Boolean> = _workspaceMode.map { it == WorkspaceMode.SPATIAL }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     // Current layout preset
     private val _layoutPreset = MutableStateFlow<LayoutPreset>(layoutPresets[currentLayoutIndex])
@@ -68,10 +81,12 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
     val selectedWindowId: StateFlow<String?> = _selectedWindowId.asStateFlow()
 
     init {
-        // Initialize with 3 sample windows
-        addWindow("WebAvanue", WindowType.WEB_APP, "#4ECDC4", WindowContent.WebContent("https://webavanue.com"))
-        addWindow("Google", WindowType.WEB_APP, "#95E1D3", WindowContent.WebContent("https://google.com"))
-        addWindow("Calculator", WindowType.WIDGET, "#FF6B9D", WindowContent.MockContent)
+        // Initialize with 5 sample windows (Ocean Blue professional colors)
+        addWindow("Augmentalis", WindowType.WEB_APP, "#2D5F7F", WindowContent.WebContent("https://www.augmentalis.com"))
+        addWindow("Google", WindowType.WEB_APP, "#2A6B6A", WindowContent.WebContent("https://google.com"))
+        addWindow("Calculator", WindowType.WIDGET, "#3A7B8A", WindowContent.WidgetContent(WidgetType.CALCULATOR))
+        addWindow("Weather", WindowType.WEB_APP, "#4A90B8", WindowContent.WebContent("https://weather.com"))
+        addWindow("Maps", WindowType.WEB_APP, "#8A9BA8", WindowContent.WebContent("https://maps.google.com"))
     }
 
     fun addWindow(title: String, type: WindowType, color: String, content: WindowContent = WindowContent.MockContent) {
@@ -83,46 +98,59 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
             type = type,
             sourceId = "demo.$title",
             position = Vector3D(0f, 0f, -2f),
-            widthMeters = 0.8f,
-            heightMeters = 0.6f,
+            widthMeters = 1.2f,  // Increased from 0.8f (50% larger)
+            heightMeters = 0.9f,  // Increased from 0.6f (50% larger)
             voiceName = title.lowercase(),
             content = content
         )
-        _windows.value = _windows.value + window
+        _windows.update { it + window }
 
         // Store window color
-        _windowColors.value = _windowColors.value + (window.id to color)
+        _windowColors.update { it + (window.id to color) }
 
         updatePositions()
     }
 
     fun removeWindow(windowId: String) {
-        _windows.value = _windows.value.filter { it.id != windowId }
-        _windowColors.value = _windowColors.value.filterKeys { it != windowId }
+        _windows.update { it.filter { window -> window.id != windowId } }
+        _windowColors.update { it.filterKeys { key -> key != windowId } }
         updatePositions()
     }
 
     fun resetWorkspace() {
-        _windows.value = emptyList()
-        _windowPositions.value = emptyMap()
-        _windowColors.value = emptyMap()
-        _isHeadCursorEnabled.value = false
-        _isSpatialMode.value = false
+        _windows.update { emptyList() }
+        _windowPositions.update { emptyMap() }
+        _windowColors.update { emptyMap() }
+        _isHeadCursorEnabled.update { false }
+        _workspaceMode.update { WorkspaceMode.CURVED }  // Default to curved workspace
         currentLayoutIndex = 1  // Reset to ArcFrontLayout (angled windows)
-        _layoutPreset.value = layoutPresets[currentLayoutIndex]
+        _layoutPreset.update { layoutPresets[currentLayoutIndex] }
 
-        // Re-initialize with sample windows
-        addWindow("WebAvanue", WindowType.WEB_APP, "#4ECDC4", WindowContent.WebContent("https://webavanue.com"))
-        addWindow("Google", WindowType.WEB_APP, "#95E1D3", WindowContent.WebContent("https://google.com"))
-        addWindow("Calculator", WindowType.WIDGET, "#FF6B9D", WindowContent.MockContent)
+        // Re-initialize with sample windows (Ocean Blue professional colors)
+        addWindow("Augmentalis", WindowType.WEB_APP, "#2D5F7F", WindowContent.WebContent("https://www.augmentalis.com"))
+        addWindow("Google", WindowType.WEB_APP, "#2A6B6A", WindowContent.WebContent("https://google.com"))
+        addWindow("Calculator", WindowType.WIDGET, "#3A7B8A", WindowContent.WidgetContent(WidgetType.CALCULATOR))
+        addWindow("Weather", WindowType.WEB_APP, "#4A90B8", WindowContent.WebContent("https://weather.com"))
+        addWindow("Maps", WindowType.WEB_APP, "#8A9BA8", WindowContent.WebContent("https://maps.google.com"))
     }
 
     fun toggleHeadCursor() {
-        _isHeadCursorEnabled.value = !_isHeadCursorEnabled.value
+        _isHeadCursorEnabled.update { !it }
     }
 
+    /**
+     * Toggle/cycle workspace mode
+     * FLAT → SPATIAL → CURVED → FLAT (cycle)
+     */
     fun toggleSpatialMode() {
-        _isSpatialMode.value = !_isSpatialMode.value
+        _workspaceMode.update { it.next() }
+    }
+
+    /**
+     * Set specific workspace mode
+     */
+    fun setWorkspaceMode(mode: WorkspaceMode) {
+        _workspaceMode.update { mode }
     }
 
     /**
@@ -136,7 +164,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
         } else {
             currentLayoutIndex = (currentLayoutIndex - 1 + layoutPresets.size) % layoutPresets.size
         }
-        _layoutPreset.value = layoutPresets[currentLayoutIndex]
+        _layoutPreset.update { layoutPresets[currentLayoutIndex] }
         updatePositions()
     }
 
@@ -174,7 +202,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
      * @param windowId The ID of the window being hovered, or null if no window
      */
     fun setSelectedWindow(windowId: String?) {
-        _selectedWindowId.value = windowId
+        _selectedWindowId.update { windowId }
     }
 
     /**
@@ -184,7 +212,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
      * @param windowId The ID of the window to minimize
      */
     fun minimizeWindow(windowId: String) {
-        _windows.value = _windows.value.map { window ->
+        _windows.update { windows -> windows.map { window ->
             if (window.id == windowId) {
                 window.copy(
                     isHidden = true,
@@ -193,7 +221,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
             } else {
                 window
             }
-        }
+        } }
     }
 
     /**
@@ -202,7 +230,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
      * @param windowId The ID of the window to restore
      */
     fun restoreWindow(windowId: String) {
-        _windows.value = _windows.value.map { window ->
+        _windows.update { windows -> windows.map { window ->
             if (window.id == windowId) {
                 window.copy(
                     isHidden = false,
@@ -211,7 +239,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
             } else {
                 window
             }
-        }
+        } }
     }
 
     /**
@@ -228,7 +256,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
      * @param windowId The ID of the window to toggle size
      */
     fun toggleWindowSize(windowId: String) {
-        _windows.value = _windows.value.map { window ->
+        _windows.update { windows -> windows.map { window ->
             if (window.id == windowId) {
                 if (window.isHidden) {
                     // Restore from minimized: clear isHidden, keep isLarge (preserve pre-minimize state)
@@ -246,7 +274,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
             } else {
                 window
             }
-        }
+        } }
     }
 
     /**
@@ -256,7 +284,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
      * @param windowId The ID of the window to select
      */
     fun selectWindow(windowId: String) {
-        _selectedWindowId.value = windowId
+        _selectedWindowId.update { windowId }
     }
 
     /**
@@ -268,7 +296,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
      * @param scrollY Vertical scroll position
      */
     fun updateWebViewScrollPosition(windowId: String, scrollX: Int, scrollY: Int) {
-        _windows.value = _windows.value.map { window ->
+        _windows.update { windows -> windows.map { window ->
             val content = window.content
             if (window.id == windowId && content is WindowContent.WebContent) {
                 window.copy(
@@ -281,7 +309,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
             } else {
                 window
             }
-        }
+        } }
     }
 
     /**
@@ -295,7 +323,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
      * @param scrollY Vertical scroll position
      */
     fun updatePdfState(windowId: String, currentPage: Int, zoomLevel: Float, scrollX: Float, scrollY: Float) {
-        _windows.value = _windows.value.map { window ->
+        _windows.update { windows -> windows.map { window ->
             val content = window.content
             if (window.id == windowId && content is WindowContent.DocumentContent && content.documentType == DocumentType.PDF) {
                 window.copy(
@@ -310,7 +338,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
             } else {
                 window
             }
-        }
+        } }
     }
 
     /**
@@ -321,7 +349,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
      * @param playbackPosition Playback position in milliseconds
      */
     fun updateVideoPlaybackPosition(windowId: String, playbackPosition: Long) {
-        _windows.value = _windows.value.map { window ->
+        _windows.update { windows -> windows.map { window ->
             val content = window.content
             if (window.id == windowId && content is WindowContent.DocumentContent && content.documentType == DocumentType.VIDEO) {
                 window.copy(
@@ -333,7 +361,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
             } else {
                 window
             }
-        }
+        } }
     }
 
     /**
@@ -344,7 +372,7 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
      * @param newContent The new content state
      */
     fun updateWindowContent(windowId: String, newContent: WindowContent) {
-        _windows.value = _windows.value.map { window ->
+        _windows.update { windows -> windows.map { window ->
             if (window.id == windowId) {
                 window.copy(
                     content = newContent,
@@ -353,18 +381,18 @@ class WorkspaceViewModel(application: Application) : AndroidViewModel(applicatio
             } else {
                 window
             }
-        }
+        } }
     }
 
     private fun updatePositions() {
         if (_windows.value.isEmpty()) {
-            _windowPositions.value = emptyMap()
+            _windowPositions.update { emptyMap() }
             return
         }
 
         val centerPoint = Vector3D(0f, 0f, -2f)
         val positions = _layoutPreset.value.calculatePositions(_windows.value, centerPoint)
 
-        _windowPositions.value = positions.associate { it.windowId to it.position }
+        _windowPositions.update { positions.associate { it.windowId to it.position } }
     }
 }

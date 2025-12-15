@@ -25,7 +25,8 @@ import com.avanues.cockpit.layout.presets.WindowPosition
  * - Optimizations: Depth sorting, visibility culling, pre-allocated paints
  */
 class SpatialWindowRenderer(
-    private val layoutPreset: LayoutPreset
+    private val layoutPreset: LayoutPreset,
+    private val qualityManager: AdaptiveQualityManager? = null
 ) {
 
     // Cache last rendered windows for hit detection
@@ -34,13 +35,13 @@ class SpatialWindowRenderer(
     // Pre-allocated paints for performance
     private val glassSurfacePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = android.graphics.Color.parseColor("#14FFFFFF")  // Ocean Theme glassSurface
+        color = android.graphics.Color.parseColor("#08FFFFFF")  // Ocean Theme glassSurface (3%)
     }
 
     private val glassBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 2f
-        color = android.graphics.Color.parseColor("#26FFFFFF")  // Ocean Theme glassBorder
+        strokeWidth = 0.5f  // Hair-thin border
+        color = android.graphics.Color.parseColor("#1AFFFFFF")  // Ocean Theme glassBorder (10%)
     }
 
     private val glassTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -51,7 +52,7 @@ class SpatialWindowRenderer(
 
     private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = android.graphics.Color.parseColor("#40000000")  // Ocean Theme glassShadow
+        color = android.graphics.Color.parseColor("#14000000")  // Ocean Theme glassShadow (8%)
     }
 
     /**
@@ -71,7 +72,7 @@ class SpatialWindowRenderer(
      * 2. Project to 2D with CurvedProjection
      * 3. Apply scale factor to dimensions
      * 4. Sort by depth (far to near)
-     * 5. Render each window with glassmorphic styling
+     * 5. Render each window with glassmorphic styling + WebView bitmaps
      *
      * @param canvas Target canvas for rendering
      * @param windows List of windows to render
@@ -79,6 +80,7 @@ class SpatialWindowRenderer(
      * @param selectedWindowId ID of selected window (for highlighting), null if none
      * @param centerPoint Center point for layout calculation
      * @param scaleFactor Uniform scale factor for all windows (0.5x to 2.0x)
+     * @param bitmapProvider Function to get bitmap for window ID (null if not yet rendered)
      */
     fun render(
         canvas: Canvas,
@@ -86,7 +88,8 @@ class SpatialWindowRenderer(
         windowColors: Map<String, String>,
         selectedWindowId: String? = null,
         centerPoint: Vector3D = Vector3D(0f, 0f, -2f),
-        scaleFactor: Float = 1.0f
+        scaleFactor: Float = 1.0f,
+        bitmapProvider: ((String) -> android.graphics.Bitmap?)? = null
     ) {
         if (windows.isEmpty()) return
 
@@ -135,7 +138,7 @@ class SpatialWindowRenderer(
         // Render each window
         sortedWindows.forEach {
             val isSelected = it.window.id == selectedWindowId
-            renderWindow(canvas, it, scaleFactor, isSelected)
+            renderWindow(canvas, it, scaleFactor, isSelected, bitmapProvider)
         }
     }
 
@@ -146,12 +149,14 @@ class SpatialWindowRenderer(
      * @param renderedWindow Window with projection metadata
      * @param scaleFactor Global scale factor for UI elements
      * @param isSelected Whether this window is selected (for highlighting)
+     * @param bitmapProvider Function to get bitmap for window ID
      */
     private fun renderWindow(
         canvas: Canvas,
         renderedWindow: RenderedWindow,
         scaleFactor: Float,
-        isSelected: Boolean = false
+        isSelected: Boolean = false,
+        bitmapProvider: ((String) -> android.graphics.Bitmap?)? = null
     ) {
         val quad = renderedWindow.quad
         val window = renderedWindow.window
@@ -168,21 +173,41 @@ class SpatialWindowRenderer(
         // Apply opacity based on depth (atmospheric perspective)
         val surfacePaint = Paint(glassSurfacePaint).apply {
             alpha = (255 * quad.opacity).toInt()
+
+            // Apply depth-of-field blur (adaptive)
+            val blurRadius = CurvedProjection.calculateDepthBlur(quad.centerDepth)
+            val adaptiveBlur = qualityManager?.applyAdaptiveBlur(blurRadius) ?: 0f
+            if (adaptiveBlur > 0.5f) {
+                maskFilter = android.graphics.BlurMaskFilter(
+                    adaptiveBlur,
+                    android.graphics.BlurMaskFilter.Blur.NORMAL
+                )
+            }
         }
         val borderPaint = Paint(glassBorderPaint).apply {
             alpha = (255 * quad.opacity).toInt()
-            // Thicker border when selected
-            strokeWidth = if (isSelected) 4f * scaleFactor else 2f * scaleFactor
+            // Thicker border when selected (hair-thin precision)
+            strokeWidth = if (isSelected) 1.5f * scaleFactor else 0.5f * scaleFactor
             // Brighter color when selected
             color = if (isSelected)
                 android.graphics.Color.parseColor("#CCFFFFFF")
             else
-                android.graphics.Color.parseColor("#26FFFFFF")
+                android.graphics.Color.parseColor("#1AFFFFFF")
         }
         val textPaint = Paint(glassTextPaint).apply {
             alpha = (255 * quad.opacity).toInt()
             // Scale text based on perspective AND scale factor
             textSize = 40f * quad.topLeft.scale * scaleFactor
+
+            // Apply depth-of-field blur (adaptive)
+            val blurRadius = CurvedProjection.calculateDepthBlur(quad.centerDepth)
+            val adaptiveBlur = qualityManager?.applyAdaptiveBlur(blurRadius) ?: 0f
+            if (adaptiveBlur > 0.5f) {
+                maskFilter = android.graphics.BlurMaskFilter(
+                    adaptiveBlur,
+                    android.graphics.BlurMaskFilter.Blur.NORMAL
+                )
+            }
         }
 
         // Draw shadow (offset down-right, scaled)
@@ -191,11 +216,36 @@ class SpatialWindowRenderer(
         }
         canvas.drawPath(shadowPath, shadowPaint)
 
+        // Draw ambient occlusion at corners (realistic lighting - XR material effect)
+        val aoRadius = 16f * scaleFactor
+        val aoPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.parseColor("#33000000")  // 20% black
+            alpha = (255 * quad.opacity).toInt()
+        }
+
+        // Helper: Draw radial gradient AO at corner
+        fun drawCornerAO(cx: Float, cy: Float) {
+            aoPaint.shader = android.graphics.RadialGradient(
+                cx, cy, aoRadius,
+                intArrayOf(aoPaint.color, android.graphics.Color.TRANSPARENT),
+                floatArrayOf(0f, 1f),
+                android.graphics.Shader.TileMode.CLAMP
+            )
+            canvas.drawCircle(cx, cy, aoRadius, aoPaint)
+            aoPaint.shader = null  // Reset shader
+        }
+
+        // Draw AO at all 4 corners
+        drawCornerAO(quad.topLeft.screenX, quad.topLeft.screenY)
+        drawCornerAO(quad.topRight.screenX, quad.topRight.screenY)
+        drawCornerAO(quad.bottomRight.screenX, quad.bottomRight.screenY)
+        drawCornerAO(quad.bottomLeft.screenX, quad.bottomLeft.screenY)
+
         // Draw glassmorphic surface
         canvas.drawPath(path, surfacePaint)
 
-        // Draw color accent at top (3dp height, scaled)
-        val accentHeight = 12f * scaleFactor
+        // Draw color accent at top (PSEUDO-SPATIAL: taller and more opaque for visibility)
+        val accentHeight = 20f * scaleFactor  // Increased from 12f for better visibility
         val accentPath = Path().apply {
             moveTo(quad.topLeft.screenX, quad.topLeft.screenY)
             lineTo(quad.topRight.screenX, quad.topRight.screenY)
@@ -206,23 +256,64 @@ class SpatialWindowRenderer(
         val accentPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
             color = renderedWindow.colorAccent
-            alpha = (255 * quad.opacity).toInt()
+            // Keep accent fully opaque for visibility (don't fade with depth)
+            alpha = 255  // Always 100% opaque
         }
         canvas.drawPath(accentPath, accentPaint)
 
         // Draw border
         canvas.drawPath(path, borderPaint)
 
-        // Draw window title (centered)
+        // Draw Fresnel edge glow (edges brighter than center - XR material effect)
+        val fresnelPath = Path(path)
+        val fresnelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 3f * scaleFactor
+            color = android.graphics.Color.parseColor("#26FFFFFF")  // 15% white
+            alpha = (255 * quad.opacity * 0.5f).toInt()  // 50% of window opacity
+            maskFilter = android.graphics.BlurMaskFilter(
+                4f * scaleFactor,
+                android.graphics.BlurMaskFilter.Blur.OUTER
+            )
+        }
+        canvas.drawPath(fresnelPath, fresnelPaint)
+
+        // Draw window content (bitmap or title text fallback)
         val centerX = (quad.topLeft.screenX + quad.topRight.screenX) / 2f
         val centerY = (quad.topLeft.screenY + quad.bottomLeft.screenY) / 2f
 
-        // Measure text to center it
-        val textWidth = textPaint.measureText(window.title)
-        val textX = centerX - (textWidth / 2f)
-        val textY = centerY  // Baseline
+        // Try to get bitmap from provider
+        val bitmap = bitmapProvider?.invoke(window.id)
 
-        canvas.drawText(window.title, textX, textY, textPaint)
+        if (bitmap != null) {
+            // Draw WebView bitmap content
+            val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                alpha = (255 * quad.opacity).toInt()
+            }
+
+            // Calculate destination rect to fit within quad
+            val quadWidth = quad.topRight.screenX - quad.topLeft.screenX
+            val quadHeight = quad.bottomLeft.screenY - quad.topLeft.screenY
+
+            // Scale bitmap to fit quad while maintaining aspect ratio
+            val destRect = android.graphics.RectF(
+                quad.topLeft.screenX,
+                quad.topLeft.screenY,
+                quad.topRight.screenX,
+                quad.bottomLeft.screenY
+            )
+
+            val srcRect = android.graphics.Rect(0, 0, bitmap.width, bitmap.height)
+
+            canvas.drawBitmap(bitmap, srcRect, destRect, bitmapPaint)
+        } else {
+            // Fallback: Draw window title text (while bitmap is loading)
+            val textWidth = textPaint.measureText(window.title)
+            val textX = centerX - (textWidth / 2f)
+            val textY = centerY  // Baseline
+
+            canvas.drawText(window.title, textX, textY, textPaint)
+        }
 
         // Draw close button (X icon) in top-right corner
         val buttonSize = 32f * quad.topLeft.scale * scaleFactor

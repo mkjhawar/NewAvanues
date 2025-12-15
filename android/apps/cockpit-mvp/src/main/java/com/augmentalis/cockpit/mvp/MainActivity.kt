@@ -49,48 +49,60 @@ fun CockpitMVPScreen() {
     val positions by viewModel.windowPositions.collectAsState()
     val windowColors by viewModel.windowColors.collectAsState()
     val isHeadCursorEnabled by viewModel.isHeadCursorEnabled.collectAsState()
-    val isSpatialMode by viewModel.isSpatialMode.collectAsState()
+    val workspaceMode by viewModel.workspaceMode.collectAsState()
     val layoutPreset by viewModel.layoutPreset.collectAsState()
     val selectedWindowId by viewModel.selectedWindowId.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Main workspace with windows (2D flat or 3D curved)
-        if (isSpatialMode) {
-            SpatialWorkspaceView(
-                windows = windows,
-                layoutPreset = layoutPreset,
-                windowColors = windowColors,
-                selectedWindowId = selectedWindowId,
-                onRemoveWindow = { viewModel.removeWindow(it) },
-                onCycleLayoutPreset = { forward -> viewModel.cycleLayoutPreset(forward) },
-                onWindowHover = { windowId -> viewModel.setSelectedWindow(windowId) },
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            WorkspaceView(
-                windows = windows,
-                positions = positions,
-                selectedWindowId = selectedWindowId,
-                onRemoveWindow = { viewModel.removeWindow(it) },
-                onMinimizeWindow = { viewModel.minimizeWindow(it) },
-                onToggleWindowSize = { viewModel.toggleWindowSize(it) },
-                onSelectWindow = { viewModel.selectWindow(it) },
-                onUpdateWindowContent = { windowId, content -> viewModel.updateWindowContent(windowId, content) },
-                modifier = Modifier.fillMaxSize()
-            )
+        // Main workspace with windows (3 modes: FLAT, SPATIAL, CURVED)
+        when (workspaceMode) {
+            WorkspaceMode.FLAT -> {
+                WorkspaceView(
+                    windows = windows,
+                    positions = positions,
+                    windowColors = windowColors,
+                    selectedWindowId = selectedWindowId,
+                    onRemoveWindow = { viewModel.removeWindow(it) },
+                    onMinimizeWindow = { viewModel.minimizeWindow(it) },
+                    onToggleWindowSize = { viewModel.toggleWindowSize(it) },
+                    onSelectWindow = { viewModel.selectWindow(it) },
+                    onUpdateWindowContent = { windowId, content -> viewModel.updateWindowContent(windowId, content) },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            WorkspaceMode.SPATIAL -> {
+                SpatialWorkspaceView(
+                    windows = windows,
+                    layoutPreset = layoutPreset,
+                    windowColors = windowColors,
+                    selectedWindowId = selectedWindowId,
+                    onRemoveWindow = { viewModel.removeWindow(it) },
+                    onCycleLayoutPreset = { forward -> viewModel.cycleLayoutPreset(forward) },
+                    onWindowHover = { windowId -> viewModel.setSelectedWindow(windowId) },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            WorkspaceMode.CURVED -> {
+                com.augmentalis.cockpit.mvp.curved.CurvedWorkspaceView(
+                    windows = windows,
+                    selectedWindowId = selectedWindowId,
+                    onWindowSelect = { windowId -> viewModel.selectWindow(windowId) },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
 
-        // Top navigation bar with spatial mode toggle
+        // Top navigation bar with workspace mode toggle
         TopNavigationBar(
             windowCount = windows.size,
             onToggleHeadCursor = { viewModel.toggleHeadCursor() },
             isHeadCursorEnabled = isHeadCursorEnabled,
             onToggleSpatialMode = { viewModel.toggleSpatialMode() },
-            isSpatialMode = isSpatialMode,
-            workspaceName = if (isSpatialMode) {
-                "Spatial - ${viewModel.getLayoutPresetName()}"
-            } else {
-                "Cockpit Workspace"
+            isSpatialMode = workspaceMode != WorkspaceMode.FLAT,  // Non-flat modes show spatial icon
+            workspaceName = when (workspaceMode) {
+                WorkspaceMode.FLAT -> "Cockpit Workspace"
+                WorkspaceMode.SPATIAL -> "Spatial - ${viewModel.getLayoutPresetName()}"
+                WorkspaceMode.CURVED -> "Curved Workspace"
             },
             modifier = Modifier.align(Alignment.TopCenter)
         )
