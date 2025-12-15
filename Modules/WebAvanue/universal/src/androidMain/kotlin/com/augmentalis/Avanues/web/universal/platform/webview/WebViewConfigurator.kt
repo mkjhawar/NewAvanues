@@ -15,7 +15,7 @@ import android.webkit.*
 import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import com.augmentalis.webavanue.platform.SettingsApplicator
-import com.augmentalis.webavanue.ui.screen.browser.DownloadRequest
+import com.augmentalis.webavanue.feature.download.DownloadRequest
 import com.augmentalis.webavanue.ui.screen.security.CertificateUtils
 import com.augmentalis.webavanue.ui.screen.security.HttpAuthRequest
 import com.augmentalis.webavanue.ui.screen.security.PermissionType

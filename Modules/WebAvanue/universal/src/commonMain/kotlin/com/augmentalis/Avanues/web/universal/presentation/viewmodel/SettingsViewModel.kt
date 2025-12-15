@@ -523,7 +523,7 @@ class SettingsViewModel(
      */
     fun validateDownloadPath(path: String) {
         if (pathValidator == null) {
-            _pathValidation.value = DownloadValidationResult.failure("Path validation not available on this platform")
+            _pathValidation.value = DownloadValidationResult.error("Path validation not available on this platform")
             return
         }
 
