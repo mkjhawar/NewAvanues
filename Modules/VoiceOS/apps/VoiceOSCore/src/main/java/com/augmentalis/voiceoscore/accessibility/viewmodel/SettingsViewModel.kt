@@ -163,9 +163,17 @@ class SettingsViewModel(private val context: Application) : AndroidViewModel(con
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    // P2 Task 2.3: Cleanup tracking
+    private val _lastCleanupTimestamp = MutableStateFlow<Long?>(null)
+    val lastCleanupTimestamp: StateFlow<Long?> = _lastCleanupTimestamp.asStateFlow()
+
+    private val _lastCleanupDeletedCount = MutableStateFlow(0)
+    val lastCleanupDeletedCount: StateFlow<Int> = _lastCleanupDeletedCount.asStateFlow()
+
     init {
         loadConfiguration()
         initializeHandlerStates()
+        loadLastCleanupInfo()  // P2 Task 2.3
     }
 
     /**
@@ -637,6 +645,37 @@ class SettingsViewModel(private val context: Application) : AndroidViewModel(con
                 _errorMessage.value = "Failed to save settings: ${e.message}"
             }
         }
+    }
+
+    /**
+     * P2 Task 2.3: Load last cleanup information from SharedPreferences
+     */
+    private fun loadLastCleanupInfo() {
+        viewModelScope.launch {
+            try {
+                val prefs = context.getSharedPreferences("voiceos_cleanup", android.content.Context.MODE_PRIVATE)
+                val timestamp = prefs.getLong("last_cleanup_timestamp", 0L).takeIf { it > 0 }
+                val deletedCount = prefs.getInt("last_cleanup_deleted", 0)
+
+                _lastCleanupTimestamp.value = timestamp
+                _lastCleanupDeletedCount.value = deletedCount
+
+                if (timestamp != null) {
+                    Log.d(TAG, "Loaded cleanup info: $deletedCount deleted at $timestamp")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading cleanup info", e)
+                _lastCleanupTimestamp.value = null
+                _lastCleanupDeletedCount.value = 0
+            }
+        }
+    }
+
+    /**
+     * P2 Task 2.3: Refresh cleanup info (call after CleanupPreviewActivity completes)
+     */
+    fun refreshCleanupInfo() {
+        loadLastCleanupInfo()
     }
 
     override fun onCleared() {

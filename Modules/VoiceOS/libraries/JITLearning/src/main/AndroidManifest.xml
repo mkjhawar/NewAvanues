@@ -8,6 +8,7 @@
   Author: Manoj Jhawar
   Created: 2025-12-11 (JIT-LearnApp Separation)
   Updated: 2025-12-12 (Security: Added signature-level permission)
+  Updated: 2025-12-15 (Fix: Use string resources for permission description)
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -26,8 +27,8 @@
     -->
     <permission
         android:name="com.augmentalis.voiceos.permission.JIT_CONTROL"
-        android:label="Control JIT Learning"
-        android:description="Allows controlling Just-In-Time learning and accessing screen capture data. Only granted to apps signed with the same certificate."
+        android:label="@string/perm_jit_control_label"
+        android:description="@string/perm_jit_control_description"
         android:protectionLevel="signature|privileged" />
 
     <application>

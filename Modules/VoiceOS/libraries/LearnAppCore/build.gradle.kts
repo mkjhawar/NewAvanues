@@ -18,7 +18,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 34
+        minSdk = 29  // Match VoiceOSCore minSdk for compatibility
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
