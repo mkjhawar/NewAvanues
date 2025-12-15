@@ -54,6 +54,7 @@ import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
 import com.augmentalis.webavanue.ui.screen.theme.ThemeType
 import com.augmentalis.webavanue.ui.viewmodel.SettingsViewModel
 import com.augmentalis.webavanue.ui.screen.settings.components.CollapsibleSectionHeader
+import com.augmentalis.webavanue.ui.screen.settings.components.*
 
 /**
  * Settings category for two-pane AR/XR layout
