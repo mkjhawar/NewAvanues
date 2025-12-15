@@ -110,7 +110,7 @@ class CleanupManagerTest {
         assertTrue(result.deletedCount > 0, "Preview should show commands would be deleted")
 
         // Verify command still exists
-        val commands = commandRepo.getCommandsForApp(packageName)
+        val commands = commandRepo.getByPackage(packageName)
         assertEquals(1, commands.size, "Command should not be deleted in preview mode")
     }
 
@@ -145,7 +145,7 @@ class CleanupManagerTest {
         commandRepo.insert(command)
 
         // Verify command exists
-        var commands = commandRepo.getCommandsForApp(packageName)
+        var commands = commandRepo.getByPackage(packageName)
         assertEquals(1, commands.size)
 
         // Execute cleanup
@@ -159,7 +159,7 @@ class CleanupManagerTest {
         assertEquals(1, result.deletedCount, "Should delete 1 command")
 
         // Verify command deleted
-        commands = commandRepo.getCommandsForApp(packageName)
+        commands = commandRepo.getByPackage(packageName)
         assertEquals(0, commands.size, "Command should be deleted")
     }
 
@@ -224,7 +224,7 @@ class CleanupManagerTest {
         assertEquals(1, result.deletedCount, "Should delete 1 old command")
 
         // Verify recent command preserved
-        val remaining = commandRepo.getCommandsForApp(packageName)
+        val remaining = commandRepo.getByPackage(packageName)
         assertEquals(1, remaining.size, "Should have 1 command remaining")
         assertEquals("hash_recent", remaining[0].elementHash)
     }
@@ -269,7 +269,7 @@ class CleanupManagerTest {
         // Verify user-approved command preserved
         assertEquals(0, result.deletedCount, "Should not delete user-approved command")
 
-        val remaining = commandRepo.getCommandsForApp(packageName)
+        val remaining = commandRepo.getByPackage(packageName)
         assertEquals(1, remaining.size)
         assertEquals(1L, remaining[0].isUserApproved)
     }
@@ -314,7 +314,7 @@ class CleanupManagerTest {
         // Verify user-approved command deleted
         assertEquals(1, result.deletedCount, "Should delete user-approved command")
 
-        val remaining = commandRepo.getCommandsForApp(packageName)
+        val remaining = commandRepo.getByPackage(packageName)
         assertEquals(0, remaining.size)
     }
 
@@ -438,7 +438,7 @@ class CleanupManagerTest {
         // Verify only deprecated deleted
         assertEquals(1, result.deletedCount)
 
-        val remaining = commandRepo.getCommandsForApp(packageName)
+        val remaining = commandRepo.getByPackage(packageName)
         assertEquals(1, remaining.size)
         assertEquals("hash_active", remaining[0].elementHash)
         assertEquals(0L, remaining[0].isDeprecated, "Remaining should be active")
@@ -488,7 +488,7 @@ class CleanupManagerTest {
         assertTrue(result.errors.isEmpty(), "Should complete without errors")
 
         // Verify 11 active commands remain
-        val remaining = commandRepo.getCommandsForApp(packageName)
+        val remaining = commandRepo.getByPackage(packageName)
         assertEquals(11, remaining.size, "11 active commands should remain")
     }
 
@@ -585,7 +585,7 @@ class CleanupManagerTest {
         assertTrue("90% deletion should trigger safety limit", exceptionThrown)
 
         // Verify no commands deleted
-        val remaining = commandRepo.getCommandsForApp(packageName)
+        val remaining = commandRepo.getByPackage(packageName)
         assertEquals(100, remaining.size, "No commands should be deleted when safety limit triggered")
     }
 

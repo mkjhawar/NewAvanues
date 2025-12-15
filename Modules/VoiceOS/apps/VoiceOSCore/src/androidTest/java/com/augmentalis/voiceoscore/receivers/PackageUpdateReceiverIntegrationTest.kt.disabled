@@ -98,8 +98,7 @@ class PackageUpdateReceiverIntegrationTest {
             packageName = packageName,
             versionName = "1.0.0",
             versionCode = 100L,
-            firstSeen = now,
-            lastSeen = now
+            lastChecked = now
         )
         appVersionRepo.insert(v1)
 
@@ -126,7 +125,7 @@ class PackageUpdateReceiverIntegrationTest {
         v1Commands.forEach { commandRepo.insert(it) }
 
         // Verify commands exist and are active
-        val beforeUpdate = commandRepo.getCommandsForApp(packageName)
+        val beforeUpdate = commandRepo.getByPackage(packageName)
         assertEquals(10, beforeUpdate.size, "Should have 10 v1 commands")
         assertTrue(beforeUpdate.all { it.isDeprecated == 0L }, "All commands should be active")
 
@@ -136,8 +135,7 @@ class PackageUpdateReceiverIntegrationTest {
             packageName = packageName,
             versionName = "2.0.0",
             versionCode = 200L,
-            firstSeen = now,
-            lastSeen = now + 1000
+            lastChecked = now + 1000
         )
         appVersionRepo.insert(v2)  // This will update existing record
 
@@ -152,7 +150,7 @@ class PackageUpdateReceiverIntegrationTest {
         delay(1000)
 
         // 4. Verify old commands marked isDeprecated=1
-        val afterUpdate = commandRepo.getCommandsForApp(packageName)
+        val afterUpdate = commandRepo.getByPackage(packageName)
         assertEquals(10, afterUpdate.size, "Should still have 10 commands")
 
         val deprecatedCommands = afterUpdate.filter { it.isDeprecated == 1L }
@@ -165,7 +163,7 @@ class PackageUpdateReceiverIntegrationTest {
         )
 
         // 5. Verify version updated in app_version table
-        val currentVersion = appVersionRepo.getByPackageName(packageName)
+        val currentVersion = appVersionRepo.getAppVersion(packageName)
         assertNotNull(currentVersion, "Version should be tracked")
         assertEquals("2.0.0", currentVersion.versionName, "Should track v2")
         assertEquals(200L, currentVersion.versionCode, "Should track v2 versionCode")
@@ -184,7 +182,7 @@ class PackageUpdateReceiverIntegrationTest {
         val packageName = "com.example.newapp"
 
         // Verify no version tracking exists
-        val beforeInstall = appVersionRepo.getByPackageName(packageName)
+        val beforeInstall = appVersionRepo.getAppVersion(packageName)
         assertEquals(null, beforeInstall, "Should have no version tracking")
 
         // Broadcast PACKAGE_ADDED (first install)
@@ -198,13 +196,13 @@ class PackageUpdateReceiverIntegrationTest {
         delay(1000)
 
         // Verify no commands exist (nothing to deprecate)
-        val commands = commandRepo.getCommandsForApp(packageName)
+        val commands = commandRepo.getByPackage(packageName)
         assertEquals(0, commands.size, "No commands should exist yet")
 
         // Verify version tracking created (Note: This depends on receiver implementation)
         // If receiver only tracks on PACKAGE_REPLACED, this might still be null
         // Adjust expectation based on actual implementation
-        val afterInstall = appVersionRepo.getByPackageName(packageName)
+        val afterInstall = appVersionRepo.getAppVersion(packageName)
         // This assertion may need adjustment based on receiver behavior
         // For now, we just verify no crash occurred
         assertTrue(
@@ -231,8 +229,7 @@ class PackageUpdateReceiverIntegrationTest {
             packageName = packageName,
             versionName = "2.0.0",
             versionCode = 200L,
-            firstSeen = now,
-            lastSeen = now
+            lastChecked = now
         )
         appVersionRepo.insert(v2)
 
@@ -259,7 +256,7 @@ class PackageUpdateReceiverIntegrationTest {
         v2Commands.forEach { commandRepo.insert(it) }
 
         // Verify v2 commands active
-        val beforeDowngrade = commandRepo.getCommandsForApp(packageName)
+        val beforeDowngrade = commandRepo.getByPackage(packageName)
         assertEquals(5, beforeDowngrade.size)
         assertTrue(beforeDowngrade.all { it.isDeprecated == 0L })
 
@@ -269,8 +266,7 @@ class PackageUpdateReceiverIntegrationTest {
             packageName = packageName,
             versionName = "1.0.0",
             versionCode = 100L,  // Lower versionCode
-            firstSeen = now,
-            lastSeen = now + 1000
+            lastChecked = now + 1000
         )
         appVersionRepo.insert(v1)
 
@@ -285,7 +281,7 @@ class PackageUpdateReceiverIntegrationTest {
         delay(1000)
 
         // Verify v2 commands deprecated
-        val afterDowngrade = commandRepo.getCommandsForApp(packageName)
+        val afterDowngrade = commandRepo.getByPackage(packageName)
         assertEquals(5, afterDowngrade.size, "Should still have 5 commands")
 
         val deprecatedCommands = afterDowngrade.filter { it.isDeprecated == 1L }
@@ -295,7 +291,7 @@ class PackageUpdateReceiverIntegrationTest {
         )
 
         // Verify version tracking reflects downgrade
-        val currentVersion = appVersionRepo.getByPackageName(packageName)
+        val currentVersion = appVersionRepo.getAppVersion(packageName)
         assertNotNull(currentVersion, "Version should be tracked")
         assertEquals(100L, currentVersion.versionCode, "Should reflect v1 versionCode")
     }
@@ -314,7 +310,7 @@ class PackageUpdateReceiverIntegrationTest {
         val now = System.currentTimeMillis()
 
         // v1 installation
-        val v1 = AppVersionDTO(packageName, "1.0.0", 100L, now, now)
+        val v1 = AppVersionDTO(packageName, "1.0.0", 100L, now)
         appVersionRepo.insert(v1)
 
         val v1Command = GeneratedCommandDTO(
@@ -337,7 +333,7 @@ class PackageUpdateReceiverIntegrationTest {
         commandRepo.insert(v1Command)
 
         // Update v1 → v2
-        val v2 = AppVersionDTO(packageName, "2.0.0", 200L, now, now + 1000)
+        val v2 = AppVersionDTO(packageName, "2.0.0", 200L, now + 1000)
         appVersionRepo.insert(v2)
 
         var intent = Intent(Intent.ACTION_PACKAGE_REPLACED).apply {
@@ -368,7 +364,7 @@ class PackageUpdateReceiverIntegrationTest {
         commandRepo.insert(v2Command)
 
         // Update v2 → v3
-        val v3 = AppVersionDTO(packageName, "3.0.0", 300L, now, now + 2000)
+        val v3 = AppVersionDTO(packageName, "3.0.0", 300L, now + 2000)
         appVersionRepo.insert(v3)
 
         intent = Intent(Intent.ACTION_PACKAGE_REPLACED).apply {
@@ -379,14 +375,14 @@ class PackageUpdateReceiverIntegrationTest {
         delay(1000)
 
         // Verify both v1 and v2 commands deprecated
-        val allCommands = commandRepo.getCommandsForApp(packageName)
+        val allCommands = commandRepo.getByPackage(packageName)
         assertEquals(2, allCommands.size, "Should have 2 commands total")
 
         val deprecatedCommands = allCommands.filter { it.isDeprecated == 1L }
         assertEquals(2, deprecatedCommands.size, "Both v1 and v2 commands should be deprecated")
 
         // Verify version tracking shows v3
-        val currentVersion = appVersionRepo.getByPackageName(packageName)
+        val currentVersion = appVersionRepo.getAppVersion(packageName)
         assertNotNull(currentVersion)
         assertEquals(300L, currentVersion.versionCode)
     }
