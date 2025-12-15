@@ -114,6 +114,9 @@ kotlin {
                 // Activity Compose - For rememberLauncherForActivityResult (file upload support)
                 implementation(libs.androidx.activity.compose)
 
+                // DocumentFile - For custom download paths
+                implementation("androidx.documentfile:documentfile:1.0.1")
+
                 // Security - EncryptedSharedPreferences
                 implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
@@ -205,8 +208,8 @@ kotlin {
 
 // Android Configuration
 android {
-    namespace = "com.augmentalis.Avanues.web.universal"
-    compileSdk = 34
+    namespace = "com.augmentalis.webavanue"
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
@@ -228,7 +231,7 @@ android {
 // universal module now depends on BrowserCoreData for all data persistence
 
 // Publishing Configuration
-group = "com.augmentalis.Avanues.web"
+group = "com.augmentalis.webavanue"
 version = "4.0.0-alpha"
 
 // Maven Publishing

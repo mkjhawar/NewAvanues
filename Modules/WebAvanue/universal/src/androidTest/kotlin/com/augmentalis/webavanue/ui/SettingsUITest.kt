@@ -5,8 +5,8 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.augmentalis.Avanues.web.universal.presentation.ui.settings.SettingsScreen
-import com.augmentalis.Avanues.web.universal.presentation.viewmodel.SettingsViewModel
+import com.augmentalis.webavanue.ui.screen.settings.SettingsScreen
+import com.augmentalis.webavanue.ui.viewmodel.SettingsViewModel
 import com.augmentalis.webavanue.data.db.BrowserDatabase
 import com.augmentalis.webavanue.data.repository.BrowserRepositoryImpl
 import com.augmentalis.webavanue.domain.model.BrowserSettings

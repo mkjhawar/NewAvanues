@@ -24,7 +24,7 @@ package com.augmentalis.webavanue.platform
  * @property availableSpaceMB Free space available in megabytes
  * @property isLowSpace Whether available space is below 100MB threshold
  */
-data class ValidationResult(
+data class DownloadValidationResult(
     val isValid: Boolean,
     val errorMessage: String? = null,
     val availableSpaceMB: Long = 0,
@@ -40,10 +40,10 @@ data class ValidationResult(
          * Create a successful validation result
          *
          * @param availableSpaceMB Free space in megabytes
-         * @return ValidationResult with isValid=true
+         * @return DownloadValidationResult with isValid=true
          */
-        fun success(availableSpaceMB: Long): ValidationResult {
-            return ValidationResult(
+        fun success(availableSpaceMB: Long): DownloadValidationResult {
+            return DownloadValidationResult(
                 isValid = true,
                 availableSpaceMB = availableSpaceMB,
                 isLowSpace = availableSpaceMB < LOW_SPACE_THRESHOLD_MB
@@ -54,10 +54,10 @@ data class ValidationResult(
          * Create a failed validation result
          *
          * @param errorMessage Reason for validation failure
-         * @return ValidationResult with isValid=false
+         * @return DownloadValidationResult with isValid=false
          */
-        fun error(errorMessage: String): ValidationResult {
-            return ValidationResult(
+        fun error(errorMessage: String): DownloadValidationResult {
+            return DownloadValidationResult(
                 isValid = false,
                 errorMessage = errorMessage
             )
@@ -66,27 +66,27 @@ data class ValidationResult(
         /**
          * Create validation result for non-existent path
          *
-         * @return ValidationResult with standard error message
+         * @return DownloadValidationResult with standard error message
          */
-        fun pathNotFound(): ValidationResult {
+        fun pathNotFound(): DownloadValidationResult {
             return error("Path no longer exists. Please select a new location.")
         }
 
         /**
          * Create validation result for non-writable path
          *
-         * @return ValidationResult with standard error message
+         * @return DownloadValidationResult with standard error message
          */
-        fun notWritable(): ValidationResult {
+        fun notWritable(): DownloadValidationResult {
             return error("Cannot write to this location. Please choose a different folder.")
         }
 
         /**
          * Create validation result for invalid URI
          *
-         * @return ValidationResult with standard error message
+         * @return DownloadValidationResult with standard error message
          */
-        fun invalidPath(): ValidationResult {
+        fun invalidPath(): DownloadValidationResult {
             return error("Invalid path format. Please select a valid location.")
         }
 
@@ -94,10 +94,10 @@ data class ValidationResult(
          * Create validation result for insufficient space
          *
          * @param availableSpaceMB Current available space
-         * @return ValidationResult with standard error message
+         * @return DownloadValidationResult with standard error message
          */
-        fun insufficientSpace(availableSpaceMB: Long): ValidationResult {
-            return ValidationResult(
+        fun insufficientSpace(availableSpaceMB: Long): DownloadValidationResult {
+            return DownloadValidationResult(
                 isValid = false,
                 errorMessage = "Insufficient storage space (${availableSpaceMB}MB available)",
                 availableSpaceMB = availableSpaceMB,

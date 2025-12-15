@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.augmentalis.Avanues.web"
+    namespace = "com.augmentalis.webavanue"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.augmentalis.Avanues.web"
+        applicationId = "com.augmentalis.webavanue"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

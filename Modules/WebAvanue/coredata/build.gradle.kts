@@ -126,8 +126,8 @@ kotlin {
 
 // Android Configuration
 android {
-    namespace = "com.augmentalis.Avanues.web.data"
-    compileSdk = 34
+    namespace = "com.augmentalis.webavanue"
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
@@ -154,5 +154,5 @@ sqldelight {
 }
 
 // Publishing Configuration
-group = "com.augmentalis.Avanues.web"
+group = "com.augmentalis.webavanue"
 version = "4.0.0-alpha"
