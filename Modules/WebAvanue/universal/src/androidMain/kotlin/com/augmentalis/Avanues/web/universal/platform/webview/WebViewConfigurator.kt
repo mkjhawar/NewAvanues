@@ -704,9 +704,8 @@ class WebViewConfigurator {
                     url = downloadUrl,
                     filename = filename,
                     mimeType = mimeType,
-                    contentLength = contentLength,
-                    userAgent = userAgent,
-                    contentDisposition = contentDisposition
+                    expectedSize = contentLength,
+                    userAgent = userAgent
                 )
                 onDownloadStart(downloadRequest)
                 println("   ✅ Download request sent to ViewModel")

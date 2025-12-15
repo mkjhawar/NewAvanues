@@ -114,6 +114,9 @@ kotlin {
                 // Activity Compose - For rememberLauncherForActivityResult (file upload support)
                 implementation(libs.androidx.activity.compose)
 
+                // DocumentFile - For custom download paths
+                implementation("androidx.documentfile:documentfile:1.0.1")
+
                 // Security - EncryptedSharedPreferences
                 implementation("androidx.security:security-crypto:1.1.0-alpha06")
 

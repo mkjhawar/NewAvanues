@@ -2,6 +2,8 @@ package com.augmentalis.webavanue.ui.screen.browser
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.augmentalis.webavanue.ui.viewmodel.SecurityViewModel
+import com.augmentalis.webavanue.domain.model.BrowserSettings
 
 /**
  * WebViewContainer - Platform-specific WebView wrapper
@@ -64,10 +66,10 @@ expect fun WebViewContainer(
     canGoForward: (Boolean) -> Unit,
     sessionData: String?,
     onSessionDataChange: (String?) -> Unit,
-    securityViewModel: com.augmentalis.webavanue.presentation.viewmodel.SecurityViewModel? = null,
+    securityViewModel: SecurityViewModel? = null,
     onDownloadStart: ((DownloadRequest) -> Unit)? = null,
     initialScale: Float = 0.75f,  // Initial page scale (0.0 = auto, 0.75 = 75%, 1.0 = 100%)
-    settings: com.augmentalis.webavanue.domain.model.BrowserSettings? = null,  // Browser settings to apply
+    settings: BrowserSettings? = null,  // Browser settings to apply
     modifier: Modifier
 )
 

@@ -45,6 +45,10 @@ import com.augmentalis.webavanue.ui.screen.components.rememberNetworkStatusMonit
 import com.augmentalis.webavanue.ui.screen.dialogs.SessionRestoreDialog
 import com.augmentalis.webavanue.ui.viewmodel.TabViewModel
 import com.augmentalis.webavanue.ui.viewmodel.SettingsViewModel
+import com.augmentalis.webavanue.ui.viewmodel.SecurityViewModel
+import com.augmentalis.webavanue.ui.viewmodel.HistoryViewModel
+import com.augmentalis.webavanue.ui.viewmodel.FavoriteViewModel
+import com.augmentalis.webavanue.ui.viewmodel.DownloadViewModel
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import kotlinx.coroutines.launch
 
@@ -71,11 +75,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun BrowserScreen(
     tabViewModel: TabViewModel,
-    settingsViewModel: com.augmentalis.webavanue.presentation.viewmodel.SettingsViewModel,
-    historyViewModel: com.augmentalis.webavanue.presentation.viewmodel.HistoryViewModel,
-    favoriteViewModel: com.augmentalis.webavanue.presentation.viewmodel.FavoriteViewModel,
-    securityViewModel: com.augmentalis.webavanue.presentation.viewmodel.SecurityViewModel,
-    downloadViewModel: com.augmentalis.webavanue.presentation.viewmodel.DownloadViewModel? = null,
+    settingsViewModel: SettingsViewModel,
+    historyViewModel: HistoryViewModel,
+    favoriteViewModel: FavoriteViewModel,
+    securityViewModel: SecurityViewModel,
+    downloadViewModel: DownloadViewModel? = null,
     xrManager: Any? = null,  // XRManager on Android, null on other platforms
     xrState: Any? = null,    // XRManager.XRState on Android, null on other platforms
     onNavigateToBookmarks: () -> Unit = {},
