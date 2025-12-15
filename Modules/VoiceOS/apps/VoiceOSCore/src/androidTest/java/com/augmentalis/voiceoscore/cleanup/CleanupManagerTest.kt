@@ -443,4 +443,201 @@ class CleanupManagerTest {
         assertEquals("hash_active", remaining[0].elementHash)
         assertEquals(0L, remaining[0].isDeprecated, "Remaining should be active")
     }
+
+    /**
+     * Test 9: Safety limit allows 89% deletion (under threshold)
+     */
+    @Test
+    fun testSafetyLimitAllows89PercentDeletion() = runBlocking {
+        val packageName = "com.example.safetylimit89"
+        val now = System.currentTimeMillis()
+        val gracePeriodDays = 30
+        val gracePeriodMs = gracePeriodDays * 86400000L
+
+        // Create 100 commands: 89 deprecated (eligible), 11 active (safe)
+        (1..100).forEach { i ->
+            val command = GeneratedCommandDTO(
+                id = 0L,
+                elementHash = "hash_$i",
+                commandText = "command $i",
+                actionType = "click",
+                confidence = 0.85,
+                synonyms = null,
+                isUserApproved = 0L,
+                usageCount = 0L,
+                lastUsed = null,
+                createdAt = now - gracePeriodMs - 1000,  // All old
+                appId = packageName,
+                appVersion = "1.0.0",
+                versionCode = 100L,
+                lastVerified = now - gracePeriodMs - 1000,
+                isDeprecated = if (i <= 89) 1L else 0L  // 89 deprecated, 11 active
+            )
+            commandRepo.insert(command)
+        }
+
+        // Execute cleanup - should succeed (89% < 90% threshold)
+        val result = cleanupManager.executeCleanup(
+            gracePeriodDays = gracePeriodDays,
+            keepUserApproved = true,
+            dryRun = false
+        )
+
+        // Verify: Should delete 89 commands (89% of 100)
+        assertEquals(89, result.deletedCount, "Should delete 89% of commands")
+        assertTrue(result.errors.isEmpty(), "Should complete without errors")
+
+        // Verify 11 active commands remain
+        val remaining = commandRepo.getCommandsForApp(packageName)
+        assertEquals(11, remaining.size, "11 active commands should remain")
+    }
+
+    /**
+     * Test 10: Safety limit refuses 91% deletion (over threshold)
+     */
+    @Test(expected = IllegalStateException::class)
+    fun testSafetyLimitRefuses91PercentDeletion() = runBlocking {
+        val packageName = "com.example.safetylimit91"
+        val now = System.currentTimeMillis()
+        val gracePeriodDays = 30
+        val gracePeriodMs = gracePeriodDays * 86400000L
+
+        // Create 100 commands: 91 deprecated (too many), 9 active
+        (1..100).forEach { i ->
+            val command = GeneratedCommandDTO(
+                id = 0L,
+                elementHash = "hash_$i",
+                commandText = "command $i",
+                actionType = "click",
+                confidence = 0.85,
+                synonyms = null,
+                isUserApproved = 0L,
+                usageCount = 0L,
+                lastUsed = null,
+                createdAt = now - gracePeriodMs - 1000,  // All old
+                appId = packageName,
+                appVersion = "1.0.0",
+                versionCode = 100L,
+                lastVerified = now - gracePeriodMs - 1000,
+                isDeprecated = if (i <= 91) 1L else 0L  // 91 deprecated, 9 active
+            )
+            commandRepo.insert(command)
+        }
+
+        // Execute cleanup - should throw IllegalStateException (91% > 90%)
+        cleanupManager.executeCleanup(
+            gracePeriodDays = gracePeriodDays,
+            keepUserApproved = true,
+            dryRun = false
+        )
+
+        // If we get here, test fails (exception should have been thrown)
+    }
+
+    /**
+     * Test 11: Safety limit boundary - exactly 90% deletion
+     */
+    @Test
+    fun testSafetyLimitBoundaryExactly90Percent() = runBlocking {
+        val packageName = "com.example.safetylimit90"
+        val now = System.currentTimeMillis()
+        val gracePeriodDays = 30
+        val gracePeriodMs = gracePeriodDays * 86400000L
+
+        // Create 100 commands: 90 deprecated (exactly at limit), 10 active
+        (1..100).forEach { i ->
+            val command = GeneratedCommandDTO(
+                id = 0L,
+                elementHash = "hash_$i",
+                commandText = "command $i",
+                actionType = "click",
+                confidence = 0.85,
+                synonyms = null,
+                isUserApproved = 0L,
+                usageCount = 0L,
+                lastUsed = null,
+                createdAt = now - gracePeriodMs - 1000,  // All old
+                appId = packageName,
+                appVersion = "1.0.0",
+                versionCode = 100L,
+                lastVerified = now - gracePeriodMs - 1000,
+                isDeprecated = if (i <= 90) 1L else 0L  // Exactly 90 deprecated
+            )
+            commandRepo.insert(command)
+        }
+
+        // Execute cleanup - 90% should be rejected (>= 90% threshold)
+        var exceptionThrown = false
+        try {
+            cleanupManager.executeCleanup(
+                gracePeriodDays = gracePeriodDays,
+                keepUserApproved = true,
+                dryRun = false
+            )
+        } catch (e: IllegalStateException) {
+            exceptionThrown = true
+            assertTrue(
+                "Error message should mention safety limit",
+                e.message?.contains("Safety limit exceeded") == true
+            )
+        }
+
+        assertTrue("90% deletion should trigger safety limit", exceptionThrown)
+
+        // Verify no commands deleted
+        val remaining = commandRepo.getCommandsForApp(packageName)
+        assertEquals(100, remaining.size, "No commands should be deleted when safety limit triggered")
+    }
+
+    /**
+     * Test 12: Preview mode calculates deletion percentage correctly
+     */
+    @Test
+    fun testPreviewCalculatesDeletionPercentage() = runBlocking {
+        val packageName = "com.example.percentagetest"
+        val now = System.currentTimeMillis()
+        val gracePeriodDays = 30
+        val gracePeriodMs = gracePeriodDays * 86400000L
+
+        // Create 200 commands: 90 deprecated (45%)
+        (1..200).forEach { i ->
+            val command = GeneratedCommandDTO(
+                id = 0L,
+                elementHash = "hash_$i",
+                commandText = "command $i",
+                actionType = "click",
+                confidence = 0.85,
+                synonyms = null,
+                isUserApproved = 0L,
+                usageCount = 0L,
+                lastUsed = null,
+                createdAt = now - gracePeriodMs - 1000,  // All old
+                appId = packageName,
+                appVersion = "1.0.0",
+                versionCode = 100L,
+                lastVerified = now - gracePeriodMs - 1000,
+                isDeprecated = if (i <= 90) 1L else 0L  // 90 deprecated (45%)
+            )
+            commandRepo.insert(command)
+        }
+
+        // Preview cleanup
+        val preview = cleanupManager.previewCleanup(
+            gracePeriodDays = gracePeriodDays,
+            keepUserApproved = true
+        )
+
+        // Verify percentage calculation
+        assertEquals(90, preview.deletedCount, "Should identify 90 commands for deletion")
+
+        // Execute should succeed (45% < 90%)
+        val result = cleanupManager.executeCleanup(
+            gracePeriodDays = gracePeriodDays,
+            keepUserApproved = true,
+            dryRun = false
+        )
+
+        assertEquals(90, result.deletedCount, "Should delete 45% of commands")
+        assertTrue(result.errors.isEmpty(), "Should complete without errors")
+    }
 }
