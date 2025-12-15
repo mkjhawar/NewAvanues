@@ -467,8 +467,6 @@ fun LearnAppUI(
     onExport: () -> Unit
 ) {
     val scrollState = rememberScrollState()
-    val isExploring = explorationState.phase == ExplorationPhase.EXPLORING ||
-            explorationState.phase == ExplorationPhase.WAITING_USER
 
     Scaffold(
         topBar = {

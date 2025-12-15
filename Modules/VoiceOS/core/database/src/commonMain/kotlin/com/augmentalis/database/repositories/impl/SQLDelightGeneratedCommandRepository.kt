@@ -352,4 +352,21 @@ class SQLDelightGeneratedCommandRepository(
             limit.toLong()    // Third ? - LIMIT
         ).executeAsList().map { it.toGeneratedCommandDTO() }
     }
+
+    // ========== Database Maintenance Methods (P3 Task 3.1) ==========
+
+    /**
+     * Rebuild database file to reclaim space from deleted records.
+     *
+     * Executes VACUUM command on the database to:
+     * 1. Rebuild database file
+     * 2. Reclaim space from deleted records
+     * 3. Defragment data pages
+     *
+     * Should be called after large deletions (>10% of database).
+     * Runs on Dispatchers.IO to avoid blocking main thread.
+     */
+    override suspend fun vacuumDatabase() = withContext(Dispatchers.IO) {
+        queries.vacuumDatabase()
+    }
 }

@@ -149,7 +149,6 @@ class LearnAppDevActivity : ComponentActivity(), SafetyCallback {
         private const val TAG = "LearnAppDevActivity"
         private const val DEFAULT_PACKAGE = "com.example.app"
         private const val DEFAULT_APP_NAME = "Example App"
-        private const val MAX_LOG_ENTRIES = 500
     }
 
     // AIDL service binding
@@ -352,7 +351,7 @@ class LearnAppDevActivity : ComponentActivity(), SafetyCallback {
 
         runOnUiThread {
             logEntries.add(0, entry)
-            if (logEntries.size > MAX_LOG_ENTRIES) {
+            if (logEntries.size > BuildConfig.MAX_LOG_ENTRIES) {
                 logEntries.removeAt(logEntries.size - 1)
             }
         }

@@ -36,6 +36,7 @@ android {
         buildConfigField("Boolean", "IS_DEVELOPER_EDITION", "true")
         buildConfigField("Boolean", "ENABLE_NEO4J", "true")
         buildConfigField("Boolean", "ENABLE_LOGGING", "true")
+        buildConfigField("int", "MAX_LOG_ENTRIES", "500")  // P3 Layer 6: No hardcoding (Java primitive)
     }
 
     buildTypes {

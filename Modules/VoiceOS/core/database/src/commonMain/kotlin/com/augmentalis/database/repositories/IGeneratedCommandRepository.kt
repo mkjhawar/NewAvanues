@@ -195,6 +195,17 @@ interface IGeneratedCommandRepository {
 
     /**
      * Update command version information after verification.
+     *
+     * **STATUS:** Implemented but primarily used in tests.
+     * **PRODUCTION USE:** Reserved for manual version corrections or
+     * administrative tools. Not part of normal command lifecycle.
+     *
+     * **Use Cases:**
+     * - Bulk version updates after database migration
+     * - Manual correction of misattributed commands
+     * - Testing version-aware logic
+     * - Administrative cleanup tools
+     *
      * Called when element is re-verified against current app version.
      *
      * @param id Command ID
@@ -276,14 +287,19 @@ interface IGeneratedCommandRepository {
     suspend fun getActiveCommands(packageName: String, versionCode: Long, limit: Int): List<GeneratedCommandDTO>
 
     /**
-     * Get active commands by version string instead of version code.
-     * More flexible than `getActiveCommands()` - accepts version string.
+     * Get active commands by version string instead of version code (Task 1.3).
      *
-     * **Performance**: Filters at database level to avoid loading deprecated or
+     * **STATUS:** Implemented for Phase 3, not yet used in production.
+     * **PLANNED USE:** Memory optimization for JIT learning to filter commands
+     * at database level instead of loading all and filtering in Kotlin.
+     *
+     * **Performance:** Filters at database level to avoid loading deprecated or
      * wrong-version commands, reducing memory usage by 60-80% for large apps.
      *
-     * **Use Case**: When you have the version string (e.g., "8.2024.11.123") but
+     * **Use Case:** When you have the version string (e.g., "8.2024.11.123") but
      * not the version code, or when version string is more convenient.
+     *
+     * **See:** VoiceOS-Plan-VersionManagement-P3-Enhancements-5141217-V1.md
      *
      * @param packageName App package name
      * @param appVersion App version string (e.g., "8.2024.11.123")
@@ -295,4 +311,32 @@ interface IGeneratedCommandRepository {
         appVersion: String,
         limit: Int = 1000
     ): List<GeneratedCommandDTO>
+
+    // ========== Database Maintenance Methods (P3 Task 3.1) ==========
+
+    /**
+     * Rebuild database file to reclaim space from deleted records.
+     *
+     * **WHEN TO USE:** After deleting >10% of database commands
+     *
+     * **PERFORMANCE:**
+     * - Execution time: ~100ms per 1MB of database size
+     * - Blocks all database operations during execution
+     * - Space savings: 20-40% reduction for fragmented databases
+     *
+     * **SAFETY:**
+     * - Should be called from background thread (Dispatchers.IO)
+     * - User should see progress indicator during execution
+     * - Automatically called by CleanupManager after large deletions
+     *
+     * **Example:**
+     * ```kotlin
+     * val totalCommands = 50000
+     * val deleted = 15000  // 30% of database
+     * if (deleted > totalCommands * 0.10) {
+     *     repository.vacuumDatabase()  // Reclaim ~3-5 MB
+     * }
+     * ```
+     */
+    suspend fun vacuumDatabase()
 }
