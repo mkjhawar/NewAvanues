@@ -44,6 +44,12 @@ package com.augmentalis.voiceoscore.version
 sealed class VersionChange {
 
     /**
+     * Get the package name for this version change.
+     * Common accessor for all subclasses.
+     */
+    abstract val packageName: String
+
+    /**
      * App is newly installed (no previous version in database).
      *
      * This is the first time VoiceOS has seen this app.
@@ -53,7 +59,7 @@ sealed class VersionChange {
      * @property current Currently installed version
      */
     data class FirstInstall(
-        val packageName: String,
+        override val packageName: String,
         val current: AppVersion
     ) : VersionChange() {
         override fun toString(): String = "FirstInstall($packageName, $current)"
@@ -70,7 +76,7 @@ sealed class VersionChange {
      * @property current Currently installed version (newer)
      */
     data class Updated(
-        val packageName: String,
+        override val packageName: String,
         val previous: AppVersion,
         val current: AppVersion
     ) : VersionChange() {
@@ -94,7 +100,7 @@ sealed class VersionChange {
      * @property current Currently installed version (older)
      */
     data class Downgraded(
-        val packageName: String,
+        override val packageName: String,
         val previous: AppVersion,
         val current: AppVersion
     ) : VersionChange() {
@@ -116,7 +122,7 @@ sealed class VersionChange {
      * @property version Current version (same as stored)
      */
     data class NoChange(
-        val packageName: String,
+        override val packageName: String,
         val version: AppVersion
     ) : VersionChange() {
         override fun toString(): String = "NoChange($packageName, $version)"
@@ -134,7 +140,7 @@ sealed class VersionChange {
      * @property packageName App package name
      */
     data class AppNotInstalled(
-        val packageName: String
+        override val packageName: String
     ) : VersionChange() {
         override fun toString(): String = "AppNotInstalled($packageName)"
     }

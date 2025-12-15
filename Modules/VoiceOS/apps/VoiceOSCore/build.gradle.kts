@@ -266,6 +266,9 @@ dependencies {
     testImplementation("app.cash.sqldelight:sqlite-driver:2.0.1")  // JVM SQLite driver for tests
     testImplementation("app.cash.turbine:turbine:1.0.0")           // Flow testing library
 
+    // Database module for androidTest (Phase 2 integration tests)
+    androidTestImplementation(project(":Modules:VoiceOS:core:database"))
+
     // Unit Testing - JUnit 4 with Robolectric (VoiceOSService SOLID refactoring tests)
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.25")
