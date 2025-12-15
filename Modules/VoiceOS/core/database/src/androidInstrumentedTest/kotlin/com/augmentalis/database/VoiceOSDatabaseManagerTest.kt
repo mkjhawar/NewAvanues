@@ -92,7 +92,7 @@ class VoiceOSDatabaseManagerTest {
     }
 
     @Test
-    fun `getInstance returns same instance on multiple calls`() {
+    fun testGetInstanceReturnsSameInstanceOnMultipleCalls() {
         val instance1 = createTestDatabaseManager(context)
         val instance2 = createTestDatabaseManager(context)
         val instance3 = createTestDatabaseManager(context)
@@ -104,14 +104,14 @@ class VoiceOSDatabaseManagerTest {
     }
 
     @Test
-    fun `getInstance returns non-null instance`() {
+    fun testGetInstanceReturnsNonNullInstance() {
         val instance = createTestDatabaseManager(context)
 
         assertNotNull("getInstance should never return null", instance)
     }
 
     @Test
-    fun `singleton instance has properly initialized repositories`() {
+    fun testSingletonInstanceHasProperlyInitializedRepositories() {
         val instance = createTestDatabaseManager(context)
 
         // Verify all repositories are initialized
@@ -137,7 +137,7 @@ class VoiceOSDatabaseManagerTest {
     }
 
     @Test
-    fun `concurrent getInstance calls return same instance`() = runTest {
+    fun testConcurrentGetInstanceCallsReturnSameInstance() = runTest {
         val driverFactory = DatabaseDriverFactory(context)
 
         // Launch 100 concurrent calls to getInstance
@@ -159,7 +159,7 @@ class VoiceOSDatabaseManagerTest {
     }
 
     @Test
-    fun `singleton database is functional`() = runTest {
+    fun testSingletonDatabaseIsFunctional() = runTest {
         val instance = createTestDatabaseManager(context)
 
         // Test that we can actually use the database
@@ -173,7 +173,7 @@ class VoiceOSDatabaseManagerTest {
     }
 
     @Test
-    fun `in-memory database is isolated per test`() = runTest {
+    fun testInMemoryDatabaseIsIsolatedPerTest() = runTest {
         val driverFactory1 = DatabaseDriverFactory(context)
 
         // Reset singleton to create new instance
@@ -197,7 +197,7 @@ class VoiceOSDatabaseManagerTest {
     }
 
     @Test
-    fun `in-memory database instance is functional`() = runTest {
+    fun testInMemoryDatabaseInstanceIsFunctional() = runTest {
         val driverFactory = DatabaseDriverFactory(context)
         val instance = VoiceOSDatabaseManager.getInstance(driverFactory)
 
@@ -209,7 +209,7 @@ class VoiceOSDatabaseManagerTest {
     }
 
     @Test
-    fun `concurrent access to repositories is safe`() = runTest {
+    fun testConcurrentAccessToRepositoriesIsSafe() = runTest {
         val driverFactory = DatabaseDriverFactory(context)
         val instance = VoiceOSDatabaseManager.getInstance(driverFactory)
 
@@ -233,7 +233,7 @@ class VoiceOSDatabaseManagerTest {
     }
 
     @Test
-    fun `getInstance with same context returns same instance`() {
+    fun testGetInstanceWithSameContextReturnsSameInstance() {
         val driverFactory1 = DatabaseDriverFactory(context)
         val driverFactory2 = DatabaseDriverFactory(context)
 

@@ -183,11 +183,34 @@ WHERE appId = ?
   AND isDeprecated = 1
 ORDER BY lastVerified DESC;
 
--- Get only active commands for a specific app version
+-- Get deprecated commands with grace period filtering (Task 1.2: Batch optimization)
+-- More efficient than loading all and filtering in Kotlin
+-- Parameters: packageName (optional, use '' for all), olderThan timestamp, keepUserApproved (1=keep, 0=delete), limit
+getDeprecatedCommandsForCleanup:
+SELECT * FROM commands_generated
+WHERE isDeprecated = 1
+  AND lastVerified < ?
+  AND (? = '' OR appId = ?)
+  AND (? = 0 OR isUserApproved = 0)
+ORDER BY lastVerified ASC
+LIMIT ?;
+
+-- Get only active commands for a specific app version (by version code)
 getActiveCommands:
 SELECT * FROM commands_generated
 WHERE appId = ?
   AND versionCode = ?
   AND isDeprecated = 0
+ORDER BY usageCount DESC, id ASC
+LIMIT ?;
+
+-- Get active commands for a package by version string (Task 1.3: Memory optimization)
+-- More flexible than getActiveCommands - accepts version string instead of code
+-- Filters at database level to avoid loading deprecated/wrong-version commands
+getActiveCommandsByVersion:
+SELECT * FROM commands_generated
+WHERE appId = ?
+  AND isDeprecated = 0
+  AND (appVersion = ? OR appVersion IS NULL OR appVersion = '')
 ORDER BY usageCount DESC, id ASC
 LIMIT ?;

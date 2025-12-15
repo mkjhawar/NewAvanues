@@ -288,6 +288,25 @@ class SQLDelightGeneratedCommandRepository(
         queries.getDeprecatedCommands(packageName).executeAsList().map { it.toGeneratedCommandDTO() }
     }
 
+    override suspend fun getDeprecatedCommandsForCleanup(
+        packageName: String,
+        olderThan: Long,
+        keepUserApproved: Boolean,
+        limit: Int
+    ): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
+        require(olderThan > 0) { "olderThan timestamp must be positive (got $olderThan)" }
+        require(limit in 1..10000) { "Limit must be between 1 and 10000 (got $limit)" }
+
+        // Parameters: lastVerified < ?, packageName (or ''), packageName again, keepUserApproved flag, limit
+        queries.getDeprecatedCommandsForCleanup(
+            olderThan,                              // First ? - lastVerified threshold
+            packageName,                            // Second ? - package filter check
+            packageName,                            // Third ? - appId value
+            if (keepUserApproved) 1L else 0L,      // Fourth ? - keep user approved flag
+            limit.toLong()                          // Fifth ? - LIMIT
+        ).executeAsList().map { it.toGeneratedCommandDTO() }
+    }
+
     override suspend fun getActiveCommands(packageName: String, versionCode: Long, limit: Int): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
         require(packageName.isNotEmpty()) { "Package name cannot be empty" }
         require(versionCode >= 0) { "Version code must be non-negative (got $versionCode)" }
@@ -297,6 +316,23 @@ class SQLDelightGeneratedCommandRepository(
         queries.getActiveCommands(
             packageName,      // First ? - appId
             versionCode,      // Second ? - versionCode
+            limit.toLong()    // Third ? - LIMIT
+        ).executeAsList().map { it.toGeneratedCommandDTO() }
+    }
+
+    override suspend fun getActiveCommandsByVersion(
+        packageName: String,
+        appVersion: String,
+        limit: Int
+    ): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
+        require(packageName.isNotEmpty()) { "Package name cannot be empty" }
+        require(appVersion.isNotEmpty()) { "App version cannot be empty" }
+        require(limit in 1..10000) { "Limit must be between 1 and 10000 (got $limit)" }
+
+        // Parameters: appId = ?, appVersion = ?, LIMIT ?
+        queries.getActiveCommandsByVersion(
+            packageName,      // First ? - appId
+            appVersion,       // Second ? - appVersion
             limit.toLong()    // Third ? - LIMIT
         ).executeAsList().map { it.toGeneratedCommandDTO() }
     }

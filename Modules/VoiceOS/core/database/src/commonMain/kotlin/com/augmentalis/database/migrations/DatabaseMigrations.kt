@@ -44,18 +44,23 @@ object DatabaseMigrations {
      * Adds appId column to commands_generated table
      */
     private fun migrateV1ToV2(driver: SqlDriver) {
-        // Add appId column with default value for existing rows
-        driver.execute(
-            identifier = null,
-            sql = """
-                ALTER TABLE commands_generated
-                ADD COLUMN appId TEXT NOT NULL DEFAULT ''
-            """.trimIndent(),
-            parameters = 0,
-            binders = null
-        )
+        // Check if appId column exists
+        val hasAppId = columnExists(driver, "commands_generated", "appId")
 
-        // Create index for efficient package-based queries
+        if (!hasAppId) {
+            // Add appId column with default value for existing rows
+            driver.execute(
+                identifier = null,
+                sql = """
+                    ALTER TABLE commands_generated
+                    ADD COLUMN appId TEXT NOT NULL DEFAULT ''
+                """.trimIndent(),
+                parameters = 0,
+                binders = null
+            )
+        }
+
+        // Create index for efficient package-based queries (IF NOT EXISTS makes it idempotent)
         driver.execute(
             identifier = null,
             sql = """
@@ -72,49 +77,63 @@ object DatabaseMigrations {
      * Adds version tracking columns for command lifecycle management
      */
     private fun migrateV2ToV3(driver: SqlDriver) {
+        // Check which columns exist
+        val hasAppVersion = columnExists(driver, "commands_generated", "appVersion")
+        val hasVersionCode = columnExists(driver, "commands_generated", "versionCode")
+        val hasLastVerified = columnExists(driver, "commands_generated", "lastVerified")
+        val hasIsDeprecated = columnExists(driver, "commands_generated", "isDeprecated")
+
         // Add appVersion column (string representation of version)
-        driver.execute(
-            identifier = null,
-            sql = """
-                ALTER TABLE commands_generated
-                ADD COLUMN appVersion TEXT NOT NULL DEFAULT ''
-            """.trimIndent(),
-            parameters = 0,
-            binders = null
-        )
+        if (!hasAppVersion) {
+            driver.execute(
+                identifier = null,
+                sql = """
+                    ALTER TABLE commands_generated
+                    ADD COLUMN appVersion TEXT NOT NULL DEFAULT ''
+                """.trimIndent(),
+                parameters = 0,
+                binders = null
+            )
+        }
 
         // Add versionCode column (integer for efficient comparison)
-        driver.execute(
-            identifier = null,
-            sql = """
-                ALTER TABLE commands_generated
-                ADD COLUMN versionCode INTEGER NOT NULL DEFAULT 0
-            """.trimIndent(),
-            parameters = 0,
-            binders = null
-        )
+        if (!hasVersionCode) {
+            driver.execute(
+                identifier = null,
+                sql = """
+                    ALTER TABLE commands_generated
+                    ADD COLUMN versionCode INTEGER NOT NULL DEFAULT 0
+                """.trimIndent(),
+                parameters = 0,
+                binders = null
+            )
+        }
 
         // Add lastVerified column (timestamp when element was last seen)
-        driver.execute(
-            identifier = null,
-            sql = """
-                ALTER TABLE commands_generated
-                ADD COLUMN lastVerified INTEGER
-            """.trimIndent(),
-            parameters = 0,
-            binders = null
-        )
+        if (!hasLastVerified) {
+            driver.execute(
+                identifier = null,
+                sql = """
+                    ALTER TABLE commands_generated
+                    ADD COLUMN lastVerified INTEGER
+                """.trimIndent(),
+                parameters = 0,
+                binders = null
+            )
+        }
 
         // Add isDeprecated column (0=active, 1=deprecated)
-        driver.execute(
-            identifier = null,
-            sql = """
-                ALTER TABLE commands_generated
-                ADD COLUMN isDeprecated INTEGER NOT NULL DEFAULT 0
-            """.trimIndent(),
-            parameters = 0,
-            binders = null
-        )
+        if (!hasIsDeprecated) {
+            driver.execute(
+                identifier = null,
+                sql = """
+                    ALTER TABLE commands_generated
+                    ADD COLUMN isDeprecated INTEGER NOT NULL DEFAULT 0
+                """.trimIndent(),
+                parameters = 0,
+                binders = null
+            )
+        }
 
         // Create composite index for version-based queries
         driver.execute(
@@ -215,6 +234,36 @@ object DatabaseMigrations {
             false // Column exists, no migration needed
         } catch (e: Exception) {
             true // Column doesn't exist, migration needed
+        }
+    }
+
+    /**
+     * Check if a column exists in a table
+     *
+     * @param driver SQL driver
+     * @param tableName Name of the table
+     * @param columnName Name of the column to check
+     * @return true if column exists, false otherwise
+     */
+    private fun columnExists(driver: SqlDriver, tableName: String, columnName: String): Boolean {
+        return try {
+            val result = driver.executeQuery(
+                identifier = null,
+                sql = "PRAGMA table_info($tableName)",
+                mapper = { cursor ->
+                    val columns = mutableListOf<String>()
+                    while (cursor.next().value) {
+                        // Column name is at index 1
+                        columns.add(cursor.getString(1) ?: "")
+                    }
+                    QueryResult.Value(columns)
+                },
+                parameters = 0,
+                binders = null
+            )
+            result.value.contains(columnName)
+        } catch (e: Exception) {
+            false
         }
     }
 }

@@ -49,6 +49,7 @@ import com.augmentalis.uuidcreator.alias.UuidAliasManager
 import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.voiceoscore.version.AppVersionDetector
+import com.augmentalis.voiceoscore.version.ScreenHashCalculator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -254,7 +255,8 @@ class LearnAppIntegration private constructor(
             repository = repository,
             voiceOSService = accessibilityService as? IVoiceOSServiceInternal,
             learnAppCore = learnAppCore,  // Phase 2: Use LearnAppCore
-            versionDetector = versionDetector  // Version-aware command creation
+            versionDetector = versionDetector,  // Version-aware command creation
+            screenHashCalculator = ScreenHashCalculator  // P2 Task 1.1: Hash-based rescan optimization
         )
 
         // FIX (2025-12-01): Initialize JIT element capture for Voice Command Element Persistence

@@ -57,7 +57,7 @@ class PaginationTest {
     }
 
     @Test
-    fun `getAllPaginated returns correct page size`() = runTest {
+    fun testGetAllPaginatedReturnsCorrectPageSize() = runTest {
         // Insert 50 test commands
         repeat(50) { i ->
             repository.insert(createTestCommand("element_$i", "click_$i"))
@@ -78,7 +78,7 @@ class PaginationTest {
     }
 
     @Test
-    fun `getAllPaginated with offset beyond dataset returns empty`() = runTest {
+    fun testGetAllPaginatedWithOffsetBeyondDatasetReturnsEmpty() = runTest {
         // Insert 10 commands
         repeat(10) { i ->
             repository.insert(createTestCommand("element_$i", "click_$i"))
@@ -90,7 +90,7 @@ class PaginationTest {
     }
 
     @Test
-    fun `getAllPaginated handles partial last page`() = runTest {
+    fun testGetAllPaginatedHandlesPartialLastPage() = runTest {
         // Insert 25 commands
         repeat(25) { i ->
             repository.insert(createTestCommand("element_$i", "click_$i"))
@@ -102,17 +102,23 @@ class PaginationTest {
     }
 
     @Test
-    fun `getAllPaginated with limit 0 returns empty`() = runTest {
+    fun testGetAllPaginatedWithLimit0ThrowsException() = runTest {
         repeat(10) { i ->
             repository.insert(createTestCommand("element_$i", "click_$i"))
         }
 
-        val page = repository.getAllPaginated(limit = 0, offset = 0)
-        assertTrue("Page should be empty", page.isEmpty())
+        // Limit must be between 1 and 1000, so 0 should throw IllegalArgumentException
+        try {
+            repository.getAllPaginated(limit = 0, offset = 0)
+            fail("Should throw IllegalArgumentException for limit = 0")
+        } catch (e: IllegalArgumentException) {
+            assertTrue("Exception message should mention limit",
+                e.message?.contains("Limit") == true)
+        }
     }
 
     @Test
-    fun `getByActionTypePaginated filters correctly`() = runTest {
+    fun testGetByActionTypePaginatedFiltersCorrectly() = runTest {
         // Insert 30 CLICK commands and 20 SCROLL commands
         repeat(30) { i ->
             repository.insert(createTestCommand("element_$i", "click_$i", actionType = "CLICK"))
@@ -138,7 +144,7 @@ class PaginationTest {
     }
 
     @Test
-    fun `pagination handles large dataset efficiently`() = runTest {
+    fun testPaginationHandlesLargeDatasetEfficiently() = runTest {
         // Insert 1000 commands
         val insertStart = System.currentTimeMillis()
         val commands = (0 until 1000).map { i ->
@@ -158,7 +164,7 @@ class PaginationTest {
     }
 
     @Test
-    fun `pagination preserves sort order`() = runTest {
+    fun testPaginationPreservesSortOrder() = runTest {
         // Insert commands with varying usage counts
         repeat(50) { i ->
             val command = createTestCommand("element_$i", "command_$i")
@@ -186,18 +192,23 @@ class PaginationTest {
     }
 
     @Test
-    fun `pagination with negative offset behaves correctly`() = runTest {
+    fun testPaginationWithNegativeOffsetThrowsException() = runTest {
         repeat(10) { i ->
             repository.insert(createTestCommand("element_$i", "command_$i"))
         }
 
-        // Negative offset should be treated as 0 by SQLite
-        val page = repository.getAllPaginated(limit = 5, offset = -10)
-        assertEquals(5, page.size) // Should get first 5
+        // Offset must be non-negative, so negative offset should throw IllegalArgumentException
+        try {
+            repository.getAllPaginated(limit = 5, offset = -10)
+            fail("Should throw IllegalArgumentException for negative offset")
+        } catch (e: IllegalArgumentException) {
+            assertTrue("Exception message should mention offset",
+                e.message?.contains("Offset") == true)
+        }
     }
 
     @Test
-    fun `pagination iterates through entire dataset`() = runTest {
+    fun testPaginationIteratesThroughEntireDataset() = runTest {
         val totalCount = 37 // Non-multiple of page size
         repeat(totalCount) { i ->
             repository.insert(createTestCommand("element_$i", "command_$i"))

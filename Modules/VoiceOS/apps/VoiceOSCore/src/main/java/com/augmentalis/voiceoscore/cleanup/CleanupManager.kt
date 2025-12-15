@@ -165,21 +165,14 @@ class CleanupManager(
         // Calculate cutoff timestamp
         val cutoffTimestamp = System.currentTimeMillis() - (gracePeriodDays * MILLIS_PER_DAY)
 
-        // Get all commands to analyze
-        val allCommands = commandRepo.getAll()
-
-        // Filter deprecated commands older than cutoff
-        val eligibleForDeletion = allCommands.filter { command ->
-            val isDeprecated = command.isDeprecated == 1L
-            val isOldEnough = (command.lastVerified ?: command.createdAt) < cutoffTimestamp
-            val shouldDelete = if (keepUserApproved) {
-                command.isUserApproved == 0L
-            } else {
-                true
-            }
-
-            isDeprecated && isOldEnough && shouldDelete
-        }
+        // Get deprecated commands eligible for deletion (database-level filtering)
+        // Task 1.2: Optimized batch query instead of loading all into memory
+        val eligibleForDeletion = commandRepo.getDeprecatedCommandsForCleanup(
+            packageName = "",  // All packages
+            olderThan = cutoffTimestamp,
+            keepUserApproved = keepUserApproved,
+            limit = 10000  // Safety limit
+        )
 
         // Calculate statistics
         val commandsToDelete = eligibleForDeletion.size
