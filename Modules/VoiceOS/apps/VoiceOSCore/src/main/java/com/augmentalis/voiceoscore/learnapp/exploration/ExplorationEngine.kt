@@ -1150,8 +1150,9 @@ class ExplorationEngine(
             "📊 [DEBUG] clickTracker stats (may be post-clear): ${clickTrackerStats.clickedElements}/${clickTrackerStats.totalElements} " +
             "(${clickTrackerStats.overallCompleteness.toInt()}%)")
 
-        // Export checklist to file
-        val checklistPath = "/sdcard/Download/learnapp-checklist-${packageName.substringAfterLast('.')}-${System.currentTimeMillis()}.md"
+        // Export checklist to file (use Environment API instead of hardcoded /sdcard)
+        val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+        val checklistPath = "${downloadsDir.absolutePath}/learnapp-checklist-${packageName.substringAfterLast('.')}-${System.currentTimeMillis()}.md"
         checklistManager.exportToFile(checklistPath)
 
         // Log checklist summary

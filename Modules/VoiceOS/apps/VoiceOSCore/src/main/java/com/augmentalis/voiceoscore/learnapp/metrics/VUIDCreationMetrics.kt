@@ -53,7 +53,7 @@ data class VUIDCreationMetrics(
     fun toReportString(): String = buildString {
         appendLine("VUID Creation Report - $packageName")
         appendLine("=".repeat(50))
-        appendLine("Exploration Time: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(java.util.Date(explorationTimestamp))}")
+        appendLine("Exploration Time: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date(explorationTimestamp))}")
         appendLine("Elements detected: $elementsDetected")
         appendLine("VUIDs created: $vuidsCreated")
         appendLine("Creation rate: ${formatPercentage(creationRate)} ${getStatusIcon(creationRate)}")

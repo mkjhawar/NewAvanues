@@ -92,9 +92,10 @@ class ProgressOverlay(private val context: Context) {
         val overlayHelper = helper ?: WidgetOverlayHelper(windowManager).also { helper = it }
 
         if (rootView == null) {
-            // Inflate layout
+            // Inflate layout with proper parent (FrameLayout for overlay)
+            val parent = android.widget.FrameLayout(context)
             rootView = LayoutInflater.from(context)
-                .inflate(R.layout.learnapp_layout_progress_overlay, null)
+                .inflate(R.layout.learnapp_layout_progress_overlay, parent, false)
 
             // Get reference to message TextView
             messageText = rootView?.findViewById(R.id.message_text)

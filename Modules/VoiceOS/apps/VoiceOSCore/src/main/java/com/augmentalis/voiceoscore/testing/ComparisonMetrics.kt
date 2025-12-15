@@ -278,7 +278,7 @@ class ComparisonMetricsCollector {
 
         return buildString {
             appendLine("=== COMPARISON FRAMEWORK METRICS ===")
-            appendLine("Generated: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(snapshot.timestamp)}")
+            appendLine("Generated: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(snapshot.timestamp)}")
             appendLine()
 
             appendLine("## Overall Statistics")
