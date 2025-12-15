@@ -49,7 +49,7 @@ import kotlinx.coroutines.launch
 import java.util.*
 
 /**
- * Voice command grouped by screen context
+ * Voice command grouped by screen context (DEPRECATED - use CommandListUiState)
  */
 data class CommandGroup(
     val screenName: String,
@@ -58,13 +58,18 @@ data class CommandGroup(
 )
 
 /**
- * Command List ViewModel
+ * Command List ViewModel with P2 Task 2.1 version info integration
  */
 class CommandListViewModel(
     private val databaseManager: VoiceOSDatabaseManager,
     private val packageName: String
 ) : ViewModel() {
 
+    // P2 Task 2.1: New UI state with version info
+    private val _uiState = MutableStateFlow(CommandListUiState())
+    val uiState: StateFlow<CommandListUiState> = _uiState.asStateFlow()
+
+    // Legacy properties (kept for backward compatibility during transition)
     private val _commandGroups = MutableStateFlow<List<CommandGroup>>(emptyList())
     val commandGroups: StateFlow<List<CommandGroup>> = _commandGroups.asStateFlow()
 
@@ -96,14 +101,85 @@ class CommandListViewModel(
     private fun loadCommands() {
         viewModelScope.launch {
             try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
                 _isLoading.value = true
 
-                // Get all commands for package
-                val allCommands = databaseManager.generatedCommands.getAllCommands()
+                // P2 Task 2.1: Load app version info
+                val appVersion = try {
+                    databaseManager.appVersions.getAppVersion(packageName)
+                } catch (e: Exception) {
+                    Log.w(TAG, "No version info for $packageName", e)
+                    null
+                }
 
-                // Group by screen context (using element hash as proxy for screen)
-                // In real implementation, you'd have a screen_hash field
-                val grouped = allCommands
+                val appInfo = appVersion?.let { version ->
+                    AppVersionInfo(
+                        packageName = packageName,
+                        appName = extractAppName(packageName),
+                        versionName = version.versionName,
+                        versionCode = version.versionCode,
+                        lastUpdated = version.lastChecked,
+                        totalCommands = 0,  // Will be updated below
+                        deprecatedCommands = 0  // Will be updated below
+                    )
+                }
+
+                // Get all commands for package
+                val allCommands = databaseManager.generatedCommands.getByPackage(packageName)
+
+                // P2 Task 2.1: Convert to CommandUiModel with version info
+                val commandUiModels = allCommands.map { cmd ->
+                    val daysUntilDeletion = if (cmd.isDeprecated == 1L) {
+                        val gracePeriodMs = 30L * 86400000L  // 30 days
+                        val elapsedMs = System.currentTimeMillis() - cmd.createdAt
+                        val remainingMs = gracePeriodMs - elapsedMs
+                        (remainingMs / 86400000L).toInt().coerceAtLeast(0)
+                    } else null
+
+                    CommandUiModel(
+                        id = cmd.id,
+                        commandText = cmd.commandText,
+                        actionType = cmd.actionType,
+                        confidence = cmd.confidence,
+                        versionName = cmd.appVersion.ifEmpty { appVersion?.versionName ?: "Unknown" },
+                        isDeprecated = cmd.isDeprecated == 1L,
+                        daysUntilDeletion = daysUntilDeletion,
+                        isUserApproved = cmd.isUserApproved == 1L,
+                        elementHash = cmd.elementHash,
+                        screenHash = null  // TODO: Add when available
+                    )
+                }
+
+                // Group by screen
+                val commandGroups = commandUiModels
+                    .groupBy { extractScreenNameFromCommand(it) }
+                    .map { (screenName, commands) ->
+                        CommandGroupUiModel(
+                            screenName = screenName,
+                            commands = commands.sortedBy { it.commandText },
+                            isExpanded = true
+                        )
+                    }
+                    .sortedBy { it.screenName }
+
+                // Update app info with counts
+                val deprecatedCount = commandUiModels.count { it.isDeprecated }
+                val finalAppInfo = appInfo?.copy(
+                    totalCommands = commandUiModels.size,
+                    deprecatedCommands = deprecatedCount
+                )
+
+                // P2 Task 2.1: Update new UI state
+                _uiState.value = CommandListUiState(
+                    appInfo = finalAppInfo,
+                    commandGroups = commandGroups,
+                    searchQuery = "",
+                    isLoading = false,
+                    errorMessage = null
+                )
+
+                // Legacy compatibility
+                val legacyGroups = allCommands
                     .groupBy { extractScreenName(it) }
                     .map { (screenName, commands) ->
                         CommandGroup(
@@ -113,13 +189,38 @@ class CommandListViewModel(
                     }
                     .sortedBy { it.screenName }
 
-                _commandGroups.value = grouped
+                _commandGroups.value = legacyGroups
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load commands", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = "Failed to load commands: ${e.message}"
+                )
             } finally {
                 _isLoading.value = false
             }
+        }
+    }
+
+    /**
+     * Extract screen name from CommandUiModel
+     */
+    private fun extractScreenNameFromCommand(command: CommandUiModel): String {
+        return when {
+            command.commandText.contains("tab", ignoreCase = true) -> "Main Screen"
+            command.commandText.contains("button", ignoreCase = true) -> "Buttons"
+            command.commandText.contains("setting", ignoreCase = true) -> "Settings"
+            else -> "Other Controls"
+        }
+    }
+
+    /**
+     * Extract app name from package name
+     */
+    private fun extractAppName(packageName: String): String {
+        return packageName.substringAfterLast(".").replaceFirstChar {
+            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
         }
     }
 
