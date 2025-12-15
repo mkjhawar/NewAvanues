@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     kotlin("android")
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.20"
 }
 
 android {
@@ -35,15 +36,12 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"
+        kotlinCompilerExtensionVersion = "1.5.5"  // Compatible with Kotlin 1.9.20
     }
 }
 
 dependencies {
     implementation(project(":Common:Cockpit"))
-    implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))
-    // Phase 2: HUDManager ready but dependencies pending - see Phase2-Architecture-Ready doc
-    // implementation(project(":Modules:VoiceOS:managers:HUDManager"))
     implementation(kotlin("stdlib"))
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.activity:activity-compose:1.8.2")
@@ -56,4 +54,10 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // For WindowPreset JSON serialization (Phase 2)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+
+    // ViewPager2 for curved workspace implementation
+    implementation("androidx.viewpager2:viewpager2:1.0.0")
 }

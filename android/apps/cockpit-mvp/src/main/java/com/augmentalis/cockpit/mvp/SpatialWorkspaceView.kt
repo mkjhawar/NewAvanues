@@ -5,6 +5,8 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -12,12 +14,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.avanues.cockpit.core.window.AppWindow
 import com.avanues.cockpit.core.workspace.Vector3D
 import com.avanues.cockpit.layout.presets.LayoutPreset
 import com.augmentalis.cockpit.mvp.rendering.SpatialWindowRenderer
+import com.augmentalis.cockpit.mvp.rendering.SpatialWebViewManager
 import kotlin.math.abs
 
 /**
@@ -101,12 +107,33 @@ fun SpatialWorkspaceView(
                 SpatialWindowRenderer(layoutPreset)
             }
 
+            // WebView manager for off-screen content rendering
+            val webViewManager = remember { SpatialWebViewManager(context) }
+
+            // Update WebViews when windows change
+            LaunchedEffect(windows, windowColors) {
+                webViewManager.updateWindows(windows, windowColors)
+            }
+
+            // Cleanup on dispose
+            DisposableEffect(Unit) {
+                onDispose {
+                    webViewManager.destroy()
+                }
+            }
+
             AndroidView(
                 factory = { context ->
-                    object : View(context) {
-                        // Gesture detectors
-                        private val gestureDetector = GestureDetector(
-                            context,
+                    // Create container for hidden WebViews + Canvas view
+                    android.widget.FrameLayout(context).apply {
+                        // Add hidden WebView container (invisible but measured)
+                        addView(webViewManager.getContainer())
+
+                        // Add Canvas view for spatial rendering on top
+                        addView(object : View(context) {
+                            // Gesture detectors
+                            private val gestureDetector = GestureDetector(
+                                context,
                             object : GestureDetector.SimpleOnGestureListener() {
                                 override fun onFling(
                                     e1: MotionEvent?,
@@ -165,14 +192,15 @@ fun SpatialWorkspaceView(
                         override fun onDraw(canvas: Canvas) {
                             super.onDraw(canvas)
 
-                            // Render all windows with curved projection, selected window highlight, and scale factor
+                            // Render all windows with curved projection, WebView bitmaps, and scale factor
                             renderer.render(
                                 canvas = canvas,
                                 windows = windows,
                                 windowColors = windowColors,
                                 selectedWindowId = selectedWindowId,
                                 centerPoint = Vector3D(0f, 0f, -2f),
-                                scaleFactor = scaleFactor
+                                scaleFactor = scaleFactor,
+                                bitmapProvider = { windowId -> webViewManager.getBitmap(windowId) }
                             )
                         }
 
@@ -223,18 +251,26 @@ fun SpatialWorkspaceView(
                             gestureDetector.onTouchEvent(event)
                             return true
                         }
-                    }.apply {
-                        // Enable alpha for transparency
-                        setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-                        // Enable touch events
-                        isClickable = true
+                        }.apply {
+                            // Enable alpha for transparency
+                            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+                            // Enable touch events
+                            isClickable = true
+                        })
                     }
                 },
                 update = { view ->
                     // Trigger redraw when windows or scale factor change
-                    view.invalidate()
+                    (view as? android.widget.FrameLayout)?.getChildAt(1)?.invalidate()
                 },
                 modifier = Modifier.fillMaxSize()
+            )
+
+            // Subtle caustic water effect overlay (XR atmosphere)
+            CausticOverlay(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .align(Alignment.Center)
             )
         }
     }
@@ -245,13 +281,78 @@ fun SpatialWorkspaceView(
  * Uses color cycling for multiple windows
  */
 fun getSpatialWindowColor(windowId: String, index: Int): String {
+    // OCEAN BLUE PROFESSIONAL PALETTE (replaces cartoonish bright colors)
+    // Deep ocean depths for professional XR appearance
     val colors = listOf(
-        "#FF6B9D", // Pink
-        "#4ECDC4", // Teal
-        "#95E1D3", // Mint
-        "#FFD93D", // Yellow
-        "#FF8B94", // Coral
-        "#A8E6CF"  // Light green
+        "#2D5F7F", // Deep bioluminescent blue - calm authority
+        "#2A6B6A", // Muted teal glow - ocean depth
+        "#3A7B8A", // Subdued aqua - water reflection
+        "#4A90B8", // Frosted blue - ice clarity
+        "#8A9BA8", // Chrome mid - metallic professionalism
+        "#4A5A6A"  // Chrome dark - steel authority
     )
     return colors[index % colors.size]
+}
+
+/**
+ * Subtle caustic water effect overlay
+ *
+ * Creates "underwater" atmosphere with slow animated ripples
+ * Uses compose animation for performance (60 FPS)
+ */
+@Composable
+fun CausticOverlay(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "caustic_transition")
+
+    val causticPhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 8000,  // 8 second cycle
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "caustic_phase"
+    )
+
+    Canvas(modifier = modifier) {
+        val width = size.width
+        val height = size.height
+
+        // Draw subtle animated caustic pattern
+        // Simple implementation: Sinusoidal wave overlay
+        val paint = Paint().asFrameworkPaint().apply {
+            color = android.graphics.Color.parseColor("#0A60A5FA")  // 4% ocean blue
+            style = android.graphics.Paint.Style.FILL
+        }
+
+        // Draw 3 horizontal wave bands at different phases
+        for (i in 0..2) {
+            val yOffset = (height / 3f) * i
+            val phaseShift = (causticPhase + (i * 0.33f)) % 1f
+
+            val path = android.graphics.Path().apply {
+                moveTo(0f, yOffset)
+
+                // Sinusoidal wave
+                val wavelength = width / 4f
+                for (x in 0..width.toInt() step 10) {
+                    val y = yOffset +
+                            kotlin.math.sin((x / wavelength + phaseShift) *
+                            2f * kotlin.math.PI.toFloat()) * 20f
+                    lineTo(x.toFloat(), y)
+                }
+
+                lineTo(width, yOffset + height)
+                lineTo(0f, yOffset + height)
+                close()
+            }
+
+            drawIntoCanvas { canvas ->
+                canvas.nativeCanvas.drawPath(path, paint)
+            }
+        }
+    }
 }

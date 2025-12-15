@@ -34,10 +34,11 @@ object CurvedProjection {
     private const val CURVE_RADIUS = 2.5f  // Radius of cylindrical projection surface
     private const val MAX_CURVE_ANGLE = 60f  // Maximum angle for curved window (degrees)
 
-    // Atmospheric fade parameters
-    private const val MIN_OPACITY = 0.3f
-    private const val OPACITY_FADE_START = 1.5f
-    private const val OPACITY_FADE_END = 4f
+    // Atmospheric fade parameters (PSEUDO-SPATIAL for LCD screens)
+    // Reduced fade for better readability - windows stay mostly opaque
+    private const val MIN_OPACITY = 0.75f         // Only 25% fade (was 0.10 = 90% fade)
+    private const val OPACITY_FADE_START = 1.2f   // Start fading farther away
+    private const val OPACITY_FADE_END = 3.5f     // End fade later
 
     /**
      * Projected point in 2D screen space
@@ -249,5 +250,40 @@ object CurvedProjection {
     ): Boolean {
         return screenX >= 0 && screenX <= screenWidth &&
                screenY >= 0 && screenY <= screenHeight
+    }
+
+    /**
+     * Calculate blur radius based on depth (depth-of-field)
+     *
+     * Focal plane at 2.0 meters with 0.5m sharp zone
+     * Windows outside focal range progressively blur
+     *
+     * @param depth Distance from camera (positive)
+     * @return Blur radius in dp [0, 24]
+     */
+    fun calculateDepthBlur(depth: Float): Float {
+        // PSEUDO-SPATIAL: Minimal blur for better readability on LCD screens
+        val focalDistance = 1.8f  // Focal plane at 1.8 meters (matches arc radius)
+        val focalRange = 1.5f     // Very wide sharp zone
+        val maxBlur = 3f          // Minimal blur (was 24f - reduced by 87.5%)
+
+        return when {
+            // Within focal range - sharp (most windows will be here)
+            depth >= (focalDistance - focalRange) &&
+            depth <= (focalDistance + focalRange) -> 0f
+
+            // Too close - almost no blur
+            depth < (focalDistance - focalRange) -> {
+                val t = ((focalDistance - focalRange) - depth) / (focalDistance - focalRange)
+                (t.coerceIn(0f, 1f) * maxBlur * 0.3f)  // Minimal blur
+            }
+
+            // Too far - subtle blur only
+            else -> {
+                val t = (depth - (focalDistance + focalRange)) /
+                        (FAR_CLIP - (focalDistance + focalRange))
+                (t.coerceIn(0f, 1f) * maxBlur)  // Subtle blur for distance
+            }
+        }
     }
 }

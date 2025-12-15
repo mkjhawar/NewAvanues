@@ -75,6 +75,10 @@ class FakeBrowserRepository : BrowserRepository {
         return Result.success(Unit)
     }
 
+    override suspend fun getRecentTabs(limit: Int): Result<List<Tab>> {
+        return Result.success(_tabs.value.take(limit))
+    }
+
     // Favorite Operations
     override suspend fun addFavorite(favorite: Favorite): Result<Favorite> {
         _favorites.value = _favorites.value + favorite
@@ -230,6 +234,47 @@ class FakeBrowserRepository : BrowserRepository {
 
     override suspend fun getAllSitePermissions(): Result<List<SitePermission>> {
         return Result.success(emptyList()) // No permissions for tests
+    }
+
+    // Session Management
+    override suspend fun saveSession(session: Session, tabs: List<SessionTab>): Result<Unit> {
+        return Result.success(Unit)
+    }
+
+    override suspend fun getSession(sessionId: String): Result<Session?> {
+        return Result.success(null)
+    }
+
+    override suspend fun getLatestSession(): Result<Session?> {
+        return Result.success(null)
+    }
+
+    override suspend fun getLatestCrashSession(): Result<Session?> {
+        return Result.success(null)
+    }
+
+    override suspend fun getAllSessions(limit: Int, offset: Int): Result<List<Session>> {
+        return Result.success(emptyList())
+    }
+
+    override suspend fun getSessionTabs(sessionId: String): Result<List<SessionTab>> {
+        return Result.success(emptyList())
+    }
+
+    override suspend fun getActiveSessionTab(sessionId: String): Result<SessionTab?> {
+        return Result.success(null)
+    }
+
+    override suspend fun deleteSession(sessionId: String): Result<Unit> {
+        return Result.success(Unit)
+    }
+
+    override suspend fun deleteAllSessions(): Result<Unit> {
+        return Result.success(Unit)
+    }
+
+    override suspend fun deleteOldSessions(timestamp: Instant): Result<Unit> {
+        return Result.success(Unit)
     }
 
     // Data Management

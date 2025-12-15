@@ -127,22 +127,37 @@ fun GlassmorphicSurface(
  * - 16.dp rounded corners
  * - 2.dp border width (more prominent than surface)
  * - Higher shadow elevation for depth
+ * - Selection state support (blue border, elevated shadow)
+ *
+ * Per spec FR-2.2:
+ * - Unselected: 1dp gray border, 4dp elevation
+ * - Selected: 2dp blue border, 8dp elevation
  */
 @Composable
 fun GlassmorphicCard(
     modifier: Modifier = Modifier,
     isFocused: Boolean = false,
+    isSelected: Boolean = false,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     content: @Composable () -> Unit
 ) {
+    // Selection takes precedence over focus
+    val border = when {
+        isSelected -> BorderStroke(2.dp, OceanTheme.primary) // Blue border for selected
+        isFocused -> BorderStroke(2.dp, OceanTheme.glassBorderFocus)
+        else -> BorderStroke(1.dp, OceanTheme.glassBorder) // Gray border for unselected
+    }
+
+    val elevation = if (isSelected) 8.dp else 4.dp
+
     GlassmorphicSurface(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        tonalElevation = 4.dp,
-        shadowElevation = 12.dp,
+        tonalElevation = elevation,
+        shadowElevation = if (isSelected) 16.dp else 12.dp,
         isFocused = isFocused,
-        focusBorder = BorderStroke(2.dp, OceanTheme.glassBorderFocus),
-        defaultBorder = BorderStroke(2.dp, OceanTheme.glassBorder),
+        focusBorder = border,
+        defaultBorder = border,
         interactionSource = interactionSource,
         content = content
     )

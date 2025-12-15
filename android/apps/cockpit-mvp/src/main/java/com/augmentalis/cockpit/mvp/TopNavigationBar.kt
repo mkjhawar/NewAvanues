@@ -6,6 +6,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.SensorsOff
+import androidx.compose.material.icons.filled.ViewInAr
+import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +30,8 @@ fun TopNavigationBar(
     windowCount: Int,
     onToggleHeadCursor: () -> Unit,
     isHeadCursorEnabled: Boolean,
+    onToggleSpatialMode: () -> Unit,
+    isSpatialMode: Boolean,
     workspaceName: String = "Cockpit Workspace",
     modifier: Modifier = Modifier
 ) {
@@ -98,11 +102,27 @@ fun TopNavigationBar(
                     )
                 }
 
-                // Right: Head cursor toggle + Status indicator
+                // Right: Spatial mode toggle + Head cursor toggle + Status indicator
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Spatial mode toggle
+                    IconButton(
+                        onClick = {
+                            hapticManager.performMediumTap()
+                            onToggleSpatialMode()
+                        },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isSpatialMode) Icons.Default.ViewInAr else Icons.Default.ViewStream,
+                            contentDescription = if (isSpatialMode) "Switch to 2D mode" else "Switch to 3D spatial mode",
+                            tint = if (isSpatialMode) OceanTheme.primary else Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
                     // Head cursor toggle
                     IconButton(
                         onClick = {
