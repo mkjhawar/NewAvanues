@@ -255,16 +255,16 @@ class AppVersionDetectorTest {
         assertEquals(3, results.size)
 
         // App1 should be Updated
-        val app1Result = results.find { it.getPackageName() == app1 }
+        val app1Result = results.find { it.packageName == app1 }
         assertNotNull(app1Result)
         assertIs<VersionChange.Updated>(app1Result)
 
         // App2 and App3 should be AppNotInstalled
-        val app2Result = results.find { it.getPackageName() == app2 }
+        val app2Result = results.find { it.packageName == app2 }
         assertNotNull(app2Result)
         assertIs<VersionChange.AppNotInstalled>(app2Result)
 
-        val app3Result = results.find { it.getPackageName() == app3 }
+        val app3Result = results.find { it.packageName == app3 }
         assertNotNull(app3Result)
         assertIs<VersionChange.AppNotInstalled>(app3Result)
     }
@@ -348,19 +348,19 @@ class AppVersionDetectorTest {
 
     @Test
     fun `VersionChange helper methods - return correct values`() {
-        // Test getPackageName()
+        // Test packageName property
         val firstInstall = VersionChange.FirstInstall(
             TEST_PACKAGE,
             AppVersion(TEST_VERSION_NAME_V1, TEST_VERSION_CODE_V1)
         )
-        assertEquals(TEST_PACKAGE, firstInstall.getPackageName())
+        assertEquals(TEST_PACKAGE, firstInstall.packageName)
 
         val updated = VersionChange.Updated(
             TEST_PACKAGE,
             AppVersion(TEST_VERSION_NAME_V1, TEST_VERSION_CODE_V1),
             AppVersion(TEST_VERSION_NAME_V2, TEST_VERSION_CODE_V2)
         )
-        assertEquals(TEST_PACKAGE, updated.getPackageName())
+        assertEquals(TEST_PACKAGE, updated.packageName)
 
         // Test getCurrentVersion()
         val currentVersion = updated.getCurrentVersion()
