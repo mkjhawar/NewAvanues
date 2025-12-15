@@ -24,6 +24,9 @@
     <!-- Android 14+ foreground service type -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
+    <!-- Audio capture permission (required with FOREGROUND_SERVICE_MICROPHONE on API 34+) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- LearnApp: System alert window for visual debugging overlays -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 

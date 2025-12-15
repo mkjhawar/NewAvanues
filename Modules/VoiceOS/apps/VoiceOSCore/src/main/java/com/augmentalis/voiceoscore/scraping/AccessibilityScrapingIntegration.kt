@@ -81,7 +81,8 @@ class AccessibilityScrapingIntegration(
 ) {
 
     companion object {
-        private const val TAG = "AccessibilityScrapingIntegration"
+        // Android Log tag max length is 23 characters
+        private const val TAG = "VOS:AccScraping"  // 15 chars (was 32, exceeded limit)
         // FIX (2025-12-11): Reduced from 50 → 15 to prevent excessive memory allocation (14MB → 4-5MB)
         // Root cause: Deep recursion caused 14MB+ allocations triggering GC pressure
         private const val MAX_DEPTH = 15 // Prevent stack overflow on deeply nested UIs
