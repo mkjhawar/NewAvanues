@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/startup-banner.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash /Users/manoj_mbpm14/.claude/statusline-command.sh"
+  }
+}
