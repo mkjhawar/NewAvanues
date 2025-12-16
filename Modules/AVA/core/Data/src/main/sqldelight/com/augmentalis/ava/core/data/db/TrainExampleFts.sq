@@ -1,0 +1,56 @@
+-- Full-Text Search (FTS4) table for train_examples
+-- Migrated from Room TrainExampleFts
+-- Provides 50-100x faster text search
+
+-- FTS4 virtual table
+CREATE VIRTUAL TABLE train_example_fts USING fts4(
+    content='train_example',
+    utterance,
+    intent,
+    locale
+);
+
+-- Triggers to keep FTS table in sync with train_example table
+
+-- Trigger: Insert
+CREATE TRIGGER train_example_fts_insert AFTER INSERT ON train_example
+BEGIN
+    INSERT INTO train_example_fts(rowid, utterance, intent, locale)
+    VALUES (new.id, new.utterance, new.intent, new.locale);
+END;
+
+-- Trigger: Update (FTS4 doesn't support UPDATE, so use DELETE + INSERT)
+CREATE TRIGGER train_example_fts_update AFTER UPDATE ON train_example
+BEGIN
+    DELETE FROM train_example_fts WHERE rowid = old.id;
+    INSERT INTO train_example_fts(rowid, utterance, intent, locale)
+    VALUES (new.id, new.utterance, new.intent, new.locale);
+END;
+
+-- Trigger: Delete
+CREATE TRIGGER train_example_fts_delete AFTER DELETE ON train_example
+BEGIN
+    DELETE FROM train_example_fts WHERE rowid = old.id;
+END;
+
+-- Search queries
+
+-- Full-text search by utterance
+searchByText:
+SELECT te.* FROM train_example te
+JOIN train_example_fts fts ON te.id = fts.rowid
+WHERE train_example_fts MATCH :query;
+
+-- Full-text search with intent filter
+searchByTextAndIntent:
+SELECT te.* FROM train_example te
+JOIN train_example_fts fts ON te.id = fts.rowid
+WHERE train_example_fts MATCH :query
+AND te.intent = :intent;
+
+-- Full-text search with locale filter
+searchByTextAndLocale:
+SELECT te.* FROM train_example te
+JOIN train_example_fts fts ON te.id = fts.rowid
+WHERE train_example_fts MATCH :query
+AND te.locale = :locale;

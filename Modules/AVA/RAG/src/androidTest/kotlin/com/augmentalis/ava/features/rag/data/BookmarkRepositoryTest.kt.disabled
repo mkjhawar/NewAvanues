@@ -1,0 +1,180 @@
+// filename: Universal/AVA/Features/RAG/src/androidTest/kotlin/com/augmentalis/ava/features/rag/data/BookmarkRepositoryTest.kt
+// created: 2025-11-22
+// author: AVA AI Team - Agent 3
+// © Augmentalis Inc, Intelligent Devices LLC
+
+package com.augmentalis.ava.features.rag.data
+
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.augmentalis.ava.features.rag.data.room.RAGDatabase
+import com.augmentalis.ava.features.rag.domain.*
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.test.assertFalse
+
+@RunWith(AndroidJUnit4::class)
+class BookmarkRepositoryTest {
+
+    private lateinit var database: RAGDatabase
+    private lateinit var repository: RoomBookmarkRepository
+
+    @Before
+    fun setup() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        database = RAGDatabase.getInstance(context)
+        repository = RoomBookmarkRepository(database.bookmarkDao())
+    }
+
+    @After
+    fun tearDown() {
+        RAGDatabase.closeInstance()
+    }
+
+    @Test
+    fun testAddBookmark() = runBlocking {
+        val bookmark = Bookmark(
+            id = "test-bookmark-1",
+            type = BookmarkType.DOCUMENT,
+            targetId = "doc-123",
+            title = "Test Document",
+            description = "A test document",
+            tags = listOf("test", "important"),
+            createdAt = "2024-01-01T00:00:00Z",
+            color = BookmarkColor.BLUE
+        )
+
+        val result = repository.addBookmark(bookmark)
+        assertTrue(result.isSuccess)
+        assertEquals(bookmark, result.getOrNull())
+    }
+
+    @Test
+    fun testGetAllBookmarks() = runBlocking {
+        // Add multiple bookmarks
+        val bookmark1 = Bookmark(
+            id = "test-bookmark-2",
+            type = BookmarkType.DOCUMENT,
+            targetId = "doc-456",
+            title = "Document 1",
+            createdAt = "2024-01-01T00:00:00Z"
+        )
+        val bookmark2 = Bookmark(
+            id = "test-bookmark-3",
+            type = BookmarkType.CHUNK,
+            targetId = "chunk-789",
+            title = "Chunk 1",
+            createdAt = "2024-01-02T00:00:00Z"
+        )
+
+        repository.addBookmark(bookmark1)
+        repository.addBookmark(bookmark2)
+
+        val result = repository.getAllBookmarks()
+        assertTrue(result.isSuccess)
+        val bookmarks = result.getOrNull() ?: emptyList()
+        assertTrue(bookmarks.size >= 2)
+    }
+
+    @Test
+    fun testGetBookmarksByType() = runBlocking {
+        val docBookmark = Bookmark(
+            id = "test-bookmark-4",
+            type = BookmarkType.DOCUMENT,
+            targetId = "doc-111",
+            title = "Document Bookmark",
+            createdAt = "2024-01-01T00:00:00Z"
+        )
+        val chunkBookmark = Bookmark(
+            id = "test-bookmark-5",
+            type = BookmarkType.CHUNK,
+            targetId = "chunk-222",
+            title = "Chunk Bookmark",
+            createdAt = "2024-01-01T00:00:00Z"
+        )
+
+        repository.addBookmark(docBookmark)
+        repository.addBookmark(chunkBookmark)
+
+        val docResult = repository.getBookmarksByType(BookmarkType.DOCUMENT)
+        assertTrue(docResult.isSuccess)
+        val docBookmarks = docResult.getOrNull() ?: emptyList()
+        assertTrue(docBookmarks.any { it.type == BookmarkType.DOCUMENT })
+    }
+
+    @Test
+    fun testGetBookmarksByTag() = runBlocking {
+        val bookmark = Bookmark(
+            id = "test-bookmark-6",
+            type = BookmarkType.DOCUMENT,
+            targetId = "doc-333",
+            title = "Tagged Document",
+            tags = listOf("important", "research"),
+            createdAt = "2024-01-01T00:00:00Z"
+        )
+
+        repository.addBookmark(bookmark)
+
+        val result = repository.getBookmarksByTag("important")
+        assertTrue(result.isSuccess)
+        val bookmarks = result.getOrNull() ?: emptyList()
+        assertTrue(bookmarks.any { it.tags.contains("important") })
+    }
+
+    @Test
+    fun testUpdateBookmark() = runBlocking {
+        val bookmark = Bookmark(
+            id = "test-bookmark-7",
+            type = BookmarkType.DOCUMENT,
+            targetId = "doc-444",
+            title = "Original Title",
+            createdAt = "2024-01-01T00:00:00Z"
+        )
+
+        repository.addBookmark(bookmark)
+
+        val updated = bookmark.copy(
+            title = "Updated Title",
+            isPinned = true
+        )
+
+        val updateResult = repository.updateBookmark(updated)
+        assertTrue(updateResult.isSuccess)
+    }
+
+    @Test
+    fun testRemoveBookmark() = runBlocking {
+        val bookmark = Bookmark(
+            id = "test-bookmark-8",
+            type = BookmarkType.DOCUMENT,
+            targetId = "doc-555",
+            title = "To Be Deleted",
+            createdAt = "2024-01-01T00:00:00Z"
+        )
+
+        repository.addBookmark(bookmark)
+        val removeResult = repository.removeBookmark(bookmark.id)
+        assertTrue(removeResult.isSuccess)
+    }
+
+    @Test
+    fun testRecordAccess() = runBlocking {
+        val bookmark = Bookmark(
+            id = "test-bookmark-9",
+            type = BookmarkType.DOCUMENT,
+            targetId = "doc-666",
+            title = "Access Test",
+            createdAt = "2024-01-01T00:00:00Z",
+            accessCount = 0
+        )
+
+        repository.addBookmark(bookmark)
+        val accessResult = repository.recordAccess(bookmark.id)
+        assertTrue(accessResult.isSuccess)
+    }
+}

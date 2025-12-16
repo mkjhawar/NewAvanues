@@ -1,0 +1,474 @@
+// filename: Universal/AVA/Features/RAG/src/androidTest/kotlin/com/augmentalis/ava/features/rag/Phase3OptimizationBenchmark.kt
+// created: 2025-11-22
+// author: AVA AI Team - Phase 3.0 Optimization Testing
+// © Augmentalis Inc, Intelligent Devices LLC
+
+package com.augmentalis.ava.features.rag
+
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.augmentalis.ava.features.rag.data.SQLiteRAGRepository
+import com.augmentalis.ava.features.rag.domain.*
+import com.augmentalis.ava.features.rag.embeddings.EmbeddingProvider
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import timber.log.Timber
+import java.io.File
+import kotlin.system.measureTimeMillis
+
+/**
+ * Benchmark tests for RAG Phase 3.0 optimizations
+ *
+ * Tests and measures:
+ * - Batch embedding performance (50, 100, 500 chunks)
+ * - Query cache effectiveness
+ * - Search latency improvements
+ * - Memory usage
+ * - Cluster count optimization
+ *
+ * Target Metrics (Phase 3.0):
+ * - Batch indexing: 10x faster than sequential
+ * - Query cache hit rate: >70% for typical workloads
+ * - Search latency: <100ms for 1000+ documents
+ * - Memory usage: <200MB for 1000 documents
+ */
+@RunWith(AndroidJUnit4::class)
+class Phase3OptimizationBenchmark {
+
+    private lateinit var context: Context
+    private lateinit var repository: SQLiteRAGRepository
+    private lateinit var mockEmbeddingProvider: MockEmbeddingProvider
+    private val benchmarkResults = mutableListOf<BenchmarkMetric>()
+
+    @Before
+    fun setup() {
+        context = ApplicationProvider.getApplicationContext()
+        mockEmbeddingProvider = MockEmbeddingProvider()
+
+        repository = SQLiteRAGRepository(
+            context = context,
+            embeddingProvider = mockEmbeddingProvider,
+            chunkingConfig = ChunkingConfig(
+                strategy = ChunkingStrategy.FIXED_SIZE,
+                maxTokens = 512,
+                overlapTokens = 50
+            ),
+            enableClustering = true,
+            clusterCount = 256,
+            enableCache = true,
+            cacheSizeLimit = 100,
+            batchSize = 50,
+            maxConcurrentBatches = 4
+        )
+
+        Timber.plant(Timber.DebugTree())
+    }
+
+    @After
+    fun tearDown() = runBlocking {
+        repository.clearAll()
+        val dbFile = context.getDatabasePath("rag_database")
+        dbFile.delete()
+        printBenchmarkReport()
+    }
+
+    // ========== BATCH EMBEDDING BENCHMARKS ==========
+
+    @Test
+    fun benchmarkBatchEmbedding50Chunks() = runBlocking {
+        val texts = (0..49).map { "Sample text chunk number $it for batch testing." }
+
+        val timeMs = measureTimeMillis {
+            val file = createTestFile("batch-50.txt", 10_000)
+            repository.addDocument(
+                AddDocumentRequest(filePath = file.absolutePath, processImmediately = true)
+            )
+            file.delete()
+        }
+
+        recordMetric(
+            name = "Batch Embedding (50 chunks)",
+            value = timeMs,
+            unit = "ms",
+            category = "Indexing",
+            target = 500L
+        )
+
+        Timber.d("Batch embedding 50 chunks: ${timeMs}ms")
+    }
+
+    @Test
+    fun benchmarkBatchEmbedding500Chunks() = runBlocking {
+        val timeMs = measureTimeMillis {
+            val file = createTestFile("batch-500.txt", 100_000)
+            repository.addDocument(
+                AddDocumentRequest(filePath = file.absolutePath, processImmediately = true)
+            )
+            file.delete()
+        }
+
+        recordMetric(
+            name = "Batch Embedding (500 chunks)",
+            value = timeMs,
+            unit = "ms",
+            category = "Indexing",
+            target = 3000L
+        )
+
+        Timber.d("Batch embedding 500 chunks: ${timeMs}ms")
+    }
+
+    @Test
+    fun benchmarkBatchEmbeddingScaling() = runBlocking {
+        // Test scaling from 50 to 500 chunks
+        val sizes = listOf(50, 100, 250, 500)
+        val times = mutableListOf<Long>()
+
+        for (size in sizes) {
+            val timeMs = measureTimeMillis {
+                val file = createTestFile("batch-$size.txt", size * 200)
+                repository.addDocument(
+                    AddDocumentRequest(filePath = file.absolutePath, processImmediately = true)
+                )
+                file.delete()
+            }
+            times.add(timeMs)
+
+            Timber.d("Batch embedding $size chunks: ${timeMs}ms")
+        }
+
+        // Check for linear or sub-linear scaling
+        val scalingFactor = times.last().toDouble() / times.first()
+        val expectedMax = sizes.last().toDouble() / sizes.first()
+
+        recordMetric(
+            name = "Batch Scaling (50→500 chunks)",
+            value = scalingFactor.toLong(),
+            unit = "factor",
+            category = "Scaling",
+            target = expectedMax.toLong()
+        )
+
+        Timber.d("Scaling factor: ${String.format("%.2f", scalingFactor)} (expected max: ${String.format("%.2f", expectedMax)})")
+    }
+
+    // ========== QUERY CACHE BENCHMARKS ==========
+
+    @Test
+    fun benchmarkQueryCacheHitRate() = runBlocking {
+        val file = createTestFile("cache-test.txt", 50_000)
+        repository.addDocument(
+            AddDocumentRequest(filePath = file.absolutePath, processImmediately = true)
+        )
+
+        val testQueries = listOf("document", "content", "text", "search", "test")
+
+        // Warm-up (first 5 searches - all cache misses)
+        testQueries.forEach { query ->
+            repository.search(SearchQuery(query = query, maxResults = 10))
+        }
+
+        // Benchmark phase (5 searches - should be cache hits)
+        val benchmarkTime = measureTimeMillis {
+            testQueries.forEach { query ->
+                repository.search(SearchQuery(query = query, maxResults = 10))
+            }
+        }
+
+        val stats = repository.getCacheStatistics()
+
+        recordMetric(
+            name = "Cache Hit Rate",
+            value = (stats?.hitRate?.times(100)?.toLong()) ?: 0,
+            unit = "%",
+            category = "Cache",
+            target = 70L
+        )
+
+        recordMetric(
+            name = "Cached Query Search Time",
+            value = benchmarkTime / testQueries.size,
+            unit = "ms",
+            category = "Search",
+            target = 5L
+        )
+
+        Timber.d("Cache stats: ${stats}")
+        Timber.d("Cached search time: ${benchmarkTime / testQueries.size}ms per query")
+
+        file.delete()
+    }
+
+    @Test
+    fun benchmarkCacheMemoryUsage() = runBlocking {
+        val file = createTestFile("memory-test.txt", 50_000)
+        repository.addDocument(
+            AddDocumentRequest(filePath = file.absolutePath, processImmediately = true)
+        )
+
+        // Generate 50 unique queries
+        for (i in 0..49) {
+            repository.search(SearchQuery(query = "query-$i content search test", maxResults = 10))
+        }
+
+        val stats = repository.getCacheStatistics()
+        val memoryProfile = repository.getMemoryProfile()
+
+        recordMetric(
+            name = "Cache Memory Usage",
+            value = (stats?.estimatedMemoryBytes ?: 0) / 1024,  // Convert to KB
+            unit = "KB",
+            category = "Memory",
+            target = 5120L  // 5MB
+        )
+
+        recordMetric(
+            name = "Total Memory Used",
+            value = memoryProfile.usedMemoryBytes / (1024 * 1024),  // Convert to MB
+            unit = "MB",
+            category = "Memory",
+            target = 100L
+        )
+
+        Timber.d("Cache memory: ${(stats?.estimatedMemoryBytes ?: 0) / 1024}KB")
+        Timber.d("Memory profile: $memoryProfile")
+
+        file.delete()
+    }
+
+    // ========== SEARCH PERFORMANCE BENCHMARKS ==========
+
+    @Test
+    fun benchmarkSearchLatency100Docs() = runBlocking {
+        // Add 100 documents
+        val files = (1..100).map { i ->
+            val file = createTestFile("doc-$i.txt", 5_000)
+            repository.addDocument(
+                AddDocumentRequest(
+                    filePath = file.absolutePath,
+                    title = "Document $i",
+                    processImmediately = true
+                )
+            )
+            file
+        }
+
+        // Search latency benchmark
+        val searchTime = measureTimeMillis {
+            repository.search(SearchQuery(query = "document content", maxResults = 20))
+        }
+
+        recordMetric(
+            name = "Search Latency (100 docs, clustered)",
+            value = searchTime,
+            unit = "ms",
+            category = "Search",
+            target = 100L
+        )
+
+        Timber.d("Search latency with 100 docs: ${searchTime}ms")
+
+        files.forEach { it.delete() }
+    }
+
+    @Test
+    fun benchmarkSearchLatency1000Chunks() = runBlocking {
+        // Create a large document with ~1000 chunks
+        val file = createTestFile("large-doc.txt", 500_000)
+        repository.addDocument(
+            AddDocumentRequest(
+                filePath = file.absolutePath,
+                title = "Large Document",
+                processImmediately = true
+            )
+        )
+
+        // Benchmark search
+        val searchTime = measureTimeMillis {
+            repository.search(SearchQuery(query = "content search", maxResults = 20))
+        }
+
+        recordMetric(
+            name = "Search Latency (1000+ chunks)",
+            value = searchTime,
+            unit = "ms",
+            category = "Search",
+            target = 100L
+        )
+
+        Timber.d("Search latency with 1000+ chunks: ${searchTime}ms")
+
+        file.delete()
+    }
+
+    @Test
+    fun benchmarkConcurrentSearches() = runBlocking {
+        val file = createTestFile("concurrent.txt", 50_000)
+        repository.addDocument(
+            AddDocumentRequest(filePath = file.absolutePath, processImmediately = true)
+        )
+
+        val concurrentTime = measureTimeMillis {
+            val jobs = (1..10).map { i ->
+                kotlinx.coroutines.async {
+                    repository.search(SearchQuery(query = "search $i", maxResults = 10))
+                }
+            }
+            jobs.forEach { it.await() }
+        }
+
+        val avgTime = concurrentTime / 10
+
+        recordMetric(
+            name = "Concurrent Search (10 queries)",
+            value = avgTime,
+            unit = "ms",
+            category = "Search",
+            target = 100L
+        )
+
+        recordMetric(
+            name = "Concurrent Search Total Time",
+            value = concurrentTime,
+            unit = "ms",
+            category = "Search",
+            target = 200L
+        )
+
+        Timber.d("Concurrent searches: ${concurrentTime}ms total, ${avgTime}ms avg")
+
+        file.delete()
+    }
+
+    // ========== CLUSTER OPTIMIZATION BENCHMARKS ==========
+
+    @Test
+    fun benchmarkOptimalClusterCount() = runBlocking {
+        // Add documents to build dataset
+        val files = (1..50).map { i ->
+            createTestFile("cluster-test-$i.txt", 10_000).also { file ->
+                repository.addDocument(
+                    AddDocumentRequest(
+                        filePath = file.absolutePath,
+                        title = "Document $i",
+                        processImmediately = true
+                    )
+                )
+            }
+        }
+
+        val optimalCount = repository.getOptimalClusterCount()
+
+        recordMetric(
+            name = "Optimal Cluster Count",
+            value = optimalCount.toLong(),
+            unit = "clusters",
+            category = "Clustering",
+            target = 256L
+        )
+
+        Timber.d("Optimal cluster count: $optimalCount")
+
+        files.forEach { it.delete() }
+    }
+
+    // ========== HELPER FUNCTIONS ==========
+
+    private fun createTestFile(filename: String, sizeBytes: Int): File {
+        val file = File(context.cacheDir, filename)
+        val content = buildString {
+            val sentence = "This is a test sentence with document content for RAG testing. "
+            while (length < sizeBytes) {
+                append(sentence)
+            }
+        }
+        file.writeText(content)
+        return file
+    }
+
+    private fun recordMetric(
+        name: String,
+        value: Long,
+        unit: String,
+        category: String,
+        target: Long
+    ) {
+        benchmarkResults.add(
+            BenchmarkMetric(
+                name = name,
+                value = value,
+                unit = unit,
+                category = category,
+                target = target,
+                passed = if (target > 0) value <= target else true
+            )
+        )
+    }
+
+    private fun printBenchmarkReport() {
+        Timber.d("========== PHASE 3.0 OPTIMIZATION BENCHMARKS ==========")
+        Timber.d("")
+
+        val byCategory = benchmarkResults.groupBy { it.category }
+
+        byCategory.forEach { (category, metrics) ->
+            Timber.d("=== $category ===")
+
+            metrics.forEach { metric ->
+                val status = if (metric.passed) "✓ PASS" else "✗ FAIL"
+                val targetStr = if (metric.target > 0) " (target: ${metric.target}${metric.unit})" else ""
+
+                Timber.d("$status ${metric.name}: ${metric.value}${metric.unit}$targetStr")
+            }
+
+            Timber.d("")
+        }
+
+        // Summary
+        val passed = benchmarkResults.count { it.passed }
+        val total = benchmarkResults.size
+
+        Timber.d("========== SUMMARY ==========")
+        Timber.d("Passed: $passed / $total")
+        Timber.d("Pass rate: ${(passed * 100) / total}%")
+        Timber.d("=================================")
+    }
+
+    // ========== DATA CLASSES ==========
+
+    data class BenchmarkMetric(
+        val name: String,
+        val value: Long,
+        val unit: String,
+        val category: String,
+        val target: Long,
+        val passed: Boolean
+    )
+
+    // ========== MOCK EMBEDDING PROVIDER ==========
+
+    private class MockEmbeddingProvider : EmbeddingProvider {
+        override val name: String = "MockEmbedding"
+        override val dimension: Int = 384
+
+        override suspend fun isAvailable(): Boolean = true
+
+        override suspend fun embed(text: String): Result<Embedding.Float32> {
+            val hash = text.hashCode()
+            val values = FloatArray(dimension) { i ->
+                ((hash + i) % 1000) / 1000f
+            }
+            return Result.success(Embedding.Float32(values))
+        }
+
+        override suspend fun embedBatch(texts: List<String>): Result<List<Embedding.Float32>> {
+            return Result.success(texts.map { embed(it).getOrThrow() })
+        }
+
+        override fun estimateTimeMs(count: Int): Long = count * 2L  // 2ms per item
+    }
+}
