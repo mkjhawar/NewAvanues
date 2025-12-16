@@ -152,6 +152,10 @@ DELETE FROM commands_static WHERE locale = ?;
 deleteAllCommands:
 DELETE FROM commands_static;
 
+-- Delete commands by category
+deleteByCategory:
+DELETE FROM commands_static WHERE category = ?;
+
 -- Update command priority
 updatePriority:
 UPDATE commands_static SET priority = ? WHERE command_id = ? AND locale = ?;

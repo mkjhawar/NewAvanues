@@ -73,12 +73,14 @@ class VUIDCreationDebugOverlay(
 ) {
 
     /**
-     * Overlay view (inflated from XML)
+     * Overlay view (inflated from XML with proper parent)
      */
     private val overlayView: View by lazy {
+        val parent = android.widget.FrameLayout(context)
         LayoutInflater.from(context).inflate(
             R.layout.learnapp_overlay_vuid_creation,
-            null
+            parent,
+            false
         )
     }
 

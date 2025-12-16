@@ -177,6 +177,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("androidx.lifecycle:lifecycle-process:2.6.2")
+
+    // WorkManager for background tasks
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
     
     // Compose BOM (compatible with Kotlin 1.9.24)
     // Compose with explicit versions (aligned with BOM 2024.06.00)
@@ -238,6 +241,10 @@ dependencies {
     implementation(project(":Modules:VoiceOS:apps:VoiceCursor"))
     implementation(project(":Modules:VoiceOS:libraries:UUIDCreator"))
 
+    // JIT-LearnApp Separation (2025-12-11)
+    implementation(project(":Modules:VoiceOS:libraries:JITLearning"))      // JIT service with AIDL
+    implementation(project(":Modules:VoiceOS:libraries:LearnAppCore"))     // Shared business logic
+
     // LearnApp dependencies merged (2025-11-24)
     implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))      // From LearnApp
     implementation(project(":Modules:VoiceOS:libraries:VoiceUIElements"))    // From LearnApp
@@ -258,6 +265,9 @@ dependencies {
     // SQLDelight Test Dependencies (for in-memory database testing)
     testImplementation("app.cash.sqldelight:sqlite-driver:2.0.1")  // JVM SQLite driver for tests
     testImplementation("app.cash.turbine:turbine:1.0.0")           // Flow testing library
+
+    // Database module for androidTest (Phase 2 integration tests)
+    androidTestImplementation(project(":Modules:VoiceOS:core:database"))
 
     // Unit Testing - JUnit 4 with Robolectric (VoiceOSService SOLID refactoring tests)
     testImplementation("junit:junit:4.13.2")

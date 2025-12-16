@@ -12,8 +12,10 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,6 +37,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Settings
@@ -83,19 +87,42 @@ import com.augmentalis.voiceoscore.accessibility.ui.utils.GlassMorphismConfig
 import com.augmentalis.voiceoscore.accessibility.ui.utils.glassMorphism
 import com.augmentalis.voiceoscore.accessibility.viewmodel.PerformanceMode
 import com.augmentalis.voiceoscore.accessibility.viewmodel.SettingsViewModel
+import com.augmentalis.voiceoscore.cleanup.ui.CleanupPreviewActivity
 
 class AccessibilitySettings : ComponentActivity() {
 
     private val settingsViewModel: SettingsViewModel by viewModels()
 
+    // P2 Task 2.3: Cleanup preview launcher
+    private val cleanupLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            Toast.makeText(
+                this,
+                "Cleanup completed successfully",
+                Toast.LENGTH_SHORT
+            ).show()
+            settingsViewModel.refreshCleanupInfo()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
+            val lastCleanupTimestamp by settingsViewModel.lastCleanupTimestamp.collectAsState()
+            val lastCleanupDeletedCount by settingsViewModel.lastCleanupDeletedCount.collectAsState()
+
             AccessibilityTheme {
                 SettingsScreen(
                     settingsViewModel = settingsViewModel,
-                    onNavigateBack = { finish() }
+                    onNavigateBack = { finish() },
+                    lastCleanupTimestamp = lastCleanupTimestamp,
+                    lastCleanupDeletedCount = lastCleanupDeletedCount,
+                    onRunCleanup = {
+                        cleanupLauncher.launch(CleanupPreviewActivity.createIntent(this))
+                    }
                 )
             }
         }
@@ -141,7 +168,10 @@ fun getSettingsAdaptiveSpacing(): SettingsAdaptiveSpacing {
 @Composable
 fun SettingsScreen(
     settingsViewModel: SettingsViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    lastCleanupTimestamp: Long? = null,  // P2 Task 2.3
+    lastCleanupDeletedCount: Int = 0,     // P2 Task 2.3
+    onRunCleanup: () -> Unit = {}         // P2 Task 2.3
 ) {
     val context = LocalContext.current
     val spacing = getSettingsAdaptiveSpacing()
@@ -227,6 +257,16 @@ fun SettingsScreen(
 
                 item {
                     AdvancedSettingsSection(settingsViewModel = settingsViewModel, spacing = spacing)
+                }
+
+                // P2 Task 2.3: Command Management Section
+                item {
+                    CommandManagementSection(
+                        lastCleanupTimestamp = lastCleanupTimestamp,
+                        lastCleanupDeletedCount = lastCleanupDeletedCount,
+                        onRunCleanup = onRunCleanup,
+                        spacing = spacing
+                    )
                 }
             }
         }
@@ -732,6 +772,114 @@ fun SettingsSlider(
                 disabledInactiveTrackColor = Color.Gray.copy(alpha = 0.1f)
             )
         )
+    }
+}
+
+/**
+ * P2 Task 2.3: Command Management Section
+ * Shows last cleanup info and provides manual cleanup trigger
+ */
+@Composable
+fun CommandManagementSection(
+    lastCleanupTimestamp: Long?,
+    lastCleanupDeletedCount: Int,
+    onRunCleanup: () -> Unit,
+    spacing: SettingsAdaptiveSpacing
+) {
+    SettingsSection(
+        title = "Command Management",
+        icon = Icons.Default.CleaningServices,
+        spacing = spacing
+    ) {
+        Text(
+            text = "Clean up deprecated commands to free space",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White.copy(alpha = 0.7f),
+            modifier = Modifier.padding(bottom = spacing.itemSpacing)
+        )
+
+        // Last cleanup info
+        lastCleanupTimestamp?.let { timestamp ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = spacing.itemSpacing),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF0F1E2E).copy(alpha = 0.3f)
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(spacing.cardPadding),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Last cleanup",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF64B5F6)
+                        )
+                        val daysAgo = ((System.currentTimeMillis() - timestamp) / 86400000L).toInt()
+                        val timeText = when {
+                            daysAgo == 0 -> "Today"
+                            daysAgo == 1 -> "Yesterday"
+                            daysAgo < 7 -> "$daysAgo days ago"
+                            daysAgo < 30 -> "${daysAgo / 7} weeks ago"
+                            else -> "${daysAgo / 30} months ago"
+                        }
+                        Text(
+                            text = timeText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = Color(0xFFFF7043),
+                            modifier = Modifier.size(spacing.iconSize)
+                        )
+                        Text(
+                            text = "$lastCleanupDeletedCount",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFFF7043),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+
+        // Cleanup button
+        Button(
+            onClick = onRunCleanup,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF4CAF50)
+            ),
+            contentPadding = PaddingValues(vertical = spacing.cardPadding)
+        ) {
+            Icon(
+                imageVector = Icons.Default.CleaningServices,
+                contentDescription = null,
+                modifier = Modifier.size(spacing.iconSize)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "Run Cleanup Now",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 

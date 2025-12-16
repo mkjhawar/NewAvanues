@@ -150,7 +150,7 @@ class SettingsAdapter(
 
         private val labelText: TextView = view.findViewById(R.id.setting_label)
         private val descriptionText: TextView = view.findViewById(R.id.setting_description)
-        private val toggleSwitch: Switch = view.findViewById(R.id.setting_toggle)
+        private val toggleSwitch: androidx.appcompat.widget.SwitchCompat = view.findViewById(R.id.setting_toggle)
 
         private var currentKey: String = ""
 

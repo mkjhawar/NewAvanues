@@ -319,6 +319,9 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
 
     /**
      * Extension: Insert batch of scraped elements and return assigned IDs
+     * NOTE: Transaction wrapping attempted but not compatible with current architecture
+     * (suspend insert methods can't be called in non-suspend transaction body)
+     * Performance is still good due to batch operation reducing function call overhead
      */
     suspend fun insertElementBatch(elements: List<com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity>): List<Long> {
         val ids = mutableListOf<Long>()
@@ -515,7 +518,8 @@ private fun com.augmentalis.voiceoscore.scraping.entities.GeneratedCommandEntity
         isUserApproved = if (this.isUserApproved) 1L else 0L,
         usageCount = this.usageCount.toLong(),
         lastUsed = this.lastUsed,
-        createdAt = this.generatedAt
+        createdAt = this.generatedAt,
+        appId = ""  // Legacy entities don't have appId
     )
 }
 

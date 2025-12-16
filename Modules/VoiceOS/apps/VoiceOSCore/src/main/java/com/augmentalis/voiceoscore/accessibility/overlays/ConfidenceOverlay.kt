@@ -31,6 +31,9 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.augmentalis.voiceoscore.accessibility.ui.overlays.ComposeViewLifecycleOwner
 import com.augmentalis.voiceos.speech.confidence.ConfidenceLevel
 import com.augmentalis.voiceos.speech.confidence.ConfidenceResult
 
@@ -42,6 +45,7 @@ class ConfidenceOverlay(
     private val windowManager: WindowManager
 ) {
     private var overlayView: ComposeView? = null
+    private var lifecycleOwner: ComposeViewLifecycleOwner? = null
     private var isShowing = false
 
     // Mutable state for confidence updates
@@ -100,6 +104,8 @@ class ConfidenceOverlay(
      */
     fun dispose() {
         hide()
+        lifecycleOwner?.onDestroy()
+        lifecycleOwner = null
         overlayView = null
     }
 
@@ -107,7 +113,14 @@ class ConfidenceOverlay(
      * Create the compose view for the overlay
      */
     private fun createOverlayView(): ComposeView {
+        val owner = ComposeViewLifecycleOwner().also {
+            lifecycleOwner = it
+            it.onCreate()
+        }
+
         return ComposeView(context).apply {
+            setViewTreeLifecycleOwner(owner)
+            setViewTreeSavedStateRegistryOwner(owner)
             setContent {
                 val confidence by remember { confidenceState }
                 val level by remember { levelState }

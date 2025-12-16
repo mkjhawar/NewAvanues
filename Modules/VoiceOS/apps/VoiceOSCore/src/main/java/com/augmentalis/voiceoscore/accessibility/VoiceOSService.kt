@@ -146,7 +146,10 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     // Service state
     @JvmField
     internal var isServiceReady = false  // Phase 3: Exposed for IPC companion service (Java-accessible)
-    private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    // FIX (2025-12-11): Changed from Dispatchers.Main to Dispatchers.Default to prevent ANR
+    // Root cause: Command cache operations (300+ items) blocked main thread for >5 seconds
+    // Solution: Move all non-UI operations off main thread
+    private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val coroutineScopeCommands = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     @Volatile
@@ -160,6 +163,11 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     private val learnAppInitState = AtomicInteger(0)
     @Volatile
     private var learnAppInitialized = false  // Keep for backward compatibility with debug logs
+
+    // FIX (2025-12-10): Event queue to buffer events during initialization
+    // Prevents event loss in first 500-1000ms after service starts
+    private val pendingEvents = java.util.concurrent.ConcurrentLinkedQueue<android.view.accessibility.AccessibilityEvent>()
+    private val MAX_QUEUED_EVENTS = 50
 
     // PHASE 3 (2025-12-08): Command Discovery integration
     // Auto-observes ExplorationEngine.state() and triggers discovery flow on completion
@@ -198,6 +206,9 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 
     @Inject
     lateinit var installedAppsManager: InstalledAppsManager
+
+    @Inject
+    lateinit var appVersionManager: com.augmentalis.voiceoscore.version.AppVersionManager
 
     // UIScrapingEngine requires AccessibilityService, so it's lazy-initialized (not injected)
     private val uiScrapingEngine by lazy {
@@ -382,6 +393,10 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             // register voice command
             registerVoiceCmd()
 
+            // Version-aware command management (2025-12-14)
+            // Initialize version tracking and cleanup scheduling
+            initializeVersionManagement()
+
             val filter = IntentFilter(Const.ACTION_CONFIG_UPDATE)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 Log.i(TAG, "onServiceConnected registerReceiver : CHANGE_LANG ")
@@ -426,6 +441,43 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             Log.e(TAG, "Failed to initialize CommandManager/ServiceMonitor", e)
             commandManagerInstance = null
             serviceMonitor = null
+        }
+    }
+
+    /**
+     * Initialize version-aware command lifecycle management.
+     *
+     * - Schedules weekly CleanupWorker for automatic deprecated command removal
+     * - Checks all installed apps and updates version tracking database
+     * - Enables version detection for future command generation
+     *
+     * @since 5.1 (Version-Aware Command Lifecycle)
+     */
+    private fun initializeVersionManagement() {
+        try {
+            Log.i(TAG, "Initializing version-aware command management...")
+
+            // Schedule weekly cleanup worker (runs when device is charging + battery not low)
+            com.augmentalis.voiceoscore.cleanup.CleanupWorker.schedulePeriodicCleanup(applicationContext)
+            Log.i(TAG, "Scheduled weekly command cleanup worker")
+
+            // Check all tracked apps and update version tracking database
+            // This runs in background to avoid blocking service startup
+            serviceScope.launch {
+                try {
+                    Log.d(TAG, "Checking versions for all tracked apps...")
+                    val processedCount = appVersionManager.checkAllTrackedApps()
+
+                    Log.i(TAG, "Version check complete: $processedCount apps processed")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to check tracked app versions", e)
+                }
+            }
+
+            Log.i(TAG, "Version management initialized successfully")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize version management", e)
         }
     }
 
@@ -567,9 +619,12 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 //                        val objectCommand = prettyGson.toJson(allCommands)
 //                        Log.d(TAG, "RegisterVoiceCmd allCommands = $objectCommand")
 //                    }
-                    speechEngineManager?.updateCommands(allCommands)  // TEMPORARY: Null-safe for standalone
+                    // FIX (2025-12-11): updateCommands is now suspend, launch in coroutine
+                    coroutineScopeCommands.launch {
+                        speechEngineManager?.updateCommands(allCommands)  // TEMPORARY: Null-safe for standalone
+                    }
 
-                    Log.i(TAG, "✓ Database commands registered successfully with speech engine")
+                    Log.i(TAG, "✓ Database commands registered successfully with speech engine (async)")
                     Log.i(TAG, "  Total commands in speech vocabulary: ${allCommands.toSet().size}")
 
                 } catch (e: Exception) {
@@ -740,6 +795,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         // This ensures FLAG_RETRIEVE_INTERACTIVE_WINDOWS has been fully processed by Android
         // FIX (2025-11-30): Use atomic state to prevent race condition where events arrive
         // before initialization completes. State: 0=not started, 1=in progress, 2=complete
+        // FIX (2025-12-10): Queue events during initialization instead of dropping them
         val initState = learnAppInitState.get()
         if (initState == 0) {
             // Try to claim initialization (atomic compare-and-set)
@@ -753,21 +809,27 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                         Log.i(TAG, "LearnApp initialization complete (event-driven)")
                         learnAppInitState.set(2)  // Mark complete AFTER init done
                         Log.i(TAG, "LEARNAPP_DEBUG: learnAppIntegration is now ${if (learnAppIntegration != null) "SET" else "STILL NULL"}")
+
+                        // FIX (2025-12-10): Process queued events after initialization completes
+                        processQueuedEvents()
                     } catch (e: Exception) {
                         Log.e(TAG, "LEARNAPP_DEBUG: Initialization failed, allowing retry", e)
                         learnAppInitState.set(0)  // Allow retry on next event
                     }
                 }
             }
-            // Don't forward events during initialization - they'd hit null integration
-            Log.d(TAG, "LEARNAPP_DEBUG: Init in progress, skipping event forwarding")
+            // Queue event during initialization instead of dropping it
+            queueEvent(event)
             return
         } else if (initState == 1) {
-            // Initialization in progress by another call - skip this event
-            Log.d(TAG, "LEARNAPP_DEBUG: Init in progress by other thread, skipping event")
+            // Initialization in progress - queue this event for later processing
+            queueEvent(event)
             return
         }
         // initState == 2: Fully initialized, proceed with event forwarding
+
+        // FIX (2025-12-10): Process any queued events first (in case of race)
+        processQueuedEvents()
 
         try {
             // Forward to hash-based scraping integration FIRST (base scraping)
@@ -855,9 +917,12 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                 }
 
                 AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                    // FIX (2025-12-11): Use coroutineScopeCommands (Dispatchers.IO) to prevent ANR
+                    // Previously used serviceScope (Dispatchers.Main) which blocked main thread with 300+ commands
+
                     // Forward to ScreenActivityDetector for rename hint display
                     screenActivityDetector?.let { detector ->
-                        serviceScope.launch {
+                        coroutineScopeCommands.launch {
                             try {
                                 Log.v(TAG, "Forwarding WINDOW_STATE_CHANGED to ScreenActivityDetector")
                                 detector.onWindowStateChanged(event)
@@ -868,15 +933,18 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                     }
 
                     // Update app context and trigger scraping for new windows
-                    serviceScope.launch {
+                    coroutineScopeCommands.launch {
                         // Also trigger UI scraping for window state changes
                         val commands = uiScrapingEngine.extractUIElementsAsync(event)
+                        val normalizedCommand = commands.map { element -> element.normalizedText }
+
+                        // Update caches on background thread (prevents ANR)
                         nodeCache.clear()
                         nodeCache.addAll(commands)
-                        val normalizedCommand = commands.map { element -> element.normalizedText }
                         commandCache.clear()
                         commandCache.addAll(normalizedCommand)
-                        Log.d(TAG, "SPEECH_TEST: TYPE_WINDOW_STATE_CHANGED commandsStr = $commandCache")
+
+                        Log.d(TAG, "SPEECH_TEST: TYPE_WINDOW_STATE_CHANGED commandsStr (${normalizedCommand.size} commands) = $commandCache")
                         if (config.verboseLogging) {
                             Log.d(TAG, "Scraped commands for $packageName: $commandCache")
                         }
@@ -933,6 +1001,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 //                                val objectCommand = prettyGson.toJson(allCommands)
 //                                Log.d(TAG, "RegisterVoiceCmd allCommands = $objectCommand")
 //                            }
+                            // FIX (2025-12-11): updateCommands is now suspend, call directly in coroutine
                             speechEngineManager?.updateCommands(allCommands)
                             allRegisteredDynamicCommands.clear()
                             allRegisteredDynamicCommands.addAll(commandCache)
@@ -1096,6 +1165,55 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             learnAppIntegration = null
         }
         Log.i(TAG, "=== LearnApp Integration Initialization Complete ===")
+    }
+
+    /**
+     * Queue an accessibility event for later processing.
+     * Called during LearnApp initialization to prevent event loss.
+     *
+     * FIX (2025-12-10): Implements event queue solution from spec Section 2.1
+     */
+    private fun queueEvent(event: android.view.accessibility.AccessibilityEvent) {
+        if (pendingEvents.size < MAX_QUEUED_EVENTS) {
+            // Create a copy of the event to avoid recycling issues
+            val eventCopy = android.view.accessibility.AccessibilityEvent.obtain(event)
+            pendingEvents.offer(eventCopy)
+            Log.d(TAG, "LEARNAPP_DEBUG: Queued event (type=${event.eventType}, queue size=${pendingEvents.size})")
+        } else {
+            Log.w(TAG, "LEARNAPP_DEBUG: Event queue full ($MAX_QUEUED_EVENTS), dropping event")
+        }
+    }
+
+    /**
+     * Process all queued events after initialization completes.
+     * Ensures no events are lost during the initialization window.
+     *
+     * FIX (2025-12-10): Implements event queue solution from spec Section 2.1
+     */
+    private fun processQueuedEvents() {
+        val queueSize = pendingEvents.size
+        if (queueSize > 0) {
+            Log.i(TAG, "LEARNAPP_DEBUG: Processing $queueSize queued events")
+            var processedCount = 0
+
+            while (pendingEvents.isNotEmpty()) {
+                val queuedEvent = pendingEvents.poll()
+                if (queuedEvent != null) {
+                    try {
+                        // Forward to LearnApp integration
+                        learnAppIntegration?.onAccessibilityEvent(queuedEvent)
+                        processedCount++
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error processing queued event", e)
+                    } finally {
+                        // Recycle the event copy to free memory
+                        queuedEvent.recycle()
+                    }
+                }
+            }
+
+            Log.i(TAG, "LEARNAPP_DEBUG: Processed $processedCount queued events")
+        }
     }
 
     /**
@@ -2245,7 +2363,8 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                     isUserApproved = 1L,
                     usageCount = 0L,
                     lastUsed = null,
-                    createdAt = timestamp
+                    createdAt = timestamp,
+                    appId = ""  // Dynamic commands are global
                 )
 
                 database.databaseManager.generatedCommands.insert(command)

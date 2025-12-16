@@ -81,8 +81,16 @@ class AccessibilityScrapingIntegration(
 ) {
 
     companion object {
-        private const val TAG = "AccessibilityScrapingIntegration"
-        private const val MAX_DEPTH = 50 // Prevent stack overflow on deeply nested UIs
+        // Android Log tag max length is 23 characters
+        private const val TAG = "VOS:AccScraping"  // 15 chars (was 32, exceeded limit)
+        // FIX (2025-12-11): Reduced from 50 → 15 to prevent excessive memory allocation (14MB → 4-5MB)
+        // Root cause: Deep recursion caused 14MB+ allocations triggering GC pressure
+        private const val MAX_DEPTH = 15 // Prevent stack overflow on deeply nested UIs
+
+        // FIX (2025-12-11): Launcher screen command throttling
+        // Root cause: Launcher screens with 50-100+ app icons generated 300+ commands causing ANR
+        private const val MAX_COMMANDS_LAUNCHER = 30  // Limit for launcher/home screens
+        private const val MAX_COMMANDS_NORMAL = 100   // Limit for regular apps
 
         // App scraping mode constants
         const val MODE_DYNAMIC = "DYNAMIC"
@@ -107,8 +115,13 @@ class AccessibilityScrapingIntegration(
 
         // P2 Fix (2025-11-30): Scroll-to-load for RecyclerView scraping
         private const val SCROLL_TO_LOAD_ENABLED = true
-        private const val MAX_SCROLL_ATTEMPTS = 5        // Max scrolls per RecyclerView
+        private const val MAX_SCROLL_ATTEMPTS = 100      // Max scrolls per RecyclerView (comprehensive scraping)
         private const val SCROLL_DELAY_MS = 300L          // Wait for content to load after scroll
+
+        // Dynamic content wait configuration
+        private const val SCREEN_STABLE_TIMEOUT_MS = 3000L  // Max wait for screen to stabilize
+        private const val STABLE_CHECK_INTERVAL_MS = 200L   // How often to check stability
+        private const val STABLE_THRESHOLD = 3              // Consecutive stable counts required
         private val SCROLLABLE_VIEW_CLASSES = setOf(
             "androidx.recyclerview.widget.RecyclerView",
             "android.widget.ListView",
@@ -357,13 +370,12 @@ class AccessibilityScrapingIntegration(
                 return
             }
 
-            // Check if launcher (device-agnostic detection)
-            if (launcherDetector.isLauncher(packageName)) {
-                if (developerSettings.isVerboseLoggingEnabled()) {
-                    Log.d(TAG, "🏠 Skipping launcher package: $packageName")
-                }
-                rootNode.recycle()
-                return
+            // FIX (2025-12-11): Allow launcher scraping but with LIMITED commands
+            // Root cause: Previously skipped launchers entirely, but user reported learning Teams app launcher
+            // Solution: Detect launcher and apply command limit (30 instead of 100) to prevent ANR
+            val isLauncher = launcherDetector.isLauncher(packageName)
+            if (isLauncher) {
+                Log.i(TAG, "🏠 Launcher detected: $packageName - applying command limit ($MAX_COMMANDS_LAUNCHER)")
             }
 
             // Check if system UI
@@ -440,6 +452,14 @@ class AccessibilityScrapingIntegration(
                 }
             }
 
+            // ===== DYNAMIC CONTENT WAIT: Wait for screen to stabilize =====
+            // This addresses async-loaded content (AJAX, lazy loading) that appears
+            // 500ms-2s after screen loads (social media feeds, search results, etc.)
+            val screenStable = waitForScreenStable(rootNode, SCREEN_STABLE_TIMEOUT_MS)
+            if (!screenStable) {
+                Log.w(TAG, "⚠️ Screen did not stabilize - scraping may miss async content")
+            }
+
             // ===== PHASE 1: Scrape element tree with hash deduplication =====
             val elements = mutableListOf<ScrapedElementEntity>()
             val hierarchyBuildInfo = mutableListOf<HierarchyBuildInfo>()
@@ -462,6 +482,21 @@ class AccessibilityScrapingIntegration(
 
             // Determine if cache hit (app already scraped recently)
             val cacheHit = !isNewApp && (appHash == lastScrapedAppHash)
+
+            // FIX (2025-12-11): Apply command limit to prevent ANR on launcher screens
+            val maxCommands = if (isLauncher) MAX_COMMANDS_LAUNCHER else MAX_COMMANDS_NORMAL
+            if (elements.size > maxCommands) {
+                Log.w(TAG, "⚠️ Command limit exceeded: ${elements.size} > $maxCommands, trimming to most important elements")
+                // Sort by importance (clickable + shallow depth + has text = more important)
+                elements.sortWith(compareByDescending<ScrapedElementEntity> { it.isClickable }
+                    .thenBy { it.depth }  // Shallower depth = more prominent
+                    .thenByDescending { !it.text.isNullOrEmpty() || !it.contentDescription.isNullOrEmpty() })
+                // Remove elements beyond limit
+                while (elements.size > maxCommands) {
+                    elements.removeAt(elements.size - 1)
+                }
+                Log.i(TAG, "✂️ Trimmed to $maxCommands elements (prioritized clickable, shallow, labeled)")
+            }
 
             // ===== PHASE 2: Clean up old hierarchy and insert elements =====
             // CRITICAL: Delete old hierarchy records BEFORE inserting elements
@@ -943,8 +978,9 @@ class AccessibilityScrapingIntegration(
         customMaxDepth: Int = MAX_DEPTH  // Phase 3E: Feature flag override
     ): Int {
         // YOLO Phase 2 - High Priority Issue #16: Absolute maximum depth enforcement
+        // FIX (2025-12-11): Reduced from 100 → 20 to prevent excessive memory allocation
         // Enforce absolute hard limit FIRST, regardless of memory pressure
-        val ABSOLUTE_MAX_DEPTH = 100  // Hard limit to prevent stack overflow on malicious apps
+        val ABSOLUTE_MAX_DEPTH = 20  // Hard limit to prevent stack overflow on malicious apps
         if (depth > ABSOLUTE_MAX_DEPTH) {
             Log.w(TAG, "ABSOLUTE max depth ($ABSOLUTE_MAX_DEPTH) exceeded at depth $depth, stopping traversal immediately")
             return -1
@@ -1371,6 +1407,75 @@ class AccessibilityScrapingIntegration(
 
         Log.i(TAG, "Scroll-to-load complete: scraped $totalNewElements additional elements in $scrollAttempts scrolls")
         return totalNewElements
+    }
+
+    /**
+     * Wait for screen to stabilize before scraping.
+     * Detects when element count stops changing (idle state).
+     *
+     * This addresses the dynamic async-loaded content gap where elements appear
+     * 500ms-2s after screen loads (e.g., social media feeds, search results).
+     *
+     * @param rootNode The root node to monitor
+     * @param timeoutMs Maximum time to wait for stability (default: 3000ms)
+     * @return true if screen stabilized, false if timeout
+     */
+    private suspend fun waitForScreenStable(
+        rootNode: AccessibilityNodeInfo,
+        timeoutMs: Long = SCREEN_STABLE_TIMEOUT_MS
+    ): Boolean {
+        val startTime = System.currentTimeMillis()
+        var previousCount = 0
+        var stableCount = 0
+
+        while (System.currentTimeMillis() - startTime < timeoutMs) {
+            rootNode.refresh()
+            val currentCount = countAllNodes(rootNode)
+
+            if (currentCount == previousCount) {
+                stableCount++
+                if (stableCount >= STABLE_THRESHOLD) {
+                    val elapsedMs = System.currentTimeMillis() - startTime
+                    if (developerSettings.isVerboseLoggingEnabled()) {
+                        Log.d(TAG, "Screen stable after ${elapsedMs}ms (${currentCount} nodes)")
+                    }
+                    return true
+                }
+            } else {
+                stableCount = 0  // Reset counter when count changes
+                if (developerSettings.isVerboseLoggingEnabled()) {
+                    Log.d(TAG, "Screen unstable: $previousCount -> $currentCount nodes")
+                }
+            }
+
+            previousCount = currentCount
+            delay(STABLE_CHECK_INTERVAL_MS)
+        }
+
+        Log.w(TAG, "Screen did not stabilize within ${timeoutMs}ms")
+        return false
+    }
+
+    /**
+     * Recursively count all nodes in the accessibility tree.
+     *
+     * Used by waitForScreenStable() to detect when async content has finished loading.
+     *
+     * @param node The root node to count from
+     * @return Total number of nodes in tree
+     */
+    private fun countAllNodes(node: AccessibilityNodeInfo): Int {
+        var count = 1
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { child ->
+                try {
+                    count += countAllNodes(child)
+                } finally {
+                    child.recycle()
+                }
+            }
+        }
+        return count
     }
 
     /**

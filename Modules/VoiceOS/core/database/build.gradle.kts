@@ -85,6 +85,19 @@ kotlin {
                 implementation("app.cash.sqldelight:sqlite-driver:2.0.1")
             }
         }
+
+        // Android instrumentation test dependencies (Phase 2)
+        val androidInstrumentedTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation("androidx.test.ext:junit:1.1.5")
+                implementation("androidx.test.espresso:espresso-core:3.5.1")
+                implementation("androidx.test:runner:1.5.2")
+                implementation("androidx.test:rules:1.5.0")
+                implementation("app.cash.sqldelight:android-driver:2.0.1")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+            }
+        }
     }
 }
 
@@ -94,6 +107,7 @@ android {
 
     defaultConfig {
         minSdk = 28  // Android 9 (Pie) - Aligned with project-wide standard
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {

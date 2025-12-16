@@ -24,8 +24,16 @@
     <!-- Android 14+ foreground service type -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
+    <!-- Audio capture permission (required with FOREGROUND_SERVICE_MICROPHONE on API 34+) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- LearnApp: System alert window for visual debugging overlays -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- JIT Learning: Control permission (signature-level) -->
+    <!-- Required to bind to JITLearningService and control passive learning -->
+    <!-- Granted automatically because VoiceOSCore and JITLearning share same signature -->
+    <uses-permission android:name="com.augmentalis.voiceos.permission.JIT_CONTROL" />
 
     <!-- Storage permissions for speech recognition models -->
     <!-- Allows models to be deployed via ADB to shared folder (.voiceos) -->
@@ -115,6 +123,21 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="com.augmentalis.voiceos.LEARNAPP_START" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Package update receiver for version-aware command management -->
+        <!-- Listens for app install/update/remove events to trigger command lifecycle management -->
+        <!-- Automatically receives broadcasts from Android system when any app changes -->
+        <receiver
+            android:name="com.augmentalis.voiceoscore.receivers.PackageUpdateReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_ADDED"/>
+                <action android:name="android.intent.action.PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.PACKAGE_REMOVED"/>
+                <data android:scheme="package"/>
             </intent-filter>
         </receiver>
     </application>

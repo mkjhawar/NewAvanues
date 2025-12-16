@@ -607,6 +607,297 @@ class VOSCommandIngestion(
         }
     }
 
+    // ==================== AVU INGESTION (Learned Apps) ====================
+
+    /**
+     * Ingest AVU-format commands from LearnApp exports
+     *
+     * @param folderPath Path to folder containing .vos files (AVU format)
+     * @return IngestionResult with statistics
+     *
+     * This method handles the new AVU format exported by LearnApp,
+     * which uses compact IPC-style codes instead of verbose JSON.
+     */
+    suspend fun ingestAVUFiles(folderPath: String? = null): IngestionResult {
+        return withContext(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
+            val errors = mutableListOf<String>()
+
+            try {
+                val avuParser = AVUFileParser(context)
+                val targetPath = folderPath ?: AVUFileParser.getLearnedAppsFolder(context).absolutePath
+
+                Log.i(TAG, "Starting AVU ingestion from: $targetPath")
+
+                // Parse all AVU files
+                val parseResult = avuParser.parseFolder(targetPath)
+                if (parseResult.isFailure) {
+                    val error = parseResult.exceptionOrNull()?.message ?: "Failed to parse AVU files"
+                    Log.e(TAG, error)
+                    return@withContext IngestionResult(
+                        success = false,
+                        commandsLoaded = 0,
+                        categoriesLoaded = emptyList(),
+                        localesLoaded = emptyList(),
+                        errors = listOf(error),
+                        durationMs = System.currentTimeMillis() - startTime,
+                        source = "avu"
+                    )
+                }
+
+                val avuFiles = parseResult.getOrThrow()
+                Log.d(TAG, "Parsed ${avuFiles.size} AVU files")
+
+                // Convert all files to entities
+                val allEntities = mutableListOf<VoiceCommandEntity>()
+                avuFiles.forEach { avuFile ->
+                    try {
+                        val entities = avuParser.convertToEntities(avuFile)
+                        allEntities.addAll(entities)
+                        Log.d(TAG, "Converted ${entities.size} commands from ${avuFile.packageName}")
+                    } catch (e: Exception) {
+                        val errorMsg = "Failed to convert ${avuFile.packageName}: ${e.message}"
+                        Log.w(TAG, errorMsg)
+                        errors.add(errorMsg)
+                    }
+                }
+
+                if (allEntities.isEmpty()) {
+                    val duration = System.currentTimeMillis() - startTime
+                    return@withContext IngestionResult(
+                        success = false,
+                        commandsLoaded = 0,
+                        categoriesLoaded = emptyList(),
+                        localesLoaded = emptyList(),
+                        errors = listOf("No valid commands found in AVU files") + errors,
+                        durationMs = duration,
+                        source = "avu"
+                    )
+                }
+
+                // Batch insert
+                val insertedCount = batchInsertWithProgress(
+                    entities = allEntities,
+                    source = "avu-files"
+                )
+
+                // Gather statistics
+                val categories = allEntities.map { it.category }.distinct().sorted()
+                val locales = allEntities.map { it.locale }.distinct().sorted()
+
+                val duration = System.currentTimeMillis() - startTime
+                Log.i(TAG, "✅ AVU ingestion complete: $insertedCount commands in ${duration}ms")
+
+                IngestionResult(
+                    success = true,
+                    commandsLoaded = insertedCount,
+                    categoriesLoaded = categories,
+                    localesLoaded = locales,
+                    errors = errors,
+                    durationMs = duration,
+                    source = "avu"
+                )
+
+            } catch (e: Exception) {
+                val duration = System.currentTimeMillis() - startTime
+                Log.e(TAG, "❌ AVU ingestion failed", e)
+                IngestionResult(
+                    success = false,
+                    commandsLoaded = 0,
+                    categoriesLoaded = emptyList(),
+                    localesLoaded = emptyList(),
+                    errors = listOf("Exception: ${e.message}") + errors,
+                    durationMs = duration,
+                    source = "avu"
+                )
+            }
+        }
+    }
+
+    /**
+     * Ingest pre-converted AVU entities directly
+     *
+     * Used by AVUFileWatcher for efficient per-file ingestion
+     *
+     * @param entities Pre-converted VoiceCommandEntity list
+     * @param packageName Source package name for logging
+     * @param appName Source app name for logging
+     * @return IngestionResult
+     */
+    suspend fun ingestAVUEntities(
+        entities: List<VoiceCommandEntity>,
+        packageName: String,
+        appName: String
+    ): IngestionResult {
+        return withContext(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
+
+            try {
+                if (entities.isEmpty()) {
+                    return@withContext IngestionResult(
+                        success = true,
+                        commandsLoaded = 0,
+                        categoriesLoaded = emptyList(),
+                        localesLoaded = emptyList(),
+                        errors = emptyList(),
+                        durationMs = 0,
+                        source = "avu-$packageName"
+                    )
+                }
+
+                Log.d(TAG, "Ingesting ${entities.size} AVU entities from $appName ($packageName)")
+
+                // Batch insert
+                val insertedCount = batchInsertWithProgress(
+                    entities = entities,
+                    source = "avu-$packageName"
+                )
+
+                val categories = entities.map { it.category }.distinct().sorted()
+                val locales = entities.map { it.locale }.distinct().sorted()
+
+                val duration = System.currentTimeMillis() - startTime
+
+                IngestionResult(
+                    success = true,
+                    commandsLoaded = insertedCount,
+                    categoriesLoaded = categories,
+                    localesLoaded = locales,
+                    errors = emptyList(),
+                    durationMs = duration,
+                    source = "avu-$packageName"
+                )
+
+            } catch (e: Exception) {
+                val duration = System.currentTimeMillis() - startTime
+                Log.e(TAG, "Failed to ingest AVU entities from $packageName", e)
+                IngestionResult(
+                    success = false,
+                    commandsLoaded = 0,
+                    categoriesLoaded = emptyList(),
+                    localesLoaded = emptyList(),
+                    errors = listOf("Exception: ${e.message}"),
+                    durationMs = duration,
+                    source = "avu-$packageName"
+                )
+            }
+        }
+    }
+
+    /**
+     * Ingest single AVU file
+     *
+     * @param filePath Path to .vos file
+     * @return IngestionResult
+     */
+    suspend fun ingestSingleAVUFile(filePath: String): IngestionResult {
+        return withContext(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
+
+            try {
+                val avuParser = AVUFileParser(context)
+                Log.i(TAG, "Ingesting single AVU file: $filePath")
+
+                // Parse the file
+                val parseResult = avuParser.parseFile(filePath)
+                if (parseResult.isFailure) {
+                    val error = parseResult.exceptionOrNull()?.message ?: "Parse error"
+                    return@withContext IngestionResult(
+                        success = false,
+                        commandsLoaded = 0,
+                        categoriesLoaded = emptyList(),
+                        localesLoaded = emptyList(),
+                        errors = listOf(error),
+                        durationMs = System.currentTimeMillis() - startTime,
+                        source = "avu-single"
+                    )
+                }
+
+                val avuFile = parseResult.getOrThrow()
+
+                // Convert to entities
+                val entities = avuParser.convertToEntities(avuFile)
+
+                if (entities.isEmpty()) {
+                    return@withContext IngestionResult(
+                        success = true,
+                        commandsLoaded = 0,
+                        categoriesLoaded = emptyList(),
+                        localesLoaded = emptyList(),
+                        errors = listOf("No commands in file"),
+                        durationMs = System.currentTimeMillis() - startTime,
+                        source = "avu-single"
+                    )
+                }
+
+                // Insert
+                val insertedCount = batchInsertWithProgress(entities, "avu-single")
+
+                val duration = System.currentTimeMillis() - startTime
+
+                IngestionResult(
+                    success = true,
+                    commandsLoaded = insertedCount,
+                    categoriesLoaded = listOf(avuFile.category),
+                    localesLoaded = listOf(avuFile.locale),
+                    errors = emptyList(),
+                    durationMs = duration,
+                    source = "avu-${avuFile.packageName}"
+                )
+
+            } catch (e: Exception) {
+                val duration = System.currentTimeMillis() - startTime
+                Log.e(TAG, "Failed to ingest AVU file: $filePath", e)
+                IngestionResult(
+                    success = false,
+                    commandsLoaded = 0,
+                    categoriesLoaded = emptyList(),
+                    localesLoaded = emptyList(),
+                    errors = listOf("Exception: ${e.message}"),
+                    durationMs = duration,
+                    source = "avu-single"
+                )
+            }
+        }
+    }
+
+    /**
+     * Get count of learned app commands
+     *
+     * @return Number of commands with category "learned_app"
+     */
+    suspend fun getLearnedAppCommandCount(): Int {
+        return withContext(Dispatchers.IO) {
+            try {
+                val counts = getCategoryCounts()
+                counts["learned_app"] ?: 0
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to get learned app count", e)
+                0
+            }
+        }
+    }
+
+    /**
+     * Clear learned app commands only
+     *
+     * Removes commands with category "learned_app" while
+     * preserving system and other commands.
+     */
+    suspend fun clearLearnedAppCommands(): Int {
+        return withContext(Dispatchers.IO) {
+            try {
+                Log.i(TAG, "Clearing learned app commands")
+                val deletedCount = commandDao.deleteByCategory("learned_app")
+                Log.i(TAG, "✅ Deleted $deletedCount learned app commands")
+                deletedCount
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to clear learned app commands", e)
+                0
+            }
+        }
+    }
+
     // ==================== UTILITY METHODS ====================
 
     /**

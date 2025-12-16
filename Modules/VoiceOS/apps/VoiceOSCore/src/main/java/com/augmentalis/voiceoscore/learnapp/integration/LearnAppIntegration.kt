@@ -34,6 +34,10 @@ import com.augmentalis.voiceoscore.learnapp.overlays.LoginPromptAction
 import com.augmentalis.voiceoscore.learnapp.overlays.LoginPromptConfig
 import com.augmentalis.voiceoscore.learnapp.overlays.LoginPromptOverlay
 import com.augmentalis.voiceoscore.learnapp.jit.JustInTimeLearner
+import com.augmentalis.jitlearning.JITLearnerProvider
+import com.augmentalis.jitlearning.JITEventCallback
+import com.augmentalis.jitlearning.JITLearningService
+import com.augmentalis.jitlearning.ExplorationProgressCallback
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppPreferences
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 import com.augmentalis.voiceoscore.learnapp.ui.ConsentDialogManager
@@ -44,9 +48,14 @@ import com.augmentalis.uuidcreator.alias.UuidAliasManager
 // TEMP DISABLED (Room migration): import com.augmentalis.uuidcreator.database.UUIDCreatorDatabase
 import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import com.augmentalis.database.VoiceOSDatabaseManager
+import com.augmentalis.voiceoscore.version.AppVersionDetector
+import com.augmentalis.voiceoscore.version.ScreenHashCalculator
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
@@ -58,7 +67,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlin.time.Duration.Companion.milliseconds
 import android.view.accessibility.AccessibilityNodeInfo
 
@@ -113,7 +121,7 @@ enum class BlockedState {
 class LearnAppIntegration private constructor(
     private val context: Context,
     private val accessibilityService: AccessibilityService
-) {
+) : JITLearnerProvider {
 
     /**
      * Coroutine scope
@@ -164,12 +172,19 @@ class LearnAppIntegration private constructor(
      */
     private val avuQuantizerIntegration: com.augmentalis.voiceoscore.learnapp.ai.quantized.AVUQuantizerIntegration
 
+    /**
+     * Database manager reference for direct screen context queries
+     * FIX (2025-12-11): Stored for getLearnedScreenHashes() implementation
+     */
+    private lateinit var databaseManager: com.augmentalis.database.VoiceOSDatabaseManager
+
     init {
         // Initialize preferences
         preferences = LearnAppPreferences(context)
 
         // Initialize database manager (singleton for SQLDelight)
-        val databaseManager = com.augmentalis.database.VoiceOSDatabaseManager.getInstance(
+        // FIX (2025-12-11): Store reference for getLearnedScreenHashes()
+        databaseManager = com.augmentalis.database.VoiceOSDatabaseManager.getInstance(
             com.augmentalis.database.DatabaseDriverFactory(context)
         )
 
@@ -188,12 +203,21 @@ class LearnAppIntegration private constructor(
         thirdPartyGenerator = ThirdPartyUuidGenerator(context)
         aliasManager = UuidAliasManager(databaseManager.uuids)
 
+        // Version-aware command management (2025-12-14)
+        // Create AppVersionDetector for tracking app versions in generated commands
+        val versionDetector = AppVersionDetector(
+            context = context,
+            appVersionRepository = databaseManager.appVersions
+        )
+
         // Phase 3 (2025-12-04): Initialize LearnAppCore for unified element processing
         // Create LearnAppCore with database and UUID generator (reuse thirdPartyGenerator)
+        // Version-aware: Pass versionDetector for version tracking in commands
         val learnAppCore = com.augmentalis.voiceoscore.learnapp.core.LearnAppCore(
             context = context,
             database = databaseManager,
-            uuidGenerator = thirdPartyGenerator
+            uuidGenerator = thirdPartyGenerator,
+            versionDetector = versionDetector  // Version-aware command creation
         )
 
         // Initialize LearnApp components
@@ -224,12 +248,15 @@ class LearnAppIntegration private constructor(
         // Initialize just-in-time learner
         // FIX (2025-11-30): Pass voiceOSService for command registration (P1-H4)
         // Phase 2 (2025-12-04): Pass LearnAppCore for unified command generation
+        // Version-aware (2025-12-14): Pass versionDetector for version tracking
         justInTimeLearner = JustInTimeLearner(
             context = context,
             databaseManager = databaseManager,
             repository = repository,
             voiceOSService = accessibilityService as? IVoiceOSServiceInternal,
-            learnAppCore = learnAppCore  // Phase 2: Use LearnAppCore
+            learnAppCore = learnAppCore,  // Phase 2: Use LearnAppCore
+            versionDetector = versionDetector,  // Version-aware command creation
+            screenHashCalculator = ScreenHashCalculator  // P2 Task 1.1: Hash-based rescan optimization
         )
 
         // FIX (2025-12-01): Initialize JIT element capture for Voice Command Element Persistence
@@ -242,6 +269,10 @@ class LearnAppIntegration private constructor(
 
         // Set up event listeners
         setupEventListeners()
+
+        // FIX (2025-12-11): Wire JITLearningService to this provider
+        // This connects the AIDL service to the actual JustInTimeLearner
+        wireJITLearningService()
     }
 
     /**
@@ -345,7 +376,7 @@ class LearnAppIntegration private constructor(
                             when (response) {
                                 is com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse.Approved -> {
                                     // Start exploration
-                                    startExploration(response.packageName)
+                                    startExplorationInternal(response.packageName)
                                 }
 
                                 is com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse.Declined -> {
@@ -490,13 +521,14 @@ class LearnAppIntegration private constructor(
     }
 
     /**
-     * Start exploration of app
+     * Start exploration of app (internal)
      *
      * FIX (2025-12-02): Added timeout protection to prevent infinite spinning
+     * FIX (2025-12-11): Renamed to startExplorationInternal to avoid conflict with JITLearnerProvider
      *
      * @param packageName Package name to explore
      */
-    private fun startExploration(packageName: String) {
+    private fun startExplorationInternal(packageName: String) {
         scope.launch {
             try {
                 // FIX: Add timeout protection (30 seconds max for initialization)
@@ -726,22 +758,28 @@ class LearnAppIntegration private constructor(
 
     /**
      * Pause exploration
+     * FIX (2025-12-11): Added override for JITLearnerProvider interface
      */
-    fun pauseExploration() {
+    override fun pauseExploration() {
+        Log.d(TAG, "Pause exploration requested")
         explorationEngine.pauseExploration()
     }
 
     /**
      * Resume exploration
+     * FIX (2025-12-11): Added override for JITLearnerProvider interface
      */
-    fun resumeExploration() {
+    override fun resumeExploration() {
+        Log.d(TAG, "Resume exploration requested")
         explorationEngine.resumeExploration()
     }
 
     /**
      * Stop exploration
+     * FIX (2025-12-11): Added override for JITLearnerProvider interface
      */
-    fun stopExploration() {
+    override fun stopExploration() {
+        Log.d(TAG, "Stop exploration requested")
         explorationEngine.stopExploration()
     }
 
@@ -1210,10 +1248,300 @@ class LearnAppIntegration private constructor(
     fun getExplorationEngine(): ExplorationEngine = explorationEngine
 
     /**
+     * Get JustInTimeLearner instance for JITLearningService integration
+     *
+     * FIX (2025-12-11): Added for JITLearningService AIDL integration
+     * Allows JITLearningService to access the actual learning engine for:
+     * - Pause/resume control
+     * - State queries (screens learned, elements discovered)
+     * - Event callback registration
+     *
+     * @return JustInTimeLearner instance
+     * @since 2.0.0 (JIT-LearnApp Separation)
+     */
+    fun getJustInTimeLearner(): JustInTimeLearner = justInTimeLearner
+
+    /**
+     * Get current root accessibility node
+     *
+     * FIX (2025-12-11): Added for JITLearningService getCurrentScreenInfo()
+     * Provides access to the current screen's accessibility tree.
+     *
+     * @return Root AccessibilityNodeInfo, or null if not available
+     */
+    override fun getCurrentRootNode(): android.view.accessibility.AccessibilityNodeInfo? {
+        return try {
+            accessibilityService.rootInActiveWindow
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get root node", e)
+            null
+        }
+    }
+
+    // ========== JITLearnerProvider Implementation (2025-12-11) ==========
+
+    /** JIT event callback storage */
+    private var jitEventCallback: JITEventCallback? = null
+
+    /**
+     * Pause JIT learning
+     */
+    override fun pauseLearning() {
+        justInTimeLearner.pause()
+    }
+
+    /**
+     * Resume JIT learning
+     */
+    override fun resumeLearning() {
+        justInTimeLearner.resume()
+    }
+
+    /**
+     * Check if learning is paused
+     */
+    override fun isLearningPaused(): Boolean {
+        return justInTimeLearner.isPausedState()
+    }
+
+    /**
+     * Check if learning is actively running
+     */
+    override fun isLearningActive(): Boolean {
+        return justInTimeLearner.isLearningActive()
+    }
+
+    /**
+     * Get stats: screens learned count
+     */
+    override fun getScreensLearnedCount(): Int {
+        return justInTimeLearner.getStats().screensLearned
+    }
+
+    /**
+     * Get stats: elements discovered count
+     */
+    override fun getElementsDiscoveredCount(): Int {
+        return justInTimeLearner.getStats().elementsDiscovered
+    }
+
+    /**
+     * Get current package being learned
+     */
+    override fun getCurrentPackage(): String? {
+        return justInTimeLearner.getStats().currentPackage
+    }
+
+    /**
+     * Check if screen has been learned
+     */
+    override fun hasScreen(screenHash: String): Boolean {
+        return kotlinx.coroutines.runBlocking {
+            justInTimeLearner.hasScreen(screenHash)
+        }
+    }
+
+    /**
+     * Get all learned screen hashes for a package
+     * FIX (2025-12-11): P2 feature implementation
+     */
+    override fun getLearnedScreenHashes(packageName: String): List<String> {
+        return kotlinx.coroutines.runBlocking {
+            try {
+                databaseManager.screenContexts.getByPackage(packageName)
+                    .map { it.screenHash }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting learned screen hashes for $packageName", e)
+                emptyList()
+            }
+        }
+    }
+
+    /**
+     * Start automated exploration (v2.1 - P2 Feature)
+     * Note: pauseExploration, resumeExploration, stopExploration are defined above
+     */
+    override fun startExploration(packageName: String): Boolean {
+        Log.i(TAG, "Start exploration requested via IPC for: $packageName")
+        return try {
+            scope.launch {
+                explorationEngine.startExploration(packageName, null)
+            }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start exploration", e)
+            false
+        }
+    }
+
+    /**
+     * Get current exploration progress (v2.1 - P2 Feature)
+     */
+    override fun getExplorationProgress(): com.augmentalis.jitlearning.ExplorationProgress {
+        val state = explorationEngine.explorationState.value
+        return when (state) {
+            is ExplorationState.Idle -> com.augmentalis.jitlearning.ExplorationProgress.idle()
+            is ExplorationState.Running -> com.augmentalis.jitlearning.ExplorationProgress.running(
+                packageName = state.packageName,
+                screensExplored = state.progress.screensExplored,
+                elementsDiscovered = state.progress.elementsDiscovered,
+                currentDepth = state.progress.currentDepth,
+                progressPercent = (state.progress.calculatePercentage() * 100).toInt(),
+                elapsedMs = state.progress.elapsedTimeMs
+            )
+            is ExplorationState.Paused -> com.augmentalis.jitlearning.ExplorationProgress.paused(
+                packageName = state.packageName,
+                screensExplored = state.progress.screensExplored,
+                elementsDiscovered = state.progress.elementsDiscovered,
+                pauseReason = state.reason
+            )
+            is ExplorationState.PausedForLogin -> com.augmentalis.jitlearning.ExplorationProgress.paused(
+                packageName = state.packageName,
+                screensExplored = state.progress.screensExplored,
+                elementsDiscovered = state.progress.elementsDiscovered,
+                pauseReason = "Login screen detected"
+            )
+            is ExplorationState.PausedByUser -> com.augmentalis.jitlearning.ExplorationProgress.paused(
+                packageName = state.packageName,
+                screensExplored = state.progress.screensExplored,
+                elementsDiscovered = state.progress.elementsDiscovered,
+                pauseReason = "User paused"
+            )
+            is ExplorationState.Completed -> com.augmentalis.jitlearning.ExplorationProgress.completed(
+                packageName = state.packageName,
+                screensExplored = state.stats.totalScreens,
+                elementsDiscovered = state.stats.totalElements
+            )
+            is ExplorationState.Failed -> com.augmentalis.jitlearning.ExplorationProgress(
+                packageName = state.packageName,
+                state = "failed",
+                screensExplored = state.partialProgress?.screensExplored ?: 0,
+                elementsDiscovered = state.partialProgress?.elementsDiscovered ?: 0
+            )
+            else -> com.augmentalis.jitlearning.ExplorationProgress.idle()
+        }
+    }
+
+    /**
+     * Set exploration progress callback (v2.1 - P2 Feature)
+     */
+    override fun setExplorationCallback(callback: ExplorationProgressCallback?) {
+        explorationProgressCallback = callback
+
+        if (callback != null) {
+            // Observe exploration state changes and forward to callback
+            scope.launch {
+                explorationEngine.explorationState.collect { state ->
+                    val progress = getExplorationProgress()
+                    when (state) {
+                        is ExplorationState.Completed -> callback.onCompleted(progress)
+                        is ExplorationState.Failed -> callback.onFailed(progress, state.error.message ?: "Unknown error")
+                        else -> callback.onProgressUpdate(progress)
+                    }
+                }
+            }
+        }
+    }
+
+    // Exploration progress callback reference
+    private var explorationProgressCallback: ExplorationProgressCallback? = null
+
+    /**
+     * Set event callback for JIT events
+     */
+    override fun setEventCallback(callback: JITEventCallback?) {
+        jitEventCallback = callback
+
+        // Wire callback to JustInTimeLearner
+        if (callback != null) {
+            justInTimeLearner.setEventCallback(object : JustInTimeLearner.JITEventCallback {
+                override fun onScreenLearned(packageName: String, screenHash: String, elementCount: Int) {
+                    callback.onScreenLearned(packageName, screenHash, elementCount)
+                }
+
+                override fun onElementDiscovered(stableId: String, vuid: String?) {
+                    callback.onElementDiscovered(stableId, vuid)
+                }
+
+                override fun onLoginDetected(packageName: String, screenHash: String) {
+                    callback.onLoginDetected(packageName, screenHash)
+                }
+            })
+        } else {
+            justInTimeLearner.setEventCallback(null)
+        }
+    }
+
+    /**
+     * Wire JITLearningService to this provider
+     *
+     * Call this after LearnAppIntegration is initialized to connect
+     * JITLearningService to JustInTimeLearner via this provider interface.
+     */
+    private fun wireJITLearningService() {
+        try {
+            val service = JITLearningService.getInstance()
+            if (service != null) {
+                service.setLearnerProvider(this)
+                Log.i(TAG, "JITLearningService wired to LearnAppIntegration")
+            } else {
+                Log.d(TAG, "JITLearningService not running yet")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to wire JITLearningService", e)
+        }
+    }
+
+    // ========== End JITLearnerProvider Implementation ==========
+
+    /**
+     * Shutdown integration and cancel all background jobs
+     * FIX (2025-12-10): Added shutdown() method per spec Section 2.5
+     *
+     * Immediately cancels all coroutines without waiting.
+     * Use shutdownGracefully() if you need to wait for pending operations.
+     */
+    fun shutdown() {
+        Log.i(TAG, "Shutting down LearnApp integration")
+        scope.cancel()
+    }
+
+    /**
+     * Gracefully shutdown integration with timeout
+     * FIX (2025-12-10): Added per spec Section 2.5
+     *
+     * Waits for current operations to complete before cancelling.
+     *
+     * @param timeoutMs Maximum time to wait for operations (default 5000ms)
+     */
+    suspend fun shutdownGracefully(timeoutMs: Long = 5000) {
+        Log.i(TAG, "Graceful shutdown initiated")
+
+        try {
+            withTimeout(timeoutMs) {
+                // Wait for current operations
+                scope.coroutineContext[kotlinx.coroutines.Job]?.children?.forEach { job ->
+                    try {
+                        job.join()
+                    } catch (e: CancellationException) {
+                        // Expected during cancellation
+                    }
+                }
+            }
+        } catch (e: TimeoutCancellationException) {
+            Log.w(TAG, "Graceful shutdown timed out after ${timeoutMs}ms, forcing cancellation")
+        }
+
+        scope.cancel()
+        Log.i(TAG, "Shutdown complete")
+    }
+
+    /**
      * Cleanup (call in onDestroy)
      * FIX (2025-11-30): Added scope.cancel() to prevent coroutine leaks
      * FIX (2025-12-04): Enhanced cleanup to fix overlay memory leak
      * FIX (2025-12-07): Updated to use FloatingProgressWidget instead of ProgressOverlayManager
+     * FIX (2025-12-10): Now calls shutdown() to cancel scope
      *
      * Root cause: Memory leak chain:
      *   VoiceOSService → learnAppIntegration → floatingProgressWidget → widgetView (retained)
@@ -1237,7 +1565,7 @@ class LearnAppIntegration private constructor(
             if (developerSettings.isVerboseLoggingEnabled()) {
                 Log.d(TAG, "Cancelling coroutine scope...")
             }
-            scope.cancel()
+            shutdown()  // FIX (2025-12-10): Use shutdown() method
             if (developerSettings.isVerboseLoggingEnabled()) {
                 Log.d(TAG, "✓ Coroutine scope cancelled")
             }
@@ -1331,7 +1659,7 @@ class LearnAppIntegration private constructor(
         if (developerSettings.isVerboseLoggingEnabled()) {
             Log.d("LearnAppIntegration", "Triggering LearnApp for package: $packageName")
         }
-        startExploration(packageName)
+        startExplorationInternal(packageName)
     }
 
     // ========== AVU Quantized Context API (2025-12-08) ==========

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AvaLearnPro</string>
+    <string name="neo4j_title">Neo4j Graph</string>
+    <string name="inspector_title">Element Inspector</string>
+    <string name="logs_title">Exploration Logs</string>
+</resources>

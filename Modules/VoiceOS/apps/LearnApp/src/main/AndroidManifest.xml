@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LearnApp - Standalone App Exploration Tool
+
+  Provides launcher icon for manual app exploration.
+  Coordinates with JIT service via AIDL to avoid duplicate learning.
+
+  Author: Manoj Jhawar
+  Created: 2025-12-11 (JIT-LearnApp Separation)
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Permissions for app exploration -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.LearnApp">
+
+        <!--
+          LearnApp Main Activity
+
+          Launcher activity for manual app exploration.
+          Provides UI for:
+          - Selecting app to explore
+          - Starting/stopping exploration
+          - Viewing JIT statistics
+          - Pausing/resuming JIT capture
+        -->
+        <activity
+            android:name=".LearnAppActivity"
+            android:exported="true"
+            android:theme="@style/Theme.LearnApp">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="perm_jit_control_label">Control JIT Learning</string>
+    <string name="perm_jit_control_description">Allows controlling Just-In-Time learning and accessing screen capture data. Only granted to apps signed with the same certificate.</string>
+</resources>

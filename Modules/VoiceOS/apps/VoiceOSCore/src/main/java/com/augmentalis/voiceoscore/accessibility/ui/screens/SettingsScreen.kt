@@ -50,7 +50,10 @@ enum class PerformanceMode(val displayName: String) {
 fun SettingsScreen(
     configuration: ServiceConfiguration,
     onConfigurationChange: (ServiceConfiguration) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    lastCleanupTimestamp: Long? = null,  // P2 Task 2.3
+    lastCleanupDeletedCount: Int = 0,     // P2 Task 2.3
+    onRunCleanup: () -> Unit = {}         // P2 Task 2.3
 ) {
     var currentConfig by remember { mutableStateOf(configuration) }
     var performanceMode by remember { 
@@ -146,6 +149,15 @@ fun SettingsScreen(
                     currentConfig = newConfig
                     onConfigurationChange(newConfig)
                 }
+            )
+        }
+
+        // P2 Task 2.3: Command Management Section
+        item {
+            CommandManagementSection(
+                lastCleanupTimestamp = lastCleanupTimestamp,
+                lastCleanupDeletedCount = lastCleanupDeletedCount,
+                onRunCleanup = onRunCleanup
             )
         }
     }
@@ -817,6 +829,162 @@ fun AdvancedSettingItem(
             color = Color(0xFF607D8B),
             fontWeight = FontWeight.SemiBold
         )
+    }
+}
+
+/**
+ * P2 Task 2.3: Command Management Section
+ * Shows last cleanup info and provides manual cleanup trigger
+ */
+@Composable
+fun CommandManagementSection(
+    lastCleanupTimestamp: Long?,
+    lastCleanupDeletedCount: Int,
+    onRunCleanup: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .glassMorphism(
+                config = GlassMorphismConfig(
+                    cornerRadius = 16.dp,
+                    backgroundOpacity = 0.12f,
+                    borderOpacity = 0.25f,
+                    borderWidth = 1.dp,
+                    tintColor = Color(0xFF4CAF50),
+                    tintOpacity = 0.18f
+                ),
+                depth = DepthLevel(0.8f)
+            ),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            // Section header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Command Management",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFE3F2FD),
+                        fontSize = 20.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Clean up deprecated commands to free space",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF90CAF9),
+                        fontSize = 13.sp
+                    )
+                }
+
+                Icon(
+                    imageVector = Icons.Default.CleaningServices,
+                    contentDescription = "Command Management",
+                    tint = Color(0xFF4CAF50),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            // Last cleanup info
+            lastCleanupTimestamp?.let { timestamp ->
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF0F1E2E).copy(alpha = 0.6f)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Last cleanup",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF64B5F6),
+                                fontSize = 11.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            val daysAgo = ((System.currentTimeMillis() - timestamp) / 86400000L).toInt()
+                            val timeText = when {
+                                daysAgo == 0 -> "Today"
+                                daysAgo == 1 -> "Yesterday"
+                                daysAgo < 7 -> "$daysAgo days ago"
+                                daysAgo < 30 -> "${daysAgo / 7} weeks ago"
+                                else -> "${daysAgo / 30} months ago"
+                            }
+                            Text(
+                                text = timeText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFFE3F2FD),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = Color(0xFFFF7043),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "$lastCleanupDeletedCount deleted",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFFFF7043),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Cleanup button
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = onRunCleanup,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4CAF50).copy(alpha = 0.8f),
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CleaningServices,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Run Cleanup Now",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
+            }
+        }
     }
 }
 
