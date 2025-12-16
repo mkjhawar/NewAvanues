@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Force Java 17 for Gradle compatibility (avoids Java 22+ native access warnings)
+export JAVA_HOME="${JAVA_HOME:-/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home}"
+
 #
 # Copyright © 2015-2021 the original authors.
 #

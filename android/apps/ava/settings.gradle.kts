@@ -58,3 +58,7 @@ project(":Actions").projectDir = file("../../../Modules/AVA/Actions")
 
 include(":WakeWord")
 project(":WakeWord").projectDir = file("../../../Modules/AVA/WakeWord")
+
+// Shared Modules (Cross-project KMP libraries)
+include(":Shared:NLU")
+project(":Shared:NLU").projectDir = file("../../../Modules/Shared/NLU")
