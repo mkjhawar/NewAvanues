@@ -66,3 +66,7 @@ include(":Modules:VoiceOS:libraries:UUIDCreator")
 include(":Modules:VoiceOS:libraries:VoiceKeyboard")
 include(":Modules:VoiceOS:libraries:VoiceOsLogging")
 include(":Modules:VoiceOS:libraries:VoiceUIElements")
+
+// WebAvanue Modules
+include(":Modules:WebAvanue:coredata")   // Data layer: repositories, database, models
+include(":Modules:WebAvanue:universal")  // UI layer: ViewModels, screens, platform code
