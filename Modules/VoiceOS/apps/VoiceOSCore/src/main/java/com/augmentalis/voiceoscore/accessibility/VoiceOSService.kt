@@ -380,6 +380,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
         serviceScope.launch {
             staticCommandCache.addAll(actionCoordinator.getAllActions())
+            installedAppsManager.initialize()
             observeInstalledApps()
             delay(VoiceOSConstants.Timing.INIT_DELAY_MS) // Small delay to not block service startup
             initializeComponents()
@@ -1863,6 +1864,15 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             Log.d(TAG, "Clearing VoiceCommandProcessor reference...")
             voiceCommandProcessor = null
             Log.i(TAG, "✓ VoiceCommandProcessor reference cleared")
+        }
+
+        // Cleanup InstalledAppsManager
+        try {
+            Log.d(TAG, "Cleaning up InstalledAppsManager...")
+            installedAppsManager.cleanup()
+            Log.i(TAG, "✓ InstalledAppsManager cleaned up successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "✗ Error cleaning up InstalledAppsManager", e)
         }
 
         // Note: Database is singleton and managed by Room lifecycle - no explicit cleanup needed
