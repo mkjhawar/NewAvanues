@@ -40,11 +40,11 @@ PTH:module-registries:Modules/{Module}/.ideacode/registries
 REG:living-docs:LD-*-V#.md:Docs/{Module}/LivingDocs/
 REG:specs:*-Spec-*-YDDMM-V#.md:docs/ideacode/specs/
 REG:plans:*-Plan-*-YDDMM-V#.md:docs/ideacode/plans/
-FNM:project-context:PROJECT-CONTEXT.md:docs/project-info/
-FNM:architecture:ARCHITECTURE.md:docs/project-info/
-FNM:api-contracts:API-CONTRACTS.md:docs/project-info/
-FNM:ipc-methods:IPC-METHODS.md:docs/project-info/
-FNM:intent-registry:INTENT-REGISTRY.md:docs/project-info/
+FNM:project-context:NAV-Docs-ProjectContext-5121522-V1.md:Docs/project-info/
+FNM:architecture:NAV-Docs-Architecture-5121522-V1.md:Docs/project-info/
+FNM:api-contracts:NAV-Docs-APIContracts-5121522-V1.md:Docs/project-info/
+FNM:ipc-methods:NAV-Docs-IPCMethods-5121522-V1.md:Docs/project-info/
+FNM:intent-registry:NAV-Docs-IntentRegistry-5121522-V1.md:Docs/project-info/
 MOD:VoiceOS:Modules/VoiceOS:active
 MOD:AVA:Modules/AVA:active
 MOD:WebAvanue:Modules/WebAvanue:active
