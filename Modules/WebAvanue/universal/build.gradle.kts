@@ -6,7 +6,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.android.library)
     alias(libs.plugins.compose)
-    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.dokka)
     // SQLDelight plugin removed - using BrowserCoreData for database access
 }
@@ -29,9 +28,10 @@ tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>().configureEach {
 kotlin {
     // Android Target (Phase 1)
     androidTarget {
-        @OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
         }
     }
 
@@ -61,7 +61,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // BrowserCoreData - Shared data layer with LRU caching
-                implementation(project(":coredata"))
+                implementation(project(":Modules:WebAvanue:coredata"))
 
                 // Kotlin
                 implementation(libs.kotlinx.coroutines.core)
@@ -113,9 +113,6 @@ kotlin {
 
                 // Activity Compose - For rememberLauncherForActivityResult (file upload support)
                 implementation(libs.androidx.activity.compose)
-
-                // DocumentFile - For custom download paths
-                implementation("androidx.documentfile:documentfile:1.0.1")
 
                 // Security - EncryptedSharedPreferences
                 implementation("androidx.security:security-crypto:1.1.0-alpha06")
@@ -208,8 +205,8 @@ kotlin {
 
 // Android Configuration
 android {
-    namespace = "com.augmentalis.webavanue"
-    compileSdk = 35
+    namespace = "com.augmentalis.webavanue.ui"
+    compileSdk = 34
 
     defaultConfig {
         minSdk = 26
