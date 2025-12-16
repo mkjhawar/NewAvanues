@@ -1,9 +1,12 @@
 package com.augmentalis.cockpit.mvp
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.compose.runtime.mutableStateListOf
 import com.avanues.cockpit.core.window.AppWindow
+import com.avanues.cockpit.core.window.WindowContent
 import com.avanues.cockpit.core.window.WindowType
+import com.avanues.cockpit.core.window.DocumentType
 import com.avanues.cockpit.core.workspace.Vector3D
 import com.avanues.cockpit.layout.presets.LayoutPreset
 import com.avanues.cockpit.layout.presets.WindowPosition
@@ -26,7 +29,7 @@ import java.util.UUID
  * - Head cursor navigation toggle
  * - Window color management
  */
-class WorkspaceViewModel : ViewModel() {
+class WorkspaceViewModel(application: Application) : AndroidViewModel(application) {
 
     // Available layout presets
     private val layoutPresets = listOf(
@@ -66,12 +69,12 @@ class WorkspaceViewModel : ViewModel() {
 
     init {
         // Initialize with 3 sample windows
-        addWindow("Email", WindowType.ANDROID_APP, "#FF6B9D")
-        addWindow("Browser", WindowType.WEB_APP, "#4ECDC4")
-        addWindow("Calculator", WindowType.WIDGET, "#95E1D3")
+        addWindow("WebAvanue", WindowType.WEB_APP, "#4ECDC4", WindowContent.WebContent("https://webavanue.com"))
+        addWindow("Google", WindowType.WEB_APP, "#95E1D3", WindowContent.WebContent("https://google.com"))
+        addWindow("Calculator", WindowType.WIDGET, "#FF6B9D", WindowContent.MockContent)
     }
 
-    fun addWindow(title: String, type: WindowType, color: String) {
+    fun addWindow(title: String, type: WindowType, color: String, content: WindowContent = WindowContent.MockContent) {
         if (_windows.value.size >= 6) return // Max 6 windows
 
         val window = AppWindow(
@@ -82,7 +85,8 @@ class WorkspaceViewModel : ViewModel() {
             position = Vector3D(0f, 0f, -2f),
             widthMeters = 0.8f,
             heightMeters = 0.6f,
-            voiceName = title.lowercase()
+            voiceName = title.lowercase(),
+            content = content
         )
         _windows.value = _windows.value + window
 
@@ -108,9 +112,9 @@ class WorkspaceViewModel : ViewModel() {
         _layoutPreset.value = layoutPresets[currentLayoutIndex]
 
         // Re-initialize with sample windows
-        addWindow("Email", WindowType.ANDROID_APP, "#FF6B9D")
-        addWindow("Browser", WindowType.WEB_APP, "#4ECDC4")
-        addWindow("Calculator", WindowType.WIDGET, "#95E1D3")
+        addWindow("WebAvanue", WindowType.WEB_APP, "#4ECDC4", WindowContent.WebContent("https://webavanue.com"))
+        addWindow("Google", WindowType.WEB_APP, "#95E1D3", WindowContent.WebContent("https://google.com"))
+        addWindow("Calculator", WindowType.WIDGET, "#FF6B9D", WindowContent.MockContent)
     }
 
     fun toggleHeadCursor() {
@@ -171,6 +175,177 @@ class WorkspaceViewModel : ViewModel() {
      */
     fun setSelectedWindow(windowId: String?) {
         _selectedWindowId.value = windowId
+    }
+
+    /**
+     * Minimize window (set isHidden = true)
+     * Hidden windows show as collapsed title bar only (48dp height)
+     *
+     * @param windowId The ID of the window to minimize
+     */
+    fun minimizeWindow(windowId: String) {
+        _windows.value = _windows.value.map { window ->
+            if (window.id == windowId) {
+                window.copy(
+                    isHidden = true,
+                    updatedAt = System.currentTimeMillis()
+                )
+            } else {
+                window
+            }
+        }
+    }
+
+    /**
+     * Restore minimized window (set isHidden = false)
+     *
+     * @param windowId The ID of the window to restore
+     */
+    fun restoreWindow(windowId: String) {
+        _windows.value = _windows.value.map { window ->
+            if (window.id == windowId) {
+                window.copy(
+                    isHidden = false,
+                    updatedAt = System.currentTimeMillis()
+                )
+            } else {
+                window
+            }
+        }
+    }
+
+    /**
+     * Toggle window size between normal (300x400dp) and maximized (screen - 40dp)
+     *
+     * State Transitions:
+     * - Normal (isHidden=false, isLarge=false) → Maximized (isHidden=false, isLarge=true)
+     * - Maximized (isHidden=false, isLarge=true) → Normal (isHidden=false, isLarge=false)
+     * - Minimized (isHidden=true, isLarge=*) → Maximized (isHidden=false, isLarge=true)
+     *
+     * Fix (Issue #1): Always clears isHidden state before toggling isLarge
+     * This prevents windows from getting stuck in minimized state (48dp height)
+     *
+     * @param windowId The ID of the window to toggle size
+     */
+    fun toggleWindowSize(windowId: String) {
+        _windows.value = _windows.value.map { window ->
+            if (window.id == windowId) {
+                window.copy(
+                    isHidden = false,        // FIX: Always restore when maximizing
+                    isLarge = !window.isLarge,
+                    updatedAt = System.currentTimeMillis()
+                )
+            } else {
+                window
+            }
+        }
+    }
+
+    /**
+     * Select a window (for Phase 2)
+     * Sets this window as the selected window (for voice commands, keyboard shortcuts)
+     *
+     * @param windowId The ID of the window to select
+     */
+    fun selectWindow(windowId: String) {
+        _selectedWindowId.value = windowId
+    }
+
+    /**
+     * Update WebView scroll position (Phase 3: FR-3.1)
+     * Saves scroll state so it persists across window switches
+     *
+     * @param windowId The ID of the window containing the WebView
+     * @param scrollX Horizontal scroll position
+     * @param scrollY Vertical scroll position
+     */
+    fun updateWebViewScrollPosition(windowId: String, scrollX: Int, scrollY: Int) {
+        _windows.value = _windows.value.map { window ->
+            val content = window.content
+            if (window.id == windowId && content is WindowContent.WebContent) {
+                window.copy(
+                    content = content.copy(
+                        scrollX = scrollX,
+                        scrollY = scrollY
+                    ),
+                    updatedAt = System.currentTimeMillis()
+                )
+            } else {
+                window
+            }
+        }
+    }
+
+    /**
+     * Update PDF document state (Phase 3: FR-3.2)
+     * Saves page number, zoom level, and scroll position
+     *
+     * @param windowId The ID of the window containing the PDF
+     * @param currentPage Current page number
+     * @param zoomLevel Zoom level (1.0 = 100%)
+     * @param scrollX Horizontal scroll position
+     * @param scrollY Vertical scroll position
+     */
+    fun updatePdfState(windowId: String, currentPage: Int, zoomLevel: Float, scrollX: Float, scrollY: Float) {
+        _windows.value = _windows.value.map { window ->
+            val content = window.content
+            if (window.id == windowId && content is WindowContent.DocumentContent && content.documentType == DocumentType.PDF) {
+                window.copy(
+                    content = content.copy(
+                        currentPage = currentPage,
+                        zoomLevel = zoomLevel,
+                        scrollX = scrollX,
+                        scrollY = scrollY
+                    ),
+                    updatedAt = System.currentTimeMillis()
+                )
+            } else {
+                window
+            }
+        }
+    }
+
+    /**
+     * Update video playback position (Phase 3: FR-3.3)
+     * Saves playback position every 5 seconds during playback
+     *
+     * @param windowId The ID of the window containing the video
+     * @param playbackPosition Playback position in milliseconds
+     */
+    fun updateVideoPlaybackPosition(windowId: String, playbackPosition: Long) {
+        _windows.value = _windows.value.map { window ->
+            val content = window.content
+            if (window.id == windowId && content is WindowContent.DocumentContent && content.documentType == DocumentType.VIDEO) {
+                window.copy(
+                    content = content.copy(
+                        playbackPosition = playbackPosition
+                    ),
+                    updatedAt = System.currentTimeMillis()
+                )
+            } else {
+                window
+            }
+        }
+    }
+
+    /**
+     * Update window content (generic method for Phase 3)
+     * Used by content renderers to update their state
+     *
+     * @param windowId The ID of the window to update
+     * @param newContent The new content state
+     */
+    fun updateWindowContent(windowId: String, newContent: WindowContent) {
+        _windows.value = _windows.value.map { window ->
+            if (window.id == windowId) {
+                window.copy(
+                    content = newContent,
+                    updatedAt = System.currentTimeMillis()
+                )
+            } else {
+                window
+            }
+        }
     }
 
     private fun updatePositions() {

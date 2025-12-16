@@ -19,7 +19,14 @@ data class AppWindow(
     val voiceName: String = title,
     val voiceDescription: String = title,
     val voiceShortcuts: List<String> = emptyList(),
-    val spatialAudioEnabled: Boolean = true
+    val spatialAudioEnabled: Boolean = true,
+    val content: WindowContent = WindowContent.MockContent,
+
+    // Window control state (Phase 1)
+    val isHidden: Boolean = false,           // Minimize state (collapsed to title bar)
+    val isLarge: Boolean = false,            // Maximize state (2x size)
+    val createdAt: Long = 0L,                // Creation timestamp (set by platform)
+    val updatedAt: Long = 0L                 // Last update timestamp (set by platform)
 )
 
 enum class WindowType {
