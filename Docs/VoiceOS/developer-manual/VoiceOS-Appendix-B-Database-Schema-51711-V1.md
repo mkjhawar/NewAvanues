@@ -417,28 +417,43 @@ CREATE INDEX index_scraped_elements_uuid ON scraped_elements(uuid);
 
 ## B.6 Generated Commands Table
 
-### B.6.1 Table Schema
+**Schema Version:** v3 (Updated 2025-12-14)
+**See Also:** [Chapter 40 - Version-Aware Command Management](VoiceOS-40-Version-Aware-Command-Management-51214-V1.md)
+
+### B.6.1 Table Schema (SQLDelight - Schema v3)
 
 ```sql
-CREATE TABLE generated_commands (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    element_hash TEXT NOT NULL,
-    command_text TEXT NOT NULL,
-    action_type TEXT NOT NULL,
+CREATE TABLE commands_generated (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    elementHash TEXT NOT NULL,
+    commandText TEXT NOT NULL,
+    actionType TEXT NOT NULL,
     confidence REAL NOT NULL,
-    synonyms TEXT NOT NULL,
-    is_user_approved INTEGER NOT NULL DEFAULT 0,
-    usage_count INTEGER NOT NULL DEFAULT 0,
-    last_used INTEGER,
-    generated_at INTEGER NOT NULL,
+    synonyms TEXT,
+    isUserApproved INTEGER NOT NULL DEFAULT 0,
+    usageCount INTEGER NOT NULL DEFAULT 0,
+    lastUsed INTEGER,
+    createdAt INTEGER NOT NULL,
+    appId TEXT NOT NULL DEFAULT '',
 
-    FOREIGN KEY(element_hash) REFERENCES scraped_elements(element_hash) ON DELETE CASCADE
+    -- Version tracking columns (Schema v3 - Added 2025-12-14)
+    appVersion TEXT NOT NULL DEFAULT '',
+    versionCode INTEGER NOT NULL DEFAULT 0,
+    lastVerified INTEGER,
+    isDeprecated INTEGER NOT NULL DEFAULT 0,
+
+    UNIQUE(elementHash, commandText)
 );
 
 -- Indices
-CREATE INDEX index_generated_commands_element_hash ON generated_commands(element_hash);
-CREATE INDEX index_generated_commands_command_text ON generated_commands(command_text);
-CREATE INDEX index_generated_commands_action_type ON generated_commands(action_type);
+CREATE INDEX idx_gc_element ON commands_generated(elementHash);
+CREATE INDEX idx_gc_action ON commands_generated(actionType);
+CREATE INDEX idx_gc_confidence ON commands_generated(confidence);
+CREATE INDEX idx_gc_app_id ON commands_generated(appId, id);
+
+-- Version management indexes (Schema v3)
+CREATE INDEX idx_gc_app_version ON commands_generated(appId, versionCode, isDeprecated);
+CREATE INDEX idx_gc_last_verified ON commands_generated(lastVerified, isDeprecated);
 ```
 
 ### B.6.2 Field Reference
@@ -446,15 +461,36 @@ CREATE INDEX index_generated_commands_action_type ON generated_commands(action_t
 | Field | Type | Nullable | Description | Example |
 |-------|------|----------|-------------|---------|
 | `id` | INTEGER | No | Auto-increment PK | `5678` |
-| `element_hash` | TEXT | No | FK to scraped_elements | `abc123...` |
-| `command_text` | TEXT | No | Primary command phrase | `click submit button` |
-| `action_type` | TEXT | No | Action type | `click`, `type`, `scroll` |
+| `elementHash` | TEXT | No | Element identifier | `abc123...` |
+| `commandText` | TEXT | No | Primary command phrase | `click submit button` |
+| `actionType` | TEXT | No | Action type | `CLICK`, `TYPE`, `SCROLL` |
 | `confidence` | REAL | No | AI confidence (0.0-1.0) | `0.92` |
-| `synonyms` | TEXT | No | JSON array of alternatives | `["send","post","submit"]` |
-| `is_user_approved` | INTEGER | No | User confirmation flag | `1` (approved) |
-| `usage_count` | INTEGER | No | Execution count | `15` |
-| `last_used` | INTEGER | Yes | Last usage timestamp | `1698865432000` |
-| `generated_at` | INTEGER | No | Generation timestamp | `1698765432000` |
+| `synonyms` | TEXT | Yes | Alternative commands | `send,post,submit` |
+| `isUserApproved` | INTEGER | No | User confirmation flag | `1` (approved) |
+| `usageCount` | INTEGER | No | Execution count | `15` |
+| `lastUsed` | INTEGER | Yes | Last usage timestamp | `1702502400000` |
+| `createdAt` | INTEGER | No | Creation timestamp | `1702502400000` |
+| `appId` | TEXT | No | App package name | `com.google.android.gm` |
+| **`appVersion`** | TEXT | No | **Version string (v3)** | `8.2024.11.123` |
+| **`versionCode`** | INTEGER | No | **Version for comparison (v3)** | `82024` |
+| **`lastVerified`** | INTEGER | Yes | **Last seen timestamp (v3)** | `1702502400000` |
+| **`isDeprecated`** | INTEGER | No | **Deprecation flag (v3)** | `0` (active), `1` (deprecated) |
+
+### B.6.3 Schema Evolution
+
+**v1 → v2 (2025-12-05):**
+- Added `appId` column for package-based filtering
+- Added `idx_gc_app_id` index
+
+**v2 → v3 (2025-12-14):**
+- Added `appVersion` column for human-readable version
+- Added `versionCode` column for integer comparison
+- Added `lastVerified` column for verification tracking
+- Added `isDeprecated` column for lifecycle management
+- Added `idx_gc_app_version` composite index
+- Added `idx_gc_last_verified` index
+
+**Migration SQL:** See `migrations/2.sqm`
 
 ### B.6.3 Action Types
 

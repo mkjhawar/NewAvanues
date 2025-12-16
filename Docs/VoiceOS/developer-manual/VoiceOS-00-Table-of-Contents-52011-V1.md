@@ -1,16 +1,26 @@
 # VOS4 Developer Manual
 ## Complete Technical Reference
 
-**Version:** 4.4.0
-**Last Updated:** 2025-11-20
+**Version:** 4.5.0
+**Last Updated:** 2025-12-14
 **Status:** Living Document
 **Framework:** IDEACODE v5.3
 
 ---
 
-## 🔥 LATEST UPDATE (v4.4.0 - 2025-11-20)
+## 🔥 LATEST UPDATE (v4.5.0 - 2025-12-14)
 
-**Vivoka Model Deployment Documentation Complete**
+**Version-Aware Command Lifecycle Management (Schema v3)**
+- Prevents command accumulation across 50+ app updates (66% database reduction)
+- App version tracking with automatic deprecation marking
+- 30-day grace period with smart cleanup strategies
+- User-approved command preservation
+- Android API 21-34 compatible version detection
+- 19 comprehensive tests (11 unit + 8 integration)
+- See Chapter 40 and Appendix B (Database Schema v3)
+
+**Previous Update (v4.4.0 - 2025-11-20):**
+Vivoka Model Deployment Documentation Complete
 - Added external model deployment guide (Chapter 7.5.1)
 - Added deployment strategies for dev/QA/production (Chapter 35.4)
 - Multi-location fallback architecture documented
@@ -379,6 +389,40 @@ VoiceOSCore IPC Architecture Complete (Phase 3)
   - 39.7 Security Testing
   - 39.8 Continuous Integration
 
+- **[Chapter 40: Version-Aware Command Lifecycle Management](VoiceOS-Database-Version-Aware-Management-5141213-V1.md)** ⭐ NEW
+  - 40.1 Overview & Problem Statement
+  - 40.2 Architecture & Design
+    - 40.2.1 Database Schema (v3)
+    - 40.2.2 AppVersionDetector Service
+    - 40.2.3 AppVersionManager Orchestration
+  - 40.3 Version Detection & Tracking
+    - 40.3.1 PackageManager Integration (API 21-34)
+    - 40.3.2 VersionChange Sealed Class
+    - 40.3.3 Version Comparison Logic
+  - 40.4 Command Lifecycle Operations
+    - 40.4.1 Marking Commands Deprecated
+    - 40.4.2 Cleanup Strategies (30-day grace)
+    - 40.4.3 User-Approved Command Preservation
+  - 40.5 Repository Methods
+    - 40.5.1 IAppVersionRepository API
+    - 40.5.2 IGeneratedCommandRepository Extensions
+    - 40.5.3 Manual UPSERT Implementation
+  - 40.6 Testing Strategy
+    - 40.6.1 Unit Tests (11 tests)
+    - 40.6.2 Integration Tests (8 tests)
+  - 40.7 Usage Examples
+    - 40.7.1 Check Single App
+    - 40.7.2 Bulk App Checks
+    - 40.7.3 Automated Cleanup
+  - 40.8 Production Deployment
+    - 40.8.1 Migration Path (v2 → v3)
+    - 40.8.2 Monitoring & Metrics
+    - 40.8.3 Performance Considerations
+  - 40.9 Performance Impact
+    - 40.9.1 Database Reduction (66%)
+    - 40.9.2 Query Performance
+    - 40.9.3 Memory Footprint
+
 ### Part XIII: Appendices
 - **[Appendix A: Complete API Reference](Appendix-A-API-Reference.md)**
   - A.1 VoiceOSCore APIs
@@ -450,8 +494,8 @@ This is a living document. To contribute:
 
 ---
 
-**Total Chapters:** 35 + 6 Appendices
-**Estimated Pages:** 800+ pages
+**Total Chapters:** 40 + 6 Appendices
+**Estimated Pages:** 850+ pages
 **Format:** Markdown with code examples
 **Target Audience:** VOS4 developers, contributors, and integrators
 
@@ -459,4 +503,4 @@ This is a living document. To contribute:
 
 **Document Status:** ✅ Structure Complete - Chapters In Progress
 **Framework Compliance:** IDEACODE v5.3
-**Last Review:** 2025-11-13
+**Last Review:** 2025-12-14
