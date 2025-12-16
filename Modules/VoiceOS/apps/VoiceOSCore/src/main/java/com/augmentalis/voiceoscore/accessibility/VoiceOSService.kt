@@ -242,6 +242,9 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     @Volatile
     private var learnAppIntegration: com.augmentalis.voiceoscore.learnapp.integration.LearnAppIntegration? = null
 
+    // Manual command integration for VOS-META-001 (Phase 2 UI Layer)
+    private var manualCommandIntegration: com.augmentalis.voiceoscore.commands.integration.ManualCommandIntegration? = null
+
     // Hash-based persistence database (nullable for safe fallback)
     // FIX (2025-11-26): Database consolidation - Use VoiceOSAppDatabase (SQLDelight via adapter)
     private var scrapingDatabase: VoiceOSAppDatabase? = null
@@ -326,6 +329,9 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 
         // Initialize rename feature components (Phase 2: On-Demand Command Renaming)
         initializeRenameFeature()
+
+        // Initialize manual command assignment feature (VOS-META-001 Phase 2)
+        initializeManualCommandFeature()
     }
 
     /**
@@ -363,6 +369,36 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             renameHintOverlay = null
             screenActivityDetector = null
             renameCommandHandler = null
+        }
+    }
+
+    /**
+     * Initialize manual command assignment feature (VOS-META-001 Phase 2 UI Layer)
+     *
+     * Initializes:
+     * 1. ManualCommandIntegration - Wiring layer for element command management
+     * 2. PostLearningOverlay - Shows elements needing commands after exploration
+     * 3. QualityIndicatorOverlay - Developer mode quality visualization
+     */
+    private fun initializeManualCommandFeature() {
+        try {
+            Log.i(TAG, "=== Initializing Manual Command Feature ===")
+
+            scrapingDatabase?.let { database ->
+                // Initialize ManualCommandIntegration (requires speechEngineManager)
+                // Note: speechEngineManager is lateinit and initialized in onServiceConnected()
+                // So we defer this initialization until speechEngineManager is ready
+                Log.d(TAG, "ManualCommandIntegration initialization deferred until speechEngineManager is ready")
+
+                // Wire to LearnAppIntegration (will be initialized later)
+                // Connection happens in initializeLearnAppIntegration()
+                Log.d(TAG, "ManualCommandIntegration will be connected to LearnAppIntegration when it initializes")
+            } ?: Log.w(TAG, "Database not initialized, skipping ManualCommandIntegration")
+
+            Log.i(TAG, "=== Manual Command Feature Initialized ===")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error initializing manual command feature", e)
+            manualCommandIntegration = null
         }
     }
 
@@ -1036,6 +1072,22 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         // TODO: Make engine selection user-configurable (Vivoka/Vosk)
         speechEngineManager.initializeEngine(SpeechEngine.VIVOKA)
 
+        // Initialize ManualCommandIntegration now that speechEngineManager is ready
+        scrapingDatabase?.let { database ->
+            try {
+                manualCommandIntegration = com.augmentalis.voiceoscore.commands.integration.ManualCommandIntegration(
+                    context = this,
+                    accessibilityService = this,
+                    databaseManager = database.databaseManager,
+                    speechEngineManager = speechEngineManager
+                )
+                manualCommandIntegration?.initialize()
+                Log.i(TAG, "✓ ManualCommandIntegration initialized (deferred from onCreate)")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize ManualCommandIntegration", e)
+            }
+        }
+
         // ARCHITECTURE: Split into two separate collectors
         // 1. State collection: Monitor engine lifecycle (initialization, listening status)
         // 2. Command event collection: Process voice commands as discrete events
@@ -1151,6 +1203,20 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                     Log.e(TAG, "  Error type: ${e.javaClass.simpleName}")
                     Log.e(TAG, "  Error message: ${e.message}")
                     discoveryIntegration = null
+                }
+
+                // VOS-META-001 Phase 2: Wire Manual Command Integration to LearnAppIntegration
+                Log.d(TAG, "Wiring Manual Command Integration to LearnAppIntegration...")
+                try {
+                    integration.manualCommandIntegration = manualCommandIntegration
+                    Log.i(TAG, "✓ Manual Command Integration wired successfully")
+                    Log.d(TAG, "  - Post-learning overlay: READY")
+                    Log.d(TAG, "  - Quality indicator overlay: READY")
+                    Log.d(TAG, "  - Element command manager: ACTIVE")
+                } catch (e: Exception) {
+                    Log.e(TAG, "✗ Failed to wire Manual Command Integration", e)
+                    Log.e(TAG, "  Error type: ${e.javaClass.simpleName}")
+                    Log.e(TAG, "  Error message: ${e.message}")
                 }
             } ?: Log.w(TAG, "Skipping Command Discovery - LearnAppIntegration not available")
 
@@ -1906,6 +1972,22 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                 Log.d(TAG, "Command Discovery integration reference cleared")
             }
         } ?: Log.d(TAG, "Command Discovery integration was not initialized, skipping cleanup")
+
+        // Cleanup Manual Command integration (VOS-META-001 Phase 2)
+        manualCommandIntegration?.let { integration ->
+            try {
+                Log.d(TAG, "Cleaning up Manual Command integration...")
+                integration.cleanup()
+                Log.i(TAG, "✓ Manual Command integration cleaned up successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "✗ Error cleaning up Manual Command integration", e)
+                Log.e(TAG, "Cleanup error type: ${e.javaClass.simpleName}")
+                Log.e(TAG, "Cleanup error message: ${e.message}")
+            } finally {
+                manualCommandIntegration = null
+                Log.d(TAG, "Manual Command integration reference cleared")
+            }
+        } ?: Log.d(TAG, "Manual Command integration was not initialized, skipping cleanup")
 
         // Cleanup rename feature components
         try {

@@ -178,6 +178,12 @@ class LearnAppIntegration private constructor(
      */
     private lateinit var databaseManager: com.augmentalis.database.VoiceOSDatabaseManager
 
+    /**
+     * Manual command integration for VOS-META-001 (Phase 2 UI Layer)
+     * Optional - set by VoiceOSService after initialization
+     */
+    var manualCommandIntegration: com.augmentalis.voiceoscore.commands.integration.ManualCommandIntegration? = null
+
     init {
         // Initialize preferences
         preferences = LearnAppPreferences(context)
@@ -730,6 +736,9 @@ class LearnAppIntegration private constructor(
                         title = "Learning Complete",
                         message = message
                     )
+
+                    // VOS-META-001: Trigger manual command overlay if elements need commands
+                    manualCommandIntegration?.onExplorationCompleted(state)
                 }
             }
 
