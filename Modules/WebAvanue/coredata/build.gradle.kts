@@ -126,8 +126,8 @@ kotlin {
 
 // Android Configuration
 android {
-    namespace = "com.augmentalis.webavanue"
-    compileSdk = 35
+    namespace = "com.augmentalis.webavanue.data"
+    compileSdk = 34
 
     defaultConfig {
         minSdk = 26
