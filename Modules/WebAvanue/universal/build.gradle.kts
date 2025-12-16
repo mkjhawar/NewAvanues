@@ -87,6 +87,7 @@ kotlin {
                 implementation(libs.voyager.screenmodel)
                 implementation(libs.voyager.tab.navigator)
                 implementation(libs.voyager.transitions)
+                implementation(libs.voyager.koin)
             }
         }
 
@@ -113,6 +114,9 @@ kotlin {
 
                 // Activity Compose - For rememberLauncherForActivityResult (file upload support)
                 implementation(libs.androidx.activity.compose)
+
+                // DocumentFile - For download file handling
+                implementation(libs.androidx.documentfile)
 
                 // Security - EncryptedSharedPreferences
                 implementation("androidx.security:security-crypto:1.1.0-alpha06")
