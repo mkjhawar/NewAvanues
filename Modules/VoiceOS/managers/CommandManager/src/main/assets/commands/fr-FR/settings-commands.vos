@@ -1,0 +1,134 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "settings-commands.vos",
+    "category": "settings",
+    "display_name": "Settings",
+    "description": "Voice commands for quick access to settings screens",
+    "command_count": 6
+  },
+  "locale": "fr-FR",
+  "commands": [
+    {
+      "action": "OPEN_CONNECTION",
+      "cmd": "ouvrir connections",
+      "syn": [
+        "connections",
+        "network paramètres",
+        "connectivity",
+        "connection paramètres",
+        "network options",
+        "wireless paramètres",
+        "internet paramètres",
+        "network menu",
+        "connection menu",
+        "connectivity paramètres",
+        "network configuration",
+        "wireless configuration",
+        "internet configuration",
+        "connection options"
+      ]
+    },
+    {
+      "action": "OPEN_SOUND",
+      "cmd": "ouvrir sound",
+      "syn": [
+        "sound paramètres",
+        "audio paramètres",
+        "volume paramètres",
+        "sound options",
+        "audio options",
+        "sound menu",
+        "audio menu",
+        "sound preferences",
+        "audio preferences",
+        "sound control",
+        "audio control",
+        "volume control",
+        "sound configuration",
+        "audio configuration"
+      ]
+    },
+    {
+      "action": "OPEN_DISPLAY",
+      "cmd": "ouvrir display",
+      "syn": [
+        "display paramètres",
+        "écran paramètres",
+        "display options",
+        "écran options",
+        "display menu",
+        "écran menu",
+        "display preferences",
+        "écran preferences",
+        "visual paramètres",
+        "display control",
+        "écran control",
+        "display configuration",
+        "écran configuration",
+        "luminosité paramètres"
+      ]
+    },
+    {
+      "action": "OPEN_SECURITY",
+      "cmd": "ouvrir security",
+      "syn": [
+        "security paramètres",
+        "privacy paramètres",
+        "security options",
+        "privacy options",
+        "security menu",
+        "privacy menu",
+        "security preferences",
+        "privacy preferences",
+        "protection paramètres",
+        "safety paramètres",
+        "security control",
+        "privacy control",
+        "security configuration",
+        "privacy configuration"
+      ]
+    },
+    {
+      "action": "OPEN_ABOUT",
+      "cmd": "ouvrir about",
+      "syn": [
+        "about device",
+        "device info",
+        "system info",
+        "about phone",
+        "device information",
+        "system information",
+        "about system",
+        "phone info",
+        "about menu",
+        "device details",
+        "system details",
+        "phone details",
+        "device specifications",
+        "system specifications"
+      ]
+    },
+    {
+      "action": "OPEN_SETTINGS",
+      "cmd": "ouvrir paramètres",
+      "syn": [
+        "paramètres",
+        "preferences",
+        "configuration",
+        "options",
+        "system paramètres",
+        "device paramètres",
+        "setup",
+        "control panel",
+        "paramètres menu",
+        "preferences menu",
+        "ouvrir preferences",
+        "ouvrir configuration",
+        "ouvrir options",
+        "afficher paramètres"
+      ]
+    }
+  ]
+}

@@ -69,146 +69,25 @@ enum class CommandSource {
 /**
  * Context information about the command execution environment.
  *
- * Unified context model that combines fields from both the legacy sealed class
- * (com.augmentalis.commandmanager.context.CommandContext) and the KMP data class.
- *
  * @property packageName Package name of the active application
  * @property activityName Activity name of the active screen
- * @property appCategory Category of the current app (productivity, social, etc.)
  * @property viewId View identifier of the focused element
  * @property screenContent Text content visible on screen
- * @property screenElements List of key UI elements on screen
- * @property hasEditableFields Whether the screen has editable text fields
- * @property hasScrollableContent Whether the screen has scrollable content
- * @property hasClickableElements Whether the screen has clickable elements
- * @property userLocation User's current location type (home, work, etc.)
- * @property locationConfidence Confidence in location detection (0.0-1.0)
- * @property activityType User's physical activity (walking, driving, etc.)
- * @property activityConfidence Confidence in activity detection (0.0-1.0)
- * @property timeOfDay Time of day category (morning, afternoon, etc.)
- * @property hour Current hour (0-23)
- * @property dayOfWeek Day of week (1=Sunday to 7=Saturday)
+ * @property userLocation User's current location
  * @property deviceState Current device state (battery, network, etc.)
  * @property focusedElement Description of the currently focused UI element
  * @property customData Additional custom context data
  */
 data class CommandContext(
-    // App context
     val packageName: String? = null,
     val activityName: String? = null,
-    val appCategory: String? = null,
-
-    // Screen context
     val viewId: String? = null,
     val screenContent: String? = null,
-    val screenElements: List<String> = emptyList(),
-    val hasEditableFields: Boolean = false,
-    val hasScrollableContent: Boolean = false,
-    val hasClickableElements: Boolean = false,
-
-    // Location context
     val userLocation: String? = null,
-    val locationConfidence: Float = 1.0f,
-
-    // Activity context
-    val activityType: String? = null,
-    val activityConfidence: Float = 1.0f,
-
-    // Time context
-    val timeOfDay: String? = null,
-    val hour: Int? = null,
-    val dayOfWeek: Int? = null,
-
-    // Device state
     val deviceState: Map<String, Any> = emptyMap(),
-
-    // Focused element
     val focusedElement: String? = null,
-
-    // Custom data
     val customData: Map<String, Any> = emptyMap()
-) {
-    /**
-     * App category constants
-     */
-    object AppCategories {
-        const val PRODUCTIVITY = "productivity"
-        const val SOCIAL = "social"
-        const val MEDIA = "media"
-        const val COMMUNICATION = "communication"
-        const val BROWSER = "browser"
-        const val SHOPPING = "shopping"
-        const val NAVIGATION = "navigation"
-        const val GAMES = "games"
-        const val SYSTEM = "system"
-        const val UNKNOWN = "unknown"
-    }
-
-    /**
-     * Location type constants
-     */
-    object LocationTypes {
-        const val HOME = "home"
-        const val WORK = "work"
-        const val PUBLIC = "public"
-        const val VEHICLE = "vehicle"
-        const val OUTDOOR = "outdoor"
-        const val UNKNOWN = "unknown"
-    }
-
-    /**
-     * Activity type constants
-     */
-    object ActivityTypes {
-        const val WALKING = "walking"
-        const val RUNNING = "running"
-        const val DRIVING = "driving"
-        const val STATIONARY = "stationary"
-        const val CYCLING = "cycling"
-        const val UNKNOWN = "unknown"
-    }
-
-    /**
-     * Time of day constants
-     */
-    object TimeOfDay {
-        const val EARLY_MORNING = "early_morning"  // 5-8 AM
-        const val MORNING = "morning"              // 8-12 PM
-        const val AFTERNOON = "afternoon"          // 12-5 PM
-        const val EVENING = "evening"              // 5-9 PM
-        const val NIGHT = "night"                  // 9 PM-12 AM
-        const val LATE_NIGHT = "late_night"        // 12-5 AM
-
-        fun fromHour(hour: Int): String = when (hour) {
-            in 5..7 -> EARLY_MORNING
-            in 8..11 -> MORNING
-            in 12..16 -> AFTERNOON
-            in 17..20 -> EVENING
-            in 21..23 -> NIGHT
-            else -> LATE_NIGHT
-        }
-    }
-
-    /**
-     * Check if this is a weekday
-     */
-    fun isWeekday(): Boolean = dayOfWeek?.let { it in 2..6 } ?: false
-
-    /**
-     * Check if this is a weekend
-     */
-    fun isWeekend(): Boolean = dayOfWeek?.let { it == 1 || it == 7 } ?: false
-
-    /**
-     * Check if location confidence is above threshold
-     */
-    fun isLocationConfident(threshold: Float = 0.7f): Boolean = locationConfidence >= threshold
-
-    /**
-     * Check if activity confidence is above threshold
-     */
-    fun isActivityConfident(threshold: Float = 0.7f): Boolean = activityConfidence >= threshold
-}
+)
 
 /**
  * Result of a command execution.
