@@ -57,7 +57,7 @@ dependencies {
     implementation(project(":core:Utils"))
 
     // Feature modules for integration
-    implementation(project(":NLU"))
+    implementation(project(":SharedNLU"))
     implementation(project(":Chat"))
     implementation(project(":LLM"))
 

@@ -47,7 +47,7 @@ dependencies {
     implementation(project(":core:Data"))
 
     // AVA Features - needed for IntentClassification
-    implementation(project(":NLU"))
+    implementation(project(":SharedNLU"))
 
     // Hilt Dependency Injection
     implementation(libs.hilt.android)

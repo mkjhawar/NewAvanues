@@ -35,8 +35,9 @@ include(":core:Theme")
 project(":core:Theme").projectDir = file("../../../Modules/AVA/core/Theme")
 
 // Feature modules
-include(":NLU")
-project(":NLU").projectDir = file("../../../Modules/AVA/NLU")
+// NLU is now in Shared (shared between AVA and VoiceOS)
+include(":SharedNLU")
+project(":SharedNLU").projectDir = file("../../../Modules/Shared/NLU")
 
 include(":Chat")
 project(":Chat").projectDir = file("../../../Modules/AVA/Chat")

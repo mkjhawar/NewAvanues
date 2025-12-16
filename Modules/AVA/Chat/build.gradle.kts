@@ -11,7 +11,7 @@ dependencies {
     implementation(project(":core:Domain"))
     implementation(project(":core:Data"))
     implementation(project(":core:Theme"))  // Ocean Glass Design System
-    implementation(project(":NLU"))
+    implementation(project(":SharedNLU"))
     implementation(project(":Actions"))
     implementation(project(":LLM"))
     implementation(project(":RAG"))  // RAG Phase 2: Chat UI Integration
