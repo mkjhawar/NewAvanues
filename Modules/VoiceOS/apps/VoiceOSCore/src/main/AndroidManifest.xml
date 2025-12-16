@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  AndroidManifest.xml - VoiceOSCore Module Configuration
+
+  Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+  Author: Manoj Jhawar
+  Created: 2025-01-27
+  Updated: 2025-10-31 - Phase 3B: Added permission hardening
+
+  Declares the VoiceOSCore accessibility service and required permissions.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- ========== PERMISSIONS ========== -->
+
+    <!-- Android 11+ package visibility (for LauncherDetector) -->
+    <!-- Required to detect launcher apps and exclude from scraping -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <!-- Foreground service for background mic access -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!-- Android 14+ foreground service type -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
+    <!-- Audio capture permission (required with FOREGROUND_SERVICE_MICROPHONE on API 34+) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- LearnApp: System alert window for visual debugging overlays -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- JIT Learning: Control permission (signature-level) -->
+    <!-- Required to bind to JITLearningService and control passive learning -->
+    <!-- Granted automatically because VoiceOSCore and JITLearning share same signature -->
+    <uses-permission android:name="com.augmentalis.voiceos.permission.JIT_CONTROL" />
+
+    <!-- Storage permissions for speech recognition models -->
+    <!-- Allows models to be deployed via ADB to shared folder (.voiceos) -->
+    <!-- Falls back to internal storage if denied -->
+
+    <!-- API 30+ (Android 11+): MANAGE_EXTERNAL_STORAGE for broad file access -->
+    <!-- Required for accessing non-media files (.voiceos folder) in shared storage -->
+    <!-- User must manually enable in system settings (not runtime dialog) -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+
+    <!-- Legacy permissions for API 23-29 (Android 6-10) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29"
+        tools:ignore="ScopedStorage" />
+
+    <!-- ========== APPLICATION ========== -->
+
+    <application>
+
+        <!-- VoiceOSCore internal activities are declared in main app manifest -->
+
+        <!-- Permission Request Activity -->
+        <!-- Transparent activity for handling storage permission requests -->
+        <activity
+            android:name="com.augmentalis.voiceoscore.permissions.PermissionRequestActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="false"
+            android:launchMode="singleTop" />
+
+        <!-- LearnApp Settings Activity -->
+        <!-- Allows user to configure LearnApp learning mode (AUTO_DETECT vs MANUAL) -->
+        <activity
+            android:name="com.augmentalis.voiceoscore.learnapp.settings.LearnAppSettingsActivity"
+            android:exported="false"
+            android:label="LearnApp Settings" />
+
+        <!-- LearnApp Developer Settings Activity -->
+        <!-- Provides comprehensive developer settings for LearnApp configuration -->
+        <activity
+            android:name="com.augmentalis.voiceoscore.learnapp.settings.ui.DeveloperSettingsActivity"
+            android:exported="false"
+            android:label="Developer Settings" />
+
+        <!-- VoiceOS Accessibility Service -->
+        <service
+            android:name="com.augmentalis.voiceoscore.accessibility.VoiceOSService"
+            android:enabled="true"
+            android:exported="true"
+            android:foregroundServiceType="microphone"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- Phase 3: VoiceOS IPC Companion Service -->
+        <!-- Provides AIDL-based IPC access to VoiceOSService functionality -->
+        <!-- Required because AccessibilityService.onBind() is final -->
+        <service
+            android:name="com.augmentalis.voiceoscore.accessibility.VoiceOSIPCService"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="signature">
+            <intent-filter>
+                <action android:name="com.augmentalis.voiceoscore.BIND_IPC" />
+            </intent-filter>
+        </service>
+
+        <!-- LearnApp: Visual debugging overlay service -->
+        <service
+            android:name="com.augmentalis.voiceoscore.learnapp.debugging.AccessibilityOverlayService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- LearnApp: Test automation broadcast receiver -->
+        <!-- Allows ADB broadcasts to trigger LearnApp exploration for testing -->
+        <!-- Usage: adb shell am broadcast -a com.augmentalis.voiceos.LEARNAPP_START -e target_package "com.google.android.gm" -->
+        <receiver
+            android:name="com.augmentalis.voiceoscore.receivers.LearnAppTestReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.augmentalis.voiceos.LEARNAPP_START" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Package update receiver for version-aware command management -->
+        <!-- Listens for app install/update/remove events to trigger command lifecycle management -->
+        <!-- Automatically receives broadcasts from Android system when any app changes -->
+        <receiver
+            android:name="com.augmentalis.voiceoscore.receivers.PackageUpdateReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_ADDED"/>
+                <action android:name="android.intent.action.PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.PACKAGE_REMOVED"/>
+                <data android:scheme="package"/>
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>

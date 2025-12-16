@@ -167,12 +167,22 @@ private fun SettingsContent(
         }
         item {
             SliderSettingItem(
-                title = "Initial Page Scale",
-                subtitle = "Default zoom level: ${(settings.initialScale * 100).toInt()}%",
-                value = settings.initialScale,
+                title = "Mobile Portrait Scale",
+                subtitle = "Scale in portrait mode: ${(settings.mobilePortraitScale * 100).toInt()}%",
+                value = settings.mobilePortraitScale,
                 valueRange = 0.5f..2.0f,
                 steps = 14,
-                onValueChange = { onUpdateSettings(settings.copy(initialScale = it)) }
+                onValueChange = { onUpdateSettings(settings.copy(mobilePortraitScale = it)) }
+            )
+        }
+        item {
+            SliderSettingItem(
+                title = "Mobile Landscape Scale",
+                subtitle = "Scale in landscape mode: ${(settings.mobileLandscapeScale * 100).toInt()}%",
+                value = settings.mobileLandscapeScale,
+                valueRange = 0.5f..2.0f,
+                steps = 14,
+                onValueChange = { onUpdateSettings(settings.copy(mobileLandscapeScale = it)) }
             )
         }
 

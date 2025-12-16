@@ -531,8 +531,9 @@ fun BrowserScreen(
                                 }
                             }
                         },
-                        initialScale = settings?.initialScale ?: 0.75f,
+                        initialScale = 0.75f,  // DEPRECATED: Kept for backward compatibility, actual scale set by WebViewContainer
                         settings = settings,
+                        isDesktopMode = tabState.tab.isDesktopMode,
                         modifier = Modifier.fillMaxSize()
                     )
                 } ?: EmptyBrowserState(

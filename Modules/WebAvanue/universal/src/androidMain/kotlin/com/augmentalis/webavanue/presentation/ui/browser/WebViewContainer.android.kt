@@ -83,6 +83,7 @@ actual fun WebViewContainer(
     onDownloadStart: ((DownloadRequest) -> Unit)?,
     initialScale: Float,
     settings: BrowserSettings?,
+    isDesktopMode: Boolean,
     modifier: Modifier
 ) {
     val context = LocalContext.current
@@ -200,19 +201,23 @@ actual fun WebViewContainer(
                     // Set black background (Ocean Blue theme)
                     setBackgroundColor(android.graphics.Color.BLACK)
 
-                    // Set initial page scale (default 75%)
-                    // 0 = auto-size, 1-100 = percentage scale
-                    val scalePercent = (initialScale * 100).toInt()
+                    // Set initial page scale based on mode and orientation
+                    // Use settings-based scale calculation
+                    val browserSettings = settings ?: BrowserSettings()
+                    val isLandscape = ctx.resources.configuration.orientation ==
+                        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+                    val scale = browserSettings.getScaleForMode(isDesktopMode, isLandscape)
+                    val scalePercent = (scale * 100).toInt()
+
                     if (scalePercent > 0) {
                         setInitialScale(scalePercent)
+                        println("🔍 WebView scale: $scalePercent% (desktop=$isDesktopMode, landscape=$isLandscape)")
                     }
 
                     // Apply BrowserSettings using SettingsApplicator
                     // This replaces hardcoded settings with user-configurable values
                     val settingsApplicator = SettingsApplicator()
-
-                    // Use provided settings or fallback to defaults
-                    val browserSettings = settings ?: BrowserSettings()
 
                     // Apply all settings (privacy, display, performance, WebXR)
                     val result = settingsApplicator.applySettings(this, browserSettings)

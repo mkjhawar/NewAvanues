@@ -141,7 +141,29 @@ class TabViewModel(
     val settingsState = settingsStateMachine.state
 
     init {
-        loadTabs()
+        // FIX P0: Load settings eagerly (blocking) before loading tabs
+        // This ensures settings are available when creating the default tab
+        // Prevents race condition where tab is created with null settings
+        viewModelScope.launch {
+            try {
+                // Eager load settings first (blocking for initial value)
+                val initialSettings = repository.getSettings().getOrNull()
+                _settings.value = initialSettings
+                Logger.info("TabViewModel", "Settings loaded eagerly: desktop=${initialSettings?.useDesktopMode}, " +
+                    "mobilePortrait=${initialSettings?.mobilePortraitScale}, " +
+                    "mobileLandscape=${initialSettings?.mobileLandscapeScale}")
+
+                // Now load tabs (settings guaranteed to be available)
+                loadTabs()
+            } catch (e: Exception) {
+                Logger.error("TabViewModel", "Failed to load initial settings: ${e.message}", e)
+                // Fall back to default settings
+                _settings.value = BrowserSettings()
+                loadTabs()
+            }
+        }
+
+        // Continue observing settings for updates (async)
         loadSettings()
         observeCombinedState()
     }

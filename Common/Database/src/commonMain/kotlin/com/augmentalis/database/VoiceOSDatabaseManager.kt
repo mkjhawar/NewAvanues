@@ -7,50 +7,54 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
 
-package com.avanues.database
+package com.augmentalis.database
 
-import com.avanues.database.repositories.ICommandRepository
-import com.avanues.database.repositories.ICommandHistoryRepository
-import com.avanues.database.repositories.IUserPreferenceRepository
-import com.avanues.database.repositories.IErrorReportRepository
-import com.avanues.database.repositories.IUUIDRepository
-import com.avanues.database.repositories.IVoiceCommandRepository
-import com.avanues.database.repositories.ICommandUsageRepository
-import com.avanues.database.repositories.IContextPreferenceRepository
-import com.avanues.database.repositories.IScrapedAppRepository
-import com.avanues.database.repositories.IScrapedElementRepository
-import com.avanues.database.repositories.IGeneratedCommandRepository
-import com.avanues.database.repositories.IScreenContextRepository
-import com.avanues.database.repositories.IScreenTransitionRepository
-import com.avanues.database.repositories.IUserInteractionRepository
-import com.avanues.database.repositories.IElementStateHistoryRepository
-import com.avanues.database.repositories.IScrapedHierarchyRepository
-import com.avanues.database.repositories.IElementRelationshipRepository
-import com.avanues.database.repositories.IAppConsentHistoryRepository
-import com.avanues.database.repositories.IElementCommandRepository
-import com.avanues.database.repositories.IQualityMetricRepository
-import com.avanues.database.repositories.impl.SQLDelightCommandRepository
-import com.avanues.database.repositories.impl.SQLDelightCommandHistoryRepository
-import com.avanues.database.repositories.impl.SQLDelightUserPreferenceRepository
-import com.avanues.database.repositories.impl.SQLDelightErrorReportRepository
-import com.avanues.database.repositories.impl.SQLDelightUUIDRepository
-import com.avanues.database.repositories.impl.SQLDelightVoiceCommandRepository
-import com.avanues.database.repositories.impl.SQLDelightCommandUsageRepository
-import com.avanues.database.repositories.impl.SQLDelightContextPreferenceRepository
-import com.avanues.database.repositories.impl.SQLDelightScrapedAppRepository
-import com.avanues.database.repositories.impl.SQLDelightScrapedElementRepository
-import com.avanues.database.repositories.impl.SQLDelightGeneratedCommandRepository
-import com.avanues.database.repositories.impl.SQLDelightScreenContextRepository
-import com.avanues.database.repositories.impl.SQLDelightScreenTransitionRepository
-import com.avanues.database.repositories.impl.SQLDelightUserInteractionRepository
-import com.avanues.database.repositories.impl.SQLDelightElementStateHistoryRepository
-import com.avanues.database.repositories.impl.SQLDelightScrapedHierarchyRepository
-import com.avanues.database.repositories.impl.SQLDelightElementRelationshipRepository
-import com.avanues.database.repositories.impl.SQLDelightAppConsentHistoryRepository
-import com.avanues.database.repositories.impl.SQLDelightElementCommandRepository
-import com.avanues.database.repositories.impl.SQLDelightQualityMetricRepository
-import com.avanues.database.repositories.plugin.IPluginRepository
-import com.avanues.database.repositories.plugin.SQLDelightPluginRepository
+import app.cash.sqldelight.db.QueryResult
+import app.cash.sqldelight.db.SqlDriver
+import com.augmentalis.database.repositories.ICommandRepository
+import com.augmentalis.database.repositories.ICommandHistoryRepository
+import com.augmentalis.database.repositories.IUserPreferenceRepository
+import com.augmentalis.database.repositories.IErrorReportRepository
+import com.augmentalis.database.repositories.IUUIDRepository
+import com.augmentalis.database.repositories.IVoiceCommandRepository
+import com.augmentalis.database.repositories.ICommandUsageRepository
+import com.augmentalis.database.repositories.IContextPreferenceRepository
+import com.augmentalis.database.repositories.IScrapedAppRepository
+import com.augmentalis.database.repositories.IScrapedElementRepository
+import com.augmentalis.database.repositories.IGeneratedCommandRepository
+import com.augmentalis.database.repositories.IScreenContextRepository
+import com.augmentalis.database.repositories.IScreenTransitionRepository
+import com.augmentalis.database.repositories.IUserInteractionRepository
+import com.augmentalis.database.repositories.IElementStateHistoryRepository
+import com.augmentalis.database.repositories.IScrapedHierarchyRepository
+import com.augmentalis.database.repositories.IElementRelationshipRepository
+import com.augmentalis.database.repositories.IAppConsentHistoryRepository
+import com.augmentalis.database.repositories.IElementCommandRepository
+import com.augmentalis.database.repositories.IQualityMetricRepository
+import com.augmentalis.database.repositories.IAppVersionRepository
+import com.augmentalis.database.repositories.impl.SQLDelightCommandRepository
+import com.augmentalis.database.repositories.impl.SQLDelightCommandHistoryRepository
+import com.augmentalis.database.repositories.impl.SQLDelightUserPreferenceRepository
+import com.augmentalis.database.repositories.impl.SQLDelightErrorReportRepository
+import com.augmentalis.database.repositories.impl.SQLDelightUUIDRepository
+import com.augmentalis.database.repositories.impl.SQLDelightVoiceCommandRepository
+import com.augmentalis.database.repositories.impl.SQLDelightCommandUsageRepository
+import com.augmentalis.database.repositories.impl.SQLDelightContextPreferenceRepository
+import com.augmentalis.database.repositories.impl.SQLDelightScrapedAppRepository
+import com.augmentalis.database.repositories.impl.SQLDelightScrapedElementRepository
+import com.augmentalis.database.repositories.impl.SQLDelightGeneratedCommandRepository
+import com.augmentalis.database.repositories.impl.SQLDelightScreenContextRepository
+import com.augmentalis.database.repositories.impl.SQLDelightScreenTransitionRepository
+import com.augmentalis.database.repositories.impl.SQLDelightUserInteractionRepository
+import com.augmentalis.database.repositories.impl.SQLDelightElementStateHistoryRepository
+import com.augmentalis.database.repositories.impl.SQLDelightScrapedHierarchyRepository
+import com.augmentalis.database.repositories.impl.SQLDelightElementRelationshipRepository
+import com.augmentalis.database.repositories.impl.SQLDelightAppConsentHistoryRepository
+import com.augmentalis.database.repositories.impl.SQLDelightElementCommandRepository
+import com.augmentalis.database.repositories.impl.SQLDelightQualityMetricRepository
+import com.augmentalis.database.repositories.impl.SQLDelightAppVersionRepository
+import com.augmentalis.database.repositories.plugin.IPluginRepository
+import com.augmentalis.database.repositories.plugin.SQLDelightPluginRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -66,25 +70,44 @@ import kotlinx.coroutines.withContext
 class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverFactory) {
 
     companion object {
+        // Thread-safe singleton instance
         @Volatile
         private var INSTANCE: VoiceOSDatabaseManager? = null
+
+        // Lock object for double-checked locking pattern
+        private val lock = Any()
 
         /**
          * Get the singleton instance of VoiceOSDatabaseManager.
          *
          * This ensures only ONE SQLite connection exists app-wide,
          * preventing database lock contention.
+         *
+         * Thread-safe using double-checked locking pattern.
          */
         fun getInstance(driverFactory: DatabaseDriverFactory): VoiceOSDatabaseManager {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: VoiceOSDatabaseManager(driverFactory).also {
-                    INSTANCE = it
+            // First check (no locking)
+            val instance = INSTANCE
+            if (instance != null) {
+                return instance
+            }
+
+            // Second check (with locking)
+            return synchronized(lock) {
+                val instance2 = INSTANCE
+                if (instance2 != null) {
+                    instance2
+                } else {
+                    VoiceOSDatabaseManager(driverFactory).also {
+                        INSTANCE = it
+                    }
                 }
             }
         }
     }
 
-    private val database: VoiceOSDatabase = createDatabase(driverFactory)
+    private val driver: SqlDriver = driverFactory.createDriver()
+    internal val database: VoiceOSDatabase = VoiceOSDatabase(driver)
 
     // Repository interfaces (use these for abstraction)
     val commands: ICommandRepository = SQLDelightCommandRepository(database)
@@ -116,6 +139,9 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
     // Metadata Quality Overlay & Manual Command Assignment (VOS-META-001)
     val elementCommands: IElementCommandRepository = SQLDelightElementCommandRepository(database)
     val qualityMetrics: IQualityMetricRepository = SQLDelightQualityMetricRepository(database)
+
+    // Version-Aware Command Management (VOS4)
+    val appVersions: IAppVersionRepository = SQLDelightAppVersionRepository(database)
 
     // Direct query access for advanced operations
     val commandHistoryQueries get() = database.commandHistoryQueries
@@ -171,6 +197,9 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
     // Metadata Quality Overlay & Manual Command Assignment queries (VOS-META-001)
     val elementCommandQueries get() = database.elementCommandQueries
 
+    // Version-Aware Command Management queries (VOS4)
+    val appVersionQueries get() = database.appVersionQueries
+
     /**
      * Execute multiple operations in a transaction.
      */
@@ -224,6 +253,121 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
             // They should be reset to defaults, not deleted
         }
     }
+
+    /**
+     * Optimize database by reclaiming unused space and defragmenting.
+     * Should be run periodically (e.g., weekly) or after large deletions.
+     *
+     * Note: VACUUM can take several seconds on large databases.
+     * Run on background thread only.
+     */
+    suspend fun vacuum() = withContext(Dispatchers.Default) {
+        // Note: VACUUM cannot run inside a transaction, execute directly
+        driver.execute(null, "VACUUM", 0)
+    }
+
+    /**
+     * Check database integrity.
+     * Returns true if database is healthy, false if corrupted.
+     *
+     * Checks performed:
+     * - Table structure integrity
+     * - Index consistency
+     * - Foreign key constraints
+     */
+    suspend fun checkIntegrity(): Boolean = withContext(Dispatchers.Default) {
+        database.transactionWithResult {
+            val query = "PRAGMA integrity_check"
+            driver.executeQuery(
+                identifier = null,
+                sql = query,
+                mapper = { cursor ->
+                    QueryResult.Value(if (cursor.next().value) {
+                        cursor.getString(0) == "ok"
+                    } else {
+                        false
+                    })
+                },
+                parameters = 0
+            ).value
+        }
+    }
+
+    /**
+     * Get detailed integrity check results.
+     */
+    suspend fun getIntegrityReport(): List<String> = withContext(Dispatchers.Default) {
+        database.transactionWithResult {
+            val results = mutableListOf<String>()
+            val query = "PRAGMA integrity_check"
+            driver.executeQuery(
+                identifier = null,
+                sql = query,
+                mapper = { cursor ->
+                    while (cursor.next().value) {
+                        results.add(cursor.getString(0) ?: "")
+                    }
+                    QueryResult.Value(Unit)
+                },
+                parameters = 0
+            ).value
+            results
+        }
+    }
+
+    /**
+     * Get database file size and page statistics.
+     */
+    suspend fun getDatabaseInfo(): DatabaseInfo = withContext(Dispatchers.Default) {
+        database.transactionWithResult {
+            val pageCount = driver.executeQuery(
+                identifier = null,
+                sql = "PRAGMA page_count",
+                mapper = { cursor ->
+                    QueryResult.Value(if (cursor.next().value) {
+                        cursor.getLong(0) ?: 0L
+                    } else {
+                        0L
+                    })
+                },
+                parameters = 0
+            ).value
+
+            val pageSize = driver.executeQuery(
+                identifier = null,
+                sql = "PRAGMA page_size",
+                mapper = { cursor ->
+                    QueryResult.Value(if (cursor.next().value) {
+                        cursor.getLong(0) ?: 0L
+                    } else {
+                        0L
+                    })
+                },
+                parameters = 0
+            ).value
+
+            val freelistCount = driver.executeQuery(
+                identifier = null,
+                sql = "PRAGMA freelist_count",
+                mapper = { cursor ->
+                    QueryResult.Value(if (cursor.next().value) {
+                        cursor.getLong(0) ?: 0L
+                    } else {
+                        0L
+                    })
+                },
+                parameters = 0
+            ).value
+
+            DatabaseInfo(
+                totalPages = pageCount,
+                pageSize = pageSize,
+                totalSize = pageCount * pageSize,
+                unusedPages = freelistCount,
+                unusedSize = freelistCount * pageSize
+            )
+        }
+    }
 }
 
 /**
@@ -236,4 +380,15 @@ data class DatabaseStats(
     val generatedCommandCount: Long,
     val scrapedAppCount: Long,
     val errorReportCount: Long
+)
+
+/**
+ * Database information including file size and page statistics.
+ */
+data class DatabaseInfo(
+    val totalPages: Long,
+    val pageSize: Long,
+    val totalSize: Long,
+    val unusedPages: Long,
+    val unusedSize: Long
 )

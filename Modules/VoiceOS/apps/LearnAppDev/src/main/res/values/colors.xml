@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Ocean Blue XR Theme - Developer Edition -->
+    <!-- Based on IDEACODE UI Guidelines V2 - Ocean Theme Tokens -->
+    <!-- Developer variant: Dark mode with Cyan accent for distinction -->
+
+    <!-- Primary Colors (Ocean Blue - Dark Mode) -->
+    <color name="dev_primary">#60A5FA</color>
+    <color name="dev_primary_variant">#3B82F6</color>
+    <color name="dev_primary_container">#1E3A5F</color>
+
+    <!-- Developer Accent (Cyan - distinguishes from User Edition) -->
+    <color name="dev_accent">#22D3EE</color>
+    <color name="dev_accent_variant">#06B6D4</color>
+
+    <!-- Secondary Colors -->
+    <color name="dev_secondary">#818CF8</color>
+    <color name="dev_secondary_container">#312E81</color>
+
+    <!-- Semantic Colors (Dark Mode) -->
+    <color name="dev_success">#34D399</color>
+    <color name="dev_error">#F87171</color>
+    <color name="dev_warning">#FBBF24</color>
+    <color name="dev_info">#60A5FA</color>
+
+    <!-- Surface Colors (Glassmorphic Dark) -->
+    <color name="dev_surface">#0F172A</color>
+    <color name="dev_surface_variant">#1E293B</color>
+    <color name="dev_glass_surface">#14FFFFFF</color>
+    <color name="dev_glass_border">#26FFFFFF</color>
+
+    <!-- Background -->
+    <color name="dev_background">#0C1929</color>
+    <color name="dev_background_variant">#111827</color>
+
+    <!-- Console Colors (Developer specific) -->
+    <color name="console_background">#0D0D0D</color>
+    <color name="log_debug">#9E9E9E</color>
+    <color name="log_info">#60A5FA</color>
+    <color name="log_warn">#FBBF24</color>
+    <color name="log_error">#F87171</color>
+    <color name="log_event">#A78BFA</color>
+
+    <!-- Status Colors -->
+    <color name="status_active">#34D399</color>
+    <color name="status_paused">#FBBF24</color>
+    <color name="status_idle">#6B7280</color>
+    <color name="status_exploring">#60A5FA</color>
+</resources>

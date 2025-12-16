@@ -14,7 +14,10 @@ data class BrowserSettings(
     val forceZoom: Boolean = false,
     val showImages: Boolean = true,
     val useDesktopMode: Boolean = false,
-    val initialScale: Float = 0.75f,  // Initial page scale (default 75%)
+
+    // Scale Settings (Mode-Specific)
+    val mobilePortraitScale: Float = 1.0f,   // Mobile portrait scale (default 100%)
+    val mobileLandscapeScale: Float = 0.75f, // Mobile landscape scale (default 75%)
 
     // Desktop Mode Settings
     val desktopModeDefaultZoom: Int = 100, // Default zoom level (50-200%)
@@ -188,6 +191,17 @@ data class BrowserSettings(
         SERIF,
         SANS_SERIF,
         MONOSPACE
+    }
+
+    /**
+     * Calculate the appropriate scale based on mode and orientation
+     */
+    fun getScaleForMode(isDesktopMode: Boolean, isLandscape: Boolean): Float {
+        return when {
+            isDesktopMode -> desktopModeDefaultZoom / 100f
+            isLandscape -> mobileLandscapeScale
+            else -> mobilePortraitScale
+        }
     }
 
     companion object {

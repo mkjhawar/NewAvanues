@@ -7,9 +7,9 @@
  * Created: 2025-11-25
  */
 
-package com.avanues.database.repositories
+package com.augmentalis.database.repositories
 
-import com.avanues.database.dto.ScreenContextDTO
+import com.augmentalis.database.dto.ScreenContextDTO
 
 /**
  * Repository interface for screen context metadata.
@@ -23,6 +23,14 @@ interface IScreenContextRepository {
     suspend fun insert(context: ScreenContextDTO)
 
     /**
+     * Insert multiple screen contexts in a single transaction.
+     * Significantly faster than sequential inserts for large batches.
+     *
+     * @param contexts List of screen contexts to insert
+     */
+    suspend fun insertBatch(contexts: List<ScreenContextDTO>)
+
+    /**
      * Get screen by hash.
      */
     suspend fun getByHash(screenHash: String): ScreenContextDTO?
@@ -31,6 +39,11 @@ interface IScreenContextRepository {
      * Get all screens for an app.
      */
     suspend fun getByApp(appId: String): List<ScreenContextDTO>
+
+    /**
+     * Get all screens by package name.
+     */
+    suspend fun getByPackage(packageName: String): List<ScreenContextDTO>
 
     /**
      * Get screens by activity name.

@@ -54,10 +54,16 @@ object SettingsValidation {
             warnings.add("Desktop mode zoom corrected from ${settings.desktopModeDefaultZoom}% to $correctedZoom% (valid range: 50-200%)")
         }
 
-        // Validate and correct initial scale (0.5-2.0)
-        val correctedInitialScale = settings.initialScale.coerceIn(0.5f, 2.0f)
-        if (correctedInitialScale != settings.initialScale) {
-            warnings.add("Initial scale corrected from ${settings.initialScale} to $correctedInitialScale (valid range: 0.5-2.0)")
+        // Validate and correct mobile portrait scale (0.5-2.0)
+        val correctedMobilePortraitScale = settings.mobilePortraitScale.coerceIn(0.5f, 2.0f)
+        if (correctedMobilePortraitScale != settings.mobilePortraitScale) {
+            warnings.add("Mobile portrait scale corrected from ${settings.mobilePortraitScale} to $correctedMobilePortraitScale (valid range: 0.5-2.0)")
+        }
+
+        // Validate and correct mobile landscape scale (0.5-2.0)
+        val correctedMobileLandscapeScale = settings.mobileLandscapeScale.coerceIn(0.5f, 2.0f)
+        if (correctedMobileLandscapeScale != settings.mobileLandscapeScale) {
+            warnings.add("Mobile landscape scale corrected from ${settings.mobileLandscapeScale} to $correctedMobileLandscapeScale (valid range: 0.5-2.0)")
         }
 
         // Validate WebXR settings combinations
@@ -102,7 +108,8 @@ object SettingsValidation {
         // Create corrected settings
         val correctedSettings = settings.copy(
             desktopModeDefaultZoom = correctedZoom,
-            initialScale = correctedInitialScale,
+            mobilePortraitScale = correctedMobilePortraitScale,
+            mobileLandscapeScale = correctedMobileLandscapeScale,
             enableWebXR = correctedEnableWebXR,
             enableJavaScript = correctedEnableJavaScript
         )
@@ -163,7 +170,7 @@ object SettingsValidation {
                 } else null
             }
 
-            "initialScale" -> {
+            "mobilePortraitScale", "mobileLandscapeScale" -> {
                 val scale = value as? Float ?: return "Invalid scale value"
                 if (!Constraints.isValidInitialScale(scale)) {
                     "Scale must be between ${Constraints.MIN_INITIAL_SCALE} and ${Constraints.MAX_INITIAL_SCALE}"

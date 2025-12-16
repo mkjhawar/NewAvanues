@@ -1,0 +1,84 @@
+/**
+ * AppVersion.sq - App version tracking table
+ *
+ * Stores the last known version for each installed app that VoiceOS
+ * has generated commands for. Used to detect app updates/downgrades.
+ *
+ * Schema v3 addition for version-aware command lifecycle management.
+ */
+
+-- Table: app_version
+-- Stores last known version for tracked apps
+CREATE TABLE IF NOT EXISTS app_version (
+    package_name TEXT PRIMARY KEY NOT NULL,
+    version_name TEXT NOT NULL,
+    version_code INTEGER NOT NULL,
+    last_checked INTEGER NOT NULL,
+
+    CHECK (version_code >= 0),
+    CHECK (last_checked > 0)
+);
+
+-- Index for version lookups
+CREATE INDEX IF NOT EXISTS idx_av_version_code
+ON app_version(version_code);
+
+-- Index for last_checked queries
+CREATE INDEX IF NOT EXISTS idx_av_last_checked
+ON app_version(last_checked);
+
+--------------------------------------------------------------------------------
+-- QUERIES
+--------------------------------------------------------------------------------
+
+-- Get app version by package name
+getAppVersion:
+SELECT * FROM app_version
+WHERE package_name = ?;
+
+-- Get all app versions
+getAllAppVersions:
+SELECT * FROM app_version
+ORDER BY last_checked DESC;
+
+-- Insert app version
+insertAppVersion:
+INSERT INTO app_version (package_name, version_name, version_code, last_checked)
+VALUES (?, ?, ?, ?);
+
+-- Update app version
+updateAppVersion:
+UPDATE app_version
+SET version_name = ?, version_code = ?, last_checked = ?
+WHERE package_name = ?;
+
+-- Delete app version
+deleteAppVersion:
+DELETE FROM app_version
+WHERE package_name = ?;
+
+-- Get apps checked before timestamp
+getAppsCheckedBefore:
+SELECT * FROM app_version
+WHERE last_checked < ?
+ORDER BY last_checked ASC;
+
+-- Get count of tracked apps
+count:
+SELECT COUNT(*) FROM app_version;
+
+-- Delete all app versions (for testing)
+deleteAll:
+DELETE FROM app_version;
+
+-- Get apps by version code range
+getAppsByVersionCodeRange:
+SELECT * FROM app_version
+WHERE version_code >= ? AND version_code <= ?
+ORDER BY version_code DESC;
+
+-- Update last checked timestamp
+updateLastChecked:
+UPDATE app_version
+SET last_checked = ?
+WHERE package_name = ?;

@@ -68,8 +68,9 @@ expect fun WebViewContainer(
     onSessionDataChange: (String?) -> Unit,
     securityViewModel: SecurityViewModel? = null,
     onDownloadStart: ((DownloadRequest) -> Unit)? = null,
-    initialScale: Float = 0.75f,  // Initial page scale (0.0 = auto, 0.75 = 75%, 1.0 = 100%)
+    initialScale: Float = 0.75f,  // DEPRECATED: Initial page scale (use settings instead)
     settings: BrowserSettings? = null,  // Browser settings to apply
+    isDesktopMode: Boolean = false,  // Whether tab is in desktop mode
     modifier: Modifier
 )
 

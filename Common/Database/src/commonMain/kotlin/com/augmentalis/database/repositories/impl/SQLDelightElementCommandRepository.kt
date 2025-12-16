@@ -4,17 +4,18 @@
  * Part of Metadata Quality Overlay & Manual Command Assignment feature (VOS-META-001)
  * Created: 2025-12-03
  */
-package com.avanues.database.repositories.impl
+package com.augmentalis.database.repositories.impl
 
-import com.avanues.database.VoiceOSDatabase
-import com.avanues.database.dto.ElementCommandDTO
-import com.avanues.database.dto.QualityMetricDTO
-import com.avanues.database.dto.QualityStatsDTO
-import com.avanues.database.dto.toDTO
-import com.avanues.database.repositories.IElementCommandRepository
-import com.avanues.database.repositories.IQualityMetricRepository
+import com.augmentalis.database.VoiceOSDatabase
+import com.augmentalis.database.dto.ElementCommandDTO
+import com.augmentalis.database.dto.QualityMetricDTO
+import com.augmentalis.database.dto.QualityStatsDTO
+import com.augmentalis.database.dto.toDTO
+import com.augmentalis.database.repositories.IElementCommandRepository
+import com.augmentalis.database.repositories.IQualityMetricRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
 
 /**
  * SQLDelight implementation of IElementCommandRepository
@@ -165,7 +166,7 @@ class SQLDelightQualityMetricRepository(
         queries.updateCommandCounts(
             commandCount.toLong(),
             manualCount.toLong(),
-            System.currentTimeMillis(),
+            Clock.System.now().toEpochMilliseconds(),
             elementUuid
         )
     }

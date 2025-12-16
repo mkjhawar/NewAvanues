@@ -11,7 +11,7 @@ plugins {
     kotlin("multiplatform")
     id("com.android.library")
     id("app.cash.sqldelight") version "2.0.1"
-    kotlin("plugin.serialization")  // Version inherited from root project (1.9.20)
+    kotlin("plugin.serialization") version "1.9.25"
 }
 
 kotlin {
@@ -85,15 +85,29 @@ kotlin {
                 implementation("app.cash.sqldelight:sqlite-driver:2.0.1")
             }
         }
+
+        // Android instrumentation test dependencies (Phase 2)
+        val androidInstrumentedTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation("androidx.test.ext:junit:1.1.5")
+                implementation("androidx.test.espresso:espresso-core:3.5.1")
+                implementation("androidx.test:runner:1.5.2")
+                implementation("androidx.test:rules:1.5.0")
+                implementation("app.cash.sqldelight:android-driver:2.0.1")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+            }
+        }
     }
 }
 
 android {
-    namespace = "com.avanues.database"
+    namespace = "com.augmentalis.database"
     compileSdk = 34
 
     defaultConfig {
         minSdk = 28  // Android 9 (Pie) - Aligned with project-wide standard
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
@@ -105,7 +119,7 @@ android {
 sqldelight {
     databases {
         create("VoiceOSDatabase") {
-            packageName.set("com.avanues.database")
+            packageName.set("com.augmentalis.database")
             generateAsync.set(false)
             deriveSchemaFromMigrations.set(false)
             verifyMigrations.set(false)  // Disabled - new database, no migrations to verify yet

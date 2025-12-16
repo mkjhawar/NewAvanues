@@ -7,12 +7,12 @@
  * Created: 2025-11-25
  */
 
-package com.avanues.database.repositories.impl
+package com.augmentalis.database.repositories.impl
 
-import com.avanues.database.VoiceOSDatabase
-import com.avanues.database.dto.ScreenContextDTO
-import com.avanues.database.dto.toScreenContextDTO
-import com.avanues.database.repositories.IScreenContextRepository
+import com.augmentalis.database.VoiceOSDatabase
+import com.augmentalis.database.dto.ScreenContextDTO
+import com.augmentalis.database.dto.toScreenContextDTO
+import com.augmentalis.database.repositories.IScreenContextRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -44,12 +44,39 @@ class SQLDelightScreenContextRepository(
         )
     }
 
+    override suspend fun insertBatch(contexts: List<ScreenContextDTO>) = withContext(Dispatchers.Default) {
+        database.transaction {
+            contexts.forEach { context ->
+                queries.insert(
+                    screenHash = context.screenHash,
+                    appId = context.appId,
+                    packageName = context.packageName,
+                    activityName = context.activityName,
+                    windowTitle = context.windowTitle,
+                    screenType = context.screenType,
+                    formContext = context.formContext,
+                    navigationLevel = context.navigationLevel,
+                    primaryAction = context.primaryAction,
+                    elementCount = context.elementCount,
+                    hasBackButton = context.hasBackButton,
+                    firstScraped = context.firstScraped,
+                    lastScraped = context.lastScraped,
+                    visitCount = context.visitCount
+                )
+            }
+        }
+    }
+
     override suspend fun getByHash(screenHash: String): ScreenContextDTO? = withContext(Dispatchers.Default) {
         queries.getByHash(screenHash).executeAsOneOrNull()?.toScreenContextDTO()
     }
 
     override suspend fun getByApp(appId: String): List<ScreenContextDTO> = withContext(Dispatchers.Default) {
         queries.getByApp(appId).executeAsList().map { it.toScreenContextDTO() }
+    }
+
+    override suspend fun getByPackage(packageName: String): List<ScreenContextDTO> = withContext(Dispatchers.Default) {
+        queries.getByPackage(packageName).executeAsList().map { it.toScreenContextDTO() }
     }
 
     override suspend fun getByActivity(activityName: String): List<ScreenContextDTO> = withContext(Dispatchers.Default) {
