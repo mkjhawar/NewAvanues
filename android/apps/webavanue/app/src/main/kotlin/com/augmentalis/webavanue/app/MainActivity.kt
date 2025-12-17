@@ -12,10 +12,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
-import com.augmentalis.webavanue.universal.presentation.BrowserApp
-import com.augmentalis.webavanue.universal.presentation.ui.theme.initializeThemeSystem
-import com.augmentalis.webavanue.universal.security.SecureStorage
-import com.augmentalis.webavanue.universal.xr.XRManager
+import com.augmentalis.webavanue.presentation.BrowserApp
+import com.augmentalis.webavanue.ui.screen.theme.initializeThemeSystem
+import com.augmentalis.webavanue.security.SecureStorage
+import com.augmentalis.webavanue.feature.xr.XRManager
 
 /**
  * MainActivity - Main entry point for WebAvanue browser
@@ -61,15 +61,18 @@ class MainActivity : ComponentActivity() {
         // Initialize secure storage for encrypted credential storage
         val secureStorage = SecureStorage(applicationContext)
 
-        // Initialize download queue for file downloads with settings callback
-        val downloadQueue = com.augmentalis.webavanue.universal.download.AndroidDownloadQueue(
+        // FIX PERFORMANCE: Use SharedPreferences for synchronous download path access
+        // Repository suspend functions are too slow for callback-based APIs
+        // SharedPreferences synced from SettingsViewModel when path changes
+        val downloadQueue = com.augmentalis.webavanue.feature.download.AndroidDownloadQueue(
             context = applicationContext,
             getDownloadPath = {
-                // Get download path from settings synchronously
-                // Note: This runs on IO dispatcher from AndroidDownloadQueue
-                runBlocking {
-                    repository.getSettings().getOrNull()?.downloadPath
-                }
+                // Read from SharedPreferences (synchronous, fast, no blocking)
+                val prefs = applicationContext.getSharedPreferences("webavanue_download", android.content.Context.MODE_PRIVATE)
+                prefs.getString("download_path", null)
+                    ?: android.os.Environment.getExternalStoragePublicDirectory(
+                        android.os.Environment.DIRECTORY_DOWNLOADS
+                    ).absolutePath
             }
         )
 
