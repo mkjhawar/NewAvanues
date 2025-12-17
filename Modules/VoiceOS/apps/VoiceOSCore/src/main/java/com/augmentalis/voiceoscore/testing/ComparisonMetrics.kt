@@ -4,6 +4,9 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: AI Testing Framework
  * Created: 2025-10-15 02:48:36 PDT
+ *
+ * Note: DivergenceSeverity, DivergenceCategory, DivergenceDetail, and ComparisonResult
+ * are defined in DivergenceReport.kt
  */
 package com.augmentalis.voiceoscore.testing
 

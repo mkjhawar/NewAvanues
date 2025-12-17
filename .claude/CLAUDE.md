@@ -1,6 +1,6 @@
-# NewAvanues-Cockpit - Project Instructions
+# NewAvanues - Project Instructions
 
-Repository: NewAvanues-Cockpit
+Repository: NewAvanues - Main Monorepo (AVA, VoiceOS, WebAvanue, Cockpit, NLU)
 
 ---
 
@@ -8,36 +8,71 @@ Repository: NewAvanues-Cockpit
 
 | Path | Purpose |
 |------|---------|
-| .claude/ | IDEACODE configuration |
-| .ideacode/ | Project config and registries |
-| docs/ | Documentation |
+| Modules/AVA/ | AI assistant platform |
+| Modules/VoiceOS/ | Voice-first accessibility service |
+| Modules/WebAvanue/ | Web platform (Tauri + React) |
+| Modules/Cockpit/ | Management dashboard |
+| Modules/NLU/ | Natural language understanding |
+| Common/ | Shared KMP libraries |
 
 ---
 
-## SESSION START (MANDATORY)
+## PROJECT-SPECIFIC TECH
 
-**FIRST ACTION:** Run `pwd` to detect repository
-
-Then read:
-1. This file (.claude/CLAUDE.md)
-2. `.ideacode/config.idc` (if exists)
+| Component | Technology |
+|-----------|------------|
+| Build | Gradle composite builds + version catalogs |
+| Shared logic | KMP (Kotlin Multiplatform) |
+| Database | SQLDelight (NOT Room) |
+| DI | Koin |
+| Web | Tauri + React + TypeScript |
 
 ---
 
-## KEY RULES
+## DEVELOPMENT BRANCHES
+
+| Branch | Purpose |
+|--------|---------|
+| Avanues-Main | Main integration |
+| AVA-Development | AVA features |
+| VoiceOS-Development | VoiceOS features |
+| WebAvanue-Development | WebAvanue features |
+| Cockpit-Development | Cockpit features |
+| NLU-Development | NLU features |
+
+---
+
+## WORKTREES
+
+| Worktree | Path | Branch |
+|----------|------|--------|
+| NewAvanues-AVA | /Volumes/M-Drive/Coding/NewAvanues-AVA | AVA-Development |
+| NewAvanues-VoiceOS | /Volumes/M-Drive/Coding/NewAvanues-VoiceOS | VoiceOS-Development |
+| NewAvanues-WebAvanue | /Volumes/M-Drive/Coding/NewAvanues-WebAvanue | WebAvanue-Development |
+| NewAvanues-Cockpit | /Volumes/M-Drive/Coding/NewAvanues-Cockpit | Cockpit-Development |
+| NewAvanues-NLU | /Volumes/M-Drive/Coding/NewAvanues-NLU | NLU-Development |
+
+---
+
+## SPECIAL RULES
 
 | Rule | Requirement |
 |------|-------------|
-| No Delete | Never delete working features without approval + pros/cons |
-| Terminal Isolation | Work ONLY in this repo unless user explicitly requests switch |
-| Mandatory Naming | ALL files: App-Module-Desc-YDDMMHH-V#.md (Y=single digit) |
+| Database | SQLDelight ONLY (never Room) |
+| Module work | Check module-level .claude/CLAUDE.md first |
+| Cross-module | Check CROSS-MODULE-DEPENDENCIES.md |
+| Worktrees | NEVER switch worktrees without approval |
 
 ---
 
-## INHERITED RULES
+## DOCUMENTATION
 
-All rules from `/Volumes/M-Drive/Coding/.claude/CLAUDE.md` apply
+| Type | Location |
+|------|----------|
+| Living Docs | `Docs/{Module}/LivingDocs/LD-*.md` |
+| Registries | `.ideacode/registries/` |
+| Project Info | `docs/project-info/` |
 
 ---
 
-Updated: $(date +%Y-%m-%d) | Version: 11.3.1
+Updated: 2025-12-17 | Version: 12.1.0

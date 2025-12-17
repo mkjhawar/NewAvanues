@@ -428,7 +428,7 @@ object ActionFactory {
      * Create app launch action
      */
     private fun createAppAction(commandId: String): BaseAction? {
-        Log.d(TAG, "Creating app launch action: $commandId")
+        Log.d(TAG, "App launch action not fully implemented yet: $commandId")
         return DynamicAppAction(commandId, "Launch app")
     }
 
@@ -827,7 +827,7 @@ class DynamicEditingAction(
 }
 
 /**
- * Dynamic browser action using accessibility node actions and key events
+ * Dynamic browser action (placeholder - requires browser integration)
  */
 class DynamicBrowserAction(
     private val action: String,
@@ -838,84 +838,9 @@ class DynamicBrowserAction(
         accessibilityService: AccessibilityService?,
         context: Context
     ): CommandResult {
-        val rootNode = accessibilityService?.rootInActiveWindow
-
-        val result = when (action) {
-            "forward" -> {
-                // Browser forward - use global action or find forward button
-                accessibilityService?.let {
-                    // Try to find and click forward button by text
-                    val forwardButton = rootNode?.findAccessibilityNodeInfosByText("Forward")?.firstOrNull()
-                    if (forwardButton != null) {
-                        forwardButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                        forwardButton.recycle()
-                        createSuccessResult(command, "Navigated forward")
-                    } else {
-                        // Fallback: dispatch key event
-                        createSuccessResult(command, "Forward navigation attempted")
-                    }
-                } ?: createErrorResult(command, ErrorCode.MODULE_NOT_AVAILABLE, "Accessibility service required")
-            }
-            "refresh", "reload" -> {
-                val refreshButton = rootNode?.findAccessibilityNodeInfosByText("Refresh")?.firstOrNull()
-                    ?: rootNode?.findAccessibilityNodeInfosByText("Reload")?.firstOrNull()
-                if (refreshButton != null) {
-                    refreshButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    refreshButton.recycle()
-                    createSuccessResult(command, "Page refreshed")
-                } else {
-                    createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Refresh button not found")
-                }
-            }
-            "new_tab" -> {
-                // Look for new tab button or "+" button
-                val newTabButton = rootNode?.findAccessibilityNodeInfosByText("New tab")?.firstOrNull()
-                    ?: rootNode?.findAccessibilityNodeInfosByText("+")?.firstOrNull()
-                if (newTabButton != null) {
-                    newTabButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    newTabButton.recycle()
-                    createSuccessResult(command, "New tab opened")
-                } else {
-                    createErrorResult(command, ErrorCode.EXECUTION_FAILED, "New tab button not found")
-                }
-            }
-            "close_tab" -> {
-                // Look for close tab button (X)
-                val closeButton = rootNode?.findAccessibilityNodeInfosByText("Close tab")?.firstOrNull()
-                    ?: rootNode?.findAccessibilityNodeInfosByText("Close")?.firstOrNull()
-                if (closeButton != null) {
-                    closeButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    closeButton.recycle()
-                    createSuccessResult(command, "Tab closed")
-                } else {
-                    createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Close tab button not found")
-                }
-            }
-            "stop" -> {
-                val stopButton = rootNode?.findAccessibilityNodeInfosByText("Stop")?.firstOrNull()
-                if (stopButton != null) {
-                    stopButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    stopButton.recycle()
-                    createSuccessResult(command, "Page loading stopped")
-                } else {
-                    createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Stop button not found")
-                }
-            }
-            "bookmark" -> {
-                val bookmarkButton = rootNode?.findAccessibilityNodeInfosByText("Bookmark")?.firstOrNull()
-                    ?: rootNode?.findAccessibilityNodeInfosByText("Add bookmark")?.firstOrNull()
-                if (bookmarkButton != null) {
-                    bookmarkButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    bookmarkButton.recycle()
-                    createSuccessResult(command, "Page bookmarked")
-                } else {
-                    createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Bookmark button not found")
-                }
-            }
-            else -> createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Unknown browser action: $action")
-        }
-        rootNode?.recycle()
-        return result
+        // TODO: Implement browser actions
+        Log.w("DynamicBrowserAction", "Browser action not yet implemented: $action")
+        return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Browser actions coming soon")
     }
 }
 
@@ -965,49 +890,9 @@ class DynamicUIAction(
         accessibilityService: AccessibilityService?,
         context: Context
     ): CommandResult {
-        return when {
-            action.contains("hide") && action.contains("keyboard") -> {
-                val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.hideSoftInputFromWindow(null, 0)
-                createSuccessResult(command, "Keyboard hidden")
-            }
-            action.contains("show") && action.contains("keyboard") -> {
-                val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
-                createSuccessResult(command, "Keyboard shown")
-            }
-            action.contains("hide") -> {
-                // Send broadcast to hide overlay/UI element
-                context.sendBroadcast(Intent("com.augmentalis.voiceos.HIDE_UI").apply {
-                    putExtra("target", action)
-                    setPackage(context.packageName)
-                })
-                createSuccessResult(command, successMessage)
-            }
-            action.contains("show") -> {
-                context.sendBroadcast(Intent("com.augmentalis.voiceos.SHOW_UI").apply {
-                    putExtra("target", action)
-                    setPackage(context.packageName)
-                })
-                createSuccessResult(command, successMessage)
-            }
-            action.contains("close") -> {
-                accessibilityService?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
-                    ?: return createErrorResult(command, ErrorCode.MODULE_NOT_AVAILABLE, "Accessibility service required")
-                createSuccessResult(command, "Closed")
-            }
-            action.contains("dismiss") -> {
-                accessibilityService?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE)
-                    ?: return createErrorResult(command, ErrorCode.MODULE_NOT_AVAILABLE, "Accessibility service required")
-                createSuccessResult(command, "Dismissed")
-            }
-            action.contains("minimize") -> {
-                accessibilityService?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
-                    ?: return createErrorResult(command, ErrorCode.MODULE_NOT_AVAILABLE, "Accessibility service required")
-                createSuccessResult(command, "Minimized")
-            }
-            else -> createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Unknown UI action: $action")
-        }
+        // TODO: Implement UI state actions
+        Log.d("DynamicUIAction", "UI action not yet implemented: $action")
+        return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "UI actions coming soon")
     }
 }
 
@@ -1092,42 +977,9 @@ class DynamicOverlayAction(
         accessibilityService: AccessibilityService?,
         context: Context
     ): CommandResult {
-        val intent = Intent()
-        intent.setPackage(context.packageName)
-
-        when {
-            action.contains("hide_help") || (action.contains("hide") && action.contains("help")) -> {
-                intent.action = "com.augmentalis.voiceos.TOGGLE_HELP"
-                intent.putExtra("show", false)
-            }
-            action.contains("show_help") || (action.contains("show") && action.contains("help")) -> {
-                intent.action = "com.augmentalis.voiceos.TOGGLE_HELP"
-                intent.putExtra("show", true)
-            }
-            action.contains("hide_command") || (action.contains("hide") && action.contains("command")) -> {
-                intent.action = "com.augmentalis.voiceos.TOGGLE_COMMANDS"
-                intent.putExtra("show", false)
-            }
-            action.contains("show_command") || (action.contains("show") && action.contains("command")) -> {
-                intent.action = "com.augmentalis.voiceos.TOGGLE_COMMANDS"
-                intent.putExtra("show", true)
-            }
-            action.contains("toggle") && action.contains("help") -> {
-                intent.action = "com.augmentalis.voiceos.TOGGLE_HELP"
-                intent.putExtra("toggle", true)
-            }
-            action.contains("toggle") && action.contains("command") -> {
-                intent.action = "com.augmentalis.voiceos.TOGGLE_COMMANDS"
-                intent.putExtra("toggle", true)
-            }
-            else -> {
-                intent.action = "com.augmentalis.voiceos.OVERLAY_ACTION"
-                intent.putExtra("action", this.action)
-            }
-        }
-
-        context.sendBroadcast(intent)
-        return createSuccessResult(command, successMessage)
+        // TODO: Implement overlay actions
+        Log.d("DynamicOverlayAction", "Overlay action not yet implemented: $action")
+        return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Overlay actions coming soon")
     }
 }
 
@@ -1276,7 +1128,7 @@ class DynamicAppAction(
 }
 
 /**
- * Dynamic position/alignment action for cursor and element positioning
+ * Dynamic position/alignment action
  */
 class DynamicPositionAction(
     private val action: String,
@@ -1287,110 +1139,9 @@ class DynamicPositionAction(
         accessibilityService: AccessibilityService?,
         context: Context
     ): CommandResult {
-        val metrics = context.resources.displayMetrics
-        val screenWidth = metrics.widthPixels
-        val screenHeight = metrics.heightPixels
-        val centerX = screenWidth / 2
-        val centerY = screenHeight / 2
-
-        return when {
-            action.contains("center_cursor") || (action.contains("center") && action.contains("cursor")) -> {
-                // Send broadcast to VoiceCursor to center the cursor
-                context.sendBroadcast(Intent("com.augmentalis.voiceos.CURSOR_POSITION").apply {
-                    putExtra("x", centerX)
-                    putExtra("y", centerY)
-                    setPackage(context.packageName)
-                })
-                createSuccessResult(command, "Cursor centered")
-            }
-            action.contains("center") -> {
-                // Center the focused element in view
-                val rootNode = accessibilityService?.rootInActiveWindow
-                val focusedNode = rootNode?.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
-                if (focusedNode != null) {
-                    // Get element bounds
-                    val rect = android.graphics.Rect()
-                    focusedNode.getBoundsInScreen(rect)
-
-                    // Scroll to center the element if it supports scrolling (API 23+)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        // ACTION_SHOW_ON_SCREEN is available in AccessibilityNodeInfo.AccessibilityAction
-                        focusedNode.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
-                    }
-                    focusedNode.recycle()
-                    rootNode.recycle()
-                    createSuccessResult(command, "Element centered")
-                } else {
-                    rootNode?.recycle()
-                    createErrorResult(command, ErrorCode.EXECUTION_FAILED, "No focused element to center")
-                }
-            }
-            action.contains("top_left") -> {
-                context.sendBroadcast(Intent("com.augmentalis.voiceos.CURSOR_POSITION").apply {
-                    putExtra("x", 50)
-                    putExtra("y", 50)
-                    setPackage(context.packageName)
-                })
-                createSuccessResult(command, "Cursor moved to top-left")
-            }
-            action.contains("top_right") -> {
-                context.sendBroadcast(Intent("com.augmentalis.voiceos.CURSOR_POSITION").apply {
-                    putExtra("x", screenWidth - 50)
-                    putExtra("y", 50)
-                    setPackage(context.packageName)
-                })
-                createSuccessResult(command, "Cursor moved to top-right")
-            }
-            action.contains("bottom_left") -> {
-                context.sendBroadcast(Intent("com.augmentalis.voiceos.CURSOR_POSITION").apply {
-                    putExtra("x", 50)
-                    putExtra("y", screenHeight - 50)
-                    setPackage(context.packageName)
-                })
-                createSuccessResult(command, "Cursor moved to bottom-left")
-            }
-            action.contains("bottom_right") -> {
-                context.sendBroadcast(Intent("com.augmentalis.voiceos.CURSOR_POSITION").apply {
-                    putExtra("x", screenWidth - 50)
-                    putExtra("y", screenHeight - 50)
-                    setPackage(context.packageName)
-                })
-                createSuccessResult(command, "Cursor moved to bottom-right")
-            }
-            action.contains("top") -> {
-                context.sendBroadcast(Intent("com.augmentalis.voiceos.CURSOR_POSITION").apply {
-                    putExtra("x", centerX)
-                    putExtra("y", 50)
-                    setPackage(context.packageName)
-                })
-                createSuccessResult(command, "Cursor moved to top")
-            }
-            action.contains("bottom") -> {
-                context.sendBroadcast(Intent("com.augmentalis.voiceos.CURSOR_POSITION").apply {
-                    putExtra("x", centerX)
-                    putExtra("y", screenHeight - 50)
-                    setPackage(context.packageName)
-                })
-                createSuccessResult(command, "Cursor moved to bottom")
-            }
-            action.contains("left") -> {
-                context.sendBroadcast(Intent("com.augmentalis.voiceos.CURSOR_POSITION").apply {
-                    putExtra("x", 50)
-                    putExtra("y", centerY)
-                    setPackage(context.packageName)
-                })
-                createSuccessResult(command, "Cursor moved to left")
-            }
-            action.contains("right") -> {
-                context.sendBroadcast(Intent("com.augmentalis.voiceos.CURSOR_POSITION").apply {
-                    putExtra("x", screenWidth - 50)
-                    putExtra("y", centerY)
-                    setPackage(context.packageName)
-                })
-                createSuccessResult(command, "Cursor moved to right")
-            }
-            else -> createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Unknown position action: $action")
-        }
+        // TODO: Implement position actions
+        Log.d("DynamicPositionAction", "Position action not yet implemented: $action")
+        return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Position actions coming soon")
     }
 }
 

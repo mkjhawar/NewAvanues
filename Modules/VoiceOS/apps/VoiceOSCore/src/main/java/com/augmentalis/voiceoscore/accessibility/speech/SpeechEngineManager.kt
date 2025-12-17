@@ -11,7 +11,7 @@ package com.augmentalis.voiceoscore.accessibility.speech
 // GoogleCloudEngine temporarily disabled
 import android.content.Context
 import android.util.Log
-import com.augmentalis.voiceoscore.utils.ConditionalLogger
+import com.augmentalis.voiceoscore.accessibility.utils.ConditionalLogger
 import com.augmentalis.speechrecognition.SpeechConfig
 import com.augmentalis.speechrecognition.SpeechEngine
 import com.augmentalis.speechrecognition.SpeechMode

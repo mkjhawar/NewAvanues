@@ -155,7 +155,7 @@ class JustInTimeLearner(
         elementCapture = JitElementCapture(accessibilityService, databaseManager, thirdPartyUuidGenerator)
 
         // FIX (2025-12-02): Initialize ScreenStateManager for structure-based hashing
-        screenStateManager = ScreenStateManager(accessibilityService)
+        screenStateManager = ScreenStateManager()
         // FIX (2025-12-01): Removed CommandGenerator - command generation is inlined in generateCommandsForElements()
         Log.i(TAG, "JIT element capture, screen state manager, and UUID generator initialized")
     }

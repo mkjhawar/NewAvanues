@@ -1,0 +1,596 @@
+package com.augmentalis.magiccode.plugins.security
+
+import com.augmentalis.magiccode.plugins.core.GrantStatus
+import com.augmentalis.magiccode.plugins.core.Permission
+import com.augmentalis.magiccode.plugins.mocks.MockPermissionStorage
+import kotlinx.coroutines.test.runTest
+import kotlin.test.*
+
+/**
+ * Comprehensive unit tests for PermissionPersistence and PermissionStorage.
+ *
+ * Test coverage:
+ * - Save and load permission state
+ * - Permission status queries
+ * - "Don't ask again" tracking
+ * - Revoke operations
+ * - Bulk operations
+ * - Cache synchronization
+ * - Error handling
+ */
+class PermissionStorageTest {
+    private lateinit var storage: MockPermissionStorage
+    private lateinit var persistence: PermissionPersistence
+
+    companion object {
+        private const val TEST_PLUGIN_ID = "com.test.plugin"
+        private const val TEST_PLUGIN_NAME = "Test Plugin"
+    }
+
+    @BeforeTest
+    fun setup() {
+        storage = MockPermissionStorage()
+        persistence = PermissionPersistence(storage)
+    }
+
+    @AfterTest
+    fun teardown() {
+        storage.reset()
+    }
+
+    // Test 1: Save Single Permission - Granted
+    @Test
+    fun testSaveSinglePermissionGranted() = runTest {
+        // Save granted permission
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = true
+        )
+
+        // Verify storage was called
+        assertEquals(1, storage.saveCount)
+        assertTrue(storage.contains(TEST_PLUGIN_ID))
+
+        // Verify state
+        val state = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals(TEST_PLUGIN_ID, state.pluginId)
+        assertEquals(TEST_PLUGIN_NAME, state.pluginName)
+        assertEquals(GrantStatus.GRANTED, state.permissions[Permission.CAMERA]?.status)
+        assertNotNull(state.permissions[Permission.CAMERA]?.grantedAt)
+    }
+
+    // Test 2: Save Single Permission - Denied
+    @Test
+    fun testSaveSinglePermissionDenied() = runTest {
+        // Save denied permission
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = false
+        )
+
+        // Verify state
+        val state = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals(GrantStatus.DENIED, state.permissions[Permission.CAMERA]?.status)
+        assertNotNull(state.permissions[Permission.CAMERA]?.deniedAt)
+    }
+
+    // Test 3: Save Permission with Don't Ask Again
+    @Test
+    fun testSavePermissionWithDontAskAgain() = runTest {
+        // Save with don't ask again flag
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = false,
+            dontAskAgain = true
+        )
+
+        // Verify state
+        val state = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertTrue(state.permissions[Permission.CAMERA]?.dontAskAgain ?: false)
+    }
+
+    // Test 4: Save Multiple Permissions at Once
+    @Test
+    fun testSaveMultiplePermissions() = runTest {
+        val result = PermissionResult(
+            granted = setOf(Permission.CAMERA, Permission.LOCATION),
+            denied = setOf(Permission.MICROPHONE),
+            dontAskAgain = setOf(Permission.MICROPHONE)
+        )
+
+        // Save multiple permissions
+        persistence.savePermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, result)
+
+        // Verify state
+        val state = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state)
+
+        // Check granted permissions
+        assertEquals(GrantStatus.GRANTED, state.permissions[Permission.CAMERA]?.status)
+        assertEquals(GrantStatus.GRANTED, state.permissions[Permission.LOCATION]?.status)
+
+        // Check denied permission
+        assertEquals(GrantStatus.DENIED, state.permissions[Permission.MICROPHONE]?.status)
+        assertTrue(state.permissions[Permission.MICROPHONE]?.dontAskAgain ?: false)
+    }
+
+    // Test 5: Load Permission State
+    @Test
+    fun testLoadPermissionState() = runTest {
+        // Save state
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = true
+        )
+
+        // Load state
+        val state = persistence.getPermissionState(TEST_PLUGIN_ID)
+
+        // Verify
+        assertNotNull(state)
+        assertEquals(TEST_PLUGIN_ID, state.pluginId)
+        assertEquals(TEST_PLUGIN_NAME, state.pluginName)
+        assertTrue(state.permissions.containsKey(Permission.CAMERA))
+    }
+
+    // Test 6: Load Non-existent Permission State
+    @Test
+    fun testLoadNonExistentPermissionState() = runTest {
+        // Load non-existent state
+        val state = persistence.getPermissionState("nonexistent.plugin")
+
+        // Should be null
+        assertNull(state)
+    }
+
+    // Test 7: Check Permission Granted
+    @Test
+    fun testCheckPermissionGranted() = runTest {
+        // Save granted permission
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = true
+        )
+
+        // Check permission
+        assertTrue(persistence.isPermissionGranted(TEST_PLUGIN_ID, Permission.CAMERA))
+        assertFalse(persistence.isPermissionGranted(TEST_PLUGIN_ID, Permission.LOCATION))
+    }
+
+    // Test 8: Check Don't Ask Again
+    @Test
+    fun testCheckDontAskAgain() = runTest {
+        // Save with don't ask again
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = false,
+            dontAskAgain = true
+        )
+
+        // Save without don't ask again
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.LOCATION,
+            granted = false,
+            dontAskAgain = false
+        )
+
+        // Check
+        assertTrue(persistence.isDontAskAgain(TEST_PLUGIN_ID, Permission.CAMERA))
+        assertFalse(persistence.isDontAskAgain(TEST_PLUGIN_ID, Permission.LOCATION))
+    }
+
+    // Test 9: Get Granted Permissions
+    @Test
+    fun testGetGrantedPermissions() = runTest {
+        // Save mixed permissions
+        val result = PermissionResult(
+            granted = setOf(Permission.CAMERA, Permission.LOCATION),
+            denied = setOf(Permission.MICROPHONE)
+        )
+        persistence.savePermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, result)
+
+        // Get granted permissions
+        val granted = persistence.getGrantedPermissions(TEST_PLUGIN_ID)
+
+        // Verify
+        assertEquals(2, granted.size)
+        assertTrue(granted.contains(Permission.CAMERA))
+        assertTrue(granted.contains(Permission.LOCATION))
+        assertFalse(granted.contains(Permission.MICROPHONE))
+    }
+
+    // Test 10: Get Denied Permissions
+    @Test
+    fun testGetDeniedPermissions() = runTest {
+        // Save mixed permissions
+        val result = PermissionResult(
+            granted = setOf(Permission.CAMERA, Permission.LOCATION),
+            denied = setOf(Permission.MICROPHONE, Permission.CONTACTS)
+        )
+        persistence.savePermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, result)
+
+        // Get denied permissions
+        val denied = persistence.getDeniedPermissions(TEST_PLUGIN_ID)
+
+        // Verify
+        assertEquals(2, denied.size)
+        assertTrue(denied.contains(Permission.MICROPHONE))
+        assertTrue(denied.contains(Permission.CONTACTS))
+        assertFalse(denied.contains(Permission.CAMERA))
+    }
+
+    // Test 11: Revoke Single Permission
+    @Test
+    fun testRevokeSinglePermission() = runTest {
+        // Grant permission first
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = true
+        )
+
+        // Verify granted
+        assertTrue(persistence.isPermissionGranted(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        // Revoke permission
+        persistence.revokePermission(TEST_PLUGIN_ID, Permission.CAMERA)
+
+        // Verify revoked
+        assertFalse(persistence.isPermissionGranted(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        // Check status is REVOKED
+        val state = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals(GrantStatus.REVOKED, state.permissions[Permission.CAMERA]?.status)
+    }
+
+    // Test 12: Revoke All Permissions
+    @Test
+    fun testRevokeAllPermissions() = runTest {
+        // Grant multiple permissions
+        val result = PermissionResult(
+            granted = setOf(Permission.CAMERA, Permission.LOCATION, Permission.MICROPHONE),
+            denied = emptySet()
+        )
+        persistence.savePermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, result)
+
+        // Verify all granted
+        assertEquals(3, persistence.getGrantedPermissions(TEST_PLUGIN_ID).size)
+
+        // Revoke all
+        persistence.revokeAllPermissions(TEST_PLUGIN_ID)
+
+        // Verify all revoked
+        assertEquals(0, persistence.getGrantedPermissions(TEST_PLUGIN_ID).size)
+
+        // All should be REVOKED status
+        val state = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        state.permissions.values.forEach { record ->
+            assertEquals(GrantStatus.REVOKED, record.status)
+        }
+    }
+
+    // Test 13: Clear Permissions
+    @Test
+    fun testClearPermissions() = runTest {
+        // Save permissions
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = true
+        )
+
+        // Verify exists
+        assertTrue(storage.contains(TEST_PLUGIN_ID))
+
+        // Clear permissions
+        persistence.clearPermissions(TEST_PLUGIN_ID)
+
+        // Verify removed
+        assertFalse(storage.contains(TEST_PLUGIN_ID))
+        assertEquals(1, storage.deleteCount)
+    }
+
+    // Test 14: Get All Permission States
+    @Test
+    fun testGetAllPermissionStates() = runTest {
+        // Save states for multiple plugins
+        persistence.savePermission("plugin1", "Plugin 1", Permission.CAMERA, granted = true)
+        persistence.savePermission("plugin2", "Plugin 2", Permission.LOCATION, granted = true)
+        persistence.savePermission("plugin3", "Plugin 3", Permission.MICROPHONE, granted = false)
+
+        // Get all states
+        val allStates = persistence.getAllPermissionStates()
+
+        // Verify
+        assertEquals(3, allStates.size)
+        assertTrue(allStates.containsKey("plugin1"))
+        assertTrue(allStates.containsKey("plugin2"))
+        assertTrue(allStates.containsKey("plugin3"))
+    }
+
+    // Test 15: Update Existing Permission
+    @Test
+    fun testUpdateExistingPermission() = runTest {
+        // Grant permission
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = true
+        )
+
+        // Verify granted
+        assertTrue(persistence.isPermissionGranted(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        // Deny same permission
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = false
+        )
+
+        // Verify now denied
+        assertFalse(persistence.isPermissionGranted(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        // Check status changed
+        val state = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals(GrantStatus.DENIED, state.permissions[Permission.CAMERA]?.status)
+    }
+
+    // Test 16: Permission Asked Count
+    @Test
+    fun testPermissionAskedCount() = runTest {
+        // First request
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = false
+        )
+
+        var state = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals(1, state.permissions[Permission.CAMERA]?.askedCount)
+
+        // Second request
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = true
+        )
+
+        state = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals(2, state.permissions[Permission.CAMERA]?.askedCount)
+
+        // Third request
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = false
+        )
+
+        state = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals(3, state.permissions[Permission.CAMERA]?.askedCount)
+    }
+
+    // Test 17: Last Updated Timestamp
+    @Test
+    fun testLastUpdatedTimestamp() = runTest {
+        // Save permission
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = true
+        )
+
+        val state1 = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state1)
+        val timestamp1 = state1.lastUpdated
+
+        // Wait a bit (not reliable in tests, but demonstrates the concept)
+        kotlinx.coroutines.delay(10)
+
+        // Update permission
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.LOCATION,
+            granted = true
+        )
+
+        val state2 = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state2)
+        val timestamp2 = state2.lastUpdated
+
+        // Timestamp should be updated
+        assertTrue(timestamp2 >= timestamp1)
+    }
+
+    // Test 18: Cache and Storage Synchronization
+    @Test
+    fun testCacheAndStorageSynchronization() = runTest {
+        // First query - should miss cache and load from storage
+        storage.addState(
+            PluginPermissionState(
+                pluginId = TEST_PLUGIN_ID,
+                pluginName = TEST_PLUGIN_NAME,
+                permissions = mapOf(
+                    Permission.CAMERA to PermissionRecord(
+                        permission = Permission.CAMERA,
+                        status = GrantStatus.GRANTED,
+                        grantedAt = System.currentTimeMillis(),
+                        deniedAt = null,
+                        dontAskAgain = false,
+                        askedCount = 1
+                    )
+                ),
+                lastUpdated = System.currentTimeMillis()
+            )
+        )
+
+        // First check - loads from storage
+        val firstCheck = persistence.isPermissionGranted(TEST_PLUGIN_ID, Permission.CAMERA)
+        assertTrue(firstCheck)
+        assertEquals(1, storage.loadCount)
+
+        // Second check - should use cache
+        val secondCheck = persistence.isPermissionGranted(TEST_PLUGIN_ID, Permission.CAMERA)
+        assertTrue(secondCheck)
+        // Load count should still be 1 (cache hit)
+        assertEquals(1, storage.loadCount)
+    }
+
+    // Test 19: Permission Timestamps
+    @Test
+    fun testPermissionTimestamps() = runTest {
+        val beforeGrant = System.currentTimeMillis()
+
+        // Grant permission
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            granted = true
+        )
+
+        val afterGrant = System.currentTimeMillis()
+
+        // Check granted timestamp
+        val state = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        val record = state.permissions[Permission.CAMERA]
+        assertNotNull(record)
+        assertNotNull(record.grantedAt)
+        assertTrue(record.grantedAt!! >= beforeGrant)
+        assertTrue(record.grantedAt!! <= afterGrant)
+        assertNull(record.deniedAt)
+    }
+
+    // Test 20: Plugin Name Update
+    @Test
+    fun testPluginNameUpdate() = runTest {
+        // Save with initial name
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            "Old Plugin Name",
+            Permission.CAMERA,
+            granted = true
+        )
+
+        var state = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals("Old Plugin Name", state.pluginName)
+
+        // Save with new name
+        persistence.savePermission(
+            TEST_PLUGIN_ID,
+            "New Plugin Name",
+            Permission.LOCATION,
+            granted = true
+        )
+
+        state = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals("New Plugin Name", state.pluginName)
+    }
+
+    // Test 21: Empty Granted Permissions
+    @Test
+    fun testEmptyGrantedPermissions() = runTest {
+        // Get granted permissions for non-existent plugin
+        val granted = persistence.getGrantedPermissions("nonexistent.plugin")
+
+        // Should return empty set
+        assertTrue(granted.isEmpty())
+    }
+
+    // Test 22: Empty Denied Permissions
+    @Test
+    fun testEmptyDeniedPermissions() = runTest {
+        // Get denied permissions for non-existent plugin
+        val denied = persistence.getDeniedPermissions("nonexistent.plugin")
+
+        // Should return empty set
+        assertTrue(denied.isEmpty())
+    }
+
+    // Test 23: Revoke Non-existent Permission
+    @Test
+    fun testRevokeNonExistentPermission() = runTest {
+        // Try to revoke permission for non-existent plugin
+        // Should not throw, just do nothing
+        persistence.revokePermission("nonexistent.plugin", Permission.CAMERA)
+
+        // Verify storage was not modified
+        assertFalse(storage.contains("nonexistent.plugin"))
+    }
+
+    // Test 24: Multiple Plugins Independence
+    @Test
+    fun testMultiplePluginsIndependence() = runTest {
+        // Grant permission to plugin1
+        persistence.savePermission("plugin1", "Plugin 1", Permission.CAMERA, granted = true)
+
+        // Deny same permission to plugin2
+        persistence.savePermission("plugin2", "Plugin 2", Permission.CAMERA, granted = false)
+
+        // Verify independence
+        assertTrue(persistence.isPermissionGranted("plugin1", Permission.CAMERA))
+        assertFalse(persistence.isPermissionGranted("plugin2", Permission.CAMERA))
+
+        // Revoke from plugin1
+        persistence.revokePermission("plugin1", Permission.CAMERA)
+
+        // plugin2 should not be affected
+        assertFalse(persistence.isPermissionGranted("plugin2", Permission.CAMERA))
+        val state2 = storage.load("plugin2")
+        assertNotNull(state2)
+        assertEquals(GrantStatus.DENIED, state2.permissions[Permission.CAMERA]?.status)
+    }
+
+    // Test 25: Permission Result with Empty Sets
+    @Test
+    fun testPermissionResultWithEmptySets() = runTest {
+        // Save empty result
+        val result = PermissionResult(
+            granted = emptySet(),
+            denied = emptySet(),
+            dontAskAgain = emptySet()
+        )
+
+        persistence.savePermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, result)
+
+        // State should exist but have empty permissions
+        val state = storage.load(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertTrue(state.permissions.isEmpty())
+    }
+}

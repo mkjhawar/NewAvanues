@@ -27,18 +27,16 @@ import android.os.Build
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.app.NotificationCompat
 import com.augmentalis.voiceoscore.learnapp.detection.ExpandableControlDetector
-import com.augmentalis.voiceoscore.learnapp.elements.ElementClassifier
 import com.augmentalis.voiceoscore.learnapp.fingerprinting.ScreenStateManager
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationProgress
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationState
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationStats
 import com.augmentalis.voiceoscore.learnapp.models.ScreenState
 import com.augmentalis.voiceoscore.learnapp.navigation.NavigationGraphBuilder
-import com.augmentalis.voiceoscore.learnapp.scrolling.ScrollDetector
-import com.augmentalis.voiceoscore.learnapp.scrolling.ScrollExecutor
 import com.augmentalis.voiceoscore.learnapp.tracking.ElementClickTracker
 import com.augmentalis.voiceoscore.learnapp.detection.LauncherDetector
 import com.augmentalis.voiceoscore.learnapp.window.WindowManager
+import com.augmentalis.voiceoscore.learnapp.window.WindowType
 import com.augmentalis.uuidcreator.UUIDCreator
 import com.augmentalis.uuidcreator.alias.UuidAliasManager
 import com.augmentalis.uuidcreator.models.UUIDElement
@@ -52,7 +50,7 @@ import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 // Phase 3 (2025-12-08): VUIDMetrics integration for observability
 import com.augmentalis.voiceoscore.learnapp.metrics.VUIDCreationMetricsCollector
 import com.augmentalis.voiceoscore.learnapp.metrics.VUIDCreationDebugOverlay
-import com.augmentalis.voiceoscore.learnapp.database.repository.VUIDMetricsRepository
+import com.augmentalis.voiceoscore.learnapp.metrics.VUIDMetricsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -189,26 +187,18 @@ class ExplorationEngine(
 
     /**
      * Screen state manager
-     *
-     * FIX (2025-11-24): Pass accessibilityService for popup/dialog detection
      */
-    private val screenStateManager = ScreenStateManager(accessibilityService)
+    private val screenStateManager = ScreenStateManager()
 
     /**
      * Element classifier
      */
-    private val elementClassifier = ElementClassifier(accessibilityService)
+    private val elementClassifier = ElementClassifier()
 
     /**
      * Screen explorer
      */
-    private val screenExplorer = ScreenExplorer(
-        context = context,
-        screenStateManager = screenStateManager,
-        elementClassifier = elementClassifier,
-        scrollDetector = ScrollDetector(),
-        scrollExecutor = ScrollExecutor(context)
-    )
+    private val screenExplorer = ScreenExplorer(elementClassifier)
 
     /**
      * Launcher detector - device-agnostic launcher detection
@@ -254,7 +244,7 @@ class ExplorationEngine(
      * Tracks real-time VUID creation stats, displays debug overlay, and persists metrics to database.
      */
     private val metricsCollector = VUIDCreationMetricsCollector()
-    private val metricsRepository = VUIDMetricsRepository(databaseManager)
+    private val metricsRepository = VUIDMetricsRepository()
     private val debugOverlay by lazy {
         VUIDCreationDebugOverlay(
             context,

@@ -1,0 +1,99 @@
+-- UUIDAnalytics.sq
+-- SQLDelight schema for UUID analytics tracking
+-- Migrated from Room: UUIDAnalyticsEntity
+
+CREATE TABLE uuid_analytics (
+    uuid TEXT NOT NULL PRIMARY KEY,
+    access_count INTEGER NOT NULL DEFAULT 0,
+    first_accessed INTEGER NOT NULL,
+    last_accessed INTEGER NOT NULL,
+    execution_time_ms INTEGER NOT NULL DEFAULT 0,
+    success_count INTEGER NOT NULL DEFAULT 0,
+    failure_count INTEGER NOT NULL DEFAULT 0,
+    lifecycle_state TEXT NOT NULL DEFAULT 'CREATED',
+    FOREIGN KEY (uuid) REFERENCES uuid_elements(uuid) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_analytics_access_count ON uuid_analytics(access_count);
+CREATE INDEX idx_analytics_last_accessed ON uuid_analytics(last_accessed);
+CREATE INDEX idx_analytics_lifecycle ON uuid_analytics(lifecycle_state);
+
+-- Get all analytics
+getAllAnalytics:
+SELECT * FROM uuid_analytics ORDER BY last_accessed DESC;
+
+-- Get analytics by UUID
+getAnalyticsByUuid:
+SELECT * FROM uuid_analytics WHERE uuid = ?;
+
+-- Get analytics by lifecycle state
+getAnalyticsByLifecycle:
+SELECT * FROM uuid_analytics WHERE lifecycle_state = ? ORDER BY last_accessed DESC;
+
+-- Get most accessed elements
+getMostAccessed:
+SELECT * FROM uuid_analytics ORDER BY access_count DESC LIMIT ?;
+
+-- Get recently accessed elements
+getRecentlyAccessed:
+SELECT * FROM uuid_analytics ORDER BY last_accessed DESC LIMIT ?;
+
+-- Get stale elements (not accessed in N days)
+getStaleElements:
+SELECT * FROM uuid_analytics WHERE last_accessed < ? ORDER BY last_accessed ASC;
+
+-- Get active elements
+getActiveElements:
+SELECT * FROM uuid_analytics WHERE lifecycle_state = 'ACTIVE' ORDER BY access_count DESC;
+
+-- Insert analytics
+insertAnalytics:
+INSERT OR REPLACE INTO uuid_analytics (uuid, access_count, first_accessed, last_accessed, execution_time_ms, success_count, failure_count, lifecycle_state)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Increment access count
+incrementAccessCount:
+UPDATE uuid_analytics
+SET access_count = access_count + 1, last_accessed = ?
+WHERE uuid = ?;
+
+-- Record execution
+recordExecution:
+UPDATE uuid_analytics
+SET execution_time_ms = execution_time_ms + ?,
+    success_count = success_count + ?,
+    failure_count = failure_count + ?,
+    last_accessed = ?
+WHERE uuid = ?;
+
+-- Update lifecycle state
+updateLifecycleState:
+UPDATE uuid_analytics SET lifecycle_state = ? WHERE uuid = ?;
+
+-- Delete analytics
+deleteAnalytics:
+DELETE FROM uuid_analytics WHERE uuid = ?;
+
+-- Delete stale analytics
+deleteStaleAnalytics:
+DELETE FROM uuid_analytics WHERE last_accessed < ?;
+
+-- Count analytics
+countAnalytics:
+SELECT COUNT(*) FROM uuid_analytics;
+
+-- Get total access count
+getTotalAccessCount:
+SELECT SUM(access_count) FROM uuid_analytics;
+
+-- Get average success rate
+getSuccessRate:
+SELECT
+    CASE WHEN (success_count + failure_count) > 0
+    THEN CAST(success_count AS REAL) / (success_count + failure_count)
+    ELSE 0.0 END AS success_rate
+FROM uuid_analytics WHERE uuid = ?;
+
+-- Delete all analytics
+deleteAll:
+DELETE FROM uuid_analytics;

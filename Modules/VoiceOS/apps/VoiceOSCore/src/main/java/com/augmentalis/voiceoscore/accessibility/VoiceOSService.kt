@@ -91,12 +91,12 @@ import kotlin.coroutines.cancellation.CancellationException
  * Now with hybrid ForegroundService approach for optimal battery and memory usage
  *
  * HILT Integration:
- * - Uses @AndroidEntryPoint for dependency injection
- * - Injected dependencies: UIScrapingEngine, SpeechEngineManager, InstalledAppsManager
- * - Lazy dependencies: ActionCoordinator (requires service instance)
+ * - NOTE: @AndroidEntryPoint does NOT support AccessibilityService
+ * - Using manual dependency injection via lazy initialization
+ * - Dependencies are initialized in onCreate() or on first use
  */
-@dagger.hilt.android.AndroidEntryPoint
-class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceOSServiceInternal {
+// @dagger.hilt.android.AndroidEntryPoint - DISABLED: Hilt doesn't support AccessibilityService
+class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceOSService {
 
     companion object {
         private const val TAG = "VoiceOSService"

@@ -4,12 +4,6 @@
  *
  * Created: 2025-10-09 12:37:32 PDT
  * Part of Week 4 - Context-Aware Commands implementation
- *
- * DEPRECATED: Use com.augmentalis.voiceos.command.CommandContext instead.
- * This sealed class is being replaced by a unified data class for KMP compatibility.
- * See: Modules/VoiceOS/core/command-models/.../CommandModels.kt
- *
- * Migration: Use CommandContextAdapter.toUnified() to convert to the new format.
  */
 
 package com.augmentalis.commandmanager.context
@@ -20,16 +14,7 @@ import java.util.Calendar
  * Sealed class representing different types of command contexts
  * Each context type provides specific information about the environment
  * in which a command is executed
- *
- * @deprecated Use com.augmentalis.voiceos.command.CommandContext instead.
  */
-@Deprecated(
-    message = "Use com.augmentalis.voiceos.command.CommandContext instead for KMP compatibility",
-    replaceWith = ReplaceWith(
-        "CommandContext",
-        "com.augmentalis.voiceos.command.CommandContext"
-    )
-)
 sealed class CommandContext {
 
     /**
