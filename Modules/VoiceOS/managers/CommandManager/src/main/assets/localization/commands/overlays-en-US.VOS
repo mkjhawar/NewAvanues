@@ -1,0 +1,163 @@
+{
+  "version": "1.0",
+  "locale": "en-US",
+  "fallback": "en-US",
+  "updated": "2025-11-14",
+  "author": "VOS4 Team",
+  "metadata": {
+    "category": "overlays",
+    "display_name": "Overlay Controls",
+    "description": "Voice commands for managing screen overlays and hints",
+    "source_file": "overlays-commands.vos",
+    "schema": "4-element: [id, primary, synonyms, description]"
+  },
+  "commands": [
+    [
+      "show_number",
+      "show number",
+      [
+        "show numbers",
+        "show hint",
+        "display numbers",
+        "numbers visible",
+        "reveal numbers",
+        "show hints",
+        "display hints",
+        "hints visible",
+        "reveal hints",
+        "number overlay",
+        "display number overlay",
+        "show number overlay",
+        "numbers on",
+        "hints on"
+      ],
+      "Show Number (Overlays)"
+    ],
+    [
+      "hide_number",
+      "hide number",
+      [
+        "hide numbers",
+        "hide hint",
+        "conceal numbers",
+        "numbers hidden",
+        "remove numbers",
+        "hide hints",
+        "conceal hints",
+        "hints hidden",
+        "remove hints",
+        "clear overlay",
+        "numbers off",
+        "hints off",
+        "remove overlay",
+        "number overlay off"
+      ],
+      "Hide Number (Overlays)"
+    ],
+    [
+      "show_help",
+      "show help",
+      [
+        "display help",
+        "help",
+        "assistance",
+        "support",
+        "guide",
+        "tutorial",
+        "instructions",
+        "help menu",
+        "user guide",
+        "manual",
+        "how to",
+        "show assistance",
+        "display support",
+        "get help"
+      ],
+      "Show Help (Overlays)"
+    ],
+    [
+      "hide_help",
+      "hide help",
+      [
+        "close help",
+        "dismiss help",
+        "assistance close",
+        "support hide",
+        "exit help",
+        "help away",
+        "remove help",
+        "help off",
+        "help invisible",
+        "help gone",
+        "close guide",
+        "exit tutorial",
+        "close assistance",
+        "dismiss support"
+      ],
+      "Hide Help (Overlays)"
+    ],
+    [
+      "show_command",
+      "show commands",
+      [
+        "show command",
+        "display commands",
+        "command list",
+        "commands visible",
+        "reveal commands",
+        "command menu",
+        "voice commands",
+        "available commands",
+        "command help",
+        "command guide",
+        "show voice commands",
+        "display voice commands",
+        "list commands",
+        "command options"
+      ],
+      "Show Commands (Overlays)"
+    ],
+    [
+      "hide_command",
+      "hide commands",
+      [
+        "hide command",
+        "conceal commands",
+        "commands hidden",
+        "remove commands",
+        "command away",
+        "commands off",
+        "commands invisible",
+        "commands gone",
+        "close commands",
+        "dismiss commands",
+        "command menu off",
+        "voice commands off",
+        "hide command list",
+        "close command menu"
+      ],
+      "Hide Commands (Overlays)"
+    ],
+    [
+      "scan_commands",
+      "scan commands",
+      [
+        "search commands",
+        "find commands",
+        "look for commands",
+        "command search",
+        "command scan",
+        "detect commands",
+        "identify commands",
+        "discover commands",
+        "explore commands",
+        "review commands",
+        "browse commands",
+        "examine commands",
+        "check commands",
+        "locate commands"
+      ],
+      "Scan Commands (Overlays)"
+    ]
+  ]
+}
