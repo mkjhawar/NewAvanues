@@ -85,16 +85,21 @@ Scope: ALL projects in /Volumes/M-Drive/Coding/
 
 ---
 
-## UI FRAMEWORK
+## GLOBAL TECH STACK
 
-| Platform | Stack |
-|----------|-------|
-| Android | Compose + Material3 |
-| iOS | SwiftUI |
-| Web | React + Tailwind |
-| Override | MagicUI (all platforms) |
+| Component | Technology |
+|-----------|------------|
+| JVM | Java 17 |
+| Cross-platform | KMP (Kotlin Multiplatform) |
+| Android | Kotlin + Jetpack Compose + Material3 |
+| iOS | Swift + SwiftUI (via KMP) |
+| Web/Desktop | Tauri / React + TypeScript |
+| Database | SQLDelight (cross-platform) |
+| DI | Koin (KMP) / Hilt (Android-only) |
+| Build | Gradle with version catalogs |
 
-**Required inputs (all):** Voice, Touch, Gaze, Keyboard, Mouse
+**Required inputs (all platforms):** Voice, Touch, Gaze, Keyboard, Mouse
+**UI Override:** MagicUI (applies to all platforms)
 
 ---
 
