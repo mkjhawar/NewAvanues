@@ -4,7 +4,6 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.android.library)
     alias(libs.plugins.compose)
     alias(libs.plugins.dokka)
@@ -62,8 +61,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // BrowserCoreData - Shared data layer with LRU caching
-                // Path varies: monorepo uses ":Modules:WebAvanue:coredata", standalone app uses ":coredata"
-                implementation(project(":coredata"))
+                implementation(project(":Modules:WebAvanue:coredata"))
 
                 // Kotlin
                 implementation(libs.kotlinx.coroutines.core)
@@ -89,7 +87,6 @@ kotlin {
                 implementation(libs.voyager.screenmodel)
                 implementation(libs.voyager.tab.navigator)
                 implementation(libs.voyager.transitions)
-                implementation(libs.voyager.koin)
             }
         }
 
@@ -117,8 +114,8 @@ kotlin {
                 // Activity Compose - For rememberLauncherForActivityResult (file upload support)
                 implementation(libs.androidx.activity.compose)
 
-                // DocumentFile - For download file handling
-                implementation(libs.androidx.documentfile)
+                // DocumentFile - For custom download paths
+                implementation("androidx.documentfile:documentfile:1.0.1")
 
                 // Security - EncryptedSharedPreferences
                 implementation("androidx.security:security-crypto:1.1.0-alpha06")
@@ -211,8 +208,8 @@ kotlin {
 
 // Android Configuration
 android {
-    namespace = "com.augmentalis.webavanue.ui"
-    compileSdk = 34
+    namespace = "com.augmentalis.webavanue"
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26

@@ -1,12 +1,12 @@
 [versions]
 # Kotlin
-kotlin = "1.9.22"
+kotlin = "1.9.24"
 kotlinx-coroutines = "1.7.3"
 kotlinx-serialization = "1.6.0"
 kotlinx-datetime = "0.5.0"
 
 # Compose
-compose = "1.6.11"
+compose = "1.7.0"
 compose-ui = "1.5.4"
 
 # Android
@@ -31,7 +31,7 @@ sqlcipher = "4.5.4"
 koin = "3.5.3"
 koin-compose = "1.1.2"
 hilt = "2.48"
-ksp = "1.9.22-1.0.16"
+ksp = "1.9.24-1.0.20"
 
 # Navigation
 voyager = "1.0.0"
@@ -95,7 +95,6 @@ voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.
 voyager-screenmodel = { module = "cafe.adriel.voyager:voyager-screenmodel", version.ref = "voyager" }
 voyager-tab-navigator = { module = "cafe.adriel.voyager:voyager-tab-navigator", version.ref = "voyager" }
 voyager-transitions = { module = "cafe.adriel.voyager:voyager-transitions", version.ref = "voyager" }
-voyager-koin = { module = "cafe.adriel.voyager:voyager-koin", version.ref = "voyager" }
 
 # Utilities
 uuid = { module = "com.benasher44:uuid", version.ref = "uuid" }
@@ -109,7 +108,7 @@ robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectr
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+# kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }  # Only for Kotlin 2.0+
 android-application = { id = "com.android.application", version.ref = "android-gradle" }
 android-library = { id = "com.android.library", version.ref = "android-gradle" }
 compose = { id = "org.jetbrains.compose", version.ref = "compose" }
