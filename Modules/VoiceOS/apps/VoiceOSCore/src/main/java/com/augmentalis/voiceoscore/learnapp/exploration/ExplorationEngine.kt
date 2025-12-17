@@ -244,7 +244,7 @@ class ExplorationEngine(
      * Tracks real-time VUID creation stats, displays debug overlay, and persists metrics to database.
      */
     private val metricsCollector = VUIDCreationMetricsCollector()
-    private val metricsRepository = VUIDMetricsRepository(databaseManager)
+    private val metricsRepository = VUIDMetricsRepository()
     private val debugOverlay by lazy {
         VUIDCreationDebugOverlay(
             context,

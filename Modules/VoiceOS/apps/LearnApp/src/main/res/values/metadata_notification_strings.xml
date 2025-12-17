@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  metadata_notification_strings.xml - Metadata notification strings
+  Path: modules/apps/LearnApp/src/main/res/values/metadata_notification_strings.xml
+
+  Author: Manoj Jhawar
+  Created: 2025-10-13
+-->
+<resources>
+    <!-- Notification Overlay -->
+    <string name="insufficient_metadata_title">Insufficient Metadata Detected</string>
+    <string name="insufficient_metadata_message">This element lacks proper identification. Providing a label will improve voice command accuracy.</string>
+    <string name="suggested_labels">Suggested Labels</string>
+    <string name="skip">Skip</string>
+    <string name="skip_all">Skip All</string>
+    <string name="provide_label">Provide Label</string>
+    <string name="warning_icon">Warning icon</string>
+    <string name="close_button">Close notification</string>
+    <string name="queue_info">%1$d more elements pending</string>
+
+    <!-- Manual Label Dialog -->
+    <string name="provide_manual_label_title">Provide Manual Label</string>
+    <string name="provide_manual_label_message">Help improve element identification by providing a descriptive label for voice commands.</string>
+    <string name="element_preview">Element Preview</string>
+    <string name="element_screenshot">Element screenshot</string>
+    <string name="label_hint">Enter descriptive label</string>
+    <string name="label_helper_text">Use clear, concise descriptions (e.g., \"Submit button\", \"Search icon\")</string>
+    <string name="quick_select">Quick Select</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+
+    <!-- Element Info -->
+    <string name="element_type_button">Button</string>
+    <string name="element_type_image">Image</string>
+    <string name="element_type_input">Input Field</string>
+    <string name="element_type_text">Text</string>
+    <string name="element_type_unknown">Unknown Element</string>
+    <string name="element_bounds_format">Position: (%1$d, %2$d) - Size: %3$dx%4$d</string>
+    <string name="element_no_identifiers">No text or description available</string>
+
+    <!-- Accessibility -->
+    <string name="metadata_notification_accessibility">Metadata quality notification</string>
+    <string name="suggestion_chip_accessibility">Suggestion: %1$s</string>
+</resources>

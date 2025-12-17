@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    themes.xml (night) - Material Design 3 dark themes for LearnApp
+    Path: modules/apps/LearnApp/src/main/res/values-night/themes.xml
+
+    Author: Manoj Jhawar
+    Code-Reviewed-By: CCA
+    Created: 2025-10-24
+
+    Dark mode theming for LearnApp dialogs and overlays.
+-->
+<resources>
+    <!-- LearnApp Base Theme (Dark) -->
+    <style name="Theme.LearnApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Material Design 3 Color Scheme (Dark) -->
+        <item name="colorPrimary">#BB86FC</item>
+        <item name="colorPrimaryVariant">#3700B3</item>
+        <item name="colorOnPrimary">#000000</item>
+        <item name="colorSecondary">#03DAC6</item>
+        <item name="colorSecondaryVariant">#03DAC6</item>
+        <item name="colorOnSecondary">#000000</item>
+        <item name="colorError">#CF6679</item>
+        <item name="colorOnError">#000000</item>
+        <item name="colorSurface">#121212</item>
+        <item name="colorOnSurface">#FFFFFF</item>
+        <item name="android:colorBackground">#121212</item>
+        <item name="colorOnBackground">#FFFFFF</item>
+
+        <!-- Typography -->
+        <item name="textAppearanceHeadline5">@style/TextAppearance.LearnApp.Headline5</item>
+        <item name="textAppearanceBody1">@style/TextAppearance.LearnApp.Body1</item>
+        <item name="textAppearanceBody2">@style/TextAppearance.LearnApp.Body2</item>
+
+        <!-- Shape -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.LearnApp.SmallComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.LearnApp.MediumComponent</item>
+    </style>
+
+    <!-- Dialog Theme for AccessibilityService Overlays (Dark) -->
+    <style name="Theme.LearnApp.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog">
+        <!-- Colors -->
+        <item name="colorPrimary">#BB86FC</item>
+        <item name="colorSecondary">#03DAC6</item>
+        <item name="colorSurface">#1E1E1E</item>
+        <item name="colorOnSurface">#FFFFFF</item>
+        <item name="android:colorBackground">#1E1E1E</item>
+
+        <!-- Dialog Background -->
+        <item name="android:windowBackground">@drawable/bg_dialog</item>
+        <item name="android:backgroundDimAmount">0.7</item>
+
+        <!-- Rounded Corners -->
+        <item name="dialogCornerRadius">16dp</item>
+
+        <!-- Elevation -->
+        <item name="elevation">8dp</item>
+    </style>
+</resources>

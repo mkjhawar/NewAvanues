@@ -16,6 +16,8 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import com.augmentalis.voiceoscore.R
 
@@ -59,7 +61,7 @@ import com.augmentalis.voiceoscore.R
 class ProgressOverlay(private val context: Context) {
 
     /**
-     * Root view (inflated from XML)
+     * Root view (inflated from XML or created programmatically)
      */
     private var rootView: View? = null
 
@@ -69,14 +71,14 @@ class ProgressOverlay(private val context: Context) {
     private var messageText: TextView? = null
 
     /**
-     * Helper for WindowManager operations
-     */
-    private var helper: WidgetOverlayHelper? = null
-
-    /**
      * Currently showing state
      */
     private var isShowing = false
+
+    /**
+     * Layout params for overlay
+     */
+    private var layoutParams: WindowManager.LayoutParams? = null
 
     /**
      * Show overlay
@@ -88,17 +90,9 @@ class ProgressOverlay(private val context: Context) {
      * @param message Message to display
      */
     fun show(windowManager: WindowManager, message: String) {
-        // Ensure helper is initialized
-        val overlayHelper = helper ?: WidgetOverlayHelper(windowManager).also { helper = it }
-
         if (rootView == null) {
-            // Inflate layout with proper parent (FrameLayout for overlay)
-            val parent = android.widget.FrameLayout(context)
-            rootView = LayoutInflater.from(context)
-                .inflate(R.layout.learnapp_layout_progress_overlay, parent, false)
-
-            // Get reference to message TextView
-            messageText = rootView?.findViewById(R.id.message_text)
+            // Create view programmatically to avoid resource dependency
+            rootView = createProgressView()
         }
 
         // Update message
@@ -106,9 +100,10 @@ class ProgressOverlay(private val context: Context) {
 
         // Show overlay if not already showing
         if (!isShowing) {
-            val params = overlayHelper.createOverlayParams()
+            val params = WidgetOverlayHelper.createCenteredDialogParams()
+            layoutParams = params
             rootView?.let { view ->
-                overlayHelper.showOverlay(view, params)
+                WidgetOverlayHelper.addOverlay(context, view, params)
                 isShowing = true
             }
         }
@@ -122,15 +117,46 @@ class ProgressOverlay(private val context: Context) {
      * @param windowManager WindowManager instance
      */
     fun dismiss(windowManager: WindowManager) {
-        // Ensure helper is initialized
-        val overlayHelper = helper ?: WidgetOverlayHelper(windowManager).also { helper = it }
-
         if (isShowing) {
             rootView?.let { view ->
-                overlayHelper.dismissOverlay(view)
+                WidgetOverlayHelper.removeOverlay(context, view)
                 isShowing = false
             }
         }
+    }
+
+    /**
+     * Create progress view programmatically
+     */
+    private fun createProgressView(): View {
+        val container = FrameLayout(context).apply {
+            setPadding(48, 32, 48, 32)
+            setBackgroundColor(0xE0FFFFFF.toInt()) // Semi-transparent white
+        }
+
+        val innerLayout = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER
+        }
+
+        val progressBar = ProgressBar(context).apply {
+            isIndeterminate = true
+        }
+
+        val textView = TextView(context).apply {
+            text = "Loading..."
+            textSize = 16f
+            setTextColor(0xFF333333.toInt())
+            setPadding(0, 16, 0, 0)
+            gravity = android.view.Gravity.CENTER
+        }
+        messageText = textView
+
+        innerLayout.addView(progressBar)
+        innerLayout.addView(textView)
+        container.addView(innerLayout)
+
+        return container
     }
 
     /**
