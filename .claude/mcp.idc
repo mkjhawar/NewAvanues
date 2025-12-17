@@ -19,7 +19,7 @@ MCP:ideacode_plan:deferred:unloaded
 MCP:ideacode_implement:deferred:unloaded
 MCP:ideacode_research:deferred:unloaded
 CFG:server_url:http://localhost:3847:string
-CFG:auto_start:true:bool
+CFG:auto_start:false:bool
 CFG:per_repo:true:bool
 ---
 aliases:
