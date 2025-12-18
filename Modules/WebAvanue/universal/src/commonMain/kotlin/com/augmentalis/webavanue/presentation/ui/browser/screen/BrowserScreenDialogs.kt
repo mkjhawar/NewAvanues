@@ -9,6 +9,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.augmentalis.webavanue.ui.screen.components.OceanDialog
+import com.augmentalis.webavanue.ui.screen.components.OceanDialogDefaults
+import com.augmentalis.webavanue.ui.screen.components.OceanTextButton
 
 /**
  * AddPageDialog - Dialog for adding a new page with URL input
@@ -26,12 +29,12 @@ fun AddPageDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    com.augmentalis.webavanue.presentation.ui.components.OceanDialog(
+    OceanDialog(
         onDismissRequest = onDismiss,
         title = "Add New Page",
         modifier = modifier,
         confirmButton = {
-            com.augmentalis.webavanue.presentation.ui.components.OceanTextButton(
+            OceanTextButton(
                 onClick = onConfirm,
                 isPrimary = true
             ) {
@@ -39,7 +42,7 @@ fun AddPageDialog(
             }
         },
         dismissButton = {
-            com.augmentalis.webavanue.presentation.ui.components.OceanTextButton(
+            OceanTextButton(
                 onClick = onDismiss,
                 isPrimary = false
             ) {
@@ -53,7 +56,7 @@ fun AddPageDialog(
             Text(
                 text = "Enter a URL or leave blank for a new empty tab",
                 style = MaterialTheme.typography.bodyMedium,
-                color = com.augmentalis.webavanue.presentation.ui.components.OceanDialogDefaults.textSecondary
+                color = OceanDialogDefaults.textSecondary
             )
 
             OutlinedTextField(
@@ -66,7 +69,7 @@ fun AddPageDialog(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { onConfirm() }),
-                colors = com.augmentalis.webavanue.presentation.ui.components.OceanDialogDefaults.outlinedTextFieldColors()
+                colors = OceanDialogDefaults.outlinedTextFieldColors()
             )
         }
     }
