@@ -40,6 +40,11 @@ UPDATE scraped_app
 SET scrapeCount = ?, elementCount = ?, commandCount = ?, lastScrapedAt = ?
 WHERE appId = ?;
 
+incrementScrapeCount:
+UPDATE scraped_app
+SET scrapeCount = scrapeCount + 1, lastScrapedAt = ?
+WHERE packageName = ?;
+
 markFullyLearned:
 UPDATE scraped_app SET isFullyLearned = 1, learnCompletedAt = ? WHERE appId = ?;
 

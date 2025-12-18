@@ -16,6 +16,7 @@
 5. [Integration Points](#integration-points)
 6. [API Reference](#api-reference)
 7. [Testing Guide](#testing-guide)
+8. [Code Quality Patterns](#code-quality-patterns)
 
 ---
 
@@ -2370,7 +2371,285 @@ Log.d(TAG, "Service running: $isRunning")
 
 ---
 
-**Document Version**: 1.0.0
-**Last Updated**: 2025-10-23 21:45:25 PDT
+## Code Quality Patterns
+
+This section documents critical code patterns implemented to prevent memory leaks, race conditions, and crashes.
+
+### 1. MutableState Delegate Pattern (Overlays)
+
+**Problem**: Using `= mutableStateOf()` creates strong references that can leak when overlays are dismissed.
+
+**Anti-Pattern** (DO NOT USE):
+```kotlin
+// BAD - Creates memory leak
+private var commandState = mutableStateOf("")
+private var isVisible = mutableStateOf(false)
+
+fun updateState(command: String) {
+    commandState.value = command  // Leaks reference
+}
+```
+
+**Correct Pattern**:
+```kotlin
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+
+// GOOD - Uses property delegate
+private var commandState by mutableStateOf("")
+private var isVisible by mutableStateOf(false)
+
+fun updateState(command: String) {
+    commandState = command  // Direct assignment, no leak
+}
+```
+
+**Files using this pattern**:
+- `CommandStatusOverlay.kt`
+- `ConfidenceOverlay.kt`
+- `ContextMenuOverlay.kt`
+- `NumberedSelectionOverlay.kt`
+
+---
+
+### 2. lateinit Initialization Checks
+
+**Problem**: Accessing uninitialized `lateinit var` properties causes `UninitializedPropertyAccessException`.
+
+**Anti-Pattern** (DO NOT USE):
+```kotlin
+private lateinit var navigationGraphBuilder: NavigationGraphBuilder
+
+fun getStats(): ExplorationStats {
+    // BAD - Crashes if navigationGraphBuilder not initialized
+    return ExplorationStats(
+        elementsDiscovered = navigationGraphBuilder.getNodeCount()
+    )
+}
+```
+
+**Correct Pattern**:
+```kotlin
+private lateinit var navigationGraphBuilder: NavigationGraphBuilder
+
+fun getStats(): ExplorationStats {
+    // GOOD - Safe access with isInitialized check
+    return ExplorationStats(
+        elementsDiscovered = if (::navigationGraphBuilder.isInitialized) {
+            navigationGraphBuilder.getNodeCount()
+        } else {
+            0
+        }
+    )
+}
+```
+
+**Files using this pattern**:
+- `ExplorationEngine.kt` - `navigationGraphBuilder` checks in `updateProgress()`, `getCurrentProgress()`, `createExplorationStats()`
+
+---
+
+### 3. Database Transaction Pattern
+
+**Problem**: Batch insertions without transactions can leave database in inconsistent state if interrupted.
+
+**Anti-Pattern** (DO NOT USE):
+```kotlin
+// BAD - No transaction wrapper
+suspend fun insertElementBatch(elements: List<ScrapedElement>) {
+    elements.forEach { element ->
+        queries.insertScrapedElement(element)  // Each insert is separate transaction
+    }
+}
+```
+
+**Correct Pattern**:
+```kotlin
+// GOOD - Wrapped in single transaction
+suspend fun insertElementBatch(elements: List<ScrapedElement>) {
+    databaseManager.transaction {
+        elements.forEach { element ->
+            queries.insertScrapedElement(element)
+        }
+    }
+}
+```
+
+**Files using this pattern**:
+- `VoiceOSCoreDatabaseAdapter.kt` - `insertElementBatch()`
+
+---
+
+### 4. Atomic Database Updates (Race Conditions)
+
+**Problem**: Read-modify-write patterns cause race conditions under concurrent access.
+
+**Anti-Pattern** (DO NOT USE):
+```kotlin
+// BAD - Race condition between read and write
+suspend fun incrementScrapeCount(packageName: String) {
+    val current = queries.getScrapedApp(packageName).executeAsOne()
+    queries.updateScrapedApp(
+        packageName = packageName,
+        scrapeCount = current.scrapeCount + 1,  // Stale read!
+        lastScrapedAt = Clock.System.now()
+    )
+}
+```
+
+**Correct Pattern**:
+```sql
+-- GOOD - Atomic increment in SQL
+incrementScrapeCount:
+UPDATE scraped_app
+SET scrapeCount = scrapeCount + 1, lastScrapedAt = ?
+WHERE packageName = ?;
+```
+
+```kotlin
+// Kotlin usage
+suspend fun incrementScrapeCount(packageName: String) {
+    queries.incrementScrapeCount(
+        lastScrapedAt = Clock.System.now().toString(),
+        packageName = packageName
+    )
+}
+```
+
+**Files using this pattern**:
+- `ScrapedApp.sq` - `incrementScrapeCount` query
+- `VoiceOSCoreDatabaseAdapter.kt`
+
+---
+
+### 5. Error Logging Pattern (No Silent Catches)
+
+**Problem**: Empty catch blocks hide errors, making debugging impossible.
+
+**Anti-Pattern** (DO NOT USE):
+```kotlin
+// BAD - Silent catch
+fun deserialize(json: String): Map<String, Any> {
+    return try {
+        Json.decodeFromString(json)
+    } catch (e: Exception) {
+        emptyMap()  // Error silently swallowed!
+    }
+}
+```
+
+**Correct Pattern**:
+```kotlin
+// GOOD - Log before returning default
+fun deserialize(json: String): Map<String, Any> {
+    return try {
+        Json.decodeFromString(json)
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to deserialize JSON context", e)
+        emptyMap()
+    }
+}
+```
+
+**Files using this pattern**:
+- `AIContextSerializer.kt` - `deserialize()` method
+
+---
+
+### 6. Overlay Lifecycle Management
+
+**Problem**: Compose overlays without proper lifecycle management leak resources.
+
+**Anti-Pattern** (DO NOT USE):
+```kotlin
+// BAD - No lifecycle owner
+class MyOverlay(private val context: Context) {
+    private var composeView: ComposeView? = null
+
+    fun show() {
+        composeView = ComposeView(context).apply {
+            setContent { MyContent() }  // No lifecycle!
+        }
+    }
+}
+```
+
+**Correct Pattern**:
+```kotlin
+// GOOD - Proper lifecycle management
+class MyOverlay(private val context: Context) {
+    private var composeView: ComposeView? = null
+    private var lifecycleOwner: ComposeViewLifecycleOwner? = null
+
+    fun show() {
+        lifecycleOwner = ComposeViewLifecycleOwner().also { it.onCreate() }
+
+        composeView = ComposeView(context).apply {
+            setViewTreeLifecycleOwner(lifecycleOwner)
+            setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+            setContent { MyContent() }
+        }
+    }
+
+    fun dispose() {
+        hide()
+        lifecycleOwner?.onDestroy()
+        lifecycleOwner = null
+    }
+}
+
+// Helper class
+class ComposeViewLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    private val savedStateRegistryController = SavedStateRegistryController.create(this)
+
+    override val lifecycle: Lifecycle get() = lifecycleRegistry
+    override val savedStateRegistry: SavedStateRegistry
+        get() = savedStateRegistryController.savedStateRegistry
+
+    fun onCreate() {
+        savedStateRegistryController.performRestore(null)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+    }
+
+    fun onDestroy() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    }
+}
+```
+
+**Files using this pattern**:
+- `LoginPromptOverlay.kt`
+- `BaseOverlay.kt`
+- `FocusIndicator.kt`
+
+---
+
+### 7. Event Queue Sizing
+
+**Problem**: Small event queues cause dropped events during high-frequency accessibility updates.
+
+**Recommendation**:
+```kotlin
+// For accessibility services processing many events:
+private const val MAX_QUEUED_EVENTS = 200  // Not 50
+
+// For lower-frequency components:
+private const val MAX_QUEUED_EVENTS = 100
+```
+
+**Files using this pattern**:
+- `VoiceOSService.kt` - Event processing queue
+
+---
+
+**Document Version**: 1.1.0
+**Last Updated**: 2025-12-17
 **Total Functions Documented**: 100+
 **Handlers Documented**: 10
+**Code Patterns Documented**: 7
