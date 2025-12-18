@@ -25,38 +25,23 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.concurrent.Volatile
 
+// Re-export refactored models for backward compatibility
+import com.augmentalis.webavanue.ui.viewmodel.tab.TabUiState as RefactoredTabUiState
+import com.augmentalis.webavanue.ui.viewmodel.tab.FindInPageState as RefactoredFindInPageState
+import com.augmentalis.webavanue.ui.viewmodel.tab.CombinedTabUiState as RefactoredCombinedTabUiState
+import com.augmentalis.webavanue.ui.viewmodel.tab.NewTabUrls
+
 /**
  * UI state wrapper for Tab with additional transient UI properties
- * These are not persisted to database - only for runtime UI state
+ * @deprecated Use com.augmentalis.webavanue.ui.viewmodel.tab.TabUiState
  */
-data class TabUiState(
-    val tab: Tab,
-    val isLoading: Boolean = false,
-    val canGoBack: Boolean = false,
-    val canGoForward: Boolean = false,
-    val isReadingMode: Boolean = false,
-    val readingModeArticle: com.augmentalis.webavanue.util.ReadingModeArticle? = null,
-    val isArticleAvailable: Boolean = false
-)
+typealias TabUiState = RefactoredTabUiState
 
 /**
  * Find in page state for text search functionality
- *
- * @property isVisible Whether the find bar is visible
- * @property query Current search query
- * @property currentMatch Index of current match (0-based)
- * @property totalMatches Total number of matches found
- * @property caseSensitive Whether search is case-sensitive
- * @property highlightAll Whether to highlight all matches (always true for better UX)
+ * @deprecated Use com.augmentalis.webavanue.ui.viewmodel.tab.FindInPageState
  */
-data class FindInPageState(
-    val isVisible: Boolean = false,
-    val query: String = "",
-    val currentMatch: Int = 0,
-    val totalMatches: Int = 0,
-    val caseSensitive: Boolean = false,
-    val highlightAll: Boolean = true
-)
+typealias FindInPageState = RefactoredFindInPageState
 
 /**
  * TabViewModel - Manages browser tab state and operations
