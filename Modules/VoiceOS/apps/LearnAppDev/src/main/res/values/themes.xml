@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Developer edition theme with orange accent -->
-    <style name="Theme.LearnAppDev" parent="Theme.Material3.DayNight">
-        <item name="colorPrimary">@color/dev_primary</item>
-        <item name="colorPrimaryContainer">@color/dev_primary_container</item>
-        <item name="colorSecondary">@color/dev_secondary</item>
-    </style>
-</resources>
