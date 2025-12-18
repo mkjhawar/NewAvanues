@@ -108,11 +108,13 @@ class ActionResultTest {
         val successMessage = when (successResult) {
             is ActionResult.Success -> "success"
             is ActionResult.Failure -> "failure"
+            is ActionResult.NeedsResolution -> "needs_resolution"
         }
 
         val failureMessage = when (failureResult) {
             is ActionResult.Success -> "success"
             is ActionResult.Failure -> "failure"
+            is ActionResult.NeedsResolution -> "needs_resolution"
         }
 
         assertEquals("success", successMessage)
@@ -144,6 +146,7 @@ class ActionResultTest {
             when (result) {
                 is ActionResult.Success -> result.message
                 is ActionResult.Failure -> result.message
+                is ActionResult.NeedsResolution -> "needs resolution for ${result.capability}"
             }
         }
 

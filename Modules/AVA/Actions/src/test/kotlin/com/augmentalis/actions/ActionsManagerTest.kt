@@ -1,6 +1,8 @@
 package com.augmentalis.actions
 
 import android.content.Context
+import com.augmentalis.ava.core.domain.resolution.AppResolverService
+import com.augmentalis.ava.core.domain.resolution.PreferencePromptManager
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlin.test.*
@@ -19,12 +21,16 @@ import kotlin.test.*
 class ActionsManagerTest {
 
     private lateinit var mockContext: Context
+    private lateinit var mockAppResolverService: AppResolverService
+    private lateinit var mockPreferencePromptManager: PreferencePromptManager
     private lateinit var actionsManager: ActionsManager
 
     @BeforeTest
     fun setup() {
         mockContext = mockk(relaxed = true)
-        actionsManager = ActionsManager(mockContext)
+        mockAppResolverService = mockk(relaxed = true)
+        mockPreferencePromptManager = mockk(relaxed = true)
+        actionsManager = ActionsManager(mockContext, mockAppResolverService, mockPreferencePromptManager)
         ActionsInitializer.reset()
     }
 
@@ -204,7 +210,7 @@ class ActionsManagerTest {
     @Test
     fun `test typical ViewModel lifecycle`() = runTest {
         // Simulate ViewModel constructor + init block
-        val viewModelActionsManager = ActionsManager(mockContext)
+        val viewModelActionsManager = ActionsManager(mockContext, mockAppResolverService, mockPreferencePromptManager)
         viewModelActionsManager.initialize()
 
         // Verify initialized
@@ -225,8 +231,8 @@ class ActionsManagerTest {
 
     @Test
     fun `test multiple ViewModels share same registry`() {
-        val manager1 = ActionsManager(mockContext)
-        val manager2 = ActionsManager(mockContext)
+        val manager1 = ActionsManager(mockContext, mockAppResolverService, mockPreferencePromptManager)
+        val manager2 = ActionsManager(mockContext, mockAppResolverService, mockPreferencePromptManager)
 
         // Initialize through first manager
         manager1.initialize()

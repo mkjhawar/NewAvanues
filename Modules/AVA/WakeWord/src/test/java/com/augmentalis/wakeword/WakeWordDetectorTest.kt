@@ -96,8 +96,8 @@ class WakeWordDetectorTest {
         val result = detector.initialize(settings) {}
 
         // Assert
-        assertIs<Result.Error<*>>(result)
-        assertTrue(result.message.contains("Porcupine access key"))
+        assertIs<Result.Error>(result)
+        assertTrue(result.message?.contains("Porcupine access key") == true)
     }
 
     @Test
@@ -106,8 +106,8 @@ class WakeWordDetectorTest {
         val result = detector.start()
 
         // Assert
-        assertIs<Result.Error<*>>(result)
-        assertTrue(result.message.contains("not initialized"))
+        assertIs<Result.Error>(result)
+        assertTrue(result.message?.contains("not initialized") == true)
     }
 
     @Test

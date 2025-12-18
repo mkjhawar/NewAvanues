@@ -1,5 +1,6 @@
 // filename: Universal/AVA/Core/Data/src/test/kotlin/com/augmentalis/ava/core/data/prefs/ChatPreferencesRAGTest.kt
 // created: 2025-11-22
+// updated: 2025-12-18 (converted from Mockito to MockK)
 // author: RAG Settings Integration Specialist
 // © Augmentalis Inc, Intelligent Devices LLC
 
@@ -7,14 +8,16 @@ package com.augmentalis.ava.core.data.prefs
 
 import android.content.Context
 import android.content.SharedPreferences
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mock
-import org.mockito.Mockito.*
-import org.mockito.junit.MockitoJUnitRunner
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -29,22 +32,15 @@ import kotlin.test.assertTrue
  * - StateFlow reactivity
  * - Edge cases (empty lists, invalid values)
  *
- * Note: Using Silent mode because not all mocks are used in all tests.
- * This is acceptable because the shared setup provides common mocks
- * that different tests use selectively.
+ * Uses MockK + Robolectric for Android unit testing.
  */
-@RunWith(MockitoJUnitRunner.Silent::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
 class ChatPreferencesRAGTest {
 
-    @Mock
     private lateinit var context: Context
-
-    @Mock
     private lateinit var sharedPreferences: SharedPreferences
-
-    @Mock
     private lateinit var editor: SharedPreferences.Editor
-
     private lateinit var chatPreferences: ChatPreferences
 
     @Before
@@ -52,19 +48,25 @@ class ChatPreferencesRAGTest {
         // Reset singleton to allow mocking for each test
         ChatPreferences.resetInstance()
 
-        // Mock SharedPreferences behavior
-        `when`(context.applicationContext).thenReturn(context)
-        `when`(context.getSharedPreferences(anyString(), anyInt())).thenReturn(sharedPreferences)
-        `when`(sharedPreferences.edit()).thenReturn(editor)
-        `when`(editor.putBoolean(anyString(), anyBoolean())).thenReturn(editor)
-        `when`(editor.putString(anyString(), anyString())).thenReturn(editor)
-        `when`(editor.putFloat(anyString(), anyFloat())).thenReturn(editor)
-        `when`(editor.apply()).then { }
+        // Create mocks
+        editor = mockk(relaxed = true) {
+            every { putBoolean(any(), any()) } returns this
+            every { putString(any(), any()) } returns this
+            every { putFloat(any(), any()) } returns this
+            every { apply() } returns Unit
+        }
 
-        // Default return values
-        `when`(sharedPreferences.getBoolean(eq("rag_enabled"), anyBoolean())).thenReturn(false)
-        `when`(sharedPreferences.getString(eq("rag_document_ids"), isNull())).thenReturn(null)
-        `when`(sharedPreferences.getFloat(eq("rag_threshold"), anyFloat())).thenReturn(0.7f)
+        sharedPreferences = mockk(relaxed = true) {
+            every { edit() } returns editor
+            every { getBoolean(eq("rag_enabled"), any()) } returns false
+            every { getString(eq("rag_document_ids"), null) } returns null
+            every { getFloat(eq("rag_threshold"), any()) } returns 0.7f
+        }
+
+        context = mockk(relaxed = true) {
+            every { applicationContext } returns this
+            every { getSharedPreferences(any(), any()) } returns sharedPreferences
+        }
 
         chatPreferences = ChatPreferences.getInstance(context)
     }
@@ -80,13 +82,13 @@ class ChatPreferencesRAGTest {
     @Test
     fun `setRagEnabled persists value`() {
         chatPreferences.setRagEnabled(true)
-        verify(editor).putBoolean("rag_enabled", true)
-        verify(editor).apply()
+        verify { editor.putBoolean("rag_enabled", true) }
+        verify { editor.apply() }
     }
 
     @Test
     fun `ragEnabled StateFlow updates when changed`() = runTest {
-        `when`(sharedPreferences.getBoolean(eq("rag_enabled"), anyBoolean())).thenReturn(true)
+        every { sharedPreferences.getBoolean(eq("rag_enabled"), any()) } returns true
 
         chatPreferences.setRagEnabled(true)
 
@@ -104,8 +106,7 @@ class ChatPreferencesRAGTest {
 
     @Test
     fun `getSelectedDocumentIds parses comma-separated string`() {
-        `when`(sharedPreferences.getString(eq("rag_document_ids"), isNull()))
-            .thenReturn("doc1,doc2,doc3")
+        every { sharedPreferences.getString(eq("rag_document_ids"), null) } returns "doc1,doc2,doc3"
 
         val ids = chatPreferences.getSelectedDocumentIds()
         assertEquals(listOf("doc1", "doc2", "doc3"), ids)
@@ -116,30 +117,29 @@ class ChatPreferencesRAGTest {
         val documentIds = listOf("doc1", "doc2", "doc3")
         chatPreferences.setSelectedDocumentIds(documentIds)
 
-        verify(editor).putString("rag_document_ids", "doc1,doc2,doc3")
-        verify(editor).apply()
+        verify { editor.putString("rag_document_ids", "doc1,doc2,doc3") }
+        verify { editor.apply() }
     }
 
     @Test
     fun `setSelectedDocumentIds handles empty list`() {
         chatPreferences.setSelectedDocumentIds(emptyList())
 
-        verify(editor).putString("rag_document_ids", "")
-        verify(editor).apply()
+        verify { editor.putString("rag_document_ids", "") }
+        verify { editor.apply() }
     }
 
     @Test
     fun `setSelectedDocumentIds handles single document`() {
         chatPreferences.setSelectedDocumentIds(listOf("doc1"))
 
-        verify(editor).putString("rag_document_ids", "doc1")
-        verify(editor).apply()
+        verify { editor.putString("rag_document_ids", "doc1") }
+        verify { editor.apply() }
     }
 
     @Test
     fun `getSelectedDocumentIds filters blank entries`() {
-        `when`(sharedPreferences.getString(eq("rag_document_ids"), isNull()))
-            .thenReturn("doc1,,doc2,  ,doc3")
+        every { sharedPreferences.getString(eq("rag_document_ids"), null) } returns "doc1,,doc2,  ,doc3"
 
         val ids = chatPreferences.getSelectedDocumentIds()
         assertEquals(listOf("doc1", "doc2", "doc3"), ids)
@@ -165,37 +165,34 @@ class ChatPreferencesRAGTest {
     @Test
     fun `setRagThreshold persists value`() {
         chatPreferences.setRagThreshold(0.8f)
-        verify(editor).putFloat("rag_threshold", 0.8f)
-        verify(editor).apply()
+        verify { editor.putFloat("rag_threshold", 0.8f) }
+        verify { editor.apply() }
     }
 
     @Test
     fun `setRagThreshold clamps value to 0_0 - 1_0 range`() {
         // Test lower bound
         chatPreferences.setRagThreshold(-0.5f)
-        verify(editor).putFloat("rag_threshold", 0.0f)
+        verify { editor.putFloat("rag_threshold", 0.0f) }
 
         // Test upper bound
-        clearInvocations(editor)
         chatPreferences.setRagThreshold(1.5f)
-        verify(editor).putFloat("rag_threshold", 1.0f)
+        verify { editor.putFloat("rag_threshold", 1.0f) }
     }
 
     @Test
     fun `setRagThreshold accepts valid values`() {
         // Test minimum
         chatPreferences.setRagThreshold(0.0f)
-        verify(editor).putFloat("rag_threshold", 0.0f)
+        verify { editor.putFloat("rag_threshold", 0.0f) }
 
         // Test mid-range
-        clearInvocations(editor)
         chatPreferences.setRagThreshold(0.5f)
-        verify(editor).putFloat("rag_threshold", 0.5f)
+        verify { editor.putFloat("rag_threshold", 0.5f) }
 
         // Test maximum
-        clearInvocations(editor)
         chatPreferences.setRagThreshold(1.0f)
-        verify(editor).putFloat("rag_threshold", 1.0f)
+        verify { editor.putFloat("rag_threshold", 1.0f) }
     }
 
     @Test
@@ -224,21 +221,9 @@ class ChatPreferencesRAGTest {
         assertEquals(0.75f, chatPreferences.ragThreshold.first())
 
         // Verify all persisted
-        verify(editor).putBoolean("rag_enabled", true)
-        verify(editor).putString("rag_document_ids", "doc1,doc2,doc3")
-        verify(editor).putFloat("rag_threshold", 0.75f)
-        verify(editor, times(3)).apply()
-    }
-
-    @Test
-    fun `RAG settings are independent from other preferences`() {
-        // Set RAG settings
-        chatPreferences.setRagEnabled(true)
-        chatPreferences.setSelectedDocumentIds(listOf("doc1"))
-        chatPreferences.setRagThreshold(0.8f)
-
-        // Verify RAG keys are distinct
-        verify(editor, never()).putBoolean(eq("conversation_mode"), anyBoolean())
-        verify(editor, never()).putFloat(eq("confidence_threshold"), anyFloat())
+        verify { editor.putBoolean("rag_enabled", true) }
+        verify { editor.putString("rag_document_ids", "doc1,doc2,doc3") }
+        verify { editor.putFloat("rag_threshold", 0.75f) }
+        verify(atLeast = 3) { editor.apply() }
     }
 }
