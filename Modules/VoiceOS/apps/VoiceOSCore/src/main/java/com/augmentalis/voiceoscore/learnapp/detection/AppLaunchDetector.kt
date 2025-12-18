@@ -11,6 +11,9 @@
 package com.augmentalis.voiceoscore.learnapp.detection
 
 import android.content.Context
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * App Launch Detector
@@ -23,6 +26,14 @@ class AppLaunchDetector(
 ) {
     private var currentPackage: String? = null
     private var listeners = mutableListOf<(AppLaunchEvent) -> Unit>()
+
+    // Flow-based API for reactive event handling
+    private val _appLaunchEvents = MutableSharedFlow<AppLaunchEvent>(
+        replay = 0,
+        extraBufferCapacity = 10
+    )
+    /** Flow of app launch events for reactive handling */
+    val appLaunchEvents: Flow<AppLaunchEvent> = _appLaunchEvents.asSharedFlow()
 
     /**
      * Register listener for app launch events
@@ -74,8 +85,27 @@ class AppLaunchDetector(
      */
     fun getCurrentPackage(): String? = currentPackage
 
+    /**
+     * Process accessibility event for package detection
+     *
+     * @param event Accessibility event to process
+     */
+    fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent) {
+        // Extract package name from event
+        val packageName = event.packageName?.toString() ?: return
+
+        // Check if this is a window state change (app launch/switch)
+        if (event.eventType == android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val className = event.className?.toString()
+            val appName = className?.substringAfterLast('.') ?: packageName.substringAfterLast('.')
+            onPackageChanged(packageName, appName)
+        }
+    }
+
     private fun notifyListeners(event: AppLaunchEvent) {
         listeners.forEach { it(event) }
+        // Also emit to flow
+        _appLaunchEvents.tryEmit(event)
     }
 }
 

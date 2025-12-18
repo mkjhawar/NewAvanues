@@ -19,8 +19,10 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 import com.augmentalis.voiceoscore.accessibility.IVoiceOSServiceInternal
+import com.augmentalis.voiceoscore.learnapp.database.LearnAppDatabaseAdapter
 import com.augmentalis.voiceoscore.learnapp.database.repository.AppMetadataProvider
 import com.augmentalis.voiceoscore.learnapp.database.repository.LearnAppRepository
+import com.augmentalis.voiceoscore.learnapp.database.repository.RepositoryResult
 import com.augmentalis.voiceoscore.learnapp.database.repository.SessionCreationResult
 import com.augmentalis.voiceoscore.learnapp.detection.AppLaunchDetector
 import com.augmentalis.voiceoscore.learnapp.detection.LearnedAppTracker
@@ -194,8 +196,9 @@ class LearnAppIntegration private constructor(
             databaseManager = databaseManager
         )
 
-        // Initialize repository with direct SQLDelight access and scraped app metadata source
-        repository = LearnAppRepository(databaseManager, context, scrapedAppMetadataSource)
+        // Initialize repository with DAO adapter (wraps SQLDelight) and scraped app metadata source
+        val databaseAdapter = LearnAppDatabaseAdapter.getInstance(context)
+        repository = LearnAppRepository(databaseAdapter.learnAppDao(), context)
         metadataProvider = AppMetadataProvider(context, scrapedAppMetadataSource)
 
         // Initialize UUIDCreator components
@@ -387,6 +390,20 @@ class LearnAppIntegration private constructor(
                                     // Activate just-in-time learning mode
                                     justInTimeLearner.activate(response.packageName)
                                 }
+
+                                is com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse.Dismissed -> {
+                                    // Dialog dismissed - no action
+                                    if (developerSettings.isVerboseLoggingEnabled()) {
+                                        Log.d(TAG, "Consent dialog dismissed for ${response.packageName}")
+                                    }
+                                }
+
+                                is com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse.Timeout -> {
+                                    // Timeout - treat as dismissed
+                                    if (developerSettings.isVerboseLoggingEnabled()) {
+                                        Log.d(TAG, "Consent dialog timed out for ${response.packageName}")
+                                    }
+                                }
                             }
                         } catch (e: Exception) {
                             Log.e(TAG, "Error handling consent response: $response", e)
@@ -548,8 +565,7 @@ class LearnAppIntegration private constructor(
                             }
 
                             // AVU Quantizer (2025-12-08): Start quantization before exploration
-                            val appName = metadataProvider.getMetadata(packageName)?.appName ?: packageName.substringAfterLast(".")
-                            avuQuantizerIntegration.startQuantization(packageName, appName)
+                            avuQuantizerIntegration.startQuantization(packageName)
 
                             // Start exploration engine with session ID for database persistence
                             explorationEngine.startExploration(packageName, result.sessionId)
@@ -1079,6 +1095,16 @@ class LearnAppIntegration private constructor(
 
                 is LoginPromptAction.Dismiss -> {
                     // Stop exploration
+                    stopExploration()
+                }
+
+                is LoginPromptAction.Pause -> {
+                    // Pause exploration for manual login
+                    pauseExploration()
+                }
+
+                is LoginPromptAction.Stop -> {
+                    // Stop exploration completely
                     stopExploration()
                 }
             }

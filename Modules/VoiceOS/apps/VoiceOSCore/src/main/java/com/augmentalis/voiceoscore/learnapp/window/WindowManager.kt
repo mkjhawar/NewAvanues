@@ -58,7 +58,19 @@ data class WindowInfo(
     val isActive: Boolean,
     val layer: Int,
     val rootNode: AccessibilityNodeInfo?
-)
+) {
+    /**
+     * Get log string representation
+     */
+    fun toLogString(): String {
+        return "[$type] ${packageName ?: "unknown"} - ${title ?: "no title"} (focused=$isFocused, layer=$layer)"
+    }
+
+    /**
+     * Reference to window state
+     */
+    val window: WindowInfo get() = this
+}
 
 /**
  * Window Manager
@@ -246,6 +258,33 @@ class WindowManager(private val service: AccessibilityService) {
             val windows = getWindowInfoList().filter {
                 it.type == WindowType.MAIN_APP || it.type == WindowType.DIALOG
             }
+            if (windows.isNotEmpty()) {
+                return windows
+            }
+            if (attempt < maxRetries - 1) {
+                kotlinx.coroutines.delay(delayMs)
+            }
+        }
+        return emptyList()
+    }
+
+    /**
+     * Get app windows with retry (package-filtered)
+     *
+     * @param packageName Optional package name to filter
+     * @param launcherDetector Optional launcher detector for exclusion
+     * @param maxRetries Maximum retry attempts
+     * @param delayMs Delay between retries in milliseconds
+     * @return List of WindowInfo for app windows
+     */
+    suspend fun getAppWindowsWithRetry(
+        packageName: String?,
+        launcherDetector: Any? = null,
+        maxRetries: Int = 3,
+        delayMs: Long = 100
+    ): List<WindowInfo> {
+        repeat(maxRetries) { attempt ->
+            val windows = getAppWindows(packageName, launcherDetector)
             if (windows.isNotEmpty()) {
                 return windows
             }

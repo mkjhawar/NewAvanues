@@ -26,7 +26,8 @@ data class LoginPromptConfig(
     val title: String = "Login Required",
     val message: String = "Please log in to continue exploration",
     val resumeButtonText: String = "I've Logged In",
-    val skipButtonText: String = "Skip Login"
+    val skipButtonText: String = "Skip Login",
+    val showVoiceHints: Boolean = false
 )
 
 // Note: LoginPromptAction is defined in LoginPromptAction.kt

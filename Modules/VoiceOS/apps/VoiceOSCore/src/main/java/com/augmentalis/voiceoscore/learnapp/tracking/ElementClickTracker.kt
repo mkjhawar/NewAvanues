@@ -171,7 +171,10 @@ data class ScreenProgress(
     val clickedElements: Int,
     val isComplete: Boolean,
     val progressPercent: Float
-)
+) {
+    /** Alias for totalElements - used by ExplorationEngine */
+    val totalClickableElements: Int get() = totalElements
+}
 
 /**
  * Tracker Stats
@@ -187,4 +190,6 @@ data class TrackerStats(
 ) {
     /** Alias for progressPercent for backward compatibility */
     val overallCompleteness: Float get() = progressPercent
+    /** Alias for elementsClicked for backward compatibility */
+    val clickedElements: Int get() = elementsClicked
 }

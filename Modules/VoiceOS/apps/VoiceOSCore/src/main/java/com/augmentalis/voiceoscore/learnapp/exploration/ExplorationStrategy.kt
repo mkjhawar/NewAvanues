@@ -42,6 +42,56 @@ interface ExplorationStrategy {
      * Strategy name for logging
      */
     val name: String
+
+    /**
+     * Get maximum exploration time in milliseconds
+     */
+    fun getMaxExplorationTime(): Long = 300_000L  // 5 minutes default
+
+    /**
+     * Get maximum back navigation attempts
+     */
+    fun getMaxBackNavigationAttempts(): Int = 3
+
+    /**
+     * Get screen hash similarity threshold (0.0-1.0)
+     */
+    fun getScreenHashSimilarityThreshold(): Float = 0.8f
+
+    /**
+     * Order elements for exploration
+     */
+    fun orderElements(elements: List<ElementInfo>): List<ElementInfo> = prioritize(elements)
+
+    /**
+     * Should explore this element
+     */
+    fun shouldExplore(element: ElementInfo): Boolean = element.isClickable
+
+    /**
+     * Minimum confidence threshold for element classification
+     */
+    fun getMinConfidenceThreshold(): Float = 0.5f
+
+    /**
+     * Get login timeout in milliseconds
+     */
+    fun getLoginTimeoutMs(): Long = 30_000L  // 30 seconds default
+
+    /**
+     * Get click retry delay in milliseconds
+     */
+    fun getClickRetryDelayMs(): Long = 500L
+
+    /**
+     * Get expansion wait delay in milliseconds
+     */
+    fun getExpansionWaitDelayMs(): Long = 200L
+
+    companion object {
+        /** Minimum confidence threshold constant */
+        const val MIN_CONFIDENCE_THRESHOLD = 0.5f
+    }
 }
 
 /**

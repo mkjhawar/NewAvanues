@@ -12,6 +12,7 @@ package com.augmentalis.voiceoscore.learnapp.database.repository
 
 import android.content.Context
 import android.content.pm.PackageManager
+import kotlinx.coroutines.runBlocking
 
 /**
  * App Metadata Provider
@@ -103,7 +104,7 @@ class ScrapedAppMetadataSourceImpl(
 
     override fun getMetadata(packageName: String): AppMetadata? {
         return try {
-            val scrapedApp = databaseManager.scrapedApps.getByPackage(packageName)
+            val scrapedApp = runBlocking { databaseManager.scrapedApps.getByPackage(packageName) }
             scrapedApp?.let {
                 AppMetadata(
                     packageName = it.packageName,

@@ -135,6 +135,38 @@ data class NavigationGraph(
     fun getReachableScreens(fromScreenHash: String): List<String> =
         getOutgoingEdges(fromScreenHash).map { it.toScreenHash }
 
+    /** Get all screen hashes */
+    fun getScreens(): List<String> = nodes.keys.toList()
+
+    /** Get elements for a screen (as GraphElement objects) */
+    fun getElementsForScreen(screenHash: String): List<GraphElement> {
+        val node = nodes[screenHash] ?: return emptyList()
+        return node.elements.map { uuid ->
+            GraphElement(
+                uuid = uuid,
+                alias = null,  // Would need to look up from database
+                type = "unknown",
+                text = null,
+                contentDescription = null,
+                isClickable = true
+            )
+        }
+    }
+
+    /** Get transitions from a screen */
+    fun getTransitionsFrom(screenHash: String): List<GraphTransition> {
+        return getOutgoingEdges(screenHash).map { edge ->
+            GraphTransition(
+                fromScreen = edge.fromScreenHash,
+                toScreen = edge.toScreenHash,
+                elementUuid = edge.clickedElementUuid
+            )
+        }
+    }
+
+    /** Get activity name for screen */
+    fun getActivityName(screenHash: String): String? = nodes[screenHash]?.activityName
+
     fun findPath(startHash: String, endHash: String): List<String> {
         if (startHash == endHash) return listOf(startHash)
 
@@ -232,4 +264,25 @@ data class GraphStats(
     val totalEdges: Int,
     val averageOutDegree: Float,
     val maxDepth: Int
+)
+
+/**
+ * Graph Element (simplified element info for graph)
+ */
+data class GraphElement(
+    val uuid: String?,
+    val alias: String?,
+    val type: String,
+    val text: String?,
+    val contentDescription: String?,
+    val isClickable: Boolean
+)
+
+/**
+ * Graph Transition (simplified transition info for graph)
+ */
+data class GraphTransition(
+    val fromScreen: String,
+    val toScreen: String,
+    val elementUuid: String
 )

@@ -12,9 +12,12 @@ package com.augmentalis.voiceoscore.learnapp.ui
 
 import android.accessibilityservice.AccessibilityService
 import com.augmentalis.voiceoscore.learnapp.detection.LearnedAppTracker
-import com.augmentalis.voiceoscore.learnapp.consent.ConsentResponse
+import com.augmentalis.voiceoscore.learnapp.consent.ConsentResponse as InternalConsentResponse
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
@@ -30,7 +33,14 @@ class ConsentDialogManager(
     private val _currentConsentState = MutableStateFlow<ConsentState>(ConsentState.None)
     val currentConsentState: StateFlow<ConsentState> = _currentConsentState.asStateFlow()
 
-    private var pendingCallback: ((ConsentResponse) -> Unit)? = null
+    private val _consentResponses = MutableSharedFlow<com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse>(
+        replay = 0,
+        extraBufferCapacity = 10
+    )
+    /** Flow of consent responses for reactive handling */
+    val consentResponses: Flow<com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse> = _consentResponses.asSharedFlow()
+
+    private var pendingCallback: ((InternalConsentResponse) -> Unit)? = null
 
     /**
      * Check if consent is needed for package
@@ -50,26 +60,51 @@ class ConsentDialogManager(
     fun showConsentDialog(
         packageName: String,
         appName: String,
-        callback: (ConsentResponse) -> Unit
+        callback: (InternalConsentResponse) -> Unit
     ) {
         pendingCallback = callback
         _currentConsentState.value = ConsentState.Showing(packageName, appName)
     }
 
     /**
+     * Show consent dialog for package (Flow-based API)
+     *
+     * Uses consentResponses Flow instead of callback for reactive handling.
+     *
+     * @param packageName Package to show consent for
+     * @param appName Display name of the app
+     */
+    fun showConsentDialog(
+        packageName: String,
+        appName: String
+    ) {
+        _currentConsentState.value = ConsentState.Showing(packageName, appName)
+        // Responses will be emitted to consentResponses Flow
+    }
+
+    /**
+     * Emit consent response to Flow
+     *
+     * @param response The consent response to emit
+     */
+    fun emitConsentResponse(response: com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse) {
+        _consentResponses.tryEmit(response)
+    }
+
+    /**
      * Handle user response to consent dialog
      */
-    fun handleConsentResponse(response: ConsentResponse) {
+    fun handleConsentResponse(response: InternalConsentResponse) {
         val currentState = _currentConsentState.value
         if (currentState is ConsentState.Showing) {
             when (response) {
-                ConsentResponse.Accept -> {
+                InternalConsentResponse.Accept -> {
                     // Mark consent accepted
                 }
-                ConsentResponse.Skip -> {
+                InternalConsentResponse.Skip -> {
                     // Enable JIT learning only
                 }
-                ConsentResponse.Decline -> {
+                InternalConsentResponse.Decline -> {
                     learnedAppTracker.excludePackage(currentState.packageName)
                 }
                 else -> {}
@@ -87,7 +122,7 @@ class ConsentDialogManager(
     fun dismissDialog() {
         if (_currentConsentState.value is ConsentState.Showing) {
             _currentConsentState.value = ConsentState.None
-            pendingCallback?.invoke(ConsentResponse.Dismissed)
+            pendingCallback?.invoke(InternalConsentResponse.Dismissed)
             pendingCallback = null
         }
     }
@@ -97,6 +132,14 @@ class ConsentDialogManager(
      */
     fun isDialogShowing(): Boolean {
         return _currentConsentState.value is ConsentState.Showing
+    }
+
+    /**
+     * Cleanup resources
+     */
+    fun cleanup() {
+        dismissDialog()
+        pendingCallback = null
     }
 }
 

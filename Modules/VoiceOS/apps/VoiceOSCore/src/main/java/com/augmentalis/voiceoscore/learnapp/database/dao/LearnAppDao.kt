@@ -88,6 +88,13 @@ interface LearnAppDao {
     suspend fun updateAppStats(packageName: String, totalScreens: Int, totalElements: Int)
 
     /**
+     * Update a learned app
+     *
+     * @param app LearnedAppEntity with updated values
+     */
+    suspend fun updateLearnedApp(app: LearnedAppEntity)
+
+    /**
      * Delete a learned app
      *
      * @param app LearnedAppEntity to delete

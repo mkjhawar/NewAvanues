@@ -30,8 +30,11 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * Main entry point for quantized context generation and LLM prompt creation.
  * Converts exploration data into compact representations suitable for NLU/LLM consumption.
+ *
+ * Implements ExplorationDebugCallback to receive exploration events and chain them
+ * to other callbacks while processing for quantization.
  */
-class AVUQuantizerIntegration(private val context: Context) {
+class AVUQuantizerIntegration(private val context: Context) : com.augmentalis.voiceoscore.learnapp.exploration.ExplorationDebugCallback {
 
     companion object {
         private const val TAG = "AVUQuantizerIntegration"
@@ -378,4 +381,163 @@ class AVUQuantizerIntegration(private val context: Context) {
         val context: QuantizedContext,
         val timestamp: Long
     )
+
+    // ============================================
+    // ExplorationDebugCallback Integration
+    // ============================================
+
+    private var chainedCallback: com.augmentalis.voiceoscore.learnapp.exploration.ExplorationDebugCallback? = null
+    private var isQuantizing = false
+    private var currentPackageName: String? = null
+    private var elementsProcessed = 0
+    private var screensProcessed = 0
+    private var actionCandidates = 0
+
+    /**
+     * Set chained debug callback
+     *
+     * When set, this callback receives all exploration events after quantization processing.
+     *
+     * @param callback The callback to chain, or null to clear
+     */
+    fun setChainedCallback(callback: com.augmentalis.voiceoscore.learnapp.exploration.ExplorationDebugCallback?) {
+        chainedCallback = callback
+    }
+
+    /**
+     * Start quantization for a package
+     *
+     * @param packageName Package to quantize
+     */
+    fun startQuantization(packageName: String) {
+        isQuantizing = true
+        currentPackageName = packageName
+        elementsProcessed = 0
+        screensProcessed = 0
+        actionCandidates = 0
+        Log.d(TAG, "Started quantization for $packageName")
+    }
+
+    /**
+     * Stop quantization and return the quantized context
+     *
+     * @return QuantizedContext if available, null otherwise
+     */
+    fun stopQuantization(): QuantizedContext? {
+        if (!isQuantizing || currentPackageName == null) {
+            return null
+        }
+
+        isQuantizing = false
+        val packageName = currentPackageName
+        currentPackageName = null
+
+        Log.d(TAG, "Stopped quantization for $packageName - " +
+            "$screensProcessed screens, $elementsProcessed elements, $actionCandidates actions")
+
+        // Return cached context if available
+        return if (packageName != null) {
+            contextCache[packageName]?.context
+        } else {
+            null
+        }
+    }
+
+    /**
+     * Get quantization statistics
+     *
+     * @return QuantizerStats with current quantization statistics
+     */
+    fun getQuantizerStats(): QuantizerStats {
+        return QuantizerStats(
+            screensProcessed = screensProcessed,
+            elementsProcessed = elementsProcessed,
+            actionCandidates = actionCandidates
+        )
+    }
+
+    /**
+     * Process accessibility event during exploration
+     *
+     * Called by exploration engine for each accessibility event.
+     *
+     * @param event The accessibility event
+     */
+    fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent) {
+        if (!isQuantizing) return
+
+        // Track events for quantization statistics
+        when (event.eventType) {
+            android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+            android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                // Could process screen changes here
+            }
+            android.view.accessibility.AccessibilityEvent.TYPE_VIEW_CLICKED -> {
+                actionCandidates++
+            }
+        }
+    }
+
+    /**
+     * Called when a screen is explored during quantization
+     */
+    override fun onScreenExplored(
+        elements: List<com.augmentalis.voiceoscore.learnapp.models.ElementInfo>,
+        screenHash: String,
+        activityName: String,
+        packageName: String,
+        parentScreenHash: String?
+    ) {
+        if (isQuantizing) {
+            screensProcessed++
+            elementsProcessed += elements.size
+            actionCandidates += elements.count { it.isClickable }
+        }
+
+        // Forward to chained callback
+        chainedCallback?.onScreenExplored(elements, screenHash, activityName, packageName, parentScreenHash)
+    }
+
+    /**
+     * Called when navigation occurs during exploration
+     */
+    override fun onElementNavigated(elementKey: String, destinationScreenHash: String) {
+        // Forward to chained callback
+        chainedCallback?.onElementNavigated(elementKey, destinationScreenHash)
+    }
+
+    /**
+     * Called when exploration progress updates
+     */
+    override fun onProgressUpdated(progress: Int) {
+        // Forward to chained callback
+        chainedCallback?.onProgressUpdated(progress)
+    }
+
+    /**
+     * Called when an element is clicked
+     */
+    override fun onElementClicked(stableId: String, screenHash: String, vuid: String?) {
+        // Forward to chained callback
+        chainedCallback?.onElementClicked(stableId, screenHash, vuid)
+    }
+
+    /**
+     * Called when an element is blocked
+     */
+    override fun onElementBlocked(stableId: String, screenHash: String, reason: String) {
+        // Forward to chained callback
+        chainedCallback?.onElementBlocked(stableId, screenHash, reason)
+    }
 }
+
+/**
+ * Quantizer Statistics
+ *
+ * Statistics from the quantization process.
+ */
+data class QuantizerStats(
+    val screensProcessed: Int,
+    val elementsProcessed: Int,
+    val actionCandidates: Int
+)

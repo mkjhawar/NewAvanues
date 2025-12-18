@@ -26,7 +26,15 @@ data class ExplorationStats(
     val maxDepth: Int,
     val dangerousElementsSkipped: Int = 0,
     val loginScreensDetected: Int = 0,
-    val scrollableContainersFound: Int = 0
+    val scrollableContainersFound: Int = 0,
+    /** Overall exploration completeness percentage (0-100) */
+    val completeness: Float = 0f,
+    /** Number of elements that were clicked */
+    val clickedElements: Int = 0,
+    /** Number of elements that could be clicked (non-blocked) */
+    val nonBlockedElements: Int = 0,
+    /** Number of elements that were blocked (dangerous/critical) */
+    val blockedElements: Int = 0
 ) {
 
     /**

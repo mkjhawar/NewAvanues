@@ -278,6 +278,108 @@ class LearnAppRepository(
         )
     }
 
+    // ========== App Learning Status ==========
+
+    /**
+     * Reset app for relearning
+     *
+     * Clears exploration data (sessions, screen states, navigation edges)
+     * and sets exploration status to PARTIAL, allowing re-exploration.
+     *
+     * @param packageName Package name of the app
+     * @return RepositoryResult indicating success or failure
+     */
+    suspend fun resetAppForRelearning(packageName: String): RepositoryResult<Boolean> {
+        val mutex = getMutexForPackage(packageName)
+        return mutex.withLock {
+            try {
+                val app = dao.getLearnedApp(packageName)
+                if (app == null) {
+                    return@withLock RepositoryResult.Failure(
+                        reason = "App with package '$packageName' not found"
+                    )
+                }
+
+                // Delete exploration data but keep the app entry
+                dao.deleteNavigationGraph(packageName)
+                dao.deleteScreenStatesForPackage(packageName)
+                dao.deleteSessionsForPackage(packageName)
+
+                // Reset app status to PARTIAL
+                dao.updateLearnedApp(app.copy(
+                    explorationStatus = ExplorationStatus.PARTIAL,
+                    totalScreens = 0,
+                    totalElements = 0,
+                    lastUpdatedAt = System.currentTimeMillis()
+                ))
+
+                RepositoryResult.Success(true)
+            } catch (e: Exception) {
+                RepositoryResult.Failure(
+                    reason = "Error resetting app: ${e.message}",
+                    cause = e
+                )
+            }
+        }
+    }
+
+    /**
+     * Mark app as fully learned
+     *
+     * @param packageName Package name of the app
+     * @param timestamp When the app was fully learned
+     */
+    suspend fun markAppAsFullyLearned(packageName: String, timestamp: Long) {
+        val mutex = getMutexForPackage(packageName)
+        mutex.withLock {
+            val existing = dao.getLearnedApp(packageName)
+            if (existing != null) {
+                dao.updateLearnedApp(existing.copy(
+                    explorationStatus = ExplorationStatus.COMPLETE,
+                    lastUpdatedAt = timestamp
+                ))
+            }
+        }
+    }
+
+    /**
+     * Save pause state for session
+     *
+     * @param sessionId Session ID
+     * @param pauseState Pause state string
+     */
+    suspend fun savePauseState(sessionId: String, pauseState: String) {
+        val session = dao.getExplorationSession(sessionId)
+        if (session != null) {
+            dao.updateSessionStatus(
+                sessionId = sessionId,
+                status = if (pauseState == "PAUSED") SessionStatus.PAUSED else session.status,
+                completedAt = session.completedAt ?: 0L,
+                durationMs = session.durationMs ?: 0L
+            )
+        }
+    }
+
+    /**
+     * Save exploration metrics
+     *
+     * @param packageName Package name
+     * @param stats Exploration statistics
+     */
+    suspend fun saveMetrics(packageName: String, stats: ExplorationStats) {
+        val mutex = getMutexForPackage(packageName)
+        mutex.withLock {
+            val existing = dao.getLearnedApp(packageName)
+            if (existing != null) {
+                dao.updateLearnedApp(existing.copy(
+                    totalScreens = stats.totalScreens,
+                    totalElements = stats.totalElements,
+                    lastUpdatedAt = System.currentTimeMillis()
+                ))
+            }
+        }
+    }
+
     // ========== Utility ==========
 
     private fun calculateAppHash(packageName: String): String {

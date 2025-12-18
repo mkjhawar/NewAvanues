@@ -101,4 +101,38 @@ object LauncherDetector {
     fun clearCache() {
         cachedLauncherPackage = null
     }
+
+    /**
+     * Detect all launcher packages on the device
+     *
+     * @param context Application context (optional, uses internal package list if not provided)
+     * @return List of launcher package names
+     */
+    fun detectLauncherPackages(context: Context? = null): List<String> {
+        val launchers = mutableListOf<String>()
+
+        // Add cached launcher if available
+        cachedLauncherPackage?.let { launchers.add(it) }
+
+        // If context provided, try to detect default launcher
+        context?.let {
+            getLauncherPackage(it)?.let { pkg ->
+                if (pkg !in launchers) launchers.add(pkg)
+            }
+        }
+
+        // Add common known launchers that might be present
+        LAUNCHER_PACKAGES.forEach { knownLauncher ->
+            if (knownLauncher !in launchers) {
+                launchers.add(knownLauncher)
+            }
+        }
+
+        return launchers.distinct()
+    }
+
+    /**
+     * Detect launcher packages without context (uses cached/known list)
+     */
+    fun detectLauncherPackages(): List<String> = detectLauncherPackages(null)
 }

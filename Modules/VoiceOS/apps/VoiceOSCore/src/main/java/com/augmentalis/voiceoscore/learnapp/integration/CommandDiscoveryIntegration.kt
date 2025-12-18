@@ -61,7 +61,7 @@ class CommandDiscoveryIntegration(
         isActive = true
         scope.launch {
             try {
-                explorationEngine.state().collectLatest { state ->
+                explorationEngine.explorationState.collectLatest { state ->
                     Log.d(TAG, "Exploration state changed: $state")
                     // TODO: Implement actual command discovery logic
                     // When state == COMPLETED:
