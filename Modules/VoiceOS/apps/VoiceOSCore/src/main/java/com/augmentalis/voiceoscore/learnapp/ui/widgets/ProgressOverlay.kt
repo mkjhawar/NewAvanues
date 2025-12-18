@@ -190,7 +190,7 @@ class ProgressOverlay(private val context: Context) {
     fun cleanup() {
         rootView = null
         messageText = null
-        layoutParams = null
+        helper = null
         isShowing = false
     }
 }

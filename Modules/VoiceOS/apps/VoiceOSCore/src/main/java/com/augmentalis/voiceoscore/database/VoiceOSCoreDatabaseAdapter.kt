@@ -252,22 +252,17 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
 
     /**
      * Extension: Insert batch of hierarchy records
-     * Note: The old Room entity uses ID-based relationships, but SQLDelight uses hash-based.
-     * This is a compatibility shim - caller should migrate to hash-based entities.
      */
     suspend fun insertHierarchyBatch(hierarchies: List<com.augmentalis.voiceoscore.scraping.entities.ScrapedHierarchyEntity>): List<Long> {
         val ids = mutableListOf<Long>()
         hierarchies.forEach { hierarchy ->
-            // WARNING: This won't work correctly - Room entity uses IDs, SQLDelight uses hashes
-            // Caller needs to provide hash-based hierarchy data instead
-            // Using placeholder values to compile, but this needs proper migration
             databaseManager.scrapedHierarchies.insert(
-                parentElementHash = hierarchy.parentElementId.toString(), // TODO: Map ID to hash
-                childElementHash = hierarchy.childElementId.toString(),   // TODO: Map ID to hash
+                parentElementHash = hierarchy.parentElementHash,
+                childElementHash = hierarchy.childElementHash,
                 depth = hierarchy.depth.toLong(),
-                createdAt = System.currentTimeMillis() // Entity doesn't have createdAt field
+                createdAt = hierarchy.createdAt
             )
-            ids.add(hierarchy.id)
+            ids.add(hierarchy.id ?: System.currentTimeMillis())
         }
         return ids
     }
@@ -291,7 +286,6 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
     suspend fun insertRelationshipBatch(relationships: List<com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity>): List<Long> {
         val ids = mutableListOf<Long>()
         relationships.forEach { relationship ->
-            val currentTime = System.currentTimeMillis()
             databaseManager.elementRelationships.insert(
                 sourceElementHash = relationship.sourceElementHash,
                 targetElementHash = relationship.targetElementHash,
@@ -299,9 +293,9 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
                 relationshipData = relationship.relationshipData,
                 confidence = relationship.confidence.toDouble(),
                 createdAt = relationship.createdAt,
-                updatedAt = currentTime // Entity doesn't have updatedAt field, use current time
+                updatedAt = relationship.updatedAt
             )
-            ids.add(relationship.id)
+            ids.add(relationship.id ?: System.currentTimeMillis())
         }
         return ids
     }
@@ -374,19 +368,17 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
 
     /**
      * Extension: Insert screen transition
-     * Note: Old Room entity is missing triggerElementHash and triggerAction fields.
-     * Using defaults for compatibility.
      */
     suspend fun insertScreenTransition(transition: com.augmentalis.voiceoscore.scraping.entities.ScreenTransitionEntity) {
         val dto = com.augmentalis.database.dto.ScreenTransitionDTO(
             id = transition.id,
             fromScreenHash = transition.fromScreenHash,
             toScreenHash = transition.toScreenHash,
-            triggerElementHash = null, // Entity doesn't have this field
-            triggerAction = "unknown", // Entity doesn't have this field
+            triggerElementHash = transition.triggerElementHash,
+            triggerAction = transition.triggerAction,
             transitionCount = transition.transitionCount.toLong(),
-            avgDurationMs = transition.avgTransitionTime ?: 0L,
-            lastTransitionAt = transition.lastTransition
+            avgDurationMs = transition.avgDurationMs,
+            lastTransitionAt = transition.lastTransitionAt
         )
         databaseManager.screenTransitions.insert(dto)
     }
@@ -501,16 +493,14 @@ private fun AppEntity.toScrapedAppDTO(): com.augmentalis.database.dto.ScrapedApp
 
 /**
  * Convert ScrapedHierarchyEntity to DTO
- * Note: This conversion is problematic - Room entity uses IDs, SQLDelight uses hashes.
- * This is a stub that won't work correctly without proper ID-to-hash mapping.
  */
 private fun com.augmentalis.voiceoscore.scraping.entities.ScrapedHierarchyEntity.toScrapedHierarchyDTO(): com.augmentalis.database.dto.ScrapedHierarchyDTO {
     return com.augmentalis.database.dto.ScrapedHierarchyDTO(
-        id = this.id,
-        parentElementHash = this.parentElementId.toString(), // WARNING: ID to hash conversion needed
-        childElementHash = this.childElementId.toString(),   // WARNING: ID to hash conversion needed
+        id = this.id ?: 0L,
+        parentElementHash = this.parentElementHash,
+        childElementHash = this.childElementHash,
         depth = this.depth.toLong(),
-        createdAt = System.currentTimeMillis() // Entity doesn't have createdAt field
+        createdAt = System.currentTimeMillis()
     )
 }
 
@@ -556,14 +546,14 @@ private fun com.augmentalis.database.dto.GeneratedCommandDTO.toGeneratedCommandE
  */
 private fun com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity.toElementRelationshipDTO(): com.augmentalis.database.dto.ElementRelationshipDTO {
     return com.augmentalis.database.dto.ElementRelationshipDTO(
-        id = this.id,
+        id = this.id ?: 0L,
         sourceElementHash = this.sourceElementHash,
         targetElementHash = this.targetElementHash,
         relationshipType = this.relationshipType,
         relationshipData = this.relationshipData,
         confidence = this.confidence.toDouble(),
         createdAt = this.createdAt,
-        updatedAt = this.createdAt // Entity doesn't have updatedAt field, use createdAt
+        updatedAt = this.updatedAt
     )
 }
 
@@ -594,7 +584,7 @@ private fun com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity.t
         semanticRole = this.semanticRole,
         inputType = this.inputType,
         visualWeight = this.visualWeight,
-        isRequired = if (this.isRequired == true) 1L else null,
+        isRequired = if (this.isRequired) 1L else null,
         formGroupId = this.formGroupId,
         placeholderText = this.placeholderText,
         validationPattern = this.validationPattern,

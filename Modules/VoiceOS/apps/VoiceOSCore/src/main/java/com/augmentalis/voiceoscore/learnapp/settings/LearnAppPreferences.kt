@@ -57,21 +57,6 @@ class LearnAppPreferences(context: Context) {
         get() = prefs.getLong(KEY_CLICK_DELAY, DEFAULT_CLICK_DELAY)
         set(value) = prefs.edit().putLong(KEY_CLICK_DELAY, value).apply()
 
-    // ========== Auto-Detect Settings ==========
-
-    /**
-     * Check if auto-detect mode is enabled.
-     * When enabled, LearnApp automatically detects app launches and shows consent dialogs.
-     */
-    fun isAutoDetectEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_DETECT_ENABLED, true)
-
-    /**
-     * Enable or disable auto-detect mode.
-     */
-    fun setAutoDetectEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_AUTO_DETECT_ENABLED, enabled).apply()
-    }
-
     // ========== Consent Settings ==========
 
     var hasShownGlobalConsent: Boolean
@@ -146,7 +131,6 @@ class LearnAppPreferences(context: Context) {
         private const val KEY_SHOW_EXPLORATION_OVERLAY = "show_exploration_overlay"
         private const val KEY_EXCLUDED_PACKAGES = "excluded_packages"
         private const val KEY_PACKAGE_CONSENT_PREFIX = "consent_"
-        private const val KEY_AUTO_DETECT_ENABLED = "auto_detect_enabled"
 
         // Defaults
         private const val DEFAULT_DEPTH_LIMIT = 10

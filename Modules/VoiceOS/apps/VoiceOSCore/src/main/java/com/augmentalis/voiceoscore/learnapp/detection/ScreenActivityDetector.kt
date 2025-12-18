@@ -316,8 +316,8 @@ class ScreenActivityDetector(
         bounds: android.graphics.Rect
     ) {
         try {
-            renameHintOverlay.show(currentLabel)
-            Log.d(TAG, "Showing rename hint for element: $elementId with label: $currentLabel")
+            renameHintOverlay.show(elementId, currentLabel, bounds)
+            Log.d(TAG, "Showing rename hint for element: $elementId")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to show rename hint", e)
         }

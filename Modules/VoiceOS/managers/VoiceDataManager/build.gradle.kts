@@ -1,7 +1,7 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
-    id("com.google.devtools.ksp") version "1.9.24-1.0.20"  // For Room annotation processing
+    id("com.google.devtools.ksp") version "1.9.25-1.0.20"  // For Room annotation processing
     id("kotlin-parcelize")
 }
 
@@ -50,7 +50,7 @@ android {
     }
     
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"  // Compatible with Kotlin 1.9.24
+        kotlinCompilerExtensionVersion = "1.5.15"  // Compatible with Kotlin 1.9.25
     }
 }
 

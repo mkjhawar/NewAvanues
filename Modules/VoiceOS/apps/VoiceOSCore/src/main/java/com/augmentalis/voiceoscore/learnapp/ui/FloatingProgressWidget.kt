@@ -54,34 +54,12 @@ import kotlinx.coroutines.withContext
  * widget.dismiss()
  * ```
  */
-class FloatingProgressWidget private constructor(
+class FloatingProgressWidget(
     private val context: Context,
     private val windowManager: WindowManager
 ) {
     companion object {
         private const val TAG = "FloatingProgressWidget"
-    }
-
-    /**
-     * Secondary constructor with callback parameters
-     *
-     * @param context Context (typically AccessibilityService)
-     * @param onPauseClick Called when pause button is clicked
-     * @param onResumeClick Called when resume button is clicked
-     * @param onStopClick Called when stop button is clicked
-     */
-    constructor(
-        context: Context,
-        onPauseClick: (() -> Unit)?,
-        onResumeClick: (() -> Unit)?,
-        onStopClick: (() -> Unit)?
-    ) : this(
-        context,
-        context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    ) {
-        this.onPauseClicked = onPauseClick
-        this.onResumeClicked = onResumeClick
-        this.onStopClicked = onStopClick
     }
 
     // Coroutine scope for async operations
@@ -217,39 +195,6 @@ class FloatingProgressWidget private constructor(
 
     // Internal debug overlay manager
     private val debugOverlayManager = DebugOverlayManager()
-
-    /**
-     * Update pause state
-     *
-     * @param isPaused Whether exploration is paused
-     */
-    fun updatePauseState(isPaused: Boolean) {
-        setPaused(isPaused)
-    }
-
-    /**
-     * Enable debug overlay (show debug information during exploration)
-     */
-    fun enableDebugOverlay() {
-        debugOverlayManager.setEnabled(true)
-    }
-
-    /**
-     * Disable debug overlay
-     */
-    fun disableDebugOverlay() {
-        debugOverlayManager.setEnabled(false)
-    }
-
-    /**
-     * Cleanup resources
-     *
-     * Call when widget is no longer needed to release resources.
-     */
-    fun cleanup() {
-        dismiss()
-        debugOverlayManager.reset()
-    }
 
     // ========================================================================
     // Private Implementation

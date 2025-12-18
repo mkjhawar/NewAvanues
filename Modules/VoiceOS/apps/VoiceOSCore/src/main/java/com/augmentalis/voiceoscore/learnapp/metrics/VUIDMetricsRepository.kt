@@ -67,10 +67,8 @@ class VUIDMetricsRepository {
 
     /**
      * Get current metrics snapshot
-     *
-     * Note: Use getMetricsSnapshot() to avoid JVM clash with currentMetrics property
      */
-    fun getMetricsSnapshot(): VUIDMetrics {
+    fun getCurrentMetrics(): VUIDMetrics {
         return currentMetrics
     }
 
@@ -97,20 +95,6 @@ class VUIDMetricsRepository {
         val metrics = currentMetrics
         if (metrics.totalLookups == 0L) return 0f
         return (metrics.successfulLookups.toFloat() / metrics.totalLookups) * 100f
-    }
-
-    /**
-     * Save metrics from exploration session
-     *
-     * @param metrics VUIDCreationMetrics from exploration
-     */
-    fun saveMetrics(metrics: VUIDCreationMetrics) {
-        _metricsFlow.value = VUIDMetrics(
-            totalCreated = metrics.vuidsCreated.toLong(),
-            totalElementsDetected = metrics.elementsDetected.toLong(),
-            totalFiltered = metrics.filteredCount.toLong(),
-            lastCreatedAt = metrics.explorationTimestamp
-        )
     }
 }
 

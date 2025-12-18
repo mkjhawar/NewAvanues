@@ -21,9 +21,6 @@ class DebugOverlayManager {
     private var commandsGenerated = 0
     private var errorsEncountered = 0
     private var startTime = 0L
-    private var isEnabled = false
-    private val elementTracking = mutableMapOf<String, MutableMap<String, Boolean>>()
-    private val navigationTracking = mutableListOf<Triple<String, String, String>>()
 
     /**
      * Start tracking a new exploration session
@@ -97,62 +94,6 @@ class DebugOverlayManager {
             |Errors: ${summary.errorsEncountered}
             |Time: ${summary.elapsedTimeMs / 1000}s
         """.trimMargin()
-    }
-
-    /**
-     * Set enabled state
-     */
-    fun setEnabled(enabled: Boolean) {
-        isEnabled = enabled
-    }
-
-    /**
-     * Check if debug overlay is enabled
-     */
-    fun isEnabled(): Boolean = isEnabled
-
-    /**
-     * Called when a screen is explored
-     */
-    fun onScreenExplored(
-        elements: List<com.augmentalis.voiceoscore.learnapp.models.ElementInfo>,
-        screenHash: String,
-        activityName: String,
-        packageName: String,
-        parentScreenHash: String?
-    ) {
-        incrementScreens()
-        addElements(elements.size)
-
-        // Initialize tracking for this screen
-        if (!elementTracking.containsKey(screenHash)) {
-            elementTracking[screenHash] = mutableMapOf()
-            elements.forEach { element ->
-                elementTracking[screenHash]!![element.stableId()] = false
-            }
-        }
-    }
-
-    /**
-     * Record navigation from element click
-     */
-    fun recordNavigation(stableId: String, fromScreenHash: String, toScreenHash: String) {
-        navigationTracking.add(Triple(stableId, fromScreenHash, toScreenHash))
-    }
-
-    /**
-     * Mark an element as clicked
-     */
-    fun markItemClicked(stableId: String, screenHash: String, vuid: String?) {
-        elementTracking[screenHash]?.set(stableId, true)
-    }
-
-    /**
-     * Mark an element as blocked
-     */
-    fun markItemBlocked(stableId: String, screenHash: String, reason: String) {
-        // Track blocked items (could add separate tracking if needed)
-        recordError()
     }
 }
 

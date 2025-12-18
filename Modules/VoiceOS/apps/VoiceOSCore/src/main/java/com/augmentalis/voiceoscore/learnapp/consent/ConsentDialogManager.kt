@@ -12,11 +12,8 @@ package com.augmentalis.voiceoscore.learnapp.consent
 
 import android.accessibilityservice.AccessibilityService
 import com.augmentalis.voiceoscore.learnapp.detection.LearnedAppTracker
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
@@ -31,14 +28,6 @@ class ConsentDialogManager(
 ) {
     private val _currentConsentState = MutableStateFlow<ConsentState>(ConsentState.None)
     val currentConsentState: StateFlow<ConsentState> = _currentConsentState.asStateFlow()
-
-    private val _consentResponses = MutableSharedFlow<com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse>(
-        replay = 0,
-        extraBufferCapacity = 10
-    )
-    /** Flow of consent responses for reactive handling */
-    val consentResponses: kotlinx.coroutines.flow.Flow<com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse> =
-        _consentResponses.asSharedFlow()
 
     private var pendingCallback: ((ConsentResponse) -> Unit)? = null
 
@@ -66,31 +55,6 @@ class ConsentDialogManager(
         _currentConsentState.value = ConsentState.Showing(packageName, appName)
         // Actual dialog showing would be implemented here
         // For now, this is a placeholder that would integrate with overlay system
-    }
-
-    /**
-     * Show consent dialog for package (Flow-based API)
-     *
-     * Uses consentResponses Flow instead of callback for reactive handling.
-     *
-     * @param packageName Package to show consent for
-     * @param appName Display name of the app
-     */
-    fun showConsentDialog(
-        packageName: String,
-        appName: String
-    ) {
-        _currentConsentState.value = ConsentState.Showing(packageName, appName)
-        // Responses will be emitted to consentResponses Flow
-    }
-
-    /**
-     * Emit consent response to Flow
-     *
-     * @param response The consent response to emit
-     */
-    fun emitConsentResponse(response: com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse) {
-        _consentResponses.tryEmit(response)
     }
 
     /**
@@ -134,14 +98,6 @@ class ConsentDialogManager(
      */
     fun isDialogShowing(): Boolean {
         return _currentConsentState.value is ConsentState.Showing
-    }
-
-    /**
-     * Cleanup resources
-     */
-    fun cleanup() {
-        dismissDialog()
-        pendingCallback = null
     }
 }
 

@@ -63,14 +63,6 @@ INSERT OR IGNORE INTO learned_apps (
 getLearnedApp:
 SELECT * FROM learned_apps WHERE package_name = ?;
 
--- Update learned app (all fields except package_name)
-updateLearnedApp:
-UPDATE learned_apps
-SET app_name = ?, version_code = ?, version_name = ?,
-    last_updated_at = ?, total_screens = ?, total_elements = ?,
-    app_hash = ?, exploration_status = ?
-WHERE package_name = ?;
-
 -- Get all learned apps
 getAllLearnedApps:
 SELECT * FROM learned_apps ORDER BY last_updated_at DESC;

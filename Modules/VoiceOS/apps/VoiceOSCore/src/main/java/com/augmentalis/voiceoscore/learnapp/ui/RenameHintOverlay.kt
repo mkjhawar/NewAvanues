@@ -173,7 +173,7 @@ class RenameHintOverlay(
      *
      * @param buttonName Name of the button to show in example (e.g., "Button 1", "Save")
      */
-    fun show(buttonName: String) {
+    private fun show(buttonName: String) {
         mainHandler.post {
             try {
                 if (isShowing) {

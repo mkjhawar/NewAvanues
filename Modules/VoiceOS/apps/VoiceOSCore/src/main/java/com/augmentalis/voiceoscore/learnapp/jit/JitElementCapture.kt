@@ -37,27 +37,6 @@ class JitElementCapture(
     }
 
     /**
-     * Capture screen elements for the given package
-     *
-     * @param packageName Package name of the app
-     * @return List of captured elements
-     */
-    suspend fun captureScreenElements(packageName: String): List<JitCapturedElement> = withContext(Dispatchers.Default) {
-        try {
-            val rootNode = accessibilityService.rootInActiveWindow ?: return@withContext emptyList()
-            val elements = mutableListOf<JitCapturedElement>()
-
-            captureElementsRecursive(rootNode, elements, 0)
-
-            Log.d(TAG, "Captured ${elements.size} elements for $packageName")
-            elements
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to capture screen elements", e)
-            emptyList()
-        }
-    }
-
-    /**
      * Capture elements from current screen
      *
      * @param packageName Package name of the app
@@ -166,43 +145,13 @@ class JitElementCapture(
     }
 
     /**
-     * Persist captured elements to database and return count
+     * Persist captured elements to database
      *
-     * @param packageName Package name of the app
      * @param elements List of elements to persist
+     * @param packageName Package name of the app
      * @param screenHash Hash of the current screen
-     * @return Number of persisted elements
      */
     suspend fun persistElements(
-        packageName: String,
-        elements: List<JitCapturedElement>,
-        screenHash: String
-    ): Int = withContext(Dispatchers.IO) {
-        try {
-            var count = 0
-            // Persist each element to database
-            elements.forEach { element ->
-                element.uuid?.let { uuid ->
-                    // Store in database via databaseManager
-                    Log.d(TAG, "Persisted element $uuid for $packageName")
-                    count++
-                }
-            }
-            count
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to persist elements", e)
-            0
-        }
-    }
-
-    /**
-     * Persist captured elements to database (alternative parameter order)
-     *
-     * @param elements List of elements to persist
-     * @param packageName Package name of the app
-     * @param screenHash Hash of the current screen
-     */
-    suspend fun persistElementsAlt(
         elements: List<JitCapturedElement>,
         packageName: String,
         screenHash: String

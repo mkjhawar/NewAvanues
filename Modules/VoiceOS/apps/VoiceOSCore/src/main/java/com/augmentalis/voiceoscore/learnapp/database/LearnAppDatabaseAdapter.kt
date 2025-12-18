@@ -223,20 +223,6 @@ private class LearnAppDaoAdapter(
         )
     }
 
-    override suspend fun updateLearnedApp(app: LearnedAppEntity) = withContext(Dispatchers.IO) {
-        databaseManager.learnedAppQueries.updateLearnedApp(
-            app_name = app.appName,
-            version_code = app.versionCode,
-            version_name = app.versionName,
-            last_updated_at = app.lastUpdatedAt,
-            total_screens = app.totalScreens.toLong(),
-            total_elements = app.totalElements.toLong(),
-            app_hash = app.appHash,
-            exploration_status = app.explorationStatus,
-            package_name = app.packageName
-        )
-    }
-
     override suspend fun deleteLearnedApp(app: LearnedAppEntity) = withContext(Dispatchers.IO) {
         databaseManager.learnedAppQueries.deleteLearnedApp(app.packageName)
     }

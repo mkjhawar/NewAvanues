@@ -815,7 +815,7 @@ class AccessibilityScrapingIntegration(
 
             // ===== METADATA QUALITY VALIDATION (PHASE 1 INTEGRATION) =====
             try {
-                val metadataValidator = com.augmentalis.voiceoscore.learnapp.validation.MetadataValidator()
+                val metadataValidator = com.augmentalis.learnapp.validation.MetadataValidator()
                 val qualityScore = metadataValidator.validateElement(node)
 
                 if (!qualityScore.isSufficient()) {
@@ -1233,11 +1233,11 @@ class AccessibilityScrapingIntegration(
             uuidCreator.registerElement(uuidElement)
 
             // Create auto-generated alias for easier voice commands
-            val aliasBase = (uuidElement.name ?: "element")
-                .lowercase()
-                .replace(Regex("[^a-z0-9]+"), "-")
-                .trim('-')
-            aliasManager.setAliasWithDeduplication(uuid, aliasBase)
+            aliasManager.createAutoAlias(
+                uuid = uuid,
+                elementName = uuidElement.name ?: "element",
+                elementType = uuidElement.type
+            )
 
             Log.d(TAG, "Registered UUID for element: ${element.text} → $uuid")
             uuid

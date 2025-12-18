@@ -35,9 +35,4 @@ sealed class LoginPromptAction {
      * Stop exploration completely
      */
     object Stop : LoginPromptAction()
-
-    /**
-     * Dismiss the overlay without action
-     */
-    object Dismiss : LoginPromptAction()
 }
