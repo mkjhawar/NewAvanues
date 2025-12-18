@@ -221,13 +221,9 @@ dependencies {
     androidTestImplementation("com.google.dagger:hilt-android-testing:2.51.1")
     kspAndroidTest("com.google.dagger:hilt-android-compiler:2.51.1")
 
-    // Room Database - Phase 3 note: Main VoiceOS data migrated to SQLDelight
-    // Room still required for legacy scraping subsystem (scraping/entities/)
-    // These will be migrated to SQLDelight in a future phase
-    val roomVersion = "2.6.1"
-    implementation("androidx.room:room-runtime:$roomVersion")
-    implementation("androidx.room:room-ktx:$roomVersion")
-    ksp("androidx.room:room-compiler:$roomVersion")
+    // Room Database - REMOVED: All entities migrated to SQLDelight
+    // Use SQLDelight repositories from core/database module:
+    // - IScrapedAppRepository, IGeneratedCommandRepository, etc.
 
     // Preferences (for settings)
     implementation("androidx.preference:preference-ktx:1.2.1")

@@ -1,0 +1,138 @@
+-- ScrapedWebsite.sq - SQLDelight schema for scraped websites
+-- Path: core/database/src/commonMain/sqldelight/com/augmentalis/database/web/ScrapedWebsite.sq
+--
+-- Author: Manoj Jhawar
+-- Code-Reviewed-By: CCA
+-- Created: 2025-12-18
+--
+-- SQLDelight schema for scraped website with hierarchy tracking and cache metadata
+
+import kotlin.Boolean;
+
+-- ============================================================================
+-- TABLE DEFINITION
+-- ============================================================================
+
+CREATE TABLE scraped_websites (
+    url_hash TEXT PRIMARY KEY NOT NULL,
+    url TEXT NOT NULL,
+    domain TEXT NOT NULL,
+    title TEXT NOT NULL,
+    structure_hash TEXT NOT NULL,
+    parent_url_hash TEXT,
+    scraped_at INTEGER NOT NULL,
+    last_accessed_at INTEGER NOT NULL,
+    access_count INTEGER NOT NULL,
+    is_stale INTEGER AS Boolean NOT NULL DEFAULT 0
+);
+
+-- ============================================================================
+-- INDICES
+-- ============================================================================
+
+CREATE INDEX idx_scraped_websites_domain ON scraped_websites(domain);
+CREATE INDEX idx_scraped_websites_parent_url_hash ON scraped_websites(parent_url_hash);
+CREATE INDEX idx_scraped_websites_is_stale ON scraped_websites(is_stale);
+CREATE INDEX idx_scraped_websites_last_accessed_at ON scraped_websites(last_accessed_at);
+
+-- ============================================================================
+-- INSERT OPERATIONS
+-- ============================================================================
+
+insert:
+INSERT OR REPLACE INTO scraped_websites (
+    url_hash,
+    url,
+    domain,
+    title,
+    structure_hash,
+    parent_url_hash,
+    scraped_at,
+    last_accessed_at,
+    access_count,
+    is_stale
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- ============================================================================
+-- UPDATE OPERATIONS
+-- ============================================================================
+
+update:
+UPDATE scraped_websites
+SET url = ?,
+    domain = ?,
+    title = ?,
+    structure_hash = ?,
+    parent_url_hash = ?,
+    scraped_at = ?,
+    last_accessed_at = ?,
+    access_count = ?,
+    is_stale = ?
+WHERE url_hash = ?;
+
+markAsStale:
+UPDATE scraped_websites
+SET is_stale = 1
+WHERE url_hash = ?;
+
+updateAccessMetadata:
+UPDATE scraped_websites
+SET last_accessed_at = :lastAccessedAt,
+    access_count = :accessCount
+WHERE url_hash = :urlHash;
+
+updateStructureHash:
+UPDATE scraped_websites
+SET structure_hash = :newStructureHash,
+    scraped_at = :timestamp,
+    is_stale = 0
+WHERE url_hash = :urlHash;
+
+-- ============================================================================
+-- SELECT OPERATIONS
+-- ============================================================================
+
+getByUrlHash:
+SELECT *
+FROM scraped_websites
+WHERE url_hash = ?;
+
+getByDomain:
+SELECT *
+FROM scraped_websites
+WHERE domain = ?
+ORDER BY last_accessed_at DESC;
+
+getChildren:
+SELECT *
+FROM scraped_websites
+WHERE parent_url_hash = ?
+ORDER BY last_accessed_at DESC;
+
+getStaleWebsites:
+SELECT *
+FROM scraped_websites
+WHERE is_stale = 1 OR scraped_at < ?;
+
+getAllByUsage:
+SELECT *
+FROM scraped_websites
+ORDER BY access_count DESC, last_accessed_at DESC;
+
+getCacheStats:
+SELECT
+    COUNT(*) AS total,
+    SUM(CASE WHEN is_stale = 1 THEN 1 ELSE 0 END) AS stale,
+    AVG(access_count) AS avg_access
+FROM scraped_websites;
+
+-- ============================================================================
+-- DELETE OPERATIONS
+-- ============================================================================
+
+deleteByUrlHash:
+DELETE FROM scraped_websites
+WHERE url_hash = ?;
+
+deleteAll:
+DELETE FROM scraped_websites;

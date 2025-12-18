@@ -246,7 +246,19 @@ class LearnAppIntegration private constructor(
         // FloatingProgressWidget is initialized when exploration starts (lazy init)
 
         // Initialize scraping integration for potential future use
-        scrapingIntegration = AccessibilityScrapingIntegration(context, accessibilityService)
+        scrapingIntegration = AccessibilityScrapingIntegration(
+            context = context,
+            accessibilityService = accessibilityService,
+            scrapedAppRepository = databaseManager.scrapedApps,
+            scrapedElementRepository = databaseManager.scrapedElements,
+            scrapedHierarchyRepository = databaseManager.scrapedHierarchies,
+            screenContextRepository = databaseManager.screenContexts,
+            elementRelationshipRepository = databaseManager.elementRelationships,
+            elementStateHistoryRepository = databaseManager.elementStateHistory,
+            userInteractionRepository = databaseManager.userInteractions,
+            generatedCommandRepository = databaseManager.generatedCommands,
+            screenTransitionRepository = databaseManager.screenTransitions
+        )
 
         // Initialize just-in-time learner
         // FIX (2025-11-30): Pass voiceOSService for command registration (P1-H4)

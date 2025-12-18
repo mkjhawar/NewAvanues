@@ -22,6 +22,24 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
+ * Data class for scraped web element (mirrors ScrapedWebElement SQLDelight table)
+ */
+data class ScrapedWebElement(
+    val id: Long,
+    val websiteUrlHash: String,
+    val elementHash: String,
+    val tagName: String,
+    val xpath: String,
+    val text: String?,
+    val ariaLabel: String?,
+    val role: String?,
+    val parentElementHash: String?,
+    val clickable: Boolean,
+    val visible: Boolean,
+    val bounds: String
+)
+
+/**
  * WebView Scraping Engine
  *
  * Extracts DOM structure from WebView using JavaScript injection.

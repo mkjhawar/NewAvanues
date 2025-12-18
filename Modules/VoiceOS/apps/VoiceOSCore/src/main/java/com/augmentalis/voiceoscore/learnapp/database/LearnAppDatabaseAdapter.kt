@@ -15,7 +15,10 @@ import android.content.Context
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.voiceoscore.learnapp.database.dao.LearnAppDao
-import com.augmentalis.voiceoscore.learnapp.database.entities.*
+import com.augmentalis.voiceoscore.learnapp.database.entities.LearnedAppEntity
+import com.augmentalis.voiceoscore.learnapp.database.entities.ExplorationSessionEntity
+import com.augmentalis.voiceoscore.learnapp.database.entities.NavigationEdgeEntity
+import com.augmentalis.voiceoscore.learnapp.database.entities.ScreenStateEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext

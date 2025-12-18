@@ -200,6 +200,11 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
     // Version-Aware Command Management queries (VOS4)
     val appVersionQueries get() = database.appVersionQueries
 
+    // Web scraping queries (LearnWeb)
+    val scrapedWebsiteQueries get() = database.scrapedWebsiteQueries
+    val scrapedWebElementQueries get() = database.scrapedWebElementQueries
+    val generatedWebCommandQueries get() = database.generatedWebCommandQueries
+
     /**
      * Execute multiple operations in a transaction.
      */

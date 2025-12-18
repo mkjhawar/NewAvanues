@@ -14,7 +14,10 @@ package com.augmentalis.voiceoscore.learnapp.database.repository
 import android.content.Context
 import com.augmentalis.voiceoscore.learnapp.database.dao.LearnAppDao
 import com.augmentalis.voiceoscore.learnapp.database.repository.MetadataSource
-import com.augmentalis.voiceoscore.learnapp.database.entities.*
+import com.augmentalis.voiceoscore.learnapp.database.entities.LearnedAppEntity
+import com.augmentalis.voiceoscore.learnapp.database.entities.ExplorationSessionEntity
+import com.augmentalis.voiceoscore.learnapp.database.entities.NavigationEdgeEntity
+import com.augmentalis.voiceoscore.learnapp.database.entities.ScreenStateEntity
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationStats
 import com.augmentalis.voiceoscore.learnapp.models.ScreenState
 import kotlinx.coroutines.sync.Mutex

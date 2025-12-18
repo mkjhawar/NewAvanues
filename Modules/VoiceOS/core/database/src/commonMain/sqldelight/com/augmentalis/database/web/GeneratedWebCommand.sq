@@ -1,0 +1,181 @@
+-- GeneratedWebCommand.sq - SQLDelight schema for generated web commands
+-- Path: core/database/src/commonMain/sqldelight/com/augmentalis/database/web/GeneratedWebCommand.sq
+--
+-- Author: Manoj Jhawar
+-- Code-Reviewed-By: CCA
+-- Created: 2025-12-18
+--
+-- SQLDelight schema for generated web commands with usage tracking
+
+-- ============================================================================
+-- TABLE DEFINITION
+-- ============================================================================
+
+CREATE TABLE generated_web_commands (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    website_url_hash TEXT NOT NULL,
+    element_hash TEXT NOT NULL,
+    command_text TEXT NOT NULL,
+    synonyms TEXT NOT NULL,
+    action TEXT NOT NULL,
+    xpath TEXT NOT NULL,
+    generated_at INTEGER NOT NULL,
+    usage_count INTEGER NOT NULL DEFAULT 0,
+    last_used_at INTEGER,
+    FOREIGN KEY (website_url_hash) REFERENCES scraped_websites(url_hash) ON DELETE CASCADE
+);
+
+-- ============================================================================
+-- INDICES
+-- ============================================================================
+
+CREATE INDEX idx_generated_web_commands_website_url_hash ON generated_web_commands(website_url_hash);
+CREATE INDEX idx_generated_web_commands_element_hash ON generated_web_commands(element_hash);
+CREATE INDEX idx_generated_web_commands_action ON generated_web_commands(action);
+CREATE INDEX idx_generated_web_commands_usage_count ON generated_web_commands(usage_count);
+CREATE INDEX idx_generated_web_commands_last_used_at ON generated_web_commands(last_used_at);
+
+-- ============================================================================
+-- INSERT OPERATIONS
+-- ============================================================================
+
+insert:
+INSERT OR REPLACE INTO generated_web_commands (
+    website_url_hash,
+    element_hash,
+    command_text,
+    synonyms,
+    action,
+    xpath,
+    generated_at,
+    usage_count,
+    last_used_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+insertWithId:
+INSERT OR REPLACE INTO generated_web_commands (
+    id,
+    website_url_hash,
+    element_hash,
+    command_text,
+    synonyms,
+    action,
+    xpath,
+    generated_at,
+    usage_count,
+    last_used_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- ============================================================================
+-- UPDATE OPERATIONS
+-- ============================================================================
+
+update:
+UPDATE generated_web_commands
+SET website_url_hash = ?,
+    element_hash = ?,
+    command_text = ?,
+    synonyms = ?,
+    action = ?,
+    xpath = ?,
+    generated_at = ?,
+    usage_count = ?,
+    last_used_at = ?
+WHERE id = ?;
+
+updateUsage:
+UPDATE generated_web_commands
+SET usage_count = :usageCount,
+    last_used_at = :lastUsedAt
+WHERE id = :commandId;
+
+incrementUsage:
+UPDATE generated_web_commands
+SET usage_count = usage_count + 1,
+    last_used_at = :timestamp
+WHERE id = :commandId;
+
+-- ============================================================================
+-- SELECT OPERATIONS
+-- ============================================================================
+
+getByWebsiteUrlHash:
+SELECT *
+FROM generated_web_commands
+WHERE website_url_hash = ?
+ORDER BY usage_count DESC;
+
+getCommandsForUrl:
+SELECT gwc.*
+FROM generated_web_commands gwc
+JOIN scraped_websites sw ON gwc.website_url_hash = sw.url_hash
+WHERE (
+    sw.url LIKE '%' || ? || '%'
+    OR sw.domain LIKE '%' || ? || '%'
+)
+ORDER BY gwc.usage_count DESC;
+
+getByElementHash:
+SELECT *
+FROM generated_web_commands
+WHERE element_hash = ?;
+
+searchCommands:
+SELECT *
+FROM generated_web_commands
+WHERE website_url_hash = :websiteUrlHash
+  AND (command_text LIKE '%' || :searchText || '%' OR synonyms LIKE '%' || :searchText || '%')
+  COLLATE NOCASE
+ORDER BY usage_count DESC;
+
+getByAction:
+SELECT *
+FROM generated_web_commands
+WHERE website_url_hash = ?
+  AND action = ?
+ORDER BY usage_count DESC;
+
+getMostUsed:
+SELECT *
+FROM generated_web_commands
+WHERE website_url_hash = ?
+ORDER BY usage_count DESC
+LIMIT ?;
+
+getRecentlyUsed:
+SELECT *
+FROM generated_web_commands
+WHERE website_url_hash = ?
+  AND last_used_at IS NOT NULL
+ORDER BY last_used_at DESC
+LIMIT ?;
+
+getAllCommands:
+SELECT *
+FROM generated_web_commands
+ORDER BY usage_count DESC;
+
+getCommandCount:
+SELECT COUNT(*)
+FROM generated_web_commands
+WHERE website_url_hash = ?;
+
+getTotalUsage:
+SELECT SUM(usage_count)
+FROM generated_web_commands
+WHERE website_url_hash = ?;
+
+-- ============================================================================
+-- DELETE OPERATIONS
+-- ============================================================================
+
+deleteByWebsiteUrlHash:
+DELETE FROM generated_web_commands
+WHERE website_url_hash = ?;
+
+deleteByElementHash:
+DELETE FROM generated_web_commands
+WHERE element_hash = ?;
+
+deleteAll:
+DELETE FROM generated_web_commands;

@@ -12,9 +12,11 @@ import android.content.Context
 import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.learnweb.WebScrapingDatabase
+import com.augmentalis.database.DatabaseDriverFactory
+import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.voiceoscore.learnweb.ScrapedWebElement
 import com.augmentalis.voiceoscore.learnweb.GeneratedWebCommand
+import com.augmentalis.voiceoscore.learnweb.toGeneratedWebCommand
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.pow
@@ -93,7 +95,7 @@ class WebCommandCoordinator(
         )
     }
 
-    private val database: WebScrapingDatabase = WebScrapingDatabase.getInstance(context)
+    private val databaseManager: VoiceOSDatabaseManager = VoiceOSDatabaseManager.getInstance(DatabaseDriverFactory(context))
 
     /**
      * Check if current app is a browser
@@ -144,19 +146,38 @@ class WebCommandCoordinator(
             Log.i(TAG, "Matched web command: ${webCommand.commandText} → ${webCommand.action}")
 
             // Get associated web element by hash
-            val element = database.scrapedWebElementDao().getByElementHash(webCommand.elementHash)
-            if (element == null) {
+            val sqlDelightElement = databaseManager.scrapedWebElementQueries.getByElementHash(webCommand.elementHash).executeAsOneOrNull()
+            if (sqlDelightElement == null) {
                 Log.w(TAG, "Web element not found (hash): ${webCommand.elementHash}")
                 Log.w(TAG, "  Element may no longer exist or page structure changed")
                 return@withContext false
             }
+
+            // Convert SQLDelight element to data class
+            val element = ScrapedWebElement(
+                id = sqlDelightElement.id,
+                websiteUrlHash = sqlDelightElement.website_url_hash,
+                elementHash = sqlDelightElement.element_hash,
+                tagName = sqlDelightElement.tag_name,
+                xpath = sqlDelightElement.xpath,
+                text = sqlDelightElement.text,
+                ariaLabel = sqlDelightElement.aria_label,
+                role = sqlDelightElement.role,
+                parentElementHash = sqlDelightElement.parent_element_hash,
+                clickable = sqlDelightElement.clickable,
+                visible = sqlDelightElement.visible,
+                bounds = sqlDelightElement.bounds
+            )
 
             // Execute web action
             val success = executeWebAction(element, webCommand.action)
 
             if (success) {
                 // Update usage statistics
-                database.generatedWebCommandDao().incrementUsage(webCommand.id, System.currentTimeMillis())
+                databaseManager.generatedWebCommandQueries.incrementUsage(
+                    commandId = webCommand.id,
+                    timestamp = System.currentTimeMillis()
+                )
                 Log.i(TAG, "✓ Web command executed successfully: ${webCommand.commandText}")
             } else {
                 Log.w(TAG, "✗ Web command execution failed: ${webCommand.commandText}")
@@ -308,7 +329,9 @@ class WebCommandCoordinator(
         val normalizedUrl = normalizeUrl(url) ?: return null
 
         // Get all commands for this URL
-        val commands = database.generatedWebCommandDao().getCommandsForUrl(normalizedUrl)
+        val commands = databaseManager.generatedWebCommandQueries.getCommandsForUrl(normalizedUrl, normalizedUrl)
+            .executeAsList()
+            .map { it.toGeneratedWebCommand() }
 
         Log.d(TAG, "Found ${commands.size} commands for URL: $normalizedUrl")
 

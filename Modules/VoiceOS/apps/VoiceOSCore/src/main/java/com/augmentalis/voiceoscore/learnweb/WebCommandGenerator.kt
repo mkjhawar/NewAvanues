@@ -14,6 +14,22 @@ package com.augmentalis.voiceoscore.learnweb
 import android.util.Log
 
 /**
+ * Data class for generated web command (mirrors GeneratedWebCommand SQLDelight table)
+ */
+data class GeneratedWebCommand(
+    val id: Long = 0,
+    val websiteUrlHash: String,
+    val elementHash: String,
+    val commandText: String,
+    val synonyms: String,
+    val action: String,
+    val xpath: String,
+    val generatedAt: Long,
+    val usageCount: Long = 0,
+    val lastUsedAt: Long? = null
+)
+
+/**
  * Web Command Generator
  *
  * Generates natural language voice commands from scraped web elements.

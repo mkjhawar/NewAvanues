@@ -56,8 +56,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.augmentalis.voiceoscore.scraping.AccessibilityScrapingIntegration
 import com.augmentalis.voiceoscore.scraping.LearnAppResult
-import com.augmentalis.voiceoscore.scraping.database.AppScrapingDatabase
-import com.augmentalis.voiceoscore.scraping.entities.ScrapedAppEntity
+import com.augmentalis.database.repositories.IScrapedAppRepository
+import com.augmentalis.database.dto.ScrapedAppDTO
 import com.augmentalis.voiceoscore.accessibility.ui.theme.AccessibilityTheme
 import com.augmentalis.voiceoscore.accessibility.ui.utils.DepthLevel
 import com.augmentalis.voiceoscore.accessibility.ui.utils.GlassMorphismConfig
@@ -79,9 +79,11 @@ class LearnAppActivity : ComponentActivity() {
 
         setContent {
             AccessibilityTheme {
+                // TODO: Inject IScrapedAppRepository from DI container or service
+                // For now, this will need to be passed from the service that creates this activity
                 LearnAppScreen(
                     packageManager = packageManager,
-                    database = AppScrapingDatabase.getInstance(this),
+                    scrapedAppRepository = null, // Will be passed from service if available
                     scrapingIntegration = null // Will be passed from service if available
                 )
             }
@@ -95,11 +97,11 @@ class LearnAppActivity : ComponentActivity() {
 @Composable
 fun LearnAppScreen(
     packageManager: PackageManager,
-    database: AppScrapingDatabase,
+    scrapedAppRepository: IScrapedAppRepository?,
     scrapingIntegration: AccessibilityScrapingIntegration?
 ) {
     var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
-    var scrapedApps by remember { mutableStateOf<List<ScrapedAppEntity>>(emptyList()) }
+    var scrapedApps by remember { mutableStateOf<List<ScrapedAppDTO>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var learningInProgress by remember { mutableStateOf(false) }
     var currentLearningPackage by remember { mutableStateOf<String?>(null) }
@@ -111,7 +113,7 @@ fun LearnAppScreen(
     LaunchedEffect(Unit) {
         loadData(
             packageManager = packageManager,
-            database = database,
+            scrapedAppRepository = scrapedAppRepository,
             onAppsLoaded = { apps, scraped ->
                 installedApps = apps
                 scrapedApps = scraped
@@ -175,7 +177,9 @@ fun LearnAppScreen(
                                         currentLearningPackage = null
 
                                         // Reload scraped apps to update status
-                                        scrapedApps = database.scrapedAppDao().getAllApps()
+                                        scrapedAppRepository?.let { repo ->
+                                            scrapedApps = repo.getAll()
+                                        }
                                     }
                                 } else {
                                     lastResult = LearnAppResult(
@@ -302,7 +306,7 @@ fun ResultCard(result: LearnAppResult) {
 @Composable
 fun AppCard(
     appInfo: AppInfo,
-    scrapedApp: ScrapedAppEntity?,
+    scrapedApp: ScrapedAppDTO?,
     isLearning: Boolean,
     onLearnClick: () -> Unit
 ) {
@@ -315,7 +319,7 @@ fun AppCard(
                     backgroundOpacity = 0.1f,
                     borderOpacity = 0.2f,
                     borderWidth = 1.dp,
-                    tintColor = if (scrapedApp?.isFullyLearned == true) Color(0xFF00C853) else Color(0xFF673AB7),
+                    tintColor = if (scrapedApp?.isFullyLearned != 0L) Color(0xFF00C853) else Color(0xFF673AB7),
                     tintOpacity = 0.15f
                 ),
                 depth = DepthLevel(0.4f)
@@ -344,12 +348,12 @@ fun AppCard(
                 if (scrapedApp != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = if (scrapedApp.isFullyLearned) {
+                        text = if (scrapedApp.isFullyLearned != 0L) {
                             "✓ Fully Learned (${scrapedApp.elementCount} elements)"
                         } else {
                             "Partial (${scrapedApp.elementCount} elements)"
                         },
-                        color = if (scrapedApp.isFullyLearned) Color(0xFF00C853) else Color(0xFFFFB300),
+                        color = if (scrapedApp.isFullyLearned != 0L) Color(0xFF00C853) else Color(0xFFFFB300),
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium
                     )
@@ -396,8 +400,8 @@ data class AppInfo(
  */
 private suspend fun loadData(
     packageManager: PackageManager,
-    database: AppScrapingDatabase,
-    onAppsLoaded: (List<AppInfo>, List<ScrapedAppEntity>) -> Unit
+    scrapedAppRepository: IScrapedAppRepository?,
+    onAppsLoaded: (List<AppInfo>, List<ScrapedAppDTO>) -> Unit
 ) {
     withContext(Dispatchers.IO) {
         // Get installed user apps (exclude system apps)
@@ -412,7 +416,7 @@ private suspend fun loadData(
             .sortedBy { it.appName }
 
         // Get scraped apps from database
-        val scrapedApps = database.scrapedAppDao().getAllApps()
+        val scrapedApps = scrapedAppRepository?.getAll() ?: emptyList()
 
         withContext(Dispatchers.Main) {
             onAppsLoaded(apps, scrapedApps)

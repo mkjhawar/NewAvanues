@@ -1,71 +1,39 @@
 /**
- * ExplorationSessionEntity.kt - Room entity for exploration sessions
+ * ExplorationSessionEntity.kt - Data class for exploration sessions (SQLDelight compatible)
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
- * Created: 2025-10-08
+ * Created: 2025-12-18
  *
- * Room database entity for storing exploration session data
+ * Data class representing exploration session data.
+ * Used by SQLDelight adapter pattern (not Room).
  */
 
 package com.augmentalis.voiceoscore.learnapp.database.entities
 
-import androidx.room.ColumnInfo
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
-
 /**
  * Exploration Session Entity
  *
- * Room entity storing exploration session metadata.
+ * Data class storing exploration session metadata.
+ * This is a pure Kotlin data class without Room annotations.
+ * SQLDelight handles database operations via LearnAppDatabaseAdapter.
+ *
+ * @property sessionId Session ID (primary key)
+ * @property packageName Package name (foreign key)
+ * @property startedAt When session started (timestamp)
+ * @property completedAt When session completed (timestamp, null if running)
+ * @property durationMs Duration in milliseconds
+ * @property screensExplored Number of screens explored
+ * @property elementsDiscovered Number of elements discovered
+ * @property status Session status (RUNNING, COMPLETED, PAUSED, FAILED)
  */
-@Entity(
-    tableName = "exploration_sessions",
-    foreignKeys = [
-        ForeignKey(
-            entity = LearnedAppEntity::class,
-            parentColumns = ["package_name"],
-            childColumns = ["package_name"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [Index("package_name")]
-)
 data class ExplorationSessionEntity(
-    @PrimaryKey
-    @ColumnInfo(name = "session_id")
     val sessionId: String,
-
-    @ColumnInfo(name = "package_name")
     val packageName: String,
-
-    @ColumnInfo(name = "started_at")
     val startedAt: Long,
-
-    @ColumnInfo(name = "completed_at")
     val completedAt: Long? = null,
-
-    @ColumnInfo(name = "duration_ms")
     val durationMs: Long? = null,
-
-    @ColumnInfo(name = "screens_explored")
     val screensExplored: Int,
-
-    @ColumnInfo(name = "elements_discovered")
     val elementsDiscovered: Int,
-
-    @ColumnInfo(name = "status")
-    val status: String  // RUNNING, COMPLETED, PAUSED, FAILED
+    val status: String
 )
-
-/**
- * Session Status
- */
-object SessionStatus {
-    const val RUNNING = "RUNNING"
-    const val COMPLETED = "COMPLETED"
-    const val PAUSED = "PAUSED"
-    const val FAILED = "FAILED"
-}

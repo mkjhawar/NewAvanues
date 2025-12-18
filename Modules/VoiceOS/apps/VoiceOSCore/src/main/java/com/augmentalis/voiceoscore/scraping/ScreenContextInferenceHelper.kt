@@ -9,7 +9,7 @@
 package com.augmentalis.voiceoscore.scraping
 
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity
+import com.augmentalis.database.dto.ScrapedElementDTO
 
 /**
  * Screen Context Inference Helper
@@ -63,7 +63,7 @@ class ScreenContextInferenceHelper {
     fun inferScreenType(
         windowTitle: String?,
         activityName: String?,
-        elements: List<ScrapedElementEntity>
+        elements: List<ScrapedElementDTO>
     ): String? {
         val lowerTitle = windowTitle?.lowercase() ?: ""
         val lowerActivity = activityName?.lowercase() ?: ""
@@ -105,7 +105,7 @@ class ScreenContextInferenceHelper {
      *
      * Returns: "registration", "payment", "address", "contact", "feedback", "search", or null
      */
-    fun inferFormContext(elements: List<ScrapedElementEntity>): String? {
+    fun inferFormContext(elements: List<ScrapedElementDTO>): String? {
         val elementTexts = elements.mapNotNull { it.text?.lowercase() } +
                           elements.mapNotNull { it.contentDescription?.lowercase() } +
                           elements.mapNotNull { it.viewIdResourceName?.lowercase() }
@@ -127,10 +127,10 @@ class ScreenContextInferenceHelper {
      *
      * Returns: "submit", "search", "browse", "purchase", "view", or null
      */
-    fun inferPrimaryAction(elements: List<ScrapedElementEntity>): String? {
+    fun inferPrimaryAction(elements: List<ScrapedElementDTO>): String? {
         // Find buttons and their text
         val buttonTexts = elements
-            .filter { it.className.contains("Button", ignoreCase = true) && it.isClickable }
+            .filter { it.className.contains("Button", ignoreCase = true) && it.isClickable != 0L }
             .mapNotNull { it.text?.lowercase() }
             .joinToString(" ")
 
@@ -139,7 +139,7 @@ class ScreenContextInferenceHelper {
             containsAny(buttonTexts, SEARCH_ACTION_KEYWORDS) -> "search"
             containsAny(buttonTexts, PURCHASE_ACTION_KEYWORDS) -> "purchase"
             containsAny(buttonTexts, BROWSE_ACTION_KEYWORDS) -> "browse"
-            elements.any { it.isScrollable } -> "browse"
+            elements.any { it.isScrollable != 0L } -> "browse"
             else -> "view"
         }
     }
@@ -265,9 +265,9 @@ class ScreenContextInferenceHelper {
     /**
      * Helper: Check if screen has multiple input fields (indicates form)
      */
-    private fun hasMultipleInputFields(elements: List<ScrapedElementEntity>): Boolean {
+    private fun hasMultipleInputFields(elements: List<ScrapedElementDTO>): Boolean {
         val inputCount = elements.count {
-            it.isEditable || it.className.contains("EditText", ignoreCase = true)
+            it.isEditable != 0L || it.className.contains("EditText", ignoreCase = true)
         }
         return inputCount >= 2
     }
@@ -275,9 +275,9 @@ class ScreenContextInferenceHelper {
     /**
      * Helper: Check if screen has any input fields
      */
-    private fun hasInputFields(elements: List<ScrapedElementEntity>): Boolean {
+    private fun hasInputFields(elements: List<ScrapedElementDTO>): Boolean {
         return elements.any {
-            it.isEditable || it.className.contains("EditText", ignoreCase = true)
+            it.isEditable != 0L || it.className.contains("EditText", ignoreCase = true)
         }
     }
 

@@ -55,7 +55,7 @@ import com.augmentalis.voiceoscore.accessibility.utils.Debouncer
 import com.augmentalis.voiceoscore.accessibility.utils.EventPriorityManager
 import com.augmentalis.voiceoscore.accessibility.utils.ResourceMonitor
 import com.augmentalis.voiceoscore.config.DynamicPackageConfig
-import com.augmentalis.voiceoscore.learnweb.WebScrapingDatabase
+// WebScrapingDatabase removed - migrated to SQLDelight (VoiceOSDatabaseManager)
 import com.augmentalis.voiceoscore.scraping.AccessibilityScrapingIntegration
 import com.augmentalis.voiceoscore.scraping.VoiceCommandProcessor
 // FIX (2025-12-01): VoiceOSAppDatabase is typealias for VoiceOSCoreDatabaseAdapter
@@ -576,24 +576,10 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                 // Continue even if this fails
             }
 
-            // SOURCE 3: WebScrapingDatabase (web commands)
-            try {
-                Log.d(TAG, "Loading commands from WebScrapingDatabase...")
-                val webDatabase = WebScrapingDatabase.getInstance(applicationContext)
-
-                val webCommands = webDatabase.generatedWebCommandDao().getAllCommands()
-                Log.i(TAG, "  Found ${webCommands.size} commands in WebScrapingDatabase")
-
-                for (cmd in webCommands) {
-                    commandTexts.add(cmd.commandText.lowercase().trim())
-                }
-
-                Log.i(TAG, "  ✓ WebScrapingDatabase: Total ${commandTexts.size} command texts")
-
-            } catch (e: Exception) {
-                Log.e(TAG, "  ✗ Error loading WebScrapingDatabase commands", e)
-                // Continue even if this fails
-            }
+            // SOURCE 3: Web commands (via SQLDelight - not yet migrated)
+            // Web scraping database schemas created but not integrated into VoiceOSDatabaseManager yet
+            // TODO: Integrate GeneratedWebCommand.sq when LearnWeb migration is complete
+            Log.d(TAG, "Web commands: Not yet available (LearnWeb migration pending)")
 
             // Remove any empty strings or invalid commands
             commandTexts.removeIf { it.isBlank() || it.length < 2 }
@@ -725,7 +711,20 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             // Initialize hash-based scraping integration (if database initialized)
             if (scrapingDatabase != null) {
                 try {
-                    scrapingIntegration = AccessibilityScrapingIntegration(this@VoiceOSService, this@VoiceOSService)
+                    val dbManager = scrapingDatabase!!.databaseManager
+                    scrapingIntegration = AccessibilityScrapingIntegration(
+                        context = this@VoiceOSService,
+                        accessibilityService = this@VoiceOSService,
+                        scrapedAppRepository = dbManager.scrapedApps,
+                        scrapedElementRepository = dbManager.scrapedElements,
+                        scrapedHierarchyRepository = dbManager.scrapedHierarchies,
+                        screenContextRepository = dbManager.screenContexts,
+                        elementRelationshipRepository = dbManager.elementRelationships,
+                        elementStateHistoryRepository = dbManager.elementStateHistory,
+                        userInteractionRepository = dbManager.userInteractions,
+                        generatedCommandRepository = dbManager.generatedCommands,
+                        screenTransitionRepository = dbManager.screenTransitions
+                    )
                     Log.i(TAG, "AccessibilityScrapingIntegration initialized successfully")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to initialize AccessibilityScrapingIntegration", e)
@@ -738,7 +737,14 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             // Initialize hash-based command processor
             if (scrapingDatabase != null) {
                 try {
-                    voiceCommandProcessor = VoiceCommandProcessor(this@VoiceOSService, this@VoiceOSService)
+                    val dbManager = scrapingDatabase!!.databaseManager
+                    voiceCommandProcessor = VoiceCommandProcessor(
+                        context = this@VoiceOSService,
+                        accessibilityService = this@VoiceOSService,
+                        scrapedAppRepository = dbManager.scrapedApps,
+                        scrapedElementRepository = dbManager.scrapedElements,
+                        generatedCommandRepository = dbManager.generatedCommands
+                    )
                     Log.i(TAG, "VoiceCommandProcessor initialized successfully")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to initialize VoiceCommandProcessor", e)

@@ -21,6 +21,8 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.augmentalis.database.DatabaseDriverFactory
+import com.augmentalis.database.VoiceOSDatabaseManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -54,7 +56,7 @@ class LearnWebActivity : AppCompatActivity() {
     private lateinit var statusText: TextView
 
     // Core Components
-    private lateinit var database: WebScrapingDatabase
+    private lateinit var databaseManager: VoiceOSDatabaseManager
     private lateinit var scrapingEngine: WebViewScrapingEngine
     private lateinit var commandGenerator: WebCommandGenerator
     private lateinit var cache: WebCommandCache
@@ -118,10 +120,10 @@ class LearnWebActivity : AppCompatActivity() {
      * Initialize core components
      */
     private fun initializeComponents() {
-        database = WebScrapingDatabase.getInstance(applicationContext)
+        databaseManager = VoiceOSDatabaseManager.getInstance(DatabaseDriverFactory(applicationContext))
         scrapingEngine = WebViewScrapingEngine(applicationContext)
         commandGenerator = WebCommandGenerator()
-        cache = WebCommandCache(database)
+        cache = WebCommandCache(databaseManager)
     }
 
     /**
@@ -343,9 +345,9 @@ class LearnWebActivity : AppCompatActivity() {
                     val success = scrapingEngine.clickElement(webView, command.xpath)
                     if (success) {
                         // Increment usage
-                        database.generatedWebCommandDao().incrementUsage(
-                            command.id,
-                            System.currentTimeMillis()
+                        databaseManager.generatedWebCommandQueries.incrementUsage(
+                            commandId = command.id,
+                            timestamp = System.currentTimeMillis()
                         )
                         Log.d(TAG, "Clicked element: ${command.commandText}")
                     } else {
@@ -356,9 +358,9 @@ class LearnWebActivity : AppCompatActivity() {
                 "SCROLL_TO" -> {
                     val success = scrapingEngine.scrollToElement(webView, command.xpath)
                     if (success) {
-                        database.generatedWebCommandDao().incrementUsage(
-                            command.id,
-                            System.currentTimeMillis()
+                        databaseManager.generatedWebCommandQueries.incrementUsage(
+                            commandId = command.id,
+                            timestamp = System.currentTimeMillis()
                         )
                         Log.d(TAG, "Scrolled to element: ${command.commandText}")
                     } else {
@@ -370,9 +372,9 @@ class LearnWebActivity : AppCompatActivity() {
                     // Focus implementation (similar to scroll + click)
                     val success = scrapingEngine.scrollToElement(webView, command.xpath)
                     if (success) {
-                        database.generatedWebCommandDao().incrementUsage(
-                            command.id,
-                            System.currentTimeMillis()
+                        databaseManager.generatedWebCommandQueries.incrementUsage(
+                            commandId = command.id,
+                            timestamp = System.currentTimeMillis()
                         )
                         Log.d(TAG, "Focused element: ${command.commandText}")
                     }

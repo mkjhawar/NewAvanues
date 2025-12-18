@@ -12,9 +12,26 @@
 package com.augmentalis.voiceoscore.learnweb
 
 import android.util.Log
+import com.augmentalis.database.VoiceOSDatabaseManager
 import kotlinx.coroutines.*
 import java.net.URL
 import java.security.MessageDigest
+
+/**
+ * Data class for scraped website (mirrors ScrapedWebsite SQLDelight table)
+ */
+data class ScrapedWebsite(
+    val urlHash: String,
+    val url: String,
+    val domain: String,
+    val title: String,
+    val structureHash: String,
+    val parentUrlHash: String?,
+    val scrapedAt: Long,
+    val lastAccessedAt: Long,
+    val accessCount: Long,
+    val isStale: Boolean
+)
 
 /**
  * Web Command Cache
@@ -26,11 +43,11 @@ import java.security.MessageDigest
  * - Parent-child hierarchy tracking
  * - URL change detection
  *
- * @property database Web scraping database instance
+ * @property databaseManager VoiceOS database manager instance
  *
  * @since 1.0.0
  */
-class WebCommandCache(private val database: WebScrapingDatabase) {
+class WebCommandCache(private val databaseManager: VoiceOSDatabaseManager) {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -62,7 +79,7 @@ class WebCommandCache(private val database: WebScrapingDatabase) {
         val urlHash = hashURL(url)
         val now = System.currentTimeMillis()
 
-        val website = database.scrapedWebsiteDao().getByUrlHash(urlHash)
+        val website = databaseManager.scrapedWebsiteQueries.getByUrlHash(urlHash).executeAsOneOrNull()
 
         return when {
             website == null -> {
@@ -70,19 +87,19 @@ class WebCommandCache(private val database: WebScrapingDatabase) {
                 CacheResult.Miss
             }
 
-            (now - website.scrapedAt) > CACHE_TTL_MS -> {
-                Log.d(TAG, "Cache EXPIRED for $url (age: ${(now - website.scrapedAt) / 1000}s)")
+            (now - website.scraped_at) > CACHE_TTL_MS -> {
+                Log.d(TAG, "Cache EXPIRED for $url (age: ${(now - website.scraped_at) / 1000}s)")
                 CacheResult.Miss
             }
 
-            website.isStale || (now - website.scrapedAt) > STALE_THRESHOLD_MS -> {
+            website.is_stale || (now - website.scraped_at) > STALE_THRESHOLD_MS -> {
                 Log.d(TAG, "Cache STALE for $url, returning cached + background refresh")
 
                 // Update access metadata
-                database.scrapedWebsiteDao().updateAccessMetadata(
-                    urlHash,
-                    now,
-                    website.accessCount + 1
+                databaseManager.scrapedWebsiteQueries.updateAccessMetadata(
+                    urlHash = urlHash,
+                    lastAccessedAt = now,
+                    accessCount = website.access_count + 1
                 )
 
                 // Trigger background refresh
@@ -95,21 +112,25 @@ class WebCommandCache(private val database: WebScrapingDatabase) {
                 }
 
                 // Return stale commands
-                val commands = database.generatedWebCommandDao().getByWebsiteUrlHash(urlHash)
+                val commands = databaseManager.generatedWebCommandQueries.getByWebsiteUrlHash(urlHash)
+                    .executeAsList()
+                    .map { it.toGeneratedWebCommand() }
                 CacheResult.Stale(commands)
             }
 
             else -> {
-                Log.d(TAG, "Cache HIT for $url (age: ${(now - website.scrapedAt) / 1000}s)")
+                Log.d(TAG, "Cache HIT for $url (age: ${(now - website.scraped_at) / 1000}s)")
 
                 // Update access metadata
-                database.scrapedWebsiteDao().updateAccessMetadata(
-                    urlHash,
-                    now,
-                    website.accessCount + 1
+                databaseManager.scrapedWebsiteQueries.updateAccessMetadata(
+                    urlHash = urlHash,
+                    lastAccessedAt = now,
+                    accessCount = website.access_count + 1
                 )
 
-                val commands = database.generatedWebCommandDao().getByWebsiteUrlHash(urlHash)
+                val commands = databaseManager.generatedWebCommandQueries.getByWebsiteUrlHash(urlHash)
+                    .executeAsList()
+                    .map { it.toGeneratedWebCommand() }
                 CacheResult.Hit(commands)
             }
         }
@@ -125,7 +146,7 @@ class WebCommandCache(private val database: WebScrapingDatabase) {
      */
     suspend fun refreshStaleCache(url: String) {
         val urlHash = hashURL(url)
-        database.scrapedWebsiteDao().markAsStale(urlHash)
+        databaseManager.scrapedWebsiteQueries.markAsStale(urlHash)
 
         // NOTE: Caller must implement actual scraping logic
         // This is a hook for external scraping trigger
@@ -146,10 +167,10 @@ class WebCommandCache(private val database: WebScrapingDatabase) {
         val newUrlHash = hashURL(newUrl)
 
         // Mark old URL as stale
-        database.scrapedWebsiteDao().markAsStale(oldUrlHash)
+        databaseManager.scrapedWebsiteQueries.markAsStale(oldUrlHash)
 
         // Check if new URL exists
-        val existingWebsite = database.scrapedWebsiteDao().getByUrlHash(newUrlHash)
+        val existingWebsite = databaseManager.scrapedWebsiteQueries.getByUrlHash(newUrlHash).executeAsOneOrNull()
         if (existingWebsite != null) {
             Log.d(TAG, "URL changed from $oldUrl to $newUrl (cached)")
         } else {
@@ -168,20 +189,20 @@ class WebCommandCache(private val database: WebScrapingDatabase) {
      */
     suspend fun invalidateByStructureChange(url: String, newStructureHash: String) {
         val urlHash = hashURL(url)
-        val website = database.scrapedWebsiteDao().getByUrlHash(urlHash)
+        val website = databaseManager.scrapedWebsiteQueries.getByUrlHash(urlHash).executeAsOneOrNull()
 
-        if (website != null && website.structureHash != newStructureHash) {
+        if (website != null && website.structure_hash != newStructureHash) {
             Log.d(TAG, "Structure changed for $url, invalidating cache")
 
             // Delete old elements and commands
-            database.scrapedWebElementDao().deleteByWebsiteUrlHash(urlHash)
-            database.generatedWebCommandDao().deleteByWebsiteUrlHash(urlHash)
+            databaseManager.scrapedWebElementQueries.deleteByWebsiteUrlHash(urlHash)
+            databaseManager.generatedWebCommandQueries.deleteByWebsiteUrlHash(urlHash)
 
             // Update structure hash
-            database.scrapedWebsiteDao().updateStructureHash(
-                urlHash,
-                newStructureHash,
-                System.currentTimeMillis()
+            databaseManager.scrapedWebsiteQueries.updateStructureHash(
+                urlHash = urlHash,
+                newStructureHash = newStructureHash,
+                timestamp = System.currentTimeMillis()
             )
         }
     }
@@ -198,9 +219,48 @@ class WebCommandCache(private val database: WebScrapingDatabase) {
         elements: List<ScrapedWebElement>,
         commands: List<GeneratedWebCommand>
     ) {
-        database.scrapedWebsiteDao().insert(website)
-        database.scrapedWebElementDao().insertAll(elements)
-        database.generatedWebCommandDao().insertAll(commands)
+        databaseManager.scrapedWebsiteQueries.insert(
+            url_hash = website.urlHash,
+            url = website.url,
+            domain = website.domain,
+            title = website.title,
+            structure_hash = website.structureHash,
+            parent_url_hash = website.parentUrlHash,
+            scraped_at = website.scrapedAt,
+            last_accessed_at = website.lastAccessedAt,
+            access_count = website.accessCount,
+            is_stale = website.isStale
+        )
+
+        elements.forEach { element ->
+            databaseManager.scrapedWebElementQueries.insert(
+                website_url_hash = element.websiteUrlHash,
+                element_hash = element.elementHash,
+                tag_name = element.tagName,
+                xpath = element.xpath,
+                text = element.text,
+                aria_label = element.ariaLabel,
+                role = element.role,
+                parent_element_hash = element.parentElementHash,
+                clickable = element.clickable,
+                visible = element.visible,
+                bounds = element.bounds
+            )
+        }
+
+        commands.forEach { command ->
+            databaseManager.generatedWebCommandQueries.insert(
+                website_url_hash = command.websiteUrlHash,
+                element_hash = command.elementHash,
+                command_text = command.commandText,
+                synonyms = command.synonyms,
+                action = command.action,
+                xpath = command.xpath,
+                generated_at = command.generatedAt,
+                usage_count = command.usageCount,
+                last_used_at = command.lastUsedAt
+            )
+        }
 
         Log.d(TAG, "Stored ${elements.size} elements and ${commands.size} commands for ${website.url}")
     }
@@ -212,7 +272,9 @@ class WebCommandCache(private val database: WebScrapingDatabase) {
      */
     suspend fun getStaleWebsites(): List<ScrapedWebsite> {
         val threshold = System.currentTimeMillis() - STALE_THRESHOLD_MS
-        return database.scrapedWebsiteDao().getStaleWebsites(threshold)
+        return databaseManager.scrapedWebsiteQueries.getStaleWebsites(threshold)
+            .executeAsList()
+            .map { it.toScrapedWebsite() }
     }
 
     /**
@@ -221,13 +283,13 @@ class WebCommandCache(private val database: WebScrapingDatabase) {
      * @return Cache statistics
      */
     suspend fun getCacheStats(): WebCacheStats {
-        val stats = database.scrapedWebsiteDao().getCacheStats()
+        val stats = databaseManager.scrapedWebsiteQueries.getCacheStats().executeAsOne()
 
         return WebCacheStats(
-            totalWebsites = stats.total,
-            staleWebsites = stats.stale,
-            freshWebsites = stats.total - stats.stale,
-            averageAccessCount = stats.avg_access
+            totalWebsites = stats.total?.toInt() ?: 0,
+            staleWebsites = stats.stale?.toInt() ?: 0,
+            freshWebsites = (stats.total?.toInt() ?: 0) - (stats.stale?.toInt() ?: 0),
+            averageAccessCount = stats.avg_access ?: 0.0
         )
     }
 
@@ -235,9 +297,9 @@ class WebCommandCache(private val database: WebScrapingDatabase) {
      * Clear all cache
      */
     suspend fun clearAll() {
-        database.scrapedWebsiteDao().deleteAll()
-        database.scrapedWebElementDao().deleteAll()
-        database.generatedWebCommandDao().deleteAll()
+        databaseManager.scrapedWebsiteQueries.deleteAll()
+        databaseManager.scrapedWebElementQueries.deleteAll()
+        databaseManager.generatedWebCommandQueries.deleteAll()
         Log.d(TAG, "Cleared all cache")
     }
 
@@ -347,4 +409,34 @@ data class WebCacheStats(
     val staleWebsites: Int,
     val freshWebsites: Int,
     val averageAccessCount: Double
+)
+
+/**
+ * Extension functions to convert between SQLDelight types and data classes
+ */
+
+fun com.augmentalis.database.web.Scraped_websites.toScrapedWebsite() = ScrapedWebsite(
+    urlHash = url_hash,
+    url = url,
+    domain = domain,
+    title = title,
+    structureHash = structure_hash,
+    parentUrlHash = parent_url_hash,
+    scrapedAt = scraped_at,
+    lastAccessedAt = last_accessed_at,
+    accessCount = access_count,
+    isStale = is_stale
+)
+
+fun com.augmentalis.database.web.Generated_web_commands.toGeneratedWebCommand() = GeneratedWebCommand(
+    id = id,
+    websiteUrlHash = website_url_hash,
+    elementHash = element_hash,
+    commandText = command_text,
+    synonyms = synonyms,
+    action = action,
+    xpath = xpath,
+    generatedAt = generated_at,
+    usageCount = usage_count,
+    lastUsedAt = last_used_at
 )
