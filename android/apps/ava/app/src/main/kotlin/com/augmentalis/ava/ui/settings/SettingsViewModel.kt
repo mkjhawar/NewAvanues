@@ -11,8 +11,8 @@ import androidx.datastore.preferences.core.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.augmentalis.ava.crashreporting.CrashReporter
-import com.augmentalis.ava.features.llm.alc.loader.HuggingFaceModelDownloader
-import com.augmentalis.ava.features.llm.alc.loader.ModelDownloadConfig
+import com.augmentalis.llm.alc.loader.HuggingFaceModelDownloader
+import com.augmentalis.llm.alc.loader.ModelDownloadConfig
 import com.augmentalis.ava.preferences.UserPreferences
 import com.augmentalis.ava.ui.settings.ModelInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -48,7 +48,7 @@ class SettingsViewModel @Inject constructor(
     private val modelDownloader = HuggingFaceModelDownloader(context)
 
     // NLU model downloader
-    private val nluDownloader = com.augmentalis.ava.features.nlu.download.NLUModelDownloader(
+    private val nluDownloader = com.augmentalis.nlu.download.NLUModelDownloader(
         context = context,
         workManager = androidx.work.WorkManager.getInstance(context)
     )
@@ -644,11 +644,11 @@ class SettingsViewModel @Inject constructor(
                 // Collect download state
                 nluDownloader.downloadState.collect { state ->
                     when (state) {
-                        is com.augmentalis.ava.features.nlu.download.NLUModelDownloader.DownloadState.Downloading -> {
+                        is com.augmentalis.nlu.download.NLUModelDownloader.DownloadState.Downloading -> {
                             _uiState.update { it.copy(nluDownloadProgress = state.progress) }
                             Timber.d("NLU download progress: ${(state.progress * 100).toInt()}%")
                         }
-                        is com.augmentalis.ava.features.nlu.download.NLUModelDownloader.DownloadState.Success -> {
+                        is com.augmentalis.nlu.download.NLUModelDownloader.DownloadState.Success -> {
                             _uiState.update {
                                 it.copy(
                                     nluModelDownloaded = true,
@@ -658,7 +658,7 @@ class SettingsViewModel @Inject constructor(
                             Timber.i("NLU model download complete: ${state.modelPath}")
                             // TODO: Show success notification
                         }
-                        is com.augmentalis.ava.features.nlu.download.NLUModelDownloader.DownloadState.Failed -> {
+                        is com.augmentalis.nlu.download.NLUModelDownloader.DownloadState.Failed -> {
                             _uiState.update { it.copy(nluDownloadProgress = 0f) }
                             Timber.e("NLU model download failed: ${state.error}")
                             // TODO: Show error notification

@@ -1,9 +1,101 @@
 plugins {
+    alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.sqldelight)
-    // KSP removed - was only used for Room compiler
+}
+
+kotlin {
+    androidTarget {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+    }
+
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                // Core modules
+                implementation(project(":core:Domain"))
+                implementation(project(":core:Utils"))
+                implementation(project(":SharedPlatform"))
+
+                // Kotlin Coroutines
+                implementation(libs.kotlinx.coroutines.core)
+
+                // Kotlin Serialization
+                implementation(libs.kotlinx.serialization.json)
+
+                // SQLDelight - KMP database
+                api(libs.sqldelight.runtime)
+                api(libs.sqldelight.coroutines.extensions)
+            }
+        }
+
+        val commonTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.kotlinx.coroutines.test)
+            }
+        }
+
+        val androidMain by getting {
+            dependencies {
+                // Android-specific SQLDelight driver
+                api(libs.sqldelight.android.driver)
+
+                // DataStore (Android-specific for developer preferences)
+                implementation(libs.androidx.datastore.preferences)
+
+                // Dagger Hilt for dependency injection (Android-specific)
+                implementation(libs.hilt.android)
+                implementation(libs.androidx.hilt.common)
+            }
+        }
+
+        val androidUnitTest by getting {
+            dependencies {
+                implementation(libs.junit)
+                implementation(libs.mockk)
+                implementation(libs.robolectric)
+                implementation(libs.androidx.test.core)
+                implementation(libs.androidx.test.core.ktx)
+            }
+        }
+
+        val androidInstrumentedTest by getting {
+            dependencies {
+                implementation(libs.androidx.test.ext.junit)
+                implementation(libs.androidx.test.runner)
+                implementation(libs.androidx.test.core)
+                implementation(libs.androidx.test.core.ktx)
+            }
+        }
+
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+        val iosMain by creating {
+            dependsOn(commonMain)
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
+            dependencies {
+                // iOS-specific SQLDelight driver
+                api(libs.sqldelight.native.driver)
+            }
+        }
+
+        val iosTest by creating {
+            dependsOn(commonTest)
+        }
+    }
 }
 
 android {
@@ -20,56 +112,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-}
-
-dependencies {
-    // Core modules
-    implementation(project(":core:Domain"))
-    implementation(project(":core:Utils"))
-
-    // Kotlin Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-
-    // Kotlin Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
-
-    // SQLDelight - KMP database (primary)
-    // Room has been removed - SQLDelight is now the only database layer
-    api(libs.sqldelight.runtime)
-    api(libs.sqldelight.android.driver)
-    api(libs.sqldelight.coroutines.extensions)
-
-    // DataStore (for developer preferences)
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
-
-    // Dagger Hilt for dependency injection
-    implementation("com.google.dagger:hilt-android:2.48")
-    implementation("androidx.hilt:hilt-common:1.1.0")
-
-    // Testing
-    testImplementation(kotlin("test"))
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("io.mockk:mockk:1.13.8")
-    testImplementation("org.mockito:mockito-core:5.2.0")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
-    // Room testing removed - using SQLDelight
-    testImplementation("org.robolectric:robolectric:4.11")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-    testImplementation("androidx.test:core:1.5.0")
-    testImplementation("androidx.test:core-ktx:1.5.0")
-
-    // Android Instrumented Testing
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test:runner:1.5.2")
-    androidTestImplementation("androidx.test:core:1.5.0")
-    androidTestImplementation("androidx.test:core-ktx:1.5.0")
-    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-    androidTestImplementation(libs.sqldelight.android.driver)
-    androidTestImplementation(libs.sqldelight.coroutines.extensions)
 }
 
 // SQLDelight Configuration
@@ -78,7 +120,7 @@ sqldelight {
         create("AVADatabase") {
             packageName.set("com.augmentalis.ava.core.data.db")
             dialect("app.cash.sqldelight:sqlite-3-38-dialect:2.0.1")
-            schemaOutputDirectory.set(file("src/main/sqldelight/databases"))
+            schemaOutputDirectory.set(file("src/commonMain/sqldelight/databases"))
             // Use CREATE TABLE statements in .sq files directly
             // Set to true only when migration files (.sqm) exist
             deriveSchemaFromMigrations.set(false)

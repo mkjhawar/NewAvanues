@@ -47,10 +47,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.augmentalis.ava.crashreporting.CrashReporter
-import com.augmentalis.ava.features.chat.ui.ChatScreen
-import com.augmentalis.ava.features.chat.ui.ChatViewModel
-import com.augmentalis.ava.features.teach.TeachAvaScreen
-import com.augmentalis.ava.features.teach.TeachAvaViewModel
+import com.augmentalis.chat.ChatScreen
+import com.augmentalis.chat.ChatViewModel
+import com.augmentalis.teach.TeachAvaScreen
+import com.augmentalis.teach.TeachAvaViewModel
 import com.augmentalis.ava.preferences.ThemeMode
 import com.augmentalis.ava.ui.components.StoragePermissionBanner
 import com.augmentalis.ava.ui.components.StoragePermissionDialog
@@ -532,10 +532,8 @@ fun ModelDownloadScreenWrapper(
 fun TestLauncherScreenWrapper(
     onNavigateBack: () -> Unit
 ) {
-    // Create TestLauncherViewModel
-    val viewModel = remember {
-        TestLauncherViewModel()
-    }
+    // Use Hilt-injected ViewModel
+    val viewModel: TestLauncherViewModel = hiltViewModel()
 
     // Use TestLauncherScreen
     TestLauncherScreen(

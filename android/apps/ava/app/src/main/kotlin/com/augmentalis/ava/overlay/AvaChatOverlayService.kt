@@ -42,11 +42,14 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.augmentalis.ava.R
-import com.augmentalis.ava.features.chat.ui.ChatViewModel
-import com.augmentalis.ava.features.overlay.controller.VoiceRecognizer
+import androidx.compose.ui.res.stringResource
+import com.augmentalis.chat.ChatViewModel
+import com.augmentalis.overlay.controller.VoiceRecognizer
 import com.augmentalis.ava.ui.theme.AvaTheme
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import timber.log.Timber
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -70,25 +73,27 @@ interface ChatViewModelDependenciesEntryPoint {
     fun messageRepository(): com.augmentalis.ava.core.domain.repository.MessageRepository
     fun trainExampleRepository(): com.augmentalis.ava.core.domain.repository.TrainExampleRepository
     fun chatPreferences(): com.augmentalis.ava.core.data.prefs.ChatPreferences
-    fun intentClassifier(): com.augmentalis.ava.features.nlu.IntentClassifier
-    fun modelManager(): com.augmentalis.ava.features.nlu.ModelManager
-    fun actionsManager(): com.augmentalis.ava.features.actions.ActionsManager
-    fun responseGenerator(): com.augmentalis.ava.features.llm.response.ResponseGenerator
-    fun learningManager(): com.augmentalis.ava.features.nlu.learning.IntentLearningManager
+    fun intentClassifier(): com.augmentalis.nlu.IntentClassifier
+    fun modelManager(): com.augmentalis.nlu.ModelManager
+    fun actionsManager(): com.augmentalis.actions.ActionsManager
+    fun responseGenerator(): com.augmentalis.llm.response.ResponseGenerator
+    fun learningManager(): com.augmentalis.nlu.learning.IntentLearningManager
     fun exportConversationUseCase(): com.augmentalis.ava.core.domain.usecase.ExportConversationUseCase
-    fun ttsManager(): com.augmentalis.ava.features.chat.tts.TTSManager
-    fun ttsPreferences(): com.augmentalis.ava.features.chat.tts.TTSPreferences
-    fun ragRepository(): com.augmentalis.ava.features.rag.domain.RAGRepository?
+    fun ragRepository(): com.augmentalis.rag.domain.RAGRepository?
     // ADR-013: Self-Learning NLU dependencies
-    fun nluSelfLearner(): com.augmentalis.ava.features.nlu.NLUSelfLearner
-    fun inferenceManager(): com.augmentalis.ava.features.llm.inference.InferenceManager
+    fun nluSelfLearner(): com.augmentalis.nlu.NLUSelfLearner
+    fun inferenceManager(): com.augmentalis.llm.inference.InferenceManager
     // P0: SOLID Coordinators for single-responsibility decomposition
-    fun nluCoordinator(): com.augmentalis.ava.features.chat.coordinator.NLUCoordinator
-    fun responseCoordinator(): com.augmentalis.ava.features.chat.coordinator.ResponseCoordinator
-    fun ragCoordinator(): com.augmentalis.ava.features.chat.coordinator.RAGCoordinator
-    fun actionCoordinator(): com.augmentalis.ava.features.chat.coordinator.ActionCoordinator
+    fun nluCoordinator(): com.augmentalis.chat.coordinator.NLUCoordinator
+    fun responseCoordinator(): com.augmentalis.chat.coordinator.ResponseCoordinator
+    fun ragCoordinator(): com.augmentalis.chat.coordinator.RAGCoordinator
+    fun actionCoordinator(): com.augmentalis.chat.coordinator.ActionCoordinator
+    fun ttsCoordinator(): com.augmentalis.chat.coordinator.TTSCoordinator
+    // P0: SOLID State Managers for single-responsibility decomposition
+    fun uiStateManager(): com.augmentalis.chat.state.ChatUIStateManager
+    fun statusIndicatorState(): com.augmentalis.chat.state.StatusIndicatorState
     // P1: WakeWordEventBus to remove reflection
-    fun wakeWordEventBus(): com.augmentalis.ava.features.chat.event.WakeWordEventBus
+    fun wakeWordEventBus(): com.augmentalis.chat.event.WakeWordEventBus
 }
 
 /**
@@ -122,13 +127,15 @@ class AvaChatOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
     private var chatOverlayView: ComposeView? = null
 
     private var isChatVisible = false
-    private var opacity = mutableStateOf(0.92f) // Adjustable opacity (92% default for better see-through)
+
+    // StateFlow-based state for proper Compose reactivity
+    private val _opacity = MutableStateFlow(0.92f) // 92% default for better see-through
+    private val _textInput = MutableStateFlow("")
+    private val _isVoiceInputActive = MutableStateFlow(false)
 
     // Chat functionality
     private lateinit var chatViewModel: ChatViewModel
     private lateinit var voiceRecognizer: VoiceRecognizer
-    private val textInput = mutableStateOf("")
-    private val isVoiceInputActive = mutableStateOf(false)
 
     override fun onCreate() {
         super.onCreate()
@@ -303,13 +310,18 @@ class AvaChatOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
 
             setContent {
                 AvaTheme {
+                    // Collect StateFlow values for proper Compose reactivity
+                    val textInput by _textInput.collectAsState()
+                    val isVoiceInputActive by _isVoiceInputActive.collectAsState()
+                    val opacity by _opacity.collectAsState()
+
                     ChatOverlayScreen(
                         chatViewModel = chatViewModel,
-                        textInput = textInput.value,
-                        onTextInputChange = { textInput.value = it },
-                        isVoiceInputActive = isVoiceInputActive.value,
-                        opacity = opacity.value,
-                        onOpacityChange = { opacity.value = it },
+                        textInput = textInput,
+                        onTextInputChange = { _textInput.value = it },
+                        isVoiceInputActive = isVoiceInputActive,
+                        opacity = opacity,
+                        onOpacityChange = { _opacity.value = it },
                         onMinimize = { hideChatOverlay() },
                         onVoiceInput = { handleVoiceInput() },
                         onClearChat = { handleClearChat() },
@@ -367,8 +379,6 @@ class AvaChatOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
                 responseGenerator = entryPoint.responseGenerator(),
                 learningManager = entryPoint.learningManager(),
                 exportConversationUseCase = entryPoint.exportConversationUseCase(),
-                ttsManager = entryPoint.ttsManager(),
-                ttsPreferences = entryPoint.ttsPreferences(),
                 ragRepository = entryPoint.ragRepository(),
                 // ADR-013: Self-Learning NLU dependencies
                 nluSelfLearner = entryPoint.nluSelfLearner(),
@@ -378,6 +388,10 @@ class AvaChatOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
                 responseCoordinator = entryPoint.responseCoordinator(),
                 ragCoordinator = entryPoint.ragCoordinator(),
                 actionCoordinator = entryPoint.actionCoordinator(),
+                ttsCoordinator = entryPoint.ttsCoordinator(),
+                // P0: SOLID State Managers for single-responsibility decomposition
+                uiStateManager = entryPoint.uiStateManager(),
+                statusIndicatorState = entryPoint.statusIndicatorState(),
                 // P1: WakeWordEventBus to remove reflection
                 wakeWordEventBus = entryPoint.wakeWordEventBus(),
                 context = applicationContext
@@ -397,18 +411,18 @@ class AvaChatOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
             context = applicationContext,
             onPartialResult = { partial ->
                 Timber.d("Voice input partial: $partial")
-                textInput.value = partial
+                _textInput.value = partial
             },
             onFinalResult = { final ->
                 Timber.d("Voice input final: $final")
-                textInput.value = final
-                isVoiceInputActive.value = false
+                _textInput.value = final
+                _isVoiceInputActive.value = false
                 // Auto-send message after voice input
                 handleSendMessage()
             },
             onError = { error ->
                 Timber.e("Voice input error: $error")
-                isVoiceInputActive.value = false
+                _isVoiceInputActive.value = false
             }
         )
         Timber.d("VoiceRecognizer initialized successfully")
@@ -418,15 +432,15 @@ class AvaChatOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
      * Handle voice input button click
      */
     private fun handleVoiceInput() {
-        if (isVoiceInputActive.value) {
+        if (_isVoiceInputActive.value) {
             // Stop listening
             voiceRecognizer.stopListening()
-            isVoiceInputActive.value = false
+            _isVoiceInputActive.value = false
             Timber.d("Voice input stopped")
         } else {
             // Start listening
             voiceRecognizer.startListening()
-            isVoiceInputActive.value = true
+            _isVoiceInputActive.value = true
             Timber.d("Voice input started")
         }
     }
@@ -435,7 +449,7 @@ class AvaChatOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
      * Handle clear chat button click
      */
     private fun handleClearChat() {
-        textInput.value = ""
+        _textInput.value = ""
         Timber.d("Chat input cleared")
     }
 
@@ -443,11 +457,11 @@ class AvaChatOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
      * Handle send message button click
      */
     private fun handleSendMessage() {
-        val message = textInput.value.trim()
+        val message = _textInput.value.trim()
         if (message.isNotEmpty()) {
             Timber.d("Sending message: $message")
             chatViewModel.sendMessage(message)
-            textInput.value = ""
+            _textInput.value = ""
         }
     }
 
@@ -599,12 +613,12 @@ private fun SimplifiedHeader(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = "AVA Assistant",
+                        text = stringResource(R.string.overlay_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Tap header to minimize",
+                        text = stringResource(R.string.overlay_minimize_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -618,7 +632,7 @@ private fun SimplifiedHeader(
             ) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Settings menu",
+                    contentDescription = stringResource(R.string.overlay_menu_settings),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -644,7 +658,7 @@ private fun SimplifiedHeader(
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurface
                         )
-                        Text("Voice Input")
+                        Text(stringResource(R.string.overlay_menu_voice_input))
                     }
                 },
                 onClick = {
@@ -665,7 +679,7 @@ private fun SimplifiedHeader(
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurface
                         )
-                        Text("Clear Chat")
+                        Text(stringResource(R.string.overlay_menu_clear_chat))
                     }
                 },
                 onClick = {
@@ -688,12 +702,12 @@ private fun SimplifiedHeader(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Transparency",
+                        text = stringResource(R.string.overlay_transparency_label),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "${((1 - opacity) * 100).toInt()}%",
+                        text = stringResource(R.string.overlay_transparency_value, ((1 - opacity) * 100).toInt()),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -747,17 +761,17 @@ private fun ChatContent(
                         modifier = Modifier.size(48.dp)
                     )
                     Text(
-                        text = "AVA Chat Overlay",
+                        text = stringResource(R.string.overlay_notification_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Ask me anything!",
+                        text = stringResource(R.string.overlay_welcome_primary),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "You can still see the app behind this overlay!",
+                        text = stringResource(R.string.overlay_welcome_secondary),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )

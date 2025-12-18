@@ -9,8 +9,8 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.augmentalis.ava.crashreporting.CrashReporter
-import com.augmentalis.ava.features.llm.provider.LocalLLMProvider
-import com.augmentalis.ava.features.nlu.NLUInitializer
+import com.augmentalis.llm.provider.LocalLLMProvider
+import com.augmentalis.nlu.NLUInitializer
 import com.augmentalis.ava.preferences.UserPreferences
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -226,7 +226,7 @@ class AvaApplication : Application(), Configuration.Provider {
 
                 if (totalCount == 0L) {
                     Timber.i("Intent category database is empty, seeding...")
-                    val seeder = com.augmentalis.ava.features.actions.CategorySeeder(intentCategoryRepository)
+                    val seeder = com.augmentalis.actions.CategorySeeder(intentCategoryRepository)
                     seeder.seedCategories()
                     Timber.i("Intent category database seeding complete")
                 } else {

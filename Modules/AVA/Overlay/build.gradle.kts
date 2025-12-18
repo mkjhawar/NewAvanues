@@ -12,7 +12,7 @@ plugins {
 }
 
 android {
-    namespace = "com.augmentalis.ava.features.overlay"
+    namespace = "com.augmentalis.overlay"
     compileSdk = 34
 
     defaultConfig {

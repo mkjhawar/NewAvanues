@@ -15,9 +15,9 @@ package com.augmentalis.ava.integration
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.augmentalis.ava.features.llm.alc.loader.ModelDiscovery
-import com.augmentalis.ava.features.llm.alc.models.ModelLoadingState
-import com.augmentalis.ava.features.llm.alc.models.ModelTypeInfo
+import com.augmentalis.llm.alc.loader.ModelDiscovery
+import com.augmentalis.llm.alc.models.ModelLoadingState
+import com.augmentalis.llm.alc.models.ModelTypeInfo
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before

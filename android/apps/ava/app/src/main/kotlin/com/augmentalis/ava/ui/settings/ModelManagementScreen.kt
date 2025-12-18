@@ -27,8 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.augmentalis.ava.features.llm.download.LLMModelDownloader
-import com.augmentalis.ava.features.llm.download.ModelStorageManager
+import com.augmentalis.llm.download.LLMModelDownloader
+import com.augmentalis.llm.download.ModelStorageManager
 
 /**
  * Model Management Screen

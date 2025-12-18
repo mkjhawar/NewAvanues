@@ -13,7 +13,7 @@ plugins {
 }
 
 android {
-    namespace = "com.augmentalis.ava.features.wakeword"
+    namespace = "com.augmentalis.wakeword"
     compileSdk = 34
 
     defaultConfig {

@@ -112,7 +112,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.ava.features.rag"
+    namespace = "com.augmentalis.rag"
     compileSdk = 34
 
     defaultConfig {

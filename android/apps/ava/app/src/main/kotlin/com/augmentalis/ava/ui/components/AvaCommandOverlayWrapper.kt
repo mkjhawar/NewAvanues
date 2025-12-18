@@ -33,7 +33,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.augmentalis.ava.features.nlu.debug.NLUDebugManager
+import com.augmentalis.nlu.debug.NLUDebugManager
 import kotlinx.coroutines.launch
 import timber.log.Timber
 

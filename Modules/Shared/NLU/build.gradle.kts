@@ -113,7 +113,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.ava.features.nlu"
+    namespace = "com.augmentalis.nlu"
     compileSdk = 34
 
     defaultConfig {

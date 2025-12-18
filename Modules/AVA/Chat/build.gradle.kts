@@ -25,6 +25,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    // Kotlin DateTime (KMP-compatible)
+    implementation(libs.kotlinx.datetime)
+
     // Jetpack Compose
     implementation("androidx.compose.ui:ui:1.5.4")
     implementation("androidx.compose.material3:material3:1.1.2")
@@ -79,13 +82,20 @@ dependencies {
 }
 
 android {
-    namespace = "com.augmentalis.ava.features.chat"
+    namespace = "com.augmentalis.chat"
     compileSdk = 34
 
     defaultConfig {
         minSdk = 28  // Android 9+ (Pie and above)
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Configure source sets for KMP-style structure
+    sourceSets {
+        getByName("main") {
+            kotlin.srcDirs("src/main/kotlin", "src/commonMain/kotlin", "src/androidMain/kotlin")
+        }
     }
 
     compileOptions {

@@ -34,10 +34,14 @@ project(":core:Data").projectDir = file("../../../Modules/AVA/core/Data")
 include(":core:Theme")
 project(":core:Theme").projectDir = file("../../../Modules/AVA/core/Theme")
 
-// Feature modules
-// NLU is now in Shared (shared between AVA and VoiceOS)
+// Shared modules (shared between AVA and VoiceOS)
+include(":SharedPlatform")
+project(":SharedPlatform").projectDir = file("../../../Modules/Shared/Platform")
+
 include(":SharedNLU")
 project(":SharedNLU").projectDir = file("../../../Modules/Shared/NLU")
+
+// Feature modules
 
 include(":Chat")
 project(":Chat").projectDir = file("../../../Modules/AVA/Chat")
@@ -59,3 +63,6 @@ project(":Actions").projectDir = file("../../../Modules/AVA/Actions")
 
 include(":WakeWord")
 project(":WakeWord").projectDir = file("../../../Modules/AVA/WakeWord")
+
+include(":Memory")
+project(":Memory").projectDir = file("../../../Modules/AVA/memory")

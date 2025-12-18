@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.augmentalis.ava.features.llm"
+    namespace = "com.augmentalis.llm"
     compileSdk = 34
 
     defaultConfig {
