@@ -114,39 +114,6 @@ data class ElementInfo(
         return copy(node = null)
     }
 
-    /**
-     * Get a stable identifier for this element.
-     * Combines class, resourceId, text, and bounds to create a unique identifier.
-     */
-    fun stableId(): String {
-        if (elementHash.isNotBlank()) return elementHash
-        if (uuid != null) return uuid!!
-
-        // Create stable ID from element properties
-        val parts = listOf(
-            className,
-            resourceId,
-            text.take(50),
-            contentDescription.take(50),
-            "${bounds.left},${bounds.top},${bounds.right},${bounds.bottom}"
-        )
-        return parts.joinToString("|").hashCode().toString(16)
-    }
-
-    /**
-     * Get stability score based on element properties.
-     * Higher score means more stable/reliable identification.
-     */
-    fun stabilityScore(): Float {
-        var score = 0f
-        if (resourceId.isNotBlank()) score += 40f
-        if (text.isNotBlank()) score += 25f
-        if (contentDescription.isNotBlank()) score += 20f
-        if (className.isNotBlank()) score += 10f
-        if (bounds.width() > 0 && bounds.height() > 0) score += 5f
-        return score.coerceAtMost(100f)
-    }
-
     override fun toString(): String {
         return "ElementInfo(class=$className, text=$text, desc=$contentDescription, clickable=$isClickable)"
     }

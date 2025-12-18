@@ -17,7 +17,6 @@
 6. [Performance Improvements](#6-performance-improvements)
 7. [Troubleshooting](#7-troubleshooting)
 8. [FAQ](#8-faq)
-9. [New in December 2025 Update](#9-new-in-december-2025-update)
 
 ---
 
@@ -567,143 +566,12 @@ A: Approximately:
 
 ---
 
-# 9. New in December 2025 Update
-
-## 9.1 Enhanced Exploration Progress Tracking
-
-The December 2025 update brings improved exploration progress tracking. You'll now see more detailed progress information during app exploration.
-
-### What's New
-
-| Feature | Description |
-|---------|-------------|
-| **Per-Screen Progress** | See progress for each individual screen |
-| **Element Click Tracking** | Know exactly which buttons have been explored |
-| **Completion Indicators** | Clear visual indicators when screens are fully explored |
-| **Export Checklists** | Export exploration progress for your records |
-
-### Progress Display
-
-During exploration, you'll see enhanced progress information:
-
-```
-┌────────────────────────────────────────┐
-│  EXPLORATION PROGRESS                  │
-│                                        │
-│  Overall: [================    ] 80%   │
-│                                        │
-│  Screens explored: 24/30               │
-│  Elements clicked: 412/515             │
-│  Completed screens: 18                 │
-│                                        │
-│  Current: SettingsActivity             │
-│  Screen progress: 75%                  │
-└────────────────────────────────────────┘
-```
-
-### Screen-by-Screen Tracking
-
-For each screen, VoiceOS now tracks:
-- Total clickable elements found
-- How many elements have been clicked
-- Whether the screen is fully explored
-
-This helps you understand:
-- Which parts of an app are well-learned
-- Which screens need more exploration
-- Overall exploration quality
-
-## 9.2 Improved Window Detection
-
-VoiceOS now better recognizes different types of windows:
-
-| Window Type | What It Is | How VoiceOS Handles It |
-|-------------|------------|------------------------|
-| **Main App** | Regular app screens | Full exploration |
-| **Dialog** | Pop-up windows | Detects and explores |
-| **Overlay** | Floating elements | Skips system overlays |
-| **Keyboard** | Input keyboard | Ignores during exploration |
-| **System** | System UI | Skips to avoid interference |
-
-### Benefits
-
-- **More accurate exploration** - VoiceOS focuses on actual app content
-- **Fewer false positives** - System elements aren't mistakenly learned
-- **Better dialog handling** - Pop-ups and modals are properly explored
-
-## 9.3 Just-In-Time Learning Improvements
-
-JIT (Just-In-Time) learning now captures more element information:
-
-### Enhanced Element Recognition
-
-VoiceOS now recognizes:
-- **Editable fields** - Text inputs, search boxes
-- **Checkboxes** - Toggle options
-- **Long-clickable items** - Elements with context menus
-- **Focusable elements** - Navigation targets
-
-### Better Voice Commands
-
-With enhanced recognition, VoiceOS generates more accurate voice commands:
-
-| Element Type | Example Commands |
-|--------------|------------------|
-| Text Input | "Edit search field", "Type in email" |
-| Checkbox | "Check remember me", "Uncheck notifications" |
-| Long-click | "Long press message", "Hold attachment" |
-
-## 9.4 AI-Powered Context
-
-VoiceOS can now provide intelligent context for apps:
-
-### How It Works
-
-When you use an app, VoiceOS understands:
-1. **What screen you're on** - Current activity and layout
-2. **What actions are available** - Clickable elements
-3. **How to navigate** - Paths to other screens
-
-### Practical Benefits
-
-- **Smarter suggestions** - VoiceOS can suggest relevant commands
-- **Better error handling** - If a command fails, VoiceOS knows alternatives
-- **Faster learning** - New screens are understood in context
-
-## 9.5 Navigation Graph Visualization
-
-For advanced users, VoiceOS now builds navigation graphs:
-
-### What's a Navigation Graph?
-
-A navigation graph shows:
-- All screens in an app (nodes)
-- How to get from one screen to another (edges)
-- Which buttons lead where
-
-### Why It Matters
-
-- **Complete app maps** - Visualize entire app structure
-- **Find missing paths** - Identify unexplored navigation
-- **Debug issues** - Understand why certain commands work
-
-### Viewing Navigation (LearnAppPro)
-
-In LearnAppPro, you can export and view navigation graphs:
-
-1. Complete an exploration
-2. Go to **Menu** > **Export Navigation Graph**
-3. View in Neo4j or export as JSON
-
----
-
 # Document History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2025-12-11 | Initial release |
 | 1.1 | 2025-12-13 | Added Section 6: Performance Improvements (pagination, app-specific filtering) |
-| 1.2 | 2025-12-17 | Added Section 9: December 2025 Update (exploration tracking, window detection, JIT improvements, AI context, navigation graphs) |
 
 ---
 

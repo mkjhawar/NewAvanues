@@ -71,19 +71,6 @@ class WindowManager(private val service: AccessibilityService) {
         private const val TAG = "LearnAppWindowManager"
     }
 
-    /**
-     * Nested reference to WindowType for convenient access
-     * Allows usage like WindowManager.WindowType.MAIN_APP
-     */
-    object WindowType {
-        val MAIN_APP = com.augmentalis.voiceoscore.learnapp.window.WindowType.MAIN_APP
-        val OVERLAY = com.augmentalis.voiceoscore.learnapp.window.WindowType.OVERLAY
-        val DIALOG = com.augmentalis.voiceoscore.learnapp.window.WindowType.DIALOG
-        val SYSTEM = com.augmentalis.voiceoscore.learnapp.window.WindowType.SYSTEM
-        val INPUT_METHOD = com.augmentalis.voiceoscore.learnapp.window.WindowType.INPUT_METHOD
-        val UNKNOWN = com.augmentalis.voiceoscore.learnapp.window.WindowType.UNKNOWN
-    }
-
     // Cached screen dimensions
     private var _screenWidth: Int = 0
     private var _screenHeight: Int = 0
@@ -259,60 +246,13 @@ class WindowManager(private val service: AccessibilityService) {
     /**
      * Map AccessibilityWindowInfo type to WindowType enum
      */
-    private fun mapWindowType(type: Int): com.augmentalis.voiceoscore.learnapp.window.WindowType {
+    private fun mapWindowType(type: Int): WindowType {
         return when (type) {
-            AccessibilityWindowInfo.TYPE_APPLICATION -> com.augmentalis.voiceoscore.learnapp.window.WindowType.MAIN_APP
-            AccessibilityWindowInfo.TYPE_SYSTEM -> com.augmentalis.voiceoscore.learnapp.window.WindowType.SYSTEM
-            AccessibilityWindowInfo.TYPE_INPUT_METHOD -> com.augmentalis.voiceoscore.learnapp.window.WindowType.INPUT_METHOD
-            AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY -> com.augmentalis.voiceoscore.learnapp.window.WindowType.OVERLAY
-            else -> com.augmentalis.voiceoscore.learnapp.window.WindowType.UNKNOWN
-        }
-    }
-
-    /**
-     * Get app windows (convenience method)
-     *
-     * @param packageName Optional package name filter
-     * @param launcherDetector Optional launcher detector for excluding launcher (use LauncherDetector object)
-     * @return List of WindowInfo for application windows
-     */
-    fun getAppWindows(
-        packageName: String? = null,
-        launcherDetector: Any? = null  // Accept LauncherDetector object
-    ): List<WindowInfo> {
-        return getWindowInfoList().filter { window ->
-            val isAppWindow = window.type == com.augmentalis.voiceoscore.learnapp.window.WindowType.MAIN_APP ||
-                             window.type == com.augmentalis.voiceoscore.learnapp.window.WindowType.DIALOG
-
-            val matchesPackage = packageName == null || window.packageName == packageName
-
-            // Use LauncherDetector.isLauncher if provided
-            val isNotLauncher = if (launcherDetector == com.augmentalis.voiceoscore.learnapp.detection.LauncherDetector &&
-                                   window.packageName != null) {
-                !com.augmentalis.voiceoscore.learnapp.detection.LauncherDetector.isLauncher(
-                    service.applicationContext,
-                    window.packageName
-                )
-            } else {
-                true
-            }
-
-            isAppWindow && matchesPackage && isNotLauncher
-        }
-    }
-
-    /**
-     * Get log string representation of current window state
-     *
-     * @return Human-readable string of current windows
-     */
-    fun toLogString(): String {
-        val windows = getWindowInfoList()
-        if (windows.isEmpty()) return "No windows"
-
-        return windows.joinToString("\n") { w ->
-            "  [${w.type}] ${w.packageName ?: "unknown"} - ${w.title ?: "no title"} " +
-            "(focused=${w.isFocused}, layer=${w.layer})"
+            AccessibilityWindowInfo.TYPE_APPLICATION -> WindowType.MAIN_APP
+            AccessibilityWindowInfo.TYPE_SYSTEM -> WindowType.SYSTEM
+            AccessibilityWindowInfo.TYPE_INPUT_METHOD -> WindowType.INPUT_METHOD
+            AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY -> WindowType.OVERLAY
+            else -> WindowType.UNKNOWN
         }
     }
 }

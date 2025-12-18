@@ -41,7 +41,7 @@ class SettingsAdapter(
 
     override fun getItemViewType(position: Int): Int {
         return when (getItem(position).type) {
-            SettingType.NUMBER_INT, SettingType.NUMBER_LONG, SettingType.NUMBER -> VIEW_TYPE_NUMBER
+            SettingType.NUMBER_INT, SettingType.NUMBER_LONG -> VIEW_TYPE_NUMBER
             SettingType.TOGGLE -> VIEW_TYPE_TOGGLE
             SettingType.SLIDER -> VIEW_TYPE_SLIDER
         }
@@ -104,7 +104,7 @@ class SettingsAdapter(
 
             // Set appropriate value and unit
             when (item.type) {
-                SettingType.NUMBER_INT, SettingType.NUMBER -> {
+                SettingType.NUMBER_INT -> {
                     valueInput.setText(item.getIntValue().toString())
                     unitText.visibility = View.GONE
                 }
@@ -126,7 +126,7 @@ class SettingsAdapter(
 
                     try {
                         val value: Any = when (currentType) {
-                            SettingType.NUMBER_INT, SettingType.NUMBER -> text.toInt()
+                            SettingType.NUMBER_INT -> text.toInt()
                             SettingType.NUMBER_LONG -> text.toLong()
                             else -> return
                         }
