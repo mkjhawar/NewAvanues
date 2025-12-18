@@ -54,6 +54,7 @@ import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
 import com.augmentalis.webavanue.ui.screen.theme.ThemeType
 import com.augmentalis.webavanue.ui.viewmodel.SettingsViewModel
 import com.augmentalis.webavanue.ui.screen.settings.components.CollapsibleSectionHeader
+import com.augmentalis.webavanue.ui.screen.settings.components.*
 
 /**
  * Settings category for two-pane AR/XR layout
@@ -786,15 +787,10 @@ private fun PortraitSettingsLayout(
 
                             AnimatedVisibility(visible = downloadsExpanded || downloadsMatchesSearch) {
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    val pathValidation by viewModel.pathValidation.collectAsState()
                                     DownloadPathSettingItem(
                                         currentPath = settings!!.downloadPath,
-                                        onPathChanged = {
-                                            viewModel.updateSettings(settings!!.copy(downloadPath = it))
-                                        },
-                                        pathValidation = pathValidation,
-                                        onValidatePath = { path ->
-                                            viewModel.validateDownloadPath(path)
+                                        onPathSelected = {
+                                            // TODO: Navigate to file picker screen
                                         }
                                     )
 
@@ -1108,9 +1104,19 @@ private fun PortraitSettingsLayout(
 
                                 item {
                                     XRPerformanceModeSettingItem(
-                                        currentMode = settings!!.xrPerformanceMode,
-                                        onModeSelected = {
-                                            viewModel.updateSettings(settings!!.copy(xrPerformanceMode = it))
+                                        currentMode = when (settings!!.xrPerformanceMode) {
+                                            BrowserSettings.XRPerformanceMode.HIGH_QUALITY -> "Performance"
+                                            BrowserSettings.XRPerformanceMode.BALANCED -> "Balanced"
+                                            BrowserSettings.XRPerformanceMode.BATTERY_SAVER -> "Battery Saver"
+                                        },
+                                        onModeSelected = { modeString ->
+                                            val mode = when (modeString) {
+                                                "Performance" -> BrowserSettings.XRPerformanceMode.HIGH_QUALITY
+                                                "Balanced" -> BrowserSettings.XRPerformanceMode.BALANCED
+                                                "Battery Saver" -> BrowserSettings.XRPerformanceMode.BATTERY_SAVER
+                                                else -> BrowserSettings.XRPerformanceMode.BALANCED
+                                            }
+                                            viewModel.updateSettings(settings!!.copy(xrPerformanceMode = mode))
                                         }
                                     )
                                 }
@@ -1772,16 +1778,11 @@ private fun CategorySettingsContent(
                 }
                 // Downloads
                 item {
-                    val pathValidation by viewModel.pathValidation.collectAsState()
                     ARXRSettingCard {
                         DownloadPathSettingItem(
                             currentPath = settings.downloadPath,
-                            onPathChanged = {
-                                viewModel.updateSettings(settings.copy(downloadPath = it))
-                            },
-                            pathValidation = pathValidation,
-                            onValidatePath = { path ->
-                                viewModel.validateDownloadPath(path)
+                            onPathSelected = {
+                                // TODO: Navigate to file picker screen
                             }
                         )
                     }
@@ -2059,9 +2060,19 @@ private fun CategorySettingsContent(
                     item {
                         ARXRSettingCard {
                             XRPerformanceModeSettingItem(
-                                currentMode = settings.xrPerformanceMode,
-                                onModeSelected = {
-                                    viewModel.updateSettings(settings.copy(xrPerformanceMode = it))
+                                currentMode = when (settings.xrPerformanceMode) {
+                                    BrowserSettings.XRPerformanceMode.HIGH_QUALITY -> "Performance"
+                                    BrowserSettings.XRPerformanceMode.BALANCED -> "Balanced"
+                                    BrowserSettings.XRPerformanceMode.BATTERY_SAVER -> "Battery Saver"
+                                },
+                                onModeSelected = { modeString ->
+                                    val mode = when (modeString) {
+                                        "Performance" -> BrowserSettings.XRPerformanceMode.HIGH_QUALITY
+                                        "Balanced" -> BrowserSettings.XRPerformanceMode.BALANCED
+                                        "Battery Saver" -> BrowserSettings.XRPerformanceMode.BATTERY_SAVER
+                                        else -> BrowserSettings.XRPerformanceMode.BALANCED
+                                    }
+                                    viewModel.updateSettings(settings.copy(xrPerformanceMode = mode))
                                 }
                             )
                         }
@@ -2652,271 +2663,6 @@ fun NewTabPageSettingItem(
     )
 }
 
-/**
- * DownloadPathSettingItem - Download path configuration with file picker
- */
-@Composable
-fun DownloadPathSettingItem(
-    currentPath: String?,
-    onPathChanged: (String?) -> Unit,
-    pathValidation: com.augmentalis.webavanue.platform.DownloadValidationResult? = null,
-    onValidatePath: (String) -> Unit = {},
-    modifier: Modifier = Modifier
-) {
-    // Get platform-specific file picker and permission manager
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val filePickerLauncher = remember { com.augmentalis.webavanue.platform.DownloadFilePickerLauncher(context) }
-    val permissionManager = remember { com.augmentalis.webavanue.platform.DownloadPermissionManager(context) }
-
-    // Permission request state
-    var showPermissionDialog by remember { mutableStateOf(false) }
-    var showSettingsDialog by remember { mutableStateOf(false) }
-
-    // Snackbar state for validation errors
-    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
-
-    // Trigger validation when path changes
-    LaunchedEffect(currentPath) {
-        currentPath?.let { path ->
-            onValidatePath(path)
-        }
-    }
-
-    // Show validation error/warning via Snackbar
-    LaunchedEffect(pathValidation) {
-        pathValidation?.let { validation ->
-            when {
-                !validation.isValid && validation.errorMessage != null -> {
-                    // Show error
-                    val result = snackbarHostState.showSnackbar(
-                        message = validation.errorMessage,
-                        actionLabel = "Use Default",
-                        duration = androidx.compose.material3.SnackbarDuration.Long
-                    )
-                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                        onPathChanged(null)
-                    }
-                }
-                validation.isLowSpace -> {
-                    // Show warning
-                    snackbarHostState.showSnackbar(
-                        message = "Low storage space: ${validation.availableSpaceMB} MB available",
-                        actionLabel = "OK",
-                        duration = androidx.compose.material3.SnackbarDuration.Short
-                    )
-                }
-            }
-        }
-    }
-
-    // File picker result launcher
-    val filePickerResultLauncher = rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
-    ) { uri: android.net.Uri? ->
-        uri?.let {
-            // Take persistable permission
-            filePickerLauncher.takePersistablePermission(it.toString())
-            // Update path
-            onPathChanged(it.toString())
-        }
-    }
-
-    // Permission result launcher
-    val permissionResultLauncher = rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            // Permission granted, launch file picker
-            filePickerResultLauncher.launch(currentPath?.let { android.net.Uri.parse(it) })
-        } else {
-            // Permission denied - show settings dialog
-            if (permissionManager.isPermanentlyDenied()) {
-                showSettingsDialog = true
-            }
-        }
-    }
-
-    androidx.compose.material3.Scaffold(
-        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
-        ListItem(
-            headlineContent = { Text("Download Location") },
-            supportingContent = {
-                Column {
-                    Text(
-                        currentPath?.let { filePickerLauncher.getDisplayPath(it) } ?: "Default system path",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    // Show validation info
-                    pathValidation?.let { validation ->
-                        if (validation.isValid) {
-                            Text(
-                                "${validation.availableSpaceMB} MB available",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (validation.isLowSpace) {
-                                    MaterialTheme.colorScheme.error
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                }
-                            )
-                        }
-                    }
-                }
-            },
-        trailingContent = {
-            Row {
-                // Browse button
-                IconButton(
-                    onClick = {
-                        // Check if permission is required and not granted
-                        if (permissionManager.isPermissionRequired() && !permissionManager.isPermissionGranted()) {
-                            // Show rationale or request permission
-                            if (permissionManager.shouldShowRationale()) {
-                                showPermissionDialog = true
-                            } else {
-                                // First request - just ask
-                                permissionResultLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                            }
-                        } else {
-                            // Permission granted or not required - launch picker
-                            filePickerResultLauncher.launch(currentPath?.let { android.net.Uri.parse(it) })
-                        }
-                    }
-                ) {
-                    Icon(androidx.compose.material.icons.Icons.Default.FolderOpen, contentDescription = "Browse")
-                }
-
-                // Use Default button (only show if custom path is set)
-                if (currentPath != null) {
-                    IconButton(
-                        onClick = {
-                            // Release persistable permission
-                            filePickerLauncher.releasePersistablePermission(currentPath)
-                            // Clear path
-                            onPathChanged(null)
-                        }
-                    ) {
-                        Icon(androidx.compose.material.icons.Icons.Default.Delete, contentDescription = "Use default")
-                    }
-                }
-            }
-        },
-            modifier = modifier.padding(paddingValues)
-        )
-    }
-
-    // Permission rationale dialog
-    if (showPermissionDialog) {
-        AlertDialog(
-            onDismissRequest = { showPermissionDialog = false },
-            title = { Text("Storage Permission Required") },
-            text = { Text("WebAvanue needs storage permission to save downloads to custom locations. The default Downloads folder will be used if permission is not granted.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showPermissionDialog = false
-                        permissionResultLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    }
-                ) {
-                    Text("Grant Permission")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPermissionDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Settings dialog (for permanently denied permission)
-    if (showSettingsDialog) {
-        AlertDialog(
-            onDismissRequest = { showSettingsDialog = false },
-            title = { Text("Permission Denied") },
-            text = { Text("Storage permission was denied. Please enable it in Settings > Permissions to use custom download locations.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showSettingsDialog = false
-                        permissionManager.openPermissionSettings()
-                    }
-                ) {
-                    Text("Open Settings")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSettingsDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-}
-
-/**
- * XRPerformanceModeSettingItem - XR performance mode selection
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun XRPerformanceModeSettingItem(
-    currentMode: BrowserSettings.XRPerformanceMode,
-    onModeSelected: (BrowserSettings.XRPerformanceMode) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    ListItem(
-        headlineContent = { Text("XR Performance Mode") },
-        supportingContent = {
-            Text(
-                when (currentMode) {
-                    BrowserSettings.XRPerformanceMode.HIGH_QUALITY -> "High quality (90fps)"
-                    BrowserSettings.XRPerformanceMode.BALANCED -> "Balanced (60fps)"
-                    BrowserSettings.XRPerformanceMode.BATTERY_SAVER -> "Battery saver (45fps)"
-                }
-            )
-        },
-        trailingContent = {
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = it }
-            ) {
-                TextButton(
-                    onClick = { expanded = true },
-                    modifier = Modifier.menuAnchor()
-                ) {
-                    Text("Change")
-                }
-
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    BrowserSettings.XRPerformanceMode.entries.forEach { mode ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    when (mode) {
-                                        BrowserSettings.XRPerformanceMode.HIGH_QUALITY -> "High quality (90fps)"
-                                        BrowserSettings.XRPerformanceMode.BALANCED -> "Balanced (60fps)"
-                                        BrowserSettings.XRPerformanceMode.BATTERY_SAVER -> "Battery saver (45fps)"
-                                    }
-                                )
-                            },
-                            onClick = {
-                                onModeSelected(mode)
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
-        },
-        modifier = modifier
-    )
-}
 // ==================== Search & Collapsible Section Composables ====================
 
 /**

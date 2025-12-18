@@ -45,6 +45,10 @@ import com.augmentalis.webavanue.ui.screen.components.rememberNetworkStatusMonit
 import com.augmentalis.webavanue.ui.screen.dialogs.SessionRestoreDialog
 import com.augmentalis.webavanue.ui.viewmodel.TabViewModel
 import com.augmentalis.webavanue.ui.viewmodel.SettingsViewModel
+import com.augmentalis.webavanue.ui.viewmodel.SecurityViewModel
+import com.augmentalis.webavanue.ui.viewmodel.HistoryViewModel
+import com.augmentalis.webavanue.ui.viewmodel.FavoriteViewModel
+import com.augmentalis.webavanue.ui.viewmodel.DownloadViewModel
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import kotlinx.coroutines.launch
 
@@ -71,11 +75,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun BrowserScreen(
     tabViewModel: TabViewModel,
-    settingsViewModel: com.augmentalis.webavanue.presentation.viewmodel.SettingsViewModel,
-    historyViewModel: com.augmentalis.webavanue.presentation.viewmodel.HistoryViewModel,
-    favoriteViewModel: com.augmentalis.webavanue.presentation.viewmodel.FavoriteViewModel,
-    securityViewModel: com.augmentalis.webavanue.presentation.viewmodel.SecurityViewModel,
-    downloadViewModel: com.augmentalis.webavanue.presentation.viewmodel.DownloadViewModel? = null,
+    settingsViewModel: SettingsViewModel,
+    historyViewModel: HistoryViewModel,
+    favoriteViewModel: FavoriteViewModel,
+    securityViewModel: SecurityViewModel,
+    downloadViewModel: DownloadViewModel? = null,
     xrManager: Any? = null,  // XRManager on Android, null on other platforms
     xrState: Any? = null,    // XRManager.XRState on Android, null on other platforms
     onNavigateToBookmarks: () -> Unit = {},
@@ -107,22 +111,20 @@ fun BrowserScreen(
         }
     }
 
-    // Check for crash recovery session on startup (Phase 4: Session Restore)
-    LaunchedEffect(Unit) {
-        val crashSession = tabViewModel.getLatestCrashSession()
-        if (crashSession != null && crashSession.tabCount > 0) {
-            showSessionRestoreDialog = true
-            sessionRestoreTabCount = crashSession.tabCount
-        }
-    }
+    // TODO: Phase 4 - Session Restore (not yet implemented)
+    // LaunchedEffect(Unit) {
+    //     val crashSession = tabViewModel.getLatestCrashSession()
+    //     if (crashSession != null && crashSession.tabCount > 0) {
+    //         showSessionRestoreDialog = true
+    //         sessionRestoreTabCount = crashSession.tabCount
+    //     }
+    // }
 
-    // Save session on screen dispose (Phase 4: Session Restore - Normal exit)
-    DisposableEffect(Unit) {
-        onDispose {
-            // Save current session as crash recovery (will be cleared on next normal startup)
-            tabViewModel.saveCurrentSession(isCrashRecovery = true)
-        }
-    }
+    // DisposableEffect(Unit) {
+    //     onDispose {
+    //         tabViewModel.saveCurrentSession(isCrashRecovery = true)
+    //     }
+    // }
 
     // Security dialog states
     val sslErrorState by securityViewModel.sslErrorState.collectAsState()
@@ -215,22 +217,17 @@ fun BrowserScreen(
     // Coroutine scope for async operations
     val scope = rememberCoroutineScope()
 
-    // Get platform-specific file picker launcher (Phase 4: Download Location Picker)
-    val context = LocalContext.current
-    val filePickerLauncher = remember { com.augmentalis.webavanue.platform.DownloadFilePickerLauncher(context) }
-
-    // File picker result launcher for download location selection
-    val filePickerResultLauncher = rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
-    ) { uri: android.net.Uri? ->
-        uri?.let {
-            // Take persistable permission for the selected directory
-            filePickerLauncher.takePersistablePermission(it.toString())
-            // Update custom path state (dialog will show this path)
-            customDownloadPath = it.toString()
-        }
-        // If user cancels (uri == null), don't update path
-    }
+    // TODO: Phase 4 - Download Location Picker (not yet implemented)
+    // val context = LocalContext.current
+    // val filePickerLauncher = remember { com.augmentalis.webavanue.platform.DownloadFilePickerLauncher(context) }
+    // val filePickerResultLauncher = rememberLauncherForActivityResult(
+    //     contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+    // ) { uri: android.net.Uri? ->
+    //     uri?.let {
+    //         filePickerLauncher.takePersistablePermission(it.toString())
+    //         customDownloadPath = it.toString()
+    //     }
+    // }
 
     // Helper to show command bar briefly (for voice commands feedback)
     fun showCommandBarBriefly() {
@@ -312,31 +309,7 @@ fun BrowserScreen(
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
-            .onPreviewKeyEvent { keyEvent ->
-                // Phase 4: Keyboard shortcuts for Find in Page
-                if (keyEvent.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
-                    when {
-                        // Ctrl+F / Cmd+F - Open Find in Page
-                        (keyEvent.isCtrlPressed || keyEvent.isMetaPressed) &&
-                        keyEvent.key == androidx.compose.ui.input.key.Key.F -> {
-                            tabViewModel.showFindInPage()
-                            true
-                        }
-                        // Escape - Close Find bar
-                        keyEvent.key == androidx.compose.ui.input.key.Key.Escape &&
-                        findInPageState.isVisible -> {
-                            scope.launch {
-                                webViewController.clearFindMatches()
-                            }
-                            tabViewModel.hideFindInPage()
-                            true
-                        }
-                        else -> false
-                    }
-                } else {
-                    false
-                }
-            }
+            // TODO: Phase 4 - Keyboard shortcuts (onPreviewKeyEvent not available in common)
     ) {
         // Detect landscape orientation based on constraints
         isLandscape = maxWidth > maxHeight
@@ -838,7 +811,7 @@ fun BrowserScreen(
 
         // SSL Error Dialog
         sslErrorState?.let { state ->
-            com.augmentalis.webavanue.presentation.ui.security.SslErrorDialog(
+            com.augmentalis.webavanue.ui.screen.security.SslErrorDialog(
                 sslErrorInfo = state.sslErrorInfo,
                 onGoBack = state.onGoBack,
                 onProceedAnyway = state.onProceedAnyway,
@@ -848,7 +821,7 @@ fun BrowserScreen(
 
         // Permission Request Dialog
         permissionRequestState?.let { state ->
-            com.augmentalis.webavanue.presentation.ui.security.PermissionRequestDialog(
+            com.augmentalis.webavanue.ui.screen.security.PermissionRequestDialog(
                 permissionRequest = state.permissionRequest,
                 onAllow = state.onAllow,
                 onDeny = state.onDeny,
@@ -858,7 +831,7 @@ fun BrowserScreen(
 
         // JavaScript Alert Dialog
         jsAlertState?.let { state ->
-            com.augmentalis.webavanue.presentation.ui.security.JavaScriptAlertDialog(
+            com.augmentalis.webavanue.ui.screen.security.JavaScriptAlertDialog(
                 domain = state.domain,
                 message = state.message,
                 onDismiss = state.onDismiss
@@ -867,7 +840,7 @@ fun BrowserScreen(
 
         // JavaScript Confirm Dialog
         jsConfirmState?.let { state ->
-            com.augmentalis.webavanue.presentation.ui.security.JavaScriptConfirmDialog(
+            com.augmentalis.webavanue.ui.screen.security.JavaScriptConfirmDialog(
                 domain = state.domain,
                 message = state.message,
                 onConfirm = state.onConfirm,
@@ -878,7 +851,7 @@ fun BrowserScreen(
 
         // JavaScript Prompt Dialog
         jsPromptState?.let { state ->
-            com.augmentalis.webavanue.presentation.ui.security.JavaScriptPromptDialog(
+            com.augmentalis.webavanue.ui.screen.security.JavaScriptPromptDialog(
                 domain = state.domain,
                 message = state.message,
                 defaultValue = state.defaultValue,
@@ -890,7 +863,7 @@ fun BrowserScreen(
 
         // HTTP Authentication Dialog
         httpAuthState?.let { state ->
-            com.augmentalis.webavanue.presentation.ui.security.HttpAuthenticationDialog(
+            com.augmentalis.webavanue.ui.screen.security.HttpAuthenticationDialog(
                 authRequest = state.authRequest,
                 onAuthenticate = state.onAuthenticate,
                 onCancel = state.onCancel,
@@ -926,15 +899,16 @@ fun BrowserScreen(
         // PHASE 4: Download Location Dialog
         // Shows when askDownloadLocation setting is enabled
         if (showDownloadLocationDialog && pendingDownloadRequest != null && downloadViewModel != null) {
-            com.augmentalis.webavanue.presentation.ui.download.AskDownloadLocationDialog(
+            com.augmentalis.webavanue.ui.screen.download.AskDownloadLocationDialog(
                 filename = pendingDownloadRequest!!.filename,
                 defaultPath = settings?.downloadPath,
                 selectedPath = customDownloadPath,
                 onLaunchFilePicker = {
+                    // TODO: Phase 4 - File picker not yet implemented
                     // Launch Android Storage Access Framework picker
                     // User can select any accessible directory (internal, SD card, cloud storage)
                     // Passing current customDownloadPath as initial URI to start navigation there
-                    filePickerResultLauncher.launch(customDownloadPath?.let { android.net.Uri.parse(it) })
+                    // filePickerResultLauncher.launch(customDownloadPath?.let { android.net.Uri.parse(it) })
                 },
                 onPathSelected = { selectedPath, rememberChoice ->
                     // Re-check WiFi-only setting (network may have changed while dialog was open)
@@ -1043,7 +1017,7 @@ fun BrowserScreen(
         // Supports voice-based navigation: say category names to navigate
         // Interactive - clicking commands executes them
         if (showVoiceHelp && settings != null) {
-            com.augmentalis.webavanue.voice.VoiceCommandsDialog(
+            com.augmentalis.webavanue.feature.voice.VoiceCommandsDialog(
                 onDismiss = { showVoiceHelp = false },
                 onCommandExecute = { command ->
                     // Execute the command

@@ -6,13 +6,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
-import com.augmentalis.webavanue.universal.commands.WebAvanueActionMapper
-import com.augmentalis.webavanue.universal.telemetry.SentryManager
-import com.augmentalis.webavanue.universal.utils.Logger
+import com.augmentalis.webavanue.feature.commands.WebAvanueActionMapper
+import com.augmentalis.webavanue.telemetry.SentryManager
+import com.augmentalis.webavanue.ui.util.Logger
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
-import com.augmentalis.webavanue.universal.presentation.controller.AndroidWebViewController
-import com.augmentalis.webavanue.universal.presentation.viewmodel.TabViewModel
+import com.augmentalis.webavanue.ui.viewmodel.AndroidWebViewController
+import com.augmentalis.webavanue.ui.viewmodel.TabViewModel
 import com.augmentalis.webavanue.data.db.BrowserDatabase
 import com.augmentalis.webavanue.data.repository.BrowserRepositoryImpl
 import com.augmentalis.webavanue.platform.createAndroidDriver
@@ -20,6 +20,7 @@ import com.augmentalis.webavanue.platform.DownloadCompletionReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
@@ -66,10 +67,11 @@ class WebAvanueApp : Application() {
 
     // Shared instances (lazy initialization)
     private val database: BrowserDatabase by lazy {
+        // FIX SECURITY: Default to encrypted for user privacy protection
         // Read encryption setting from bootstrap preferences
         // This is stored separately from BrowserSettings to avoid chicken-and-egg problem
         val bootstrapPrefs = applicationContext.getSharedPreferences("webavanue_bootstrap", Context.MODE_PRIVATE)
-        val useEncryption = bootstrapPrefs.getBoolean("database_encryption", false) // Default: unencrypted
+        val useEncryption = bootstrapPrefs.getBoolean("database_encryption", true) // Default: ENCRYPTED
 
         val driver = createAndroidDriver(applicationContext, useEncryption)
         BrowserDatabase(driver)
@@ -110,6 +112,21 @@ class WebAvanueApp : Application() {
             Logger.info(TAG, "Sentry crash reporting initialized")
         }
 
+        // FIX SECURITY: Check if database encryption migration is needed
+        if (DatabaseMigrationHelper.needsMigration(applicationContext)) {
+            Logger.info(TAG, "Database encryption migration required - running async")
+            applicationScope.launch {
+                val success = DatabaseMigrationHelper.migrateToEncrypted(applicationContext) { progress ->
+                    Logger.debug(TAG, "Migration: $progress")
+                }
+                if (success) {
+                    Logger.info(TAG, "✅ Database now encrypted - user privacy protected")
+                } else {
+                    Logger.warn(TAG, "⚠️  Migration failed - using unencrypted database")
+                }
+            }
+        }
+
         // Initialize database (triggers migration if needed)
         database
         SentryManager.addBreadcrumb("app", "Database initialized")
@@ -123,20 +140,6 @@ class WebAvanueApp : Application() {
         Logger.info(TAG, "Download completion receiver repository provider configured")
 
         Logger.info(TAG, "WebAvanueApp initialized successfully")
-    }
-
-    override fun onTerminate() {
-        super.onTerminate()
-
-        // Unregister IPC receiver
-        ipcReceiver?.let {
-            try {
-                unregisterReceiver(it)
-                Log.d(TAG, "IPC receiver unregistered")
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to unregister IPC receiver", e)
-            }
-        }
     }
 
     /**
@@ -312,4 +315,29 @@ class WebAvanueApp : Application() {
      * Used by IPC ActionMapper for voice commands
      */
     fun provideTabViewModel(): TabViewModel = tabViewModel
+
+    /**
+     * FIX MEMORY: Cleanup on application termination
+     *
+     * NOTE: onTerminate() is rarely called in production (emulator only)
+     * But this is best practice to prevent memory leaks and phantom broadcasts.
+     */
+    override fun onTerminate() {
+        super.onTerminate()
+
+        // Unregister IPC receiver to prevent leak
+        ipcReceiver?.let { receiver ->
+            try {
+                applicationContext.unregisterReceiver(receiver)
+                Logger.info(TAG, "IPC receiver unregistered")
+            } catch (e: IllegalArgumentException) {
+                // Already unregistered - ignore
+                Logger.debug(TAG, "IPC receiver already unregistered")
+            }
+        }
+
+        // Cancel application scope coroutines
+        applicationScope.cancel()
+        Logger.info(TAG, "Application scope cancelled")
+    }
 }

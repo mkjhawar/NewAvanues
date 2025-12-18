@@ -27,8 +27,7 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class DownloadViewModel(
     private val repository: BrowserRepository,
-    private val downloadQueue: com.augmentalis.webavanue.download.DownloadQueue? = null,
-    private val progressMonitor: com.augmentalis.webavanue.download.DownloadProgressMonitor? = null
+    private val downloadQueue: com.augmentalis.webavanue.feature.download.DownloadQueue? = null
 ) {
     // Coroutine scope
     private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -58,16 +57,18 @@ class DownloadViewModel(
      * Setup progress monitoring
      */
     private fun setupProgressMonitoring() {
-        progressMonitor?.let { monitor ->
+        downloadQueue?.let { queue ->
             viewModelScope.launch {
-                monitor.progressFlow.collect { progressMap ->
+                queue.observeAllActive().collect { progressList ->
+                    // Convert list to map for easier lookup
+                    val progressMap = progressList.associateBy { it.downloadId }
+
                     val updatedDownloads = _downloads.value.map { download ->
                         progressMap[download.id]?.let { progress ->
                             download.copy(
                                 downloadedSize = progress.bytesDownloaded,
                                 fileSize = progress.bytesTotal,
-                                downloadSpeed = progress.downloadSpeed,
-                                estimatedTimeRemaining = progress.estimatedTimeRemaining,
+                                status = progress.status,
                                 lastProgressUpdate = System.currentTimeMillis()
                             )
                         } ?: download
@@ -213,7 +214,7 @@ class DownloadViewModel(
 
                 // Enqueue actual download to platform download queue
                 downloadQueue?.let { queue ->
-                    val request = com.augmentalis.webavanue.download.DownloadRequest(
+                    val request = com.augmentalis.webavanue.feature.download.DownloadRequest(
                         url = url,
                         filename = sanitizedFilename,
                         mimeType = mimeType,
@@ -226,16 +227,7 @@ class DownloadViewModel(
                     val queueId = queue.enqueue(request)
                     if (queueId != null) {
                         Logger.info("DownloadViewModel", "Download enqueued to platform queue: $queueId")
-
-                        // Start progress monitoring (if downloadManagerId is available)
-                        // Note: downloadManagerId should be stored in the download object
-                        // when DownloadQueue.enqueue returns it
-                        // For now, we assume queueId is the downloadManagerId
-                        val downloadManagerId = queueId.toLongOrNull()
-                        if (downloadManagerId != null) {
-                            progressMonitor?.startMonitoring(download.id, downloadManagerId)
-                            Logger.info("DownloadViewModel", "Started progress monitoring for download: ${download.id}")
-                        }
+                        // Progress is monitored via observeAllActive() in setupProgressMonitoring()
                     } else {
                         Logger.error("DownloadViewModel", "Failed to enqueue download to platform queue", null)
                         _error.value = "Failed to start download"
@@ -279,9 +271,6 @@ class DownloadViewModel(
      * @param downloadId Download ID
      */
     fun cancelDownload(downloadId: String) {
-        // Stop progress monitoring
-        progressMonitor?.stopMonitoring(downloadId)
-
         val currentDownloads = _downloads.value.toMutableList()
         val index = currentDownloads.indexOfFirst { it.id == downloadId }
         if (index >= 0) {
@@ -351,7 +340,6 @@ class DownloadViewModel(
      * Clean up resources
      */
     fun onCleared() {
-        progressMonitor?.stopAll()
         viewModelScope.cancel()
     }
 }

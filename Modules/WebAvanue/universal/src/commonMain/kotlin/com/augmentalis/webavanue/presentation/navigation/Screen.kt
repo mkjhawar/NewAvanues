@@ -31,7 +31,7 @@ data class ViewModelHolder(
         fun create(
             repository: BrowserRepository,
             secureStorage: SecureStorageProvider? = null,
-            downloadQueue: com.augmentalis.webavanue.download.DownloadQueue? = null
+            downloadQueue: com.augmentalis.webavanue.feature.download.DownloadQueue? = null
         ): ViewModelHolder {
             val securityViewModel = SecurityViewModel(repository, secureStorage)
 
@@ -184,12 +184,6 @@ data class SettingsScreenNav(
             viewModel = viewModels.settingsViewModel,
             onNavigateBack = {
                 navigator.pop()
-            },
-            onNavigateToXRSettings = {
-                navigator.push(XRSettingsScreenNav(viewModels))
-            },
-            onNavigateToARPreview = {
-                navigator.push(ARPreviewScreenNav(viewModels))
             }
         )
     }
@@ -210,7 +204,7 @@ data class XRSettingsScreenNav(
 
         // Only show XR settings if settings are loaded
         settings?.let { currentSettings ->
-            com.augmentalis.webavanue.presentation.ui.xr.XRSettingsScreen(
+            com.augmentalis.webavanue.ui.screen.xr.XRSettingsScreen(
                 settings = currentSettings,
                 onSettingsChange = { newSettings ->
                     viewModels.settingsViewModel.updateSettings(newSettings)
@@ -251,7 +245,7 @@ data class ARPreviewScreenNav(
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
 
-        com.augmentalis.webavanue.presentation.ui.demo.ARLayoutPreview(
+        com.augmentalis.webavanue.ui.screen.demo.ARLayoutPreview(
             onBack = {
                 navigator.pop()
             }
