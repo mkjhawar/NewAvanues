@@ -49,8 +49,10 @@ class IntentEmbeddingManager(
     /**
      * Pre-computed intent embeddings for semantic similarity matching.
      * Key: intent name, Value: normalized embedding vector
+     * Thread-safe: Uses synchronized map for concurrent access safety.
      */
-    private val intentEmbeddings = mutableMapOf<String, FloatArray>()
+    private val intentEmbeddings: MutableMap<String, FloatArray> =
+        java.util.Collections.synchronizedMap(mutableMapOf())
 
     /**
      * Flag indicating whether precomputation is complete.
