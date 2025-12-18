@@ -16,28 +16,31 @@ package com.augmentalis.voiceoscore.learnapp.ui
  * Represents possible user responses to the exploration consent dialog.
  */
 sealed class ConsentResponse {
+    /** Package name associated with the consent response */
+    abstract val packageName: String
+
     /**
      * User approved exploration
      */
-    object Approved : ConsentResponse()
+    data class Approved(override val packageName: String) : ConsentResponse()
 
     /**
      * User declined exploration
      */
-    object Declined : ConsentResponse()
+    data class Declined(override val packageName: String) : ConsentResponse()
 
     /**
      * User skipped (JIT learning mode)
      */
-    object Skipped : ConsentResponse()
+    data class Skipped(override val packageName: String) : ConsentResponse()
 
     /**
      * Dialog was dismissed without explicit action
      */
-    object Dismissed : ConsentResponse()
+    data class Dismissed(override val packageName: String) : ConsentResponse()
 
     /**
      * Consent request timed out
      */
-    object Timeout : ConsentResponse()
+    data class Timeout(override val packageName: String) : ConsentResponse()
 }

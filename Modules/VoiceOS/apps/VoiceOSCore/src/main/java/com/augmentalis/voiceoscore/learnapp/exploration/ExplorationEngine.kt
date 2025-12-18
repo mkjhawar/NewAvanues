@@ -36,6 +36,7 @@ import com.augmentalis.voiceoscore.learnapp.navigation.NavigationGraphBuilder
 import com.augmentalis.voiceoscore.learnapp.tracking.ElementClickTracker
 import com.augmentalis.voiceoscore.learnapp.detection.LauncherDetector
 import com.augmentalis.voiceoscore.learnapp.window.WindowManager
+import com.augmentalis.voiceoscore.learnapp.window.WindowInfo
 import com.augmentalis.voiceoscore.learnapp.window.WindowType
 import com.augmentalis.uuidcreator.UUIDCreator
 import com.augmentalis.uuidcreator.alias.UuidAliasManager
@@ -201,9 +202,9 @@ class ExplorationEngine(
     private val screenExplorer = ScreenExplorer(elementClassifier)
 
     /**
-     * Launcher detector - device-agnostic launcher detection
+     * Launcher detector - device-agnostic launcher detection (singleton, uses object methods)
      */
-    private val launcherDetector = LauncherDetector(accessibilityService.applicationContext)
+    private val launcherDetector = LauncherDetector
 
     /**
      * Window manager - multi-window detection system
@@ -236,7 +237,7 @@ class ExplorationEngine(
      * Checklist manager - real-time element exploration tracking
      */
     private val checklistManager = ChecklistManager()
-    private val expandableDetector = ExpandableControlDetector(context)
+    private val expandableDetector = ExpandableControlDetector
 
     /**
      * PHASE 3 (2025-12-08): VUID Metrics tracking for observability
@@ -400,15 +401,8 @@ class ExplorationEngine(
     private var debugCallback: ExplorationDebugCallback? = null
 
     init {
-        // PHASE 3 (2025-12-08): Initialize VUID metrics database schema
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                metricsRepository.initializeSchema()
-                android.util.Log.d("ExplorationEngine", "VUID metrics schema initialized")
-            } catch (e: Exception) {
-                android.util.Log.e("ExplorationEngine", "Failed to initialize metrics schema", e)
-            }
-        }
+        // PHASE 3 (2025-12-08): VUID metrics repository is ready to use
+        android.util.Log.d("ExplorationEngine", "VUID metrics repository initialized")
     }
 
     /**
@@ -675,8 +669,8 @@ class ExplorationEngine(
         // Add root screen to checklist
         checklistManager.addScreen(
             screenHash = rootScreenState.hash,
-            screenTitle = rootScreenState.activityName ?: "Root Screen",
-            elements = rootElementsWithUuids
+            screenName = rootScreenState.activityName ?: "Root Screen",
+            elementCount = rootElementsWithUuids.size
         )
 
         // Register screen with clickTracker for progress tracking
@@ -1029,8 +1023,8 @@ class ExplorationEngine(
 
                         checklistManager.addScreen(
                             screenHash = postExploreState.hash,
-                            screenTitle = postExploreState.activityName ?: "Screen #${visitedScreens.size}",
-                            elements = newElementsWithUuids
+                            screenName = postExploreState.activityName ?: "Screen #${visitedScreens.size}",
+                            elementCount = newElementsWithUuids.size
                         )
 
                         // P4 Fix: Exclude critical dangerous elements from total count
@@ -1924,7 +1918,7 @@ class ExplorationEngine(
         }
 
         // Check depth limit
-        if (depth > strategy.getMaxDepth()) {
+        if (depth > strategy.maxDepth) {
             return
         }
 
@@ -2994,7 +2988,7 @@ class ExplorationEngine(
      */
     @Suppress("UNNECESSARY_SAFE_CALL")  // Element properties can be null at runtime despite type inference
     private suspend fun exploreWindow(
-        window: WindowManager.WindowInfo,
+        window: WindowInfo,
         packageName: String,
         depth: Int
     ) {
@@ -3693,7 +3687,7 @@ class ExplorationEngine(
             // Persist pause state to database
             currentSessionId?.let { sessionId ->
                 try {
-                    repository.savePauseState(currentState.packageName, _pauseState.value)
+                    repository.savePauseState(currentState.packageName, _pauseState.value.name)
                     android.util.Log.i("ExplorationEngine", "✅ Pause state persisted to database")
                 } catch (e: Exception) {
                     android.util.Log.e("ExplorationEngine", "Failed to persist pause state", e)
@@ -3726,7 +3720,7 @@ class ExplorationEngine(
 
             // Persist resume state to database
             try {
-                repository.savePauseState(currentState.packageName, ExplorationPauseState.RUNNING)
+                repository.savePauseState(currentState.packageName, ExplorationPauseState.RUNNING.name)
                 android.util.Log.i("ExplorationEngine", "✅ Resume state persisted to database")
             } catch (e: Exception) {
                 android.util.Log.e("ExplorationEngine", "Failed to persist resume state", e)

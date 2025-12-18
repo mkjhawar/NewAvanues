@@ -61,7 +61,7 @@ import com.augmentalis.voiceoscore.version.AppVersion
  * @param versionDetector App version detector for version-aware command creation
  */
 class LearnAppCore(
-    context: Context,
+    private val context: Context,
     private val database: VoiceOSDatabaseManager,
     private val uuidGenerator: ThirdPartyUuidGenerator,
     private val versionDetector: AppVersionDetector? = null
@@ -264,7 +264,7 @@ class LearnAppCore(
         // Detect app framework (cached)
         val framework = if (packageName.isNotEmpty() && element.node != null) {
             frameworkCache.getOrPut(packageName) {
-                CrossPlatformDetector.detectFramework(packageName, element.node)
+                CrossPlatformDetector.detectFramework(context, packageName, element.node)
             }
         } else {
             AppFramework.NATIVE

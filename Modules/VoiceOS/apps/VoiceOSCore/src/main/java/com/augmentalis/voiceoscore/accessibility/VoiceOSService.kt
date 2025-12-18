@@ -780,11 +780,12 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         // Phase 3E: Adaptive event filtering based on memory pressure
         // Drop low-priority events (scrolling, focus) under memory pressure
         // Preserve critical events (clicks, text input) to maintain functionality
-        val throttleLevel = resourceMonitor.getThrottleRecommendation()
-        val shouldProcess = eventPriorityManager.shouldProcessEvent(event, throttleLevel)
+        val isLowResource = resourceMonitor.isLowResourceMode.value
+        val eventPriority = eventPriorityManager.getPriorityForEvent(event.eventType)
+        val shouldProcess = !isLowResource || eventPriority >= EventPriorityManager.PRIORITY_HIGH
 
         if (!shouldProcess) {
-            Log.v(TAG, "Event filtered due to memory pressure: type=${event.eventType}, throttle=$throttleLevel")
+            Log.v(TAG, "Event filtered due to memory pressure: type=${event.eventType}, priority=$eventPriority")
             return
         }
 
@@ -925,7 +926,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                         coroutineScopeCommands.launch {
                             try {
                                 Log.v(TAG, "Forwarding WINDOW_STATE_CHANGED to ScreenActivityDetector")
-                                detector.onWindowStateChanged(event)
+                                detector.onWindowStateChanged(event.packageName?.toString(), event.className?.toString())
                             } catch (e: Exception) {
                                 Log.e(TAG, "Error in ScreenActivityDetector", e)
                             }
@@ -1478,49 +1479,30 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             // Initialize handler on-demand if not already initialized
             if (renameCommandHandler == null) {
                 Log.d(TAG, "Initializing RenameCommandHandler on-demand...")
-
-                // Get TTS from speech engine
-                val tts = try {
-                    // TODO: Get TTS instance from SpeechEngineManager
-                    // For now, create a simple TTS instance
-                    android.speech.tts.TextToSpeech(applicationContext) { status ->
-                        if (status == android.speech.tts.TextToSpeech.SUCCESS) {
-                            Log.d(TAG, "TTS initialized for rename commands")
-                        } else {
-                            Log.e(TAG, "TTS initialization failed")
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to create TTS instance", e)
-                    return@withContext false
-                }
-
-                scrapingDatabase?.let { database ->
-                    renameCommandHandler = RenameCommandHandler(
-                        context = applicationContext,
-                        database = database.databaseManager,
-                        tts = tts
-                    )
-                    Log.d(TAG, "✓ RenameCommandHandler initialized")
-                } ?: run {
-                    Log.e(TAG, "Cannot initialize RenameCommandHandler: database not available")
-                    return@withContext false
-                }
+                renameCommandHandler = RenameCommandHandler(context = applicationContext)
+                renameCommandHandler?.start()
+                Log.d(TAG, "✓ RenameCommandHandler initialized")
             }
 
             // Process rename command
-            val handler = renameCommandHandler ?: return@withContext false
-            val result = handler.processRenameCommand(voiceInput, packageName)
+            // TODO: Parse voice input to extract old name and new name
+            // Format expected: "rename [old name] to [new name]"
+            val renamePattern = "rename\\s+(.+?)\\s+to\\s+(.+)".toRegex(RegexOption.IGNORE_CASE)
+            val matchResult = renamePattern.find(voiceInput)
 
-            when (result) {
-                is com.augmentalis.voiceoscore.learnapp.commands.RenameResult.Success -> {
-                    Log.i(TAG, "Rename successful: ${result.oldName} → ${result.newName}")
-                    true
+            if (matchResult != null) {
+                val (oldName, newName) = matchResult.destructured
+                val commandId = "${packageName}_${oldName.trim()}"
+                val success = renameCommandHandler?.renameCommand(commandId, oldName.trim(), newName.trim()) ?: false
+                if (success) {
+                    Log.i(TAG, "Rename successful: $oldName → $newName")
+                } else {
+                    Log.e(TAG, "Rename failed for: $oldName → $newName")
                 }
-                is com.augmentalis.voiceoscore.learnapp.commands.RenameResult.Error -> {
-                    Log.e(TAG, "Rename failed: ${result.message}")
-                    false
-                }
+                success
+            } else {
+                Log.w(TAG, "Could not parse rename command from: $voiceInput")
+                false
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error in handleRenameCommand", e)
@@ -1808,12 +1790,12 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                 while (isActive) {
                     try {
                         // Log current memory stats
-                        resourceMonitor.logMemoryStats(TAG)
+                        val state = resourceMonitor.resourceState.value
+                        Log.d(TAG, "Memory: ${state.usedMemoryPercent}% used (${state.availableMemoryMb}MB available), Battery: ${state.batteryLevel}%")
 
                         // Warn if memory pressure is high
-                        if (resourceMonitor.isMemoryPressureHigh()) {
-                            val stats = resourceMonitor.getMemoryStats()
-                            Log.w(TAG, "⚠️ High memory pressure detected: ${stats.usagePercentage * 100}% heap usage")
+                        if (resourceMonitor.shouldReduceMemory()) {
+                            Log.w(TAG, "⚠️ High memory pressure detected: ${state.usedMemoryPercent}% heap usage")
                             Log.w(TAG, "   Consider reducing scraping depth or skipping operations")
                         }
 

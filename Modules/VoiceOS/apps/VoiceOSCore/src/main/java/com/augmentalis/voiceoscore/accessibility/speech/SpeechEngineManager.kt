@@ -131,7 +131,7 @@ class SpeechEngineManager(private val context: Context) {
                 confidence = confidence,
                 timestamp = System.currentTimeMillis()
             ))
-            ConditionalLogger.d(TAG) { "SPEECH_TEST: Command event emitted - command='$currentText', confidence=$confidence" }
+            ConditionalLogger.d(TAG, "SPEECH_TEST: Command event emitted - command='$currentText', confidence=$confidence")
         }
     }
 

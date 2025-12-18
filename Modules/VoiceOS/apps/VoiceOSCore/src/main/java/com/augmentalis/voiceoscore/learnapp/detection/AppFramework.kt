@@ -61,5 +61,33 @@ enum class AppFramework {
     /**
      * Unknown framework (could not be detected)
      */
-    UNKNOWN
+    UNKNOWN;
+
+    /**
+     * Get minimum label length adjusted for framework
+     * Cross-platform frameworks often have shorter labels
+     */
+    fun getMinLabelLength(defaultLength: Int): Int {
+        return when (this) {
+            UNITY, UNREAL -> 1  // Game engines often have icon-only buttons
+            FLUTTER, REACT_NATIVE -> 2  // Cross-platform may have short labels
+            WEB_BASED -> 2
+            else -> defaultLength
+        }
+    }
+
+    /**
+     * Whether this framework needs aggressive fallback label generation
+     * (e.g., game engines with no semantic information)
+     */
+    fun needsAggressiveFallback(): Boolean {
+        return this == UNITY || this == UNREAL
+    }
+
+    /**
+     * Whether this framework needs moderate fallback label generation
+     */
+    fun needsModerateFallback(): Boolean {
+        return this == FLUTTER || this == REACT_NATIVE || this == WEB_BASED
+    }
 }

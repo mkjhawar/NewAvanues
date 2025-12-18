@@ -115,6 +115,18 @@ data class ElementInfo(
     }
 
     /**
+     * Recycle the AccessibilityNodeInfo to free memory.
+     * Should be called when the ElementInfo is no longer needed.
+     */
+    fun recycleNode() {
+        try {
+            node?.recycle()
+        } catch (e: Exception) {
+            // Ignore - node may already be recycled
+        }
+    }
+
+    /**
      * Get a stable identifier for this element.
      * Combines class, resourceId, text, and bounds to create a unique identifier.
      */

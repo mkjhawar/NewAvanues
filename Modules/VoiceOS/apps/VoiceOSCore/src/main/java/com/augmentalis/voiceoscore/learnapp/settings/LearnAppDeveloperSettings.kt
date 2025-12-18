@@ -64,6 +64,11 @@ class LearnAppDeveloperSettings(private val context: Context) {
         private const val DEFAULT_MIN_LABEL_LENGTH = 1
         private const val DEFAULT_MIN_GENERATED_LABEL_LENGTH = 2
         private const val DEFAULT_MAX_COMMAND_BATCH_SIZE = 100
+        private const val DEFAULT_EXPANSION_WAIT_DELAY_MS = 200L
+        private const val DEFAULT_MAX_BACK_NAVIGATION_ATTEMPTS = 3
+        private const val DEFAULT_SCREEN_HASH_SIMILARITY_THRESHOLD = 0.85f
+        private const val DEFAULT_LOGIN_TIMEOUT_MS = 600_000L  // 10 minutes
+        private const val DEFAULT_CLICK_RETRY_DELAY_MS = 500L
     }
 
     private val prefs: SharedPreferences by lazy {
@@ -337,6 +342,33 @@ class LearnAppDeveloperSettings(private val context: Context) {
      * Get maximum command batch size for processing.
      */
     fun getMaxCommandBatchSize(): Int = DEFAULT_MAX_COMMAND_BATCH_SIZE
+
+    /**
+     * Get expansion wait delay in milliseconds.
+     */
+    fun getExpansionWaitDelayMs(): Long = DEFAULT_EXPANSION_WAIT_DELAY_MS
+
+    /**
+     * Get maximum back navigation attempts.
+     */
+    fun getMaxBackNavigationAttempts(): Int = DEFAULT_MAX_BACK_NAVIGATION_ATTEMPTS
+
+    /**
+     * Get screen hash similarity threshold for screen comparison.
+     * Value between 0.0 and 1.0 where 1.0 means exact match required.
+     */
+    fun getScreenHashSimilarityThreshold(): Float = DEFAULT_SCREEN_HASH_SIMILARITY_THRESHOLD
+
+    /**
+     * Get login timeout in milliseconds.
+     * Time to wait for user to complete login before resuming exploration.
+     */
+    fun getLoginTimeoutMs(): Long = DEFAULT_LOGIN_TIMEOUT_MS
+
+    /**
+     * Get click retry delay in milliseconds.
+     */
+    fun getClickRetryDelayMs(): Long = DEFAULT_CLICK_RETRY_DELAY_MS
 
     /**
      * Check if aggressive fallback mode is needed.
