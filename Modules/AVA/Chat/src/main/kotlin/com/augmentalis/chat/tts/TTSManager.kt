@@ -9,6 +9,8 @@ import com.augmentalis.ava.core.common.Result
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -107,9 +109,11 @@ class TTSManager @Inject constructor(
     private var tts: TextToSpeech? = null
 
     /**
-     * Coroutine scope for async operations
+     * Coroutine scope for async operations.
+     * Uses SupervisorJob to prevent child failures from cancelling the scope.
+     * CRITICAL: Must be cancelled in shutdown() to prevent memory leaks.
      */
-    private val scope = CoroutineScope(Dispatchers.Main)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /**
      * Map of utterance IDs to completion callbacks.
@@ -405,11 +409,21 @@ class TTSManager @Inject constructor(
     /**
      * Shutdown TTS engine and release resources.
      * Should be called when app is destroyed.
+     *
+     * CRITICAL: Cancels coroutine scope to prevent memory leaks (Issue 1.1).
+     * Without cancellation, the scope holds references to StateFlows and
+     * callbacks, causing memory to accumulate with each TTS usage cycle.
      */
     fun shutdown() {
         Log.d(TAG, "Shutting down TTS...")
+
+        // Cancel coroutine scope first to stop any pending operations
+        // This prevents memory leaks from retained StateFlow references
+        scope.cancel()
+
         tts?.stop()
         tts?.shutdown()
+        tts = null
         utteranceCallbacks.clear()
         _isInitialized.value = false
         _isSpeaking.value = false

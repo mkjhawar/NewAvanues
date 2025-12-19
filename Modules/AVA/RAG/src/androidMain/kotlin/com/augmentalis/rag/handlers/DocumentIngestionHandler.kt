@@ -142,6 +142,9 @@ class DocumentIngestionHandler(
     /**
      * Process a document: parse, chunk, and generate embeddings.
      *
+     * Issue 1.4 Fix: Added transaction handling to ensure data integrity.
+     * If any step fails, the entire operation is rolled back.
+     *
      * @param documentId Document ID
      * @param docType Document type
      * @param filePath File path
@@ -204,13 +207,19 @@ class DocumentIngestionHandler(
 
         Log.d(TAG, "Generated ${embeddings.size} embeddings")
 
-        // Insert chunks
-        insertChunks(documentId, domainChunks, embeddings, now.toString())
+        // Insert chunks within a transaction for data integrity (Issue 1.4)
+        // If insertion fails mid-way, all chunk insertions are rolled back
+        database.transaction {
+            insertChunksInTransaction(documentId, domainChunks, embeddings, now.toString())
+        }
         Log.i(TAG, "Document processed successfully: $documentId")
     }
 
     /**
      * Add document with pre-computed chunks and embeddings.
+     *
+     * Issue 1.4 Fix: Added transaction handling to ensure document and chunks
+     * are inserted atomically. If any step fails, entire operation is rolled back.
      *
      * @param document Document domain object
      * @param chunks Pre-chunked document chunks
@@ -221,37 +230,39 @@ class DocumentIngestionHandler(
         chunks: List<Chunk>
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            // Insert document
-            documentQueries.insert(
-                id = document.id,
-                title = document.title,
-                file_path = document.filePath,
-                document_type = document.fileType.name,
-                total_pages = 0,
-                size_bytes = document.sizeBytes,
-                added_timestamp = document.createdAt.toString(),
-                last_accessed_timestamp = null,
-                metadata_json = kotlinx.serialization.json.Json.encodeToString(
-                    kotlinx.serialization.serializer(),
-                    document.metadata
-                ),
-                content_checksum = null
-            )
-
-            // Extract chunk texts
+            // Extract chunk texts for embedding generation (done outside transaction)
             val chunkTexts = chunks.map { it.content }
 
-            // Generate embeddings in batch
+            // Generate embeddings in batch (expensive operation, done outside transaction)
             val embeddingResult = embeddingProvider.embedBatch(chunkTexts)
             val embeddings = if (embeddingResult.isFailure) {
-                documentQueries.deleteById(document.id)
                 throw embeddingResult.exceptionOrNull() ?: Exception("Failed to generate embeddings")
             } else {
                 embeddingResult.getOrThrow()
             }
 
-            // Insert chunks
-            insertChunks(document.id, chunks, embeddings, Clock.System.now().toString())
+            // Insert document and chunks within a transaction for data integrity (Issue 1.4)
+            database.transaction {
+                // Insert document
+                documentQueries.insert(
+                    id = document.id,
+                    title = document.title,
+                    file_path = document.filePath,
+                    document_type = document.fileType.name,
+                    total_pages = 0,
+                    size_bytes = document.sizeBytes,
+                    added_timestamp = document.createdAt.toString(),
+                    last_accessed_timestamp = null,
+                    metadata_json = kotlinx.serialization.json.Json.encodeToString(
+                        kotlinx.serialization.serializer(),
+                        document.metadata
+                    ),
+                    content_checksum = null
+                )
+
+                // Insert chunks (within same transaction)
+                insertChunksInTransaction(document.id, chunks, embeddings, Clock.System.now().toString())
+            }
 
             Result.success(Unit)
         } catch (e: Exception) {
@@ -300,7 +311,13 @@ class DocumentIngestionHandler(
 
     // ==================== Helper Methods ====================
 
-    private fun insertChunks(
+    /**
+     * Insert chunks within a transaction context.
+     * This method should only be called from within a database.transaction {} block.
+     *
+     * Issue 1.4: Renamed from insertChunks to make transaction requirement explicit.
+     */
+    private fun insertChunksInTransaction(
         documentId: String,
         chunks: List<Chunk>,
         embeddings: List<Embedding>,

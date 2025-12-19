@@ -90,6 +90,116 @@ object BuiltInIntents {
      */
     const val TEACH_AVA = "teach_ava"
 
+    // ==================== System Control (Fast Path) ====================
+
+    /**
+     * System stop command - halt current operation
+     * Examples: "stop", "halt"
+     */
+    const val SYSTEM_STOP = "system_stop"
+
+    /**
+     * System back command - go back/undo
+     * Examples: "back", "go back"
+     */
+    const val SYSTEM_BACK = "system_back"
+
+    /**
+     * System cancel command - cancel current operation
+     * Examples: "cancel", "nevermind"
+     */
+    const val SYSTEM_CANCEL = "system_cancel"
+
+    /**
+     * System home command - return to home
+     * Examples: "home", "go home"
+     */
+    const val SYSTEM_HOME = "system_home"
+
+    /**
+     * System help command - show help
+     * Examples: "help", "assist me"
+     */
+    const val SYSTEM_HELP = "system_help"
+
+    /**
+     * System quit command - exit application
+     * Examples: "quit", "close"
+     */
+    const val SYSTEM_QUIT = "system_quit"
+
+    /**
+     * System exit command - exit current mode
+     * Examples: "exit", "leave"
+     */
+    const val SYSTEM_EXIT = "system_exit"
+
+    /**
+     * System pause command - pause playback/operation
+     * Examples: "pause", "hold"
+     */
+    const val SYSTEM_PAUSE = "system_pause"
+
+    /**
+     * System resume command - resume paused operation
+     * Examples: "resume", "continue"
+     */
+    const val SYSTEM_RESUME = "system_resume"
+
+    /**
+     * System mute command - mute audio
+     * Examples: "mute", "silence"
+     */
+    const val SYSTEM_MUTE = "system_mute"
+
+    /**
+     * System unmute command - unmute audio
+     * Examples: "unmute", "sound on"
+     */
+    const val SYSTEM_UNMUTE = "system_unmute"
+
+    // ==================== Navigation (Fast Path) ====================
+
+    /**
+     * Navigation up command
+     */
+    const val NAVIGATION_UP = "navigation_up"
+
+    /**
+     * Navigation down command
+     */
+    const val NAVIGATION_DOWN = "navigation_down"
+
+    /**
+     * Navigation left command
+     */
+    const val NAVIGATION_LEFT = "navigation_left"
+
+    /**
+     * Navigation right command
+     */
+    const val NAVIGATION_RIGHT = "navigation_right"
+
+    /**
+     * Navigation next command
+     */
+    const val NAVIGATION_NEXT = "navigation_next"
+
+    /**
+     * Navigation previous command
+     */
+    const val NAVIGATION_PREVIOUS = "navigation_previous"
+
+    /**
+     * Navigation select command
+     */
+    const val NAVIGATION_SELECT = "navigation_select"
+
+    /**
+     * Navigation enter command
+     */
+    const val NAVIGATION_ENTER = "navigation_enter"
+
     // ==================== Fallback ====================
 
     /**
@@ -99,7 +209,8 @@ object BuiltInIntents {
     const val UNKNOWN = "unknown"
 
     /**
-     * All built-in intents that AVA understands by default
+     * All built-in intents that AVA understands by default.
+     * CRITICAL: All intents in FAST_KEYWORDS must be included here to satisfy the contract.
      */
     val ALL_INTENTS = listOf(
         // Device Control
@@ -118,6 +229,29 @@ object BuiltInIntents {
         SHOW_HISTORY,
         NEW_CONVERSATION,
         TEACH_AVA,
+
+        // System Control (Fast Path)
+        SYSTEM_STOP,
+        SYSTEM_BACK,
+        SYSTEM_CANCEL,
+        SYSTEM_HOME,
+        SYSTEM_HELP,
+        SYSTEM_QUIT,
+        SYSTEM_EXIT,
+        SYSTEM_PAUSE,
+        SYSTEM_RESUME,
+        SYSTEM_MUTE,
+        SYSTEM_UNMUTE,
+
+        // Navigation (Fast Path)
+        NAVIGATION_UP,
+        NAVIGATION_DOWN,
+        NAVIGATION_LEFT,
+        NAVIGATION_RIGHT,
+        NAVIGATION_NEXT,
+        NAVIGATION_PREVIOUS,
+        NAVIGATION_SELECT,
+        NAVIGATION_ENTER,
 
         // Fallback
         UNKNOWN
@@ -145,6 +279,11 @@ object BuiltInIntents {
             CHECK_WEATHER, SHOW_TIME -> "information"
             SET_ALARM, SET_REMINDER -> "productivity"
             SHOW_HISTORY, NEW_CONVERSATION, TEACH_AVA -> "system"
+            SYSTEM_STOP, SYSTEM_BACK, SYSTEM_CANCEL, SYSTEM_HOME,
+            SYSTEM_HELP, SYSTEM_QUIT, SYSTEM_EXIT, SYSTEM_PAUSE,
+            SYSTEM_RESUME, SYSTEM_MUTE, SYSTEM_UNMUTE -> "system_control"
+            NAVIGATION_UP, NAVIGATION_DOWN, NAVIGATION_LEFT, NAVIGATION_RIGHT,
+            NAVIGATION_NEXT, NAVIGATION_PREVIOUS, NAVIGATION_SELECT, NAVIGATION_ENTER -> "navigation"
             else -> "custom"
         }
     }
@@ -177,32 +316,35 @@ object BuiltInIntents {
      * Fast-path keyword to intent mapping.
      * These are single-word commands that bypass NLU for instant response.
      * Used by NLUDispatcher for sub-millisecond classification.
+     *
+     * CONTRACT: All intent values must exist in ALL_INTENTS to ensure downstream
+     * action handlers can process them. This was fixed in Issue 1.2.
      */
     val FAST_KEYWORDS: Map<String, String> = mapOf(
         // System commands
-        "stop" to "system_stop",
-        "back" to "system_back",
-        "cancel" to "system_cancel",
-        "home" to "system_home",
-        "help" to "system_help",
-        "quit" to "system_quit",
-        "exit" to "system_exit",
+        "stop" to SYSTEM_STOP,
+        "back" to SYSTEM_BACK,
+        "cancel" to SYSTEM_CANCEL,
+        "home" to SYSTEM_HOME,
+        "help" to SYSTEM_HELP,
+        "quit" to SYSTEM_QUIT,
+        "exit" to SYSTEM_EXIT,
 
         // Voice control
-        "pause" to "system_pause",
-        "resume" to "system_resume",
-        "mute" to "system_mute",
-        "unmute" to "system_unmute",
+        "pause" to SYSTEM_PAUSE,
+        "resume" to SYSTEM_RESUME,
+        "mute" to SYSTEM_MUTE,
+        "unmute" to SYSTEM_UNMUTE,
 
         // Navigation
-        "up" to "navigation_up",
-        "down" to "navigation_down",
-        "left" to "navigation_left",
-        "right" to "navigation_right",
-        "next" to "navigation_next",
-        "previous" to "navigation_previous",
-        "select" to "navigation_select",
-        "enter" to "navigation_enter"
+        "up" to NAVIGATION_UP,
+        "down" to NAVIGATION_DOWN,
+        "left" to NAVIGATION_LEFT,
+        "right" to NAVIGATION_RIGHT,
+        "next" to NAVIGATION_NEXT,
+        "previous" to NAVIGATION_PREVIOUS,
+        "select" to NAVIGATION_SELECT,
+        "enter" to NAVIGATION_ENTER
     )
 
     /**

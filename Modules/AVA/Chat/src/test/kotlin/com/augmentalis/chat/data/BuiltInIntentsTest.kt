@@ -47,7 +47,50 @@ class BuiltInIntentsTest {
 
     @Test
     fun `ALL_INTENTS has correct count`() {
-        assertEquals(10, BuiltInIntents.ALL_INTENTS.size, "Should have 10 built-in intents")
+        // 10 original + 11 system control + 8 navigation = 29 total
+        assertEquals(29, BuiltInIntents.ALL_INTENTS.size, "Should have 29 built-in intents")
+    }
+
+    @Test
+    fun `ALL_INTENTS contains system control intents`() {
+        val systemIntents = listOf(
+            "system_stop", "system_back", "system_cancel", "system_home",
+            "system_help", "system_quit", "system_exit", "system_pause",
+            "system_resume", "system_mute", "system_unmute"
+        )
+
+        systemIntents.forEach { intent ->
+            assertTrue(
+                BuiltInIntents.ALL_INTENTS.contains(intent),
+                "ALL_INTENTS should contain '$intent'"
+            )
+        }
+    }
+
+    @Test
+    fun `ALL_INTENTS contains navigation intents`() {
+        val navIntents = listOf(
+            "navigation_up", "navigation_down", "navigation_left", "navigation_right",
+            "navigation_next", "navigation_previous", "navigation_select", "navigation_enter"
+        )
+
+        navIntents.forEach { intent ->
+            assertTrue(
+                BuiltInIntents.ALL_INTENTS.contains(intent),
+                "ALL_INTENTS should contain '$intent'"
+            )
+        }
+    }
+
+    @Test
+    fun `FAST_KEYWORDS all map to valid intents in ALL_INTENTS`() {
+        // Issue 1.2 contract validation: All fast keyword intents must exist in ALL_INTENTS
+        BuiltInIntents.FAST_KEYWORDS.forEach { (keyword, intent) ->
+            assertTrue(
+                BuiltInIntents.ALL_INTENTS.contains(intent),
+                "FAST_KEYWORD '$keyword' maps to '$intent' which should be in ALL_INTENTS"
+            )
+        }
     }
 
     // ==================== FAST_KEYWORDS Tests ====================
@@ -142,6 +185,10 @@ class BuiltInIntentsTest {
         assertEquals("system", BuiltInIntents.getCategory("show_history"))
         assertEquals("system", BuiltInIntents.getCategory("new_conversation"))
         assertEquals("system", BuiltInIntents.getCategory("teach_ava"))
+        assertEquals("system_control", BuiltInIntents.getCategory("system_stop"))
+        assertEquals("system_control", BuiltInIntents.getCategory("system_mute"))
+        assertEquals("navigation", BuiltInIntents.getCategory("navigation_up"))
+        assertEquals("navigation", BuiltInIntents.getCategory("navigation_select"))
         assertEquals("custom", BuiltInIntents.getCategory("unknown_intent"))
     }
 

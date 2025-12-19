@@ -139,12 +139,19 @@ actual class ModelManager(private val context: Context) {
                 activeModelFile = findModelFileCaseInsensitive(internalModelsDir, ModelType.MOBILEBERT.modelFileName)
                 ModelType.MOBILEBERT
             }
-            // No model found - will trigger download (currently disabled)
+            // No model found - throw explicit error (Issue 1.5)
+            // Previously this silently returned MOBILEBERT with non-existent file path,
+            // causing confusing downstream initialization failures.
             else -> {
-                activeModelFile = internalMobilebertFile
-                android.util.Log.w(TAG, "No model found - download required but DOWNLOAD SITE UNDEFINED")
+                activeModelFile = null
+                android.util.Log.e(TAG, "CRITICAL: No NLU model found in any location")
                 logSearchedPaths()
-                ModelType.MOBILEBERT
+
+                val errorMsg = buildModelNotFoundErrorMessage()
+                android.util.Log.e(TAG, errorMsg)
+
+                // Throw with clear instructions for developers/users
+                throw IllegalStateException(errorMsg)
             }
         }
 
@@ -179,6 +186,43 @@ actual class ModelManager(private val context: Context) {
             val exists = dir.exists()
             val files = if (exists) dir.listFiles()?.size ?: 0 else 0
             android.util.Log.w(TAG, "[$index] ${dir.absolutePath} (exists: $exists, files: $files)")
+        }
+    }
+
+    /**
+     * Build a detailed error message when no model is found.
+     * Issue 1.5: Provides clear instructions for developers and users.
+     */
+    private fun buildModelNotFoundErrorMessage(): String {
+        return buildString {
+            appendLine("╔══════════════════════════════════════════════════════════════╗")
+            appendLine("║                  NLU MODEL NOT FOUND                         ║")
+            appendLine("╠══════════════════════════════════════════════════════════════╣")
+            appendLine("║ The AVA NLU model could not be found in any of the expected  ║")
+            appendLine("║ locations. NLU features will be unavailable until a model    ║")
+            appendLine("║ is installed.                                                ║")
+            appendLine("╠══════════════════════════════════════════════════════════════╣")
+            appendLine("║ TO FIX:                                                      ║")
+            appendLine("║                                                              ║")
+            appendLine("║ Option 1: Bundle model in APK                                ║")
+            appendLine("║   - Place ${ModelType.MOBILEBERT.modelFileName} in:                  ║")
+            appendLine("║     app/src/main/assets/models/                              ║")
+            appendLine("║                                                              ║")
+            appendLine("║ Option 2: Place model in external storage                    ║")
+            appendLine("║   - Copy to: ${externalModelsDir.absolutePath}               ║")
+            appendLine("║   - Expected file: ${ModelType.MOBILEBERT.modelFileName}             ║")
+            appendLine("║                                                              ║")
+            appendLine("║ Option 3: Place model in package data directory              ║")
+            appendLine("║   - For debug: /sdcard/Android/data/$packageName/files/models/nlu/ ║")
+            appendLine("║                                                              ║")
+            appendLine("╠══════════════════════════════════════════════════════════════╣")
+            appendLine("║ SEARCHED LOCATIONS:                                          ║")
+            val allPaths = packageDataPaths + listOf(externalModelsDir, internalModelsDir)
+            allPaths.forEachIndexed { index, dir ->
+                val exists = if (dir.exists()) "✓" else "✗"
+                appendLine("║ $exists ${dir.absolutePath}".take(62).padEnd(62) + " ║")
+            }
+            appendLine("╚══════════════════════════════════════════════════════════════╝")
         }
     }
 
