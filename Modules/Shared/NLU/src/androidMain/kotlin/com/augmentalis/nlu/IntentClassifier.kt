@@ -879,13 +879,19 @@ actual class IntentClassifier private constructor(
 
     /**
      * Learning statistics result.
+     *
+     * ADR-014: Extended for unified learning to include VoiceOS commands.
      */
     data class LearningStatsResult(
         val total: Int,
         val llmAuto: Int,
         val llmVariation: Int,
         val user: Int,
-        val confirmed: Int
+        val confirmed: Int,
+        /** VoiceOS scraped commands synced to AVA */
+        val voiceosCommands: Int = 0,
+        /** Count of entries with computed embeddings */
+        val withEmbedding: Int = 0
     )
 
     /**

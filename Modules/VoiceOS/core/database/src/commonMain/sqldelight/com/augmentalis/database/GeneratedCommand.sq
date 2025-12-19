@@ -13,6 +13,9 @@ CREATE TABLE commands_generated (
     usageCount INTEGER NOT NULL DEFAULT 0,
     lastUsed INTEGER,
     createdAt INTEGER NOT NULL,
+    -- ADR-014: Unified Learning columns
+    synced_to_ava INTEGER NOT NULL DEFAULT 0,
+    synced_at INTEGER,
     UNIQUE(elementHash, commandText)  -- FIX (2025-12-05): Prevent duplicate commands
 );
 
@@ -101,3 +104,56 @@ SET elementHash = ?,
     usageCount = ?,
     lastUsed = ?
 WHERE id = ?;
+
+-- ==================== ADR-014: Unified Learning Queries ====================
+
+-- Get commands not yet synced to AVA
+getUnsyncedCommands:
+SELECT * FROM commands_generated
+WHERE synced_to_ava = 0 AND confidence >= ?
+ORDER BY isUserApproved DESC, confidence DESC
+LIMIT ?;
+
+-- Get high-confidence unsynced commands
+getHighConfidenceUnsynced:
+SELECT * FROM commands_generated
+WHERE synced_to_ava = 0 AND (isUserApproved = 1 OR confidence >= 0.85)
+ORDER BY isUserApproved DESC, confidence DESC
+LIMIT ?;
+
+-- Get user-approved unsynced commands
+getUserApprovedUnsynced:
+SELECT * FROM commands_generated
+WHERE synced_to_ava = 0 AND isUserApproved = 1
+ORDER BY createdAt DESC
+LIMIT ?;
+
+-- Mark command as synced to AVA
+markSyncedToAva:
+UPDATE commands_generated
+SET synced_to_ava = 1, synced_at = ?
+WHERE id = ?;
+
+-- Batch mark commands as synced
+markBatchSynced:
+UPDATE commands_generated
+SET synced_to_ava = 1, synced_at = ?
+WHERE id IN ?;
+
+-- Count synced commands
+countSynced:
+SELECT COUNT(*) FROM commands_generated WHERE synced_to_ava = 1;
+
+-- Count unsynced commands
+countUnsynced:
+SELECT COUNT(*) FROM commands_generated WHERE synced_to_ava = 0 AND confidence >= ?;
+
+-- Get sync statistics
+getSyncStats:
+SELECT
+    COUNT(*) AS total,
+    SUM(CASE WHEN synced_to_ava = 1 THEN 1 ELSE 0 END) AS synced,
+    SUM(CASE WHEN synced_to_ava = 0 THEN 1 ELSE 0 END) AS pending,
+    SUM(CASE WHEN isUserApproved = 1 THEN 1 ELSE 0 END) AS user_approved,
+    SUM(CASE WHEN confidence >= 0.85 THEN 1 ELSE 0 END) AS high_confidence
+FROM commands_generated;
