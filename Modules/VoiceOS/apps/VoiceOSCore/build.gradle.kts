@@ -250,9 +250,9 @@ dependencies {
     implementation(project(":Modules:VoiceOS:libraries:VoiceUIElements"))    // From LearnApp
 
     // Vivoka VSDK
-    compileOnly(files("${rootDir}/vivoka/vsdk-6.0.0.aar"))
-    compileOnly(files("${rootDir}/vivoka/vsdk-csdk-asr-2.0.0.aar"))
-    compileOnly(files("${rootDir}/vivoka/vsdk-csdk-core-1.0.1.aar"))
+    implementation(files("${rootDir}/vivoka/vsdk-6.0.0.aar"))
+    implementation(files("${rootDir}/vivoka/vsdk-csdk-asr-2.0.0.aar"))
+    implementation(files("${rootDir}/vivoka/vsdk-csdk-core-1.0.1.aar"))
 
     implementation("com.alphacephei:vosk-android:0.3.47") {
         exclude(group = "com.google.guava", module = "listenablefuture")
