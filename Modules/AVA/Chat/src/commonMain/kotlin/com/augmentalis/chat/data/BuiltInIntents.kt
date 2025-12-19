@@ -171,6 +171,40 @@ object BuiltInIntents {
         }
     }
 
+    // ==================== Fast Path Keywords ====================
+
+    /**
+     * Fast-path keyword to intent mapping.
+     * These are single-word commands that bypass NLU for instant response.
+     * Used by NLUDispatcher for sub-millisecond classification.
+     */
+    val FAST_KEYWORDS: Map<String, String> = mapOf(
+        // System commands
+        "stop" to "system_stop",
+        "back" to "system_back",
+        "cancel" to "system_cancel",
+        "home" to "system_home",
+        "help" to "system_help",
+        "quit" to "system_quit",
+        "exit" to "system_exit",
+
+        // Voice control
+        "pause" to "system_pause",
+        "resume" to "system_resume",
+        "mute" to "system_mute",
+        "unmute" to "system_unmute",
+
+        // Navigation
+        "up" to "navigation_up",
+        "down" to "navigation_down",
+        "left" to "navigation_left",
+        "right" to "navigation_right",
+        "next" to "navigation_next",
+        "previous" to "navigation_previous",
+        "select" to "navigation_select",
+        "enter" to "navigation_enter"
+    )
+
     /**
      * Get example utterances for an intent (for Teach-AVA suggestions)
      * @param intent Intent name

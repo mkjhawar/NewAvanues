@@ -113,16 +113,10 @@ class NLUCoordinator @Inject constructor(
                     Log.i(TAG, "*** NLU MODEL LOADED AND READY ***")
 
                     loadCandidateIntents()
-                    
+
                     // Initialize Fast Path (Optimization)
-                    // TODO: Load these from a config or DB
-                    val fastKeywords = mapOf(
-                        "stop" to "system_stop",
-                        "back" to "system_back",
-                        "cancel" to "system_cancel",
-                        "home" to "system_home"
-                    )
-                    nluDispatcher.initialize(fastKeywords)
+                    // Uses centralized keyword config from BuiltInIntents
+                    nluDispatcher.initialize(BuiltInIntents.FAST_KEYWORDS)
                     
                     Result.Success(Unit)
                 }
