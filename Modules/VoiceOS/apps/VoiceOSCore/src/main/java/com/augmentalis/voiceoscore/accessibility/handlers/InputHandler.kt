@@ -11,13 +11,13 @@ package com.augmentalis.voiceoscore.accessibility.handlers
 import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.accessibility.VoiceOSService
+import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
 
 /**
  * Handler for text input and keyboard actions
  */
 class InputHandler(
-    private val service: VoiceOSService
+    private val context: IVoiceOSContext
 ) : ActionHandler {
     
     companion object {
@@ -220,7 +220,7 @@ class InputHandler(
     
     private fun performSearch(query: String): Boolean {
         // Attempt to find search field and enter text
-        val rootNode = service.rootInActiveWindow ?: return false
+        val rootNode = context.rootInActiveWindow ?: return false
         val searchNode = findSearchField(rootNode) ?: return false
         
         val arguments = Bundle().apply {
@@ -235,7 +235,7 @@ class InputHandler(
     }
     
     private fun findFocusedNode(): AccessibilityNodeInfo? {
-        val rootNode = service.rootInActiveWindow ?: return null
+        val rootNode = context.rootInActiveWindow ?: return null
         return rootNode.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) 
             ?: rootNode.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
     }

@@ -28,16 +28,19 @@ import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 import com.augmentalis.voiceoscore.version.AppVersion
 import com.augmentalis.voiceoscore.version.AppVersionDetector
+import com.augmentalis.voiceoscore.learnapp.detection.CrossPlatformDetector
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
+import io.mockk.mockkObject
 import io.mockk.slot
 import io.mockk.unmockkAll
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -86,6 +89,11 @@ class LearnAppCoreTest {
         every { anyConstructed<LearnAppDeveloperSettings>().isVerboseLoggingEnabled() } returns false
         every { anyConstructed<LearnAppDeveloperSettings>().getMaxCommandBatchSize() } returns 100
         every { anyConstructed<LearnAppDeveloperSettings>().getMinGeneratedLabelLength() } returns 3
+
+        // Mock CrossPlatformDetector to return NATIVE by default
+        // This ensures label filtering is applied for short/numeric labels
+        mockkObject(CrossPlatformDetector)
+        every { CrossPlatformDetector.detectFramework(any(), any(), any()) } returns AppFramework.NATIVE
 
         // Create system under test
         learnAppCore = LearnAppCore(
@@ -154,6 +162,7 @@ class LearnAppCoreTest {
     }
 
     @Test
+    @Ignore("Rect properties return 0 in unit tests with isReturnDefaultValues=true. Test in instrumentation tests.")
     fun `generateUUID uses element bounds in hash calculation`() = runTest {
         // Arrange
         val element1 = createTestElement(

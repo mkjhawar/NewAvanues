@@ -1,33 +1,22 @@
 /**
- * LearnedAppEntity.kt - Data class for learned apps (SQLDelight compatible)
+ * LearnedAppEntity.kt - Data model for learned apps
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
- * Created: 2025-12-18
+ * Created: 2025-10-08
+ * Migrated to SQLDelight: 2025-12-17
  *
- * Data class representing learned app metadata.
- * Used by SQLDelight adapter pattern (not Room).
+ * Data model for storing learned app metadata
+ * Uses SQLDelight schema from core/database module
  */
 
 package com.augmentalis.voiceoscore.learnapp.database.entities
 
 /**
- * Learned App Entity
+ * Learned App Data Model
  *
- * Data class storing metadata about learned apps.
- * This is a pure Kotlin data class without Room annotations.
- * SQLDelight handles database operations via LearnAppDatabaseAdapter.
- *
- * @property packageName Package name (primary key)
- * @property appName Human-readable app name
- * @property versionCode App version code
- * @property versionName App version name
- * @property firstLearnedAt When app was first learned (timestamp)
- * @property lastUpdatedAt When app was last updated (timestamp)
- * @property totalScreens Total screens discovered
- * @property totalElements Total elements mapped
- * @property appHash Hash of app structure (for update detection)
- * @property explorationStatus Exploration status (COMPLETE, PARTIAL, FAILED)
+ * Data model storing metadata about learned apps.
+ * Corresponds to learned_apps table in SQLDelight schema.
  */
 data class LearnedAppEntity(
     val packageName: String,
@@ -39,5 +28,14 @@ data class LearnedAppEntity(
     val totalScreens: Int,
     val totalElements: Int,
     val appHash: String,
-    val explorationStatus: String
+    val explorationStatus: String  // COMPLETE, PARTIAL, FAILED
 )
+
+/**
+ * Exploration Status
+ */
+object ExplorationStatus {
+    const val COMPLETE = "COMPLETE"
+    const val PARTIAL = "PARTIAL"
+    const val FAILED = "FAILED"
+}

@@ -19,22 +19,10 @@ import android.os.BatteryManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.database.dto.ScrapedAppDTO
-import com.augmentalis.database.dto.ScrapedElementDTO
-import com.augmentalis.database.dto.ScrapedHierarchyDTO
-import com.augmentalis.database.dto.ScreenContextDTO
-import com.augmentalis.database.dto.ElementRelationshipDTO
-import com.augmentalis.database.dto.ElementStateHistoryDTO
-import com.augmentalis.database.dto.UserInteractionDTO
-import com.augmentalis.database.repositories.IScrapedAppRepository
-import com.augmentalis.database.repositories.IScrapedElementRepository
-import com.augmentalis.database.repositories.IScrapedHierarchyRepository
-import com.augmentalis.database.repositories.IScreenContextRepository
-import com.augmentalis.database.repositories.IElementRelationshipRepository
-import com.augmentalis.database.repositories.IElementStateHistoryRepository
-import com.augmentalis.database.repositories.IUserInteractionRepository
-import com.augmentalis.database.repositories.IGeneratedCommandRepository
-import com.augmentalis.database.repositories.IScreenTransitionRepository
+import com.augmentalis.voiceoscore.scraping.database.AppScrapingDatabase
+import com.augmentalis.voiceoscore.scraping.entities.ScrapedAppEntity
+import com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity
+import com.augmentalis.voiceoscore.scraping.entities.ScrapedHierarchyEntity
 import com.augmentalis.uuidcreator.UUIDCreator
 import com.augmentalis.uuidcreator.alias.UuidAliasManager
 import com.augmentalis.uuidcreator.database.UUIDCreatorDatabase
@@ -76,16 +64,7 @@ import java.util.UUID
  */
 class AccessibilityScrapingIntegration(
     private val context: Context,
-    private val accessibilityService: AccessibilityService,
-    private val scrapedAppRepository: IScrapedAppRepository,
-    private val scrapedElementRepository: IScrapedElementRepository,
-    private val scrapedHierarchyRepository: IScrapedHierarchyRepository,
-    private val screenContextRepository: IScreenContextRepository,
-    private val elementRelationshipRepository: IElementRelationshipRepository,
-    private val elementStateHistoryRepository: IElementStateHistoryRepository,
-    private val userInteractionRepository: IUserInteractionRepository,
-    private val generatedCommandRepository: IGeneratedCommandRepository,
-    private val screenTransitionRepository: IScreenTransitionRepository
+    private val accessibilityService: AccessibilityService
 ) {
 
     companion object {
@@ -106,65 +85,10 @@ class AccessibilityScrapingIntegration(
         )
     }
 
-    /**
-     * Interaction type constants for user interaction tracking
-     */
-    object InteractionType {
-        const val CLICK = "CLICK"
-        const val LONG_PRESS = "LONG_PRESS"
-        const val FOCUS = "FOCUS"
-        const val SCROLL = "SCROLL"
-    }
-
-    /**
-     * State type constants for element state tracking
-     */
-    object StateType {
-        const val ENABLED = "ENABLED"
-        const val DISABLED = "DISABLED"
-        const val CHECKED = "CHECKED"
-        const val UNCHECKED = "UNCHECKED"
-        const val SELECTED = "SELECTED"
-        const val FOCUSED = "FOCUSED"
-        const val VISIBLE = "VISIBLE"
-        const val EXPANDED = "EXPANDED"
-        const val COLLAPSED = "COLLAPSED"
-    }
-
-    /**
-     * Trigger source constants for state changes
-     */
-    object TriggerSource {
-        const val USER_CLICK = "USER_CLICK"
-        const val USER_KEYBOARD = "USER_KEYBOARD"
-        const val USER_GESTURE = "USER_GESTURE"
-        const val SYSTEM = "SYSTEM"
-        const val UNKNOWN = "UNKNOWN"
-    }
-
-    /**
-     * Relationship type constants for element relationships
-     */
-    object RelationshipType {
-        const val LABEL_FOR = "LABEL_FOR"
-        const val BUTTON_SUBMITS_FORM = "BUTTON_SUBMITS_FORM"
-        const val TRIGGERS = "TRIGGERS"
-        const val NAVIGATES_TO = "NAVIGATES_TO"
-    }
-
+    private val database: AppScrapingDatabase = AppScrapingDatabase.getInstance(context)
     private val packageManager: PackageManager = context.packageManager
-    private val commandGenerator: CommandGenerator = CommandGenerator(
-        context = context,
-        elementStateHistoryRepository = elementStateHistoryRepository,
-        userInteractionRepository = userInteractionRepository
-    )
-    private val voiceCommandProcessor: VoiceCommandProcessor = VoiceCommandProcessor(
-        context = context,
-        accessibilityService = accessibilityService,
-        scrapedAppRepository = scrapedAppRepository,
-        scrapedElementRepository = scrapedElementRepository,
-        generatedCommandRepository = generatedCommandRepository
-    )
+    private val commandGenerator: CommandGenerator = CommandGenerator(context)
+    private val voiceCommandProcessor: VoiceCommandProcessor = VoiceCommandProcessor(context, accessibilityService)
 
     // Phase 3: Interaction learning preferences
     private val preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -226,28 +150,28 @@ class AccessibilityScrapingIntegration(
             AccessibilityEvent.TYPE_VIEW_CLICKED -> {
                 Log.d(TAG, "View clicked")
                 integrationScope.launch {
-                    recordInteraction(event, InteractionType.CLICK)
+                    recordInteraction(event, com.augmentalis.voiceoscore.scraping.entities.InteractionType.CLICK)
                 }
             }
 
             AccessibilityEvent.TYPE_VIEW_LONG_CLICKED -> {
                 Log.d(TAG, "View long clicked")
                 integrationScope.launch {
-                    recordInteraction(event, InteractionType.LONG_PRESS)
+                    recordInteraction(event, com.augmentalis.voiceoscore.scraping.entities.InteractionType.LONG_PRESS)
                 }
             }
 
             AccessibilityEvent.TYPE_VIEW_FOCUSED -> {
                 Log.d(TAG, "View focused")
                 integrationScope.launch {
-                    recordInteraction(event, InteractionType.FOCUS)
+                    recordInteraction(event, com.augmentalis.voiceoscore.scraping.entities.InteractionType.FOCUS)
                 }
             }
 
             AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
                 Log.d(TAG, "View scrolled")
                 integrationScope.launch {
-                    recordInteraction(event, InteractionType.SCROLL)
+                    recordInteraction(event, com.augmentalis.voiceoscore.scraping.entities.InteractionType.SCROLL)
                 }
             }
 
@@ -255,7 +179,7 @@ class AccessibilityScrapingIntegration(
             AccessibilityEvent.TYPE_VIEW_SELECTED -> {
                 Log.d(TAG, "View selected")
                 integrationScope.launch {
-                    recordStateChange(event, StateType.SELECTED)
+                    recordStateChange(event, com.augmentalis.voiceoscore.scraping.entities.StateType.SELECTED)
                 }
             }
 
@@ -328,44 +252,39 @@ class AccessibilityScrapingIntegration(
             val metrics = ScrapingMetrics()
             val scrapeStartTime = System.currentTimeMillis()
 
-            val existingApp = scrapedAppRepository.getByPackage(packageName)
+            val existingApp = database.scrapedAppDao().getAppByHash(appHash)
             val appId: String
             val isNewApp = existingApp == null
 
             if (existingApp != null) {
                 Log.d(TAG, "App already in database (appId=${existingApp.appId}), using incremental scraping")
-                scrapedAppRepository.updateStats(
-                    existingApp.appId,
-                    existingApp.scrapeCount + 1,
-                    existingApp.elementCount,
-                    existingApp.commandCount,
-                    System.currentTimeMillis()
-                )
+                database.scrapedAppDao().incrementScrapeCount(existingApp.appId)
                 appId = existingApp.appId
             } else {
                 Log.i(TAG, "New app detected, performing full scrape")
 
                 val currentTime = System.currentTimeMillis()
 
-                // Create app DTO
+                // Create app entity
                 appId = UUID.randomUUID().toString()
-                val scrapedApp = ScrapedAppDTO(
+                val scrapedApp = ScrapedAppEntity(
                     appId = appId,
                     packageName = packageName,
-                    versionCode = appInfo.versionCode.toLong(),
+                    appName = appInfo.applicationInfo.loadLabel(packageManager).toString(),
+                    versionCode = appInfo.versionCode,
                     versionName = appInfo.versionName ?: "unknown",
                     appHash = appHash,
-                    firstScrapedAt = currentTime,
-                    lastScrapedAt = currentTime
+                    firstScraped = currentTime,
+                    lastScraped = currentTime
                 )
 
                 // Insert app
-                scrapedAppRepository.insert(scrapedApp)
-                Log.d(TAG, "Inserted app: $packageName")
+                database.scrapedAppDao().insert(scrapedApp)
+                Log.d(TAG, "Inserted app: ${scrapedApp.appName}")
             }
 
             // ===== PHASE 1: Scrape element tree with hash deduplication =====
-            val elements = mutableListOf<ScrapedElementDTO>()
+            val elements = mutableListOf<ScrapedElementEntity>()
             val hierarchyBuildInfo = mutableListOf<HierarchyBuildInfo>()
 
             scrapeNode(rootNode, appId, null, 0, 0, elements, hierarchyBuildInfo, filterNonActionable, metrics)
@@ -387,24 +306,24 @@ class AccessibilityScrapingIntegration(
                 Log.i(TAG, "📈 Cache hit rate: $cacheHitRate% (${metrics.elementsCached}/${metrics.elementsFound})")
             }
 
-            // ===== PHASE 2: Insert elements =====
-            // Insert elements using repository
-            elements.forEach { element ->
-                scrapedElementRepository.insert(element)
+            // ===== PHASE 2: Insert elements and capture database-assigned IDs =====
+            val assignedIds: List<Long> = database.scrapedElementDao().insertBatchWithIds(elements)
+
+            Log.i(TAG, "Inserted ${assignedIds.size} elements, captured database IDs")
+            Log.d(TAG, "Sample ID mapping (first 5): ${assignedIds.take(5)}")
+
+            // Validate we got the expected number of IDs
+            if (assignedIds.size != elements.size) {
+                Log.e(TAG, "ID count mismatch! Expected ${elements.size}, got ${assignedIds.size}")
+                throw IllegalStateException("Failed to retrieve all element IDs from database")
             }
-
-            Log.i(TAG, "Inserted ${elements.size} elements")
-
-            // Note: With SQLDelight, we'll need to retrieve elements back to get their IDs
-            // For now, we'll skip hierarchy insertion until we implement proper ID handling
-            // TODO: Implement proper ID retrieval and hierarchy insertion
 
             // ===== PHASE 2.5: Register UUIDs with UUIDCreator =====
             // Register elements that have UUIDs with the UUIDCreator system
             val registeredCount = elements.count { element ->
                 element.uuid != null && try {
                     val uuidElement = UUIDElement(
-                        uuid = element.uuid!!,
+                        uuid = element.uuid,
                         name = element.text ?: element.contentDescription ?: "Unknown",
                         type = element.className?.substringAfterLast('.') ?: "unknown",
                         description = element.contentDescription,
@@ -420,9 +339,9 @@ class AccessibilityScrapingIntegration(
                             ),
                             accessibility = UUIDAccessibility(
                                 contentDescription = element.contentDescription,
-                                isClickable = element.isClickable != 0L,
-                                isFocusable = element.isFocusable != 0L,
-                                isScrollable = element.isScrollable != 0L
+                                isClickable = element.isClickable,
+                                isFocusable = element.isFocusable,
+                                isScrollable = element.isScrollable
                             )
                         )
                     )
@@ -435,23 +354,37 @@ class AccessibilityScrapingIntegration(
             }
             Log.i(TAG, "Registered $registeredCount UUIDs with UUIDCreator (${elements.size} total elements)")
 
-            // ===== PHASE 3 & 4: Hierarchy insertion skipped =====
-            // TODO: Implement hierarchy insertion with SQLDelight
-            // This requires retrieving element IDs after insertion
+            // ===== PHASE 3: Build hierarchy entities using real database IDs =====
+            val hierarchy = hierarchyBuildInfo.map { buildInfo ->
+                // Map list indices to real database IDs
+                val childId = assignedIds[buildInfo.childListIndex]
+                val parentId = assignedIds[buildInfo.parentListIndex]
+
+                ScrapedHierarchyEntity(
+                    parentElementId = parentId,   // ✅ Real database ID
+                    childElementId = childId,      // ✅ Real database ID
+                    childOrder = buildInfo.childOrder,
+                    depth = buildInfo.depth
+                )
+            }
+
+            Log.d(TAG, "Built ${hierarchy.size} hierarchy entities with valid foreign keys")
+
+            // ===== PHASE 4: Insert hierarchy with valid foreign key references =====
+            database.scrapedHierarchyDao().insertBatch(hierarchy)
 
             // Update element count
-            scrapedAppRepository.updateStats(
-                appId,
-                existingApp?.scrapeCount?.plus(1) ?: 1,
-                elements.size.toLong(),
-                existingApp?.commandCount ?: 0,
-                System.currentTimeMillis()
-            )
+            database.scrapedAppDao().updateElementCount(appId, elements.size)
 
-            // Generate commands
+            // Generate commands (need to update elements with real database IDs first)
             Log.d(TAG, "Generating voice commands...")
 
-            val commands = commandGenerator.generateCommandsForElements(elements)
+            // Update elements with real database IDs from assignedIds
+            val elementsWithIds = elements.mapIndexed { index, element ->
+                element.copy(id = assignedIds[index])
+            }
+
+            val commands = commandGenerator.generateCommandsForElements(elementsWithIds)
 
             // Validation: Ensure all commands have valid element hashes
             require(commands.all { it.elementHash.isNotBlank() }) {
@@ -461,30 +394,22 @@ class AccessibilityScrapingIntegration(
             Log.d(TAG, "Generated ${commands.size} commands with valid element hashes")
 
             // Insert commands
-            commands.forEach { command ->
-                generatedCommandRepository.insert(command)
-            }
+            database.generatedCommandDao().insertBatch(commands)
 
             // Update command count
-            scrapedAppRepository.updateStats(
-                appId,
-                existingApp?.scrapeCount?.plus(1) ?: 1,
-                elements.size.toLong(),
-                commands.size.toLong(),
-                System.currentTimeMillis()
-            )
+            database.scrapedAppDao().updateCommandCount(appId, commands.size)
 
             // ===== PHASE 5: Create/Update Screen Context (Phase 2) =====
             val screenHash = java.security.MessageDigest.getInstance("MD5")
                 .digest("$packageName${event.className}${rootNode.windowId}".toByteArray())
                 .joinToString("") { "%02x".format(it) }
 
-            val existingScreenContext = screenContextRepository.getByHash(screenHash)
+            val existingScreenContext = database.screenContextDao().getByScreenHash(screenHash)
 
             if (existingScreenContext != null) {
                 // Update existing screen context
-                // TODO: Implement incrementVisitCount in repository
-                Log.d(TAG, "Screen context already exists")
+                database.screenContextDao().incrementVisitCount(screenHash, System.currentTimeMillis())
+                Log.d(TAG, "Updated screen context (visit count: ${existingScreenContext.visitCount + 1})")
             } else {
                 // Create new screen context
                 val screenType = screenContextHelper.inferScreenType(
@@ -507,8 +432,7 @@ class AccessibilityScrapingIntegration(
                     windowTitle = rootNode.text?.toString()
                 )
 
-                val screenContext = ScreenContextDTO(
-                    id = 0, // Auto-generated by database
+                val screenContext = com.augmentalis.voiceoscore.scraping.entities.ScreenContextEntity(
                     screenHash = screenHash,
                     appId = appId,
                     packageName = packageName,
@@ -516,23 +440,20 @@ class AccessibilityScrapingIntegration(
                     windowTitle = rootNode.text?.toString(),
                     screenType = screenType,
                     formContext = formContext,
-                    navigationLevel = navigationLevel.toLong(),
+                    navigationLevel = navigationLevel,
                     primaryAction = primaryAction,
-                    elementCount = elements.size.toLong(),
-                    hasBackButton = if (hasBackButton) 1L else 0L,
-                    visitCount = 1L,
-                    firstScraped = System.currentTimeMillis(),
-                    lastScraped = System.currentTimeMillis()
+                    elementCount = elements.size,
+                    hasBackButton = hasBackButton
                 )
 
-                screenContextRepository.insert(screenContext)
+                database.screenContextDao().insert(screenContext)
                 Log.d(TAG, "Created screen context: type=$screenType, formContext=$formContext, primaryAction=$primaryAction")
 
                 // ===== PHASE 2.5: Assign Form Group IDs =====
                 if (formContext != null) {
                     // Find all form-related elements (editable fields and form inputs)
                     val formElements = elements.filter { element ->
-                        element.isEditable != 0L ||
+                        element.isEditable ||
                         element.semanticRole?.startsWith("input_") == true ||
                         element.className.contains("EditText", ignoreCase = true)
                     }
@@ -542,13 +463,15 @@ class AccessibilityScrapingIntegration(
                         val groupId = screenContextHelper.generateFormGroupId(
                             packageName = packageName,
                             screenHash = screenHash,
-                            elementDepth = formElements.firstOrNull()?.depth?.toInt() ?: 0,
+                            elementDepth = formElements.firstOrNull()?.depth ?: 0,
                             formContext = formContext
                         )
 
-                        // TODO: Update all form elements with the group ID
-                        // This requires implementing updateFormGroupId in repository
-                        Log.d(TAG, "Would assign formGroupId '$groupId' to ${formElements.size} form elements (TODO)")
+                        // Update all form elements with the group ID
+                        val elementHashes = formElements.map { it.elementHash }
+                        database.scrapedElementDao().updateFormGroupIdBatch(elementHashes, groupId)
+
+                        Log.d(TAG, "Assigned formGroupId '$groupId' to ${formElements.size} form elements")
                     }
                 }
 
@@ -556,7 +479,7 @@ class AccessibilityScrapingIntegration(
                 // Find submit buttons
                 val submitButtons = elements.filter { element ->
                     element.semanticRole in listOf("submit_form", "submit_login", "submit_signup", "submit_payment") ||
-                    (element.isClickable != 0L && element.className.contains("Button", ignoreCase = true) &&
+                    (element.isClickable && element.className.contains("Button", ignoreCase = true) &&
                      element.text?.lowercase()?.let { text ->
                          text.contains("submit") || text.contains("login") || text.contains("sign in") ||
                          text.contains("continue") || text.contains("next") || text.contains("done") ||
@@ -565,10 +488,10 @@ class AccessibilityScrapingIntegration(
                 }
 
                 // Find form input fields
-                val formInputs = elements.filter { it.isEditable != 0L || it.semanticRole?.startsWith("input_") == true }
+                val formInputs = elements.filter { it.isEditable || it.semanticRole?.startsWith("input_") == true }
 
                 if (submitButtons.isNotEmpty() && formInputs.isNotEmpty()) {
-                    val relationships = mutableListOf<ElementRelationshipDTO>()
+                    val relationships = mutableListOf<com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity>()
 
                     submitButtons.forEach { button ->
                         // Find form inputs that precede this button (heuristic: same or shallower depth, earlier in tree)
@@ -582,32 +505,19 @@ class AccessibilityScrapingIntegration(
                         // Create relationship for each candidate input
                         candidateInputs.forEach { input ->
                             relationships.add(
-                                ElementRelationshipDTO(
-                                    id = 0, // Auto-generated
+                                com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity(
                                     sourceElementHash = button.elementHash,
                                     targetElementHash = input.elementHash,
-                                    relationshipType = RelationshipType.BUTTON_SUBMITS_FORM,
-                                    relationshipData = "heuristic_proximity",
-                                    confidence = 0.8,
-                                    createdAt = System.currentTimeMillis(),
-                                    updatedAt = System.currentTimeMillis()
+                                    relationshipType = com.augmentalis.voiceoscore.scraping.entities.RelationshipType.BUTTON_SUBMITS_FORM,
+                                    confidence = 0.8f,
+                                    inferredBy = "heuristic_proximity"
                                 )
                             )
                         }
                     }
 
                     if (relationships.isNotEmpty()) {
-                        relationships.forEach { rel ->
-                            elementRelationshipRepository.insert(
-                                sourceElementHash = rel.sourceElementHash,
-                                targetElementHash = rel.targetElementHash,
-                                relationshipType = rel.relationshipType,
-                                relationshipData = rel.relationshipData,
-                                confidence = rel.confidence,
-                                createdAt = rel.createdAt,
-                                updatedAt = rel.updatedAt
-                            )
-                        }
+                        database.elementRelationshipDao().insertAll(relationships)
                         Log.d(TAG, "Created ${relationships.size} button→form relationships")
                     }
                 }
@@ -622,10 +532,10 @@ class AccessibilityScrapingIntegration(
                 }
 
                 // Find input fields
-                val inputs = elements.filter { it.isEditable != 0L || it.semanticRole?.startsWith("input_") == true }
+                val inputs = elements.filter { it.isEditable || it.semanticRole?.startsWith("input_") == true }
 
                 if (labels.isNotEmpty() && inputs.isNotEmpty()) {
-                    val labelRelationships = mutableListOf<ElementRelationshipDTO>()
+                    val labelRelationships = mutableListOf<com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity>()
 
                     inputs.forEach { input ->
                         // Strategy 1: Find label immediately before input (same depth, previous index)
@@ -636,15 +546,12 @@ class AccessibilityScrapingIntegration(
 
                         if (adjacentLabel != null) {
                             labelRelationships.add(
-                                ElementRelationshipDTO(
-                                    id = 0, // Auto-generated
+                                com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity(
                                     sourceElementHash = adjacentLabel.elementHash,
                                     targetElementHash = input.elementHash,
-                                    relationshipType = RelationshipType.LABEL_FOR,
-                                    relationshipData = "heuristic_sequence",
-                                    confidence = 0.9,
-                                    createdAt = System.currentTimeMillis(),
-                                    updatedAt = System.currentTimeMillis()
+                                    relationshipType = com.augmentalis.voiceoscore.scraping.entities.RelationshipType.LABEL_FOR,
+                                    confidence = 0.9f,  // High confidence for adjacent elements
+                                    inferredBy = "heuristic_sequence"
                                 )
                             )
                         } else {
@@ -656,15 +563,12 @@ class AccessibilityScrapingIntegration(
 
                             if (parentLabel != null) {
                                 labelRelationships.add(
-                                    ElementRelationshipDTO(
-                                        id = 0, // Auto-generated
+                                    com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity(
                                         sourceElementHash = parentLabel.elementHash,
                                         targetElementHash = input.elementHash,
-                                        relationshipType = RelationshipType.LABEL_FOR,
-                                        relationshipData = "heuristic_parent_container",
-                                        confidence = 0.7,
-                                        createdAt = System.currentTimeMillis(),
-                                        updatedAt = System.currentTimeMillis()
+                                        relationshipType = com.augmentalis.voiceoscore.scraping.entities.RelationshipType.LABEL_FOR,
+                                        confidence = 0.7f,  // Lower confidence for parent-level labels
+                                        inferredBy = "heuristic_parent_container"
                                     )
                                 )
                             }
@@ -672,17 +576,7 @@ class AccessibilityScrapingIntegration(
                     }
 
                     if (labelRelationships.isNotEmpty()) {
-                        labelRelationships.forEach { rel ->
-                            elementRelationshipRepository.insert(
-                                sourceElementHash = rel.sourceElementHash,
-                                targetElementHash = rel.targetElementHash,
-                                relationshipType = rel.relationshipType,
-                                relationshipData = rel.relationshipData,
-                                confidence = rel.confidence,
-                                createdAt = rel.createdAt,
-                                updatedAt = rel.updatedAt
-                            )
-                        }
+                        database.elementRelationshipDao().insertAll(labelRelationships)
                         Log.d(TAG, "Created ${labelRelationships.size} label→input relationships")
                     }
                 }
@@ -695,9 +589,14 @@ class AccessibilityScrapingIntegration(
                         currentTime - lastScreenTime
                     } else null
 
-                    // TODO: Record the transition
-                    // This requires implementing recordTransition in repository
-                    Log.d(TAG, "Would record screen transition: ${lastScrapedScreenHash?.take(8)} → ${screenHash.take(8)}" +
+                    // Record the transition
+                    database.screenTransitionDao().recordTransition(
+                        fromHash = lastScrapedScreenHash!!,
+                        toHash = screenHash,
+                        transitionTime = transitionTime
+                    )
+
+                    Log.d(TAG, "Recorded screen transition: ${lastScrapedScreenHash?.take(8)} → ${screenHash.take(8)}" +
                           if (transitionTime != null) " (${transitionTime}ms)" else "")
                 }
 
@@ -744,7 +643,7 @@ class AccessibilityScrapingIntegration(
         parentIndex: Int?,
         depth: Int,
         indexInParent: Int,
-        elements: MutableList<ScrapedElementDTO>,
+        elements: MutableList<ScrapedElementEntity>,
         hierarchyBuildInfo: MutableList<HierarchyBuildInfo>,
         filterNonActionable: Boolean = false,
         metrics: ScrapingMetrics? = null
@@ -793,8 +692,10 @@ class AccessibilityScrapingIntegration(
             // ===== PHASE 1: Hash Deduplication - Check if element already exists =====
             metrics?.elementsFound = (metrics?.elementsFound ?: 0) + 1
 
-            // Check database for existing element (using runBlocking since we're already on IO dispatcher)
-            val existsInDb = runBlocking { scrapedElementRepository.getByHash(elementHash) != null }
+            // FIX (2025-12-17): Use withContext instead of runBlocking to avoid blocking threads
+            val existsInDb = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                database.scrapedElementDao().getElementByHash(elementHash) != null
+            }
             if (existsInDb) {
                 metrics?.elementsCached = (metrics?.elementsCached ?: 0) + 1
                 Log.v(TAG, "✓ CACHED (hash=$elementHash): ${node.className}")
@@ -877,9 +778,8 @@ class AccessibilityScrapingIntegration(
 
             // formGroupId will be set at screen level after all elements are collected
 
-            // Create element DTO (ID will be auto-generated by database)
-            val element = ScrapedElementDTO(
-                id = 0, // Auto-generated
+            // Create element entity (ID will be auto-generated by database)
+            val element = ScrapedElementEntity(
                 elementHash = elementHash,
                 appId = appId,
                 uuid = elementUuid,
@@ -888,27 +788,25 @@ class AccessibilityScrapingIntegration(
                 text = text,
                 contentDescription = contentDesc,
                 bounds = boundsToJson(bounds),
-                isClickable = if (node.isClickable) 1L else 0L,
-                isLongClickable = if (node.isLongClickable) 1L else 0L,
-                isEditable = if (node.isEditable) 1L else 0L,
-                isScrollable = if (node.isScrollable) 1L else 0L,
-                isCheckable = if (node.isCheckable) 1L else 0L,
-                isFocusable = if (node.isFocusable) 1L else 0L,
-                isEnabled = if (node.isEnabled) 1L else 0L,
-                depth = depth.toLong(),
-                indexInParent = indexInParent.toLong(),
+                isClickable = node.isClickable,
+                isLongClickable = node.isLongClickable,
+                isEditable = node.isEditable,
+                isScrollable = node.isScrollable,
+                isCheckable = node.isCheckable,
+                isFocusable = node.isFocusable,
+                isEnabled = node.isEnabled,
+                depth = depth,
+                indexInParent = indexInParent,
                 // AI Context (Phase 1)
                 semanticRole = semanticRole,
                 inputType = inputType,
                 visualWeight = visualWeight,
-                isRequired = if (isRequired == true) 1L else 0L,
+                isRequired = isRequired,
                 // AI Context (Phase 2)
                 formGroupId = null,  // Set later at screen level
                 placeholderText = placeholderText,
                 validationPattern = validationPattern,
-                backgroundColor = backgroundColor,
-                scrapedAt = System.currentTimeMillis(),
-                screen_hash = null  // Set at screen level after scraping
+                backgroundColor = backgroundColor
             )
 
             // Get current list index BEFORE adding element
@@ -1162,35 +1060,38 @@ class AccessibilityScrapingIntegration(
                 Log.d(TAG, "App hash: $appHash")
 
                 // Get or create app entity
-                var app = scrapedAppRepository.getByPackage(packageName)
+                var app = database.scrapedAppDao().getAppByHash(appHash)
                 val appId = if (app != null) {
-                    Log.d(TAG, "App exists in database: $packageName")
+                    Log.d(TAG, "App exists in database: ${app.appName}")
                     app.appId
                 } else {
-                    // Create new app DTO
+                    // Create new app entity
                     val newAppId = UUID.randomUUID().toString()
                     val currentTime = System.currentTimeMillis()
-                    app = ScrapedAppDTO(
+                    app = ScrapedAppEntity(
                         appId = newAppId,
                         packageName = packageName,
-                        versionCode = appInfo.versionCode.toLong(),
+                        appName = appInfo.applicationInfo.loadLabel(packageManager).toString(),
+                        versionCode = appInfo.versionCode,
                         versionName = appInfo.versionName ?: "unknown",
                         appHash = appHash,
-                        firstScrapedAt = currentTime,
-                        lastScrapedAt = currentTime,
+                        firstScraped = currentTime,
+                        lastScraped = currentTime,
                         scrapingMode = ScrapingMode.LEARN_APP.name
                     )
-                    scrapedAppRepository.insert(app)
-                    Log.d(TAG, "Created new app entity: $packageName")
+                    database.scrapedAppDao().insert(app)
+                    Log.d(TAG, "Created new app entity: ${app.appName}")
                     newAppId
                 }
 
-                // TODO: Update mode to LEARN_APP (requires implementing updateScrapingMode in repository)
+                // Update mode to LEARN_APP
+                database.scrapedAppDao().updateScrapingMode(appId, ScrapingMode.LEARN_APP.name)
 
                 // Get root node
                 val rootNode = accessibilityService.rootInActiveWindow
                 if (rootNode == null) {
                     Log.e(TAG, "Cannot start LearnApp - no root node")
+                    database.scrapedAppDao().updateScrapingMode(appId, ScrapingMode.DYNAMIC.name)
                     return@withContext LearnAppResult(
                         success = false,
                         message = "No accessibility access - ensure service is enabled",
@@ -1205,6 +1106,7 @@ class AccessibilityScrapingIntegration(
                 if (currentPackage != packageName) {
                     Log.w(TAG, "Current app ($currentPackage) doesn't match target ($packageName)")
                     rootNode.recycle()
+                    database.scrapedAppDao().updateScrapingMode(appId, ScrapingMode.DYNAMIC.name)
                     return@withContext LearnAppResult(
                         success = false,
                         message = "Please navigate to $packageName before learning",
@@ -1217,7 +1119,7 @@ class AccessibilityScrapingIntegration(
                 Log.i(TAG, "Starting comprehensive UI traversal...")
 
                 // Scrape all elements (similar to dynamic, but using LearnApp mode)
-                val elements = mutableListOf<ScrapedElementDTO>()
+                val elements = mutableListOf<ScrapedElementEntity>()
                 val hierarchyBuildInfo = mutableListOf<HierarchyBuildInfo>()
 
                 scrapeNode(rootNode, appId, null, 0, 0, elements, hierarchyBuildInfo)
@@ -1226,42 +1128,38 @@ class AccessibilityScrapingIntegration(
 
                 Log.i(TAG, "Scraped ${elements.size} elements")
 
-                // Merge elements using insert (hash-based deduplication)
+                // Merge elements using upsert (hash-based deduplication)
                 var newCount = 0
                 var updatedCount = 0
 
                 for (element in elements) {
-                    val existing = scrapedElementRepository.getByHash(element.elementHash)
+                    val existing = database.scrapedElementDao().getElementByHash(element.elementHash)
                     if (existing != null) {
                         updatedCount++
                     } else {
                         newCount++
                     }
-                    scrapedElementRepository.insert(element)
+                    database.scrapedElementDao().upsertElement(element)
                 }
 
                 Log.i(TAG, "Merge complete: $newCount new, $updatedCount updated")
 
                 // Mark app as fully learned
                 val completionTime = System.currentTimeMillis()
-                scrapedAppRepository.markFullyLearned(appId, completionTime)
+                database.scrapedAppDao().markAsFullyLearned(appId, completionTime)
+                database.scrapedAppDao().updateElementCount(appId, elements.size)
 
-                // TODO: Update scraping mode back to DYNAMIC (requires implementing updateScrapingMode)
+                // Update scraping mode back to DYNAMIC
+                database.scrapedAppDao().updateScrapingMode(appId, ScrapingMode.DYNAMIC.name)
 
                 // Generate commands for new elements
                 if (newCount > 0) {
                     Log.d(TAG, "Generating commands for $newCount new elements...")
                     // Get all elements with real database IDs
-                    val allElements = scrapedElementRepository.getByApp(appId)
+                    val allElements = database.scrapedElementDao().getElementsByAppId(appId)
                     val commands = commandGenerator.generateCommandsForElements(allElements)
-                    commands.forEach { generatedCommandRepository.insert(it) }
-                    scrapedAppRepository.updateStats(
-                        appId,
-                        app.scrapeCount + 1,
-                        elements.size.toLong(),
-                        commands.size.toLong(),
-                        System.currentTimeMillis()
-                    )
+                    database.generatedCommandDao().insertBatch(commands)
+                    database.scrapedAppDao().updateCommandCount(appId, commands.size)
                     Log.d(TAG, "Generated ${commands.size} total commands")
                 }
 
@@ -1269,7 +1167,7 @@ class AccessibilityScrapingIntegration(
 
                 LearnAppResult(
                     success = true,
-                    message = "Successfully learned ${app!!.packageName}",
+                    message = "Successfully learned ${app!!.appName}",
                     elementsDiscovered = elements.size,
                     newElements = newCount,
                     updatedElements = updatedCount
@@ -1300,7 +1198,7 @@ class AccessibilityScrapingIntegration(
      * @return Generated UUID string, or null if registration failed
      */
     private suspend fun registerElementWithUUID(
-        element: ScrapedElementDTO,
+        element: ScrapedElementEntity,
         node: AccessibilityNodeInfo,
         packageName: String
     ): String? {
@@ -1326,9 +1224,9 @@ class AccessibilityScrapingIntegration(
                     ),
                     accessibility = UUIDAccessibility(
                         contentDescription = element.contentDescription,
-                        isClickable = element.isClickable != 0L,
-                        isFocusable = element.isFocusable != 0L,
-                        isScrollable = element.isScrollable != 0L
+                        isClickable = element.isClickable,
+                        isFocusable = element.isFocusable,
+                        isScrollable = element.isScrollable
                     )
                 )
             )
@@ -1498,7 +1396,7 @@ class AccessibilityScrapingIntegration(
             // (race condition: user interactions can occur before window scraping completes)
 
             // Verify element exists in database (FK: element_hash -> scraped_elements.element_hash)
-            val elementExists = scrapedElementRepository.getByHash(elementHash) != null
+            val elementExists = database.scrapedElementDao().getElementByHash(elementHash) != null
             if (!elementExists) {
                 Log.v(TAG, "Skipping $interactionType interaction - element not scraped yet: $elementHash")
                 node.recycle()
@@ -1506,7 +1404,7 @@ class AccessibilityScrapingIntegration(
             }
 
             // Verify screen exists in database (FK: screen_hash -> screen_contexts.screen_hash)
-            val screenExists = screenContextRepository.getByHash(screenHash) != null
+            val screenExists = database.screenContextDao().getScreenByHash(screenHash) != null
             if (!screenExists) {
                 Log.v(TAG, "Skipping $interactionType interaction - screen not scraped yet: $screenHash")
                 node.recycle()
@@ -1519,19 +1417,18 @@ class AccessibilityScrapingIntegration(
                 System.currentTimeMillis() - it
             }
 
-            // Create interaction DTO
-            val interaction = UserInteractionDTO(
-                id = 0, // Auto-generated
+            // Create interaction entity
+            val interaction = com.augmentalis.voiceoscore.scraping.entities.UserInteractionEntity(
                 elementHash = elementHash,
                 screenHash = screenHash,
                 interactionType = interactionType,
-                interactionTime = System.currentTimeMillis(),
                 visibilityStart = visibilityStart,
-                visibilityDuration = visibilityDuration
+                visibilityDuration = visibilityDuration,
+                success = true  // Assume success unless we detect failure
             )
 
             // Save to database (safe - both FK parents verified to exist)
-            userInteractionRepository.insert(interaction)
+            database.userInteractionDao().insert(interaction)
             Log.d(TAG, "Recorded $interactionType interaction for element $elementHash (visibility: ${visibilityDuration}ms)")
 
             node.recycle()
@@ -1572,28 +1469,26 @@ class AccessibilityScrapingIntegration(
 
             // Determine new value based on state type
             val newValue = when (stateType) {
-                StateType.CHECKED -> node.isChecked.toString()
-                StateType.SELECTED -> node.isSelected.toString()
-                StateType.ENABLED -> node.isEnabled.toString()
-                StateType.FOCUSED -> node.isFocused.toString()
-                StateType.VISIBLE -> node.isVisibleToUser.toString()
+                com.augmentalis.voiceoscore.scraping.entities.StateType.CHECKED -> node.isChecked.toString()
+                com.augmentalis.voiceoscore.scraping.entities.StateType.SELECTED -> node.isSelected.toString()
+                com.augmentalis.voiceoscore.scraping.entities.StateType.ENABLED -> node.isEnabled.toString()
+                com.augmentalis.voiceoscore.scraping.entities.StateType.FOCUSED -> node.isFocused.toString()
+                com.augmentalis.voiceoscore.scraping.entities.StateType.VISIBLE -> node.isVisibleToUser.toString()
                 else -> null
             }
 
             // Only record if state actually changed
             if (oldValue != newValue) {
-                val stateChange = ElementStateHistoryDTO(
-                    id = 0, // Auto-generated
+                val stateChange = com.augmentalis.voiceoscore.scraping.entities.ElementStateHistoryEntity(
                     elementHash = elementHash,
                     screenHash = screenHash,
                     stateType = stateType,
                     oldValue = oldValue,
                     newValue = newValue,
-                    changedAt = System.currentTimeMillis(),
                     triggeredBy = determineTrigerSource(event)
                 )
 
-                elementStateHistoryRepository.insert(stateChange)
+                database.elementStateHistoryDao().insert(stateChange)
                 previousStates[stateType] = newValue
                 Log.d(TAG, "Recorded state change: $stateType from $oldValue to $newValue")
             }
@@ -1635,17 +1530,17 @@ class AccessibilityScrapingIntegration(
             if (screenHash != null) {
                 // Track checked state
                 trackStateIfChanged(node, elementHash, screenHash,
-                    StateType.CHECKED,
+                    com.augmentalis.voiceoscore.scraping.entities.StateType.CHECKED,
                     node.isChecked.toString(), event)
 
                 // Track enabled state
                 trackStateIfChanged(node, elementHash, screenHash,
-                    StateType.ENABLED,
+                    com.augmentalis.voiceoscore.scraping.entities.StateType.ENABLED,
                     node.isEnabled.toString(), event)
 
                 // Track visible state
                 trackStateIfChanged(node, elementHash, screenHash,
-                    StateType.VISIBLE,
+                    com.augmentalis.voiceoscore.scraping.entities.StateType.VISIBLE,
                     node.isVisibleToUser.toString(), event)
             }
 
@@ -1671,7 +1566,7 @@ class AccessibilityScrapingIntegration(
         event: AccessibilityEvent
     ) {
         // Verify element exists in database (FK constraint requirement)
-        val elementExists = scrapedElementRepository.getByHash(elementHash) != null
+        val elementExists = database.scrapedElementDao().getElementByHash(elementHash) != null
         if (!elementExists) {
             // Element not scraped yet - skip state tracking
             // State will be captured when element is eventually scraped
@@ -1679,7 +1574,7 @@ class AccessibilityScrapingIntegration(
         }
 
         // Verify screen exists in database (FK constraint requirement)
-        val screenExists = screenContextRepository.getByHash(screenHash) != null
+        val screenExists = database.screenContextDao().getScreenByHash(screenHash) != null
         if (!screenExists) {
             // Screen not scraped yet - skip state tracking
             return
@@ -1689,18 +1584,16 @@ class AccessibilityScrapingIntegration(
         val oldValue = previousStates[stateType]
 
         if (oldValue != newValue) {
-            val stateChange = ElementStateHistoryDTO(
-                id = 0, // Auto-generated
+            val stateChange = com.augmentalis.voiceoscore.scraping.entities.ElementStateHistoryEntity(
                 elementHash = elementHash,
                 screenHash = screenHash,
                 stateType = stateType,
                 oldValue = oldValue,
                 newValue = newValue,
-                changedAt = System.currentTimeMillis(),
                 triggeredBy = determineTrigerSource(event)
             )
 
-            elementStateHistoryRepository.insert(stateChange)
+            database.elementStateHistoryDao().insert(stateChange)
             previousStates[stateType] = newValue
         }
     }
@@ -1714,17 +1607,17 @@ class AccessibilityScrapingIntegration(
     private fun determineTrigerSource(event: AccessibilityEvent): String {
         return when (event.eventType) {
             AccessibilityEvent.TYPE_VIEW_CLICKED,
-            AccessibilityEvent.TYPE_VIEW_LONG_CLICKED -> TriggerSource.USER_CLICK
+            AccessibilityEvent.TYPE_VIEW_LONG_CLICKED -> com.augmentalis.voiceoscore.scraping.entities.TriggerSource.USER_CLICK
 
-            AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> TriggerSource.USER_KEYBOARD
+            AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> com.augmentalis.voiceoscore.scraping.entities.TriggerSource.USER_KEYBOARD
 
             AccessibilityEvent.TYPE_GESTURE_DETECTION_START,
-            AccessibilityEvent.TYPE_GESTURE_DETECTION_END -> TriggerSource.USER_GESTURE
+            AccessibilityEvent.TYPE_GESTURE_DETECTION_END -> com.augmentalis.voiceoscore.scraping.entities.TriggerSource.USER_GESTURE
 
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> TriggerSource.SYSTEM
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> com.augmentalis.voiceoscore.scraping.entities.TriggerSource.SYSTEM
 
-            else -> TriggerSource.UNKNOWN
+            else -> com.augmentalis.voiceoscore.scraping.entities.TriggerSource.UNKNOWN
         }
     }
 }

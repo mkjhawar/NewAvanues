@@ -1,29 +1,22 @@
 /**
- * ScreenStateEntity.kt - Data class for screen states (SQLDelight compatible)
+ * ScreenStateEntity.kt - Data model for screen states
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
- * Created: 2025-12-18
+ * Created: 2025-10-08
+ * Migrated to SQLDelight: 2025-12-17
  *
- * Data class representing screen state data.
- * Used by SQLDelight adapter pattern (not Room).
+ * Data model for storing screen state data
+ * Uses SQLDelight schema from core/database module
  */
 
 package com.augmentalis.voiceoscore.learnapp.database.entities
 
 /**
- * Screen State Entity
+ * Screen State Data Model
  *
- * Data class storing screen state metadata.
- * This is a pure Kotlin data class without Room annotations.
- * SQLDelight handles database operations via LearnAppDatabaseAdapter.
- *
- * @property screenHash Screen hash (primary key)
- * @property packageName Package name (foreign key)
- * @property activityName Activity name
- * @property fingerprint Full SHA-256 fingerprint
- * @property elementCount Number of elements on screen
- * @property discoveredAt When screen was discovered
+ * Data model storing screen state metadata.
+ * Corresponds to screen_states table in SQLDelight schema.
  */
 data class ScreenStateEntity(
     val screenHash: String,

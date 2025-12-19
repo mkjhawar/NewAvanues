@@ -101,10 +101,12 @@ class LearnAppRepository(
                     )
                 }
 
-                dao.deleteNavigationGraph(packageName)
-                dao.deleteScreenStatesForPackage(packageName)
-                dao.deleteSessionsForPackage(packageName)
-                dao.deleteLearnedApp(app)
+                dao.transaction {
+                    dao.deleteNavigationGraph(packageName)
+                    dao.deleteScreenStatesForPackage(packageName)
+                    dao.deleteSessionsForPackage(packageName)
+                    dao.deleteLearnedApp(app)
+                }
 
                 RepositoryResult.Success(true)
             } catch (e: Exception) {
@@ -123,41 +125,40 @@ class LearnAppRepository(
         return mutex.withLock {
             try {
                 val existingApp = dao.getLearnedApp(packageName)
-                val appWasCreated: Boolean
-
-                if (existingApp == null) {
-                    val newApp = LearnedAppEntity(
-                        packageName = packageName,
-                        appName = packageName,
-                        versionCode = 0,
-                        versionName = "unknown",
-                        firstLearnedAt = System.currentTimeMillis(),
-                        lastUpdatedAt = System.currentTimeMillis(),
-                        totalScreens = 0,
-                        totalElements = 0,
-                        appHash = calculateAppHash(packageName),
-                        explorationStatus = ExplorationStatus.PARTIAL
-                    )
-                    dao.insertLearnedAppMinimal(newApp)
-                    appWasCreated = true
-                } else {
-                    appWasCreated = false
-                }
-
+                var appWasCreated = false
                 val sessionId = UUID.randomUUID().toString()
 
-                val session = ExplorationSessionEntity(
-                    sessionId = sessionId,
-                    packageName = packageName,
-                    startedAt = System.currentTimeMillis(),
-                    completedAt = null,
-                    durationMs = null,
-                    screensExplored = 0,
-                    elementsDiscovered = 0,
-                    status = SessionStatus.RUNNING
-                )
+                dao.transaction {
+                    if (existingApp == null) {
+                        val newApp = LearnedAppEntity(
+                            packageName = packageName,
+                            appName = packageName,
+                            versionCode = 0,
+                            versionName = "unknown",
+                            firstLearnedAt = System.currentTimeMillis(),
+                            lastUpdatedAt = System.currentTimeMillis(),
+                            totalScreens = 0,
+                            totalElements = 0,
+                            appHash = calculateAppHash(packageName),
+                            explorationStatus = ExplorationStatus.PARTIAL
+                        )
+                        dao.insertLearnedAppMinimal(newApp)
+                        appWasCreated = true
+                    }
 
-                dao.insertExplorationSession(session)
+                    val session = ExplorationSessionEntity(
+                        sessionId = sessionId,
+                        packageName = packageName,
+                        startedAt = System.currentTimeMillis(),
+                        completedAt = null,
+                        durationMs = null,
+                        screensExplored = 0,
+                        elementsDiscovered = 0,
+                        status = SessionStatus.RUNNING
+                    )
+
+                    dao.insertExplorationSession(session)
+                }
 
                 SessionCreationResult.Created(
                     sessionId = sessionId,
@@ -227,33 +228,35 @@ class LearnAppRepository(
     suspend fun saveScreenState(screenState: ScreenState) {
         val mutex = getMutexForPackage(screenState.packageName)
         mutex.withLock {
-            val existingApp = dao.getLearnedApp(screenState.packageName)
-            if (existingApp == null) {
-                val newApp = LearnedAppEntity(
+            dao.transaction {
+                val existingApp = dao.getLearnedApp(screenState.packageName)
+                if (existingApp == null) {
+                    val newApp = LearnedAppEntity(
+                        packageName = screenState.packageName,
+                        appName = screenState.packageName,
+                        versionCode = 0,
+                        versionName = "unknown",
+                        firstLearnedAt = System.currentTimeMillis(),
+                        lastUpdatedAt = System.currentTimeMillis(),
+                        totalScreens = 0,
+                        totalElements = 0,
+                        appHash = calculateAppHash(screenState.packageName),
+                        explorationStatus = ExplorationStatus.PARTIAL
+                    )
+                    dao.insertLearnedAppMinimal(newApp)
+                }
+
+                val entity = ScreenStateEntity(
+                    screenHash = screenState.hash,
                     packageName = screenState.packageName,
-                    appName = screenState.packageName,
-                    versionCode = 0,
-                    versionName = "unknown",
-                    firstLearnedAt = System.currentTimeMillis(),
-                    lastUpdatedAt = System.currentTimeMillis(),
-                    totalScreens = 0,
-                    totalElements = 0,
-                    appHash = calculateAppHash(screenState.packageName),
-                    explorationStatus = ExplorationStatus.PARTIAL
+                    activityName = screenState.activityName,
+                    fingerprint = screenState.hash,
+                    elementCount = screenState.elementCount,
+                    discoveredAt = screenState.timestamp
                 )
-                dao.insertLearnedAppMinimal(newApp)
+
+                dao.insertScreenState(entity)
             }
-
-            val entity = ScreenStateEntity(
-                screenHash = screenState.hash,
-                packageName = screenState.packageName,
-                activityName = screenState.activityName,
-                fingerprint = screenState.hash,
-                elementCount = screenState.elementCount,
-                discoveredAt = screenState.timestamp
-            )
-
-            dao.insertScreenState(entity)
         }
     }
 
@@ -303,18 +306,20 @@ class LearnAppRepository(
                     )
                 }
 
-                // Delete exploration data but keep the app entry
-                dao.deleteNavigationGraph(packageName)
-                dao.deleteScreenStatesForPackage(packageName)
-                dao.deleteSessionsForPackage(packageName)
+                dao.transaction {
+                    // Delete exploration data but keep the app entry
+                    dao.deleteNavigationGraph(packageName)
+                    dao.deleteScreenStatesForPackage(packageName)
+                    dao.deleteSessionsForPackage(packageName)
 
-                // Reset app status to PARTIAL
-                dao.updateLearnedApp(app.copy(
-                    explorationStatus = ExplorationStatus.PARTIAL,
-                    totalScreens = 0,
-                    totalElements = 0,
-                    lastUpdatedAt = System.currentTimeMillis()
-                ))
+                    // Reset app status to PARTIAL
+                    dao.updateLearnedApp(app.copy(
+                        explorationStatus = ExplorationStatus.PARTIAL,
+                        totalScreens = 0,
+                        totalElements = 0,
+                        lastUpdatedAt = System.currentTimeMillis()
+                    ))
+                }
 
                 RepositoryResult.Success(true)
             } catch (e: Exception) {

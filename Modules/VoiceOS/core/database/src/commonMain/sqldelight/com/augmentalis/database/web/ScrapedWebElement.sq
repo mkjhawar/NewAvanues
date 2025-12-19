@@ -1,19 +1,9 @@
 -- ScrapedWebElement.sq - SQLDelight schema for scraped web elements
--- Path: core/database/src/commonMain/sqldelight/com/augmentalis/database/web/ScrapedWebElement.sq
---
+-- Part of LearnWeb module migration from Room to SQLDelight
 -- Author: Manoj Jhawar
--- Code-Reviewed-By: CCA
--- Created: 2025-12-18
---
--- SQLDelight schema for scraped web elements with hierarchy tracking
+-- Date: 2025-12-17
 
-import kotlin.Boolean;
-
--- ============================================================================
--- TABLE DEFINITION
--- ============================================================================
-
-CREATE TABLE scraped_web_elements (
+CREATE TABLE IF NOT EXISTS scraped_web_elements (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     website_url_hash TEXT NOT NULL,
     element_hash TEXT NOT NULL,
@@ -23,121 +13,110 @@ CREATE TABLE scraped_web_elements (
     aria_label TEXT,
     role TEXT,
     parent_element_hash TEXT,
-    clickable INTEGER AS Boolean NOT NULL,
-    visible INTEGER AS Boolean NOT NULL,
-    bounds TEXT NOT NULL,
+    clickable INTEGER NOT NULL DEFAULT 0,  -- Boolean: 0 = false, 1 = true
+    visible INTEGER NOT NULL DEFAULT 0,  -- Boolean: 0 = false, 1 = true
+    bounds TEXT NOT NULL,  -- JSON: {x, y, width, height}
     FOREIGN KEY (website_url_hash) REFERENCES scraped_websites(url_hash) ON DELETE CASCADE
 );
 
--- ============================================================================
--- INDICES
--- ============================================================================
+-- Index for faster queries by website URL hash
+CREATE INDEX IF NOT EXISTS idx_scraped_web_elements_website
+ON scraped_web_elements(website_url_hash);
 
-CREATE INDEX idx_scraped_web_elements_website_url_hash ON scraped_web_elements(website_url_hash);
-CREATE INDEX idx_scraped_web_elements_element_hash ON scraped_web_elements(element_hash);
-CREATE INDEX idx_scraped_web_elements_parent_element_hash ON scraped_web_elements(parent_element_hash);
-CREATE INDEX idx_scraped_web_elements_tag_name ON scraped_web_elements(tag_name);
-CREATE INDEX idx_scraped_web_elements_clickable_visible ON scraped_web_elements(clickable, visible);
+-- Index for faster queries by element hash
+CREATE INDEX IF NOT EXISTS idx_scraped_web_elements_hash
+ON scraped_web_elements(element_hash);
 
--- ============================================================================
--- INSERT OPERATIONS
--- ============================================================================
+-- Index for faster queries by parent element hash
+CREATE INDEX IF NOT EXISTS idx_scraped_web_elements_parent
+ON scraped_web_elements(parent_element_hash);
 
-insert:
+-- Index for faster queries by tag name
+CREATE INDEX IF NOT EXISTS idx_scraped_web_elements_tag
+ON scraped_web_elements(website_url_hash, tag_name);
+
+-- Index for clickable elements
+CREATE INDEX IF NOT EXISTS idx_scraped_web_elements_clickable
+ON scraped_web_elements(website_url_hash, clickable, visible);
+
+-- Queries
+
+-- Insert or replace element
+insertScrapedWebElement:
 INSERT OR REPLACE INTO scraped_web_elements (
-    website_url_hash,
-    element_hash,
-    tag_name,
-    xpath,
-    text,
-    aria_label,
-    role,
-    parent_element_hash,
-    clickable,
-    visible,
-    bounds
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-
-insertWithId:
-INSERT OR REPLACE INTO scraped_web_elements (
-    id,
-    website_url_hash,
-    element_hash,
-    tag_name,
-    xpath,
-    text,
-    aria_label,
-    role,
-    parent_element_hash,
-    clickable,
-    visible,
-    bounds
+    id, website_url_hash, element_hash, tag_name, xpath, text,
+    aria_label, role, parent_element_hash, clickable, visible, bounds
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
--- ============================================================================
--- SELECT OPERATIONS
--- ============================================================================
+-- Insert element (auto-generate ID)
+insertScrapedWebElementAuto:
+INSERT OR REPLACE INTO scraped_web_elements (
+    website_url_hash, element_hash, tag_name, xpath, text,
+    aria_label, role, parent_element_hash, clickable, visible, bounds
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
+-- Insert multiple elements
+insertScrapedWebElements:
+INSERT OR REPLACE INTO scraped_web_elements (
+    website_url_hash, element_hash, tag_name, xpath, text,
+    aria_label, role, parent_element_hash, clickable, visible, bounds
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get all elements for a website
 getByWebsiteUrlHash:
-SELECT *
-FROM scraped_web_elements
+SELECT * FROM scraped_web_elements
 WHERE website_url_hash = ?;
 
+-- Get element by hash
 getByElementHash:
-SELECT *
-FROM scraped_web_elements
+SELECT * FROM scraped_web_elements
 WHERE element_hash = ?
 LIMIT 1;
 
+-- Get element by ID
 getElementById:
-SELECT *
-FROM scraped_web_elements
+SELECT * FROM scraped_web_elements
 WHERE id = ?
 LIMIT 1;
 
+-- Get child elements
 getChildren:
-SELECT *
-FROM scraped_web_elements
+SELECT * FROM scraped_web_elements
 WHERE parent_element_hash = ?;
 
+-- Get clickable elements
 getClickableElements:
-SELECT *
-FROM scraped_web_elements
-WHERE website_url_hash = ?
-  AND clickable = 1
-  AND visible = 1;
+SELECT * FROM scraped_web_elements
+WHERE website_url_hash = ? AND clickable = 1 AND visible = 1;
 
+-- Get elements by tag name
 getByTagName:
-SELECT *
-FROM scraped_web_elements
-WHERE website_url_hash = ?
-  AND tag_name = ?;
+SELECT * FROM scraped_web_elements
+WHERE website_url_hash = ? AND tag_name = ?;
 
+-- Search elements by text
 searchByText:
-SELECT *
-FROM scraped_web_elements
-WHERE website_url_hash = ?
-  AND text LIKE '%' || ? || '%' COLLATE NOCASE;
+SELECT * FROM scraped_web_elements
+WHERE website_url_hash = ? AND text LIKE '%' || ? || '%' COLLATE NOCASE;
 
-getElementCount:
-SELECT COUNT(*)
-FROM scraped_web_elements
-WHERE website_url_hash = ?;
-
-getClickableElementCount:
-SELECT COUNT(*)
-FROM scraped_web_elements
-WHERE website_url_hash = ?
-  AND clickable = 1
-  AND visible = 1;
-
--- ============================================================================
--- DELETE OPERATIONS
--- ============================================================================
-
+-- Delete all elements for a website
 deleteByWebsiteUrlHash:
-DELETE FROM scraped_web_elements
-WHERE website_url_hash = ?;
+DELETE FROM scraped_web_elements WHERE website_url_hash = ?;
 
+-- Delete all elements
 deleteAll:
 DELETE FROM scraped_web_elements;
+
+-- Get element count for a website
+getElementCount:
+SELECT COUNT(*) FROM scraped_web_elements
+WHERE website_url_hash = ?;
+
+-- Get clickable element count
+getClickableElementCount:
+SELECT COUNT(*) FROM scraped_web_elements
+WHERE website_url_hash = ? AND clickable = 1 AND visible = 1;
+
+-- Count all elements
+count:
+SELECT COUNT(*) FROM scraped_web_elements;

@@ -9,7 +9,7 @@
 package com.augmentalis.voiceoscore.accessibility.managers
 
 import android.util.Log
-import com.augmentalis.voiceoscore.accessibility.VoiceOSService
+import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
 import com.augmentalis.voiceoscore.accessibility.handlers.ActionCategory
 import com.augmentalis.voiceoscore.accessibility.handlers.ActionHandler
 import com.augmentalis.voiceoscore.accessibility.handlers.AppHandler
@@ -37,8 +37,9 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Coordinates action execution across multiple handlers
  * Direct implementation except for ActionHandler interface usage
+ * Now uses IVoiceOSContext for Dependency Inversion Principle compliance
  */
-class ActionCoordinator(private val service: VoiceOSService) {
+class ActionCoordinator(private val context: IVoiceOSContext) {
 
     companion object {
         private const val TAG = "ActionCoordinator"
@@ -76,24 +77,24 @@ class ActionCoordinator(private val service: VoiceOSService) {
         Log.d(TAG, "Initializing ActionCoordinator")
 
         // Register handlers - lazy initialization
-        registerHandler(ActionCategory.SYSTEM, SystemHandler(service))
-        registerHandler(ActionCategory.APP, AppHandler(service))
-        registerHandler(ActionCategory.DEVICE, DeviceHandler(service))
-        registerHandler(ActionCategory.INPUT, InputHandler(service))
-        registerHandler(ActionCategory.NAVIGATION, NavigationHandler(service))
-        registerHandler(ActionCategory.UI, UIHandler(service))
-        registerHandler(ActionCategory.GESTURE, GestureHandler(service))
-        //registerHandler(ActionCategory.GAZE, GazeHandler(service))
+        registerHandler(ActionCategory.SYSTEM, SystemHandler(context))
+        registerHandler(ActionCategory.APP, AppHandler(context))
+        registerHandler(ActionCategory.DEVICE, DeviceHandler(context))
+        registerHandler(ActionCategory.INPUT, InputHandler(context))
+        registerHandler(ActionCategory.NAVIGATION, NavigationHandler(context))
+        registerHandler(ActionCategory.UI, UIHandler(context))
+        registerHandler(ActionCategory.GESTURE, GestureHandler(context))
+        //registerHandler(ActionCategory.GAZE, GazeHandler(context))
 
         // Add DragHandler to GESTURE category (multiple handlers per category)
-        val dragHandler = DragHandler(service)
+        val dragHandler = DragHandler(context)
         registerHandler(ActionCategory.GESTURE, dragHandler)
 
         // Register new migrated handlers from Legacy Avenue
-        registerHandler(ActionCategory.DEVICE, BluetoothHandler(service))
-        registerHandler(ActionCategory.UI, HelpMenuHandler(service))
-        registerHandler(ActionCategory.UI, SelectHandler(service))
-        registerHandler(ActionCategory.UI, NumberHandler(service))
+        registerHandler(ActionCategory.DEVICE, BluetoothHandler(context))
+        registerHandler(ActionCategory.UI, HelpMenuHandler(context))
+        registerHandler(ActionCategory.UI, SelectHandler(context))
+        registerHandler(ActionCategory.UI, NumberHandler(context))
 
         // Set cursor manager reference for DragHandler
         try {

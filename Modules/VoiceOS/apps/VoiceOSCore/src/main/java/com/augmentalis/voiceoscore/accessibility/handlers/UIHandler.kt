@@ -11,14 +11,14 @@ package com.augmentalis.voiceoscore.accessibility.handlers
 import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.accessibility.VoiceOSService
+import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
 import android.accessibilityservice.AccessibilityService as AndroidAccessibilityService
 
 /**
  * Handler for UI element interactions
  */
 class UIHandler(
-    private val service: VoiceOSService
+    private val context: IVoiceOSContext
 ) : ActionHandler {
     
     companion object {

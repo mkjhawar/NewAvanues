@@ -108,6 +108,10 @@ private class LearnAppDaoAdapter(
      * VoiceOSDatabaseManager's threading model. The inner runBlocking(Dispatchers.Unconfined)
      * is kept to bridge suspend/non-suspend contexts.
      *
+     * FIX (2025-12-17): Changed from Dispatchers.Unconfined to Dispatchers.Default to prevent ANR.
+     * Unconfined dispatcher can run on Main thread if called from Main thread context,
+     * causing ANR. Default dispatcher ensures work is always off Main thread.
+     *
      * NOTE (2025-11-30): All DAO methods use withContext(Dispatchers.IO) even though they are
      * typically called from coroutines. This is INTENTIONAL - it ensures thread safety regardless
      * of the caller's dispatcher context. The overhead of dispatcher switches is negligible
@@ -116,7 +120,7 @@ private class LearnAppDaoAdapter(
     override suspend fun <R> transaction(block: suspend LearnAppDao.() -> R): R {
         // Remove outer withContext wrapper - databaseManager.transaction handles threading
         return databaseManager.transaction {
-            runBlocking(Dispatchers.Unconfined) {
+            runBlocking(Dispatchers.Default) {
                 this@LearnAppDaoAdapter.block()
             }
         }

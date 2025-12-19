@@ -10,8 +10,10 @@ package com.augmentalis.voiceoscore.accessibility.overlays
 
 import android.content.Context
 import android.graphics.PixelFormat
+import android.speech.tts.TextToSpeech
 import android.view.Gravity
 import android.view.WindowManager
+import java.util.Locale
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -29,6 +31,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -66,11 +70,12 @@ class CommandStatusOverlay(
     private var overlayView: ComposeView? = null
     private var lifecycleOwner: ComposeViewLifecycleOwner? = null
     private var isShowing = false
+    private var tts: TextToSpeech? = null
 
     // Mutable state for command status
-    private var commandState = mutableStateOf("")
-    private var stateState = mutableStateOf(CommandState.LISTENING)
-    private var messageState = mutableStateOf<String?>(null)
+    private var commandState by mutableStateOf("")
+    private var stateState by mutableStateOf(CommandState.LISTENING)
+    private var messageState by mutableStateOf<String?>(null)
 
     /**
      * Show status with command and state
@@ -84,14 +89,17 @@ class CommandStatusOverlay(
             overlayView = createOverlayView()
         }
 
-        commandState.value = command
-        stateState.value = state
-        messageState.value = message
+        commandState = command
+        stateState = state
+        messageState = message
 
         if (!isShowing) {
+            initTts()
             windowManager.addView(overlayView, createLayoutParams())
             isShowing = true
         }
+
+        announceForAccessibility(getStateAnnouncement(state, command))
     }
 
     /**
@@ -102,10 +110,13 @@ class CommandStatusOverlay(
         state: CommandState? = null,
         message: String? = null
     ) {
-        command?.let { commandState.value = it }
-        state?.let { stateState.value = it }
+        command?.let { commandState = it }
+        state?.let {
+            stateState = it
+            announceForAccessibility(getStateAnnouncement(it, commandState))
+        }
         if (message != null) {
-            messageState.value = message
+            messageState = message
         }
     }
 
@@ -118,6 +129,7 @@ class CommandStatusOverlay(
                 try {
                     windowManager.removeView(it)
                     isShowing = false
+                    shutdownTts()
                 } catch (e: IllegalArgumentException) {
                     // View not attached, ignore
                 }
@@ -135,6 +147,7 @@ class CommandStatusOverlay(
      */
     fun dispose() {
         hide()
+        shutdownTts()
         lifecycleOwner?.onDestroy()
         lifecycleOwner = null
         overlayView = null
@@ -153,14 +166,10 @@ class CommandStatusOverlay(
             setViewTreeLifecycleOwner(owner)
             setViewTreeSavedStateRegistryOwner(owner)
             setContent {
-                val command by remember { commandState }
-                val state by remember { stateState }
-                val message by remember { messageState }
-
                 CommandStatusUI(
-                    command = command,
-                    state = state,
-                    message = message
+                    command = commandState,
+                    state = stateState,
+                    message = messageState
                 )
             }
         }
@@ -181,6 +190,48 @@ class CommandStatusOverlay(
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             y = 80
+        }
+    }
+
+    /**
+     * Initialize Text-to-Speech
+     */
+    private fun initTts() {
+        if (tts == null) {
+            tts = TextToSpeech(context) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    tts?.language = Locale.getDefault()
+                }
+            }
+        }
+    }
+
+    /**
+     * Announce message for accessibility
+     */
+    private fun announceForAccessibility(message: String) {
+        tts?.speak(message, TextToSpeech.QUEUE_ADD, null, "accessibility_announcement")
+    }
+
+    /**
+     * Shutdown Text-to-Speech
+     */
+    private fun shutdownTts() {
+        tts?.stop()
+        tts?.shutdown()
+        tts = null
+    }
+
+    /**
+     * Get announcement text for state
+     */
+    private fun getStateAnnouncement(state: CommandState, command: String): String {
+        return when (state) {
+            CommandState.LISTENING -> "Listening for command"
+            CommandState.PROCESSING -> "Processing $command"
+            CommandState.EXECUTING -> "Executing $command"
+            CommandState.SUCCESS -> "$command succeeded"
+            CommandState.ERROR -> "$command failed"
         }
     }
 }

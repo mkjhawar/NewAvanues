@@ -119,12 +119,17 @@ class LearnAppCore(
             val appVersion = versionDetector?.getCurrentVersion(packageName) ?: AppVersion.UNKNOWN
 
             // 3. Generate voice command with version info
-            val command = generateVoiceCommand(element, uuid, packageName, appVersion) ?: return ElementProcessingResult(
-                uuid = uuid,
-                command = null,
-                success = false,
-                error = "No label found for command"
-            )
+            // Returns null if label is filtered (too short, numeric, etc.) - this is expected behavior
+            val command = generateVoiceCommand(element, uuid, packageName, appVersion)
+            if (command == null) {
+                // Label was filtered - this is expected behavior, not an error
+                return ElementProcessingResult(
+                    uuid = uuid,
+                    command = null,
+                    success = true,  // Successful processing, just no command generated
+                    error = null
+                )
+            }
             if (developerSettings.isVerboseLoggingEnabled()) {
                 Log.d(TAG, "Generated command: ${command.commandText} for version: ${appVersion}")
             }
@@ -209,6 +214,7 @@ class LearnAppCore(
      */
     private fun calculateElementHash(element: ElementInfo): String {
         // Combine element properties
+        // Use individual rect properties instead of toString() for reliable unit testing
         val fingerprint = buildString {
             append(element.className)
             append("|")
@@ -218,7 +224,14 @@ class LearnAppCore(
             append("|")
             append(element.contentDescription)
             append("|")
-            append(element.bounds.toString())
+            // Use individual rect properties for reliable hash in unit tests
+            append(element.bounds.left)
+            append(",")
+            append(element.bounds.top)
+            append(",")
+            append(element.bounds.right)
+            append(",")
+            append(element.bounds.bottom)
         }
 
         // Generate MD5 hash

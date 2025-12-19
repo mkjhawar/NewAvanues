@@ -11,5 +11,7 @@
       }
     ]
   },
-  "statusLine": "./.claude/statusline-command.sh"
+  "statusline": {
+    "command": "bash .claude/statusline-command.sh"
+  }
 }

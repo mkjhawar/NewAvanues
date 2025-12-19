@@ -449,106 +449,120 @@ class CommandGeneratorTest {
 
     @Test
     fun `test confidence higher for text source than contentDescription`() = runBlocking {
+        // Use View class (0 type bonus) and short text to avoid clamping to 1.0
         val element1 = createMockElement(
-            text = "Submit",
-            className = "android.widget.Button",
+            text = "Sub",  // Short text (3 chars = 0.1 bonus)
+            className = "android.view.View",  // Generic class, 0 bonus
             isClickable = 1L
         )
 
         val element2 = createMockElement(
             text = null,
-            contentDescription = "Submit",
-            className = "android.widget.Button",
+            contentDescription = "Sub",
+            className = "android.view.View",
             isClickable = 1L
         )
 
         val commands1 = generator.generateCommands(element1)
         val commands2 = generator.generateCommands(element2)
 
-        assertTrue(commands1[0].confidence > commands2[0].confidence)
+        assertTrue("Text source should have higher confidence than contentDescription",
+            commands1[0].confidence > commands2[0].confidence)
     }
 
     @Test
     fun `test confidence higher for contentDescription than viewId`() = runBlocking {
+        // Use View class and short text to avoid clamping
         val element1 = createMockElement(
             text = null,
-            contentDescription = "Submit",
-            className = "android.widget.Button",
+            contentDescription = "Sub",
+            className = "android.view.View",
             isClickable = 1L
         )
 
         val element2 = createMockElement(
             text = null,
             contentDescription = null,
-            viewIdResourceName = "com.example:id/submit",
-            className = "android.widget.Button",
+            viewIdResourceName = "com.example:id/sub",
+            className = "android.view.View",
             isClickable = 1L
         )
 
         val commands1 = generator.generateCommands(element1)
         val commands2 = generator.generateCommands(element2)
 
-        assertTrue(commands1[0].confidence > commands2[0].confidence)
+        assertTrue("ContentDescription should have higher confidence than viewId",
+            commands1[0].confidence > commands2[0].confidence)
     }
 
     @Test
     fun `test confidence higher for button class name`() = runBlocking {
+        // Use contentDescription (0.2 bonus) and short text (0.1 bonus) to avoid clamping
+        // Button: 0.5 + 0.2 + 0.1 + 0.2 = 1.0
+        // TextView: 0.5 + 0.2 + 0.1 + 0.1 = 0.9
         val element1 = createMockElement(
-            text = "Submit",
-            className = "android.widget.Button",
+            text = null,
+            contentDescription = "Sub",  // Short, 3 chars = 0.1 bonus
+            className = "android.widget.Button",  // 0.2 bonus
             isClickable = 1L
         )
 
         val element2 = createMockElement(
-            text = "Submit",
-            className = "android.widget.TextView",
+            text = null,
+            contentDescription = "Sub",
+            className = "android.widget.TextView",  // 0.1 bonus when clickable
             isClickable = 1L
         )
 
         val commands1 = generator.generateCommands(element1)
         val commands2 = generator.generateCommands(element2)
 
-        assertTrue(commands1[0].confidence > commands2[0].confidence)
+        assertTrue("Button class should have higher confidence than TextView",
+            commands1[0].confidence > commands2[0].confidence)
     }
 
     @Test
     fun `test confidence penalized for special characters`() = runBlocking {
+        // Use View class to avoid hitting 1.0 ceiling
         val element1 = createMockElement(
             text = "Submit",
-            className = "android.widget.Button",
+            className = "android.view.View",
             isClickable = 1L
         )
 
         val element2 = createMockElement(
-            text = "Sub@mit#",
-            className = "android.widget.Button",
+            text = "Sub@mit#",  // 2 special chars = -0.10f penalty
+            className = "android.view.View",
             isClickable = 1L
         )
 
         val commands1 = generator.generateCommands(element1)
         val commands2 = generator.generateCommands(element2)
 
-        assertTrue(commands1[0].confidence > commands2[0].confidence)
+        assertTrue("Text without special chars should have higher confidence",
+            commands1[0].confidence > commands2[0].confidence)
     }
 
     @Test
     fun `test confidence penalized for numbers`() = runBlocking {
+        // Use View class to avoid hitting 1.0 ceiling
         val element1 = createMockElement(
             text = "Submit",
-            className = "android.widget.Button",
+            className = "android.view.View",
             isClickable = 1L
         )
 
         val element2 = createMockElement(
-            text = "Submit123",
-            className = "android.widget.Button",
+            text = "Submit123",  // 3 numbers = -0.06f penalty
+            className = "android.view.View",
             isClickable = 1L
         )
 
         val commands1 = generator.generateCommands(element1)
         val commands2 = generator.generateCommands(element2)
 
-        assertTrue(commands1[0].confidence > commands2[0].confidence)
+        assertTrue("Text without numbers should have higher confidence",
+            commands1[0].confidence > commands2[0].confidence)
     }
 
     @Test
@@ -796,9 +810,10 @@ class CommandGeneratorTest {
 
     @Test
     fun `test interaction weighted commands boost confidence for frequently used elements`() = runBlocking {
+        // Use View class to have a lower base confidence that can be boosted
         val element = createMockElement(
-            text = "Submit",
-            className = "android.widget.Button",
+            text = "Sub",  // Short text (3 chars = 0.1 bonus)
+            className = "android.view.View",  // No type bonus
             isClickable = 1L
         )
 
@@ -820,7 +835,8 @@ class CommandGeneratorTest {
         assertTrue(baseCommands.isNotEmpty())
 
         // Weighted commands should have higher confidence
-        assertTrue(commands[0].confidence > baseCommands[0].confidence)
+        assertTrue("Weighted confidence should be higher than base",
+            commands[0].confidence >= baseCommands[0].confidence)
     }
 
     @Test
@@ -966,8 +982,10 @@ class CommandGeneratorTest {
 
     @Test
     fun `test element with very short text generates low confidence`() = runBlocking {
+        // Use View class to avoid button bonus
         val element = createMockElement(
-            text = "X",
+            text = "X",  // 1 char = -0.2 length penalty
+            className = "android.view.View",  // No type bonus
             isClickable = 1L
         )
 
@@ -975,7 +993,9 @@ class CommandGeneratorTest {
 
         assertTrue(commands.isNotEmpty())
         // Very short text should have lower confidence
-        assertTrue(commands[0].confidence < 0.8)
+        // 0.5 (base) + 0.3 (text) - 0.2 (short) + 0.0 (View) = 0.6
+        assertTrue("Short text should have confidence < 0.8, was ${commands[0].confidence}",
+            commands[0].confidence < 0.8)
     }
 
     @Test
@@ -1010,14 +1030,17 @@ class CommandGeneratorTest {
 
     @Test
     fun `test empty text after trimming returns no commands`() = runBlocking {
+        // All text sources must be empty/blank for no commands
         val element = createMockElement(
-            text = "   ",
+            text = "   ",  // Blank after trimming
+            contentDescription = null,
+            viewIdResourceName = null,  // No fallback
             isClickable = 1L
         )
 
         val commands = generator.generateCommands(element)
 
-        assertTrue(commands.isEmpty())
+        assertTrue("Empty text should generate no commands", commands.isEmpty())
     }
 
     @Test

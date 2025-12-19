@@ -257,6 +257,7 @@ class AIContextSerializer(
                     result[key] = json.opt(key)
                 }
             } catch (e: Exception) {
+                android.util.Log.e("AIContextSerializer", "Failed to deserialize JSON context", e)
                 // Return empty map on parse error
             }
             return result

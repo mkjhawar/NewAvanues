@@ -9,6 +9,8 @@ import com.augmentalis.database.dto.toDTO
 import com.augmentalis.database.repositories.IContextPreferenceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
+import kotlin.time.Duration.Companion.hours
 
 /**
  * SQLDelight implementation of IContextPreferenceRepository.
@@ -111,10 +113,11 @@ class SQLDelightContextPreferenceRepository(
 
     override suspend fun applyTimeDecay(currentTime: Long, decayFactor: Float) =
         withContext(Dispatchers.Default) {
-            // Time decay implementation:
-            // For each record, reduce its weight based on age
-            // This is a placeholder - actual implementation would update records
-            // For now, we'll skip this as it requires schema changes
-            // TODO: Implement proper time decay with weighted counts
+            database.transactionWithResult {
+                queries.applyTimeDecay(
+                    decayFactor = decayFactor.toDouble(),
+                    cutoffTime = currentTime
+                )
+            }
         }
 }

@@ -6,8 +6,8 @@
  * Created: 2025-12-17
  *
  * Manages showing and handling consent dialogs for app exploration.
- * VoiceOSCore-specific version that integrates with VoiceOS infrastructure.
  */
+
 package com.augmentalis.voiceoscore.learnapp.ui
 
 import android.accessibilityservice.AccessibilityService
@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Consent Dialog Manager
  *
- * Manages consent dialogs for app exploration in VoiceOSCore.
+ * Manages consent dialogs for app exploration.
  * Shows consent dialog when user enters an unlearned app.
  */
 class ConsentDialogManager(
@@ -78,6 +78,7 @@ class ConsentDialogManager(
         appName: String
     ) {
         _currentConsentState.value = ConsentState.Showing(packageName, appName)
+        // Responses will be emitted to consentResponses Flow
     }
 
     /**
@@ -105,9 +106,7 @@ class ConsentDialogManager(
                 is ConsentResponse.Declined -> {
                     learnedAppTracker.excludePackage(currentState.packageName)
                 }
-                is ConsentResponse.Dismissed, is ConsentResponse.Timeout -> {
-                    // No action needed
-                }
+                else -> {}
             }
         }
 
@@ -120,11 +119,10 @@ class ConsentDialogManager(
      * Dismiss current consent dialog
      */
     fun dismissDialog() {
-        val currentState = _currentConsentState.value
-        if (currentState is ConsentState.Showing) {
+        if (_currentConsentState.value is ConsentState.Showing) {
+            val state = _currentConsentState.value as ConsentState.Showing
             _currentConsentState.value = ConsentState.None
-            val response = ConsentResponse.Dismissed(currentState.packageName)
-            pendingCallback?.invoke(response)
+            pendingCallback?.invoke(ConsentResponse.Dismissed(state.packageName))
             pendingCallback = null
         }
     }

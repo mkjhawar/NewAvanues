@@ -1,31 +1,22 @@
 /**
- * ExplorationSessionEntity.kt - Data class for exploration sessions (SQLDelight compatible)
+ * ExplorationSessionEntity.kt - Data model for exploration sessions
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
- * Created: 2025-12-18
+ * Created: 2025-10-08
+ * Migrated to SQLDelight: 2025-12-17
  *
- * Data class representing exploration session data.
- * Used by SQLDelight adapter pattern (not Room).
+ * Data model for storing exploration session data
+ * Uses SQLDelight schema from core/database module
  */
 
 package com.augmentalis.voiceoscore.learnapp.database.entities
 
 /**
- * Exploration Session Entity
+ * Exploration Session Data Model
  *
- * Data class storing exploration session metadata.
- * This is a pure Kotlin data class without Room annotations.
- * SQLDelight handles database operations via LearnAppDatabaseAdapter.
- *
- * @property sessionId Session ID (primary key)
- * @property packageName Package name (foreign key)
- * @property startedAt When session started (timestamp)
- * @property completedAt When session completed (timestamp, null if running)
- * @property durationMs Duration in milliseconds
- * @property screensExplored Number of screens explored
- * @property elementsDiscovered Number of elements discovered
- * @property status Session status (RUNNING, COMPLETED, PAUSED, FAILED)
+ * Data model storing exploration session metadata.
+ * Corresponds to exploration_sessions table in SQLDelight schema.
  */
 data class ExplorationSessionEntity(
     val sessionId: String,
@@ -35,5 +26,15 @@ data class ExplorationSessionEntity(
     val durationMs: Long? = null,
     val screensExplored: Int,
     val elementsDiscovered: Int,
-    val status: String
+    val status: String  // RUNNING, COMPLETED, PAUSED, FAILED
 )
+
+/**
+ * Session Status
+ */
+object SessionStatus {
+    const val RUNNING = "RUNNING"
+    const val COMPLETED = "COMPLETED"
+    const val PAUSED = "PAUSED"
+    const val FAILED = "FAILED"
+}

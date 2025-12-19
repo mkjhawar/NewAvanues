@@ -1,30 +1,22 @@
 /**
- * NavigationEdgeEntity.kt - Data class for navigation edges (SQLDelight compatible)
+ * NavigationEdgeEntity.kt - Data model for navigation edges
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
- * Created: 2025-12-18
+ * Created: 2025-10-08
+ * Migrated to SQLDelight: 2025-12-17
  *
- * Data class representing navigation graph edges.
- * Used by SQLDelight adapter pattern (not Room).
+ * Data model for storing navigation graph edges
+ * Uses SQLDelight schema from core/database module
  */
 
 package com.augmentalis.voiceoscore.learnapp.database.entities
 
 /**
- * Navigation Edge Entity
+ * Navigation Edge Data Model
  *
- * Data class storing navigation graph edges (screen transitions).
- * This is a pure Kotlin data class without Room annotations.
- * SQLDelight handles database operations via LearnAppDatabaseAdapter.
- *
- * @property edgeId Edge ID (primary key)
- * @property packageName Package name (foreign key)
- * @property sessionId Session ID (foreign key)
- * @property fromScreenHash Source screen hash
- * @property clickedElementUuid Clicked element UUID
- * @property toScreenHash Destination screen hash
- * @property timestamp When edge was discovered
+ * Data model storing navigation graph edges (screen transitions).
+ * Corresponds to navigation_edges table in SQLDelight schema.
  */
 data class NavigationEdgeEntity(
     val edgeId: String,
