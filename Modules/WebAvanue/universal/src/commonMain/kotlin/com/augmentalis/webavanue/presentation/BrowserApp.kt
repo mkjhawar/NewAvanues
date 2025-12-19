@@ -67,7 +67,7 @@ import kotlinx.datetime.toLocalDateTime
 fun BrowserApp(
     repository: BrowserRepository,
     secureStorage: SecureStorageProvider? = null,  // SecureStorage on Android, null on other platforms
-    downloadQueue: com.augmentalis.webavanue.download.DownloadQueue? = null,  // AndroidDownloadQueue on Android, null on other platforms
+    downloadQueue: com.augmentalis.webavanue.feature.download.DownloadQueue? = null,  // AndroidDownloadQueue on Android, null on other platforms
     xrManager: Any? = null,  // XRManager on Android, null on other platforms
     xrState: Any? = null,    // XRManager.XRState on Android, null on other platforms
     modifier: Modifier = Modifier

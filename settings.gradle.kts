@@ -72,3 +72,6 @@ include(":Modules:VoiceOS:libraries:VoiceUIElements")
 // WebAvanue Modules
 include(":Modules:WebAvanue:coredata")   // Data layer: repositories, database, models
 include(":Modules:WebAvanue:universal")  // UI layer: ViewModels, screens, platform code
+
+// Android App
+include(":android:apps:webavanue")

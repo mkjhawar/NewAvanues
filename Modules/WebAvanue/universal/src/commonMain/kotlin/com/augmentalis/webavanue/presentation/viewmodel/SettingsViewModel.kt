@@ -95,6 +95,9 @@ class SettingsViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _isSaving = MutableStateFlow(false)
+    val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
+
     // State: Error
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
@@ -163,14 +166,15 @@ class SettingsViewModel(
      */
     fun updateSettings(settings: BrowserSettings) {
         viewModelScope.launch {
-            _isLoading.value = true
+            _isSaving.value = true
             _error.value = null
             _saveSuccess.value = false
 
+            // Optional: optimistic UI so Compose updates instantly without waiting DB
+            _settings.value = settings
+
             repository.updateSettings(settings)
                 .onSuccess {
-                    _settings.value = settings
-                    _isLoading.value = false
                     _saveSuccess.value = true
 
                     // TODO: Sync download path to SharedPreferences on Android
@@ -179,8 +183,8 @@ class SettingsViewModel(
                 }
                 .onFailure { e ->
                     _error.value = "Failed to save settings: ${e.message}"
-                    _isLoading.value = false
                 }
+            _isSaving.value = false
         }
     }
 

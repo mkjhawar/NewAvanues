@@ -64,6 +64,7 @@ expect fun WebViewContainer(
     onProgressChange: (Float) -> Unit,
     canGoBack: (Boolean) -> Unit,
     canGoForward: (Boolean) -> Unit,
+    onOpenInNewTab: (String) -> Unit,
     sessionData: String?,
     onSessionDataChange: (String?) -> Unit,
     securityViewModel: SecurityViewModel? = null,

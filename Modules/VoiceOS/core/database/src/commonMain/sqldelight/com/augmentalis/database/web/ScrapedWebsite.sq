@@ -98,9 +98,9 @@ ORDER BY access_count DESC, last_accessed_at DESC;
 -- Get cache statistics
 getCacheStats:
 SELECT
-    COUNT(*) as total,
-    SUM(CASE WHEN is_stale = 1 THEN 1 ELSE 0 END) as stale,
-    AVG(access_count) as avg_access
+    COUNT(*) AS `total`,
+    SUM(CASE WHEN is_stale = 1 THEN 1 ELSE 0 END) AS stale,
+    AVG(access_count) AS avg_access
 FROM scraped_websites;
 
 -- Count all websites

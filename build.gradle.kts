@@ -14,29 +14,31 @@ buildscript {
 }
 
 plugins {
-    // Kotlin
-    kotlin("multiplatform") version "1.9.24" apply false
-    kotlin("android") version "1.9.24" apply false
-    kotlin("plugin.serialization") version "1.9.24" apply false
+    // Kotlin (use catalog so only one version exists)
+    alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
+    alias(libs.plugins.kotlin.compose) apply false
 
     // Android
-    id("com.android.application") version "8.2.0" apply false
-    id("com.android.library") version "8.2.0" apply false
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.android.library) apply false
 
     // Dependency Injection
-    id("com.google.dagger.hilt.android") version "2.48" apply false
+    alias(libs.plugins.hilt) apply false
 
     // Code Generation
-    id("com.google.devtools.ksp") version "1.9.24-1.0.20" apply false
+    alias(libs.plugins.ksp) apply false
 
     // Database
-    id("app.cash.sqldelight") version "2.0.1" apply false
+    alias(libs.plugins.sqldelight) apply false
 
     // Compose Multiplatform
-    id("org.jetbrains.compose") version "1.7.0" apply false
+    alias(libs.plugins.compose) apply false
 
     // Documentation
-    id("org.jetbrains.dokka") version "1.9.10" apply false
+    alias(libs.plugins.dokka) apply false
+    alias(libs.plugins.sentry) apply false
 }
 
 tasks.register("clean", Delete::class) {

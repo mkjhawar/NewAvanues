@@ -2,10 +2,12 @@ package com.augmentalis.webavanue.ui.screen.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.augmentalis.webavanue.ui.viewmodel.SettingsViewModel
@@ -25,6 +27,7 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isSaving by viewModel.isSaving.collectAsState()
     val error by viewModel.error.collectAsState()
 
     Scaffold(
@@ -37,11 +40,14 @@ fun SettingsScreen(
                     }
                 }
             )
+            if (isSaving) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
         },
         modifier = modifier
     ) { paddingValues ->
         when {
-            isLoading -> {
+            settings == null && isLoading -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -52,7 +58,7 @@ fun SettingsScreen(
                     )
                 }
             }
-            error != null -> {
+            error != null && settings == null -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -82,7 +88,11 @@ private fun SettingsContent(
     onUpdateSettings: (BrowserSettings) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val listState = rememberSaveable(saver = LazyListState.Saver) {
+       LazyListState()
+    }
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 8.dp)
     ) {

@@ -22,6 +22,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.augmentalis.webavanue.ui.screen.security.CertificateUtils
 import com.augmentalis.webavanue.ui.screen.security.HttpAuthRequest
 import com.augmentalis.webavanue.ui.screen.security.PermissionType
+import com.augmentalis.webavanue.ui.viewmodel.SecurityViewModel
 import com.augmentalis.webavanue.platform.SettingsApplicator
 import com.augmentalis.webavanue.platform.webview.WebViewLifecycle
 import com.augmentalis.webavanue.domain.model.BrowserSettings
@@ -76,9 +77,10 @@ actual fun WebViewContainer(
     onProgressChange: (Float) -> Unit,
     canGoBack: (Boolean) -> Unit,
     canGoForward: (Boolean) -> Unit,
+    onOpenInNewTab: (String) -> Unit,
     sessionData: String?,
     onSessionDataChange: (String?) -> Unit,
-    securityViewModel: com.augmentalis.webavanue.presentation.viewmodel.SecurityViewModel?,
+    securityViewModel: SecurityViewModel?,
     onDownloadStart: ((DownloadRequest) -> Unit)?,
     initialScale: Float,
     settings: BrowserSettings?,
@@ -132,8 +134,9 @@ actual fun WebViewContainer(
 
     // FIX L3: Apply settings through state machine when settings change
     // LaunchedEffect dependency on 'settings' ensures this only runs when settings actually change
-    LaunchedEffect(settings) {
-        settings?.let { browserSettings ->
+    val latestSettings by rememberUpdatedState(settings)
+    LaunchedEffect(latestSettings) {
+        latestSettings?.let { browserSettings ->
             webView?.let { view ->
                 settingsStateMachine.requestUpdate(browserSettings) { settingsToApply ->
                     val settingsApplicator = SettingsApplicator()
@@ -275,7 +278,14 @@ actual fun WebViewContainer(
                         view: WebView?,
                         request: WebResourceRequest?
                     ): Boolean {
-                        // Let WebView handle the URL
+                        val newUrl = request?.url?.toString() ?: return false
+
+                        if (browserSettings.openLinksInNewTab && request.isForMainFrame && request.hasGesture()) {
+                            println("🔗 Opening link in new tab: $newUrl")
+                            onOpenInNewTab(newUrl)
+                            return true
+                        }
+
                         return false
                     }
 

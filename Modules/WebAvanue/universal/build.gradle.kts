@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.android.library)
     alias(libs.plugins.compose)
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.dokka)
     // SQLDelight plugin removed - using BrowserCoreData for database access
 }
@@ -139,12 +140,6 @@ kotlin {
                 implementation(kotlin("test"))
                 implementation(libs.kotlin.test.junit)
 
-                // Android test core
-                implementation(libs.androidx.test.core)
-                implementation(libs.androidx.test.runner)
-                implementation(libs.androidx.test.rules)
-                implementation(libs.androidx.test.junit)
-                implementation(libs.androidx.test.junit.ktx)
 
                 // Compose test
                 implementation(libs.compose.ui.test.junit4)

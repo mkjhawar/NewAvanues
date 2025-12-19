@@ -1,5 +1,6 @@
 package com.augmentalis.webavanue.ui.screen.browser
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -45,6 +46,10 @@ import com.augmentalis.webavanue.ui.screen.components.rememberNetworkStatusMonit
 import com.augmentalis.webavanue.ui.screen.dialogs.SessionRestoreDialog
 import com.augmentalis.webavanue.ui.viewmodel.TabViewModel
 import com.augmentalis.webavanue.ui.viewmodel.SettingsViewModel
+import com.augmentalis.webavanue.ui.viewmodel.SecurityViewModel
+import com.augmentalis.webavanue.ui.viewmodel.HistoryViewModel
+import com.augmentalis.webavanue.ui.viewmodel.FavoriteViewModel
+import com.augmentalis.webavanue.ui.viewmodel.DownloadViewModel
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import kotlinx.coroutines.launch
 
@@ -68,14 +73,15 @@ import kotlinx.coroutines.launch
  * @param onNavigateToXRSettings Callback to navigate to XR settings screen
  * @param modifier Modifier for customization
  */
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun BrowserScreen(
     tabViewModel: TabViewModel,
-    settingsViewModel: com.augmentalis.webavanue.presentation.viewmodel.SettingsViewModel,
-    historyViewModel: com.augmentalis.webavanue.presentation.viewmodel.HistoryViewModel,
-    favoriteViewModel: com.augmentalis.webavanue.presentation.viewmodel.FavoriteViewModel,
-    securityViewModel: com.augmentalis.webavanue.presentation.viewmodel.SecurityViewModel,
-    downloadViewModel: com.augmentalis.webavanue.presentation.viewmodel.DownloadViewModel? = null,
+    settingsViewModel: SettingsViewModel,
+    historyViewModel: HistoryViewModel,
+    favoriteViewModel: FavoriteViewModel,
+    securityViewModel: SecurityViewModel,
+    downloadViewModel: DownloadViewModel? = null,
     xrManager: Any? = null,  // XRManager on Android, null on other platforms
     xrState: Any? = null,    // XRManager.XRState on Android, null on other platforms
     onNavigateToBookmarks: () -> Unit = {},
@@ -107,22 +113,20 @@ fun BrowserScreen(
         }
     }
 
-    // Check for crash recovery session on startup (Phase 4: Session Restore)
-    LaunchedEffect(Unit) {
-        val crashSession = tabViewModel.getLatestCrashSession()
-        if (crashSession != null && crashSession.tabCount > 0) {
-            showSessionRestoreDialog = true
-            sessionRestoreTabCount = crashSession.tabCount
-        }
-    }
+    // TODO: Phase 4 - Session Restore (not yet implemented)
+    // LaunchedEffect(Unit) {
+    //     val crashSession = tabViewModel.getLatestCrashSession()
+    //     if (crashSession != null && crashSession.tabCount > 0) {
+    //         showSessionRestoreDialog = true
+    //         sessionRestoreTabCount = crashSession.tabCount
+    //     }
+    // }
 
-    // Save session on screen dispose (Phase 4: Session Restore - Normal exit)
-    DisposableEffect(Unit) {
-        onDispose {
-            // Save current session as crash recovery (will be cleared on next normal startup)
-            tabViewModel.saveCurrentSession(isCrashRecovery = true)
-        }
-    }
+    // DisposableEffect(Unit) {
+    //     onDispose {
+    //         tabViewModel.saveCurrentSession(isCrashRecovery = true)
+    //     }
+    // }
 
     // Security dialog states
     val sslErrorState by securityViewModel.sslErrorState.collectAsState()
@@ -215,22 +219,17 @@ fun BrowserScreen(
     // Coroutine scope for async operations
     val scope = rememberCoroutineScope()
 
-    // Get platform-specific file picker launcher (Phase 4: Download Location Picker)
-    val context = LocalContext.current
-    val filePickerLauncher = remember { com.augmentalis.webavanue.platform.DownloadFilePickerLauncher(context) }
-
-    // File picker result launcher for download location selection
-    val filePickerResultLauncher = rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
-    ) { uri: android.net.Uri? ->
-        uri?.let {
-            // Take persistable permission for the selected directory
-            filePickerLauncher.takePersistablePermission(it.toString())
-            // Update custom path state (dialog will show this path)
-            customDownloadPath = it.toString()
-        }
-        // If user cancels (uri == null), don't update path
-    }
+    // TODO: Phase 4 - Download Location Picker (not yet implemented)
+    // val context = LocalContext.current
+    // val filePickerLauncher = remember { com.augmentalis.webavanue.platform.DownloadFilePickerLauncher(context) }
+    // val filePickerResultLauncher = rememberLauncherForActivityResult(
+    //     contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+    // ) { uri: android.net.Uri? ->
+    //     uri?.let {
+    //         filePickerLauncher.takePersistablePermission(it.toString())
+    //         customDownloadPath = it.toString()
+    //     }
+    // }
 
     // Helper to show command bar briefly (for voice commands feedback)
     fun showCommandBarBriefly() {
@@ -312,31 +311,7 @@ fun BrowserScreen(
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
-            .onPreviewKeyEvent { keyEvent ->
-                // Phase 4: Keyboard shortcuts for Find in Page
-                if (keyEvent.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
-                    when {
-                        // Ctrl+F / Cmd+F - Open Find in Page
-                        (keyEvent.isCtrlPressed || keyEvent.isMetaPressed) &&
-                        keyEvent.key == androidx.compose.ui.input.key.Key.F -> {
-                            tabViewModel.showFindInPage()
-                            true
-                        }
-                        // Escape - Close Find bar
-                        keyEvent.key == androidx.compose.ui.input.key.Key.Escape &&
-                        findInPageState.isVisible -> {
-                            scope.launch {
-                                webViewController.clearFindMatches()
-                            }
-                            tabViewModel.hideFindInPage()
-                            true
-                        }
-                        else -> false
-                    }
-                } else {
-                    false
-                }
-            }
+        // TODO: Phase 4 - Keyboard shortcuts (onPreviewKeyEvent not available in common)
     ) {
         // Detect landscape orientation based on constraints
         isLandscape = maxWidth > maxHeight
@@ -369,107 +344,107 @@ fun BrowserScreen(
                 exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
             ) {
                 AddressBar(
-                url = urlInput,
-                canGoBack = activeTab?.canGoBack ?: false,
-                canGoForward = activeTab?.canGoForward ?: false,
-                isDesktopMode = isDesktopMode,
-                isReadingMode = activeTab?.isReadingMode ?: false,
-                isArticleAvailable = activeTab?.readingModeArticle != null,
-                isFavorite = isFavorite,
-                tabCount = tabs.size,
-                tabs = tabs,
-                activeTabId = activeTab?.tab?.id,
-                favorites = favorites,
-                onUrlChange = { newUrl ->
-                    urlInput = newUrl
-                },
-                onGo = {
-                    if (urlInput.isNotBlank()) {
-                        tabViewModel.navigateToUrl(urlInput)
-                    }
-                },
-                onBack = {
-                    webViewController.goBack()
-                },
-                onForward = {
-                    webViewController.goForward()
-                },
-                onRefresh = {
-                    webViewController.reload()
-                },
-                onDesktopModeToggle = {
-                    val newMode = !isDesktopMode
-                    webViewController.setDesktopMode(newMode)
-                    tabViewModel.setDesktopMode(newMode)
-                    // Reload current page to apply new user agent
-                    webViewController.reload()
-                },
-                onReadingModeToggle = {
-                    tabViewModel.toggleReadingMode()
-                },
-                onFavoriteClick = {
-                    // Legacy callback - now handled by dropdown
-                    showAddToFavoritesDialog = true
-                },
-                onTabClick = { tabId ->
-                    tabViewModel.switchTab(tabId)
-                },
-                onTabClose = { tabId ->
-                    tabViewModel.closeTab(tabId)
-                },
-                onNewTab = {
-                    // FIX: Show dialog to prompt for URL instead of creating blank tab
-                    showAddPageDialog = true
-                },
-                onFavoriteNavigate = { favorite ->
-                    tabViewModel.navigateToUrl(favorite.url)
-                },
-                onAddFavorite = {
-                    // FIX: Use async addFavorite with duplicate prevention and crash protection
-                    activeTab?.let { tab ->
-                        scope.launch {
-                            try {
-                                val success = favoriteViewModel.addFavorite(
-                                    url = tab.tab.url,
-                                    title = tab.tab.title.ifBlank { tab.tab.url },
-                                    favicon = tab.tab.favicon
-                                )
-                                if (!success) {
-                                    // Duplicate detected - show error via dialog
-                                    showAddToFavoritesDialog = true
+                    url = urlInput,
+                    canGoBack = activeTab?.canGoBack ?: false,
+                    canGoForward = activeTab?.canGoForward ?: false,
+                    isDesktopMode = isDesktopMode,
+                    isReadingMode = activeTab?.isReadingMode ?: false,
+                    isArticleAvailable = activeTab?.readingModeArticle != null,
+                    isFavorite = isFavorite,
+                    tabCount = tabs.size,
+                    tabs = tabs,
+                    activeTabId = activeTab?.tab?.id,
+                    favorites = favorites,
+                    onUrlChange = { newUrl ->
+                        urlInput = newUrl
+                    },
+                    onGo = {
+                        if (urlInput.isNotBlank()) {
+                            tabViewModel.navigateToUrl(urlInput)
+                        }
+                    },
+                    onBack = {
+                        webViewController.goBack()
+                    },
+                    onForward = {
+                        webViewController.goForward()
+                    },
+                    onRefresh = {
+                        webViewController.reload()
+                    },
+                    onDesktopModeToggle = {
+                        val newMode = !isDesktopMode
+                        webViewController.setDesktopMode(newMode)
+                        tabViewModel.setDesktopMode(newMode)
+                        // Reload current page to apply new user agent
+                        webViewController.reload()
+                    },
+                    onReadingModeToggle = {
+                        tabViewModel.toggleReadingMode()
+                    },
+                    onFavoriteClick = {
+                        // Legacy callback - now handled by dropdown
+                        showAddToFavoritesDialog = true
+                    },
+                    onTabClick = { tabId ->
+                        tabViewModel.switchTab(tabId)
+                    },
+                    onTabClose = { tabId ->
+                        tabViewModel.closeTab(tabId)
+                    },
+                    onNewTab = {
+                        // FIX: Show dialog to prompt for URL instead of creating blank tab
+                        showAddPageDialog = true
+                    },
+                    onFavoriteNavigate = { favorite ->
+                        tabViewModel.navigateToUrl(favorite.url)
+                    },
+                    onAddFavorite = {
+                        // FIX: Use async addFavorite with duplicate prevention and crash protection
+                        activeTab?.let { tab ->
+                            scope.launch {
+                                try {
+                                    val success = favoriteViewModel.addFavorite(
+                                        url = tab.tab.url,
+                                        title = tab.tab.title.ifBlank { tab.tab.url },
+                                        favicon = tab.tab.favicon
+                                    )
+                                    if (!success) {
+                                        // Duplicate detected - show error via dialog
+                                        showAddToFavoritesDialog = true
+                                    }
+                                } catch (e: Exception) {
+                                    println("BrowserScreen: Error adding favorite: ${e.message}")
+                                    e.printStackTrace()
                                 }
-                            } catch (e: Exception) {
-                                println("BrowserScreen: Error adding favorite: ${e.message}")
-                                e.printStackTrace()
                             }
                         }
+                    },
+                    onShowFavorites = {
+                        showSpatialFavorites = true
+                    },
+                    onHistoryClick = onNavigateToHistory,
+                    onSettingsClick = onNavigateToSettings,
+                    onTabSwitcherClick = {
+                        showTabSwitcher = true
+                    },
+                    isCommandBarVisible = isCommandBarVisible,
+                    onCommandBarToggle = {
+                        isCommandBarVisible = !isCommandBarVisible
+                    },
+                    isListening = isListening,
+                    onStartListening = {
+                        // Start voice recognition - for now just show indicator
+                        // Actual voice recognition will be triggered from Android Activity
+                        isListening = true
+                        // Show command bar briefly when listening starts
+                        showCommandBarBriefly()
+                        // Auto-stop after 5 seconds (demo timeout)
+                        scope.launch {
+                            kotlinx.coroutines.delay(5000L)
+                            isListening = false
+                        }
                     }
-                },
-                onShowFavorites = {
-                    showSpatialFavorites = true
-                },
-                onHistoryClick = onNavigateToHistory,
-                onSettingsClick = onNavigateToSettings,
-                onTabSwitcherClick = {
-                    showTabSwitcher = true
-                },
-                isCommandBarVisible = isCommandBarVisible,
-                onCommandBarToggle = {
-                    isCommandBarVisible = !isCommandBarVisible
-                },
-                isListening = isListening,
-                onStartListening = {
-                    // Start voice recognition - for now just show indicator
-                    // Actual voice recognition will be triggered from Android Activity
-                    isListening = true
-                    // Show command bar briefly when listening starts
-                    showCommandBarBriefly()
-                    // Auto-stop after 5 seconds (demo timeout)
-                    scope.launch {
-                        kotlinx.coroutines.delay(5000L)
-                        isListening = false
-                    }
-                }
                 )
             }  // End AnimatedVisibility for AddressBar
 
@@ -505,7 +480,15 @@ fun BrowserScreen(
                         },
                         onProgressChange = { },
                         canGoBack = { canGoBack -> tabViewModel.updateTabNavigation(tabState.tab.id, canGoBack = canGoBack) },
-                        canGoForward = { canGoForward -> tabViewModel.updateTabNavigation(tabState.tab.id, canGoForward = canGoForward) },
+                        canGoForward = { canGoForward ->
+                            tabViewModel.updateTabNavigation(
+                                tabState.tab.id,
+                                canGoForward = canGoForward
+                            )
+                        },
+                        onOpenInNewTab = { newUrl ->
+                           tabViewModel.createTab(url = newUrl)
+                        },
                         sessionData = tabState.tab.sessionData,
                         onSessionDataChange = { sessionData ->
                             val updatedTab = tabState.tab.copy(sessionData = sessionData)
@@ -616,9 +599,15 @@ fun BrowserScreen(
                                                 favoriteViewModel.removeFavorite(fav.id)
                                             }
                                         } else {
-                                            favoriteViewModel.addFavorite(url = url, title = tab.tab.title.ifBlank { url }, favicon = tab.tab.favicon)
+                                            favoriteViewModel.addFavorite(
+                                                url = url,
+                                                title = tab.tab.title.ifBlank { url },
+                                                favicon = tab.tab.favicon
+                                            )
                                         }
-                                    } catch (e: Exception) { e.printStackTrace() }
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
                                 }
                             }
                         },
@@ -838,7 +827,7 @@ fun BrowserScreen(
 
         // SSL Error Dialog
         sslErrorState?.let { state ->
-            com.augmentalis.webavanue.presentation.ui.security.SslErrorDialog(
+            com.augmentalis.webavanue.ui.screen.security.SslErrorDialog(
                 sslErrorInfo = state.sslErrorInfo,
                 onGoBack = state.onGoBack,
                 onProceedAnyway = state.onProceedAnyway,
@@ -848,7 +837,7 @@ fun BrowserScreen(
 
         // Permission Request Dialog
         permissionRequestState?.let { state ->
-            com.augmentalis.webavanue.presentation.ui.security.PermissionRequestDialog(
+            com.augmentalis.webavanue.ui.screen.security.PermissionRequestDialog(
                 permissionRequest = state.permissionRequest,
                 onAllow = state.onAllow,
                 onDeny = state.onDeny,
@@ -858,7 +847,7 @@ fun BrowserScreen(
 
         // JavaScript Alert Dialog
         jsAlertState?.let { state ->
-            com.augmentalis.webavanue.presentation.ui.security.JavaScriptAlertDialog(
+            com.augmentalis.webavanue.ui.screen.security.JavaScriptAlertDialog(
                 domain = state.domain,
                 message = state.message,
                 onDismiss = state.onDismiss
@@ -867,7 +856,7 @@ fun BrowserScreen(
 
         // JavaScript Confirm Dialog
         jsConfirmState?.let { state ->
-            com.augmentalis.webavanue.presentation.ui.security.JavaScriptConfirmDialog(
+            com.augmentalis.webavanue.ui.screen.security.JavaScriptConfirmDialog(
                 domain = state.domain,
                 message = state.message,
                 onConfirm = state.onConfirm,
@@ -878,7 +867,7 @@ fun BrowserScreen(
 
         // JavaScript Prompt Dialog
         jsPromptState?.let { state ->
-            com.augmentalis.webavanue.presentation.ui.security.JavaScriptPromptDialog(
+            com.augmentalis.webavanue.ui.screen.security.JavaScriptPromptDialog(
                 domain = state.domain,
                 message = state.message,
                 defaultValue = state.defaultValue,
@@ -890,7 +879,7 @@ fun BrowserScreen(
 
         // HTTP Authentication Dialog
         httpAuthState?.let { state ->
-            com.augmentalis.webavanue.presentation.ui.security.HttpAuthenticationDialog(
+            com.augmentalis.webavanue.ui.screen.security.HttpAuthenticationDialog(
                 authRequest = state.authRequest,
                 onAuthenticate = state.onAuthenticate,
                 onCancel = state.onCancel,
@@ -926,15 +915,16 @@ fun BrowserScreen(
         // PHASE 4: Download Location Dialog
         // Shows when askDownloadLocation setting is enabled
         if (showDownloadLocationDialog && pendingDownloadRequest != null && downloadViewModel != null) {
-            com.augmentalis.webavanue.presentation.ui.download.AskDownloadLocationDialog(
+            com.augmentalis.webavanue.ui.screen.download.AskDownloadLocationDialog(
                 filename = pendingDownloadRequest!!.filename,
                 defaultPath = settings?.downloadPath,
                 selectedPath = customDownloadPath,
                 onLaunchFilePicker = {
+                    // TODO: Phase 4 - File picker not yet implemented
                     // Launch Android Storage Access Framework picker
                     // User can select any accessible directory (internal, SD card, cloud storage)
                     // Passing current customDownloadPath as initial URI to start navigation there
-                    filePickerResultLauncher.launch(customDownloadPath?.let { android.net.Uri.parse(it) })
+                    // filePickerResultLauncher.launch(customDownloadPath?.let { android.net.Uri.parse(it) })
                 },
                 onPathSelected = { selectedPath, rememberChoice ->
                     // Re-check WiFi-only setting (network may have changed while dialog was open)
@@ -1043,7 +1033,7 @@ fun BrowserScreen(
         // Supports voice-based navigation: say category names to navigate
         // Interactive - clicking commands executes them
         if (showVoiceHelp && settings != null) {
-            com.augmentalis.webavanue.voice.VoiceCommandsDialog(
+            com.augmentalis.webavanue.feature.voice.VoiceCommandsDialog(
                 onDismiss = { showVoiceHelp = false },
                 onCommandExecute = { command ->
                     // Execute the command
@@ -1070,9 +1060,17 @@ fun BrowserScreen(
                         "reopen tab" -> {} // TODO: implement reopen tab
 
                         // Zoom commands
-                        "zoom in" -> { webViewController.zoomIn(); tabViewModel.zoomIn() }
-                        "zoom out" -> { webViewController.zoomOut(); tabViewModel.zoomOut() }
-                        "reset zoom" -> { webViewController.setZoomLevel(100); tabViewModel.setZoomLevel(100) }
+                        "zoom in" -> {
+                            webViewController.zoomIn(); tabViewModel.zoomIn()
+                        }
+
+                        "zoom out" -> {
+                            webViewController.zoomOut(); tabViewModel.zoomOut()
+                        }
+
+                        "reset zoom" -> {
+                            webViewController.setZoomLevel(100); tabViewModel.setZoomLevel(100)
+                        }
 
                         // Mode commands
                         "desktop mode" -> {
@@ -1080,11 +1078,13 @@ fun BrowserScreen(
                             tabViewModel.setDesktopMode(true)
                             webViewController.reload()
                         }
+
                         "mobile mode" -> {
                             webViewController.setDesktopMode(false)
                             tabViewModel.setDesktopMode(false)
                             webViewController.reload()
                         }
+
                         "reader mode" -> {
                             // Extract article and enter reading mode
                             scope.launch {
@@ -1102,6 +1102,7 @@ fun BrowserScreen(
                                 }
                             }
                         }
+
                         "fullscreen" -> {} // TODO: implement fullscreen
 
                         // Feature commands
@@ -1175,7 +1176,11 @@ fun BrowserScreen(
                             newPageUrl
                         }
                         // FIX BUG #4: Apply global desktop mode when creating new tabs
-                        tabViewModel.createTab(url = formattedUrl, title = formattedUrl, isDesktopMode = settings?.useDesktopMode == true)
+                        tabViewModel.createTab(
+                            url = formattedUrl,
+                            title = formattedUrl,
+                            isDesktopMode = settings?.useDesktopMode == true
+                        )
                     } else {
                         tabViewModel.createTab(url = "", title = "New Tab", isDesktopMode = settings?.useDesktopMode == true)
                     }
@@ -1287,6 +1292,7 @@ fun BrowserScreen(
 
 /**
  * Execute a text command
+ * @deprecated Use com.augmentalis.webavanue.ui.screen.browser.screen.executeTextCommand
  */
 private fun executeTextCommand(
     command: String,
@@ -1297,133 +1303,41 @@ private fun executeTextCommand(
     onDownloads: () -> Unit,
     onHistory: () -> Unit,
     onSettings: () -> Unit
-) {
-    val normalizedCommand = command.lowercase().trim()
-
-    when {
-        normalizedCommand == "back" || normalizedCommand == "go back" -> {
-            webViewController.goBack()
-        }
-        normalizedCommand == "forward" || normalizedCommand == "go forward" -> {
-            webViewController.goForward()
-        }
-        normalizedCommand == "refresh" || normalizedCommand == "reload" -> {
-            webViewController.reload()
-        }
-        normalizedCommand == "home" || normalizedCommand == "go home" -> {
-            // FIX: Use configurable home URL from settings
-            val homeUrl = settings?.homePage ?: "https://www.google.com"
-            tabViewModel.navigateToUrl(homeUrl)
-        }
-        normalizedCommand == "new tab" -> {
-            // FIX BUG #4: Apply global desktop mode when creating new tabs
-            tabViewModel.createTab(url = "", title = "New Tab", isDesktopMode = settings?.useDesktopMode == true)
-        }
-        normalizedCommand == "bookmarks" -> onBookmarks()
-        normalizedCommand == "downloads" -> onDownloads()
-        normalizedCommand == "history" -> onHistory()
-        normalizedCommand == "settings" -> onSettings()
-        normalizedCommand.startsWith("go to ") -> {
-            val url = normalizedCommand.removePrefix("go to ").trim()
-            val formattedUrl = if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                "https://$url"
-            } else {
-                url
-            }
-            tabViewModel.navigateToUrl(formattedUrl)
-        }
-    }
-}
+) = com.augmentalis.webavanue.ui.screen.browser.screen.executeTextCommand(
+    command = command,
+    webViewController = webViewController,
+    tabViewModel = tabViewModel,
+    settings = settings,
+    onBookmarks = onBookmarks,
+    onDownloads = onDownloads,
+    onHistory = onHistory,
+    onSettings = onSettings
+)
 
 /**
  * WebViewPlaceholder - Placeholder for actual WebView (to be implemented)
- *
- * @param url Current URL
- * @param isLoading Whether page is loading
- * @param modifier Modifier for customization
+ * @deprecated Use com.augmentalis.webavanue.ui.screen.browser.screen.WebViewPlaceholder
  */
 @Composable
 fun WebViewPlaceholder(
     url: String,
     isLoading: Boolean,
     modifier: Modifier = Modifier
-) {
-    Box(modifier = modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Loading...",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
-
-            Text(
-                text = if (url.isBlank()) "Enter a URL to browse" else url,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "WebView will be integrated here",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-            )
-        }
-    }
-}
+) = com.augmentalis.webavanue.ui.screen.browser.screen.WebViewPlaceholder(url, isLoading, modifier)
 
 /**
  * EmptyBrowserState - Shown when no tabs are open
- *
- * @param onNewTab Callback when new tab button is clicked
- * @param modifier Modifier for customization
+ * @deprecated Use com.augmentalis.webavanue.ui.screen.browser.screen.EmptyBrowserState
  */
 @Composable
 fun EmptyBrowserState(
     onNewTab: () -> Unit,
     modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = "No tabs open",
-                style = MaterialTheme.typography.headlineMedium
-            )
-
-            Text(
-                text = "Create a new tab to start browsing",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Button(onClick = onNewTab) {
-                Text("New Tab")
-            }
-        }
-    }
-}
+) = com.augmentalis.webavanue.ui.screen.browser.screen.EmptyBrowserState(onNewTab, modifier)
 
 /**
  * AddPageDialog - Dialog for adding a new page with URL input
- *
- * @param url Current URL value
- * @param onUrlChange Callback when URL changes
- * @param onConfirm Callback when user confirms (creates new tab)
- * @param onDismiss Callback when dialog is dismissed
+ * @deprecated Use com.augmentalis.webavanue.ui.screen.browser.screen.AddPageDialog
  */
 @Composable
 fun AddPageDialog(
@@ -1432,50 +1346,5 @@ fun AddPageDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
-) {
-    com.augmentalis.webavanue.presentation.ui.components.OceanDialog(
-        onDismissRequest = onDismiss,
-        title = "Add New Page",
-        modifier = modifier,
-        confirmButton = {
-            com.augmentalis.webavanue.presentation.ui.components.OceanTextButton(
-                onClick = onConfirm,
-                isPrimary = true
-            ) {
-                Text("Add Page")
-            }
-        },
-        dismissButton = {
-            com.augmentalis.webavanue.presentation.ui.components.OceanTextButton(
-                onClick = onDismiss,
-                isPrimary = false
-            ) {
-                Text("Cancel")
-            }
-        }
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Enter a URL or leave blank for a new empty tab",
-                style = MaterialTheme.typography.bodyMedium,
-                color = com.augmentalis.webavanue.presentation.ui.components.OceanDialogDefaults.textSecondary
-            )
-
-            OutlinedTextField(
-                value = url,
-                onValueChange = onUrlChange,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Text("example.com or google.com")
-                },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                keyboardActions = KeyboardActions(onGo = { onConfirm() }),
-                colors = com.augmentalis.webavanue.presentation.ui.components.OceanDialogDefaults.outlinedTextFieldColors()
-            )
-        }
-    }
-}
+) = com.augmentalis.webavanue.ui.screen.browser.screen.AddPageDialog(url, onUrlChange, onConfirm, onDismiss, modifier)
 
