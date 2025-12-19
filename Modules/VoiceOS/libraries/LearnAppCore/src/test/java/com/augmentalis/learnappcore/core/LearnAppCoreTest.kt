@@ -15,7 +15,6 @@ package com.augmentalis.learnappcore.core
 
 import android.content.Context
 import android.graphics.Rect
-import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.database.repositories.IGeneratedCommandRepository
 import com.augmentalis.learnappcore.models.ElementInfo
@@ -52,7 +51,6 @@ import org.robolectric.annotation.Config
 class LearnAppCoreTest {
 
     private lateinit var mockContext: Context
-    private lateinit var mockDatabase: VoiceOSDatabaseManager
     private lateinit var mockCommandsRepository: IGeneratedCommandRepository
     private lateinit var mockUuidGenerator: ThirdPartyUuidGenerator
     private lateinit var learnAppCore: LearnAppCore
@@ -60,16 +58,14 @@ class LearnAppCoreTest {
     @Before
     fun setup() {
         mockContext = mockk(relaxed = true)
-        mockDatabase = mockk(relaxed = true)
         mockCommandsRepository = mockk(relaxed = true)
         mockUuidGenerator = mockk(relaxed = true)
 
-        // Setup database mock - uses Repository pattern (SQLDelight), NOT DAO
-        every { mockDatabase.generatedCommands } returns mockCommandsRepository
+        // Setup repository mock
         coEvery { mockCommandsRepository.insert(any()) } returns 1L
 
-        // Create LearnAppCore instance
-        learnAppCore = LearnAppCore(mockContext, mockDatabase, mockUuidGenerator)
+        // Create LearnAppCore instance with repository directly
+        learnAppCore = LearnAppCore(mockContext, mockCommandsRepository, mockUuidGenerator)
     }
 
     // ============================================================

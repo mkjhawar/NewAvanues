@@ -5017,6 +5017,326 @@ if (element.isLongClickable) {
 
 ---
 
+# Chapter 15: Code Quality Improvements (December 2025)
+
+## 15.1 Overview
+
+This chapter documents the code quality improvements implemented on December 18, 2025, addressing P0 (Critical), P1 (High), and P2 (Medium) priority issues identified in the code quality audit.
+
+### Summary of Changes
+
+| Category | Changes Made | Impact |
+|----------|--------------|--------|
+| Dependency Initialization | VoiceOSService lazy initialization pattern | Proper DI without Hilt |
+| Command Discovery | Full StateFlow-based implementation | Reliable exploration feedback |
+| Compose State Management | Reusable lifecycle-aware hooks | Reduced code duplication |
+| Error Handling | Toast/Snackbar user feedback | Better UX on failures |
+| Type Safety | Fixed redundant conversions | Cleaner code |
+
+## 15.2 VoiceOSService Dependency Initialization
+
+### Problem
+
+`AppVersionManager` was being initialized with only `Context`, but requires 4 parameters. Hilt doesn't support `AccessibilityService`, so manual dependency initialization is required.
+
+### Solution
+
+Added proper lazy initialization chain with all required dependencies:
+
+```kotlin
+// File: VoiceOSService.kt
+
+// Database manager for SQLDelight repositories
+private val databaseManager by lazy {
+    VoiceOSDatabaseManager.getInstance(DatabaseDriverFactory(applicationContext)).also {
+        Log.d(TAG, "VoiceOSDatabaseManager initialized (lazy)")
+    }
+}
+
+// AppVersionDetector requires IAppVersionRepository
+private val appVersionDetector by lazy {
+    AppVersionDetector(applicationContext, databaseManager.appVersions).also {
+        Log.d(TAG, "AppVersionDetector initialized (lazy)")
+    }
+}
+
+// AppVersionManager requires detector, version repo, and command repo
+private val appVersionManager by lazy {
+    com.augmentalis.voiceoscore.version.AppVersionManager(
+        context = applicationContext,
+        detector = appVersionDetector,
+        versionRepo = databaseManager.appVersions,
+        commandRepo = databaseManager.generatedCommands
+    ).also {
+        Log.d(TAG, "AppVersionManager initialized (lazy)")
+    }
+}
+```
+
+### Benefits
+
+- Proper dependency chain without Hilt
+- Lazy initialization reduces startup time
+- Clear initialization order with logging
+- All parameters properly provided
+
+## 15.3 CommandDiscoveryIntegration Implementation
+
+### Problem
+
+The original file was a stub with TODO comments. The exploration completion flow had no visual or audio feedback.
+
+### Solution
+
+Implemented full `CommandDiscoveryIntegration` with:
+
+1. **StateFlow Observation**: Auto-observes `ExplorationEngine.explorationState`
+2. **Visual Overlays**: Shows discovery results with auto-hide
+3. **TTS Audio Summary**: Speaks exploration summary
+4. **Error Handling**: Shows error overlays on failure
+
+```kotlin
+// File: CommandDiscoveryIntegration.kt
+
+class CommandDiscoveryIntegration(
+    private val context: Context,
+    private val explorationEngine: ExplorationEngine
+) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var textToSpeech: TextToSpeech? = null
+
+    init {
+        initializeTts()
+        startObserving()
+    }
+
+    private fun startObserving() {
+        scope.launch {
+            explorationEngine.explorationState.collectLatest { state ->
+                handleStateChange(state)
+            }
+        }
+    }
+
+    private suspend fun handleStateChange(state: ExplorationState) {
+        when (state) {
+            is ExplorationState.Completed -> {
+                onExplorationCompleted(state.packageName, state.stats)
+            }
+            is ExplorationState.Failed -> {
+                onExplorationFailed(state.packageName, state.error)
+            }
+            // ... other states
+        }
+    }
+
+    private fun onExplorationCompleted(packageName: String, stats: ExplorationStats) {
+        mainHandler.post {
+            showDiscoveryOverlay(packageName, stats)
+            playAudioSummary(packageName, stats)
+            scheduleAutoHide()
+        }
+    }
+}
+```
+
+### Key Features
+
+| Feature | Implementation |
+|---------|----------------|
+| State Observation | `StateFlow.collectLatest` |
+| Visual Feedback | `WidgetOverlayHelper.addOverlay()` |
+| Audio Feedback | Android TTS with `TextToSpeech.speak()` |
+| Auto-dismiss | 10-second timeout via coroutine `delay()` |
+| Tap-to-dismiss | `setOnClickListener` on overlay |
+
+## 15.4 AccessibilityServiceState Composable Hooks
+
+### Problem
+
+Multiple screens duplicated 15+ lines of lifecycle observer code for accessibility service state checking.
+
+### Solution
+
+Created reusable composable hooks in `AccessibilityServiceState.kt`:
+
+```kotlin
+// File: AccessibilityServiceState.kt
+
+@Composable
+fun rememberAccessibilityServiceState(context: Context): MutableState<Boolean> {
+    val state = remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Initial check on first composition
+    LaunchedEffect(Unit) {
+        state.value = AccessibilityServiceHelper.isVoiceOSServiceEnabled(context)
+    }
+
+    // Update on lifecycle resume events
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                state.value = AccessibilityServiceHelper.isVoiceOSServiceEnabled(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    return state
+}
+
+@Composable
+fun rememberMicrophonePermissionState(context: Context): MutableState<Boolean> {
+    // Similar implementation for microphone permission
+}
+```
+
+### Usage
+
+```kotlin
+// Before: 15+ lines of boilerplate
+// After: Single line
+val isServiceEnabled by rememberAccessibilityServiceState(context)
+```
+
+### Files Updated
+
+- `MainActivity.kt` - Simplified using hook
+- `HomeScreen.kt` - Simplified using hook
+- `SetupScreen.kt` - Simplified using hook
+
+## 15.5 Error Handling Improvements
+
+### LearnApp Intent Launch
+
+Added comprehensive error handling for LearnApp launch:
+
+```kotlin
+private fun launchLearnApp(context: Context) {
+    try {
+        val intent = Intent().apply {
+            setClassName("com.augmentalis.learnapp",
+                         "com.augmentalis.learnapp.LearnAppActivity")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+        Toast.makeText(context,
+            "LearnApp is not installed. Opening Play Store...",
+            Toast.LENGTH_LONG).show()
+        // Redirect to Play Store
+    } catch (e: SecurityException) {
+        Toast.makeText(context,
+            "Permission denied to launch LearnApp",
+            Toast.LENGTH_LONG).show()
+    } catch (e: Exception) {
+        Toast.makeText(context,
+            "Failed to launch LearnApp: ${e.message}",
+            Toast.LENGTH_LONG).show()
+    }
+}
+```
+
+## 15.6 Type Safety Fixes
+
+### Redundant Type Conversions
+
+Fixed redundant `toInt().toLong()` conversions in `LearnAppRepository.kt`:
+
+```kotlin
+// Before
+version_code = versionCode.toInt().toLong()
+
+// After
+version_code = versionCode.toLong()
+```
+
+Fixed at 5 locations in the file.
+
+### TextView Property Access
+
+Fixed `lineSpacingMultiplier` val reassignment issue:
+
+```kotlin
+// Before (compile error - lineSpacingMultiplier is read-only)
+lineSpacingMultiplier = 1.3f
+
+// After (use setter method)
+setLineSpacing(0f, 1.3f)
+```
+
+## 15.7 Import Corrections
+
+### LocalLifecycleOwner Import
+
+The `LocalLifecycleOwner` import was updated for Compose compatibility:
+
+```kotlin
+// Before (incorrect - causes unresolved reference)
+import androidx.lifecycle.compose.LocalLifecycleOwner
+
+// After (correct)
+import androidx.compose.ui.platform.LocalLifecycleOwner
+```
+
+## 15.8 Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    CODE QUALITY IMPROVEMENTS ARCHITECTURE                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         VOICEOS SERVICE LAYER                                │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                        VoiceOSService                                │    │
+│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐  │    │
+│  │  │ databaseManager │──│appVersionDetector│──│  appVersionManager  │  │    │
+│  │  │  (lazy init)    │  │   (lazy init)    │  │    (lazy init)      │  │    │
+│  │  └─────────────────┘  └─────────────────┘  └─────────────────────┘  │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      COMMAND DISCOVERY LAYER                                 │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                  CommandDiscoveryIntegration                         │    │
+│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐  │    │
+│  │  │ StateFlow       │  │  Visual Overlay │  │  TTS Audio Summary  │  │    │
+│  │  │ Observation     │  │  (auto-hide)    │  │  (on completion)    │  │    │
+│  │  └─────────────────┘  └─────────────────┘  └─────────────────────┘  │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         COMPOSE UI LAYER                                     │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                    AccessibilityServiceState.kt                      │    │
+│  │  ┌───────────────────────────────┐  ┌─────────────────────────────┐  │    │
+│  │  │rememberAccessibilityServiceState│  │rememberMicrophonePermissionState│    │
+│  │  │   - LaunchedEffect(Unit)      │  │   - LaunchedEffect(Unit)     │  │    │
+│  │  │   - DisposableEffect          │  │   - DisposableEffect         │  │    │
+│  │  │   - LifecycleEventObserver    │  │   - LifecycleEventObserver   │  │    │
+│  │  └───────────────────────────────┘  └─────────────────────────────┘  │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## 15.9 Build Verification
+
+All changes verified with successful build:
+
+```bash
+./gradlew :Modules:VoiceOS:apps:VoiceOS:assembleDebug
+BUILD SUCCESSFUL in 3s
+```
+
+---
+
 # Document History
 
 | Version | Date | Changes |
@@ -5026,6 +5346,7 @@ if (element.isLongClickable) {
 | 1.2 | 2025-12-11 | Added Chapter 11: Architecture Roadmap - Path to 10/10 |
 | 1.3 | 2025-12-13 | Added Chapter 13: Package-Based Pagination Feature (appId, offset/keyset pagination, database migration) |
 | 1.4 | 2025-12-17 | Added Chapter 14: Build Migration - New Classes Reference (ElementClickTracker, ChecklistManager, NavigationGraphBuilder, AVUQuantizerIntegration, QuantizedContext, LLMPromptFormat, JitElementCapture, WindowType/WindowInfo, ElementInfo extensions) |
+| 1.5 | 2025-12-18 | Added Chapter 15: Code Quality Improvements (VoiceOSService DI, CommandDiscoveryIntegration, AccessibilityServiceState hooks, error handling, type safety) |
 
 ---
 

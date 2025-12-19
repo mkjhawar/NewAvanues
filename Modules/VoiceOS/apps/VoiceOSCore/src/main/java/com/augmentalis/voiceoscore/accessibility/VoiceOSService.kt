@@ -62,6 +62,9 @@ import com.augmentalis.voiceoscore.scraping.VoiceCommandProcessor
 import com.augmentalis.voiceoscore.database.VoiceOSAppDatabase
 import com.augmentalis.voiceoscore.database.VoiceOSCoreDatabaseAdapter
 import com.augmentalis.database.dto.GeneratedCommandDTO
+import com.augmentalis.database.DatabaseDriverFactory
+import com.augmentalis.database.VoiceOSDatabaseManager
+import com.augmentalis.voiceoscore.version.AppVersionDetector
 import com.augmentalis.voiceoscore.web.WebCommandCoordinator
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.CoroutineScope
@@ -82,7 +85,6 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
-import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -200,15 +202,44 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 
     private val prettyGson by lazy { GsonBuilder().setPrettyPrinting().create() }
 
-    // Hilt injected dependencies
-    @Inject
-    lateinit var speechEngineManager: SpeechEngineManager
+    // Manual dependency initialization (Hilt does not support AccessibilityService)
+    private val speechEngineManager by lazy {
+        SpeechEngineManager(applicationContext).also {
+            Log.d(TAG, "SpeechEngineManager initialized (lazy)")
+        }
+    }
 
-    @Inject
-    lateinit var installedAppsManager: InstalledAppsManager
+    private val installedAppsManager by lazy {
+        InstalledAppsManager(applicationContext).also {
+            Log.d(TAG, "InstalledAppsManager initialized (lazy)")
+        }
+    }
 
-    @Inject
-    lateinit var appVersionManager: com.augmentalis.voiceoscore.version.AppVersionManager
+    // Database manager for SQLDelight repositories
+    private val databaseManager by lazy {
+        VoiceOSDatabaseManager.getInstance(DatabaseDriverFactory(applicationContext)).also {
+            Log.d(TAG, "VoiceOSDatabaseManager initialized (lazy)")
+        }
+    }
+
+    // AppVersionDetector requires IAppVersionRepository
+    private val appVersionDetector by lazy {
+        AppVersionDetector(applicationContext, databaseManager.appVersions).also {
+            Log.d(TAG, "AppVersionDetector initialized (lazy)")
+        }
+    }
+
+    // AppVersionManager requires detector, version repo, and command repo
+    private val appVersionManager by lazy {
+        com.augmentalis.voiceoscore.version.AppVersionManager(
+            context = applicationContext,
+            detector = appVersionDetector,
+            versionRepo = databaseManager.appVersions,
+            commandRepo = databaseManager.generatedCommands
+        ).also {
+            Log.d(TAG, "AppVersionManager initialized (lazy)")
+        }
+    }
 
     // UIScrapingEngine requires AccessibilityService, so it's lazy-initialized (not injected)
     private val uiScrapingEngine by lazy {
@@ -607,7 +638,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 //                    }
                     // FIX (2025-12-11): updateCommands is now suspend, launch in coroutine
                     coroutineScopeCommands.launch {
-                        speechEngineManager?.updateCommands(allCommands)  // TEMPORARY: Null-safe for standalone
+                        speechEngineManager.updateCommands(allCommands)
                     }
 
                     Log.i(TAG, "✓ Database commands registered successfully with speech engine (async)")
@@ -1009,7 +1040,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 //                                Log.d(TAG, "RegisterVoiceCmd allCommands = $objectCommand")
 //                            }
                             // FIX (2025-12-11): updateCommands is now suspend, call directly in coroutine
-                            speechEngineManager?.updateCommands(allCommands)
+                            speechEngineManager.updateCommands(allCommands)
                             allRegisteredDynamicCommands.clear()
                             allRegisteredDynamicCommands.addAll(commandCache)
                             lastCommandLoaded = System.currentTimeMillis()
@@ -2054,7 +2085,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             if (intent?.action == Const.ACTION_CONFIG_UPDATE) {
                 config = ServiceConfiguration.loadFromPreferences(this@VoiceOSService)
                 Log.i(TAG, "CHANGE_LANG onReceive config = $config")
-                speechEngineManager?.updateConfiguration(
+                speechEngineManager.updateConfiguration(
                     SpeechConfigurationData(
                         language = config.voiceLanguage,
                         mode = SpeechMode.DYNAMIC_COMMAND,
@@ -2097,7 +2128,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             }
 
             // Update speech configuration with new language
-            speechEngineManager?.updateConfiguration(
+            speechEngineManager.updateConfiguration(
                 SpeechConfigurationData(
                     language = language,
                     mode = mode,
@@ -2110,7 +2141,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             )
 
             // Start listening
-            speechEngineManager?.startListening()
+            speechEngineManager.startListening()
             Log.i(TAG, "Voice recognition started successfully")
             true
         } catch (e: Exception) {
@@ -2131,7 +2162,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                 return false
             }
 
-            speechEngineManager?.stopListening()
+            speechEngineManager.stopListening()
             Log.i(TAG, "Voice recognition stopped successfully")
             true
         } catch (e: Exception) {

@@ -40,6 +40,7 @@ import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -153,6 +154,11 @@ class ExplorationEngine(
      * Login screens detected count
      */
     private var loginScreensDetected = 0
+
+    /**
+     * Scrollable containers found count
+     */
+    private var scrollableContainersFound = 0
 
     /**
      * Current session ID for database persistence
@@ -368,6 +374,9 @@ class ExplorationEngine(
                         "Registered but NOT clicking dangerous element: '${element.text}' " +
                         "(UUID: ${element.uuid}) - Reason: $reason")
                 }
+
+                // Track scrollable containers found
+                scrollableContainersFound += explorationResult.scrollableContainersCount
 
                 // Add screen to navigation graph (with ALL elements)
                 navigationGraphBuilder.addScreen(
@@ -883,7 +892,7 @@ class ExplorationEngine(
      * @param depth Current depth
      * @param currentScreenHash Current screen hash
      */
-    private fun updateProgress(packageName: String, depth: Int, @Suppress("UNUSED_PARAMETER") currentScreenHash: String) {
+    private suspend fun updateProgress(packageName: String, depth: Int, @Suppress("UNUSED_PARAMETER") currentScreenHash: String) {
         val stats = screenStateManager.getStats()
         val elapsed = System.currentTimeMillis() - startTimestamp
 
@@ -910,7 +919,7 @@ class ExplorationEngine(
      * @param depth Depth
      * @return Progress
      */
-    private fun getCurrentProgress(packageName: String, depth: Int): ExplorationProgress {
+    private suspend fun getCurrentProgress(packageName: String, depth: Int): ExplorationProgress {
         val stats = screenStateManager.getStats()
         val elapsed = System.currentTimeMillis() - startTimestamp
 
@@ -931,7 +940,7 @@ class ExplorationEngine(
      * @param packageName Package name
      * @return Stats
      */
-    private fun createExplorationStats(packageName: String): ExplorationStats {
+    private suspend fun createExplorationStats(packageName: String): ExplorationStats {
         val stats = screenStateManager.getStats()
         val graph = navigationGraphBuilder.build()
         val graphStats = graph.getStats()
@@ -947,7 +956,7 @@ class ExplorationEngine(
             maxDepth = graphStats.maxDepth,
             dangerousElementsSkipped = dangerousElementsSkipped,
             loginScreensDetected = loginScreensDetected,
-            scrollableContainersFound = 0  // TODO: track this
+            scrollableContainersFound = scrollableContainersFound
         )
     }
 
@@ -979,15 +988,19 @@ class ExplorationEngine(
 
     /**
      * Stop exploration
+     *
+     * Launches coroutine to create final stats and update state.
      */
     fun stopExploration() {
         val currentState = _explorationState.value
         if (currentState is ExplorationState.Running) {
-            val stats = createExplorationStats(currentState.packageName)
-            _explorationState.value = ExplorationState.Completed(
-                packageName = currentState.packageName,
-                stats = stats
-            )
+            scope.launch {
+                val stats = createExplorationStats(currentState.packageName)
+                _explorationState.value = ExplorationState.Completed(
+                    packageName = currentState.packageName,
+                    stats = stats
+                )
+            }
         }
     }
 
@@ -1105,6 +1118,15 @@ class ExplorationEngine(
         } catch (e: Exception) {
             android.util.Log.e("ExplorationEngine", "Failed to send generic alias notification", e)
         }
+    }
+
+    /**
+     * Cleanup resources
+     *
+     * Cancels all coroutines. Call when done with exploration.
+     */
+    fun cleanup() {
+        scope.cancel()
     }
 
     companion object {

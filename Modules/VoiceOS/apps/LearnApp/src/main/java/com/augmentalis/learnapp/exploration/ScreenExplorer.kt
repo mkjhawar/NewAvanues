@@ -96,7 +96,7 @@ class ScreenExplorer(
         }
 
         // 3. Collect all elements (including offscreen via scrolling)
-        val allElements = collectAllElements(rootNode)
+        val (allElements, scrollableCount) = collectAllElementsWithScrollableCount(rootNode)
 
         // 4. Classify elements
         val classifications = elementClassifier.classifyAll(allElements)
@@ -128,19 +128,22 @@ class ScreenExplorer(
             allElements = allElements,
             safeClickableElements = safeClickableElements,
             dangerousElements = dangerousElements,
-            elementClassifications = classifications
+            elementClassifications = classifications,
+            scrollableContainersCount = scrollableCount
         )
     }
 
     /**
-     * Collect all elements from screen
+     * Collect all elements from screen with scrollable container count
      *
      * Includes offscreen elements via scrolling.
      *
      * @param rootNode Root node
-     * @return List of all elements
+     * @return Pair of (elements list, scrollable containers count)
      */
-    private suspend fun collectAllElements(rootNode: AccessibilityNodeInfo): List<ElementInfo> {
+    private suspend fun collectAllElementsWithScrollableCount(
+        rootNode: AccessibilityNodeInfo
+    ): Pair<List<ElementInfo>, Int> {
         val allElements = mutableSetOf<ElementInfo>()
 
         // 1. Collect visible elements
@@ -161,7 +164,7 @@ class ScreenExplorer(
             }
         }
 
-        return allElements.toList()
+        return Pair(allElements.toList(), scrollables.size)
     }
 
     /**
@@ -274,13 +277,15 @@ sealed class ScreenExplorationResult {
      * @property safeClickableElements Safe clickable elements
      * @property dangerousElements Dangerous elements (element, reason)
      * @property elementClassifications All element classifications
+     * @property scrollableContainersCount Number of scrollable containers found
      */
     data class Success(
         val screenState: ScreenState,
         val allElements: List<ElementInfo>,
         val safeClickableElements: List<ElementInfo>,
         val dangerousElements: List<Pair<ElementInfo, String>>,
-        val elementClassifications: List<ElementClassification>
+        val elementClassifications: List<ElementClassification>,
+        val scrollableContainersCount: Int = 0
     ) : ScreenExplorationResult()
 
     /**

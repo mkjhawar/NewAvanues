@@ -116,10 +116,12 @@ class NavigationGraphBuilder(
     /**
      * Build final navigation graph
      *
+     * Thread-safe: acquires mutex before reading collections.
+     *
      * @return Immutable navigation graph
      */
-    fun build(): NavigationGraph {
-        return NavigationGraph(
+    suspend fun build(): NavigationGraph = mutex.withLock {
+        NavigationGraph(
             packageName = packageName,
             nodes = nodes.toMap(),
             edges = edges.toList()
@@ -129,29 +131,35 @@ class NavigationGraphBuilder(
     /**
      * Get current node count
      *
+     * Thread-safe: acquires mutex before reading.
+     *
      * @return Number of nodes
      */
-    fun getNodeCount(): Int {
-        return nodes.size
+    suspend fun getNodeCount(): Int = mutex.withLock {
+        nodes.size
     }
 
     /**
      * Get current edge count
      *
+     * Thread-safe: acquires mutex before reading.
+     *
      * @return Number of edges
      */
-    fun getEdgeCount(): Int {
-        return edges.size
+    suspend fun getEdgeCount(): Int = mutex.withLock {
+        edges.size
     }
 
     /**
      * Check if screen already added
      *
+     * Thread-safe: acquires mutex before reading.
+     *
      * @param screenHash Screen hash
      * @return true if screen exists
      */
-    fun hasScreen(screenHash: String): Boolean {
-        return nodes.containsKey(screenHash)
+    suspend fun hasScreen(screenHash: String): Boolean = mutex.withLock {
+        nodes.containsKey(screenHash)
     }
 
     /**

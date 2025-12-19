@@ -20,6 +20,7 @@ import com.augmentalis.learnapp.ui.widgets.ProgressOverlay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -149,14 +150,18 @@ class ProgressOverlayManager(
     /**
      * Cleanup
      *
-     * Releases resources. Call when manager is no longer needed.
+     * Releases resources and cancels all coroutines.
+     * Call when manager is no longer needed.
      */
     fun cleanup() {
+        // First perform cleanup on main thread, then cancel scope
         mainScope.launch {
             withContext(Dispatchers.Main) {
                 hideProgressOverlay()
                 progressOverlay.cleanup()
             }
+        }.invokeOnCompletion {
+            mainScope.cancel()
         }
     }
 }

@@ -23,16 +23,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -40,7 +33,7 @@ import com.augmentalis.voiceos.ui.screens.HomeScreen
 import com.augmentalis.voiceos.ui.screens.SetupScreen
 import com.augmentalis.voiceos.ui.screens.SettingsScreen
 import com.augmentalis.voiceos.ui.theme.VoiceOSTheme
-import com.augmentalis.voiceos.util.AccessibilityServiceHelper
+import com.augmentalis.voiceos.util.rememberAccessibilityServiceState
 
 /**
  * Main Activity - VoiceOS launcher entry point.
@@ -80,24 +73,7 @@ fun VoiceOSApp() {
     val navController = rememberNavController()
 
     // Track accessibility service state with lifecycle awareness
-    var isServiceEnabled by remember { mutableStateOf(false) }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                // Recheck service status when app resumes (user may have enabled it)
-                isServiceEnabled = AccessibilityServiceHelper.isVoiceOSServiceEnabled(context)
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    // Initial check
-    isServiceEnabled = AccessibilityServiceHelper.isVoiceOSServiceEnabled(context)
+    val isServiceEnabled by rememberAccessibilityServiceState(context)
 
     // Determine start destination based on service state
     val startDestination = if (isServiceEnabled) VoiceOSRoutes.HOME else VoiceOSRoutes.SETUP

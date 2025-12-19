@@ -17,7 +17,8 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
-import com.augmentalis.learnapp.database.LearnAppDatabase
+import com.augmentalis.database.DatabaseDriverFactory
+import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.learnapp.database.repository.AppMetadataProvider
 import com.augmentalis.learnapp.database.repository.LearnAppRepository
 import com.augmentalis.learnapp.database.repository.SessionCreationResult
@@ -39,6 +40,7 @@ import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -102,8 +104,9 @@ class LearnAppIntegration private constructor(
 
     /**
      * Database and repository
+     * Uses SQLDelight via VoiceOSDatabaseManager (migrated from Room 2025-12-18)
      */
-    private val database: LearnAppDatabase
+    private val dbManager: VoiceOSDatabaseManager
     private val repository: LearnAppRepository
     private val metadataProvider: AppMetadataProvider
 
@@ -125,9 +128,10 @@ class LearnAppIntegration private constructor(
     private val explorationStrategy: ExplorationStrategy = DFSExplorationStrategy()
 
     init {
-        // Initialize databases
-        database = LearnAppDatabase.getInstance(context)
-        repository = LearnAppRepository(database.learnAppDao(), context)
+        // Initialize database using SQLDelight (migrated from Room 2025-12-18)
+        val driverFactory = DatabaseDriverFactory(context)
+        dbManager = VoiceOSDatabaseManager.getInstance(driverFactory)
+        repository = LearnAppRepository(dbManager, context)
         metadataProvider = AppMetadataProvider(context)
 
         // Initialize UUIDCreator components
@@ -600,8 +604,11 @@ class LearnAppIntegration private constructor(
 
     /**
      * Cleanup (call in onDestroy)
+     *
+     * Cancels all coroutines and releases resources.
      */
     fun cleanup() {
+        scope.cancel()
         hideLoginPromptOverlay()
         consentDialogManager.cleanup()
         progressOverlayManager.cleanup()

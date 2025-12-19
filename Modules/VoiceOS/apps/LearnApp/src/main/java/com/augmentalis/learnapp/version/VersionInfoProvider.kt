@@ -310,7 +310,7 @@ class VersionInfoProvider(private val context: Context) {
         }
 
         val minSdkVersion = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            appInfo.minSdkVersion
+            appInfo?.minSdkVersion ?: 1
         } else {
             // Pre-Android N, default to 1
             1
@@ -320,12 +320,12 @@ class VersionInfoProvider(private val context: Context) {
             packageName = packageInfo.packageName,
             versionName = packageInfo.versionName ?: "unknown",
             versionCode = versionCode,
-            targetSdkVersion = appInfo.targetSdkVersion,
+            targetSdkVersion = appInfo?.targetSdkVersion ?: 0,
             minSdkVersion = minSdkVersion,
             firstInstallTime = packageInfo.firstInstallTime,
             lastUpdateTime = packageInfo.lastUpdateTime,
-            isSystemApp = (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0,
-            isUpdatedSystemApp = (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+            isSystemApp = appInfo?.let { (it.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0 } ?: false,
+            isUpdatedSystemApp = appInfo?.let { (it.flags and android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0 } ?: false
         )
     }
 

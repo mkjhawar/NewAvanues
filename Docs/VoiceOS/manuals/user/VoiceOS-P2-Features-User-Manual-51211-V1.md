@@ -697,6 +697,64 @@ In LearnAppPro, you can export and view navigation graphs:
 
 ---
 
+## 9.6 Reliability and Stability Improvements
+
+The December 18, 2025 update includes important stability improvements that make VoiceOS more reliable.
+
+### Better Error Messages
+
+When something goes wrong, VoiceOS now tells you what happened:
+
+| Situation | What You'll See |
+|-----------|-----------------|
+| LearnApp not installed | "LearnApp is not installed. Opening Play Store..." |
+| Permission denied | "Permission denied to launch LearnApp" |
+| Launch failed | "Failed to launch LearnApp: [reason]" |
+
+### Exploration Completion Feedback
+
+When exploration finishes, you'll now see and hear the results:
+
+```
+┌────────────────────────────────────────┐
+│     COMMANDS DISCOVERED                 │
+│                                         │
+│           Gmail                         │
+│                                         │
+│  Screens explored: 24                   │
+│  Elements found: 412                    │
+│  Navigation paths: 18                   │
+│  Duration: 3m 45s                       │
+│                                         │
+│  Tap to dismiss or wait 10 seconds      │
+└────────────────────────────────────────┘
+```
+
+VoiceOS also speaks: *"Finished learning Gmail. Found 412 elements across 24 screens."*
+
+### What's Improved
+
+| Before | After |
+|--------|-------|
+| Silent failures | Clear error messages |
+| No completion feedback | Visual overlay + voice summary |
+| App may freeze on errors | Graceful error handling |
+
+### Auto-Dismissing Notifications
+
+- Exploration results appear for **10 seconds** then auto-hide
+- Tap anywhere on the overlay to dismiss immediately
+- Error notifications also auto-dismiss
+
+### Smoother App Switching
+
+When you go to Settings and come back:
+- VoiceOS immediately detects if accessibility service is now enabled
+- No need to restart the app
+- Setup wizard automatically advances
+
+---
+
 # Document History
 
 | Version | Date | Changes |
@@ -704,6 +762,7 @@ In LearnAppPro, you can export and view navigation graphs:
 | 1.0 | 2025-12-11 | Initial release |
 | 1.1 | 2025-12-13 | Added Section 6: Performance Improvements (pagination, app-specific filtering) |
 | 1.2 | 2025-12-17 | Added Section 9: December 2025 Update (exploration tracking, window detection, JIT improvements, AI context, navigation graphs) |
+| 1.3 | 2025-12-18 | Added Section 9.6: Reliability and Stability Improvements (error messages, exploration feedback, auto-dismiss) |
 
 ---
 

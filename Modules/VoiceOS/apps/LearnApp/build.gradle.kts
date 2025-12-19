@@ -13,6 +13,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("kotlin-parcelize")  // For @Parcelize support
+    // Note: Room removed in favor of SQLDelight via core:database module (2025-12-18)
 }
 
 android {
@@ -65,7 +66,10 @@ dependencies {
     // JITLearning (AIDL interface for service binding)
     implementation(project(":Modules:VoiceOS:libraries:JITLearning"))
 
-    // Database module
+    // UUIDCreator (element identification and tracking)
+    implementation(project(":Modules:VoiceOS:libraries:UUIDCreator"))
+
+    // Database module (SQLDelight - replaces Room as of 2025-12-18)
     implementation(project(":Modules:VoiceOS:core:database"))
 
     // Kotlin Coroutines

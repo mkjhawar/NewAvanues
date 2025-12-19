@@ -17,6 +17,7 @@ import android.view.accessibility.AccessibilityEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -259,6 +260,15 @@ class AppLaunchDetector(
     fun resetDebounce() {
         lastEventTimestamp = 0L
         lastProcessedPackage = null
+    }
+
+    /**
+     * Cleanup resources
+     *
+     * Cancels all coroutines. Call in onDestroy.
+     */
+    fun cleanup() {
+        scope.cancel()
     }
 
     companion object {
