@@ -423,9 +423,33 @@ To clear all learned data:
 
 # Chapter 9: Troubleshooting
 
-## 9.1 "Service Disconnected" Error
+## 9.1 "Not connected to JIT service" Error (Red Status)
 
-**Cause:** VoiceOS accessibility service not running.
+**Symptom:** AvaLearn shows red status message "Not connected to JIT service" even though VoiceOS is enabled.
+
+**Cause:** The JIT Learning Service failed to start automatically with VoiceOS.
+
+**Fix (Easy):**
+1. Go to Settings > Accessibility
+2. Find VoiceOS
+3. Toggle it **OFF**
+4. Wait 3 seconds
+5. Toggle it **ON** again
+6. Wait 5 seconds for services to start
+7. Open AvaLearn - status should now be green "Connected"
+
+**If Still Not Working:**
+1. Restart your device
+2. Enable VoiceOS accessibility after restart
+3. Wait 10 seconds
+4. Open AvaLearn
+
+**What Was Fixed (Dec 2025):**
+A software update fixed an issue where the JIT service wasn't automatically starting. If you installed VoiceOS before December 18, 2025, update to the latest version for the permanent fix.
+
+## 9.2 "Service Disconnected" Error
+
+**Cause:** VoiceOS accessibility service not running at all.
 
 **Fix:**
 1. Go to Settings > Accessibility
@@ -433,7 +457,7 @@ To clear all learned data:
 3. Toggle OFF then ON
 4. Return to AvaLearn
 
-## 9.2 Stats Stay at Zero
+## 9.3 Stats Stay at Zero
 
 **Cause:** JIT learning not capturing.
 
@@ -443,7 +467,7 @@ To clear all learned data:
 3. Wait 5-10 seconds on each screen
 4. Restart VoiceOS service
 
-## 9.3 Events Not Appearing (Pro)
+## 9.4 Events Not Appearing (Pro)
 
 **Cause:** Event listener not registered.
 
@@ -453,7 +477,7 @@ To clear all learned data:
 3. Reopen AvaLearnPro
 4. Events should now appear
 
-## 9.4 App Keeps Crashing
+## 9.5 App Keeps Crashing
 
 **Cause:** Memory or compatibility issue.
 
@@ -462,7 +486,7 @@ To clear all learned data:
 2. Restart device
 3. Reinstall if problem persists
 
-## 9.5 Voice Commands Not Working
+## 9.6 Voice Commands Not Working
 
 **Cause:** Commands not generated yet.
 

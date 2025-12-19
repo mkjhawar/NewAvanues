@@ -57,4 +57,8 @@
     <string name="error_command_not_supported">Command not supported</string>
     <string name="error_handler_init_failed">Handler initialization failed</string>
     <string name="error_permission_denied">Permission denied</string>
+
+    <!-- JIT Learning Permissions (Phase 3: JIT-LearnApp Separation - 2025-12-18) -->
+    <string name="perm_jit_control_label">Control JIT Learning</string>
+    <string name="perm_jit_control_description">Allows controlling Just-In-Time learning and accessing screen capture data. Only granted to apps signed with the same certificate.</string>
 </resources>

@@ -15,10 +15,13 @@ import android.accessibilityservice.GestureDescription.Builder
 import android.accessibilityservice.GestureDescription.StrokeDescription
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.ServiceConnection
 import android.os.Build
+import android.os.IBinder
 import android.provider.Settings
 import android.util.ArrayMap
 import android.util.Log
@@ -272,6 +275,11 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     // FIX (2025-11-30): Add @Volatile for thread visibility across coroutine and event handler
     @Volatile
     private var learnAppIntegration: com.augmentalis.voiceoscore.learnapp.integration.LearnAppIntegration? = null
+
+    // JIT Learning Service connection (Phase 3: JIT-LearnApp Separation - 2025-12-18)
+    // Manages binding to JITLearningService foreground service
+    @Volatile
+    private var jitServiceBound = false
 
     // Hash-based persistence database (nullable for safe fallback)
     // FIX (2025-11-26): Database consolidation - Use VoiceOSAppDatabase (SQLDelight via adapter)
@@ -1206,6 +1214,97 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             learnAppIntegration = null
         }
         Log.i(TAG, "=== LearnApp Integration Initialization Complete ===")
+
+        // Start JIT Learning Service (Phase 3: JIT-LearnApp Separation - 2025-12-18)
+        // Must be called AFTER LearnAppIntegration initializes (provides JITLearnerProvider)
+        startJITService()
+    }
+
+    /**
+     * Service connection for JIT Learning Service binding
+     * Phase 3: JIT-LearnApp Separation (2025-12-18)
+     */
+    private val jitServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            Log.i(TAG, "JIT Learning Service connected via AIDL")
+
+            try {
+                // Get service instance and wire up provider
+                val jitService = com.augmentalis.jitlearning.JITLearningService.getInstance()
+                if (jitService != null && learnAppIntegration != null) {
+                    // Set JITLearnerProvider (implemented by LearnAppIntegration)
+                    jitService.setLearnerProvider(learnAppIntegration!!)
+
+                    // Set AccessibilityService interface for root node access
+                    jitService.setAccessibilityService(object : com.augmentalis.jitlearning.JITLearningService.AccessibilityServiceInterface {
+                        override fun getRootNode(): android.view.accessibility.AccessibilityNodeInfo? {
+                            return this@VoiceOSService.rootInActiveWindow
+                        }
+
+                        override fun performGlobalAction(action: Int): Boolean {
+                            return this@VoiceOSService.performGlobalAction(action)
+                        }
+                    })
+
+                    jitServiceBound = true
+                    Log.i(TAG, "✓ JIT Learning Service provider wired successfully")
+                    Log.d(TAG, "  - JITLearnerProvider: ${learnAppIntegration!!.javaClass.simpleName}")
+                    Log.d(TAG, "  - AccessibilityService interface: PROVIDED")
+                    Log.d(TAG, "  - Service ready for LearnApp binding")
+                } else {
+                    Log.w(TAG, "Cannot wire JIT service - service or integration is null")
+                    Log.w(TAG, "  JIT service: ${if (jitService != null) "OK" else "NULL"}")
+                    Log.w(TAG, "  Integration: ${if (learnAppIntegration != null) "OK" else "NULL"}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to wire JIT Learning Service provider", e)
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            Log.w(TAG, "JIT Learning Service disconnected")
+            jitServiceBound = false
+        }
+    }
+
+    /**
+     * Start JIT Learning Service
+     * Phase 3: JIT-LearnApp Separation (2025-12-18)
+     *
+     * Starts the foreground service and binds to it to wire up the JITLearnerProvider.
+     * Called after LearnAppIntegration initializes.
+     */
+    private fun startJITService() {
+        try {
+            Log.i(TAG, "Starting JIT Learning Service...")
+
+            val intent = Intent(this, com.augmentalis.jitlearning.JITLearningService::class.java)
+
+            // Start as foreground service (Android O+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+
+            // Bind to service to wire up provider
+            val bound = bindService(intent, jitServiceConnection, Context.BIND_AUTO_CREATE)
+
+            if (bound) {
+                Log.i(TAG, "✓ JIT Learning Service started and binding initiated")
+                Log.d(TAG, "  - Service will run as foreground service")
+                Log.d(TAG, "  - LearnApp can now bind via AIDL")
+                Log.d(TAG, "  - Passive learning will begin on next accessibility event")
+            } else {
+                Log.e(TAG, "✗ Failed to bind to JIT Learning Service")
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start JIT Learning Service", e)
+            Log.e(TAG, "  Error type: ${e.javaClass.simpleName}")
+            Log.e(TAG, "  Error message: ${e.message}")
+            Log.w(TAG, "Service will continue without JIT Learning")
+        }
     }
 
     /**
@@ -1911,6 +2010,34 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                 Log.d(TAG, "LearnApp integration reference cleared")
             }
         } ?: Log.d(TAG, "LearnApp integration was not initialized, skipping cleanup")
+
+        // Cleanup JIT Learning Service (Phase 3: JIT-LearnApp Separation - 2025-12-18)
+        if (jitServiceBound) {
+            try {
+                Log.d(TAG, "Unbinding from JIT Learning Service...")
+                unbindService(jitServiceConnection)
+                jitServiceBound = false
+                Log.i(TAG, "✓ JIT Learning Service unbound successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "✗ Error unbinding from JIT Learning Service", e)
+                Log.e(TAG, "Cleanup error type: ${e.javaClass.simpleName}")
+                Log.e(TAG, "Cleanup error message: ${e.message}")
+            }
+        } else {
+            Log.d(TAG, "JIT Learning Service was not bound, skipping unbind")
+        }
+
+        // Stop JIT Learning Service
+        try {
+            Log.d(TAG, "Stopping JIT Learning Service...")
+            val intent = Intent(this, com.augmentalis.jitlearning.JITLearningService::class.java)
+            stopService(intent)
+            Log.i(TAG, "✓ JIT Learning Service stopped successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "✗ Error stopping JIT Learning Service", e)
+            Log.e(TAG, "Stop error type: ${e.javaClass.simpleName}")
+            Log.e(TAG, "Stop error message: ${e.message}")
+        }
 
         // Cleanup Command Discovery integration
         // PHASE 3 (2025-12-08): Cleanup CommandDiscoveryIntegration

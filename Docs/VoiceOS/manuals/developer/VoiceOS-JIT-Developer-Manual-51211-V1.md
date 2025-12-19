@@ -926,8 +926,81 @@ val loginElements = jitService?.queryElements("text:Login")
 | Events not received | Listener not registered | Check registration logs |
 | RemoteException | Process died | Re-bind to service |
 | Stale screen info | Recycled nodes | Get fresh rootInActiveWindow |
+| **LearnApp "Not connected"** | **Service not started/declared** | **See C.4 below** |
 
-## C.2 Debug Logging
+## C.2 Service Binding Issues (CRITICAL)
+
+### C.2.1 Symptom: "Not connected to JIT service"
+
+LearnApp shows red status "Not connected to JIT service" despite VoiceOS running.
+
+**Root Causes:**
+1. JITLearningService not declared in VoiceOSCore manifest
+2. Service not started by VoiceOSService
+3. Binding fails due to missing permission
+
+### C.2.2 Fix Applied (2025-12-18)
+
+**Issue**: VoiceOS-Issue-JITServiceBinding-251218-V1
+
+**Changes Made**:
+
+1. **Manifest Declaration** (VoiceOSCore/AndroidManifest.xml)
+   ```xml
+   <service
+       android:name="com.augmentalis.jitlearning.JITLearningService"
+       android:enabled="true"
+       android:exported="true"
+       android:permission="com.augmentalis.voiceos.permission.JIT_CONTROL"
+       android:foregroundServiceType="dataSync">
+       <intent-filter>
+           <action android:name="com.augmentalis.jitlearning.ELEMENT_CAPTURE_SERVICE" />
+       </intent-filter>
+   </service>
+   ```
+
+2. **Service Startup** (VoiceOSService.kt)
+   - Added `startJITService()` method
+   - Called after LearnAppIntegration initializes
+   - Binds to service and wires JITLearnerProvider
+
+3. **Service Cleanup** (VoiceOSService.onDestroy())
+   - Unbinds from service
+   - Stops foreground service
+
+### C.2.3 Verification Steps
+
+```bash
+# 1. Check service declared
+adb shell dumpsys package com.augmentalis.voiceoscore | grep JITLearning
+
+# 2. Check service running
+adb shell dumpsys activity services | grep JITLearning
+# Expected: State=RUNNING
+
+# 3. Check binding logs
+adb logcat -s VoiceOSService:I JITLearningService:I | grep -E "Starting JIT|connected|wired"
+# Expected logs:
+#   Starting JIT Learning Service...
+#   ✓ JIT Learning Service started and binding initiated
+#   JIT Learning Service connected via AIDL
+#   ✓ JIT Learning Service provider wired successfully
+
+# 4. Test from LearnApp
+# Launch LearnApp → Check status card
+# Expected: "Connected to JIT service" (green)
+```
+
+### C.2.4 Common Failures After Fix
+
+| Issue | Check | Fix |
+|-------|-------|-----|
+| Service declaration missing | `dumpsys package` | Verify manifest merge |
+| Service not starting | Check VoiceOS logs | Restart accessibility service |
+| Binding fails | Check permissions | Verify signature match |
+| Provider null | Check initialization order | Ensure LearnAppIntegration first |
+
+## C.3 Debug Logging
 
 ```bash
 # All JIT-related logs
@@ -954,3 +1027,4 @@ adb shell dumpsys activity services | grep -A 5 JITLearning
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-12-11 | Claude | Initial version |
+| 1.1 | 2025-12-18 | Claude | Added C.2: Service Binding Issues troubleshooting section |
