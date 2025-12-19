@@ -1,13 +1,14 @@
 /**
- * NumberOverlayRenderer.kt - VoiceOS component
+ * NumberBadgeView.kt - VoiceOS component
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
  * Created: 2025-10-09 12:37:30 PDT
+ * Renamed: 2025-12-18 (from NumberOverlayRenderer to NumberBadgeView)
  */
 /**
- * NumberOverlayRenderer.kt
+ * NumberBadgeView.kt
  *
  * Purpose: High-performance custom View for rendering number overlay badges
  * Optimized for 60 FPS rendering with 100+ simultaneous overlays
@@ -40,7 +41,7 @@ import kotlin.math.max
  *
  * Thread Safety: Must be called from UI thread only
  */
-class NumberOverlayRenderer @JvmOverloads constructor(
+class NumberBadgeView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
@@ -366,7 +367,7 @@ class NumberOverlayRenderer @JvmOverloads constructor(
     }
 
     companion object {
-        private const val TAG = "NumberOverlayRenderer"
+        private const val TAG = "NumberBadgeView"
     }
 }
 

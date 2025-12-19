@@ -6,7 +6,7 @@
  * Created: 2025-12-17
  *
  * Sealed class hierarchy representing user's response to exploration consent dialog.
- * This is the UI-specific version used in LearnAppIntegration.
+ * This is the VoiceOSCore-specific version used in LearnAppIntegration.
  */
 package com.augmentalis.voiceoscore.learnapp.ui
 
@@ -14,6 +14,7 @@ package com.augmentalis.voiceoscore.learnapp.ui
  * Consent Response
  *
  * Represents possible user responses to the exploration consent dialog.
+ * VoiceOSCore-specific version with packageName property on all variants.
  */
 sealed class ConsentResponse {
     /** Package name associated with the consent response */

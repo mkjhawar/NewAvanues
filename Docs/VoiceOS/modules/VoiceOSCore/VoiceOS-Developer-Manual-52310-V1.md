@@ -16,6 +16,7 @@
 5. [Integration Points](#integration-points)
 6. [API Reference](#api-reference)
 7. [Testing Guide](#testing-guide)
+8. [Namespace and File Structure](#namespace-and-file-structure)
 
 ---
 
@@ -2370,7 +2371,105 @@ Log.d(TAG, "Service running: $isRunning")
 
 ---
 
-**Document Version**: 1.0.0
-**Last Updated**: 2025-10-23 21:45:25 PDT
+## Namespace and File Structure
+
+### Overview
+
+VoiceOSCore follows a structured namespace convention to avoid confusion and redundancy. This section documents the file organization and naming conventions.
+
+### Key Components and Locations
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| NumberBadgeView | `ui/overlays/NumberBadgeView.kt` | Hardware-accelerated View for rendering number badges |
+| NumberOverlayManager | `ui/overlays/NumberOverlayManager.kt` | Lifecycle management for overlay system |
+| ConsentDialogManager | `learnapp/ui/ConsentDialogManager.kt` | Consent dialogs for VoiceOSCore integration |
+| CommandGenerator | `scraping/CommandGenerator.kt` | State-aware command generation with SQLDelight |
+
+### Naming Conventions
+
+**Classes should NOT restate their folder/namespace:**
+
+| Correct | Incorrect |
+|---------|-----------|
+| `overlays/NumberBadgeView.kt` | `overlays/NumberOverlayRenderer.kt` |
+| `consent/DialogManager.kt` | `consent/ConsentDialogManager.kt` |
+
+**Class names should be descriptive of their specific function:**
+
+| Class | Purpose |
+|-------|---------|
+| `NumberBadgeView` | A View subclass that renders number badges |
+| `OverlayData` | Data class for overlay information |
+| `PerformanceMetrics` | Metrics tracking for render performance |
+
+### Overlay System Architecture
+
+```
+ui/overlays/
+├── NumberBadgeView.kt       # View subclass for rendering badges
+├── NumberOverlayManager.kt  # Lifecycle and window management
+├── NumberOverlayConfig.kt   # Configuration data class
+├── NumberOverlayStyle.kt    # Style definitions
+├── OverlayData.kt           # Data model for overlays
+├── ElementVoiceState.kt     # State enum for elements
+└── RenderConfig.kt          # Render configuration
+```
+
+**NumberBadgeView** (renamed from NumberOverlayRenderer in v51218):
+- Extends `View` for hardware-accelerated rendering
+- Targets 60 FPS with <5MB memory for 100+ overlays
+- Uses paint object pooling to reduce GC pressure
+- Supports partial invalidation for efficiency
+
+```kotlin
+class NumberBadgeView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : View(context, attrs, defStyleAttr) {
+    fun setOverlays(newOverlays: List<OverlayData>)
+    fun getPerformanceMetrics(): PerformanceMetrics
+}
+```
+
+### Consent System
+
+The consent system has two implementations serving different contexts:
+
+| Location | Purpose | Used By |
+|----------|---------|---------|
+| `voiceoscore/learnapp/ui/` | VoiceOSCore integration | LearnAppIntegration.kt |
+| `learnapp/ui/` | Standalone LearnApp | LearnApp module |
+
+Both have similar names but different signatures and features:
+- VoiceOSCore version: Simpler API with `packageName` on all response variants
+- LearnApp version: Full-featured with session cache, overlay permissions, "don't ask again" support
+
+### Command Generation
+
+Three command generators exist for different purposes:
+
+| Generator | Location | Purpose |
+|-----------|----------|---------|
+| LearnAppCore | `export/CommandGenerator.kt` | Simple synonym generation (object pattern) |
+| VoiceOSCore | `scraping/CommandGenerator.kt` | State-aware with SQLDelight integration |
+| LearnApp | `generation/CommandGenerator.kt` | Registry manager with conflict resolution |
+
+All implement `ICommandGenerator` interface from LearnAppCore for polymorphism.
+
+### Change History
+
+| Date | Change | Reason |
+|------|--------|--------|
+| 2025-12-18 | Renamed `NumberOverlayRenderer` → `NumberBadgeView` | Clarify it's a View subclass |
+| 2025-12-18 | Deleted `accessibility/overlays/NumberOverlayRenderer.kt` | Unused duplicate |
+| 2025-12-18 | Deleted `learnapp/consent/` package | True duplicate of `learnapp/ui/` |
+
+---
+
+**Document Version**: 1.1.0
+**Last Updated**: 2025-12-18
 **Total Functions Documented**: 100+
 **Handlers Documented**: 10
+**Changelog**: Added Namespace and File Structure section

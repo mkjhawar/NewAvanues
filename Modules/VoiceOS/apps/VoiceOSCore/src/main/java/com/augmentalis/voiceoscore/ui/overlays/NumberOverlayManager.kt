@@ -56,8 +56,8 @@ class NumberOverlayManager(
     private val windowManager: WindowManager =
         context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-    // Renderer view
-    private var renderer: NumberOverlayRenderer? = null
+    // Renderer view (renamed from NumberOverlayRenderer to NumberBadgeView)
+    private var renderer: NumberBadgeView? = null
 
     // Layout parameters for overlay window
     private var layoutParams: WindowManager.LayoutParams? = null
@@ -84,7 +84,7 @@ class NumberOverlayManager(
      * Setup the overlay renderer
      */
     private fun setupRenderer() {
-        renderer = NumberOverlayRenderer(context).apply {
+        renderer = NumberBadgeView(context).apply {
             setStyle(config.styleVariant.toStyle())
             setRenderConfig(RenderConfig(
                 hardwareAcceleration = config.hardwareAcceleration,
