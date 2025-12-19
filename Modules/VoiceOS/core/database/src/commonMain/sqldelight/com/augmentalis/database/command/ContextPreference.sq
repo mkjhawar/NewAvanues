@@ -91,3 +91,14 @@ SELECT * FROM context_preference ORDER BY last_used_timestamp DESC LIMIT ?;
 -- Get last inserted row ID
 lastInsertRowId:
 SELECT last_insert_rowid();
+
+-- ==================== Time Decay Queries ====================
+
+-- Apply exponential time decay to usage and success counts
+-- Multiplies counts by decayFactor for records older than cutoffTime
+applyTimeDecay:
+UPDATE context_preference
+SET
+    usage_count = CAST(usage_count * :decayFactor AS INTEGER),
+    success_count = CAST(success_count * :decayFactor AS INTEGER)
+WHERE last_used_timestamp < :cutoffTime;

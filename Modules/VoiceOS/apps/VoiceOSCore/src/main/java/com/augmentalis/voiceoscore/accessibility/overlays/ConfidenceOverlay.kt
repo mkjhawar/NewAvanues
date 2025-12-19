@@ -23,6 +23,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -49,9 +51,9 @@ class ConfidenceOverlay(
     private var isShowing = false
 
     // Mutable state for confidence updates
-    private var confidenceState = mutableStateOf(0f)
-    private var levelState = mutableStateOf(ConfidenceLevel.HIGH)
-    private var textState = mutableStateOf("")
+    private var confidenceState by mutableStateOf(0f)
+    private var levelState by mutableStateOf(ConfidenceLevel.HIGH)
+    private var textState by mutableStateOf("")
 
     /**
      * Show the confidence overlay with initial result
@@ -73,9 +75,9 @@ class ConfidenceOverlay(
      * Update confidence values without recreating overlay
      */
     fun updateConfidence(result: ConfidenceResult) {
-        confidenceState.value = result.confidence
-        levelState.value = result.level
-        textState.value = result.text
+        confidenceState = result.confidence
+        levelState = result.level
+        textState = result.text
     }
 
     /**
@@ -122,14 +124,10 @@ class ConfidenceOverlay(
             setViewTreeLifecycleOwner(owner)
             setViewTreeSavedStateRegistryOwner(owner)
             setContent {
-                val confidence by remember { confidenceState }
-                val level by remember { levelState }
-                val text by remember { textState }
-
                 ConfidenceIndicatorUI(
-                    confidence = confidence,
-                    level = level,
-                    text = text
+                    confidence = confidenceState,
+                    level = levelState,
+                    text = textState
                 )
             }
         }

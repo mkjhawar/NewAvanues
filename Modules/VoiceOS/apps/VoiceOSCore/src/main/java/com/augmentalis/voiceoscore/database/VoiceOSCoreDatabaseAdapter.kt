@@ -200,14 +200,16 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
 
     /**
      * Update formGroupId for multiple elements by their hashes
-     * Note: This is a batch operation that may be slow for large hash lists
+     * Note: This is a batch operation wrapped in transaction for atomicity
      */
     suspend fun updateFormGroupIdBatch(hashes: List<String>, groupId: String?) {
-        hashes.forEach { hash ->
-            val element = databaseManager.scrapedElements.getByHash(hash)
-            if (element != null) {
-                val updated = element.copy(formGroupId = groupId)
-                databaseManager.scrapedElements.insert(updated)
+        databaseManager.transaction {
+            hashes.forEach { hash ->
+                val element = databaseManager.scrapedElements.getByHash(hash)
+                if (element != null) {
+                    val updated = element.copy(formGroupId = groupId)
+                    databaseManager.scrapedElements.insert(updated)
+                }
             }
         }
     }
@@ -257,17 +259,19 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      */
     suspend fun insertHierarchyBatch(hierarchies: List<com.augmentalis.voiceoscore.scraping.entities.ScrapedHierarchyEntity>): List<Long> {
         val ids = mutableListOf<Long>()
-        hierarchies.forEach { hierarchy ->
-            // WARNING: This won't work correctly - Room entity uses IDs, SQLDelight uses hashes
-            // Caller needs to provide hash-based hierarchy data instead
-            // Using placeholder values to compile, but this needs proper migration
-            databaseManager.scrapedHierarchies.insert(
-                parentElementHash = hierarchy.parentElementId.toString(), // TODO: Map ID to hash
-                childElementHash = hierarchy.childElementId.toString(),   // TODO: Map ID to hash
-                depth = hierarchy.depth.toLong(),
-                createdAt = System.currentTimeMillis() // Entity doesn't have createdAt field
-            )
-            ids.add(hierarchy.id)
+        databaseManager.transaction {
+            hierarchies.forEach { hierarchy ->
+                // WARNING: This won't work correctly - Room entity uses IDs, SQLDelight uses hashes
+                // Caller needs to provide hash-based hierarchy data instead
+                // Using placeholder values to compile, but this needs proper migration
+                databaseManager.scrapedHierarchies.insert(
+                    parentElementHash = hierarchy.parentElementId.toString(), // TODO: Map ID to hash
+                    childElementHash = hierarchy.childElementId.toString(),   // TODO: Map ID to hash
+                    depth = hierarchy.depth.toLong(),
+                    createdAt = System.currentTimeMillis() // Entity doesn't have createdAt field
+                )
+                ids.add(hierarchy.id)
+            }
         }
         return ids
     }
@@ -277,10 +281,12 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      */
     suspend fun insertCommandBatch(commands: List<com.augmentalis.voiceoscore.scraping.entities.GeneratedCommandEntity>): List<Long> {
         val ids = mutableListOf<Long>()
-        commands.forEach { command ->
-            val dto = command.toGeneratedCommandDTO()
-            databaseManager.generatedCommands.insert(dto)
-            ids.add(command.id ?: System.currentTimeMillis())
+        databaseManager.transaction {
+            commands.forEach { command ->
+                val dto = command.toGeneratedCommandDTO()
+                databaseManager.generatedCommands.insert(dto)
+                ids.add(command.id ?: System.currentTimeMillis())
+            }
         }
         return ids
     }
@@ -290,18 +296,20 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      */
     suspend fun insertRelationshipBatch(relationships: List<com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity>): List<Long> {
         val ids = mutableListOf<Long>()
-        relationships.forEach { relationship ->
-            val currentTime = System.currentTimeMillis()
-            databaseManager.elementRelationships.insert(
-                sourceElementHash = relationship.sourceElementHash,
-                targetElementHash = relationship.targetElementHash,
-                relationshipType = relationship.relationshipType,
-                relationshipData = relationship.relationshipData,
-                confidence = relationship.confidence.toDouble(),
-                createdAt = relationship.createdAt,
-                updatedAt = currentTime // Entity doesn't have updatedAt field, use current time
-            )
-            ids.add(relationship.id)
+        databaseManager.transaction {
+            relationships.forEach { relationship ->
+                val currentTime = System.currentTimeMillis()
+                databaseManager.elementRelationships.insert(
+                    sourceElementHash = relationship.sourceElementHash,
+                    targetElementHash = relationship.targetElementHash,
+                    relationshipType = relationship.relationshipType,
+                    relationshipData = relationship.relationshipData,
+                    confidence = relationship.confidence.toDouble(),
+                    createdAt = relationship.createdAt,
+                    updatedAt = currentTime // Entity doesn't have updatedAt field, use current time
+                )
+                ids.add(relationship.id)
+            }
         }
         return ids
     }
@@ -325,17 +333,17 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
 
     /**
      * Extension: Insert batch of scraped elements and return assigned IDs
-     * NOTE: Transaction wrapping attempted but not compatible with current architecture
-     * (suspend insert methods can't be called in non-suspend transaction body)
-     * Performance is still good due to batch operation reducing function call overhead
+     * Wrapped in transaction for atomicity and performance
      */
     suspend fun insertElementBatch(elements: List<com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity>): List<Long> {
         val ids = mutableListOf<Long>()
-        elements.forEach { element ->
-            val dto = element.toScrapedElementDTO()
-            databaseManager.scrapedElements.insert(dto)
-            // Use element hash as ID for now
-            ids.add(element.id ?: element.elementHash.hashCode().toLong())
+        databaseManager.transaction {
+            elements.forEach { element ->
+                val dto = element.toScrapedElementDTO()
+                databaseManager.scrapedElements.insert(dto)
+                // Use element hash as ID for now
+                ids.add(element.id ?: element.elementHash.hashCode().toLong())
+            }
         }
         return ids
     }

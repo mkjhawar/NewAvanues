@@ -5,17 +5,15 @@
  * Author: VOS4 Development Team
  * Code-Reviewed-By: CCA
  * Created: 2025-10-09
+ * Migrated to SQLDelight: 2025-12-17
  */
 package com.augmentalis.voiceoscore.scraping.entities
 
-import androidx.room.ColumnInfo
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
-
 /**
  * Entity representing a generated voice command
+ *
+ * MIGRATION NOTE: This entity has been migrated to use SQLDelight.
+ * The schema is defined in: core/database/src/commonMain/sqldelight/com/augmentalis/database/GeneratedCommand.sq
  *
  * This entity stores voice commands automatically generated from UI elements.
  * Commands include primary phrases, synonyms, and confidence scores. Usage
@@ -30,53 +28,27 @@ import androidx.room.PrimaryKey
  * @property isUserApproved Whether user has confirmed this command works
  * @property usageCount Number of times this command has been executed
  * @property lastUsed Timestamp of last usage (milliseconds), null if never used
- * @property generatedAt Timestamp when command was generated (milliseconds)
+ * @property createdAt Timestamp when command was generated (milliseconds)
+ * @property appId Application ID for the command
+ * @property appVersion Application version string
+ * @property versionCode Application version code
+ * @property lastVerified Timestamp when command was last verified
+ * @property isDeprecated Whether command is deprecated for current app version
  */
-@Entity(
-    tableName = "generated_commands",
-    foreignKeys = [
-        ForeignKey(
-            entity = ScrapedElementEntity::class,
-            parentColumns = ["element_hash"],
-            childColumns = ["element_hash"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [
-        Index("element_hash"),
-        Index("command_text"),
-        Index("action_type")
-    ]
-)
 data class GeneratedCommandEntity(
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id")
     val id: Long = 0,
-
-    @ColumnInfo(name = "element_hash")
     val elementHash: String,
-
-    @ColumnInfo(name = "command_text")
     val commandText: String,
-
-    @ColumnInfo(name = "action_type")
     val actionType: String,
-
-    @ColumnInfo(name = "confidence")
-    val confidence: Float,
-
-    @ColumnInfo(name = "synonyms")
-    val synonyms: String,
-
-    @ColumnInfo(name = "is_user_approved")
-    val isUserApproved: Boolean = false,
-
-    @ColumnInfo(name = "usage_count")
-    val usageCount: Int = 0,
-
-    @ColumnInfo(name = "last_used")
+    val confidence: Double,
+    val synonyms: String?,
+    val isUserApproved: Long = 0,
+    val usageCount: Long = 0,
     val lastUsed: Long? = null,
-
-    @ColumnInfo(name = "generated_at")
-    val generatedAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val appId: String = "",
+    val appVersion: String = "",
+    val versionCode: Long = 0,
+    val lastVerified: Long? = null,
+    val isDeprecated: Long = 0
 )

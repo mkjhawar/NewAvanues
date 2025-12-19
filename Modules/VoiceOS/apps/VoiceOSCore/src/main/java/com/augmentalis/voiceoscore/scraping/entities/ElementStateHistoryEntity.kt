@@ -4,17 +4,15 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
  * Created: 2025-10-18
+ * Migrated to SQLDelight: 2025-12-17
  */
 package com.augmentalis.voiceoscore.scraping.entities
 
-import androidx.room.ColumnInfo
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
-
 /**
  * Element State History Entity
+ *
+ * MIGRATION NOTE: This entity has been migrated to use SQLDelight.
+ * The schema is defined in: core/database/src/commonMain/sqldelight/com/augmentalis/database/ElementStateHistory.sq
  *
  * Tracks changes to element states over time including checked status,
  * selection, enabled/disabled, visibility, and focus. Records what
@@ -35,54 +33,15 @@ import androidx.room.PrimaryKey
  * @property changedAt When the state change occurred
  * @property triggeredBy What triggered the change (user_click, system, app_event, etc.)
  */
-@Entity(
-    tableName = "element_state_history",
-    foreignKeys = [
-        ForeignKey(
-            entity = ScrapedElementEntity::class,
-            parentColumns = ["element_hash"],
-            childColumns = ["element_hash"],
-            onDelete = ForeignKey.CASCADE
-        ),
-        ForeignKey(
-            entity = ScreenContextEntity::class,
-            parentColumns = ["screen_hash"],
-            childColumns = ["screen_hash"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [
-        Index("element_hash"),
-        Index("screen_hash"),
-        Index("state_type"),
-        Index("changed_at")
-    ]
-)
 data class ElementStateHistoryEntity(
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id")
     val id: Long = 0,
-
-    @ColumnInfo(name = "element_hash")
     val elementHash: String,
-
-    @ColumnInfo(name = "screen_hash")
     val screenHash: String,
-
-    @ColumnInfo(name = "state_type")
-    val stateType: String,  // See StateType constants
-
-    @ColumnInfo(name = "old_value")
-    val oldValue: String? = null,  // Previous state value (may be null for initial state)
-
-    @ColumnInfo(name = "new_value")
-    val newValue: String? = null,  // New state value
-
-    @ColumnInfo(name = "changed_at")
+    val stateType: String,
+    val oldValue: String? = null,
+    val newValue: String? = null,
     val changedAt: Long = System.currentTimeMillis(),
-
-    @ColumnInfo(name = "triggered_by")
-    val triggeredBy: String? = null  // See TriggerSource constants
+    val triggeredBy: String
 )
 
 /**

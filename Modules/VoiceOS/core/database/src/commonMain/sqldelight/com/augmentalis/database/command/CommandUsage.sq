@@ -146,3 +146,9 @@ DELETE FROM command_usage;
 -- Delete records for specific command
 deleteCommandRecords:
 DELETE FROM command_usage WHERE command_id = ?;
+
+-- ==================== Time Decay Queries ====================
+
+-- Note: SQLite doesn't support direct UPDATE with multiplication of non-numeric fields
+-- Command usage table doesn't have a score field, so time decay is not applicable
+-- The decay is managed at the preference level (ContextPreference table)

@@ -3456,7 +3456,7 @@ class ExplorationEngine(
             appName = packageName,
             screensExplored = stats.totalScreensVisited,
             estimatedTotalScreens = maxOf(20, stats.totalScreensDiscovered + 10),
-            elementsDiscovered = navigationGraphBuilder.getNodeCount(),
+            elementsDiscovered = if (::navigationGraphBuilder.isInitialized) navigationGraphBuilder.getNodeCount() else 0,
             currentDepth = depth,
             currentScreen = "Screen ${stats.totalScreensVisited}",
             elapsedTimeMs = elapsed
@@ -3490,7 +3490,7 @@ class ExplorationEngine(
             appName = packageName,
             screensExplored = stats.totalScreensVisited,
             estimatedTotalScreens = maxOf(20, stats.totalScreensDiscovered + 10),
-            elementsDiscovered = navigationGraphBuilder.getNodeCount(),
+            elementsDiscovered = if (::navigationGraphBuilder.isInitialized) navigationGraphBuilder.getNodeCount() else 0,
             currentDepth = depth,
             currentScreen = "Screen ${stats.totalScreensVisited}",
             elapsedTimeMs = elapsed
@@ -3505,7 +3505,13 @@ class ExplorationEngine(
      */
     private suspend fun createExplorationStats(packageName: String): ExplorationStats {
         val stats = screenStateManager.getStats()
-        val graph = navigationGraphBuilder.build()
+        val graph = if (::navigationGraphBuilder.isInitialized) {
+            navigationGraphBuilder.build()
+        } else {
+            // Return empty graph if builder not initialized
+            android.util.Log.w("ExplorationEngine", "navigationGraphBuilder not initialized, using empty graph")
+            NavigationGraphBuilder(packageName).build()
+        }
         val graphStats = graph.getStats()
         val elapsed = System.currentTimeMillis() - startTimestamp
 

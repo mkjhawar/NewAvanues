@@ -5,17 +5,15 @@
  * Author: VOS4 Development Team
  * Code-Reviewed-By: CCA
  * Created: 2025-10-09
+ * Migrated to SQLDelight: 2025-12-17
  */
 package com.augmentalis.voiceoscore.scraping.entities
 
-import androidx.room.ColumnInfo
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
-
 /**
  * Entity representing a scraped UI element
+ *
+ * MIGRATION NOTE: This entity has been migrated to use SQLDelight.
+ * The schema is defined in: core/database/src/commonMain/sqldelight/com/augmentalis/database/ScrapedElement.sq
  *
  * This entity stores detailed information about individual UI elements discovered
  * through the accessibility service. Elements are hashed for fast lookup and
@@ -48,111 +46,35 @@ import androidx.room.PrimaryKey
  * @property placeholderText Placeholder/hint text for input fields
  * @property validationPattern Expected input validation pattern (e.g., email format, phone format)
  * @property backgroundColor Background color in hex format (for visual prominence detection)
+ * @property screen_hash Screen hash for grouping elements by screen
  */
-@Entity(
-    tableName = "scraped_elements",
-    foreignKeys = [
-        ForeignKey(
-            entity = ScrapedAppEntity::class,
-            parentColumns = ["app_id"],
-            childColumns = ["app_id"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [
-        Index("app_id"),
-        Index(value = ["element_hash"], unique = true),
-        Index("view_id_resource_name"),
-        Index("uuid")
-    ]
-)
 data class ScrapedElementEntity(
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id")
     val id: Long = 0,
-
-    @ColumnInfo(name = "element_hash")
     val elementHash: String,
-
-    @ColumnInfo(name = "app_id")
     val appId: String,
-
-    // Universal UUID for cross-system element identification
-    @ColumnInfo(name = "uuid")
     val uuid: String? = null,
-
-    // Accessibility properties
-    @ColumnInfo(name = "class_name")
     val className: String,
-
-    @ColumnInfo(name = "view_id_resource_name")
     val viewIdResourceName: String?,
-
-    @ColumnInfo(name = "text")
     val text: String?,
-
-    @ColumnInfo(name = "content_description")
     val contentDescription: String?,
-
-    @ColumnInfo(name = "bounds")
     val bounds: String,
-
-    // Action capabilities
-    @ColumnInfo(name = "is_clickable")
-    val isClickable: Boolean,
-
-    @ColumnInfo(name = "is_long_clickable")
-    val isLongClickable: Boolean,
-
-    @ColumnInfo(name = "is_editable")
-    val isEditable: Boolean,
-
-    @ColumnInfo(name = "is_scrollable")
-    val isScrollable: Boolean,
-
-    @ColumnInfo(name = "is_checkable")
-    val isCheckable: Boolean,
-
-    @ColumnInfo(name = "is_focusable")
-    val isFocusable: Boolean,
-
-    @ColumnInfo(name = "is_enabled")
-    val isEnabled: Boolean,
-
-    // Hierarchy position
-    @ColumnInfo(name = "depth")
-    val depth: Int,
-
-    @ColumnInfo(name = "index_in_parent")
-    val indexInParent: Int,
-
-    // Metadata
-    @ColumnInfo(name = "scraped_at")
+    val isClickable: Long,
+    val isLongClickable: Long,
+    val isEditable: Long,
+    val isScrollable: Long,
+    val isCheckable: Long,
+    val isFocusable: Long,
+    val isEnabled: Long = 1,
+    val depth: Long,
+    val indexInParent: Long,
     val scrapedAt: Long = System.currentTimeMillis(),
-
-    // AI Context Inference (Phase 1)
-    @ColumnInfo(name = "semantic_role")
     val semanticRole: String? = null,
-
-    @ColumnInfo(name = "input_type")
     val inputType: String? = null,
-
-    @ColumnInfo(name = "visual_weight")
     val visualWeight: String? = null,
-
-    @ColumnInfo(name = "is_required")
-    val isRequired: Boolean? = null,
-
-    // AI Context Inference (Phase 2)
-    @ColumnInfo(name = "form_group_id")
+    val isRequired: Long? = 0,
     val formGroupId: String? = null,
-
-    @ColumnInfo(name = "placeholder_text")
     val placeholderText: String? = null,
-
-    @ColumnInfo(name = "validation_pattern")
     val validationPattern: String? = null,
-
-    @ColumnInfo(name = "background_color")
-    val backgroundColor: String? = null
+    val backgroundColor: String? = null,
+    val screen_hash: String? = null
 )

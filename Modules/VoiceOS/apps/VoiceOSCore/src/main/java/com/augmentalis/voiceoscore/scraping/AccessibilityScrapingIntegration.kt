@@ -692,8 +692,10 @@ class AccessibilityScrapingIntegration(
             // ===== PHASE 1: Hash Deduplication - Check if element already exists =====
             metrics?.elementsFound = (metrics?.elementsFound ?: 0) + 1
 
-            // Check database for existing element (using runBlocking since we're already on IO dispatcher)
-            val existsInDb = runBlocking { database.scrapedElementDao().getElementByHash(elementHash) != null }
+            // FIX (2025-12-17): Use withContext instead of runBlocking to avoid blocking threads
+            val existsInDb = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                database.scrapedElementDao().getElementByHash(elementHash) != null
+            }
             if (existsInDb) {
                 metrics?.elementsCached = (metrics?.elementsCached ?: 0) + 1
                 Log.v(TAG, "✓ CACHED (hash=$elementHash): ${node.className}")

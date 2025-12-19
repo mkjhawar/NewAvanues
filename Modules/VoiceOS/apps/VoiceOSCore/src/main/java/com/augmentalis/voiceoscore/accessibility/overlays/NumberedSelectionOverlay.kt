@@ -11,8 +11,10 @@ package com.augmentalis.voiceoscore.accessibility.overlays
 import android.content.Context
 import android.graphics.PixelFormat
 import android.graphics.Rect
+import android.speech.tts.TextToSpeech
 import android.view.Gravity
 import android.view.WindowManager
+import java.util.Locale
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -30,6 +32,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,9 +71,10 @@ class NumberedSelectionOverlay(
     private var overlayView: ComposeView? = null
     private var lifecycleOwner: ComposeViewLifecycleOwner? = null
     private var isShowing = false
+    private var tts: TextToSpeech? = null
 
     // Mutable state for items
-    private var itemsState = mutableStateOf<List<SelectableItem>>(emptyList())
+    private var itemsState by mutableStateOf<List<SelectableItem>>(emptyList())
 
     /**
      * Show overlay with numbered items
@@ -79,19 +84,27 @@ class NumberedSelectionOverlay(
             overlayView = createOverlayView()
         }
 
-        itemsState.value = items
+        itemsState = items
 
         if (!isShowing) {
+            initTts()
             windowManager.addView(overlayView, createLayoutParams())
             isShowing = true
         }
+
+        announceForAccessibility("${items.size} items available. Say a number to select.")
     }
 
     /**
      * Update items without recreating overlay
      */
     fun updateItems(items: List<SelectableItem>) {
-        itemsState.value = items
+        val previousCount = itemsState.size
+        itemsState = items
+
+        if (items.size != previousCount) {
+            announceForAccessibility("${items.size} items available")
+        }
     }
 
     /**
@@ -103,6 +116,7 @@ class NumberedSelectionOverlay(
                 try {
                     windowManager.removeView(it)
                     isShowing = false
+                    shutdownTts()
                 } catch (e: IllegalArgumentException) {
                     // View not attached, ignore
                 }
@@ -114,7 +128,7 @@ class NumberedSelectionOverlay(
      * Select item by number
      */
     fun selectItem(number: Int): Boolean {
-        val item = itemsState.value.find { it.number == number }
+        val item = itemsState.find { it.number == number }
         return if (item != null) {
             item.action()
             true
@@ -133,6 +147,7 @@ class NumberedSelectionOverlay(
      */
     fun dispose() {
         hide()
+        shutdownTts()
         lifecycleOwner?.onDestroy()
         lifecycleOwner = null
         overlayView = null
@@ -173,6 +188,35 @@ class NumberedSelectionOverlay(
         ).apply {
             gravity = Gravity.FILL
         }
+    }
+
+    /**
+     * Initialize Text-to-Speech
+     */
+    private fun initTts() {
+        if (tts == null) {
+            tts = TextToSpeech(context) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    tts?.language = Locale.getDefault()
+                }
+            }
+        }
+    }
+
+    /**
+     * Announce message for accessibility
+     */
+    private fun announceForAccessibility(message: String) {
+        tts?.speak(message, TextToSpeech.QUEUE_ADD, null, "accessibility_announcement")
+    }
+
+    /**
+     * Shutdown Text-to-Speech
+     */
+    private fun shutdownTts() {
+        tts?.stop()
+        tts?.shutdown()
+        tts = null
     }
 }
 

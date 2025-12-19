@@ -96,7 +96,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * - Dependencies are initialized in onCreate() or on first use
  */
 // @dagger.hilt.android.AndroidEntryPoint - DISABLED: Hilt doesn't support AccessibilityService
-class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceOSService {
+class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceOSService, IVoiceOSContext {
 
     companion object {
         private const val TAG = "VoiceOSService"
@@ -2034,6 +2034,40 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     }
 
     override fun getAppCommands() = appsCommand
+
+    // ============================================================
+    // IVoiceOSContext interface implementations
+    // ============================================================
+
+    override val context: Context
+        get() = this
+
+    override val accessibilityService: AccessibilityService
+        get() = this
+
+    override val windowManager: android.view.WindowManager
+        get() = getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
+
+    override fun showToast(message: String) {
+        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show()
+    }
+
+    override fun vibrate(duration: Long) {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator?.vibrate(
+                android.os.VibrationEffect.createOneShot(
+                    duration,
+                    android.os.VibrationEffect.DEFAULT_AMPLITUDE
+                )
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(duration)
+        }
+    }
+
+    // ============================================================
 
     private fun getCenterOffset(): CursorOffset {
         val displayMetrics = resources.displayMetrics

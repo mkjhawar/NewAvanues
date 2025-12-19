@@ -96,6 +96,7 @@ interface ScrapedAppMetadataSource {
 
 /**
  * Implementation of ScrapedAppMetadataSource using VoiceOSDatabaseManager
+ * FIX (2025-12-17): Changed runBlocking to use Dispatchers.Default to prevent ANR on Main thread
  */
 class ScrapedAppMetadataSourceImpl(
     private val context: Context,
@@ -104,7 +105,9 @@ class ScrapedAppMetadataSourceImpl(
 
     override fun getMetadata(packageName: String): AppMetadata? {
         return try {
-            val scrapedApp = runBlocking { databaseManager.scrapedApps.getByPackage(packageName) }
+            val scrapedApp = runBlocking(kotlinx.coroutines.Dispatchers.Default) {
+                databaseManager.scrapedApps.getByPackage(packageName)
+            }
             scrapedApp?.let {
                 AppMetadata(
                     packageName = it.packageName,

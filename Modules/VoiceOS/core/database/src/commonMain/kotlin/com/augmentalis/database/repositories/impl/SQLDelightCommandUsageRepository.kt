@@ -10,6 +10,8 @@ import com.augmentalis.database.repositories.CommandStats
 import com.augmentalis.database.repositories.ICommandUsageRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
+import kotlin.time.Duration.Companion.hours
 
 /**
  * SQLDelight implementation of ICommandUsageRepository.
@@ -125,10 +127,11 @@ class SQLDelightCommandUsageRepository(
 
     override suspend fun applyTimeDecay(currentTime: Long, decayFactor: Float) =
         withContext(Dispatchers.Default) {
-            // Time decay implementation:
-            // For each record, reduce its weight based on age
-            // This is a placeholder - actual implementation would update records
-            // For now, we'll skip this as it requires schema changes
-            // TODO: Implement proper time decay with weighted counts
+            // CommandUsage table tracks individual events, not aggregated scores
+            // Time decay is applied by deleting old records rather than reducing scores
+            // Delete records older than the cutoff time
+            database.transactionWithResult {
+                queries.deleteOldRecords(currentTime)
+            }
         }
 }

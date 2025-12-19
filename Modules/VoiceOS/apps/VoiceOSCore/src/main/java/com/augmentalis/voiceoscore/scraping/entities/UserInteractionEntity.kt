@@ -4,17 +4,15 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
  * Created: 2025-10-18
+ * Migrated to SQLDelight: 2025-12-17
  */
 package com.augmentalis.voiceoscore.scraping.entities
 
-import androidx.room.ColumnInfo
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
-
 /**
  * User Interaction Entity
+ *
+ * MIGRATION NOTE: This entity has been migrated to use SQLDelight.
+ * The schema is defined in: core/database/src/commonMain/sqldelight/com/augmentalis/database/UserInteraction.sq
  *
  * Records user interactions with UI elements including clicks, long presses,
  * swipes, and focus events. Tracks visibility duration to measure user
@@ -33,60 +31,15 @@ import androidx.room.PrimaryKey
  * @property interactionTime When the interaction occurred
  * @property visibilityStart When the element first became visible (if tracked)
  * @property visibilityDuration How long element was visible before interaction (ms)
- * @property success Whether the interaction was successful (default true)
- * @property createdAt Record creation timestamp
  */
-@Entity(
-    tableName = "user_interactions",
-    foreignKeys = [
-        ForeignKey(
-            entity = ScrapedElementEntity::class,
-            parentColumns = ["element_hash"],
-            childColumns = ["element_hash"],
-            onDelete = ForeignKey.CASCADE
-        ),
-        ForeignKey(
-            entity = ScreenContextEntity::class,
-            parentColumns = ["screen_hash"],
-            childColumns = ["screen_hash"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [
-        Index("element_hash"),
-        Index("screen_hash"),
-        Index("interaction_type"),
-        Index("interaction_time")
-    ]
-)
 data class UserInteractionEntity(
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id")
     val id: Long = 0,
-
-    @ColumnInfo(name = "element_hash")
     val elementHash: String,
-
-    @ColumnInfo(name = "screen_hash")
     val screenHash: String,
-
-    @ColumnInfo(name = "interaction_type")
-    val interactionType: String,  // See InteractionType constants
-
-    @ColumnInfo(name = "interaction_time")
+    val interactionType: String,
     val interactionTime: Long = System.currentTimeMillis(),
-
-    @ColumnInfo(name = "visibility_start")
-    val visibilityStart: Long? = null,  // When element became visible
-
-    @ColumnInfo(name = "visibility_duration")
-    val visibilityDuration: Long? = null,  // Milliseconds visible before interaction
-
-    @ColumnInfo(name = "success")
-    val success: Boolean = true,  // Did the interaction succeed?
-
-    @ColumnInfo(name = "created_at")
-    val createdAt: Long = System.currentTimeMillis()
+    val visibilityStart: Long? = null,
+    val visibilityDuration: Long? = null
 )
 
 /**

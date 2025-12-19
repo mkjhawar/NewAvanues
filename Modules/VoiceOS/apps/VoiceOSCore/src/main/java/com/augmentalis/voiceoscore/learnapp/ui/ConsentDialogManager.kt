@@ -12,7 +12,6 @@ package com.augmentalis.voiceoscore.learnapp.ui
 
 import android.accessibilityservice.AccessibilityService
 import com.augmentalis.voiceoscore.learnapp.detection.LearnedAppTracker
-import com.augmentalis.voiceoscore.learnapp.consent.ConsentResponse as InternalConsentResponse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,14 +32,14 @@ class ConsentDialogManager(
     private val _currentConsentState = MutableStateFlow<ConsentState>(ConsentState.None)
     val currentConsentState: StateFlow<ConsentState> = _currentConsentState.asStateFlow()
 
-    private val _consentResponses = MutableSharedFlow<com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse>(
+    private val _consentResponses = MutableSharedFlow<ConsentResponse>(
         replay = 0,
         extraBufferCapacity = 10
     )
     /** Flow of consent responses for reactive handling */
-    val consentResponses: Flow<com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse> = _consentResponses.asSharedFlow()
+    val consentResponses: Flow<ConsentResponse> = _consentResponses.asSharedFlow()
 
-    private var pendingCallback: ((InternalConsentResponse) -> Unit)? = null
+    private var pendingCallback: ((ConsentResponse) -> Unit)? = null
 
     /**
      * Check if consent is needed for package
@@ -60,7 +59,7 @@ class ConsentDialogManager(
     fun showConsentDialog(
         packageName: String,
         appName: String,
-        callback: (InternalConsentResponse) -> Unit
+        callback: (ConsentResponse) -> Unit
     ) {
         pendingCallback = callback
         _currentConsentState.value = ConsentState.Showing(packageName, appName)
@@ -87,24 +86,24 @@ class ConsentDialogManager(
      *
      * @param response The consent response to emit
      */
-    fun emitConsentResponse(response: com.augmentalis.voiceoscore.learnapp.ui.ConsentResponse) {
+    fun emitConsentResponse(response: ConsentResponse) {
         _consentResponses.tryEmit(response)
     }
 
     /**
      * Handle user response to consent dialog
      */
-    fun handleConsentResponse(response: InternalConsentResponse) {
+    fun handleConsentResponse(response: ConsentResponse) {
         val currentState = _currentConsentState.value
         if (currentState is ConsentState.Showing) {
             when (response) {
-                InternalConsentResponse.Accept -> {
+                is ConsentResponse.Approved -> {
                     // Mark consent accepted
                 }
-                InternalConsentResponse.Skip -> {
+                is ConsentResponse.Skipped -> {
                     // Enable JIT learning only
                 }
-                InternalConsentResponse.Decline -> {
+                is ConsentResponse.Declined -> {
                     learnedAppTracker.excludePackage(currentState.packageName)
                 }
                 else -> {}
@@ -121,8 +120,9 @@ class ConsentDialogManager(
      */
     fun dismissDialog() {
         if (_currentConsentState.value is ConsentState.Showing) {
+            val state = _currentConsentState.value as ConsentState.Showing
             _currentConsentState.value = ConsentState.None
-            pendingCallback?.invoke(InternalConsentResponse.Dismissed)
+            pendingCallback?.invoke(ConsentResponse.Dismissed(state.packageName))
             pendingCallback = null
         }
     }
