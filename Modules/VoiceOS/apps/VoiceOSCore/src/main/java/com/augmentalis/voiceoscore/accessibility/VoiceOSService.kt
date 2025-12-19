@@ -1112,19 +1112,22 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 
     /**
      * Initialize VoiceCursor API for cursor functionality
+     * Must run on Main thread for GestureDetector initialization
      */
-    private fun initializeVoiceCursor() {
-        try {
-            voiceCursorInitialized = VoiceCursorAPI.initialize(this, this)
-            if (voiceCursorInitialized) {
-                showCursor()
-                Log.d(TAG, "VoiceCursor API initialized successfully")
-            } else {
-                Log.w(TAG, "Failed to initialize VoiceCursor API")
+    private suspend fun initializeVoiceCursor() {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+            try {
+                voiceCursorInitialized = VoiceCursorAPI.initialize(this@VoiceOSService, this@VoiceOSService)
+                if (voiceCursorInitialized) {
+                    showCursor()
+                    Log.d(TAG, "VoiceCursor API initialized successfully")
+                } else {
+                    Log.w(TAG, "Failed to initialize VoiceCursor API")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error initializing VoiceCursor API", e)
+                voiceCursorInitialized = false
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error initializing VoiceCursor API", e)
-            voiceCursorInitialized = false
         }
     }
 
