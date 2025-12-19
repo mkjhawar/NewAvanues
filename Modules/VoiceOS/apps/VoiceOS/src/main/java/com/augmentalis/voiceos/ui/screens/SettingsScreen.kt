@@ -49,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,6 +64,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.augmentalis.voiceos.BuildConfig
 import com.augmentalis.voiceos.util.AccessibilityServiceHelper
+import com.augmentalis.voiceos.viewmodel.SettingsViewModel
+import org.koin.androidx.compose.koinViewModel
 
 /**
  * Settings screen for VoiceOS configuration.
@@ -71,13 +74,14 @@ import com.augmentalis.voiceos.util.AccessibilityServiceHelper
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
+    val settings by viewModel.settings.collectAsState()
     var showWakeWordDialog by remember { mutableStateOf(false) }
     var showVoiceEngineDialog by remember { mutableStateOf(false) }
     var showLearnedAppsDialog by remember { mutableStateOf(false) }
-    var selectedEngine by remember { mutableStateOf("Default") }
 
     // Wake Word Dialog
     if (showWakeWordDialog) {
@@ -125,13 +129,13 @@ fun SettingsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { selectedEngine = name }
+                                .clickable { viewModel.setVoiceEngine(name) }
                                 .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
-                                selected = selectedEngine == name,
-                                onClick = { selectedEngine = name }
+                                selected = settings.voiceEngine == name,
+                                onClick = { viewModel.setVoiceEngine(name) }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
@@ -232,17 +236,16 @@ fun SettingsScreen(
                 SettingsItem(
                     icon = Icons.Default.Mic,
                     title = "Voice Engine",
-                    subtitle = selectedEngine,
+                    subtitle = settings.voiceEngine,
                     onClick = { showVoiceEngineDialog = true }
                 )
 
-                var continuousListening by remember { mutableStateOf(false) }
                 SettingsToggleItem(
                     icon = Icons.AutoMirrored.Filled.VolumeUp,
                     title = "Continuous Listening",
                     subtitle = "Keep listening after command",
-                    checked = continuousListening,
-                    onCheckedChange = { continuousListening = it }
+                    checked = settings.continuousListening,
+                    onCheckedChange = { viewModel.setContinuousListening(it) }
                 )
             }
 
@@ -267,22 +270,20 @@ fun SettingsScreen(
 
             // Feedback Section
             SettingsSection(title = "Feedback") {
-                var visualFeedback by remember { mutableStateOf(true) }
                 SettingsToggleItem(
                     icon = Icons.Default.Palette,
                     title = "Visual Feedback",
                     subtitle = "Show overlays when listening",
-                    checked = visualFeedback,
-                    onCheckedChange = { visualFeedback = it }
+                    checked = settings.visualFeedback,
+                    onCheckedChange = { viewModel.setVisualFeedback(it) }
                 )
 
-                var audioFeedback by remember { mutableStateOf(true) }
                 SettingsToggleItem(
                     icon = Icons.Default.Notifications,
                     title = "Audio Feedback",
                     subtitle = "Play sounds for actions",
-                    checked = audioFeedback,
-                    onCheckedChange = { audioFeedback = it }
+                    checked = settings.audioFeedback,
+                    onCheckedChange = { viewModel.setAudioFeedback(it) }
                 )
             }
 

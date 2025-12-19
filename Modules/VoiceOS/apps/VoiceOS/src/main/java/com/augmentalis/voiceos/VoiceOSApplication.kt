@@ -9,6 +9,11 @@ package com.augmentalis.voiceos
 
 import android.app.Application
 import android.util.Log
+import com.augmentalis.voiceos.di.appModule
+import org.koin.android.ext.koin.androidContext
+import org.koin.android.ext.koin.androidLogger
+import org.koin.core.context.startKoin
+import org.koin.core.logger.Level
 
 /**
  * Main Application class for VoiceOS.
@@ -32,5 +37,14 @@ class VoiceOSApplication : Application() {
         super.onCreate()
         instance = this
         Log.i(TAG, "VoiceOS Application started")
+
+        // Initialize Koin for dependency injection
+        startKoin {
+            androidLogger(Level.INFO)
+            androidContext(this@VoiceOSApplication)
+            modules(appModule)
+        }
+
+        Log.i(TAG, "Koin dependency injection initialized")
     }
 }

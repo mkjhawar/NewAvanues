@@ -165,7 +165,7 @@
 - [x] No state mutations during composition
 - [x] All interactive icons have content descriptions
 - [x] Error conditions show user feedback
-- [ ] Settings persist across app restarts (DataStore implementation pending)
+- [x] Settings persist across app restarts (DataStore implementation complete)
 
 ---
 

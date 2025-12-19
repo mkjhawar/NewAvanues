@@ -42,6 +42,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import com.augmentalis.voiceos.ui.theme.VoiceOSColors
 import com.augmentalis.voiceos.util.AccessibilityServiceHelper
 import com.augmentalis.voiceos.util.rememberAccessibilityServiceState
+import com.augmentalis.voiceos.viewmodel.HomeViewModel
+import org.koin.androidx.compose.koinViewModel
 
 /**
  * Home screen showing VoiceOS status and quick actions.
@@ -63,10 +66,12 @@ import com.augmentalis.voiceos.util.rememberAccessibilityServiceState
 fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToSetup: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: HomeViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
     val isServiceEnabled by rememberAccessibilityServiceState(context)
+    val uiState by viewModel.uiState.collectAsState()
     var showCommandsDialog by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
 
@@ -199,7 +204,12 @@ fun HomeScreen(
         }
 
         // Statistics Card
-        StatisticsCard()
+        StatisticsCard(
+            appsLearned = uiState.appsLearned,
+            commandsAvailable = uiState.commandsAvailable,
+            commandsToday = uiState.commandsToday,
+            isLoading = uiState.isLoading
+        )
 
         // Accessibility Settings Button (Always Visible)
         Card(
@@ -365,7 +375,12 @@ private fun QuickActionButton(
 }
 
 @Composable
-private fun StatisticsCard() {
+private fun StatisticsCard(
+    appsLearned: Long,
+    commandsAvailable: Long,
+    commandsToday: Long,
+    isLoading: Boolean
+) {
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -382,9 +397,18 @@ private fun StatisticsCard() {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            StatRow(label = "Apps Learned", value = "0")
-            StatRow(label = "Commands Available", value = "0")
-            StatRow(label = "Commands Today", value = "0")
+            if (isLoading) {
+                Text(
+                    text = "Loading statistics...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            } else {
+                StatRow(label = "Apps Learned", value = appsLearned.toString())
+                StatRow(label = "Commands Available", value = commandsAvailable.toString())
+                StatRow(label = "Commands Today", value = commandsToday.toString())
+            }
         }
     }
 }
