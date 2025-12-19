@@ -60,8 +60,18 @@ actual class ModelManager(private val context: Context) {
     private val apkMobilebertAssetPath = "models/${ModelType.MOBILEBERT.modelFileName}"
 
     // Active model (detected at runtime)
+    // Issue 3.1 Fix: @Volatile for thread-safe visibility across threads
+    @Volatile
     private var activeModelType: ModelType? = null
+    @Volatile
     private var activeModelFile: File? = null
+
+    // Issue 4.4 Fix: Cached model checksum to avoid recalculating on every call
+    // Checksum is expensive for large model files (~10-20MB)
+    @Volatile
+    private var cachedChecksum: String? = null
+    @Volatile
+    private var cachedChecksumModelPath: String? = null
 
     /**
      * Model download URLs
@@ -514,6 +524,10 @@ actual class ModelManager(private val context: Context) {
             if (vocabFile.exists()) {
                 vocabFile.delete()
             }
+
+            // Issue 4.4: Invalidate cached checksum since models were cleared
+            invalidateChecksumCache()
+
             Result.Success(Unit)
         } catch (e: Exception) {
             Result.Error(
@@ -643,15 +657,35 @@ actual class ModelManager(private val context: Context) {
     }
 
     /**
-     * Calculate SHA-256 checksum of model file
+     * Calculate SHA-256 checksum of model file with caching.
+     *
+     * Issue 4.4 Fix: Caches checksum to avoid recalculating on every call.
+     * A 15MB model file takes ~100-200ms to hash - this adds up when
+     * checkVersionStatus() is called frequently.
+     *
+     * Cache is invalidated when:
+     * - Model file path changes (different model loaded)
+     * - clearModels() is called
      *
      * Used to detect if model file has been replaced.
      * Returns "unknown" if file doesn't exist or checksum fails.
      */
     private fun calculateModelChecksum(): String {
+        val modelFile = activeModelFile ?: return "unknown"
+        if (!modelFile.exists()) return "unknown"
+
+        val currentPath = modelFile.absolutePath
+
+        // Issue 4.4: Return cached checksum if model file hasn't changed
+        synchronized(this) {
+            if (cachedChecksum != null && cachedChecksumModelPath == currentPath) {
+                return cachedChecksum!!
+            }
+        }
+
         return try {
-            val modelFile = activeModelFile ?: return "unknown"
-            if (!modelFile.exists()) return "unknown"
+            android.util.Log.d(TAG, "Calculating checksum for: $currentPath")
+            val startTime = System.currentTimeMillis()
 
             val digest = MessageDigest.getInstance("SHA-256")
             val bytes = modelFile.inputStream().use { input ->
@@ -663,10 +697,32 @@ actual class ModelManager(private val context: Context) {
                 digest.digest()
             }
 
-            bytes.joinToString("") { "%02x".format(it) }
+            val checksum = bytes.joinToString("") { "%02x".format(it) }
+
+            val elapsed = System.currentTimeMillis() - startTime
+            android.util.Log.d(TAG, "Checksum calculated in ${elapsed}ms")
+
+            // Issue 4.4: Cache the result
+            synchronized(this) {
+                cachedChecksum = checksum
+                cachedChecksumModelPath = currentPath
+            }
+
+            checksum
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Checksum calculation failed", e)
             "unknown"
+        }
+    }
+
+    /**
+     * Invalidate cached checksum.
+     * Called when model file may have changed.
+     */
+    private fun invalidateChecksumCache() {
+        synchronized(this) {
+            cachedChecksum = null
+            cachedChecksumModelPath = null
         }
     }
 

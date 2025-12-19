@@ -214,19 +214,26 @@ class IntentEmbeddingManager(
     /**
      * Save a trained embedding to database.
      *
+     * Issue 3.4 Fix: Atomic update - only update in-memory map after successful DB write.
+     * Previously, the in-memory map was updated regardless of DB success, causing
+     * inconsistent state if the database write failed.
+     *
      * @param intentName Intent name
      * @param embedding Embedding vector
      * @param utterance Original utterance used for training (stored as source)
+     * @return true if save succeeded, false otherwise
      */
     suspend fun saveTrainedEmbedding(
         intentName: String,
         embedding: FloatArray,
         utterance: String
-    ) = withContext(Dispatchers.IO) {
+    ): Boolean = withContext(Dispatchers.IO) {
         try {
             val embeddingBytes = floatArrayToBytes(embedding)
             val now = System.currentTimeMillis()
 
+            // Issue 3.4: Write to database FIRST, then update in-memory map
+            // This ensures we don't have stale in-memory state if DB fails
             database.intentEmbeddingQueries.insert(
                 intent_id = intentName,
                 locale = "en",
@@ -241,12 +248,15 @@ class IntentEmbeddingManager(
                 source = "USER_TRAINED"
             )
 
-            // Also update in-memory map
+            // Database write succeeded - now safe to update in-memory map
+            // Using synchronized map ensures thread-safe update
             intentEmbeddings[intentName] = embedding
 
             Log.d(TAG, "Saved trained embedding: $intentName")
+            true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save trained embedding: ${e.message}", e)
+            false
         }
     }
 

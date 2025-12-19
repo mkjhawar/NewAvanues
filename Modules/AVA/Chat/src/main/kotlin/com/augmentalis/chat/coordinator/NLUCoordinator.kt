@@ -64,6 +64,8 @@ class NLUCoordinator @Inject constructor(
 
     // ==================== Caching ====================
 
+    // Issue 3.2 Fix: @Volatile for thread-safe visibility across coroutines
+    @Volatile
     private var candidateIntentsCacheTimestamp = 0L
 
     private val intentsCacheTTL: Long

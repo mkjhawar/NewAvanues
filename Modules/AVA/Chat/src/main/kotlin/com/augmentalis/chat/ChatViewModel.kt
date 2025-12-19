@@ -405,7 +405,10 @@ class ChatViewModel @Inject constructor(
      * Current generation job (for cancellation support).
      * Set when LLM response generation starts, cleared when complete.
      * Used by stopGeneration() to cancel ongoing generation.
+     *
+     * Issue 3.3 Fix: @Volatile for thread-safe visibility across coroutines.
      */
+    @Volatile
     private var generationJob: kotlinx.coroutines.Job? = null
 
     // ==================== TTS State (Phase 1.2) ====================

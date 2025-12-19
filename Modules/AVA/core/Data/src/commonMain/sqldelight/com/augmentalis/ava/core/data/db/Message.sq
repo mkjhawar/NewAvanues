@@ -74,3 +74,16 @@ updateIntent:
 UPDATE message
 SET intent = ?, confidence = ?
 WHERE id = ?;
+
+-- Issue 4.3: Select messages by role in a conversation
+-- Uses existing idx_message_role index for efficient filtering
+-- Enables fetching only user messages (for training) or assistant messages (for feedback)
+selectByConversationIdAndRole:
+SELECT * FROM message
+WHERE conversation_id = ? AND role = ?
+ORDER BY timestamp ASC;
+
+-- Issue 4.3: Count messages by role in a conversation
+countByConversationIdAndRole:
+SELECT COUNT(*) FROM message
+WHERE conversation_id = ? AND role = ?;

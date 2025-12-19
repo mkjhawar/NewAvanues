@@ -6,11 +6,15 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.augmentalis.ava.core.data.db.Memory as DbMemory
 
+private const val TAG = "MemoryMapper"
+
 /**
  * Mapper functions for Domain Memory <-> SQLDelight Memory
  * Updated to use SQLDelight generated classes (Room removed)
  *
  * Uses binary BLOB for embeddings (60% space savings vs JSON)
+ *
+ * Issue 2.2 Fix: Added validation for corrupted BLOB data and MemoryType parsing
  */
 
 private val json = Json {
@@ -19,14 +23,24 @@ private val json = Json {
 }
 
 /**
- * Convert SQLDelight Memory to Domain Memory
+ * Convert SQLDelight Memory to Domain Memory.
+ *
+ * Issue 2.2 Fix: Added error handling for MemoryType parsing and BLOB validation.
  */
 fun DbMemory.toDomain(): Memory {
+    // Safely parse MemoryType with fallback
+    val parsedMemoryType: MemoryType = try {
+        MemoryType.valueOf(memory_type)
+    } catch (e: IllegalArgumentException) {
+        println("$TAG: Unknown memory_type '$memory_type' for memory $id, defaulting to CONTEXT")
+        MemoryType.CONTEXT
+    }
+
     return Memory(
         id = id,
-        memoryType = MemoryType.valueOf(memory_type),
+        memoryType = parsedMemoryType,
         content = content,
-        embedding = embedding?.let { bytesToFloatList(it) },
+        embedding = embedding?.let { bytesToFloatListSafe(it, id) },
         importance = importance.toFloat(),
         createdAt = created_at,
         lastAccessed = last_accessed,
@@ -35,6 +49,7 @@ fun DbMemory.toDomain(): Memory {
             try {
                 json.decodeFromString<Map<String, String>>(it)
             } catch (e: Exception) {
+                println("$TAG: Failed to parse metadata for memory $id: ${e.message}")
                 null
             }
         }
@@ -85,24 +100,53 @@ data class MemoryInsertParams(
 // Binary embedding conversion utilities
 
 /**
- * Convert ByteArray (BLOB) to List<Float>
- * Each float is stored as 4 bytes in little-endian format
+ * Convert ByteArray (BLOB) to List<Float> with validation.
+ * Each float is stored as 4 bytes in little-endian format.
+ *
+ * Issue 2.2 Fix: Added validation for:
+ * - BLOB size divisibility by 4
+ * - NaN/Infinity detection (indicates corruption)
+ * - Exception handling for malformed data
+ *
+ * @param bytes The raw BLOB data
+ * @param memoryId Memory ID for error logging
+ * @return List of floats, or null if corrupted
  */
-private fun bytesToFloatList(bytes: ByteArray): List<Float> {
+private fun bytesToFloatListSafe(bytes: ByteArray, memoryId: String): List<Float>? {
     if (bytes.isEmpty()) return emptyList()
-    val floatCount = bytes.size / 4
-    val result = mutableListOf<Float>()
 
-    for (i in 0 until floatCount) {
-        val offset = i * 4
-        val bits = (bytes[offset].toInt() and 0xFF) or
-                   ((bytes[offset + 1].toInt() and 0xFF) shl 8) or
-                   ((bytes[offset + 2].toInt() and 0xFF) shl 16) or
-                   ((bytes[offset + 3].toInt() and 0xFF) shl 24)
-        result.add(Float.fromBits(bits))
+    // Validate: must be divisible by 4 (float = 4 bytes)
+    if (bytes.size % 4 != 0) {
+        println("$TAG: Invalid embedding BLOB size ${bytes.size} for memory $memoryId (not divisible by 4)")
+        return null
     }
 
-    return result
+    return try {
+        val floatCount = bytes.size / 4
+        val result = mutableListOf<Float>()
+
+        for (i in 0 until floatCount) {
+            val offset = i * 4
+            val bits = (bytes[offset].toInt() and 0xFF) or
+                       ((bytes[offset + 1].toInt() and 0xFF) shl 8) or
+                       ((bytes[offset + 2].toInt() and 0xFF) shl 16) or
+                       ((bytes[offset + 3].toInt() and 0xFF) shl 24)
+            val floatValue = Float.fromBits(bits)
+
+            // Validate: check for NaN/Infinity which indicate corruption
+            if (floatValue.isNaN() || floatValue.isInfinite()) {
+                println("$TAG: Invalid float value at index $i for memory $memoryId: $floatValue")
+                return null
+            }
+
+            result.add(floatValue)
+        }
+
+        result
+    } catch (e: Exception) {
+        println("$TAG: Failed to parse embedding BLOB for memory $memoryId: ${e.message}")
+        null
+    }
 }
 
 /**

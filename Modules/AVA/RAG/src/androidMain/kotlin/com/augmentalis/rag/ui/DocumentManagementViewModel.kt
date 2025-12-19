@@ -66,14 +66,19 @@ class DocumentManagementViewModel(
     }
 
     /**
-     * Load all documents from repository
+     * Load all documents from repository.
+     *
+     * Issue 4.1 Fix: Changed from O(n²) to O(n) complexity.
+     * Previously, each document emission created a new list copy (_documents.value + document).
+     * For 100 documents, this caused ~5,000 list allocations.
+     * Now collects all documents first, then emits once.
      */
     fun loadDocuments() {
         viewModelScope.launch {
             try {
-                ragRepository.listDocuments().collect { document ->
-                    _documents.value = _documents.value + document
-                }
+                // Issue 4.1: Collect all documents first, then emit once (O(n) vs O(n²))
+                val allDocuments = ragRepository.listDocuments().toList()
+                _documents.value = allDocuments
             } catch (e: Exception) {
                 Timber.e(e, "Failed to load documents")
                 _error.value = "Failed to load documents: ${e.message}"
