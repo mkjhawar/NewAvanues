@@ -1,0 +1,273 @@
+# MagicElements YAML Example: Dashboard
+# Demonstrates Windows 11 Fluent 2 theme with complex layouts
+
+theme: Windows11Fluent2
+
+components:
+  - Column:
+      padding: 24
+      children:
+        # Header Row
+        - Row:
+            arrangement: SpaceBetween
+            padding:
+              bottom: 24
+            children:
+              - Text:
+                  text: "Dashboard"
+                  font:
+                    size: 32
+                    weight: Bold
+
+              - Button:
+                  text: "Refresh"
+                  style: Secondary
+                  leadingIcon: "refresh"
+                  onClick: handleRefresh
+
+        # Stats Cards Row
+        - Row:
+            arrangement: SpaceBetween
+            padding:
+              bottom: 16
+            children:
+              # Users Card
+              - Card:
+                  elevation: 2
+                  padding: 20
+                  style:
+                    border:
+                      radius: 8
+                    backgroundColor: "#F3F3F3"
+                    width: 30%
+                  children:
+                    - Column:
+                        children:
+                          - Icon:
+                              name: "users"
+                              tint: "#0078D4"
+
+                          - Text:
+                              text: "Users"
+                              font: Caption
+                              padding:
+                                top: 8
+
+                          - Text:
+                              text: "1,234"
+                              font:
+                                size: 28
+                                weight: Bold
+
+                          - Text:
+                              text: "+12% from last month"
+                              font:
+                                size: 11
+                                weight: Regular
+                              color: "#107C10"
+                              padding:
+                                top: 4
+
+              # Revenue Card
+              - Card:
+                  elevation: 2
+                  padding: 20
+                  style:
+                    border:
+                      radius: 8
+                    backgroundColor: "#F3F3F3"
+                    width: 30%
+                  children:
+                    - Column:
+                        children:
+                          - Icon:
+                              name: "chart"
+                              tint: "#8764B8"
+
+                          - Text:
+                              text: "Revenue"
+                              font: Caption
+                              padding:
+                                top: 8
+
+                          - Text:
+                              text: "$12,345"
+                              font:
+                                size: 28
+                                weight: Bold
+
+                          - Text:
+                              text: "+8% from last month"
+                              font:
+                                size: 11
+                                weight: Regular
+                              color: "#107C10"
+                              padding:
+                                top: 4
+
+              # Growth Card
+              - Card:
+                  elevation: 2
+                  padding: 20
+                  style:
+                    border:
+                      radius: 8
+                    backgroundColor: "#F3F3F3"
+                    width: 30%
+                  children:
+                    - Column:
+                        children:
+                          - Icon:
+                              name: "trending_up"
+                              tint: "#00B7C3"
+
+                          - Text:
+                              text: "Growth"
+                              font: Caption
+                              padding:
+                                top: 8
+
+                          - Text:
+                              text: "+23%"
+                              font:
+                                size: 28
+                                weight: Bold
+
+                          - Text:
+                              text: "Year over year"
+                              font:
+                                size: 11
+                                weight: Regular
+                              color: "#3B3B3B"
+                              padding:
+                                top: 4
+
+        # Recent Activity Card
+        - Card:
+            elevation: 1
+            padding: 24
+            style:
+              border:
+                radius: 8
+              margin:
+                bottom: 16
+            children:
+              - Column:
+                  children:
+                    - Row:
+                        arrangement: SpaceBetween
+                        padding:
+                          bottom: 16
+                        children:
+                          - Text:
+                              text: "Recent Activity"
+                              font: Heading
+
+                          - Button:
+                              text: "View All"
+                              style: Text
+                              onClick: handleViewAll
+
+                    # Activity Items
+                    - Row:
+                        padding:
+                          top: 12
+                          bottom: 12
+                        children:
+                          - Icon:
+                              name: "person_add"
+                              tint: "#0078D4"
+
+                          - Column:
+                              padding:
+                                left: 12
+                              children:
+                                - Text:
+                                    text: "New user registered"
+                                    font: Body
+
+                                - Text:
+                                    text: "2 minutes ago"
+                                    font: Caption
+                                    color: "#3B3B3B"
+
+                    - Row:
+                        padding:
+                          top: 12
+                          bottom: 12
+                        children:
+                          - Icon:
+                              name: "payment"
+                              tint: "#107C10"
+
+                          - Column:
+                              padding:
+                                left: 12
+                              children:
+                                - Text:
+                                    text: "Payment received: $499"
+                                    font: Body
+
+                                - Text:
+                                    text: "15 minutes ago"
+                                    font: Caption
+                                    color: "#3B3B3B"
+
+                    - Row:
+                        padding:
+                          top: 12
+                          bottom: 12
+                        children:
+                          - Icon:
+                              name: "notification"
+                              tint: "#8764B8"
+
+                          - Column:
+                              padding:
+                                left: 12
+                              children:
+                                - Text:
+                                    text: "System update available"
+                                    font: Body
+
+                                - Text:
+                                    text: "1 hour ago"
+                                    font: Caption
+                                    color: "#3B3B3B"
+
+        # Quick Actions Card
+        - Card:
+            elevation: 1
+            padding: 24
+            style:
+              border:
+                radius: 8
+            children:
+              - Column:
+                  children:
+                    - Text:
+                        text: "Quick Actions"
+                        font: Heading
+                        padding:
+                          bottom: 16
+
+                    - Row:
+                        arrangement: SpaceEvenly
+                        children:
+                          - Button:
+                              text: "New User"
+                              style: Primary
+                              leadingIcon: "person_add"
+                              onClick: handleNewUser
+
+                          - Button:
+                              text: "Generate Report"
+                              style: Secondary
+                              leadingIcon: "description"
+                              onClick: handleGenerateReport
+
+                          - Button:
+                              text: "Settings"
+                              style: Outlined
+                              leadingIcon: "settings"
+                              onClick: handleSettings

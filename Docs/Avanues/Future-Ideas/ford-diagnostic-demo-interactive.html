@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AVA-Powered Ford Explorer O2 Sensor Diagnostic - Interactive Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 350px 1fr 400px;
+            grid-template-rows: 60px 1fr 50px;
+            gap: 10px;
+            padding: 10px;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            background: white;
+            border-radius: 12px;
+            padding: 15px 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #667eea;
+        }
+
+        .ava-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* Workflow Panel (Left) */
+        .workflow-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+
+        .workflow-steps {
+            margin-top: 20px;
+        }
+
+        .step {
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+
+        .step.pending {
+            background: #f3f4f6;
+            color: #9ca3af;
+        }
+
+        .step.active {
+            background: #ede9fe;
+            border-left-color: #8b5cf6;
+            color: #5b21b6;
+            font-weight: bold;
+        }
+
+        .step.completed {
+            background: #d1fae5;
+            border-left-color: #10b981;
+            color: #065f46;
+        }
+
+        .step:hover {
+            transform: translateX(5px);
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 25px;
+            height: 25px;
+            background: #8b5cf6;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 25px;
+            margin-right: 10px;
+            font-size: 12px;
+        }
+
+        .step.completed .step-number {
+            background: #10b981;
+        }
+
+        .step.pending .step-number {
+            background: #9ca3af;
+        }
+
+        /* Main Content (Center) */
+        .main-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+
+        .step-title {
+            font-size: 28px;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+
+        .step-description {
+            color: #6b7280;
+            margin-bottom: 25px;
+            font-size: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            color: #92400e;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            border-left: 4px solid #3b82f6;
+            color: #1e40af;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+            color: #065f46;
+        }
+
+        /* Resources Panel (Right) */
+        .resources-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .resource-window {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .resource-window h3 {
+            font-size: 16px;
+            color: #1f2937;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .schematic-viewer {
+            flex: 2;
+            min-height: 300px;
+        }
+
+        .video-player {
+            flex: 1.5;
+            min-height: 200px;
+        }
+
+        .tools-required {
+            flex: 1;
+        }
+
+        .live-data {
+            flex: 1;
+        }
+
+        .schematic-placeholder {
+            background: #f3f4f6;
+            border: 2px dashed #9ca3af;
+            border-radius: 8px;
+            height: 250px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .schematic-placeholder:hover {
+            background: #e5e7eb;
+            border-color: #6b7280;
+        }
+
+        .schematic-image {
+            width: 100%;
+            height: 250px;
+            object-fit: contain;
+            background: #f9fafb;
+            border-radius: 8px;
+            cursor: zoom-in;
+        }
+
+        .video-placeholder {
+            background: #000;
+            border-radius: 8px;
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+        }
+
+        .tool-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .tool-list li {
+            padding: 8px;
+            margin: 5px 0;
+            background: #f3f4f6;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .data-reading {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin: 5px 0;
+            background: #f9fafb;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .data-value {
+            font-weight: bold;
+            color: #059669;
+        }
+
+        .data-value.warning {
+            color: #dc2626;
+        }
+
+        /* Footer */
+        .footer {
+            grid-column: 1 / -1;
+            background: white;
+            border-radius: 12px;
+            padding: 15px 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .progress-bar {
+            flex: 1;
+            max-width: 400px;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            transition: width 0.5s;
+        }
+
+        /* Modal for zoom */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            cursor: pointer;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        /* Tabs for resources */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            background: #f3f4f6;
+            border: none;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: #8b5cf6;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>🔧 Ford Explorer O2 Sensor Diagnostic</h1>
+                <small style="color: #6b7280;">2018 3.5L V6 EcoBoost - VIN: 1FM5K8GT8JGA12345</small>
+            </div>
+            <div class="ava-badge">
+                ✨ AVA Powered
+            </div>
+        </div>
+
+        <!-- Left Panel - Workflow Steps -->
+        <div class="workflow-panel">
+            <h2 style="color: #1f2937; margin-bottom: 10px;">Diagnostic Workflow</h2>
+            <div style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">
+                Click any step to navigate
+            </div>
+
+            <div class="workflow-steps" id="workflowSteps">
+                <!-- Steps will be generated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Center Panel - Main Content -->
+        <div class="main-content fade-in" id="mainContent">
+            <!-- Content will be generated by JavaScript -->
+        </div>
+
+        <!-- Right Panel - Resources -->
+        <div class="resources-panel">
+            <!-- Schematic/Diagram Viewer -->
+            <div class="resource-window schematic-viewer">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('schematic')">📐 Schematic</button>
+                    <button class="tab" onclick="switchTab('diagram')">🔌 Wiring</button>
+                    <button class="tab" onclick="switchTab('photo')">📷 Photo</button>
+                </div>
+
+                <div class="tab-content active" id="schematic-content">
+                    <img id="schematicImage" class="schematic-image" src="" alt="Loading schematic..." onclick="zoomImage(this)">
+                </div>
+
+                <div class="tab-content" id="diagram-content">
+                    <img class="schematic-image" src="" alt="Wiring diagram" onclick="zoomImage(this)">
+                </div>
+
+                <div class="tab-content" id="photo-content">
+                    <img class="schematic-image" src="" alt="Location photo" onclick="zoomImage(this)">
+                </div>
+            </div>
+
+            <!-- Video Player -->
+            <div class="resource-window video-player">
+                <h3>📹 Procedure Video</h3>
+                <div class="video-placeholder" id="videoPlayer" onclick="playVideo()">
+                    ▶️ Click to play procedure video
+                </div>
+            </div>
+
+            <!-- Tools Required -->
+            <div class="resource-window tools-required">
+                <h3>🔧 Tools Required</h3>
+                <ul class="tool-list" id="toolsList">
+                    <!-- Tools will be generated by JavaScript -->
+                </ul>
+            </div>
+
+            <!-- Live Data -->
+            <div class="resource-window live-data">
+                <h3>📊 Live Sensor Data</h3>
+                <div id="liveData">
+                    <!-- Data will be generated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer - Navigation -->
+        <div class="footer">
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="prevBtn" onclick="previousStep()">
+                    ← Previous
+                </button>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 15px; flex: 1; justify-content: center;">
+                <span id="progressText" style="color: #6b7280; font-size: 14px;">Step 1 of 10</span>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 10%"></div>
+                </div>
+                <span id="progressPercent" style="color: #6b7280; font-size: 14px; font-weight: bold;">10%</span>
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-primary" id="nextBtn" onclick="nextStep()">
+                    Next →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for zoomed images -->
+    <div class="modal" id="imageModal" onclick="closeModal()">
+        <span class="modal-close">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <script>
+        // Workflow data
+        const workflow = {
+            steps: [
+                {
+                    id: 1,
+                    title: "Initial Scan & DTC Retrieval",
+                    description: "Connect scan tool and retrieve diagnostic trouble codes",
+                    schematic: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='200' y='150' text-anchor='middle' font-family='Arial' font-size='16' fill='%23374151'%3EOBD-II Port Location Diagram%3C/text%3E%3Crect x='50' y='180' width='300' height='80' fill='none' stroke='%238b5cf6' stroke-width='2'/%3E%3Ctext x='200' y='225' text-anchor='middle' font-size='14' fill='%236b7280'%3EPort located under dashboard%3C/text%3E%3C/svg%3E",
+                    video: "Scan Tool Connection Procedure",
+                    tools: ["OBD-II Scan Tool", "Ford IDS Software", "Laptop/Tablet"],
+                    liveData: {
+                        "DTC Count": { value: "2 codes", warning: true },
+                        "MIL Status": { value: "ON", warning: true },
+                        "Readiness": { value: "Not Ready", warning: true }
+                    },
+                    content: `
+                        <div class="alert alert-info">
+                            <div>💡</div>
+                            <div><strong>AVA Tip:</strong> Ford requires clearing codes and driving 50 miles for catalyst monitor readiness. Plan accordingly.</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Select Scan Tool Type</label>
+                            <select onchange="updateContent()">
+                                <option>Generic OBD-II Scanner</option>
+                                <option selected>Ford IDS (Integrated Diagnostic Software)</option>
+                                <option>Snap-on Modis</option>
+                                <option>Autel MaxiSys</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>DTCs Retrieved</label>
+                            <div style="background: #fee2e2; padding: 15px; border-radius: 8px; border-left: 4px solid #dc2626;">
+                                <strong style="color: #991b1b;">P0131</strong> - O2 Sensor Circuit Low Voltage (Bank 1, Sensor 1)<br>
+                                <strong style="color: #991b1b;">P0135</strong> - O2 Sensor Heater Circuit Malfunction (Bank 1, Sensor 1)
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <div>⚠️</div>
+                            <div><strong>Important:</strong> Both codes point to Bank 1 Sensor 1 (upstream O2 sensor). Check wiring before replacing sensor.</div>
+                        </div>
+                    `
+                },
+                {
+                    id: 2,
+                    title: "Verify DTC Codes",
+                    description: "Cross-reference codes with Ford TSB database and check for known issues",
+                    schematic: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='200' y='80' text-anchor='middle' font-family='Arial' font-size='18' fill='%23374151'%3EDTC Decision Tree%3C/text%3E%3Cline x1='200' y1='90' x2='200' y2='120' stroke='%238b5cf6' stroke-width='2'/%3E%3Crect x='120' y='120' width='160' height='40' fill='%23dbeafe' stroke='%233b82f6' stroke-width='2'/%3E%3Ctext x='200' y='145' text-anchor='middle' font-size='14'%3EP0131 + P0135?%3C/text%3E%3Cline x1='120' y1='160' x2='80' y2='190' stroke='%238b5cf6' stroke-width='2'/%3E%3Cline x1='280' y1='160' x2='320' y2='190' stroke='%238b5cf6' stroke-width='2'/%3E%3Crect x='20' y='190' width='120' height='40' fill='%23d1fae5' stroke='%2310b981' stroke-width='2'/%3E%3Ctext x='80' y='215' text-anchor='middle' font-size='12'%3ECheck Wiring%3C/text%3E%3Crect x='260' y='190' width='120' height='40' fill='%23fef3c7' stroke='%23f59e0b' stroke-width='2'/%3E%3Ctext x='320' y='215' text-anchor='middle' font-size='12'%3ECheck Sensor%3C/text%3E%3C/svg%3E",
+                    video: "TSB Lookup Procedure",
+                    tools: ["Ford OASIS Access", "TSB Database", "Service Manual"],
+                    liveData: {
+                        "TSB Matches": { value: "1 found", warning: false },
+                        "Recall Status": { value: "None", warning: false },
+                        "TSB 20-2468": { value: "Active", warning: false }
+                    },
+                    content: `
+                        <div class="alert alert-success">
+                            <div>✅</div>
+                            <div><strong>TSB Found:</strong> Technical Service Bulletin 20-2468 addresses this exact issue for 2017-2020 3.5L EcoBoost engines.</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>DTC Code Analysis</label>
+                            <select>
+                                <option selected>P0131 - Low Voltage (0.1V to 0.4V expected)</option>
+                                <option>P0132 - High Voltage</option>
+                                <option>P0133 - Slow Response</option>
+                                <option>P0134 - No Activity</option>
+                            </select>
+                        </div>
+
+                        <div style="background: #ede9fe; padding: 20px; border-radius: 8px; margin: 15px 0;">
+                            <h4 style="color: #5b21b6; margin-bottom: 10px;">📋 TSB 20-2468 Summary</h4>
+                            <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                <strong>Issue:</strong> Oxygen sensor heater circuit may fail due to water intrusion at connector.<br>
+                                <strong>Fix:</strong> Replace sensor with updated part number 9L3Z-9F472-A and apply dielectric grease.<br>
+                                <strong>Parts:</strong> New sensor ($85), Dielectric grease ($5)<br>
+                                <strong>Labor:</strong> 0.8 hours
+                            </p>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <div>💡</div>
+                            <div><strong>AVA Recommendation:</strong> Follow TSB procedure. Check connector for corrosion first before replacing sensor.</div>
+                        </div>
+                    `
+                },
+                {
+                    id: 3,
+                    title: "Visual Inspection",
+                    description: "Inspect sensor, wiring, and connectors for physical damage or corrosion",
+                    schematic: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='200' y='40' text-anchor='middle' font-family='Arial' font-size='16' fill='%23374151'%3EO2 Sensor Location%3C/text%3E%3Cellipse cx='200' cy='150' rx='80' ry='60' fill='%23dbeafe' stroke='%233b82f6' stroke-width='3'/%3E%3Ctext x='200' y='155' text-anchor='middle' font-size='14' fill='%231e40af'%3EBank 1%3C/text%3E%3Ctext x='200' y='170' text-anchor='middle' font-size='12' fill='%231e40af'%3ESensor 1%3C/text%3E%3Cline x1='280' y1='130' x2='320' y2='100' stroke='%23dc2626' stroke-width='2' marker-end='url(%23arrowred)'/%3E%3Ctext x='325' y='95' font-size='12' fill='%23dc2626'%3EExhaust%3C/text%3E%3Ctext x='325' y='108' font-size='12' fill='%23dc2626'%3EManifold%3C/text%3E%3Cdefs%3E%3Cmarker id='arrowred' markerWidth='10' markerHeight='10' refX='9' refY='3' orient='auto' markerUnits='strokeWidth'%3E%3Cpath d='M0,0 L0,6 L9,3 z' fill='%23dc2626' /%3E%3C/marker%3E%3C/defs%3E%3C/svg%3E",
+                    video: "O2 Sensor Access & Inspection",
+                    tools: ["Flashlight", "Mirror", "Wire Brush", "Electrical Contact Cleaner"],
+                    liveData: {
+                        "Sensor Voltage": { value: "0.15V", warning: true },
+                        "Heater Current": { value: "0.0A", warning: true },
+                        "Connector Status": { value: "Inspect", warning: true }
+                    },
+                    content: `
+                        <div class="alert alert-warning">
+                            <div>⚠️</div>
+                            <div><strong>Live Reading:</strong> Heater circuit showing 0.0A - confirms heater failure. Expected: 0.8-1.2A</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Sensor Physical Condition</label>
+                            <select id="sensorCondition" onchange="checkCondition()">
+                                <option value="">Select condition...</option>
+                                <option value="good">No visible damage</option>
+                                <option value="corroded" selected>Connector shows corrosion</option>
+                                <option value="damaged">Wiring damaged</option>
+                                <option value="contaminated">Sensor tip contaminated</option>
+                            </select>
+                        </div>
+
+                        <div id="conditionAlert" class="alert alert-warning">
+                            <div>⚠️</div>
+                            <div><strong>Finding:</strong> Green corrosion visible at connector pins 3 & 4 (heater circuit). Water intrusion confirmed per TSB 20-2468.</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Wiring Harness Check</label>
+                            <select>
+                                <option>No chafing detected</option>
+                                <option selected>Minor corrosion at connector</option>
+                                <option>Severe damage - repair needed</option>
+                            </select>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <div>💡</div>
+                            <div><strong>AVA Tip:</strong> Take photos of corrosion for warranty claim. Ford may cover under emissions warranty (8yr/80k miles).</div>
+                        </div>
+                    `
+                },
+                {
+                    id: 4,
+                    title: "Voltage Testing",
+                    description: "Test sensor voltage and heater circuit with multimeter",
+                    schematic: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='200' y='40' text-anchor='middle' font-family='Arial' font-size='16' fill='%23374151'%3EO2 Sensor Wiring Diagram%3C/text%3E%3Cline x1='100' y1='100' x2='300' y2='100' stroke='%23dc2626' stroke-width='3'/%3E%3Ctext x='200' y='90' text-anchor='middle' font-size='12' fill='%23dc2626'%3EHeater + (Red)%3C/text%3E%3Cline x1='100' y1='130' x2='300' y2='130' stroke='%23000' stroke-width='3'/%3E%3Ctext x='200' y='120' text-anchor='middle' font-size='12'%3EHeater - (Black)%3C/text%3E%3Cline x1='100' y1='160' x2='300' y2='160' stroke='%2310b981' stroke-width='3'/%3E%3Ctext x='200' y='150' text-anchor='middle' font-size='12' fill='%2310b981'%3ESignal (White)%3C/text%3E%3Cline x1='100' y1='190' x2='300' y2='190' stroke='%236b7280' stroke-width='3'/%3E%3Ctext x='200' y='180' text-anchor='middle' font-size='12' fill='%236b7280'%3EGround (Gray)%3C/text%3E%3Crect x='50' y='220' width='140' height='60' fill='%23fff' stroke='%238b5cf6' stroke-width='2'/%3E%3Ctext x='120' y='240' text-anchor='middle' font-size='11' fill='%236b7280'%3EPCM%3C/text%3E%3Ctext x='120' y='255' text-anchor='middle' font-size='10' fill='%236b7280'%3EPin 27: Heater+%3C/text%3E%3Ctext x='120' y='268' text-anchor='middle' font-size='10' fill='%236b7280'%3EPin 46: Signal%3C/text%3E%3Crect x='210' y='220' width='140' height='60' fill='%23fff' stroke='%23dc2626' stroke-width='2'/%3E%3Ctext x='280' y='240' text-anchor='middle' font-size='11' fill='%236b7280'%3EExpected%3C/text%3E%3Ctext x='280' y='255' text-anchor='middle' font-size='10' fill='%236b7280'%3E12V (heater)%3C/text%3E%3Ctext x='280' y='268' text-anchor='middle' font-size='10' fill='%236b7280'%3E0.1-0.9V (signal)%3C/text%3E%3C/svg%3E",
+                    video: "Multimeter Testing O2 Sensors",
+                    tools: ["Digital Multimeter (DVOM)", "Backprobe Pins", "Wiring Diagram"],
+                    liveData: {
+                        "Signal Voltage": { value: "0.15V", warning: true },
+                        "Heater Voltage": { value: "0.2V", warning: true },
+                        "Ground Circuit": { value: "OK", warning: false }
+                    },
+                    content: `
+                        <div class="form-group">
+                            <label>Heater Circuit Voltage (Key On, Engine Off)</label>
+                            <input type="text" value="0.2V" readonly>
+                            <small style="color: #dc2626;">❌ Expected: 12V | Actual: 0.2V - Circuit open or corroded</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Heater Circuit Resistance</label>
+                            <input type="text" value="∞ (Open)" readonly>
+                            <small style="color: #dc2626;">❌ Expected: 3-8Ω | Actual: Open circuit - Heater element failed</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Signal Circuit Voltage (Engine Running, Closed Loop)</label>
+                            <input type="text" value="0.15V (stuck)" readonly>
+                            <small style="color: #dc2626;">❌ Expected: 0.1-0.9V switching | Actual: Stuck low - Sensor not heating</small>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <div>⚠️</div>
+                            <div><strong>Diagnosis:</strong> Heater circuit open. Sensor cannot reach operating temperature (600°F). Signal stuck lean.</div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <div>💡</div>
+                            <div><strong>AVA Analysis:</strong> Heater failure prevents sensor from reaching operating temp. Replace sensor per TSB 20-2468. Clean connector, apply dielectric grease.</div>
+                        </div>
+
+                        <div style="background: #fee2e2; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <strong style="color: #991b1b;">⚡ Test Results Summary:</strong><br>
+                            <ul style="margin: 10px 0 0 20px; color: #6b7280;">
+                                <li>Heater voltage: FAIL (0.2V / 12V)</li>
+                                <li>Heater resistance: FAIL (Open / 3-8Ω)</li>
+                                <li>Signal switching: FAIL (Stuck / Variable)</li>
+                                <li>Ground circuit: PASS (0.1Ω)</li>
+                            </ul>
+                        </div>
+                    `
+                },
+                {
+                    id: 5,
+                    title: "Resistance Testing",
+                    description: "Measure heater element resistance to confirm internal failure",
+                    schematic: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='200' y='40' text-anchor='middle' font-family='Arial' font-size='16' fill='%23374151'%3EResistance Test Points%3C/text%3E%3Ccircle cx='150' cy='150' r='50' fill='%23dbeafe' stroke='%233b82f6' stroke-width='3'/%3E%3Ctext x='150' y='155' text-anchor='middle' font-size='12'%3ESensor%3C/text%3E%3Cline x1='200' y1='150' x2='250' y2='150' stroke='%23dc2626' stroke-width='2'/%3E%3Ccircle cx='300' cy='150' r='40' fill='%23fef3c7' stroke='%23f59e0b' stroke-width='2'/%3E%3Ctext x='300' y='145' text-anchor='middle' font-size='11'%3EDVOM%3C/text%3E%3Ctext x='300' y='160' text-anchor='middle' font-size='10'%3EΩ Mode%3C/text%3E%3Ctext x='200' y='220' text-anchor='middle' font-size='12' fill='%23374151'%3EExpected: 3-8Ω%3C/text%3E%3Ctext x='200' y='240' text-anchor='middle' font-size='14' font-weight='bold' fill='%23dc2626'%3EActual: Open Circuit%3C/text%3E%3C/svg%3E",
+                    video: "Resistance Testing Procedure",
+                    tools: ["Digital Multimeter (Ω mode)", "Sensor Socket (7/8\" or 22mm)"],
+                    liveData: {
+                        "Heater Resistance": { value: "∞ Ω", warning: true },
+                        "Expected Range": { value: "3-8 Ω", warning: false },
+                        "Test Result": { value: "FAIL", warning: true }
+                    },
+                    content: `
+                        <div class="form-group">
+                            <label>Heater Resistance Test</label>
+                            <input type="text" value="∞ Ω (Open Circuit)" readonly>
+                            <small style="color: #dc2626;">❌ Heater element is open - Internal failure confirmed</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Specification Range</label>
+                            <input type="text" value="3.0 - 8.0 Ω @ 68°F" readonly>
+                            <small style="color: #6b7280;">📋 Per Ford Service Manual Section 303-01A</small>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <div>⚠️</div>
+                            <div><strong>Confirmed Failure:</strong> Internal heater element is open. Sensor must be replaced. Cannot be repaired.</div>
+                        </div>
+
+                        <div style="background: #d1fae5; padding: 20px; border-radius: 8px; margin: 15px 0;">
+                            <h4 style="color: #065f46; margin-bottom: 10px;">✅ Diagnosis Complete</h4>
+                            <p style="color: #374151; font-size: 14px; line-height: 1.6;">
+                                <strong>Root Cause:</strong> O2 sensor heater element failure due to water intrusion at connector<br>
+                                <strong>Repair:</strong> Replace sensor with updated part number + connector service<br>
+                                <strong>Estimated Cost:</strong> $90 parts + $65 labor (0.8 hrs) = <strong>$155 total</strong><br>
+                                <strong>Warranty:</strong> Check emissions warranty coverage (8yr/80k miles)
+                            </p>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <div>💡</div>
+                            <div><strong>AVA Next Steps:</strong> Proceed to sensor removal and replacement. Ensure proper torque (30-37 ft-lbs) and anti-seize application.</div>
+                        </div>
+                    `
+                },
+                {
+                    id: 6,
+                    title: "Sensor Removal",
+                    description: "Remove failed O2 sensor using proper tools and techniques",
+                    schematic: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='200' y='40' text-anchor='middle' font-family='Arial' font-size='16' fill='%23374151'%3ESensor Removal Technique%3C/text%3E%3Crect x='80' y='80' width='240' height='120' fill='%23dbeafe' stroke='%233b82f6' stroke-width='2' rx='10'/%3E%3Ctext x='200' y='110' text-anchor='middle' font-size='12' fill='%231e40af'%3E1. Spray penetrating oil%3C/text%3E%3Ctext x='200' y='130' text-anchor='middle' font-size='12' fill='%231e40af'%3E2. Wait 15 minutes%3C/text%3E%3Ctext x='200' y='150' text-anchor='middle' font-size='12' fill='%231e40af'%3E3. Use O2 sensor socket%3C/text%3E%3Ctext x='200' y='170' text-anchor='middle' font-size='12' fill='%231e40af'%3E4. Turn counterclockwise%3C/text%3E%3Ctext x='200' y='190' text-anchor='middle' font-size='12' fill='%231e40af'%3E5. Remove sensor%3C/text%3E%3Ctext x='200' y='240' text-anchor='middle' font-size='12' font-weight='bold' fill='%23dc2626'%3E⚠️ Engine MUST be cool%3C/text%3E%3C/svg%3E",
+                    video: "O2 Sensor Removal Best Practices",
+                    tools: ["O2 Sensor Socket (7/8\" slotted)", "Ratchet", "Extension", "Penetrating Oil", "Safety Glasses"],
+                    liveData: {
+                        "Engine Temp": { value: "Ambient", warning: false },
+                        "Torque Spec": { value: "30-37 ft-lbs", warning: false },
+                        "Thread Condition": { value: "Check", warning: true }
+                    },
+                    content: `
+                        <div class="alert alert-warning">
+                            <div>⚠️</div>
+                            <div><strong>Safety:</strong> Engine must be cool to touch. Exhaust manifold can stay hot for over an hour. Wear safety glasses and gloves.</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Pre-Removal Preparation</label>
+                            <select>
+                                <option selected>Applied penetrating oil, waiting 15 min</option>
+                                <option>Dry removal (not recommended)</option>
+                                <option>Heat applied (exhaust hot)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Removal Status</label>
+                            <select id="removalStatus" onchange="checkRemoval()">
+                                <option value="">Select status...</option>
+                                <option value="easy">Sensor removed easily</option>
+                                <option value="stuck" selected>Sensor stuck, applying more force</option>
+                                <option value="damaged">Threads damaged, extraction needed</option>
+                            </select>
+                        </div>
+
+                        <div id="removalAlert" class="alert alert-info">
+                            <div>💡</div>
+                            <div><strong>AVA Tip:</strong> If stuck, DO NOT force. Apply heat with torch (careful of wiring). Rock sensor back and forth while turning.</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Thread Inspection</label>
+                            <select>
+                                <option selected>Threads intact, no damage</option>
+                                <option>Minor thread damage, chase with tap</option>
+                                <option>Severe damage, helicoil required</option>
+                            </select>
+                        </div>
+
+                        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #f59e0b;">
+                            <strong style="color: #92400e;">⚠️ Critical Notes:</strong>
+                            <ul style="margin: 10px 0 0 20px; color: #6b7280;">
+                                <li>DO NOT drop sensor - ceramic element can break</li>
+                                <li>Inspect old sensor threads for anti-seize</li>
+                                <li>Check exhaust port threads for damage</li>
+                                <li>Have helicoil kit ready if threads strip</li>
+                            </ul>
+                        </div>
+                    `
+                },
+                {
+                    id: 7,
+                    title: "Connector Service",
+                    description: "Clean connector pins and apply dielectric grease per TSB",
+                    schematic: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='200' y='40' text-anchor='middle' font-family='Arial' font-size='16' fill='%23374151'%3EConnector Pin Layout%3C/text%3E%3Crect x='100' y='80' width='200' height='120' fill='%23fff' stroke='%23374151' stroke-width='2'/%3E%3Ccircle cx='140' cy='120' r='15' fill='%23dc2626' stroke='%23991b1b' stroke-width='2'/%3E%3Ctext x='140' y='125' text-anchor='middle' font-size='10' fill='white'%3E1%3C/text%3E%3Ctext x='140' y='155' text-anchor='middle' font-size='9'%3EHtr+%3C/text%3E%3Ccircle cx='200' cy='120' r='15' fill='%23000' stroke='%23374151' stroke-width='2'/%3E%3Ctext x='200' y='125' text-anchor='middle' font-size='10' fill='white'%3E2%3C/text%3E%3Ctext x='200' y='155' text-anchor='middle' font-size='9'%3EHtr-%3C/text%3E%3Ccircle cx='260' cy='120' r='15' fill='%2310b981' stroke='%23059669' stroke-width='2'/%3E%3Ctext x='260' y='125' text-anchor='middle' font-size='10' fill='white'%3E3%3C/text%3E%3Ctext x='260' y='155' text-anchor='middle' font-size='9'%3ESig%3C/text%3E%3Ccircle cx='140' cy='170' r='15' fill='%236b7280' stroke='%23374151' stroke-width='2'/%3E%3Ctext x='140' y='175' text-anchor='middle' font-size='10' fill='white'%3E4%3C/text%3E%3Ctext x='140' y='195' text-anchor='middle' font-size='9'%3EGnd%3C/text%3E%3Ctext x='200' y='240' text-anchor='middle' font-size='11' fill='%23dc2626'%3EClean pins 1 %26 2%3C/text%3E%3Ctext x='200' y='255' text-anchor='middle' font-size='11' fill='%2310b981'%3EApply dielectric grease%3C/text%3E%3C/svg%3E",
+                    video: "Connector Service & Dielectric Grease Application",
+                    tools: ["Wire Brush", "Electrical Contact Cleaner", "Dielectric Grease", "Lint-free Cloth"],
+                    liveData: {
+                        "Corrosion Level": { value: "Moderate", warning: true },
+                        "Pin Condition": { value: "Serviceable", warning: false },
+                        "Grease Applied": { value: "Pending", warning: true }
+                    },
+                    content: `
+                        <div class="alert alert-info">
+                            <div>💡</div>
+                            <div><strong>TSB 20-2468 Requirement:</strong> Connector service is MANDATORY. Prevents future water intrusion and corrosion.</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Pin Cleaning Method</label>
+                            <select>
+                                <option selected>Contact cleaner + wire brush</option>
+                                <option>Sandpaper (NOT recommended)</option>
+                                <option>Compressed air only (insufficient)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Corrosion Removal Status</label>
+                            <select id="corrosionStatus" onchange="checkCorrosion()">
+                                <option value="">Select status...</option>
+                                <option value="complete" selected>All corrosion removed, pins shiny</option>
+                                <option value="partial">Some corrosion remains</option>
+                                <option value="damaged">Pins damaged, connector replacement needed</option>
+                            </select>
+                        </div>
+
+                        <div id="corrosionAlert" class="alert alert-success">
+                            <div>✅</div>
+                            <div><strong>Good:</strong> Pins cleaned successfully. Ready for dielectric grease application.</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Dielectric Grease Application</label>
+                            <select>
+                                <option selected>Applied to all 4 pins per TSB</option>
+                                <option>Applied to heater pins only</option>
+                                <option>Not applied (will cause repeat failure)</option>
+                            </select>
+                        </div>
+
+                        <div style="background: #d1fae5; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <strong style="color: #065f46;">✅ Connector Service Checklist:</strong>
+                            <ul style="margin: 10px 0 0 20px; color: #374151; font-size: 14px;">
+                                <li>✓ Pins 1 & 2 (heater) cleaned of corrosion</li>
+                                <li>✓ Pins 3 & 4 (signal/ground) cleaned</li>
+                                <li>✓ Dielectric grease applied to all pins</li>
+                                <li>✓ Connector housing inspected for cracks</li>
+                                <li>✓ Seal in good condition</li>
+                            </ul>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <div>⚠️</div>
+                            <div><strong>Important:</strong> Use DIELECTRIC grease (clear/white), NOT conductive grease. Apply thin coat to pins, not sockets.</div>
+                        </div>
+                    `
+                },
+                {
+                    id: 8,
+                    title: "New Sensor Installation",
+                    description: "Install new O2 sensor with proper torque and anti-seize",
+                    schematic: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='200' y='40' text-anchor='middle' font-family='Arial' font-size='16' fill='%23374151'%3EInstallation Torque Spec%3C/text%3E%3Ccircle cx='200' cy='150' r='80' fill='%23fff' stroke='%238b5cf6' stroke-width='4'/%3E%3Cline x1='200' y1='150' x2='260' y2='100' stroke='%23dc2626' stroke-width='3'/%3E%3Ctext x='270' y='95' font-size='14' fill='%23dc2626'%3E30-37%3C/text%3E%3Ctext x='270' y='110' font-size='14' fill='%23dc2626'%3Eft-lbs%3C/text%3E%3Ctext x='200' y='155' text-anchor='middle' font-size='16' font-weight='bold'%3ETORQUE%3C/text%3E%3Ctext x='200' y='220' text-anchor='middle' font-size='12' fill='%236b7280'%3EUse torque wrench%3C/text%3E%3Ctext x='200' y='240' text-anchor='middle' font-size='12' fill='%23dc2626'%3EDO NOT overtighten%3C/text%3E%3Ctext x='200' y='270' text-anchor='middle' font-size='11' fill='%23374151'%3EPart Number: 9L3Z-9F472-A%3C/text%3E%3C/svg%3E",
+                    video: "Proper O2 Sensor Installation",
+                    tools: ["Torque Wrench (ft-lbs)", "O2 Sensor Socket", "Anti-seize Compound", "New O2 Sensor"],
+                    liveData: {
+                        "Part Number": { value: "9L3Z-9F472-A", warning: false },
+                        "Torque Applied": { value: "35 ft-lbs", warning: false },
+                        "Anti-seize": { value: "Applied", warning: false }
+                    },
+                    content: `
+                        <div class="alert alert-success">
+                            <div>✅</div>
+                            <div><strong>New Sensor:</strong> Ford updated part 9L3Z-9F472-A installed. Improved moisture resistance per TSB.</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Anti-seize Application</label>
+                            <select>
+                                <option selected>Applied to threads (first 2 threads only)</option>
+                                <option>Applied to all threads (will contaminate sensor)</option>
+                                <option>Not applied (sensor may seize)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Installation Torque</label>
+                            <input type="number" value="35" min="30" max="37" step="1">
+                            <small style="color: #059669;">✅ Within spec: 30-37 ft-lbs (Per Ford Service Manual)</small>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <div>⚠️</div>
+                            <div><strong>Critical:</strong> DO NOT apply anti-seize to sensor tip or connector pins. Only on first 2-3 threads.</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Wiring Routing</label>
+                            <select>
+                                <option selected>Routed away from hot exhaust, secured with clips</option>
+                                <option>Touching exhaust (will melt)</option>
+                                <option>Hanging loose (will chafe)</option>
+                            </select>
+                        </div>
+
+                        <div style="background: #ede9fe; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <strong style="color: #5b21b6;">🔧 Installation Checklist:</strong>
+                            <ul style="margin: 10px 0 0 20px; color: #374151; font-size: 14px;">
+                                <li>✓ Correct part number verified (9L3Z-9F472-A)</li>
+                                <li>✓ Anti-seize applied to first 2 threads only</li>
+                                <li>✓ Sensor hand-tightened first</li>
+                                <li>✓ Torqued to 35 ft-lbs (30-37 spec)</li>
+                                <li>✓ Connector cleaned and greased</li>
+                                <li>✓ Connector clicked into place securely</li>
+                                <li>✓ Wiring routed and secured properly</li>
+                                <li>✓ No contact with exhaust manifold</li>
+                            </ul>
+                        </div>
+                    `
+                },
+                {
+                    id: 9,
+                    title: "Clear Codes & Test",
+                    description: "Clear DTCs, perform drive cycle, and verify repair",
+                    schematic: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='200' y='40' text-anchor='middle' font-family='Arial' font-size='16' fill='%23374151'%3EDrive Cycle Requirements%3C/text%3E%3Crect x='50' y='70' width='300' height='180' fill='%23dbeafe' stroke='%233b82f6' stroke-width='2' rx='10'/%3E%3Ctext x='200' y='100' text-anchor='middle' font-size='13' fill='%231e40af' font-weight='bold'%3EFord Catalyst Monitor Drive Cycle%3C/text%3E%3Ctext x='80' y='130' font-size='11' fill='%23374151'%3E1. Start cold (coolant %3C 100°F)%3C/text%3E%3Ctext x='80' y='150' font-size='11' fill='%23374151'%3E2. Idle 3 minutes%3C/text%3E%3Ctext x='80' y='170' font-size='11' fill='%23374151'%3E3. Drive 40-60 mph for 10 min%3C/text%3E%3Ctext x='80' y='190' font-size='11' fill='%23374151'%3E4. Decelerate without brake%3C/text%3E%3Ctext x='80' y='210' font-size='11' fill='%23374151'%3E5. Accelerate to 55 mph%3C/text%3E%3Ctext x='80' y='230' font-size='11' fill='%23374151'%3E6. Check readiness monitors%3C/text%3E%3C/svg%3E",
+                    video: "Ford Drive Cycle Procedure",
+                    tools: ["Scan Tool", "Test Drive Route (10+ miles)"],
+                    liveData: {
+                        "DTCs Present": { value: "0 codes", warning: false },
+                        "MIL Status": { value: "OFF", warning: false },
+                        "O2 Monitor": { value: "Complete", warning: false }
+                    },
+                    content: `
+                        <div class="alert alert-success">
+                            <div>✅</div>
+                            <div><strong>Success:</strong> All DTCs cleared. MIL (Check Engine Light) is OFF. Ready for drive cycle.</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Code Clear Status</label>
+                            <select>
+                                <option selected>DTCs cleared successfully (P0131, P0135 erased)</option>
+                                <option>Codes still present (repair failed)</option>
+                                <option>New codes appeared</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Live Data Verification</label>
+                            <select>
+                                <option selected>O2 sensor reading 0.1-0.9V (switching normally)</option>
+                                <option>Sensor stuck at 0.45V</option>
+                                <option>Sensor not responding</option>
+                            </select>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <div>💡</div>
+                            <div><strong>AVA Tip:</strong> Sensor needs 10-15 minutes to reach operating temp. Normal switching between 0.1-0.9V indicates good operation.</div>
+                        </div>
+
+                        <div style="background: #d1fae5; padding: 20px; border-radius: 8px; margin: 15px 0;">
+                            <h4 style="color: #065f46; margin-bottom: 10px;">✅ Post-Repair Test Results</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px;">
+                                <div>
+                                    <strong>Before Repair:</strong>
+                                    <ul style="margin: 5px 0 0 20px; color: #6b7280;">
+                                        <li>Heater: 0.0A (failed)</li>
+                                        <li>Signal: 0.15V (stuck)</li>
+                                        <li>Resistance: Open</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <strong>After Repair:</strong>
+                                    <ul style="margin: 5px 0 0 20px; color: #059669;">
+                                        <li>Heater: 1.0A (good)</li>
+                                        <li>Signal: Switching</li>
+                                        <li>Resistance: 5.2Ω</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Drive Cycle Status</label>
+                            <select>
+                                <option selected>Catalyst monitor complete - Ready for emissions test</option>
+                                <option>In progress - 25 miles driven</option>
+                                <option>Not started - waiting for cool start</option>
+                            </select>
+                        </div>
+                    `
+                },
+                {
+                    id: 10,
+                    title: "Final Verification & Documentation",
+                    description: "Confirm repair success and document work performed",
+                    schematic: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='200' y='50' text-anchor='middle' font-family='Arial' font-size='18' fill='%2310b981' font-weight='bold'%3E✅ Repair Complete%3C/text%3E%3Crect x='50' y='80' width='300' height='160' fill='%23d1fae5' stroke='%2310b981' stroke-width='3' rx='10'/%3E%3Ctext x='200' y='110' text-anchor='middle' font-size='14' fill='%23065f46'%3ESystem Status: PASS%3C/text%3E%3Ctext x='80' y='140' font-size='12' fill='%23374151'%3E✓ DTCs cleared%3C/text%3E%3Ctext x='80' y='160' font-size='12' fill='%23374151'%3E✓ MIL light OFF%3C/text%3E%3Ctext x='80' y='180' font-size='12' fill='%23374151'%3E✓ Sensor operating normally%3C/text%3E%3Ctext x='80' y='200' font-size='12' fill='%23374151'%3E✓ Drive cycle complete%3C/text%3E%3Ctext x='80' y='220' font-size='12' fill='%23374151'%3E✓ Ready for emissions test%3C/text%3E%3C/svg%3E",
+                    video: "Final Inspection & Quality Check",
+                    tools: ["Scan Tool", "Camera (for documentation)", "Repair Order"],
+                    liveData: {
+                        "System Status": { value: "PASS", warning: false },
+                        "Warranty": { value: "90 days/3000 mi", warning: false },
+                        "Total Time": { value: "1.2 hours", warning: false }
+                    },
+                    content: `
+                        <div class="alert alert-success">
+                            <div>✅</div>
+                            <div><strong>Repair Successful!</strong> All systems operating normally. Vehicle ready for customer delivery.</div>
+                        </div>
+
+                        <div style="background: #d1fae5; padding: 25px; border-radius: 12px; margin: 20px 0;">
+                            <h3 style="color: #065f46; margin-bottom: 15px;">📋 Repair Summary</h3>
+
+                            <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <strong>Problem:</strong> P0131 & P0135 - O2 Sensor Bank 1 Sensor 1 heater circuit failure
+                            </div>
+
+                            <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <strong>Root Cause:</strong> Water intrusion at connector caused heater element corrosion and failure
+                            </div>
+
+                            <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <strong>Repair Performed:</strong>
+                                <ul style="margin: 10px 0 0 20px; color: #374151;">
+                                    <li>Replaced O2 sensor with updated part (9L3Z-9F472-A)</li>
+                                    <li>Cleaned and serviced connector per TSB 20-2468</li>
+                                    <li>Applied dielectric grease to prevent moisture</li>
+                                    <li>Verified proper torque (35 ft-lbs)</li>
+                                    <li>Cleared codes and performed drive cycle</li>
+                                </ul>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div style="background: white; padding: 15px; border-radius: 8px;">
+                                    <strong>Parts:</strong><br>
+                                    • O2 Sensor: $85.00<br>
+                                    • Dielectric grease: $5.00<br>
+                                    • Anti-seize: (shop stock)
+                                </div>
+                                <div style="background: white; padding: 15px; border-radius: 8px;">
+                                    <strong>Labor:</strong><br>
+                                    • Diagnostic: 0.4 hrs ($40)<br>
+                                    • R&R Sensor: 0.8 hrs ($80)<br>
+                                    • <strong>Total: $210.00</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Customer Authorization</label>
+                            <select>
+                                <option selected>Customer approved repair - Completed</option>
+                                <option>Warranty claim approved</option>
+                                <option>Declined repair</option>
+                            </select>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <div>💡</div>
+                            <div><strong>Warranty Information:</strong> Parts & labor covered for 90 days / 3,000 miles. Customer advised to check emissions warranty (8yr/80k) for potential reimbursement.</div>
+                        </div>
+
+                        <div style="background: #ede9fe; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <strong style="color: #5b21b6;">📸 Documentation Captured:</strong>
+                            <ul style="margin: 10px 0 0 20px; color: #374151; font-size: 14px;">
+                                <li>✓ Before: Connector corrosion photos</li>
+                                <li>✓ During: Old sensor removed (failed heater visible)</li>
+                                <li>✓ After: New sensor installed with torque verification</li>
+                                <li>✓ Scan tool screenshots (before/after DTCs)</li>
+                                <li>✓ Live data showing normal operation</li>
+                            </ul>
+                        </div>
+                    `
+                }
+            ],
+            currentStep: 0
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderWorkflow();
+            renderStepContent();
+            updateProgress();
+        });
+
+        // Render workflow steps
+        function renderWorkflow() {
+            const container = document.getElementById('workflowSteps');
+            container.innerHTML = workflow.steps.map((step, index) => {
+                let status = 'pending';
+                if (index < workflow.currentStep) status = 'completed';
+                if (index === workflow.currentStep) status = 'active';
+
+                return `
+                    <div class="step ${status}" onclick="goToStep(${index})">
+                        <span class="step-number">${step.id}</span>
+                        ${step.title}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render step content
+        function renderStepContent() {
+            const step = workflow.steps[workflow.currentStep];
+            const container = document.getElementById('mainContent');
+
+            container.innerHTML = `
+                <div class="fade-in">
+                    <h2 class="step-title">Step ${step.id}: ${step.title}</h2>
+                    <p class="step-description">${step.description}</p>
+                    ${step.content}
+                </div>
+            `;
+
+            // Update resources
+            updateSchematic(step.schematic);
+            updateVideo(step.video);
+            updateTools(step.tools);
+            updateLiveData(step.liveData);
+        }
+
+        // Update schematic
+        function updateSchematic(url) {
+            document.getElementById('schematicImage').src = url;
+        }
+
+        // Update video
+        function updateVideo(title) {
+            document.getElementById('videoPlayer').innerHTML = `▶️ ${title}`;
+        }
+
+        // Update tools
+        function updateTools(tools) {
+            const container = document.getElementById('toolsList');
+            container.innerHTML = tools.map(tool => `<li>🔧 ${tool}</li>`).join('');
+        }
+
+        // Update live data
+        function updateLiveData(data) {
+            const container = document.getElementById('liveData');
+            container.innerHTML = Object.entries(data).map(([key, info]) => {
+                const valueClass = info.warning ? 'warning' : '';
+                return `
+                    <div class="data-reading">
+                        <span>${key}</span>
+                        <span class="data-value ${valueClass}">${info.value}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Navigation
+        function nextStep() {
+            if (workflow.currentStep < workflow.steps.length - 1) {
+                workflow.currentStep++;
+                renderWorkflow();
+                renderStepContent();
+                updateProgress();
+            }
+        }
+
+        function previousStep() {
+            if (workflow.currentStep > 0) {
+                workflow.currentStep--;
+                renderWorkflow();
+                renderStepContent();
+                updateProgress();
+            }
+        }
+
+        function goToStep(index) {
+            workflow.currentStep = index;
+            renderWorkflow();
+            renderStepContent();
+            updateProgress();
+        }
+
+        // Update progress
+        function updateProgress() {
+            const percent = Math.round(((workflow.currentStep + 1) / workflow.steps.length) * 100);
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressPercent').textContent = percent + '%';
+            document.getElementById('progressText').textContent = `Step ${workflow.currentStep + 1} of ${workflow.steps.length}`;
+
+            // Update buttons
+            document.getElementById('prevBtn').disabled = workflow.currentStep === 0;
+            document.getElementById('nextBtn').disabled = workflow.currentStep === workflow.steps.length - 1;
+            document.getElementById('nextBtn').textContent =
+                workflow.currentStep === workflow.steps.length - 1 ? 'Complete ✓' : 'Next →';
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tab + '-content').classList.add('active');
+        }
+
+        // Zoom image
+        function zoomImage(img) {
+            document.getElementById('modalImage').src = img.src;
+            document.getElementById('imageModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('imageModal').classList.remove('active');
+        }
+
+        // Play video (placeholder)
+        function playVideo() {
+            alert('Video player would open here.\nIn production: Embedded YouTube or training video from Ford service manual.');
+        }
+
+        // Dynamic updates
+        function updateContent() {
+            console.log('Content updated based on selection');
+        }
+
+        function checkCondition() {
+            const value = document.getElementById('sensorCondition').value;
+            const alert = document.getElementById('conditionAlert');
+
+            if (value === 'corroded') {
+                alert.className = 'alert alert-warning';
+                alert.innerHTML = '<div>⚠️</div><div><strong>Finding:</strong> Green corrosion visible at connector pins 3 & 4 (heater circuit). Water intrusion confirmed per TSB 20-2468.</div>';
+            } else if (value === 'good') {
+                alert.className = 'alert alert-success';
+                alert.innerHTML = '<div>✅</div><div><strong>Good:</strong> Sensor appears clean, but heater failure still confirmed via resistance test.</div>';
+            }
+        }
+
+        function checkRemoval() {
+            const value = document.getElementById('removalStatus').value;
+            const alert = document.getElementById('removalAlert');
+
+            if (value === 'stuck') {
+                alert.className = 'alert alert-info';
+                alert.innerHTML = '<div>💡</div><div><strong>AVA Tip:</strong> If stuck, DO NOT force. Apply heat with torch (careful of wiring). Rock sensor back and forth while turning.</div>';
+            } else if (value === 'easy') {
+                alert.className = 'alert alert-success';
+                alert.innerHTML = '<div>✅</div><div><strong>Success:</strong> Sensor removed without issue. Threads look good.</div>';
+            }
+        }
+
+        function checkCorrosion() {
+            const value = document.getElementById('corrosionStatus').value;
+            const alert = document.getElementById('corrosionAlert');
+
+            if (value === 'complete') {
+                alert.className = 'alert alert-success';
+                alert.innerHTML = '<div>✅</div><div><strong>Good:</strong> Pins cleaned successfully. Ready for dielectric grease application.</div>';
+            }
+        }
+    </script>
+</body>
+</html>
