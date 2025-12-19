@@ -30,6 +30,9 @@ import javax.inject.Singleton
  *
  * Wraps TTSManager and TTSPreferences for clean ViewModel integration.
  *
+ * Issue 5.1: Implements ITTSCoordinator for better testability and
+ * potential alternative implementations.
+ *
  * @param ttsManager Text-to-speech engine manager
  * @param ttsPreferences TTS user preferences
  *
@@ -40,7 +43,7 @@ import javax.inject.Singleton
 class TTSCoordinator @Inject constructor(
     private val ttsManager: TTSManager,
     private val ttsPreferences: TTSPreferences
-) {
+) : ITTSCoordinator {
     companion object {
         private const val TAG = "TTSCoordinator"
     }
@@ -50,17 +53,17 @@ class TTSCoordinator @Inject constructor(
     /**
      * TTS initialization state (delegated from TTSManager)
      */
-    val isTTSReady: StateFlow<Boolean> = ttsManager.isInitialized
+    override val isTTSReady: StateFlow<Boolean> = ttsManager.isInitialized
 
     /**
      * Currently speaking state (delegated from TTSManager)
      */
-    val isTTSSpeaking: StateFlow<Boolean> = ttsManager.isSpeaking
+    override val isTTSSpeaking: StateFlow<Boolean> = ttsManager.isSpeaking
 
     /**
      * TTS settings (delegated from TTSPreferences)
      */
-    val ttsSettings: StateFlow<TTSSettings> = ttsPreferences.settings
+    override val ttsSettings: StateFlow<TTSSettings> = ttsPreferences.settings
 
     // ==================== Local State ====================
 
@@ -68,7 +71,7 @@ class TTSCoordinator @Inject constructor(
      * ID of message currently being spoken (for UI highlight)
      */
     private val _speakingMessageId = MutableStateFlow<String?>(null)
-    val speakingMessageId: StateFlow<String?> = _speakingMessageId.asStateFlow()
+    override val speakingMessageId: StateFlow<String?> = _speakingMessageId.asStateFlow()
 
     // ==================== Operations ====================
 
@@ -80,10 +83,10 @@ class TTSCoordinator @Inject constructor(
      * @param onComplete Optional callback when speech completes
      * @return Result indicating success or failure
      */
-    fun speak(
+    override fun speak(
         text: String,
-        messageId: String? = null,
-        onComplete: (() -> Unit)? = null
+        messageId: String?,
+        onComplete: (() -> Unit)?
     ): Result<Unit> {
         return try {
             Log.d(TAG, "Speaking message: $messageId")
@@ -109,7 +112,7 @@ class TTSCoordinator @Inject constructor(
     /**
      * Stop current speech playback.
      */
-    fun stop() {
+    override fun stop() {
         Log.d(TAG, "Stopping TTS")
         ttsManager.stop()
         _speakingMessageId.value = null
@@ -118,21 +121,21 @@ class TTSCoordinator @Inject constructor(
     /**
      * Check if auto-speak is enabled for assistant messages.
      */
-    fun isAutoSpeakEnabled(): Boolean {
+    override fun isAutoSpeakEnabled(): Boolean {
         return ttsSettings.value.autoSpeak
     }
 
     /**
      * Clear speaking message ID (call when speech completes).
      */
-    fun clearSpeakingMessageId() {
+    override fun clearSpeakingMessageId() {
         _speakingMessageId.value = null
     }
 
     /**
      * Update speaking message ID (for streaming TTS scenarios).
      */
-    fun setSpeakingMessageId(messageId: String?) {
+    override fun setSpeakingMessageId(messageId: String?) {
         _speakingMessageId.value = messageId
     }
 
@@ -141,24 +144,24 @@ class TTSCoordinator @Inject constructor(
     /**
      * Get current speech rate.
      */
-    fun getSpeechRate(): Float = ttsSettings.value.speechRate
+    override fun getSpeechRate(): Float = ttsSettings.value.speechRate
 
     /**
      * Get current pitch.
      */
-    fun getPitch(): Float = ttsSettings.value.pitch
+    override fun getPitch(): Float = ttsSettings.value.pitch
 
     /**
      * Check if TTS is ready to speak.
      */
-    fun isReady(): Boolean = isTTSReady.value
+    override fun isReady(): Boolean = isTTSReady.value
 
     // ==================== Settings Toggles ====================
 
     /**
      * Toggle TTS enabled state.
      */
-    fun toggleEnabled() {
+    override fun toggleEnabled() {
         ttsPreferences.toggleEnabled()
         Log.d(TAG, "TTS enabled toggled")
     }
@@ -166,7 +169,7 @@ class TTSCoordinator @Inject constructor(
     /**
      * Toggle TTS auto-speak state.
      */
-    fun toggleAutoSpeak() {
+    override fun toggleAutoSpeak() {
         ttsPreferences.toggleAutoSpeak()
         Log.d(TAG, "TTS auto-speak toggled")
     }

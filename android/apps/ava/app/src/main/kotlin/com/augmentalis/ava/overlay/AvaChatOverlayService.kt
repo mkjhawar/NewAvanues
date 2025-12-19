@@ -77,7 +77,7 @@ interface ChatViewModelDependenciesEntryPoint {
     fun modelManager(): com.augmentalis.nlu.ModelManager
     fun actionsManager(): com.augmentalis.actions.ActionsManager
     fun responseGenerator(): com.augmentalis.llm.response.ResponseGenerator
-    fun learningManager(): com.augmentalis.nlu.learning.IntentLearningManager
+    // Issue 5.3: IntentLearningManager removed - use nluSelfLearner below
     fun exportConversationUseCase(): com.augmentalis.ava.core.domain.usecase.ExportConversationUseCase
     fun ragRepository(): com.augmentalis.rag.domain.RAGRepository?
     // ADR-013: Self-Learning NLU dependencies
@@ -377,7 +377,7 @@ class AvaChatOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
                 modelManager = entryPoint.modelManager(),
                 actionsManager = entryPoint.actionsManager(),
                 responseGenerator = entryPoint.responseGenerator(),
-                learningManager = entryPoint.learningManager(),
+                // Issue 5.3: IntentLearningManager removed - use nluSelfLearner below
                 exportConversationUseCase = entryPoint.exportConversationUseCase(),
                 ragRepository = entryPoint.ragRepository(),
                 // ADR-013: Self-Learning NLU dependencies

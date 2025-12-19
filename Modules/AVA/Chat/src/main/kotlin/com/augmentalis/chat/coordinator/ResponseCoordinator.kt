@@ -10,7 +10,7 @@ import com.augmentalis.llm.response.ResponseGenerator
 import com.augmentalis.llm.teacher.LLMResponseParser
 import com.augmentalis.nlu.IntentClassification
 import com.augmentalis.nlu.NLUSelfLearner
-import com.augmentalis.nlu.learning.IntentLearningManager
+// Issue 5.3: IntentLearningManager removed - no legacy users, all learning via NLUSelfLearner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,9 +28,16 @@ import javax.inject.Singleton
  * - Self-learning from LLM responses (ADR-013)
  * - Response cleanup and metadata extraction
  *
+ * Issue 5.3: Unified learning through NLUSelfLearner (ADR-013).
+ * All learning routes through NLUSelfLearner which provides:
+ * - Proper embedding computation and storage
+ * - Background WorkManager jobs for heavy operations
+ * - De-duplication and validation
+ *
+ * IntentLearningManager has been removed (no legacy users).
+ *
  * @param responseGenerator LLM-based response generator with template fallback
- * @param learningManager Legacy learning system for fallback
- * @param nluSelfLearner New self-learning system (ADR-013)
+ * @param nluSelfLearner Unified learning system (ADR-013)
  * @param chatPreferences User preferences for thresholds
  *
  * @author Manoj Jhawar
@@ -39,7 +46,6 @@ import javax.inject.Singleton
 @Singleton
 class ResponseCoordinator @Inject constructor(
     private val responseGenerator: ResponseGenerator,
-    private val learningManager: IntentLearningManager,
     private val nluSelfLearner: NLUSelfLearner,
     private val chatPreferences: ChatPreferences
 ) : IResponseCoordinator {
@@ -164,6 +170,9 @@ class ResponseCoordinator @Inject constructor(
 
     /**
      * Handle low confidence response - trigger LLM fallback and learning.
+     *
+     * Issue 5.3: Unified learning through NLUSelfLearner (ADR-013).
+     * Uses LLMResponseParser to extract teaching metadata from LLM responses.
      */
     private suspend fun handleLowConfidenceResponse(
         rawResponseContent: String,
@@ -182,39 +191,31 @@ class ResponseCoordinator @Inject constructor(
         _llmFallbackInvoked.value = true
         setResponder("LLM")
 
-        // Attempt self-learning
-        Log.d(TAG, "Low confidence, attempting to learn from LLM response")
+        // Issue 5.3: Unified learning via NLUSelfLearner (ADR-013)
         val llmTeacherResult = LLMResponseParser.parse(rawResponseContent)
-        val learned = if (llmTeacherResult != null && LLMResponseParser.hasTeachingMetadata(rawResponseContent)) {
-            Log.i(TAG, "ADR-013: Using new LLM Teacher format")
+        val hasTeachingData = llmTeacherResult != null && LLMResponseParser.hasTeachingMetadata(rawResponseContent)
+
+        if (hasTeachingData) {
             scope.launch {
-                val selfLearned = nluSelfLearner.learnFromLLM(
+                val learned = nluSelfLearner.learnFromLLM(
                     utterance = userMessage,
-                    intent = llmTeacherResult.intent,
+                    intent = llmTeacherResult!!.intent,
                     confidence = llmTeacherResult.confidence,
                     variations = llmTeacherResult.variations
                 )
-                if (selfLearned) {
+                if (learned) {
                     Log.i(TAG, "ADR-013: Successfully self-learned intent '${llmTeacherResult.intent}'")
                 }
             }
-            true
         } else {
-            learningManager.learnFromResponse(
-                userMessage = userMessage,
-                llmResponse = rawResponseContent
-            )
+            Log.d(TAG, "No teaching metadata found in response")
         }
 
-        if (learned) {
-            Log.i(TAG, "Successfully learned intent from LLM response")
-        }
-
-        // Clean response
-        val cleanedContent = if (llmTeacherResult != null && LLMResponseParser.hasTeachingMetadata(rawResponseContent)) {
+        // Clean response - remove teaching metadata for display
+        val cleanedContent = if (hasTeachingData) {
             LLMResponseParser.extractResponseOnly(rawResponseContent)
         } else {
-            learningManager.cleanResponse(rawResponseContent)
+            rawResponseContent
         }
 
         return IResponseCoordinator.ResponseResult(

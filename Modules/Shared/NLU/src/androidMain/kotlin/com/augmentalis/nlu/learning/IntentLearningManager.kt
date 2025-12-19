@@ -67,10 +67,21 @@ class IntentLearningManager(
      *
      * Extracts intent hint from LLM response, validates it, and stores in database.
      *
+     * **DEPRECATED (Issue 5.3):** Use NLUSelfLearner.learnFromLLM() instead.
+     * This method is retained for backwards compatibility but learning now
+     * routes through NLUSelfLearner for proper embedding computation.
+     *
      * @param userMessage Original user message
      * @param llmResponse LLM's full response (may contain [INTENT: xxx] markers)
      * @return True if learning was successful, false otherwise
      */
+    @Deprecated(
+        message = "Issue 5.3: Use NLUSelfLearner.learnFromLLM() for unified learning",
+        replaceWith = ReplaceWith(
+            "nluSelfLearner.learnFromLLM(userMessage, extractIntentHint(llmResponse)?.intentName ?: \"\", extractIntentHint(llmResponse)?.confidence?.div(100f) ?: 0f)",
+            "com.augmentalis.nlu.NLUSelfLearner"
+        )
+    )
     suspend fun learnFromResponse(
         userMessage: String,
         llmResponse: String

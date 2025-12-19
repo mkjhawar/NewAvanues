@@ -29,7 +29,7 @@ import com.augmentalis.actions.ActionResult
 import com.augmentalis.llm.response.ResponseGenerator
 import com.augmentalis.llm.response.ResponseChunk
 import com.augmentalis.llm.response.ResponseContext
-import com.augmentalis.nlu.learning.IntentLearningManager
+// Issue 5.3: IntentLearningManager removed - all learning via NLUSelfLearner
 import com.augmentalis.nlu.NLUSelfLearner
 import com.augmentalis.llm.inference.InferenceManager
 import com.augmentalis.llm.teacher.LLMResponseParser
@@ -109,7 +109,7 @@ class ChatViewModel @Inject constructor(
     private val modelManager: ModelManager,
     private val actionsManager: ActionsManager,
     private val responseGenerator: ResponseGenerator,
-    private val learningManager: IntentLearningManager,
+    // Issue 5.3: IntentLearningManager removed - use nluSelfLearner below
     private val exportConversationUseCase: ExportConversationUseCase,
     private val ragRepository: RAGRepository?,
     // ADR-013: Self-Learning NLU with LLM-as-Teacher
@@ -1168,6 +1168,8 @@ class ChatViewModel @Inject constructor(
     /**
      * Confirm NLU's interpretation and learn from it (REQ-004).
      * Called when user clicks YES in confidence learning dialog.
+     *
+     * Issue 5.3: Now uses unified NLUSelfLearner for learning.
      */
     fun confirmInterpretation() {
         viewModelScope.launch {
@@ -1176,17 +1178,18 @@ class ChatViewModel @Inject constructor(
 
                 Log.i(TAG, "User confirmed interpretation: \"${dialogState.userInput}\" → ${dialogState.interpretedIntent}")
 
-                // Save to database
-                val success = learningManager.saveLearnedExample(
-                    userText = dialogState.userInput,
-                    intentId = dialogState.interpretedIntent,
-                    source = "USER_CONFIRMED"
+                // Issue 5.3: Use NLUSelfLearner for unified learning
+                val success = nluSelfLearner.learnFromLLM(
+                    utterance = dialogState.userInput,
+                    intent = dialogState.interpretedIntent,
+                    confidence = 1.0f, // User confirmed = high confidence
+                    variations = emptyList()
                 )
 
                 if (success) {
-                    Log.i(TAG, "Successfully saved confirmed interpretation to database")
+                    Log.i(TAG, "Successfully learned confirmed interpretation via NLUSelfLearner")
                 } else {
-                    Log.w(TAG, "Failed to save confirmed interpretation")
+                    Log.w(TAG, "Failed to learn confirmed interpretation (may already exist)")
                 }
 
                 // Dismiss dialog
@@ -1202,6 +1205,8 @@ class ChatViewModel @Inject constructor(
     /**
      * User selected an alternate intent (REQ-004).
      * Called when user selects alternate from dialog.
+     *
+     * Issue 5.3: Now uses unified NLUSelfLearner for learning.
      */
     fun selectAlternateIntent(alternate: com.augmentalis.chat.components.AlternateIntent) {
         viewModelScope.launch {
@@ -1210,17 +1215,18 @@ class ChatViewModel @Inject constructor(
 
                 Log.i(TAG, "User selected alternate: \"${dialogState.userInput}\" → ${alternate.intentId}")
 
-                // Save corrected mapping to database
-                val success = learningManager.saveLearnedExample(
-                    userText = dialogState.userInput,
-                    intentId = alternate.intentId,
-                    source = "USER_CORRECTED"
+                // Issue 5.3: Use NLUSelfLearner for unified learning
+                val success = nluSelfLearner.learnFromLLM(
+                    utterance = dialogState.userInput,
+                    intent = alternate.intentId,
+                    confidence = 1.0f, // User corrected = high confidence
+                    variations = emptyList()
                 )
 
                 if (success) {
-                    Log.i(TAG, "Successfully saved corrected interpretation to database")
+                    Log.i(TAG, "Successfully learned corrected interpretation via NLUSelfLearner")
                 } else {
-                    Log.w(TAG, "Failed to save corrected interpretation")
+                    Log.w(TAG, "Failed to learn corrected interpretation (may already exist)")
                 }
 
                 // Dismiss dialog

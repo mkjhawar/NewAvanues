@@ -96,6 +96,7 @@ class DocumentIngestionHandler(
                 val now = Clock.System.now()
 
                 // Insert document using SQLDelight
+                // Issue 5.2: Include status field in insert
                 documentQueries.insert(
                     id = documentId,
                     title = request.title ?: file.nameWithoutExtension,
@@ -109,7 +110,9 @@ class DocumentIngestionHandler(
                         kotlinx.serialization.serializer(),
                         request.metadata
                     ),
-                    content_checksum = null
+                    content_checksum = null,
+                    status = DocumentStatus.PENDING.name,
+                    error_message = null
                 )
 
                 Log.d(TAG, "Document added: $documentId (${file.name})")
@@ -145,6 +148,9 @@ class DocumentIngestionHandler(
      * Issue 1.4 Fix: Added transaction handling to ensure data integrity.
      * If any step fails, the entire operation is rolled back.
      *
+     * Issue 5.2 Fix: Proper status tracking - marks document as PROCESSING,
+     * then INDEXED on success or FAILED on error with error message.
+     *
      * @param documentId Document ID
      * @param docType Document type
      * @param filePath File path
@@ -156,6 +162,32 @@ class DocumentIngestionHandler(
     ) = withContext(Dispatchers.IO) {
         Log.d(TAG, "Processing document: $documentId")
 
+        // Issue 5.2: Mark as PROCESSING before starting
+        documentQueries.markProcessing(documentId)
+
+        try {
+            processDocumentInternal(documentId, docType, filePath)
+            // Issue 5.2: Mark as INDEXED on success
+            documentQueries.markIndexed(Clock.System.now().toString(), documentId)
+            Log.i(TAG, "Document processed and indexed: $documentId")
+        } catch (e: Exception) {
+            // Issue 5.2: Mark as FAILED with error message
+            val errorMessage = e.message ?: "Unknown error during processing"
+            documentQueries.markFailed(errorMessage, documentId)
+            Log.e(TAG, "Document processing failed: $documentId - $errorMessage", e)
+            throw e
+        }
+    }
+
+    /**
+     * Internal document processing logic.
+     * Separated to enable proper try-catch status handling in processDocument.
+     */
+    private suspend fun processDocumentInternal(
+        documentId: String,
+        docType: DocumentType,
+        filePath: String
+    ) {
         // Get the document entity
         val docEntity = documentQueries.selectById(documentId).executeAsOneOrNull()
             ?: throw Exception("Document not found: $documentId")
@@ -199,7 +231,7 @@ class DocumentIngestionHandler(
         // Generate embeddings using batch processing
         val embeddingResult = embeddingProvider.embedBatch(texts)
         val embeddings = if (embeddingResult.isFailure) {
-            documentQueries.deleteById(documentId)
+            // Issue 5.2: Don't delete document on failure, let processDocument mark as FAILED
             throw embeddingResult.exceptionOrNull() ?: Exception("Failed to generate embeddings")
         } else {
             embeddingResult.getOrThrow()
@@ -212,7 +244,6 @@ class DocumentIngestionHandler(
         database.transaction {
             insertChunksInTransaction(documentId, domainChunks, embeddings, now.toString())
         }
-        Log.i(TAG, "Document processed successfully: $documentId")
     }
 
     /**
@@ -244,6 +275,7 @@ class DocumentIngestionHandler(
             // Insert document and chunks within a transaction for data integrity (Issue 1.4)
             database.transaction {
                 // Insert document
+                // Issue 5.2: Include status field (INDEXED since chunks are being added)
                 documentQueries.insert(
                     id = document.id,
                     title = document.title,
@@ -257,7 +289,9 @@ class DocumentIngestionHandler(
                         kotlinx.serialization.serializer(),
                         document.metadata
                     ),
-                    content_checksum = null
+                    content_checksum = null,
+                    status = DocumentStatus.INDEXED.name,
+                    error_message = null
                 )
 
                 // Insert chunks (within same transaction)
@@ -368,6 +402,14 @@ class DocumentIngestionHandler(
     }
 
     private fun toDomainDocument(entity: Rag_document, chunkCount: Int): Document {
+        // Issue 5.2: Read status from database instead of inferring from chunk count
+        val status = try {
+            DocumentStatus.valueOf(entity.status)
+        } catch (e: Exception) {
+            // Fallback for legacy data without status column
+            if (chunkCount > 0) DocumentStatus.INDEXED else DocumentStatus.PENDING
+        }
+
         return Document(
             id = entity.id,
             title = entity.title,
@@ -377,7 +419,7 @@ class DocumentIngestionHandler(
             createdAt = Instant.parse(entity.added_timestamp),
             modifiedAt = entity.last_accessed_timestamp?.let { Instant.parse(it) }
                 ?: Instant.parse(entity.added_timestamp),
-            status = if (chunkCount > 0) DocumentStatus.INDEXED else DocumentStatus.PENDING,
+            status = status,
             metadata = try {
                 kotlinx.serialization.json.Json.decodeFromString(
                     entity.metadata_json ?: "{}"

@@ -218,10 +218,13 @@ class SQLiteRAGRepository(
     override suspend fun getStatistics(): Result<RAGStatistics> =
         withContext(Dispatchers.IO) {
             try {
-                val allDocs = documentQueries.selectAll().executeAsList()
-                val totalDocs = allDocs.size
-                val indexed = allDocs.count { it.last_accessed_timestamp != null }
-                val pending = totalDocs - indexed
+                val totalDocs = documentQueries.count().executeAsOne().toInt()
+
+                // Issue 5.2: Count documents by actual status from database
+                val indexed = documentQueries.countByStatus(DocumentStatus.INDEXED.name).executeAsOne().toInt()
+                val pending = documentQueries.countByStatus(DocumentStatus.PENDING.name).executeAsOne().toInt() +
+                    documentQueries.countByStatus(DocumentStatus.PROCESSING.name).executeAsOne().toInt()
+                val failed = documentQueries.countByStatus(DocumentStatus.FAILED.name).executeAsOne().toInt()
 
                 // Calculate actual storage usage
                 val documentSizeBytes = (documentQueries.sumSizeBytes().executeAsOneOrNull() as? Long) ?: 0L
@@ -229,15 +232,18 @@ class SQLiteRAGRepository(
                 val contentBytes = (chunkQueries.sumContentBytes().executeAsOneOrNull() as? Long) ?: 0L
                 val totalStorageBytes = documentSizeBytes + embeddingBytes + contentBytes
 
+                // Get last indexed timestamp from the most recently added indexed document
+                val allDocs = documentQueries.selectByStatus(DocumentStatus.INDEXED.name).executeAsList()
+
                 Result.success(
                     RAGStatistics(
                         totalDocuments = totalDocs,
                         indexedDocuments = indexed,
                         pendingDocuments = pending,
-                        failedDocuments = 0,
+                        failedDocuments = failed,
                         totalChunks = chunkQueries.count().executeAsOne().toInt(),
                         storageUsedBytes = totalStorageBytes,
-                        lastIndexedAt = allDocs.maxByOrNull { it.added_timestamp }?.added_timestamp
+                        lastIndexedAt = allDocs.firstOrNull()?.added_timestamp
                     )
                 )
             } catch (e: Exception) {
@@ -456,6 +462,14 @@ class SQLiteRAGRepository(
             emptyMap()
         }
 
+        // Issue 5.2: Read status from database instead of inferring
+        val status = try {
+            DocumentStatus.valueOf(entity.status)
+        } catch (e: Exception) {
+            // Fallback for legacy data without status column
+            if (entity.last_accessed_timestamp != null) DocumentStatus.INDEXED else DocumentStatus.PENDING
+        }
+
         val now = Clock.System.now()
 
         return Document(
@@ -469,7 +483,7 @@ class SQLiteRAGRepository(
             indexedAt = entity.last_accessed_timestamp?.let { Instant.parse(it) },
             chunkCount = chunkCount,
             metadata = metadata,
-            status = if (entity.last_accessed_timestamp != null) DocumentStatus.INDEXED else DocumentStatus.PENDING
+            status = status
         )
     }
 
