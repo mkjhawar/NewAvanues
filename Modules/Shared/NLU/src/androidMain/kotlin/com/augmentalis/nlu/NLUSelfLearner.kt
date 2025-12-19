@@ -4,6 +4,7 @@ import androidx.work.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -203,8 +204,13 @@ class NLUSelfLearner @Inject constructor(
             .addTag(WORK_TAG_EMBEDDING)
             .build()
 
+        // Issue I-05: Use MD5 hash instead of hashCode to avoid collisions
+        val md5Hash = MessageDigest.getInstance("MD5")
+            .digest(utterance.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+
         workManager.enqueueUniqueWork(
-            "embedding_${utterance.hashCode()}",
+            "embedding_$md5Hash",
             ExistingWorkPolicy.KEEP, // Don't duplicate
             workRequest
         )

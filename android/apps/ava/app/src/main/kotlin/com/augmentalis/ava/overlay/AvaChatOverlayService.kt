@@ -126,7 +126,11 @@ class AvaChatOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
     private var bubbleView: ComposeView? = null
     private var chatOverlayView: ComposeView? = null
 
-    private var isChatVisible = false
+    // Issue I-07 Fix: Changed from simple var to StateFlow for thread safety
+    // The previous `var isChatVisible` could cause race conditions when
+    // accessed from multiple coroutines/threads simultaneously.
+    private val _isChatVisible = MutableStateFlow(false)
+    val isChatVisible = _isChatVisible.asStateFlow()
 
     // StateFlow-based state for proper Compose reactivity
     private val _opacity = MutableStateFlow(0.92f) // 92% default for better see-through
@@ -271,9 +275,10 @@ class AvaChatOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
 
     /**
      * Toggle chat overlay visibility
+     * Issue I-07: Uses StateFlow.value for thread-safe access
      */
     private fun toggleChatOverlay() {
-        if (isChatVisible) {
+        if (_isChatVisible.value) {
             hideChatOverlay()
         } else {
             showChatOverlay()
@@ -332,17 +337,18 @@ class AvaChatOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
         }
 
         windowManager.addView(chatOverlayView, params)
-        isChatVisible = true
+        _isChatVisible.value = true // Issue I-07: Thread-safe StateFlow update
     }
 
     /**
      * Hide chat overlay
+     * Issue I-07: Uses StateFlow.value for thread-safe state update
      */
     private fun hideChatOverlay() {
         chatOverlayView?.let {
             windowManager.removeView(it)
             chatOverlayView = null
-            isChatVisible = false
+            _isChatVisible.value = false // Issue I-07: Thread-safe StateFlow update
         }
     }
 

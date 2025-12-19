@@ -46,6 +46,9 @@ class NLUCoordinator @Inject constructor(
 ) : INLUCoordinator {
     companion object {
         private const val TAG = "NLUCoordinator"
+
+        /** Issue I-06: Timeout for NLU model initialization (30 seconds) */
+        private const val INIT_TIMEOUT_MS = 30_000L
     }
 
     // ==================== State ====================
@@ -91,6 +94,10 @@ class NLUCoordinator @Inject constructor(
     /**
      * Initialize NLU classifier and load ONNX model.
      *
+     * Issue I-06 Fix: Added timeout to prevent indefinite blocking during
+     * model loading. If initialization takes longer than INIT_TIMEOUT_MS,
+     * gracefully fails with timeout error.
+     *
      * @return Result indicating success or failure with error message
      */
     override suspend fun initialize(): Result<Unit> {
@@ -106,7 +113,21 @@ class NLUCoordinator @Inject constructor(
             }
 
             val modelPath = modelManager.getModelPath()
-            when (val result = intentClassifier.initialize(modelPath)) {
+
+            // Issue I-06: Wrap initialization in timeout to prevent indefinite blocking
+            val initResult = withTimeoutOrNull(INIT_TIMEOUT_MS) {
+                intentClassifier.initialize(modelPath)
+            }
+
+            if (initResult == null) {
+                val error = "NLU initialization timed out after ${INIT_TIMEOUT_MS}ms"
+                _errorMessage.value = error
+                _isNLULoaded.value = false
+                Log.e(TAG, error)
+                return Result.Error(IllegalStateException(error), error)
+            }
+
+            when (initResult) {
                 is Result.Success -> {
                     val initTime = System.currentTimeMillis() - startTime
                     Log.d(TAG, "NLU classifier initialized successfully in ${initTime}ms")
@@ -119,14 +140,14 @@ class NLUCoordinator @Inject constructor(
                     // Initialize Fast Path (Optimization)
                     // Uses centralized keyword config from BuiltInIntents
                     nluDispatcher.initialize(BuiltInIntents.FAST_KEYWORDS)
-                    
+
                     Result.Success(Unit)
                 }
                 is Result.Error -> {
-                    _errorMessage.value = result.message
+                    _errorMessage.value = initResult.message
                     _isNLULoaded.value = false
-                    Log.e(TAG, "Failed to initialize NLU: ${result.message}", result.exception)
-                    Result.Error(result.exception, result.message)
+                    Log.e(TAG, "Failed to initialize NLU: ${initResult.message}", initResult.exception)
+                    Result.Error(initResult.exception, initResult.message)
                 }
             }
         } catch (e: Exception) {

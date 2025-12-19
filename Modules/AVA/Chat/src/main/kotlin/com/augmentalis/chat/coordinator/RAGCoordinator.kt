@@ -10,6 +10,7 @@ import com.augmentalis.rag.domain.SearchQuery
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,6 +38,9 @@ class RAGCoordinator @Inject constructor(
 ) : IRAGCoordinator {
     companion object {
         private const val TAG = "RAGCoordinator"
+
+        /** Issue I-10: Timeout for RAG search operations (10 seconds) */
+        private const val RAG_SEARCH_TIMEOUT_MS = 10_000L
     }
 
     // ==================== State ====================
@@ -58,6 +62,9 @@ class RAGCoordinator @Inject constructor(
 
     /**
      * Retrieve RAG context for a user query.
+     *
+     * Issue I-10 Fix: Added timeout to prevent RAG search from blocking
+     * indefinitely on slow embedding computations or database operations.
      *
      * @param query User query text
      * @return RAGResult with context, citations, and timing
@@ -93,7 +100,16 @@ class RAGCoordinator @Inject constructor(
             filters = SearchFilters(documentIds = selectedDocumentIds.value)
         )
 
-        val searchResult = ragRepository.search(searchQuery)
+        // Issue I-10: Wrap search in timeout to prevent indefinite blocking
+        val searchResult = withTimeoutOrNull(RAG_SEARCH_TIMEOUT_MS) {
+            ragRepository.search(searchQuery)
+        }
+
+        if (searchResult == null) {
+            Log.e(TAG, "RAG search timed out after ${RAG_SEARCH_TIMEOUT_MS}ms")
+            _recentSourceCitations.value = emptyList()
+            return IRAGCoordinator.RAGResult(null, emptyList(), System.currentTimeMillis() - startTime)
+        }
 
         return if (searchResult.isSuccess) {
             val searchResponse = searchResult.getOrNull()

@@ -19,18 +19,32 @@ private val json = Json {
 }
 
 /**
+ * Issue I-09: Truncate input for safe logging (security: avoid logging sensitive data in full)
+ */
+private fun truncateForLog(input: String, maxLen: Int = 100): String {
+    return if (input.length > maxLen) {
+        "${input.take(maxLen)}... [truncated, total ${input.length} chars]"
+    } else {
+        input
+    }
+}
+
+/**
  * Convert SQLDelight Decision to Domain Decision.
  *
  * Issue 1.3 Fix: Added try-catch for JSON deserialization to prevent crashes
  * from malformed JSON in input_data or output_data fields.
+ *
+ * Issue I-09 Fix: Enhanced logging to include truncated failed input for debugging.
  */
 fun DbDecision.toDomain(): Decision {
     // Safely parse inputData with fallback to empty map
     val parsedInputData: Map<String, String> = try {
         json.decodeFromString(input_data)
     } catch (e: Exception) {
-        // Log error in KMP-compatible way (platform-specific logging should be injected)
+        // Issue I-09: Log truncated failed input for debugging
         println("$TAG: Failed to parse input_data for decision $id: ${e.message}")
+        println("$TAG: Failed input (truncated): ${truncateForLog(input_data)}")
         emptyMap()
     }
 
@@ -38,7 +52,9 @@ fun DbDecision.toDomain(): Decision {
     val parsedOutputData: Map<String, String> = try {
         json.decodeFromString(output_data)
     } catch (e: Exception) {
+        // Issue I-09: Log truncated failed input for debugging
         println("$TAG: Failed to parse output_data for decision $id: ${e.message}")
+        println("$TAG: Failed input (truncated): ${truncateForLog(output_data)}")
         emptyMap()
     }
 

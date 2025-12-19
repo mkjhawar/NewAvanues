@@ -23,6 +23,17 @@ private val json = Json {
 }
 
 /**
+ * Issue I-09: Truncate input for safe logging (security: avoid logging sensitive data in full)
+ */
+private fun truncateForLog(input: String, maxLen: Int = 100): String {
+    return if (input.length > maxLen) {
+        "${input.take(maxLen)}... [truncated, total ${input.length} chars]"
+    } else {
+        input
+    }
+}
+
+/**
  * Convert SQLDelight Learning to Domain Learning.
  *
  * Issue 2.4 Fix: Added error handling for FeedbackType and Outcome parsing.
@@ -52,7 +63,9 @@ fun DbLearning.toDomain(): Learning {
             try {
                 json.decodeFromString<Map<String, String>>(it)
             } catch (e: Exception) {
+                // Issue I-09: Log truncated failed input for debugging
                 println("$TAG: Failed to parse user_correction for learning $id: ${e.message}")
+                println("$TAG: Failed input (truncated): ${truncateForLog(it)}")
                 null
             }
         },
@@ -92,7 +105,9 @@ fun SelectWithCorrections.toDomain(): Learning {
         userCorrection = try {
             json.decodeFromString<Map<String, String>>(user_correction)
         } catch (e: Exception) {
+            // Issue I-09: Log truncated failed input for debugging
             println("$TAG: Failed to parse user_correction for learning $id: ${e.message}")
+            println("$TAG: Failed input (truncated): ${truncateForLog(user_correction)}")
             null
         },
         timestamp = timestamp,

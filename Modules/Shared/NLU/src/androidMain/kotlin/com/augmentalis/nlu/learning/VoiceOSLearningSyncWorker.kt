@@ -32,10 +32,18 @@ import java.util.concurrent.TimeUnit
  *
  * @see ADR-014: Unified Learning Architecture
  */
+/**
+ * Issue I-02 Fix: Route all sync operations through UnifiedLearningService
+ * instead of directly calling IntentClassifier. This ensures:
+ * - Consistent event emission for all learned commands
+ * - Proper consumer notification
+ * - Unified statistics tracking
+ */
 @HiltWorker
 class VoiceOSLearningSyncWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted private val params: WorkerParameters,
+    private val unifiedLearningService: UnifiedLearningService,
     private val intentClassifier: IntentClassifier
 ) : CoroutineWorker(context, params) {
 
@@ -229,6 +237,9 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
 
     /**
      * Sync commands by confidence threshold
+     *
+     * Issue I-02 Fix: Route through UnifiedLearningService for proper
+     * event emission and consumer notification.
      */
     private suspend fun syncByConfidence(minConfidence: Float, maxCommands: Int): SyncResult {
         var synced = 0
@@ -249,24 +260,10 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                     continue
                 }
 
-                // Compute embedding
-                val embedding = intentClassifier.computeEmbedding(command.utterance)
-                if (embedding == null) {
-                    Log.w(TAG, "Failed to compute embedding for: ${command.utterance}")
-                    failed++
-                    continue
-                }
+                // Issue I-02: Route through UnifiedLearningService instead of direct IntentClassifier
+                val consumed = unifiedLearningService.consume(command)
 
-                // Save to AVA
-                val saved = intentClassifier.saveTrainedEmbedding(
-                    utterance = command.utterance,
-                    intent = command.intent,
-                    embedding = embedding,
-                    source = command.source.name.lowercase(),
-                    confidence = command.confidence
-                )
-
-                if (saved) {
+                if (consumed) {
                     synced++
                     // Mark as synced in VoiceOS (via ContentProvider or direct DB)
                     markSyncedInVoiceOS(command.id)
@@ -284,6 +281,9 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
 
     /**
      * Sync user-approved commands (priority)
+     *
+     * Issue I-02 Fix: Route through UnifiedLearningService for proper
+     * event emission and consumer notification.
      */
     private suspend fun syncUserApproved(maxCommands: Int): SyncResult {
         var synced = 0
@@ -302,21 +302,12 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                     continue
                 }
 
-                val embedding = intentClassifier.computeEmbedding(command.utterance)
-                if (embedding == null) {
-                    failed++
-                    continue
-                }
+                // Issue I-02: Route through UnifiedLearningService
+                // Mark as VOICEOS_APPROVED source for higher priority
+                val approvedCommand = command.copy(source = LearningSource.VOICEOS_APPROVED)
+                val consumed = unifiedLearningService.consume(approvedCommand)
 
-                val saved = intentClassifier.saveTrainedEmbedding(
-                    utterance = command.utterance,
-                    intent = command.intent,
-                    embedding = embedding,
-                    source = LearningSource.VOICEOS_APPROVED.name.lowercase(),
-                    confidence = command.confidence
-                )
-
-                if (saved) {
+                if (consumed) {
                     synced++
                     markSyncedInVoiceOS(command.id)
                 } else {
@@ -333,6 +324,9 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
 
     /**
      * Sync a single command immediately
+     *
+     * Issue I-02 Fix: Route through UnifiedLearningService for proper
+     * event emission and consumer notification.
      */
     private suspend fun syncSingleCommand(): SyncResult {
         val commandId = inputData.getString(KEY_COMMAND_ID)
@@ -347,18 +341,10 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                 return SyncResult(0, 0, 1)
             }
 
-            val embedding = intentClassifier.computeEmbedding(command.utterance)
-                ?: return SyncResult(0, 1, 0)
+            // Issue I-02: Route through UnifiedLearningService
+            val consumed = unifiedLearningService.consume(command)
 
-            val saved = intentClassifier.saveTrainedEmbedding(
-                utterance = command.utterance,
-                intent = command.intent,
-                embedding = embedding,
-                source = command.source.name.lowercase(),
-                confidence = command.confidence
-            )
-
-            if (saved) {
+            if (consumed) {
                 markSyncedInVoiceOS(commandId)
                 SyncResult(1, 0, 0)
             } else {

@@ -2,6 +2,7 @@
 -- Migrated from Room LearningEntity
 -- VOS4 Patterns: Feedback tracking with outcome
 
+-- Issue I-01: Added FK to decision table for referential integrity
 CREATE TABLE learning (
     id TEXT PRIMARY KEY NOT NULL,
     decision_id TEXT NOT NULL,
@@ -9,12 +10,15 @@ CREATE TABLE learning (
     user_correction TEXT,
     timestamp INTEGER NOT NULL,
     outcome TEXT NOT NULL,
-    notes TEXT
+    notes TEXT,
+    FOREIGN KEY (decision_id) REFERENCES decision(id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_learning_decision_id ON learning(decision_id);
 CREATE INDEX idx_learning_feedback_type ON learning(feedback_type);
 CREATE INDEX idx_learning_timestamp ON learning(timestamp);
+-- Issue I-08: Composite index for timeline queries
+CREATE INDEX idx_learning_decision_timestamp ON learning(decision_id, timestamp DESC);
 
 -- Insert or replace (VOS4 INSERT OR REPLACE pattern)
 insert:
