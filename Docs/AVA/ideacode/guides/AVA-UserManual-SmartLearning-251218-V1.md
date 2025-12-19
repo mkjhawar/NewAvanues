@@ -242,4 +242,19 @@ The more you use voice control, the smarter both apps become - automatically!
 
 ---
 
+## Technical Reliability (v1.1 - December 2025)
+
+Recent updates improve sync reliability:
+
+| Improvement | User Benefit |
+|-------------|--------------|
+| **Sync timeout protection** | App won't freeze if sync takes too long |
+| **Better error recovery** | Continues working even if one command fails |
+| **Duplicate prevention** | Same command won't be learned twice |
+| **Improved logging** | Easier for support to diagnose issues |
+
+These improvements happen automatically - no action needed from you.
+
+---
+
 **For technical details, see: Developer Manual Chapter 75 - Unified Learning Architecture**
