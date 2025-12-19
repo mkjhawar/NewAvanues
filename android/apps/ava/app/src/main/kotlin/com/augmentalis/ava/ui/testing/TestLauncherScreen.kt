@@ -27,11 +27,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.augmentalis.ava.features.llm.Language
-import com.augmentalis.ava.features.llm.LanguageDetector
-import com.augmentalis.ava.features.llm.ModelSelector
-import com.augmentalis.ava.features.llm.alc.StopTokenDetector
-import com.augmentalis.ava.features.llm.alc.TokenSampler
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import com.augmentalis.llm.Language
+import com.augmentalis.llm.LanguageDetector
+import com.augmentalis.llm.ModelSelector
+import com.augmentalis.llm.alc.StopTokenDetector
+import com.augmentalis.llm.alc.TokenSampler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -260,7 +262,8 @@ fun TestResultRow(test: TestCase) {
 /**
  * Test Launcher ViewModel
  */
-class TestLauncherViewModel : ViewModel(), ITestLauncherViewModel {
+@HiltViewModel
+class TestLauncherViewModel @Inject constructor() : ViewModel(), ITestLauncherViewModel {
 
     private val _testSuites = MutableStateFlow(createTestSuites())
     override val testSuites: StateFlow<List<TestSuite>> = _testSuites.asStateFlow()

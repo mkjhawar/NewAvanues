@@ -20,5 +20,7 @@ enum class DecisionType {
     ACTION_SELECTION,
     RESPONSE_GENERATION,
     CONTEXT_RETRIEVAL,
-    MEMORY_RECALL
+    MEMORY_RECALL,
+    /** Fallback for unknown/corrupted decision types (Issue 1.3) */
+    UNKNOWN
 }

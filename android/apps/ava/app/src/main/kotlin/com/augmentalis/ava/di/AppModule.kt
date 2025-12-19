@@ -12,12 +12,12 @@ import androidx.work.WorkManager
 import com.augmentalis.ava.core.data.prefs.ChatPreferences
 import com.augmentalis.ava.core.domain.resolution.AppResolverService
 import com.augmentalis.ava.core.domain.resolution.PreferencePromptManager
-import com.augmentalis.ava.features.actions.ActionsManager
-import com.augmentalis.ava.features.llm.inference.InferenceManager
-import com.augmentalis.ava.features.nlu.IntentClassifier
-import com.augmentalis.ava.features.nlu.ModelManager
-import com.augmentalis.ava.features.nlu.NLUSelfLearner
-import com.augmentalis.ava.features.nlu.learning.IntentLearningManager
+import com.augmentalis.actions.ActionsManager
+import com.augmentalis.llm.inference.InferenceManager
+import com.augmentalis.nlu.IntentClassifier
+import com.augmentalis.nlu.ModelManager
+import com.augmentalis.nlu.NLUSelfLearner
+// Issue 5.3: IntentLearningManager import removed - learning via NLUSelfLearner
 import com.augmentalis.ava.preferences.UserPreferences
 import dagger.Module
 import dagger.Provides
@@ -125,24 +125,7 @@ object AppModule {
         return ActionsManager(context, appResolverService, preferencePromptManager)
     }
 
-    /**
-     * Provides IntentLearningManager singleton
-     *
-     * IntentLearningManager handles Phase 2 learning functionality:
-     * - Extracts intent hints from LLM responses
-     * - Stores learned intents in database
-     * - Triggers NLU re-embedding for improved classification
-     *
-     * This enables the self-improving AI system where LLM teaches NLU,
-     * reducing CPU/GPU load and improving battery life over time.
-     */
-    @Provides
-    @Singleton
-    fun provideIntentLearningManager(
-        @ApplicationContext context: Context
-    ): IntentLearningManager {
-        return IntentLearningManager(context)
-    }
+    // Issue 5.3: IntentLearningManager removed - all learning via NLUSelfLearner (ADR-013)
 
     // ==================== ADR-013: Self-Learning NLU ====================
 

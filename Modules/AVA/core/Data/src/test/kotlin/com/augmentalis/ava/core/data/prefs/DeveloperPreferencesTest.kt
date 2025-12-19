@@ -1,5 +1,6 @@
 // filename: Universal/AVA/Core/Data/src/test/kotlin/com/augmentalis/ava/core/data/prefs/DeveloperPreferencesTest.kt
 // created: 2025-11-25
+// updated: 2025-12-18 (converted from Mockito to MockK)
 // author: Testing Swarm Agent 1 - AVA AI Features 003 + 004
 // © Augmentalis Inc, Intelligent Devices LLC
 
@@ -10,15 +11,16 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mock
-import org.mockito.Mockito.*
-import org.mockito.junit.MockitoJUnitRunner
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -30,24 +32,15 @@ import kotlin.test.assertTrue
  * - setFlashModeEnabled should persist value
  * - clearAll should reset all preferences to defaults
  *
- * Follows the pattern from ChatPreferencesRAGTest.kt using Mockito + runTest.
- *
- * Note: Using Silent mode because not all mocks are used in all tests.
- * This is acceptable because the shared setup provides common mocks
- * that different tests use selectively.
+ * Uses MockK + Robolectric for Android unit testing.
  */
-@RunWith(MockitoJUnitRunner.Silent::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
 class DeveloperPreferencesTest {
 
-    @Mock
     private lateinit var context: Context
-
-    @Mock
     private lateinit var dataStore: DataStore<Preferences>
-
-    @Mock
     private lateinit var preferences: Preferences
-
     private lateinit var developerPreferences: DeveloperPreferences
 
     companion object {
@@ -59,21 +52,23 @@ class DeveloperPreferencesTest {
     @Before
     fun setup() {
         // Mock Context
-        `when`(context.applicationContext).thenReturn(context)
+        context = mockk(relaxed = true) {
+            every { applicationContext } returns this
+        }
 
         // Mock Preferences to return default values
-        `when`(preferences[FLASH_MODE_ENABLED]).thenReturn(null)
-        `when`(preferences[VERBOSE_LOGGING_ENABLED]).thenReturn(null)
-        `when`(preferences[SHOW_PERFORMANCE_METRICS]).thenReturn(null)
+        preferences = mockk(relaxed = true) {
+            every { get(FLASH_MODE_ENABLED) } returns null
+            every { get(VERBOSE_LOGGING_ENABLED) } returns null
+            every { get(SHOW_PERFORMANCE_METRICS) } returns null
+        }
 
         // Mock DataStore to return preferences flow
-        `when`(dataStore.data).thenReturn(flowOf(preferences))
+        dataStore = mockk(relaxed = true) {
+            every { data } returns flowOf(preferences)
+        }
 
-        // Note: We can't easily mock the DataStore creation via extension property,
-        // so we'll use reflection or create a test-friendly constructor.
-        // For this test, we'll create DeveloperPreferences directly and use a mock Context.
-        // The actual DeveloperPreferences uses DataStore internally which we'll mock.
-
+        // Create DeveloperPreferences directly with mock Context
         developerPreferences = DeveloperPreferences(context)
     }
 
@@ -101,8 +96,8 @@ class DeveloperPreferencesTest {
     fun `setFlashModeEnabled should persist value`() = runTest {
         // Given: DeveloperPreferences initialized
         // Mock preferences to return true after setting
-        `when`(preferences[FLASH_MODE_ENABLED]).thenReturn(true)
-        `when`(dataStore.data).thenReturn(flowOf(preferences))
+        every { preferences[FLASH_MODE_ENABLED] } returns true
+        every { dataStore.data } returns flowOf(preferences)
 
         // When: Set flash mode to true
         developerPreferences.setFlashModeEnabled(true)
@@ -112,8 +107,8 @@ class DeveloperPreferencesTest {
         assertTrue(value, "Flash mode should be enabled after setting to true")
 
         // Mock preferences to return false after second setting
-        `when`(preferences[FLASH_MODE_ENABLED]).thenReturn(false)
-        `when`(dataStore.data).thenReturn(flowOf(preferences))
+        every { preferences[FLASH_MODE_ENABLED] } returns false
+        every { dataStore.data } returns flowOf(preferences)
 
         // When: Set flash mode to false
         developerPreferences.setFlashModeEnabled(false)
@@ -129,8 +124,8 @@ class DeveloperPreferencesTest {
     @Test
     fun `clearAll should reset all preferences to defaults`() = runTest {
         // Given: Set flash mode to true
-        `when`(preferences[FLASH_MODE_ENABLED]).thenReturn(true)
-        `when`(dataStore.data).thenReturn(flowOf(preferences))
+        every { preferences[FLASH_MODE_ENABLED] } returns true
+        every { dataStore.data } returns flowOf(preferences)
         developerPreferences.setFlashModeEnabled(true)
 
         // Verify flash mode is enabled
@@ -142,8 +137,8 @@ class DeveloperPreferencesTest {
 
         // Then: Flash mode should reset to default (false)
         // Mock empty preferences after clear
-        `when`(preferences[FLASH_MODE_ENABLED]).thenReturn(null)
-        `when`(dataStore.data).thenReturn(flowOf(emptyPreferences()))
+        every { preferences[FLASH_MODE_ENABLED] } returns null
+        every { dataStore.data } returns flowOf(emptyPreferences())
 
         val afterClear = developerPreferences.isFlashModeEnabled.first()
         assertFalse(afterClear, "Flash mode should reset to false after clearAll()")

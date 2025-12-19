@@ -8,6 +8,7 @@ composeMultiplatform = "1.6.10"
 room = "2.6.1"
 coroutines = "1.7.3"
 serialization = "1.6.2"
+datetime = "0.5.0"
 ktor = "2.3.7"
 sqldelight = "2.0.1"
 onnxruntime = "1.16.3"
@@ -35,6 +36,9 @@ kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-
 # Kotlin Multiplatform - Serialization
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 
+# Kotlin Multiplatform - DateTime
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
+
 # Kotlin Multiplatform - Ktor (networking)
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktor" }
@@ -57,7 +61,16 @@ hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt"
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "androidxHiltNavigationCompose" }
 
+# AndroidX Libraries
+androidx-hilt-common = { module = "androidx.hilt:hilt-common", version = "1.2.0" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version = "1.0.0" }
+androidx-test-core = { module = "androidx.test:core", version = "1.5.0" }
+androidx-test-core-ktx = { module = "androidx.test:core-ktx", version = "1.5.0" }
+androidx-test-ext-junit = { module = "androidx.test.ext:junit", version = "1.1.5" }
+androidx-test-runner = { module = "androidx.test:runner", version = "1.5.2" }
+
 # Testing Libraries
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 mockk-android = { module = "io.mockk:mockk-android", version.ref = "mockk" }

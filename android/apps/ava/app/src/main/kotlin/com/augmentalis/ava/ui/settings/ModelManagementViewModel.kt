@@ -19,8 +19,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
-import com.augmentalis.ava.features.llm.download.LLMModelDownloader
-import com.augmentalis.ava.features.llm.download.ModelStorageManager
+import com.augmentalis.llm.download.LLMModelDownloader
+import com.augmentalis.llm.download.ModelStorageManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

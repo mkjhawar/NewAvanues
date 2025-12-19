@@ -12,7 +12,7 @@ plugins {
 }
 
 android {
-    namespace = "com.augmentalis.ava.features.overlay"
+    namespace = "com.augmentalis.overlay"
     compileSdk = 34
 
     defaultConfig {
@@ -57,7 +57,7 @@ dependencies {
     implementation(project(":core:Utils"))
 
     // Feature modules for integration
-    implementation(project(":NLU"))
+    implementation(project(":SharedNLU"))
     implementation(project(":Chat"))
     implementation(project(":LLM"))
 

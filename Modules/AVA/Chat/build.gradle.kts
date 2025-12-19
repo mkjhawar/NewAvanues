@@ -11,7 +11,7 @@ dependencies {
     implementation(project(":core:Domain"))
     implementation(project(":core:Data"))
     implementation(project(":core:Theme"))  // Ocean Glass Design System
-    implementation(project(":NLU"))
+    implementation(project(":SharedNLU"))
     implementation(project(":Actions"))
     implementation(project(":LLM"))
     implementation(project(":RAG"))  // RAG Phase 2: Chat UI Integration
@@ -24,6 +24,9 @@ dependencies {
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // Kotlin DateTime (KMP-compatible)
+    implementation(libs.kotlinx.datetime)
 
     // Jetpack Compose
     implementation("androidx.compose.ui:ui:1.5.4")
@@ -46,7 +49,7 @@ dependencies {
     // Unit testing
     testImplementation("junit:junit:4.13.2")
     testImplementation(kotlin("test"))
-    testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("io.mockk:mockk-android:1.13.8")  // mockk-android for final class mocking in Android JVM tests
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("app.cash.turbine:turbine:1.0.0")
     testImplementation("androidx.test:core:1.5.0")  // For ApplicationProvider in unit tests
@@ -79,13 +82,20 @@ dependencies {
 }
 
 android {
-    namespace = "com.augmentalis.ava.features.chat"
+    namespace = "com.augmentalis.chat"
     compileSdk = 34
 
     defaultConfig {
         minSdk = 28  // Android 9+ (Pie and above)
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Configure source sets for KMP-style structure
+    sourceSets {
+        getByName("main") {
+            kotlin.srcDirs("src/main/kotlin", "src/commonMain/kotlin", "src/androidMain/kotlin")
+        }
     }
 
     compileOptions {

@@ -95,7 +95,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.ava.features.actions"
+    namespace = "com.augmentalis.actions"
     compileSdk = 34
 
     defaultConfig {

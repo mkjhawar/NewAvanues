@@ -68,21 +68,21 @@ object AVAExceptionHandler {
         onError: ErrorCallback? = null
     ): CoroutineExceptionHandler {
         return CoroutineExceptionHandler { _, throwable ->
-            when (throwable) {
-                is CancellationException -> {
+            when {
+                throwable is CancellationException -> {
                     // Normal cancellation - don't log as error
                     println("[$tag] Coroutine cancelled: ${throwable.message}")
                 }
 
-                is OutOfMemoryError -> {
-                    // OOM - trigger cleanup and report
+                throwable::class.simpleName == "OutOfMemoryError" -> {
+                    // OOM - trigger cleanup and report (platform-agnostic check)
                     println("[$tag] OOM in coroutine: ${throwable.message}")
                     triggerLowMemoryCleanup()
                     onError?.onError(throwable)
                 }
 
-                is StackOverflowError -> {
-                    // SOE - log and report
+                throwable::class.simpleName == "StackOverflowError" -> {
+                    // SOE - log and report (platform-agnostic check)
                     println("[$tag] StackOverflow in coroutine: ${throwable.message}")
                     onError?.onError(throwable)
                 }
@@ -90,7 +90,7 @@ object AVAExceptionHandler {
                 else -> {
                     // Standard exception - log and report
                     println("[$tag] Coroutine exception: ${throwable.message}")
-                    throwable.printStackTrace()
+                    println(throwable.stackTraceToString())
                     onError?.onError(throwable)
                 }
             }
@@ -109,11 +109,15 @@ object AVAExceptionHandler {
         onUserError: (String) -> Unit
     ): CoroutineExceptionHandler {
         return create(tag) { throwable ->
-            val userMessage = when (throwable) {
-                is OutOfMemoryError -> "Device is low on memory. Please close other apps."
-                is java.io.IOException -> "Network error. Please check your connection."
-                is java.net.SocketTimeoutException -> "Request timed out. Please try again."
-                is IllegalStateException -> "Something went wrong. Please try again."
+            val userMessage = when {
+                throwable::class.simpleName == "OutOfMemoryError" ->
+                    "Device is low on memory. Please close other apps."
+                throwable::class.simpleName?.contains("IOException") == true ->
+                    "Network error. Please check your connection."
+                throwable::class.simpleName?.contains("SocketTimeoutException") == true ->
+                    "Request timed out. Please try again."
+                throwable is IllegalStateException ->
+                    "Something went wrong. Please try again."
                 else -> "An error occurred: ${throwable.message}"
             }
             onUserError(userMessage)
@@ -122,15 +126,12 @@ object AVAExceptionHandler {
 
     /**
      * Trigger low memory cleanup.
-     * Calls the global callback if set, otherwise does basic GC.
+     * Calls the global callback if set.
+     * Note: GC is platform-specific - callback should handle it if needed.
      */
     private fun triggerLowMemoryCleanup() {
-        val callback = lowMemoryCallback
-        if (callback != null) {
-            callback.onLowMemory()
-        } else {
-            // Basic cleanup if no callback set
-            System.gc()
-        }
+        lowMemoryCallback?.onLowMemory()
+        // Note: System.gc() removed - platform-specific GC should be handled
+        // by the lowMemoryCallback implementation on each platform
     }
 }
