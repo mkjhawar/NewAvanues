@@ -18,22 +18,6 @@ import java.net.URL
 import java.security.MessageDigest
 
 /**
- * Data class for scraped website (mirrors ScrapedWebsite SQLDelight table)
- */
-data class ScrapedWebsite(
-    val urlHash: String,
-    val url: String,
-    val domain: String,
-    val title: String,
-    val structureHash: String,
-    val parentUrlHash: String?,
-    val scrapedAt: Long,
-    val lastAccessedAt: Long,
-    val accessCount: Long,
-    val isStale: Boolean
-)
-
-/**
  * Web Command Cache
  *
  * Implements Hybrid Smart caching strategy:
@@ -92,14 +76,14 @@ class WebCommandCache(private val databaseManager: VoiceOSDatabaseManager) {
                 CacheResult.Miss
             }
 
-            website.is_stale || (now - website.scraped_at) > STALE_THRESHOLD_MS -> {
+            (website.is_stale != 0L) || (now - website.scraped_at) > STALE_THRESHOLD_MS -> {
                 Log.d(TAG, "Cache STALE for $url, returning cached + background refresh")
 
                 // Update access metadata
                 databaseManager.scrapedWebsiteQueries.updateAccessMetadata(
-                    urlHash = urlHash,
-                    lastAccessedAt = now,
-                    accessCount = website.access_count + 1
+                    last_accessed_at = now,
+                    access_count = website.access_count + 1,
+                    url_hash = urlHash
                 )
 
                 // Trigger background refresh
@@ -123,9 +107,9 @@ class WebCommandCache(private val databaseManager: VoiceOSDatabaseManager) {
 
                 // Update access metadata
                 databaseManager.scrapedWebsiteQueries.updateAccessMetadata(
-                    urlHash = urlHash,
-                    lastAccessedAt = now,
-                    accessCount = website.access_count + 1
+                    last_accessed_at = now,
+                    access_count = website.access_count + 1,
+                    url_hash = urlHash
                 )
 
                 val commands = databaseManager.generatedWebCommandQueries.getByWebsiteUrlHash(urlHash)
@@ -200,9 +184,9 @@ class WebCommandCache(private val databaseManager: VoiceOSDatabaseManager) {
 
             // Update structure hash
             databaseManager.scrapedWebsiteQueries.updateStructureHash(
-                urlHash = urlHash,
-                newStructureHash = newStructureHash,
-                timestamp = System.currentTimeMillis()
+                structure_hash = newStructureHash,
+                scraped_at = System.currentTimeMillis(),
+                url_hash = urlHash
             )
         }
     }
@@ -219,7 +203,7 @@ class WebCommandCache(private val databaseManager: VoiceOSDatabaseManager) {
         elements: List<ScrapedWebElement>,
         commands: List<GeneratedWebCommand>
     ) {
-        databaseManager.scrapedWebsiteQueries.insert(
+        databaseManager.scrapedWebsiteQueries.insertScrapedWebsite(
             url_hash = website.urlHash,
             url = website.url,
             domain = website.domain,
@@ -228,12 +212,12 @@ class WebCommandCache(private val databaseManager: VoiceOSDatabaseManager) {
             parent_url_hash = website.parentUrlHash,
             scraped_at = website.scrapedAt,
             last_accessed_at = website.lastAccessedAt,
-            access_count = website.accessCount,
-            is_stale = website.isStale
+            access_count = website.accessCount.toLong(),
+            is_stale = if (website.isStale) 1L else 0L
         )
 
         elements.forEach { element ->
-            databaseManager.scrapedWebElementQueries.insert(
+            databaseManager.scrapedWebElementQueries.insertScrapedWebElementAuto(
                 website_url_hash = element.websiteUrlHash,
                 element_hash = element.elementHash,
                 tag_name = element.tagName,
@@ -242,14 +226,14 @@ class WebCommandCache(private val databaseManager: VoiceOSDatabaseManager) {
                 aria_label = element.ariaLabel,
                 role = element.role,
                 parent_element_hash = element.parentElementHash,
-                clickable = element.clickable,
-                visible = element.visible,
+                clickable = if (element.clickable) 1L else 0L,
+                visible = if (element.visible) 1L else 0L,
                 bounds = element.bounds
             )
         }
 
         commands.forEach { command ->
-            databaseManager.generatedWebCommandQueries.insert(
+            databaseManager.generatedWebCommandQueries.insertGeneratedWebCommandAuto(
                 website_url_hash = command.websiteUrlHash,
                 element_hash = command.elementHash,
                 command_text = command.commandText,
@@ -257,7 +241,7 @@ class WebCommandCache(private val databaseManager: VoiceOSDatabaseManager) {
                 action = command.action,
                 xpath = command.xpath,
                 generated_at = command.generatedAt,
-                usage_count = command.usageCount,
+                usage_count = command.usageCount.toLong(),
                 last_used_at = command.lastUsedAt
             )
         }
@@ -286,9 +270,9 @@ class WebCommandCache(private val databaseManager: VoiceOSDatabaseManager) {
         val stats = databaseManager.scrapedWebsiteQueries.getCacheStats().executeAsOne()
 
         return WebCacheStats(
-            totalWebsites = stats.total?.toInt() ?: 0,
+            totalWebsites = stats.total.toInt(),
             staleWebsites = stats.stale?.toInt() ?: 0,
-            freshWebsites = (stats.total?.toInt() ?: 0) - (stats.stale?.toInt() ?: 0),
+            freshWebsites = stats.total.toInt() - (stats.stale?.toInt() ?: 0),
             averageAccessCount = stats.avg_access ?: 0.0
         )
     }
@@ -412,7 +396,7 @@ data class WebCacheStats(
 )
 
 /**
- * Extension functions to convert between SQLDelight types and data classes
+ * Extension functions to convert between SQLDelight types and domain models
  */
 
 fun com.augmentalis.database.web.Scraped_websites.toScrapedWebsite() = ScrapedWebsite(
@@ -424,8 +408,23 @@ fun com.augmentalis.database.web.Scraped_websites.toScrapedWebsite() = ScrapedWe
     parentUrlHash = parent_url_hash,
     scrapedAt = scraped_at,
     lastAccessedAt = last_accessed_at,
-    accessCount = access_count,
-    isStale = is_stale
+    accessCount = access_count.toInt(),
+    isStale = is_stale != 0L
+)
+
+fun com.augmentalis.database.web.Scraped_web_elements.toScrapedWebElement() = ScrapedWebElement(
+    id = id,
+    websiteUrlHash = website_url_hash,
+    elementHash = element_hash,
+    tagName = tag_name,
+    xpath = xpath,
+    text = text,
+    ariaLabel = aria_label,
+    role = role,
+    parentElementHash = parent_element_hash,
+    clickable = clickable != 0L,
+    visible = visible != 0L,
+    bounds = bounds
 )
 
 fun com.augmentalis.database.web.Generated_web_commands.toGeneratedWebCommand() = GeneratedWebCommand(
@@ -437,6 +436,6 @@ fun com.augmentalis.database.web.Generated_web_commands.toGeneratedWebCommand() 
     action = action,
     xpath = xpath,
     generatedAt = generated_at,
-    usageCount = usage_count,
+    usageCount = usage_count.toInt(),
     lastUsedAt = last_used_at
 )

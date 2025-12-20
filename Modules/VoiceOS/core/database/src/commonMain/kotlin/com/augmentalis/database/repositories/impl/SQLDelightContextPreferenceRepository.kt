@@ -23,14 +23,14 @@ class SQLDelightContextPreferenceRepository(
 
     override suspend fun insert(preference: ContextPreferenceDTO): Long =
         withContext(Dispatchers.Default) {
-            queries.insertPreference(
-                command_id = preference.commandId,
-                context_key = preference.contextKey,
-                usage_count = preference.usageCount,
-                success_count = preference.successCount,
-                last_used_timestamp = preference.lastUsedTimestamp
-            )
-            queries.transactionWithResult {
+            database.transactionWithResult {
+                queries.insertPreference(
+                    command_id = preference.commandId,
+                    context_key = preference.contextKey,
+                    usage_count = preference.usageCount,
+                    success_count = preference.successCount,
+                    last_used_timestamp = preference.lastUsedTimestamp
+                )
                 queries.lastInsertRowId().executeAsOne()
             }
         }

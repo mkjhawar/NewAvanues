@@ -174,8 +174,11 @@ class DatabaseTest {
         val queries = database.generatedCommandQueries
         val now = System.currentTimeMillis()
 
-        queries.insert("hash1", "click submit button", "click", 0.85, null, 0, 0, null, now)
-        queries.insert("hash2", "scroll down page", "scroll", 0.9, null, 0, 0, null, now)
+        // Schema v3: Added appId, appVersion, versionCode, lastVerified, isDeprecated
+        queries.insert("hash1", "click submit button", "click", 0.85, null, 0, 0, null, now,
+            "com.test.app", "1.0.0", 1, now, 0)
+        queries.insert("hash2", "scroll down page", "scroll", 0.9, null, 0, 0, null, now,
+            "com.test.app", "1.0.0", 1, now, 0)
 
         val results = queries.fuzzySearch("submit").executeAsList()
         assertEquals(1, results.size)
@@ -187,7 +190,9 @@ class DatabaseTest {
         val queries = database.generatedCommandQueries
         val now = System.currentTimeMillis()
 
-        queries.insert("hash1", "test command", "click", 0.8, null, 0, 0, null, now)
+        // Schema v3: Added appId, appVersion, versionCode, lastVerified, isDeprecated
+        queries.insert("hash1", "test command", "click", 0.8, null, 0, 0, null, now,
+            "com.test.app", "1.0.0", 1, now, 0)
         val id = queries.getAll().executeAsList()[0].id
 
         queries.markApproved(id)

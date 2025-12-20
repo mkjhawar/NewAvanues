@@ -205,10 +205,12 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
     suspend fun updateFormGroupIdBatch(hashes: List<String>, groupId: String?) {
         databaseManager.transaction {
             hashes.forEach { hash ->
-                val element = databaseManager.scrapedElements.getByHash(hash)
-                if (element != null) {
-                    val updated = element.copy(formGroupId = groupId)
-                    databaseManager.scrapedElements.insert(updated)
+                kotlinx.coroutines.runBlocking {
+                    val element = databaseManager.scrapedElements.getByHash(hash)
+                    if (element != null) {
+                        val updated = element.copy(formGroupId = groupId)
+                        databaseManager.scrapedElements.insert(updated)
+                    }
                 }
             }
         }
@@ -264,12 +266,14 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
                 // WARNING: This won't work correctly - Room entity uses IDs, SQLDelight uses hashes
                 // Caller needs to provide hash-based hierarchy data instead
                 // Using placeholder values to compile, but this needs proper migration
-                databaseManager.scrapedHierarchies.insert(
-                    parentElementHash = hierarchy.parentElementId.toString(), // TODO: Map ID to hash
-                    childElementHash = hierarchy.childElementId.toString(),   // TODO: Map ID to hash
-                    depth = hierarchy.depth.toLong(),
-                    createdAt = System.currentTimeMillis() // Entity doesn't have createdAt field
-                )
+                kotlinx.coroutines.runBlocking {
+                    databaseManager.scrapedHierarchies.insert(
+                        parentElementHash = hierarchy.parentElementId.toString(), // TODO: Map ID to hash
+                        childElementHash = hierarchy.childElementId.toString(),   // TODO: Map ID to hash
+                        depth = hierarchy.depth.toLong(),
+                        createdAt = System.currentTimeMillis() // Entity doesn't have createdAt field
+                    )
+                }
                 ids.add(hierarchy.id)
             }
         }
@@ -283,8 +287,10 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
         val ids = mutableListOf<Long>()
         databaseManager.transaction {
             commands.forEach { command ->
-                val dto = command.toGeneratedCommandDTO()
-                databaseManager.generatedCommands.insert(dto)
+                kotlinx.coroutines.runBlocking {
+                    val dto = command.toGeneratedCommandDTO()
+                    databaseManager.generatedCommands.insert(dto)
+                }
                 ids.add(command.id ?: System.currentTimeMillis())
             }
         }
@@ -298,16 +304,18 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
         val ids = mutableListOf<Long>()
         databaseManager.transaction {
             relationships.forEach { relationship ->
-                val currentTime = System.currentTimeMillis()
-                databaseManager.elementRelationships.insert(
-                    sourceElementHash = relationship.sourceElementHash,
-                    targetElementHash = relationship.targetElementHash,
-                    relationshipType = relationship.relationshipType,
-                    relationshipData = relationship.relationshipData,
-                    confidence = relationship.confidence.toDouble(),
-                    createdAt = relationship.createdAt,
-                    updatedAt = currentTime // Entity doesn't have updatedAt field, use current time
-                )
+                kotlinx.coroutines.runBlocking {
+                    val currentTime = System.currentTimeMillis()
+                    databaseManager.elementRelationships.insert(
+                        sourceElementHash = relationship.sourceElementHash,
+                        targetElementHash = relationship.targetElementHash,
+                        relationshipType = relationship.relationshipType,
+                        relationshipData = relationship.relationshipData,
+                        confidence = relationship.confidence.toDouble(),
+                        createdAt = relationship.createdAt,
+                        updatedAt = currentTime // Entity doesn't have updatedAt field, use current time
+                    )
+                }
                 ids.add(relationship.id)
             }
         }
@@ -339,8 +347,10 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
         val ids = mutableListOf<Long>()
         databaseManager.transaction {
             elements.forEach { element ->
-                val dto = element.toScrapedElementDTO()
-                databaseManager.scrapedElements.insert(dto)
+                kotlinx.coroutines.runBlocking {
+                    val dto = element.toScrapedElementDTO()
+                    databaseManager.scrapedElements.insert(dto)
+                }
                 // Use element hash as ID for now
                 ids.add(element.id ?: element.elementHash.hashCode().toLong())
             }
@@ -372,7 +382,7 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
             navigationLevel = context.navigationLevel.toLong(),
             primaryAction = context.primaryAction,
             elementCount = context.elementCount.toLong(),
-            hasBackButton = if (context.hasBackButton) 1L else 0L,
+            hasBackButton = context.hasBackButton,
             firstScraped = context.firstScraped,
             lastScraped = context.lastScraped,
             visitCount = context.visitCount.toLong()
@@ -382,19 +392,17 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
 
     /**
      * Extension: Insert screen transition
-     * Note: Old Room entity is missing triggerElementHash and triggerAction fields.
-     * Using defaults for compatibility.
      */
     suspend fun insertScreenTransition(transition: com.augmentalis.voiceoscore.scraping.entities.ScreenTransitionEntity) {
         val dto = com.augmentalis.database.dto.ScreenTransitionDTO(
             id = transition.id,
             fromScreenHash = transition.fromScreenHash,
             toScreenHash = transition.toScreenHash,
-            triggerElementHash = null, // Entity doesn't have this field
-            triggerAction = "unknown", // Entity doesn't have this field
-            transitionCount = transition.transitionCount.toLong(),
-            avgDurationMs = transition.avgTransitionTime ?: 0L,
-            lastTransitionAt = transition.lastTransition
+            triggerElementHash = transition.triggerElementHash,
+            triggerAction = transition.triggerAction,
+            transitionCount = transition.transitionCount,
+            avgDurationMs = transition.avgDurationMs,
+            lastTransitionAt = transition.lastTransitionAt
         )
         databaseManager.screenTransitions.insert(dto)
     }
@@ -531,13 +539,17 @@ private fun com.augmentalis.voiceoscore.scraping.entities.GeneratedCommandEntity
         elementHash = this.elementHash,
         commandText = this.commandText,
         actionType = this.actionType,
-        confidence = this.confidence.toDouble(),
+        confidence = this.confidence,
         synonyms = this.synonyms,
-        isUserApproved = if (this.isUserApproved) 1L else 0L,
-        usageCount = this.usageCount.toLong(),
+        isUserApproved = this.isUserApproved,
+        usageCount = this.usageCount,
         lastUsed = this.lastUsed,
-        createdAt = this.generatedAt,
-        appId = ""  // Legacy entities don't have appId
+        createdAt = this.createdAt,
+        appId = this.appId,
+        appVersion = this.appVersion,
+        versionCode = this.versionCode,
+        lastVerified = this.lastVerified,
+        isDeprecated = this.isDeprecated
     )
 }
 
@@ -550,12 +562,17 @@ private fun com.augmentalis.database.dto.GeneratedCommandDTO.toGeneratedCommandE
         elementHash = this.elementHash,
         commandText = this.commandText,
         actionType = this.actionType,
-        confidence = this.confidence.toFloat(),
-        synonyms = this.synonyms ?: "",
-        isUserApproved = this.isUserApproved == 1L,
-        usageCount = this.usageCount.toInt(),
+        confidence = this.confidence,
+        synonyms = this.synonyms,
+        isUserApproved = this.isUserApproved,
+        usageCount = this.usageCount,
         lastUsed = this.lastUsed,
-        generatedAt = this.createdAt
+        createdAt = this.createdAt,
+        appId = this.appId,
+        appVersion = this.appVersion,
+        versionCode = this.versionCode,
+        lastVerified = this.lastVerified,
+        isDeprecated = this.isDeprecated
     )
 }
 
@@ -589,20 +606,20 @@ private fun com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity.t
         text = this.text,
         contentDescription = this.contentDescription,
         bounds = this.bounds,
-        isClickable = if (this.isClickable) 1L else 0L,
-        isLongClickable = if (this.isLongClickable) 1L else 0L,
-        isEditable = if (this.isEditable) 1L else 0L,
-        isScrollable = if (this.isScrollable) 1L else 0L,
-        isCheckable = if (this.isCheckable) 1L else 0L,
-        isFocusable = if (this.isFocusable) 1L else 0L,
-        isEnabled = if (this.isEnabled) 1L else 0L,
+        isClickable = if (this.isClickable != 0L) 1L else 0L,
+        isLongClickable = if (this.isLongClickable != 0L) 1L else 0L,
+        isEditable = if (this.isEditable != 0L) 1L else 0L,
+        isScrollable = if (this.isScrollable != 0L) 1L else 0L,
+        isCheckable = if (this.isCheckable != 0L) 1L else 0L,
+        isFocusable = if (this.isFocusable != 0L) 1L else 0L,
+        isEnabled = if (this.isEnabled != 0L) 1L else 0L,
         depth = this.depth.toLong(),
         indexInParent = this.indexInParent.toLong(),
         scrapedAt = this.scrapedAt,
         semanticRole = this.semanticRole,
         inputType = this.inputType,
         visualWeight = this.visualWeight,
-        isRequired = if (this.isRequired == true) 1L else null,
+        isRequired = this.isRequired,
         formGroupId = this.formGroupId,
         placeholderText = this.placeholderText,
         validationPattern = this.validationPattern,
@@ -625,20 +642,20 @@ fun com.augmentalis.database.dto.ScrapedElementDTO.toScrapedElementEntity(): com
         text = this.text,
         contentDescription = this.contentDescription,
         bounds = this.bounds,
-        isClickable = this.isClickable == 1L,
-        isLongClickable = this.isLongClickable == 1L,
-        isEditable = this.isEditable == 1L,
-        isScrollable = this.isScrollable == 1L,
-        isCheckable = this.isCheckable == 1L,
-        isFocusable = this.isFocusable == 1L,
-        isEnabled = this.isEnabled == 1L,
-        depth = this.depth.toInt(),
-        indexInParent = this.indexInParent.toInt(),
+        isClickable = this.isClickable,
+        isLongClickable = this.isLongClickable,
+        isEditable = this.isEditable,
+        isScrollable = this.isScrollable,
+        isCheckable = this.isCheckable,
+        isFocusable = this.isFocusable,
+        isEnabled = this.isEnabled,
+        depth = this.depth,
+        indexInParent = this.indexInParent,
         scrapedAt = this.scrapedAt,
         semanticRole = this.semanticRole,
         inputType = this.inputType,
         visualWeight = this.visualWeight,
-        isRequired = this.isRequired == 1L,
+        isRequired = this.isRequired ?: 0L,
         formGroupId = this.formGroupId,
         placeholderText = this.placeholderText,
         validationPattern = this.validationPattern,

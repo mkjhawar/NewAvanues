@@ -13,13 +13,13 @@ import android.content.Intent
 import android.media.AudioManager
 import android.provider.Settings
 import android.util.Log
-import com.augmentalis.voiceoscore.accessibility.VoiceOSService
+import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
 
 /**
  * Handler for device control actions
  */
 class DeviceHandler(
-    private val service: VoiceOSService
+    private val service: IVoiceOSContext
 ) : ActionHandler {
     
     companion object {
@@ -170,7 +170,7 @@ class DeviceHandler(
     
     private fun adjustBrightness(increase: Boolean): Boolean {
         return try {
-            val resolver = service.contentResolver
+            val resolver = service.context.contentResolver
             val currentBrightness = Settings.System.getInt(
                 resolver, 
                 Settings.System.SCREEN_BRIGHTNESS,
@@ -194,12 +194,12 @@ class DeviceHandler(
     private fun setBrightness(value: Int): Boolean {
         return try {
             Settings.System.putInt(
-                service.contentResolver,
+                service.context.contentResolver,
                 Settings.System.SCREEN_BRIGHTNESS_MODE,
                 Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
             )
             Settings.System.putInt(
-                service.contentResolver,
+                service.context.contentResolver,
                 Settings.System.SCREEN_BRIGHTNESS,
                 value
             )

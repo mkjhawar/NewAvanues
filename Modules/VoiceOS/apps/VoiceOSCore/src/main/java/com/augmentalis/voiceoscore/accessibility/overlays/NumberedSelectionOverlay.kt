@@ -74,7 +74,7 @@ class NumberedSelectionOverlay(
     private var tts: TextToSpeech? = null
 
     // Mutable state for items
-    private var itemsState by mutableStateOf<List<SelectableItem>>(emptyList())
+    private val itemsState = mutableStateOf<List<SelectableItem>>(emptyList())
 
     /**
      * Show overlay with numbered items
@@ -84,7 +84,7 @@ class NumberedSelectionOverlay(
             overlayView = createOverlayView()
         }
 
-        itemsState = items
+        itemsState.value = items
 
         if (!isShowing) {
             initTts()
@@ -99,8 +99,8 @@ class NumberedSelectionOverlay(
      * Update items without recreating overlay
      */
     fun updateItems(items: List<SelectableItem>) {
-        val previousCount = itemsState.size
-        itemsState = items
+        val previousCount = itemsState.value.size
+        itemsState.value = items
 
         if (items.size != previousCount) {
             announceForAccessibility("${items.size} items available")
@@ -128,7 +128,7 @@ class NumberedSelectionOverlay(
      * Select item by number
      */
     fun selectItem(number: Int): Boolean {
-        val item = itemsState.find { it.number == number }
+        val item = itemsState.value.find { it.number == number }
         return if (item != null) {
             item.action()
             true

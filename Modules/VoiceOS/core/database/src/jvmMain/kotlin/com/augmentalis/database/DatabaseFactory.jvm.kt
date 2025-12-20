@@ -20,6 +20,11 @@ actual class DatabaseDriverFactory {
     actual fun createDriver(): SqlDriver {
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         VoiceOSDatabase.Schema.create(driver)
+
+        // CRITICAL: Enable foreign key constraints
+        // FIX (2025-12-19): Added to enforce referential integrity
+        driver.execute(null, "PRAGMA foreign_keys = ON", 0)
+
         return driver
     }
 
@@ -29,6 +34,11 @@ actual class DatabaseDriverFactory {
     fun createPersistentDriver(path: String): SqlDriver {
         val driver = JdbcSqliteDriver("jdbc:sqlite:$path")
         VoiceOSDatabase.Schema.create(driver)
+
+        // CRITICAL: Enable foreign key constraints
+        // FIX (2025-12-19): Added to enforce referential integrity
+        driver.execute(null, "PRAGMA foreign_keys = ON", 0)
+
         return driver
     }
 }

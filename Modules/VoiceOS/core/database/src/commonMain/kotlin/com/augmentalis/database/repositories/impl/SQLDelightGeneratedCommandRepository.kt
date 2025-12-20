@@ -224,7 +224,11 @@ class SQLDelightGeneratedCommandRepository(
 
         var rowsAffected = 0
         database.transaction {
-            queries.markVersionDeprecated(appId = packageName, versionCode = versionCode)
+            queries.markVersionDeprecated(
+                lastVerified = System.currentTimeMillis(),
+                appId = packageName,
+                versionCode = versionCode
+            )
             // Get number of affected rows by counting before/after
             rowsAffected = queries.getDeprecatedCommands(packageName).executeAsList().size
         }
@@ -353,6 +357,10 @@ class SQLDelightGeneratedCommandRepository(
         ).executeAsList().map { it.toGeneratedCommandDTO() }
     }
 
+    override suspend fun getByAppVersion(appId: String, versionCode: Long): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
+        queries.getByAppVersion(appId, versionCode).executeAsList().map { it.toGeneratedCommandDTO() }
+    }
+
     // ========== Database Maintenance Methods (P3 Task 3.1) ==========
 
     /**
@@ -364,9 +372,9 @@ class SQLDelightGeneratedCommandRepository(
      * 3. Defragment data pages
      *
      * Should be called after large deletions (>10% of database).
-     * Runs on Dispatchers.IO to avoid blocking main thread.
+     * Runs on Dispatchers.Default (KMP compatible - Dispatchers.IO is JVM-only).
      */
-    override suspend fun vacuumDatabase() = withContext(Dispatchers.IO) {
+    override suspend fun vacuumDatabase() = withContext(Dispatchers.Default) {
         queries.vacuumDatabase()
     }
 }

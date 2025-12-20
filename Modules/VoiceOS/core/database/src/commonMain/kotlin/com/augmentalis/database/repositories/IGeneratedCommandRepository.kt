@@ -312,6 +312,16 @@ interface IGeneratedCommandRepository {
         limit: Int = 1000
     ): List<GeneratedCommandDTO>
 
+    /**
+     * Get all commands for a specific app version.
+     * Used to retrieve commands associated with a particular app version code.
+     *
+     * @param appId App package name
+     * @param versionCode App version code
+     * @return List of commands for the specified app version, sorted by usage
+     */
+    suspend fun getByAppVersion(appId: String, versionCode: Long): List<GeneratedCommandDTO>
+
     // ========== Database Maintenance Methods (P3 Task 3.1) ==========
 
     /**

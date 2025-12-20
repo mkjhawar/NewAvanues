@@ -10,7 +10,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        minSdk = 28  // Android 9 (Pie) - Minimum supported (aligned with project-wide standard)
+        minSdk = 29  // Android 9 (Pie) - Minimum supported (aligned with project-wide standard)
         // targetSdk removed - deprecated for libraries
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")

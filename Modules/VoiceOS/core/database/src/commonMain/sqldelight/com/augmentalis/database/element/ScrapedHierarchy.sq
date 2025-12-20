@@ -60,3 +60,8 @@ countByParent:
 SELECT parentElementHash, COUNT(*) AS count
 FROM scraped_hierarchy
 GROUP BY parentElementHash;
+
+-- Batch insert is handled by Kotlin extension calling insert() multiple times
+-- Get last inserted row ID (for batch operations)
+lastInsertRowId:
+SELECT last_insert_rowid();

@@ -12,10 +12,12 @@
 package com.augmentalis.voiceoscore.accessibility
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
 import android.content.Context
 import android.content.pm.PackageManager
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityNodeInfo
+import com.augmentalis.voiceos.cursor.core.CursorOffset
 
 /**
  * Interface providing context for action handlers
@@ -45,14 +47,16 @@ interface IVoiceOSContext {
 
     /**
      * Package manager for app operations
+     * Note: AccessibilityService already provides this via context.packageManager
      */
-    val packageManager: PackageManager
+    fun getPackageManager(): PackageManager = context.packageManager
 
     /**
      * Get root accessibility node of active window
      * @return Root node or null if no active window
+     * Note: AccessibilityService already provides getRootInActiveWindow() method
      */
-    val rootInActiveWindow: AccessibilityNodeInfo?
+    fun getRootNodeInActiveWindow(): AccessibilityNodeInfo? = accessibilityService.rootInActiveWindow
 
     /**
      * Perform global accessibility action
@@ -91,4 +95,16 @@ interface IVoiceOSContext {
      * @param duration Duration in milliseconds
      */
     fun vibrate(duration: Long)
+
+    /**
+     * Check if cursor is currently visible
+     * @return true if cursor is visible, false otherwise
+     */
+    fun isCursorVisible(): Boolean
+
+    /**
+     * Get current cursor position
+     * @return CursorOffset with current X,Y coordinates
+     */
+    fun getCursorPosition(): CursorOffset
 }

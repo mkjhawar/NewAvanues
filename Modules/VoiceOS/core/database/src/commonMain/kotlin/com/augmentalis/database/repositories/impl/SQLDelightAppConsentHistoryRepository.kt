@@ -29,24 +29,28 @@ class SQLDelightAppConsentHistoryRepository(
 
     override suspend fun insert(packageName: String, userChoice: String, timestamp: Long): Long =
         withContext(Dispatchers.Default) {
-            queries.insertConsentRecord(
-                package_name = packageName,
-                user_choice = userChoice,
-                timestamp = timestamp
-            )
-            queries.transactionWithResult {
-                queries.count().executeAsOne()
+            database.transactionWithResult {
+                queries.insertConsentRecord(
+                    package_name = packageName,
+                    user_choice = userChoice,
+                    timestamp = timestamp
+                )
+                queries.lastInsertRowId().executeAsOne()
             }
         }
 
     override suspend fun getConsentHistory(packageName: String): List<AppConsentHistoryDTO> =
         withContext(Dispatchers.Default) {
-            queries.getConsentHistory(packageName).executeAsList().map { it.toDTO() }
+            queries.getConsentHistory(packageName).executeAsList().map { consent: com.augmentalis.database.App_consent_history ->
+                consent.toDTO()
+            }
         }
 
     override suspend fun getLatestConsent(packageName: String): AppConsentHistoryDTO? =
         withContext(Dispatchers.Default) {
-            queries.getLatestConsent(packageName).executeAsOneOrNull()?.toDTO()
+            queries.getLatestConsent(packageName).executeAsOneOrNull()?.let { consent: com.augmentalis.database.App_consent_history ->
+                consent.toDTO()
+            }
         }
 
     override suspend fun getDontAskAgainApps(): List<String> =

@@ -61,8 +61,8 @@ interface ComponentProvider {
     fun Icon(
         imageVector: ImageVector,
         contentDescription: String?,
-        variant: IconVariant = IconVariant.Primary,
-        modifier: Modifier = Modifier
+        variant: IconVariant,
+        modifier: Modifier
     )
 
     /**
@@ -76,8 +76,8 @@ interface ComponentProvider {
     @Composable
     fun IconButton(
         onClick: () -> Unit,
-        enabled: Boolean = true,
-        modifier: Modifier = Modifier,
+        enabled: Boolean,
+        modifier: Modifier,
         content: @Composable () -> Unit
     )
 
@@ -93,9 +93,9 @@ interface ComponentProvider {
     @Composable
     fun Button(
         onClick: () -> Unit,
-        enabled: Boolean = true,
-        variant: ButtonVariant = ButtonVariant.Primary,
-        modifier: Modifier = Modifier,
+        enabled: Boolean,
+        variant: ButtonVariant,
+        modifier: Modifier,
         content: @Composable RowScope.() -> Unit
     )
 
@@ -110,10 +110,10 @@ interface ComponentProvider {
      */
     @Composable
     fun Surface(
-        modifier: Modifier = Modifier,
-        variant: SurfaceVariant = SurfaceVariant.Default,
-        shape: Shape? = null,
-        onClick: (() -> Unit)? = null,
+        modifier: Modifier,
+        variant: SurfaceVariant,
+        shape: Shape?,
+        onClick: (() -> Unit)?,
         content: @Composable () -> Unit
     )
 
@@ -132,11 +132,11 @@ interface ComponentProvider {
     fun TextField(
         value: String,
         onValueChange: (String) -> Unit,
-        modifier: Modifier = Modifier,
-        placeholder: String? = null,
-        leadingIcon: (@Composable () -> Unit)? = null,
-        trailingIcon: (@Composable () -> Unit)? = null,
-        enabled: Boolean = true
+        modifier: Modifier,
+        placeholder: String?,
+        leadingIcon: (@Composable () -> Unit)?,
+        trailingIcon: (@Composable () -> Unit)?,
+        enabled: Boolean
     )
 
     /**
@@ -151,9 +151,9 @@ interface ComponentProvider {
     @Composable
     fun FloatingActionButton(
         onClick: () -> Unit,
-        modifier: Modifier = Modifier,
-        containerColor: Color? = null,
-        contentColor: Color? = null,
+        modifier: Modifier,
+        containerColor: Color?,
+        contentColor: Color?,
         content: @Composable () -> Unit
     )
 }
@@ -192,3 +192,60 @@ enum class SurfaceVariant {
     Input,      // Input surface (text fields)
     Glass       // Glassmorphic surface
 }
+
+// ========== Extension functions with default values ==========
+// These provide backward compatibility for call sites that expect default values
+
+@Composable
+fun ComponentProvider.Icon(
+    imageVector: ImageVector,
+    contentDescription: String?,
+    variant: IconVariant = IconVariant.Primary,
+    modifier: Modifier = Modifier
+) = Icon(imageVector, contentDescription, variant, modifier)
+
+@Composable
+fun ComponentProvider.IconButton(
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) = IconButton(onClick, enabled, modifier, content)
+
+@Composable
+fun ComponentProvider.Button(
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    variant: ButtonVariant = ButtonVariant.Primary,
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit
+) = Button(onClick, enabled, variant, modifier, content)
+
+@Composable
+fun ComponentProvider.Surface(
+    modifier: Modifier = Modifier,
+    variant: SurfaceVariant = SurfaceVariant.Default,
+    shape: Shape? = null,
+    onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit
+) = Surface(modifier, variant, shape, onClick, content)
+
+@Composable
+fun ComponentProvider.TextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String? = null,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    trailingIcon: (@Composable () -> Unit)? = null,
+    enabled: Boolean = true
+) = TextField(value, onValueChange, modifier, placeholder, leadingIcon, trailingIcon, enabled)
+
+@Composable
+fun ComponentProvider.FloatingActionButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    containerColor: Color? = null,
+    contentColor: Color? = null,
+    content: @Composable () -> Unit
+) = FloatingActionButton(onClick, modifier, containerColor, contentColor, content)

@@ -12,7 +12,7 @@ import android.accessibilityservice.AccessibilityService
 import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.accessibility.VoiceOSService
+import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,7 +23,7 @@ import kotlinx.coroutines.cancel
  * Provides context-aware selection and menu operations
  */
 class SelectHandler(
-    private val service: VoiceOSService
+    private val service: IVoiceOSContext
 ) : ActionHandler {
 
     companion object {
@@ -208,7 +208,7 @@ class SelectHandler(
      */
     private fun performSelectAtCurrentPosition(): Boolean {
         return try {
-            val rootNode = service.rootInActiveWindow
+            val rootNode = service.getRootNodeInActiveWindow()
             val focusedNode = findFocusedNode(rootNode)
 
             if (focusedNode != null) {
@@ -285,7 +285,7 @@ class SelectHandler(
      */
     private fun selectAll(): Boolean {
         return try {
-            val rootNode = service.rootInActiveWindow
+            val rootNode = service.getRootNodeInActiveWindow()
             val editableNode = findEditableNode(rootNode)
 
             if (editableNode != null) {
@@ -327,7 +327,7 @@ class SelectHandler(
         }
 
         return try {
-            val rootNode = service.rootInActiveWindow
+            val rootNode = service.getRootNodeInActiveWindow()
             val editableNode = findEditableNode(rootNode)
 
             if (editableNode != null) {
@@ -412,7 +412,7 @@ class SelectHandler(
             
             Log.d(TAG, "Performing $actionName action")
 
-            val targetNode = currentSelection?.node ?: findEditableNode(service.rootInActiveWindow)
+            val targetNode = currentSelection?.node ?: findEditableNode(service.getRootNodeInActiveWindow())
             
             if (targetNode != null) {
                 val result = targetNode.performAction(action)
@@ -456,7 +456,7 @@ class SelectHandler(
      */
     private fun updateSelectionContext() {
         try {
-            val rootNode = service.rootInActiveWindow
+            val rootNode = service.getRootNodeInActiveWindow()
             val focusedNode = findFocusedNode(rootNode)
             
             if (focusedNode != null) {

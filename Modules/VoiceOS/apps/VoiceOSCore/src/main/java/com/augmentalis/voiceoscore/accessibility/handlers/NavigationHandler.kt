@@ -38,7 +38,7 @@ class NavigationHandler(
         params: Map<String, Any>
     ): Boolean {
         val normalizedAction = action.lowercase().trim()
-        val rootNode = context.rootInActiveWindow
+        val rootNode = context.getRootNodeInActiveWindow()
         
         if (rootNode == null) {
             Log.w(TAG, "No active window for navigation")

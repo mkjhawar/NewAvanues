@@ -237,10 +237,10 @@ class RepositoryIntegrationTest {
         val repo = databaseManager.voiceCommands
         val timestamp = now()
 
-        // Insert same command in multiple locales
-        repo.insert(VoiceCommandDTO(0, "nav-home", "en-US", "go home", "NAV", "NAV", 0, 1, timestamp, timestamp))
-        repo.insert(VoiceCommandDTO(0, "nav-home", "es-ES", "ir a inicio", "NAV", "NAV", 0, 1, timestamp, timestamp))
-        repo.insert(VoiceCommandDTO(0, "nav-home", "fr-FR", "aller à accueil", "NAV", "NAV", 0, 1, timestamp, timestamp))
+        // Insert same command in multiple locales (updated to include all 13 parameters)
+        repo.insert(VoiceCommandDTO(0, "nav-home", "en-US", "go home", "[]", "NAV", "", "NAV", 0, 0, 1, timestamp, timestamp))
+        repo.insert(VoiceCommandDTO(0, "nav-home", "es-ES", "ir a inicio", "[]", "NAV", "", "NAV", 0, 0, 1, timestamp, timestamp))
+        repo.insert(VoiceCommandDTO(0, "nav-home", "fr-FR", "aller à accueil", "[]", "NAV", "", "NAV", 0, 0, 1, timestamp, timestamp))
 
         // Query by command ID
         val allLocales = repo.getByCommandId("nav-home")
@@ -260,9 +260,10 @@ class RepositoryIntegrationTest {
         val repo = databaseManager.voiceCommands
         val timestamp = now()
 
-        repo.insert(VoiceCommandDTO(0, "cmd-001", "en-US", "open settings", "ACT", "SYS", 0, 1, timestamp, timestamp))
-        repo.insert(VoiceCommandDTO(0, "cmd-002", "en-US", "open browser", "ACT", "SYS", 0, 1, timestamp, timestamp))
-        repo.insert(VoiceCommandDTO(0, "cmd-003", "en-US", "close window", "ACT", "SYS", 0, 1, timestamp, timestamp))
+        // Updated to include all 13 parameters
+        repo.insert(VoiceCommandDTO(0, "cmd-001", "en-US", "open settings", "[]", "ACT", "", "SYS", 0, 0, 1, timestamp, timestamp))
+        repo.insert(VoiceCommandDTO(0, "cmd-002", "en-US", "open browser", "[]", "ACT", "", "SYS", 0, 0, 1, timestamp, timestamp))
+        repo.insert(VoiceCommandDTO(0, "cmd-003", "en-US", "close window", "[]", "ACT", "", "SYS", 0, 0, 1, timestamp, timestamp))
 
         val openCommands = repo.searchByTrigger("%open%")
         assertEquals(2, openCommands.size)

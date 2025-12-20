@@ -248,16 +248,7 @@ class LearnAppIntegration private constructor(
         // Initialize scraping integration for potential future use
         scrapingIntegration = AccessibilityScrapingIntegration(
             context = context,
-            accessibilityService = accessibilityService,
-            scrapedAppRepository = databaseManager.scrapedApps,
-            scrapedElementRepository = databaseManager.scrapedElements,
-            scrapedHierarchyRepository = databaseManager.scrapedHierarchies,
-            screenContextRepository = databaseManager.screenContexts,
-            elementRelationshipRepository = databaseManager.elementRelationships,
-            elementStateHistoryRepository = databaseManager.elementStateHistory,
-            userInteractionRepository = databaseManager.userInteractions,
-            generatedCommandRepository = databaseManager.generatedCommands,
-            screenTransitionRepository = databaseManager.screenTransitions
+            accessibilityService = accessibilityService
         )
 
         // Initialize just-in-time learner

@@ -192,26 +192,26 @@ class UIHandler(
     
     private fun performDismiss(): Boolean {
         // Try to find and click dismiss/close button
-        service.rootInActiveWindow ?: return false
-        
+        context.getRootNodeInActiveWindow() ?: return false
+
         // Look for common dismiss elements
-        val dismissNode = findNodeByText("dismiss") 
+        val dismissNode = findNodeByText("dismiss")
             ?: findNodeByText("close")
             ?: findNodeByText("cancel")
             ?: findNodeByText("ok")
             ?: findNodeByDescription("dismiss")
             ?: findNodeByDescription("close")
-        
+
         if (dismissNode != null) {
             return dismissNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         }
-        
+
         // Fallback to back action
-        return service.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_BACK)
+        return context.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_BACK)
     }
     
     private fun findNodeByText(text: String): AccessibilityNodeInfo? {
-        val rootNode = service.rootInActiveWindow ?: return null
+        val rootNode = context.getRootNodeInActiveWindow() ?: return null
         return findNodeByTextRecursive(rootNode, text.lowercase())
     }
     
@@ -238,7 +238,7 @@ class UIHandler(
     }
     
     private fun findNodeByDescription(description: String): AccessibilityNodeInfo? {
-        val rootNode = service.rootInActiveWindow ?: return null
+        val rootNode = context.getRootNodeInActiveWindow() ?: return null
         return findNodeByDescriptionRecursive(rootNode, description.lowercase())
     }
     

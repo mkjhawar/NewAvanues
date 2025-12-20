@@ -19,10 +19,16 @@ import android.os.BatteryManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.scraping.database.AppScrapingDatabase
+import com.augmentalis.database.VoiceOSDatabaseManager
+import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.voiceoscore.scraping.entities.ScrapedAppEntity
 import com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity
 import com.augmentalis.voiceoscore.scraping.entities.ScrapedHierarchyEntity
+import com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity
+import com.augmentalis.voiceoscore.scraping.entities.RelationshipType
+import com.augmentalis.voiceoscore.scraping.entities.toDTO
+import com.augmentalis.voiceoscore.database.*  // Extension functions for batch operations
+import com.augmentalis.database.dto.toScrapedElementDTO
 import com.augmentalis.uuidcreator.UUIDCreator
 import com.augmentalis.uuidcreator.alias.UuidAliasManager
 import com.augmentalis.uuidcreator.database.UUIDCreatorDatabase
@@ -85,10 +91,20 @@ class AccessibilityScrapingIntegration(
         )
     }
 
-    private val database: AppScrapingDatabase = AppScrapingDatabase.getInstance(context)
+    private val databaseManager: VoiceOSDatabaseManager = VoiceOSDatabaseManager.getInstance(DatabaseDriverFactory(context))
     private val packageManager: PackageManager = context.packageManager
-    private val commandGenerator: CommandGenerator = CommandGenerator(context)
-    private val voiceCommandProcessor: VoiceCommandProcessor = VoiceCommandProcessor(context, accessibilityService)
+    private val commandGenerator: CommandGenerator = CommandGenerator(
+        context,
+        databaseManager.elementStateHistoryQueries,
+        databaseManager.userInteractionQueries
+    )
+    private val voiceCommandProcessor: VoiceCommandProcessor = VoiceCommandProcessor(
+        context,
+        accessibilityService,
+        databaseManager.scrapedAppQueries,
+        databaseManager.scrapedElementQueries,
+        databaseManager.generatedCommandQueries
+    )
 
     // Phase 3: Interaction learning preferences
     private val preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -252,13 +268,13 @@ class AccessibilityScrapingIntegration(
             val metrics = ScrapingMetrics()
             val scrapeStartTime = System.currentTimeMillis()
 
-            val existingApp = database.scrapedAppDao().getAppByHash(appHash)
+            val existingApp = databaseManager.scrapedAppQueries.getByHash(appHash).executeAsOneOrNull()
             val appId: String
             val isNewApp = existingApp == null
 
             if (existingApp != null) {
                 Log.d(TAG, "App already in database (appId=${existingApp.appId}), using incremental scraping")
-                database.scrapedAppDao().incrementScrapeCount(existingApp.appId)
+                databaseManager.scrapedAppQueries.incrementScrapeCount(System.currentTimeMillis(), existingApp.appId)
                 appId = existingApp.appId
             } else {
                 Log.i(TAG, "New app detected, performing full scrape")
@@ -270,17 +286,32 @@ class AccessibilityScrapingIntegration(
                 val scrapedApp = ScrapedAppEntity(
                     appId = appId,
                     packageName = packageName,
-                    appName = appInfo.applicationInfo.loadLabel(packageManager).toString(),
-                    versionCode = appInfo.versionCode,
+                    versionCode = appInfo.versionCode.toLong(),
                     versionName = appInfo.versionName ?: "unknown",
                     appHash = appHash,
-                    firstScraped = currentTime,
-                    lastScraped = currentTime
+                    firstScrapedAt = currentTime,
+                    lastScrapedAt = currentTime
                 )
 
-                // Insert app
-                database.scrapedAppDao().insert(scrapedApp)
-                Log.d(TAG, "Inserted app: ${scrapedApp.appName}")
+                // Insert app - ScrapedApp.sq: INSERT OR REPLACE VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                // Order: appId, packageName, versionCode, versionName, appHash, isFullyLearned, learnCompletedAt,
+                //        scrapingMode, scrapeCount, elementCount, commandCount, firstScrapedAt, lastScrapedAt
+                databaseManager.scrapedAppQueries.insert(
+                    scrapedApp.appId,
+                    scrapedApp.packageName,
+                    scrapedApp.versionCode,
+                    scrapedApp.versionName,
+                    scrapedApp.appHash,
+                    scrapedApp.isFullyLearned,
+                    scrapedApp.learnCompletedAt,
+                    scrapedApp.scrapingMode,
+                    scrapedApp.scrapeCount,
+                    scrapedApp.elementCount,
+                    scrapedApp.commandCount,
+                    scrapedApp.firstScrapedAt,
+                    scrapedApp.lastScrapedAt
+                )
+                Log.d(TAG, "Inserted app: ${scrapedApp.packageName}")
             }
 
             // ===== PHASE 1: Scrape element tree with hash deduplication =====
@@ -307,7 +338,7 @@ class AccessibilityScrapingIntegration(
             }
 
             // ===== PHASE 2: Insert elements and capture database-assigned IDs =====
-            val assignedIds: List<Long> = database.scrapedElementDao().insertBatchWithIds(elements)
+            val assignedIds: List<Long> = databaseManager.scrapedElementQueries.insertBatchWithIds(elements)
 
             Log.i(TAG, "Inserted ${assignedIds.size} elements, captured database IDs")
             Log.d(TAG, "Sample ID mapping (first 5): ${assignedIds.take(5)}")
@@ -339,9 +370,9 @@ class AccessibilityScrapingIntegration(
                             ),
                             accessibility = UUIDAccessibility(
                                 contentDescription = element.contentDescription,
-                                isClickable = element.isClickable,
-                                isFocusable = element.isFocusable,
-                                isScrollable = element.isScrollable
+                                isClickable = element.isClickable != 0L,
+                                isFocusable = element.isFocusable != 0L,
+                                isScrollable = element.isScrollable != 0L
                             )
                         )
                     )
@@ -371,20 +402,20 @@ class AccessibilityScrapingIntegration(
             Log.d(TAG, "Built ${hierarchy.size} hierarchy entities with valid foreign keys")
 
             // ===== PHASE 4: Insert hierarchy with valid foreign key references =====
-            database.scrapedHierarchyDao().insertBatch(hierarchy)
+            databaseManager.scrapedHierarchyQueries.insertBatch(hierarchy)
 
             // Update element count
-            database.scrapedAppDao().updateElementCount(appId, elements.size)
+            databaseManager.scrapedAppQueries.updateElementCount(elements.size.toLong(), appId)
 
             // Generate commands (need to update elements with real database IDs first)
             Log.d(TAG, "Generating voice commands...")
 
-            // Update elements with real database IDs from assignedIds
+            // Update elements with real database IDs from assignedIds and convert to DTOs
             val elementsWithIds = elements.mapIndexed { index, element ->
                 element.copy(id = assignedIds[index])
             }
 
-            val commands = commandGenerator.generateCommandsForElements(elementsWithIds)
+            val commands = commandGenerator.generateCommandsForElements(elementsWithIds.map { it.toDTO() })
 
             // Validation: Ensure all commands have valid element hashes
             require(commands.all { it.elementHash.isNotBlank() }) {
@@ -394,33 +425,33 @@ class AccessibilityScrapingIntegration(
             Log.d(TAG, "Generated ${commands.size} commands with valid element hashes")
 
             // Insert commands
-            database.generatedCommandDao().insertBatch(commands)
+            databaseManager.generatedCommands.insertBatch(commands)
 
             // Update command count
-            database.scrapedAppDao().updateCommandCount(appId, commands.size)
+            databaseManager.scrapedAppQueries.updateCommandCount(commands.size.toLong(), appId)
 
             // ===== PHASE 5: Create/Update Screen Context (Phase 2) =====
             val screenHash = java.security.MessageDigest.getInstance("MD5")
                 .digest("$packageName${event.className}${rootNode.windowId}".toByteArray())
                 .joinToString("") { "%02x".format(it) }
 
-            val existingScreenContext = database.screenContextDao().getByScreenHash(screenHash)
+            val existingScreenContext = databaseManager.screenContextQueries.getByScreenHash(screenHash).executeAsOneOrNull()
 
             if (existingScreenContext != null) {
                 // Update existing screen context
-                database.screenContextDao().incrementVisitCount(screenHash, System.currentTimeMillis())
-                Log.d(TAG, "Updated screen context (visit count: ${existingScreenContext.visitCount + 1})")
+                databaseManager.screenContextQueries.incrementVisitCount(System.currentTimeMillis(), screenHash)
+                Log.d(TAG, "Updated screen context visit count")
             } else {
                 // Create new screen context
                 val screenType = screenContextHelper.inferScreenType(
                     windowTitle = rootNode.text?.toString(),
                     activityName = event.className?.toString(),
-                    elements = elements
+                    elements = elements.map { it.toDTO() }
                 )
 
-                val formContext = screenContextHelper.inferFormContext(elements)
+                val formContext = screenContextHelper.inferFormContext(elements.map { it.toDTO() })
 
-                val primaryAction = screenContextHelper.inferPrimaryAction(elements)
+                val primaryAction = screenContextHelper.inferPrimaryAction(elements.map { it.toDTO() })
 
                 val hasBackButton = elements.any {
                     it.contentDescription?.contains("back", ignoreCase = true) == true ||
@@ -440,20 +471,38 @@ class AccessibilityScrapingIntegration(
                     windowTitle = rootNode.text?.toString(),
                     screenType = screenType,
                     formContext = formContext,
-                    navigationLevel = navigationLevel,
+                    navigationLevel = navigationLevel.toLong(),
                     primaryAction = primaryAction,
-                    elementCount = elements.size,
-                    hasBackButton = hasBackButton
+                    elementCount = elements.size.toLong(),
+                    hasBackButton = if (hasBackButton) 1L else 0L
                 )
 
-                database.screenContextDao().insert(screenContext)
+                // Insert screen context - ScreenContext.sq: INSERT OR REPLACE VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                // Order: screenHash, appId, packageName, activityName, windowTitle, screenType, formContext,
+                //        navigationLevel, primaryAction, elementCount, hasBackButton, firstScraped, lastScraped, visitCount
+                databaseManager.screenContextQueries.insert(
+                    screenContext.screenHash,
+                    screenContext.appId,
+                    screenContext.packageName,
+                    screenContext.activityName,
+                    screenContext.windowTitle,
+                    screenContext.screenType,
+                    screenContext.formContext,
+                    screenContext.navigationLevel,
+                    screenContext.primaryAction,
+                    screenContext.elementCount,
+                    screenContext.hasBackButton,
+                    screenContext.firstScraped,
+                    screenContext.lastScraped,
+                    screenContext.visitCount
+                )
                 Log.d(TAG, "Created screen context: type=$screenType, formContext=$formContext, primaryAction=$primaryAction")
 
                 // ===== PHASE 2.5: Assign Form Group IDs =====
                 if (formContext != null) {
                     // Find all form-related elements (editable fields and form inputs)
                     val formElements = elements.filter { element ->
-                        element.isEditable ||
+                        element.isEditable != 0L ||
                         element.semanticRole?.startsWith("input_") == true ||
                         element.className.contains("EditText", ignoreCase = true)
                     }
@@ -463,13 +512,13 @@ class AccessibilityScrapingIntegration(
                         val groupId = screenContextHelper.generateFormGroupId(
                             packageName = packageName,
                             screenHash = screenHash,
-                            elementDepth = formElements.firstOrNull()?.depth ?: 0,
+                            elementDepth = (formElements.firstOrNull()?.depth ?: 0L).toInt(),
                             formContext = formContext
                         )
 
                         // Update all form elements with the group ID
                         val elementHashes = formElements.map { it.elementHash }
-                        database.scrapedElementDao().updateFormGroupIdBatch(elementHashes, groupId)
+                        databaseManager.scrapedElementQueries.updateFormGroupIdBatch(formGroupId = groupId, elementHashes = elementHashes)
 
                         Log.d(TAG, "Assigned formGroupId '$groupId' to ${formElements.size} form elements")
                     }
@@ -479,7 +528,7 @@ class AccessibilityScrapingIntegration(
                 // Find submit buttons
                 val submitButtons = elements.filter { element ->
                     element.semanticRole in listOf("submit_form", "submit_login", "submit_signup", "submit_payment") ||
-                    (element.isClickable && element.className.contains("Button", ignoreCase = true) &&
+                    (element.isClickable != 0L && element.className.contains("Button", ignoreCase = true) &&
                      element.text?.lowercase()?.let { text ->
                          text.contains("submit") || text.contains("login") || text.contains("sign in") ||
                          text.contains("continue") || text.contains("next") || text.contains("done") ||
@@ -488,7 +537,7 @@ class AccessibilityScrapingIntegration(
                 }
 
                 // Find form input fields
-                val formInputs = elements.filter { it.isEditable || it.semanticRole?.startsWith("input_") == true }
+                val formInputs = elements.filter { it.isEditable != 0L || it.semanticRole?.startsWith("input_") == true }
 
                 if (submitButtons.isNotEmpty() && formInputs.isNotEmpty()) {
                     val relationships = mutableListOf<com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity>()
@@ -517,7 +566,7 @@ class AccessibilityScrapingIntegration(
                     }
 
                     if (relationships.isNotEmpty()) {
-                        database.elementRelationshipDao().insertAll(relationships)
+                        databaseManager.elementRelationshipQueries.insertAll(relationships)
                         Log.d(TAG, "Created ${relationships.size} button→form relationships")
                     }
                 }
@@ -532,7 +581,7 @@ class AccessibilityScrapingIntegration(
                 }
 
                 // Find input fields
-                val inputs = elements.filter { it.isEditable || it.semanticRole?.startsWith("input_") == true }
+                val inputs = elements.filter { it.isEditable != 0L || it.semanticRole?.startsWith("input_") == true }
 
                 if (labels.isNotEmpty() && inputs.isNotEmpty()) {
                     val labelRelationships = mutableListOf<com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity>()
@@ -576,7 +625,7 @@ class AccessibilityScrapingIntegration(
                     }
 
                     if (labelRelationships.isNotEmpty()) {
-                        database.elementRelationshipDao().insertAll(labelRelationships)
+                        databaseManager.elementRelationshipQueries.insertAll(labelRelationships)
                         Log.d(TAG, "Created ${labelRelationships.size} label→input relationships")
                     }
                 }
@@ -590,7 +639,7 @@ class AccessibilityScrapingIntegration(
                     } else null
 
                     // Record the transition
-                    database.screenTransitionDao().recordTransition(
+                    databaseManager.screenTransitionQueries.recordTransition(
                         fromHash = lastScrapedScreenHash!!,
                         toHash = screenHash,
                         transitionTime = transitionTime
@@ -692,9 +741,9 @@ class AccessibilityScrapingIntegration(
             // ===== PHASE 1: Hash Deduplication - Check if element already exists =====
             metrics?.elementsFound = (metrics?.elementsFound ?: 0) + 1
 
-            // FIX (2025-12-17): Use withContext instead of runBlocking to avoid blocking threads
-            val existsInDb = kotlinx.coroutines.withContext(Dispatchers.IO) {
-                database.scrapedElementDao().getElementByHash(elementHash) != null
+            // FIX (2025-12-17): Check if element exists in database
+            val existsInDb = kotlinx.coroutines.runBlocking {
+                databaseManager.scrapedElementQueries.getElementByHash(elementHash) != null
             }
             if (existsInDb) {
                 metrics?.elementsCached = (metrics?.elementsCached ?: 0) + 1
@@ -779,6 +828,7 @@ class AccessibilityScrapingIntegration(
             // formGroupId will be set at screen level after all elements are collected
 
             // Create element entity (ID will be auto-generated by database)
+            // Note: Boolean values must be converted to Long (1 or 0) for SQLDelight
             val element = ScrapedElementEntity(
                 elementHash = elementHash,
                 appId = appId,
@@ -788,20 +838,20 @@ class AccessibilityScrapingIntegration(
                 text = text,
                 contentDescription = contentDesc,
                 bounds = boundsToJson(bounds),
-                isClickable = node.isClickable,
-                isLongClickable = node.isLongClickable,
-                isEditable = node.isEditable,
-                isScrollable = node.isScrollable,
-                isCheckable = node.isCheckable,
-                isFocusable = node.isFocusable,
-                isEnabled = node.isEnabled,
-                depth = depth,
-                indexInParent = indexInParent,
+                isClickable = if (node.isClickable) 1L else 0L,
+                isLongClickable = if (node.isLongClickable) 1L else 0L,
+                isEditable = if (node.isEditable) 1L else 0L,
+                isScrollable = if (node.isScrollable) 1L else 0L,
+                isCheckable = if (node.isCheckable) 1L else 0L,
+                isFocusable = if (node.isFocusable) 1L else 0L,
+                isEnabled = if (node.isEnabled) 1L else 0L,
+                depth = depth.toLong(),
+                indexInParent = indexInParent.toLong(),
                 // AI Context (Phase 1)
                 semanticRole = semanticRole,
                 inputType = inputType,
                 visualWeight = visualWeight,
-                isRequired = isRequired,
+                isRequired = if (isRequired == true) 1L else null,
                 // AI Context (Phase 2)
                 formGroupId = null,  // Set later at screen level
                 placeholderText = placeholderText,
@@ -1060,38 +1110,45 @@ class AccessibilityScrapingIntegration(
                 Log.d(TAG, "App hash: $appHash")
 
                 // Get or create app entity
-                var app = database.scrapedAppDao().getAppByHash(appHash)
+                var app = databaseManager.scrapedAppQueries.getByHash(appHash).executeAsOneOrNull()
                 val appId = if (app != null) {
-                    Log.d(TAG, "App exists in database: ${app.appName}")
+                    Log.d(TAG, "App exists in database: ${app.packageName}")
                     app.appId
                 } else {
-                    // Create new app entity
+                    // Create new app
                     val newAppId = UUID.randomUUID().toString()
                     val currentTime = System.currentTimeMillis()
-                    app = ScrapedAppEntity(
-                        appId = newAppId,
-                        packageName = packageName,
-                        appName = appInfo.applicationInfo.loadLabel(packageManager).toString(),
-                        versionCode = appInfo.versionCode,
-                        versionName = appInfo.versionName ?: "unknown",
-                        appHash = appHash,
-                        firstScraped = currentTime,
-                        lastScraped = currentTime,
-                        scrapingMode = ScrapingMode.LEARN_APP.name
+
+                    // Insert app - ScrapedApp.sq: INSERT OR REPLACE VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    // Order: appId, packageName, versionCode, versionName, appHash, isFullyLearned, learnCompletedAt,
+                    //        scrapingMode, scrapeCount, elementCount, commandCount, firstScrapedAt, lastScrapedAt
+                    databaseManager.scrapedAppQueries.insert(
+                        newAppId,
+                        packageName,
+                        appInfo.versionCode.toLong(),
+                        appInfo.versionName ?: "unknown",
+                        appHash,
+                        0L, // isFullyLearned
+                        null, // learnCompletedAt
+                        ScrapingMode.LEARN_APP.name,
+                        0L, // scrapeCount
+                        0L, // elementCount
+                        0L, // commandCount
+                        currentTime, // firstScrapedAt
+                        currentTime // lastScrapedAt
                     )
-                    database.scrapedAppDao().insert(app)
-                    Log.d(TAG, "Created new app entity: ${app.appName}")
+                    Log.d(TAG, "Created new app in database: $packageName")
                     newAppId
                 }
 
                 // Update mode to LEARN_APP
-                database.scrapedAppDao().updateScrapingMode(appId, ScrapingMode.LEARN_APP.name)
+                databaseManager.scrapedAppQueries.updateScrapingMode(appId, ScrapingMode.LEARN_APP.name)
 
                 // Get root node
                 val rootNode = accessibilityService.rootInActiveWindow
                 if (rootNode == null) {
                     Log.e(TAG, "Cannot start LearnApp - no root node")
-                    database.scrapedAppDao().updateScrapingMode(appId, ScrapingMode.DYNAMIC.name)
+                    databaseManager.scrapedAppQueries.updateScrapingMode(appId, ScrapingMode.DYNAMIC.name)
                     return@withContext LearnAppResult(
                         success = false,
                         message = "No accessibility access - ensure service is enabled",
@@ -1106,7 +1163,7 @@ class AccessibilityScrapingIntegration(
                 if (currentPackage != packageName) {
                     Log.w(TAG, "Current app ($currentPackage) doesn't match target ($packageName)")
                     rootNode.recycle()
-                    database.scrapedAppDao().updateScrapingMode(appId, ScrapingMode.DYNAMIC.name)
+                    databaseManager.scrapedAppQueries.updateScrapingMode(appId, ScrapingMode.DYNAMIC.name)
                     return@withContext LearnAppResult(
                         success = false,
                         message = "Please navigate to $packageName before learning",
@@ -1133,33 +1190,66 @@ class AccessibilityScrapingIntegration(
                 var updatedCount = 0
 
                 for (element in elements) {
-                    val existing = database.scrapedElementDao().getElementByHash(element.elementHash)
+                    val existing = databaseManager.scrapedElementQueries.getElementByHash(element.elementHash)
                     if (existing != null) {
                         updatedCount++
                     } else {
                         newCount++
                     }
-                    database.scrapedElementDao().upsertElement(element)
+                    // Upsert element - ScrapedElement.sq: INSERT OR REPLACE VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    // Order: elementHash, appId, uuid, className, viewIdResourceName, text, contentDescription,
+                    //        bounds, isClickable, isLongClickable, isEditable, isScrollable, isCheckable,
+                    //        isFocusable, isEnabled, depth, indexInParent, scrapedAt, semanticRole, inputType,
+                    //        visualWeight, isRequired, formGroupId, placeholderText, validationPattern, backgroundColor, screen_hash
+                    databaseManager.scrapedElementQueries.upsertElement(
+                        element.elementHash,
+                        element.appId,
+                        element.uuid,
+                        element.className,
+                        element.viewIdResourceName,
+                        element.text,
+                        element.contentDescription,
+                        element.bounds,
+                        element.isClickable,
+                        element.isLongClickable,
+                        element.isEditable,
+                        element.isScrollable,
+                        element.isCheckable,
+                        element.isFocusable,
+                        element.isEnabled,
+                        element.depth,
+                        element.indexInParent,
+                        element.scrapedAt,
+                        element.semanticRole,
+                        element.inputType,
+                        element.visualWeight,
+                        element.isRequired,
+                        element.formGroupId,
+                        element.placeholderText,
+                        element.validationPattern,
+                        element.backgroundColor,
+                        element.screen_hash
+                    )
                 }
 
                 Log.i(TAG, "Merge complete: $newCount new, $updatedCount updated")
 
                 // Mark app as fully learned
                 val completionTime = System.currentTimeMillis()
-                database.scrapedAppDao().markAsFullyLearned(appId, completionTime)
-                database.scrapedAppDao().updateElementCount(appId, elements.size)
+                databaseManager.scrapedAppQueries.markAsFullyLearned(completionTime, appId)
+                databaseManager.scrapedAppQueries.updateElementCount(elements.size.toLong(), appId)
 
                 // Update scraping mode back to DYNAMIC
-                database.scrapedAppDao().updateScrapingMode(appId, ScrapingMode.DYNAMIC.name)
+                databaseManager.scrapedAppQueries.updateScrapingMode(appId, ScrapingMode.DYNAMIC.name)
 
                 // Generate commands for new elements
                 if (newCount > 0) {
                     Log.d(TAG, "Generating commands for $newCount new elements...")
-                    // Get all elements with real database IDs
-                    val allElements = database.scrapedElementDao().getElementsByAppId(appId)
-                    val commands = commandGenerator.generateCommandsForElements(allElements)
-                    database.generatedCommandDao().insertBatch(commands)
-                    database.scrapedAppDao().updateCommandCount(appId, commands.size)
+                    // Get all elements with real database IDs and convert to DTOs
+                    val allElements = databaseManager.scrapedElementQueries.getElementsByAppId(appId).executeAsList()
+                    val commands = commandGenerator.generateCommandsForElements(allElements.map { it.toScrapedElementDTO() })
+                    databaseManager.generatedCommands.insertBatch(commands)
+                    databaseManager.scrapedAppQueries.updateCommandCount(commands.size.toLong(), appId)
                     Log.d(TAG, "Generated ${commands.size} total commands")
                 }
 
@@ -1167,7 +1257,7 @@ class AccessibilityScrapingIntegration(
 
                 LearnAppResult(
                     success = true,
-                    message = "Successfully learned ${app!!.appName}",
+                    message = "Successfully learned ${app!!.packageName}",
                     elementsDiscovered = elements.size,
                     newElements = newCount,
                     updatedElements = updatedCount
@@ -1224,9 +1314,9 @@ class AccessibilityScrapingIntegration(
                     ),
                     accessibility = UUIDAccessibility(
                         contentDescription = element.contentDescription,
-                        isClickable = element.isClickable,
-                        isFocusable = element.isFocusable,
-                        isScrollable = element.isScrollable
+                        isClickable = element.isClickable != 0L,
+                        isFocusable = element.isFocusable != 0L,
+                        isScrollable = element.isScrollable != 0L
                     )
                 )
             )
@@ -1396,7 +1486,7 @@ class AccessibilityScrapingIntegration(
             // (race condition: user interactions can occur before window scraping completes)
 
             // Verify element exists in database (FK: element_hash -> scraped_elements.element_hash)
-            val elementExists = database.scrapedElementDao().getElementByHash(elementHash) != null
+            val elementExists = databaseManager.scrapedElementQueries.getElementByHash(elementHash) != null
             if (!elementExists) {
                 Log.v(TAG, "Skipping $interactionType interaction - element not scraped yet: $elementHash")
                 node.recycle()
@@ -1404,7 +1494,7 @@ class AccessibilityScrapingIntegration(
             }
 
             // Verify screen exists in database (FK: screen_hash -> screen_contexts.screen_hash)
-            val screenExists = database.screenContextDao().getScreenByHash(screenHash) != null
+            val screenExists = databaseManager.screenContextQueries.getScreenByHash(screenHash) != null
             if (!screenExists) {
                 Log.v(TAG, "Skipping $interactionType interaction - screen not scraped yet: $screenHash")
                 node.recycle()
@@ -1423,12 +1513,19 @@ class AccessibilityScrapingIntegration(
                 screenHash = screenHash,
                 interactionType = interactionType,
                 visibilityStart = visibilityStart,
-                visibilityDuration = visibilityDuration,
-                success = true  // Assume success unless we detect failure
+                visibilityDuration = visibilityDuration
             )
 
-            // Save to database (safe - both FK parents verified to exist)
-            database.userInteractionDao().insert(interaction)
+            // Save to database - UserInteraction.sq: INSERT OR REPLACE VALUES (?, ?, ?, ?, ?, ?)
+            // Order: elementHash, screenHash, interactionType, interactionTime, visibilityStart, visibilityDuration
+            databaseManager.userInteractionQueries.insert(
+                interaction.elementHash,
+                interaction.screenHash,
+                interaction.interactionType,
+                interaction.interactionTime,
+                interaction.visibilityStart,
+                interaction.visibilityDuration
+            )
             Log.d(TAG, "Recorded $interactionType interaction for element $elementHash (visibility: ${visibilityDuration}ms)")
 
             node.recycle()
@@ -1488,7 +1585,17 @@ class AccessibilityScrapingIntegration(
                     triggeredBy = determineTrigerSource(event)
                 )
 
-                database.elementStateHistoryDao().insert(stateChange)
+                // Insert state change - ElementStateHistory.sq: INSERT OR REPLACE VALUES (?, ?, ?, ?, ?, ?, ?)
+                // Order: elementHash, screenHash, stateType, oldValue, newValue, changedAt, triggeredBy
+                databaseManager.elementStateHistoryQueries.insert(
+                    stateChange.elementHash,
+                    stateChange.screenHash,
+                    stateChange.stateType,
+                    stateChange.oldValue,
+                    stateChange.newValue,
+                    stateChange.changedAt,
+                    stateChange.triggeredBy
+                )
                 previousStates[stateType] = newValue
                 Log.d(TAG, "Recorded state change: $stateType from $oldValue to $newValue")
             }
@@ -1566,7 +1673,7 @@ class AccessibilityScrapingIntegration(
         event: AccessibilityEvent
     ) {
         // Verify element exists in database (FK constraint requirement)
-        val elementExists = database.scrapedElementDao().getElementByHash(elementHash) != null
+        val elementExists = databaseManager.scrapedElementQueries.getElementByHash(elementHash) != null
         if (!elementExists) {
             // Element not scraped yet - skip state tracking
             // State will be captured when element is eventually scraped
@@ -1574,7 +1681,7 @@ class AccessibilityScrapingIntegration(
         }
 
         // Verify screen exists in database (FK constraint requirement)
-        val screenExists = database.screenContextDao().getScreenByHash(screenHash) != null
+        val screenExists = databaseManager.screenContextQueries.getScreenByHash(screenHash) != null
         if (!screenExists) {
             // Screen not scraped yet - skip state tracking
             return
@@ -1593,7 +1700,17 @@ class AccessibilityScrapingIntegration(
                 triggeredBy = determineTrigerSource(event)
             )
 
-            database.elementStateHistoryDao().insert(stateChange)
+            // Insert state change - ElementStateHistory.sq: INSERT OR REPLACE VALUES (?, ?, ?, ?, ?, ?, ?)
+            // Order: elementHash, screenHash, stateType, oldValue, newValue, changedAt, triggeredBy
+            databaseManager.elementStateHistoryQueries.insert(
+                stateChange.elementHash,
+                stateChange.screenHash,
+                stateChange.stateType,
+                stateChange.oldValue,
+                stateChange.newValue,
+                stateChange.changedAt,
+                stateChange.triggeredBy
+            )
             previousStates[stateType] = newValue
         }
     }

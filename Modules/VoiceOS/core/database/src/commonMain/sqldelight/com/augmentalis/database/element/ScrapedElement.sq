@@ -55,6 +55,9 @@ SELECT * FROM scraped_element WHERE id = ?;
 getByHash:
 SELECT * FROM scraped_element WHERE elementHash = ?;
 
+getElementByHash:
+SELECT * FROM scraped_element WHERE elementHash = ?;
+
 getByHashAndApp:
 SELECT * FROM scraped_element WHERE appId = ? AND elementHash = ? LIMIT 1;
 
@@ -62,6 +65,9 @@ getByUuid:
 SELECT * FROM scraped_element WHERE appId = ? AND uuid = ? LIMIT 1;
 
 getByApp:
+SELECT * FROM scraped_element WHERE appId = ? ORDER BY depth, indexInParent;
+
+getElementsByAppId:
 SELECT * FROM scraped_element WHERE appId = ? ORDER BY depth, indexInParent;
 
 getClickable:
@@ -120,3 +126,20 @@ SELECT COUNT(*) FROM scraped_element WHERE appId = ? AND screen_hash = ?;
 
 getByScreenHash:
 SELECT * FROM scraped_element WHERE appId = ? AND screen_hash = ? ORDER BY depth, indexInParent;
+
+upsertElement:
+INSERT OR REPLACE INTO scraped_element(
+    elementHash, appId, uuid, className, viewIdResourceName, text, contentDescription,
+    bounds, isClickable, isLongClickable, isEditable, isScrollable, isCheckable,
+    isFocusable, isEnabled, depth, indexInParent, scrapedAt, semanticRole, inputType,
+    visualWeight, isRequired, formGroupId, placeholderText, validationPattern, backgroundColor, screen_hash
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateFormGroupIdBatch:
+UPDATE scraped_element
+SET formGroupId = :formGroupId
+WHERE elementHash IN :elementHashes;
+
+-- Get last inserted row ID (for batch insert with ID capture)
+lastInsertRowId:
+SELECT last_insert_rowid();

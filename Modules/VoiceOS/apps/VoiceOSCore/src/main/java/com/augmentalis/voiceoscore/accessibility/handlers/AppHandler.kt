@@ -24,7 +24,7 @@ class AppHandler(
         private const val TAG = "AppHandler"
     }
 
-    private val packageManager: PackageManager = context.packageManager
+    private val packageManager: PackageManager = context.getPackageManager()
 
     override fun execute(
         category: ActionCategory,

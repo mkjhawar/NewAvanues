@@ -16,7 +16,7 @@ import android.graphics.Point
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.ViewConfiguration
-import com.augmentalis.voiceoscore.accessibility.VoiceOSService
+import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
 import com.augmentalis.voiceoscore.accessibility.ui.utils.DisplayUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Handler for complex gesture interactions
  */
 class GestureHandler(
-    private val service: VoiceOSService,
+    private val service: IVoiceOSContext,
     private val pathFactory: GesturePathFactory = RealGesturePathFactory(),
     private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) : ActionHandler {
@@ -319,7 +319,7 @@ class GestureHandler(
      */
     private fun dispatchGesture(gesture: GestureDescription): Boolean {
         return try {
-            service.dispatchGesture(gesture, object : GestureResultCallback() {
+            service.accessibilityService.dispatchGesture(gesture, object : GestureResultCallback() {
                 override fun onCompleted(gestureDescription: GestureDescription?) {
                     super.onCompleted(gestureDescription)
                     Log.d(TAG, "Gesture completed successfully")
@@ -345,7 +345,7 @@ class GestureHandler(
         
         val gesture = gestureQueue[0]
         try {
-            val success = service.dispatchGesture(gesture, gestureResultCallback, null)
+            val success = service.accessibilityService.dispatchGesture(gesture, gestureResultCallback, null)
             if (!success) {
                 gestureQueue.clear()
                 Log.w(TAG, "Failed to dispatch gesture, clearing queue")
@@ -386,20 +386,20 @@ class GestureHandler(
      */
     private fun getScreenCenter(): Pair<Int, Int> {
         return try {
-            val size = DisplayUtils.getRealScreenSize(service)
+            val size = DisplayUtils.getRealScreenSize(service.context)
             Pair(size.x / 2, size.y / 2)
         } catch (e: Exception) {
             Log.e(TAG, "Error getting screen center", e)
             Pair(0, 0)
         }
     }
-    
+
     /**
      * Get display metrics for boundary checking
      */
     private fun getDisplayMetrics(): DisplayMetrics {
         return try {
-            DisplayUtils.getRealDisplayMetrics(service)
+            DisplayUtils.getRealDisplayMetrics(service.context)
         } catch (e: Exception) {
             Log.e(TAG, "Error getting display metrics, using system defaults", e)
             Resources.getSystem().displayMetrics

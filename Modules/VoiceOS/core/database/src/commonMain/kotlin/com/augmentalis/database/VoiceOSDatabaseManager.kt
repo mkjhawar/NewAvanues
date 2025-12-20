@@ -57,6 +57,10 @@ import com.augmentalis.database.repositories.plugin.IPluginRepository
 import com.augmentalis.database.repositories.plugin.SQLDelightPluginRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 
 /**
  * Main database manager providing access to all repositories.
@@ -106,8 +110,54 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
         }
     }
 
+    /**
+     * Initialization state for database validation
+     */
+    sealed class InitializationState {
+        object NotStarted : InitializationState()
+        object InProgress : InitializationState()
+        data class Completed(val timestamp: Long) : InitializationState()
+        data class Failed(val error: String) : InitializationState()
+    }
+
+    // Initialization state tracking
+    private val _initState = MutableStateFlow<InitializationState>(InitializationState.InProgress)
+    val initState: StateFlow<InitializationState> = _initState
+
     private val driver: SqlDriver = driverFactory.createDriver()
     internal val database: VoiceOSDatabase = VoiceOSDatabase(driver)
+
+    /**
+     * Public accessor for database instance (needed for VoiceOSService foreign key verification)
+     */
+    fun getDatabase(): VoiceOSDatabase = database
+
+    init {
+        // Verify database initialization on creation
+        try {
+            // Verify foreign keys are enabled
+            val fkEnabled = driver.executeQuery(
+                identifier = null,
+                sql = "PRAGMA foreign_keys",
+                mapper = { cursor ->
+                    QueryResult.Value(if (cursor.next().value) {
+                        cursor.getLong(0) == 1L
+                    } else {
+                        false
+                    })
+                },
+                parameters = 0
+            ).value
+
+            if (!fkEnabled) {
+                _initState.value = InitializationState.Failed("Foreign keys not enabled")
+            } else {
+                _initState.value = InitializationState.Completed(System.currentTimeMillis())
+            }
+        } catch (e: Exception) {
+            _initState.value = InitializationState.Failed(e.message ?: "Unknown initialization error")
+        }
+    }
 
     // Repository interfaces (use these for abstraction)
     val commands: ICommandRepository = SQLDelightCommandRepository(database)
@@ -204,6 +254,49 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
     val scrapedWebsiteQueries get() = database.scrapedWebsiteQueries
     val scrapedWebElementQueries get() = database.scrapedWebElementQueries
     val generatedWebCommandQueries get() = database.generatedWebCommandQueries
+
+    /**
+     * Wait for database initialization to complete.
+     *
+     * This method suspends until the database is fully initialized and ready for use.
+     * If initialization fails, throws IllegalStateException.
+     *
+     * @param timeoutMs Maximum time to wait in milliseconds (default: 10000ms)
+     * @throws IllegalStateException if database initialization failed or timed out
+     */
+    suspend fun waitForInitialization(timeoutMs: Long = 10_000L) {
+        val startTime = System.currentTimeMillis()
+
+        // Wait for initialization to complete or fail
+        val state = _initState.first {
+            it is InitializationState.Completed ||
+            it is InitializationState.Failed ||
+            (System.currentTimeMillis() - startTime) > timeoutMs
+        }
+
+        when (state) {
+            is InitializationState.Completed -> {
+                // Success - database is ready
+            }
+            is InitializationState.Failed -> {
+                throw IllegalStateException("Database initialization failed: ${state.error}")
+            }
+            else -> {
+                if ((System.currentTimeMillis() - startTime) > timeoutMs) {
+                    throw IllegalStateException("Database initialization timed out after ${timeoutMs}ms")
+                }
+            }
+        }
+    }
+
+    /**
+     * Check if database is ready for use (non-blocking).
+     *
+     * @return true if database is initialized and ready, false otherwise
+     */
+    fun isReady(): Boolean {
+        return _initState.value is InitializationState.Completed
+    }
 
     /**
      * Execute multiple operations in a transaction.

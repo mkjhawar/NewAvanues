@@ -1,5 +1,5 @@
 /**
- * VoiceRecognitionManager.kt - Integration manager for voice recognition
+ * VoiceRecognitionManagerIPC.kt - Integration manager for voice recognition (IPC-based)
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
@@ -14,15 +14,15 @@ import com.augmentalis.voiceoscore.accessibility.managers.ActionCoordinator
 import kotlinx.coroutines.*
 
 /**
- * Manager class that integrates VoiceRecognitionBinder with the VoiceAccessibility service
- * Example usage for voice recognition integration
+ * IPC-based manager that integrates VoiceRecognitionBinder with the VoiceAccessibility service
+ * Example usage for voice recognition integration via inter-process communication
  */
-class VoiceRecognitionManager(
+class VoiceRecognitionManagerIPC(
     private val actionCoordinator: ActionCoordinator
 ) {
     
     companion object {
-        private const val TAG = "VoiceRecognitionManager"
+        private const val TAG = "VoiceRecognitionManagerIPC"
         private const val DEFAULT_ENGINE = "google"
         private const val DEFAULT_LANGUAGE = "en-US"
         private const val CONNECTION_TIMEOUT_MS = 10000L
@@ -40,8 +40,8 @@ class VoiceRecognitionManager(
             Log.w(TAG, "Already initialized")
             return
         }
-        
-        Log.d(TAG, "Initializing VoiceRecognitionManager")
+
+        Log.d(TAG, "Initializing VoiceRecognitionManagerIPC")
         
         try {
             // Create the binder with ActionCoordinator
@@ -53,10 +53,10 @@ class VoiceRecognitionManager(
             }
             
             isInitialized = true
-            Log.i(TAG, "VoiceRecognitionManager initialized successfully")
-            
+            Log.i(TAG, "VoiceRecognitionManagerIPC initialized successfully")
+
         } catch (e: Exception) {
-            Log.e(TAG, "Error initializing VoiceRecognitionManager", e)
+            Log.e(TAG, "Error initializing VoiceRecognitionManagerIPC", e)
         }
     }
     
@@ -191,9 +191,9 @@ class VoiceRecognitionManager(
      */
     fun getDebugInfo(): String {
         return buildString {
-            appendLine("VoiceRecognitionManager Debug Info")
+            appendLine("VoiceRecognitionManagerIPC Debug Info")
             appendLine("Initialized: $isInitialized")
-            
+
             val binder = voiceRecognitionBinder
             if (binder != null) {
                 appendLine("Binder Status:")
@@ -208,19 +208,19 @@ class VoiceRecognitionManager(
      * Dispose and clean up resources
      */
     fun dispose() {
-        Log.d(TAG, "Disposing VoiceRecognitionManager")
-        
+        Log.d(TAG, "Disposing VoiceRecognitionManagerIPC")
+
         try {
             voiceRecognitionBinder?.dispose()
         } catch (e: Exception) {
             Log.e(TAG, "Error disposing binder", e)
         }
-        
+
         voiceRecognitionBinder = null
         isInitialized = false
-        
+
         managerScope.cancel()
-        
-        Log.d(TAG, "VoiceRecognitionManager disposed")
+
+        Log.d(TAG, "VoiceRecognitionManagerIPC disposed")
     }
 }

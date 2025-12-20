@@ -13,6 +13,16 @@ CREATE TABLE commands_generated (
     usageCount INTEGER NOT NULL DEFAULT 0,
     lastUsed INTEGER,
     createdAt INTEGER NOT NULL,
+
+    -- P2 Task 3: Package-based pagination (Schema v3)
+    appId TEXT NOT NULL DEFAULT '',
+
+    -- Schema v3: Version tracking (2025-12-13)
+    appVersion TEXT NOT NULL DEFAULT '',
+    versionCode INTEGER NOT NULL DEFAULT 0,
+    lastVerified INTEGER,
+    isDeprecated INTEGER NOT NULL DEFAULT 0,
+
     -- ADR-014: Unified Learning columns
     synced_to_ava INTEGER NOT NULL DEFAULT 0,
     synced_at INTEGER,
@@ -23,9 +33,18 @@ CREATE INDEX idx_gc_element ON commands_generated(elementHash);
 CREATE INDEX idx_gc_action ON commands_generated(actionType);
 CREATE INDEX idx_gc_confidence ON commands_generated(confidence);
 
+-- Schema v3: Indexes for new columns
+CREATE INDEX idx_gc_appId ON commands_generated(appId);
+CREATE INDEX idx_gc_versionCode ON commands_generated(versionCode);
+CREATE INDEX idx_gc_deprecated ON commands_generated(isDeprecated);
+
 insert:
-INSERT OR REPLACE INTO commands_generated(elementHash, commandText, actionType, confidence, synonyms, isUserApproved, usageCount, lastUsed, createdAt)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO commands_generated(
+    elementHash, commandText, actionType, confidence, synonyms,
+    isUserApproved, usageCount, lastUsed, createdAt,
+    appId, appVersion, versionCode, lastVerified, isDeprecated
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getById:
 SELECT * FROM commands_generated WHERE id = ?;
@@ -82,8 +101,12 @@ SELECT COUNT(*) > 0 FROM commands_generated WHERE elementHash = ? AND commandTex
 
 -- FIX (2025-12-05): Insert only if not exists (more efficient than INSERT OR REPLACE)
 insertIfNotExists:
-INSERT OR IGNORE INTO commands_generated(elementHash, commandText, actionType, confidence, synonyms, isUserApproved, usageCount, lastUsed, createdAt)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR IGNORE INTO commands_generated(
+    elementHash, commandText, actionType, confidence, synonyms,
+    isUserApproved, usageCount, lastUsed, createdAt,
+    appId, appVersion, versionCode, lastVerified, isDeprecated
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- Get commands by package (via join with scraped_element)
 getByPackage:
@@ -102,7 +125,12 @@ SET elementHash = ?,
     synonyms = ?,
     isUserApproved = ?,
     usageCount = ?,
-    lastUsed = ?
+    lastUsed = ?,
+    appId = ?,
+    appVersion = ?,
+    versionCode = ?,
+    lastVerified = ?,
+    isDeprecated = ?
 WHERE id = ?;
 
 -- ==================== ADR-014: Unified Learning Queries ====================
@@ -157,3 +185,133 @@ SELECT
     SUM(CASE WHEN isUserApproved = 1 THEN 1 ELSE 0 END) AS user_approved,
     SUM(CASE WHEN confidence >= 0.85 THEN 1 ELSE 0 END) AS high_confidence
 FROM commands_generated;
+
+-- ==================== Schema v3: Version Tracking Queries ====================
+
+-- Get last inserted row ID (required by repository)
+lastInsertRowId:
+SELECT last_insert_rowid();
+
+-- Delete commands by package name
+deleteByPackage:
+DELETE FROM commands_generated WHERE appId = ?;
+
+-- Get commands by app version
+getByAppVersion:
+SELECT * FROM commands_generated
+WHERE appId = ? AND versionCode = ?
+ORDER BY usageCount DESC;
+
+-- Get deprecated commands
+getDeprecated:
+SELECT * FROM commands_generated
+WHERE isDeprecated = 1
+ORDER BY lastVerified DESC;
+
+-- Mark commands as deprecated (for version cleanup)
+markDeprecated:
+UPDATE commands_generated
+SET isDeprecated = 1, lastVerified = ?
+WHERE appId = ? AND versionCode < ?;
+
+-- Clean up old deprecated commands
+deleteDeprecated:
+DELETE FROM commands_generated
+WHERE isDeprecated = 1 AND lastVerified < ?;
+
+-- ==================== Pagination Queries ====================
+
+-- Get all commands with pagination
+getAllPaginated:
+SELECT * FROM commands_generated
+ORDER BY usageCount DESC
+LIMIT ? OFFSET ?;
+
+-- Get commands by package with pagination
+getByPackagePaginated:
+SELECT gc.* FROM commands_generated gc
+INNER JOIN scraped_element se ON gc.elementHash = se.elementHash
+WHERE se.appId = ?
+ORDER BY gc.usageCount DESC
+LIMIT ? OFFSET ?;
+
+-- Get commands by package using keyset pagination (cursor-based)
+getByPackageKeysetPaginated:
+SELECT gc.* FROM commands_generated gc
+INNER JOIN scraped_element se ON gc.elementHash = se.elementHash
+WHERE se.appId = ? AND gc.id > ?
+ORDER BY gc.id ASC
+LIMIT ?;
+
+-- Get commands by action type with pagination
+getByActionTypePaginated:
+SELECT * FROM commands_generated
+WHERE actionType = ?
+ORDER BY confidence DESC
+LIMIT ? OFFSET ?;
+
+-- ==================== Version Management Queries ====================
+
+-- Mark all commands for a specific app version as deprecated
+markVersionDeprecated:
+UPDATE commands_generated
+SET isDeprecated = 1, lastVerified = ?
+WHERE appId = ? AND versionCode = ?;
+
+-- Update command version information
+updateCommandVersion:
+UPDATE commands_generated
+SET versionCode = ?, appVersion = ?, lastVerified = ?, isDeprecated = ?
+WHERE id = ?;
+
+-- Mark a single command as deprecated or active
+updateCommandDeprecated:
+UPDATE commands_generated
+SET isDeprecated = ?
+WHERE id = ?;
+
+-- Delete deprecated commands older than threshold
+deleteDeprecatedCommands:
+DELETE FROM commands_generated
+WHERE isDeprecated = 1 AND lastVerified < ? AND (? = 0 OR isUserApproved = 0);
+
+-- Get deprecated commands for a specific app
+getDeprecatedCommands:
+SELECT * FROM commands_generated
+WHERE appId = ? AND isDeprecated = 1
+ORDER BY lastVerified DESC;
+
+-- Get all deprecated commands grouped by app
+getAllDeprecatedCommands:
+SELECT * FROM commands_generated
+WHERE isDeprecated = 1
+ORDER BY appId, lastVerified DESC;
+
+-- Get deprecated commands filtered by grace period for cleanup
+getDeprecatedCommandsForCleanup:
+SELECT * FROM commands_generated
+WHERE isDeprecated = 1 AND lastVerified < ?
+  AND (? = '' OR appId = ?)
+  AND (? = 0 OR isUserApproved = 0)
+ORDER BY lastVerified ASC
+LIMIT ?;
+
+-- Get only active (non-deprecated) commands for a specific app version
+getActiveCommands:
+SELECT * FROM commands_generated
+WHERE appId = ? AND versionCode = ? AND isDeprecated = 0
+ORDER BY usageCount DESC
+LIMIT ?;
+
+-- Get active commands by version string
+getActiveCommandsByVersion:
+SELECT * FROM commands_generated
+WHERE appId = ? AND appVersion = ? AND isDeprecated = 0
+ORDER BY usageCount DESC
+LIMIT ?;
+
+-- ==================== Database Maintenance ====================
+
+-- Vacuum database to reclaim space
+vacuumDatabase:
+VACUUM;

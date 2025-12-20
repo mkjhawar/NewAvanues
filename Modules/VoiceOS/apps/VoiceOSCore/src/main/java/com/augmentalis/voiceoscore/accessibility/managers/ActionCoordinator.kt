@@ -137,7 +137,7 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
      * Process voice command text and route to appropriate handler
      * This method is called by SpeechRecognitionIntegration -> UnifiedCommandProcessor
      */
-    fun processCommand(commandText: String): Boolean {
+    suspend fun processCommand(commandText: String): Boolean {
         if (commandText.isBlank()) {
             Log.w(TAG, "Received empty command text")
             return false
@@ -284,10 +284,10 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
     /**
      * Execute an action by routing to appropriate handler
      */
-    fun executeAction(
+    suspend fun executeAction(
         action: String,
         params: Map<String, Any> = emptyMap()
-    ): Boolean {
+    ): Boolean = withContext(Dispatchers.Default) {
         val startTime = System.currentTimeMillis()
 
         // Find handler that can handle this action
@@ -295,19 +295,17 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
         if (handler == null) {
             Log.w(TAG, "No handler found for action: $action")
             recordMetric(action, System.currentTimeMillis() - startTime, false)
-            return false
+            return@withContext false
         }
 
         // Determine category
         val category = handlers.entries.find { it.value.contains(handler) }?.key
             ?: ActionCategory.CUSTOM
 
-        return try {
+        try {
             // Execute with timeout
-            val result = runBlocking {
-                withTimeoutOrNull(HANDLER_TIMEOUT_MS) {
-                    handler.execute(category, action, params)
-                }
+            val result = withTimeoutOrNull(HANDLER_TIMEOUT_MS) {
+                handler.execute(category, action, params)
             } ?: false
 
             val executionTime = System.currentTimeMillis() - startTime
@@ -342,9 +340,23 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
     }
 
     /**
+     * Execute action synchronously (blocking version for compatibility)
+     * WARNING: Only use from background threads!
+     */
+    @Deprecated("Use suspend executeAction instead", ReplaceWith("executeAction(action, params)"))
+    fun executeActionBlocking(
+        action: String,
+        params: Map<String, Any> = emptyMap()
+    ): Boolean {
+        return runBlocking {
+            executeAction(action, params)
+        }
+    }
+
+    /**
      * Process voice command with confidence scoring
      */
-    fun processVoiceCommand(text: String, confidence: Float): Boolean {
+    suspend fun processVoiceCommand(text: String, confidence: Float): Boolean {
         val startTime = System.currentTimeMillis()
 
         Log.d(TAG, "Processing voice command: '$text' (confidence: $confidence)")
@@ -385,7 +397,7 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
     /**
      * Process voice command with additional context and variations
      */
-    private fun processVoiceCommandWithContext(
+    private suspend fun processVoiceCommandWithContext(
         command: String,
         params: Map<String, Any>
     ): Boolean {

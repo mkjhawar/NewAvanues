@@ -30,6 +30,10 @@ insertConsentRecord:
 INSERT INTO app_consent_history (package_name, user_choice, timestamp)
 VALUES (?, ?, ?);
 
+-- Get last inserted row ID
+lastInsertRowId:
+SELECT last_insert_rowid();
+
 -- Get all consent records for a package
 getConsentHistory:
 SELECT * FROM app_consent_history

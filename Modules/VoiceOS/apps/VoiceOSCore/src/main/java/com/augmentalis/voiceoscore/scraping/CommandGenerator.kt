@@ -13,8 +13,8 @@ package com.augmentalis.voiceoscore.scraping
 import android.content.Context
 import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.database.dto.ScrapedElementDTO
-import com.augmentalis.database.repositories.IElementStateHistoryRepository
-import com.augmentalis.database.repositories.IUserInteractionRepository
+import com.augmentalis.database.ElementStateHistoryQueries
+import com.augmentalis.database.stats.UserInteractionQueries
 import org.json.JSONArray
 
 /**
@@ -52,8 +52,8 @@ object StateType {
  */
 class CommandGenerator(
     private val context: Context,
-    private val elementStateHistoryRepository: IElementStateHistoryRepository,
-    private val userInteractionRepository: IUserInteractionRepository
+    private val elementStateHistoryQueries: ElementStateHistoryQueries,
+    private val userInteractionQueries: UserInteractionQueries
 ) {
 
     companion object {
@@ -440,8 +440,9 @@ class CommandGenerator(
 
         // Check for checkable elements (checkboxes, radio buttons, toggle switches)
         if (element.isCheckable != 0L) {
-            val currentState = elementStateHistoryRepository
+            val currentState = elementStateHistoryQueries
                 .getCurrentState(element.elementHash, StateType.CHECKED)
+                .executeAsOneOrNull()
 
             val isChecked = currentState?.newValue?.toBoolean() ?: false
 
@@ -454,8 +455,9 @@ class CommandGenerator(
         if (element.className.contains("ExpandableListView") ||
             element.className.contains("Expandable")) {
 
-            val currentState = elementStateHistoryRepository
+            val currentState = elementStateHistoryQueries
                 .getCurrentState(element.elementHash, StateType.EXPANDED)
+                .executeAsOneOrNull()
 
             val isExpanded = currentState?.newValue?.toBoolean() ?: false
 
@@ -465,8 +467,9 @@ class CommandGenerator(
         }
 
         // Check for selectable elements
-        val selectableState = elementStateHistoryRepository
+        val selectableState = elementStateHistoryQueries
             .getCurrentState(element.elementHash, StateType.SELECTED)
+            .executeAsOneOrNull()
 
         if (selectableState != null) {
             val isSelected = selectableState.newValue?.toBoolean() ?: false
@@ -684,12 +687,15 @@ class CommandGenerator(
         val baseCommands = generateCommands(element)
 
         // Get interaction count for this element
-        val interactionCount = userInteractionRepository
+        val interactionCount = userInteractionQueries
             .getInteractionCount(element.elementHash)
+            .executeAsOne()
+            .toInt()
 
-        // Get success/failure ratio
-        val ratio = userInteractionRepository
+        // Get success/failure ratio (currently returns 1.0 as default since we don't track success/failure)
+        val successRatio = userInteractionQueries
             .getSuccessFailureRatio(element.elementHash)
+            .executeAsOneOrNull()
 
         // Calculate confidence boost based on interaction frequency
         val frequencyBoost = when {
@@ -700,12 +706,9 @@ class CommandGenerator(
             else -> 0.0f                     // Rarely/never used
         }
 
-        // Calculate success rate penalty/boost
-        val successRate = if (ratio != null && (ratio.successful + ratio.failed) > 0) {
-            ratio.successful.toFloat() / (ratio.successful + ratio.failed)
-        } else {
-            1.0f  // No data = assume 100% success
-        }
+        // For now, we don't track success/failure, so assume 100% success rate
+        // TODO: Add success/failure tracking to UserInteraction table
+        val successRate = successRatio?.toFloat() ?: 1.0f
 
         val successBoost = when {
             successRate >= 0.9f -> 0.05f     // Very reliable

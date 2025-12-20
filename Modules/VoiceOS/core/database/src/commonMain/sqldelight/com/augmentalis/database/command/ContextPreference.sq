@@ -99,6 +99,6 @@ SELECT last_insert_rowid();
 applyTimeDecay:
 UPDATE context_preference
 SET
-    usage_count = CAST(usage_count * :decayFactor AS INTEGER),
-    success_count = CAST(success_count * :decayFactor AS INTEGER)
+    usage_count = CAST(usage_count * CAST(:decayFactor AS REAL) AS INTEGER),
+    success_count = CAST(success_count * CAST(:decayFactor AS REAL) AS INTEGER)
 WHERE last_used_timestamp < :cutoffTime;

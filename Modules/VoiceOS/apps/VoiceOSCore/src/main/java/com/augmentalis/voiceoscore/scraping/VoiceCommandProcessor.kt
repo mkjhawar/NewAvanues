@@ -18,11 +18,13 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.commandmanager.CommandManager
 import com.augmentalis.commandmanager.models.Command
 import com.augmentalis.commandmanager.models.CommandSource
-import com.augmentalis.database.repositories.IScrapedAppRepository
-import com.augmentalis.database.repositories.IScrapedElementRepository
-import com.augmentalis.database.repositories.IGeneratedCommandRepository
+import com.augmentalis.database.ScrapedAppQueries
+import com.augmentalis.database.element.ScrapedElementQueries
+import com.augmentalis.database.GeneratedCommandQueries
 import com.augmentalis.database.dto.ScrapedElementDTO
 import com.augmentalis.database.dto.GeneratedCommandDTO
+import com.augmentalis.database.dto.toScrapedElementDTO
+import com.augmentalis.database.dto.toGeneratedCommandDTO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -50,9 +52,9 @@ import org.json.JSONArray
 class VoiceCommandProcessor(
     private val context: Context,
     private val accessibilityService: AccessibilityService,
-    private val scrapedAppRepository: IScrapedAppRepository,
-    private val scrapedElementRepository: IScrapedElementRepository,
-    private val generatedCommandRepository: IGeneratedCommandRepository
+    private val scrapedAppQueries: ScrapedAppQueries,
+    private val scrapedElementQueries: ScrapedElementQueries,
+    private val generatedCommandQueries: GeneratedCommandQueries
 ) {
 
     companion object {
@@ -100,7 +102,7 @@ class VoiceCommandProcessor(
             Log.d(TAG, "App hash: $appHash")
 
             // Check if app has been scraped
-            val scrapedApp = scrapedAppRepository.getByPackage(currentPackage)
+            val scrapedApp = scrapedAppQueries.getByPackage(currentPackage).executeAsOneOrNull()
             if (scrapedApp == null) {
                 Log.w(TAG, "App has not been scraped yet: $currentPackage")
                 return@withContext CommandResult.failure("App not yet learned. Please wait for learning to complete.")
@@ -118,7 +120,7 @@ class VoiceCommandProcessor(
             Log.i(TAG, "Matched command: ${matchedCommand.commandText} (confidence: ${matchedCommand.confidence})")
 
             // Get associated element by hash (stable across sessions)
-            val element = scrapedElementRepository.getByHash(matchedCommand.elementHash)
+            val element = scrapedElementQueries.getByHash(matchedCommand.elementHash).executeAsOneOrNull()?.toScrapedElementDTO()
             if (element == null) {
                 Log.w(TAG, "Element not found for command '${matchedCommand.commandText}' (hash=${matchedCommand.elementHash})")
                 Log.w(TAG, "Element may no longer exist or UI has changed. Consider re-scraping.")
@@ -133,7 +135,7 @@ class VoiceCommandProcessor(
 
             if (success) {
                 // Update usage statistics
-                generatedCommandRepository.incrementUsage(matchedCommand.id, System.currentTimeMillis())
+                generatedCommandQueries.incrementUsage(matchedCommand.id, System.currentTimeMillis())
                 Log.i(TAG, "✓ Command executed successfully: ${matchedCommand.commandText}")
 
                 CommandResult.success(
@@ -156,8 +158,8 @@ class VoiceCommandProcessor(
      * Find matching command in database using fuzzy matching
      */
     private suspend fun findMatchingCommand(packageName: String, input: String): GeneratedCommandDTO? {
-        // Get all commands for the app
-        val commands = generatedCommandRepository.getByPackage(packageName)
+        // Get all commands for the app and convert to DTOs
+        val commands = generatedCommandQueries.getByPackage(packageName).executeAsList().map { it.toGeneratedCommandDTO() }
 
         Log.d(TAG, "Searching ${commands.size} commands for match")
 
@@ -390,7 +392,7 @@ class VoiceCommandProcessor(
             val elementHash = result.elementHash
             if (elementHash != null) {
                 withContext(Dispatchers.Main) {
-                    val element = scrapedElementRepository.getByHash(elementHash)
+                    val element = scrapedElementQueries.getByHash(elementHash).executeAsOneOrNull()?.toScrapedElementDTO()
                     if (element != null) {
                         val rootNode = accessibilityService.rootInActiveWindow
                         val targetNode = rootNode?.let { findNodeByHash(it, element.elementHash) }

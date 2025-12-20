@@ -12,7 +12,7 @@ import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
-import com.augmentalis.voiceoscore.accessibility.VoiceOSService
+import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
  * Shows numbered overlays on UI elements for voice selection
  */
 class NumberHandler(
-    private val service: VoiceOSService
+    private val service: IVoiceOSContext
 ) : ActionHandler {
 
     companion object {
@@ -126,7 +126,7 @@ class NumberHandler(
 
             Log.i(TAG, "Showing number overlay")
             
-            val rootNode = service.rootInActiveWindow
+            val rootNode = service.getRootNodeInActiveWindow()
             if (rootNode == null) {
                 Log.w(TAG, "No root node available")
                 return false
@@ -467,7 +467,7 @@ class NumberHandler(
      */
     private fun showFeedback(message: String) {
         try {
-            Toast.makeText(service, message, Toast.LENGTH_SHORT).show()
+            Toast.makeText(service.context, message, Toast.LENGTH_SHORT).show()
             Log.i(TAG, "Feedback: $message")
         } catch (e: Exception) {
             Log.e(TAG, "Error showing feedback", e)

@@ -72,3 +72,7 @@ DELETE FROM screen_transition;
 
 count:
 SELECT COUNT(*) FROM screen_transition;
+
+-- Note: recordTransition is implemented as a Kotlin extension function
+-- that uses getExistingTransition, updateTransition, and insertTransition
+-- to handle UPSERT logic (SQLDelight sqlite_3_18 dialect doesn't support ON CONFLICT DO UPDATE)

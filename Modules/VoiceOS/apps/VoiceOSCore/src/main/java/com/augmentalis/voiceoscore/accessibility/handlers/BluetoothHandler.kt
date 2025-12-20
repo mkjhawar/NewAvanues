@@ -18,14 +18,14 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.augmentalis.voiceoscore.accessibility.VoiceOSService
+import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
 
 /**
  * Handler for Bluetooth-related voice commands
  * Provides device connectivity control and settings access
  */
 class BluetoothHandler(
-    private val service: VoiceOSService
+    private val service: IVoiceOSContext
 ) : ActionHandler {
 
     companion object {
@@ -129,7 +129,7 @@ class BluetoothHandler(
             // Check permissions for Android 12+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val hasPermission = ContextCompat.checkSelfPermission(
-                    service, 
+                    service.context,
                     Manifest.permission.BLUETOOTH_CONNECT
                 ) == PackageManager.PERMISSION_GRANTED
 

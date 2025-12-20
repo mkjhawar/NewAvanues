@@ -220,7 +220,7 @@ class InputHandler(
     
     private fun performSearch(query: String): Boolean {
         // Attempt to find search field and enter text
-        val rootNode = context.rootInActiveWindow ?: return false
+        val rootNode = context.getRootNodeInActiveWindow() ?: return false
         val searchNode = findSearchField(rootNode) ?: return false
         
         val arguments = Bundle().apply {
@@ -235,7 +235,7 @@ class InputHandler(
     }
     
     private fun findFocusedNode(): AccessibilityNodeInfo? {
-        val rootNode = context.rootInActiveWindow ?: return null
+        val rootNode = context.getRootNodeInActiveWindow() ?: return null
         return rootNode.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) 
             ?: rootNode.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
     }

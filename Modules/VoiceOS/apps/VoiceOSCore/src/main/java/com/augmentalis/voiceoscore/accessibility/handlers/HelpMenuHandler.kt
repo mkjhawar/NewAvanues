@@ -12,7 +12,7 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
-import com.augmentalis.voiceoscore.accessibility.VoiceOSService
+import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
  * Provides user guidance and command reference
  */
 class HelpMenuHandler(
-    private val service: VoiceOSService
+    private val service: IVoiceOSContext
 ) : ActionHandler {
 
     companion object {
@@ -385,7 +385,7 @@ class HelpMenuHandler(
     private fun showHelpToast(message: String) {
         try {
             // Use a long toast for help messages
-            Toast.makeText(service, message, Toast.LENGTH_LONG).show()
+            Toast.makeText(service.context, message, Toast.LENGTH_LONG).show()
             
             // Log the help content for accessibility
             Log.i(TAG, "Help content displayed: $message")

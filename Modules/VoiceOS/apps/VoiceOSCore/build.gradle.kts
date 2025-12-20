@@ -149,14 +149,14 @@ afterEvaluate {
 
 dependencies {
     // Core Android
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    implementation("androidx.activity:activity-ktx:1.8.2")
-    
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")  // TODO: Add to catalog
+    implementation("androidx.activity:activity-ktx:1.8.2")  // Note: Different from activity-compose
+
     // Kotlin Coroutines (for async operations) - Updated to LearnApp version
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.coroutines.core)
 
     // VoiceOS KMP Libraries (project dependencies)
     implementation(project(":Modules:VoiceOS:core:result"))         // Type-safe error handling (KMP)
@@ -172,32 +172,28 @@ dependencies {
     implementation(project(":Modules:VoiceOS:core:database"))            // SQLDelight KMP database (KMP - project dependency) - Phase 3: Migration complete
 
     // Lifecycle components
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-service:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-process:2.6.2")
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation("androidx.lifecycle:lifecycle-service:2.7.0")  // TODO: Add to catalog
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")  // TODO: Add to catalog
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation("androidx.lifecycle:lifecycle-process:2.6.2")  // TODO: Add to catalog
 
     // WorkManager for background tasks
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
-    
+    implementation(libs.androidx.work.runtime.ktx)
+
     // Compose BOM (compatible with Kotlin 1.9.24)
     // Compose with explicit versions (aligned with BOM 2024.06.00)
-    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
-    implementation(composeBom)
-    androidTestImplementation(composeBom)
-    
-    // Explicitly declare versions to avoid resolution warnings
-    implementation("androidx.compose.ui:ui:1.6.8")
-    implementation("androidx.compose.ui:ui-graphics:1.6.8")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.6.8")
-    implementation("androidx.compose.material3:material3:1.2.1")
-    implementation("androidx.compose.material:material-icons-extended:1.6.8")
-    implementation("androidx.compose.runtime:runtime:1.6.8")
-    implementation("androidx.compose.runtime:runtime-livedata:1.6.8")
-    implementation("androidx.compose.ui:ui-text-google-fonts")
-    implementation("androidx.activity:activity-compose:1.8.2")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
+    implementation(platform(libs.compose.bom))
+    androidTestImplementation(platform(libs.compose.bom))
+
+    // Compose UI libraries (versions from BOM)
+    implementation(libs.bundles.compose)
+    implementation("androidx.compose.material:material-icons-extended")  // Version from BOM
+    implementation("androidx.compose.runtime:runtime")  // Version from BOM
+    implementation("androidx.compose.runtime:runtime-livedata")  // Version from BOM
+    implementation("androidx.compose.ui:ui-text-google-fonts")  // Version from BOM
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.5")
@@ -209,27 +205,27 @@ dependencies {
     implementation("com.google.accompanist:accompanist-flowlayout:0.35.0-alpha")
 
     // Material Design (for UI)
-    implementation("com.google.android.material:material:1.11.0")
+    implementation(libs.androidx.material)
 
     // Dependency injection (Hilt)
-    implementation("com.google.dagger:hilt-android:2.51.1")
-    ksp("com.google.dagger:hilt-compiler:2.51.1")
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
 
     // Hilt Testing
-    testImplementation("com.google.dagger:hilt-android-testing:2.51.1")
-    kspTest("com.google.dagger:hilt-android-compiler:2.51.1")
-    androidTestImplementation("com.google.dagger:hilt-android-testing:2.51.1")
-    kspAndroidTest("com.google.dagger:hilt-android-compiler:2.51.1")
+    testImplementation("com.google.dagger:hilt-android-testing:2.51.1")  // TODO: Add to catalog
+    kspTest("com.google.dagger:hilt-android-compiler:2.51.1")  // TODO: Add to catalog
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.51.1")  // TODO: Add to catalog
+    kspAndroidTest("com.google.dagger:hilt-android-compiler:2.51.1")  // TODO: Add to catalog
 
     // Room Database - REMOVED: All entities migrated to SQLDelight
     // Use SQLDelight repositories from core/database module:
     // - IScrapedAppRepository, IGeneratedCommandRepository, etc.
 
     // Preferences (for settings)
-    implementation("androidx.preference:preference-ktx:1.2.1")
+    implementation("androidx.preference:preference-ktx:1.2.1")  // TODO: Add to catalog
 
     // JSON Serialization
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation(libs.gson)
     
     // Local modules (when available)
     // implementation(project(":libraries:DeviceManager"))
@@ -263,87 +259,84 @@ dependencies {
     // Testing Framework
 
     // SQLDelight Test Dependencies (for in-memory database testing)
-    testImplementation("app.cash.sqldelight:sqlite-driver:2.0.1")  // JVM SQLite driver for tests
-    testImplementation("app.cash.turbine:turbine:1.0.0")           // Flow testing library
+    testImplementation(libs.sqldelight.sqlite.driver)  // JVM SQLite driver for tests
+    testImplementation("app.cash.turbine:turbine:1.0.0")  // TODO: Add to catalog - Flow testing library
 
     // Database module for androidTest (Phase 2 integration tests)
     androidTestImplementation(project(":Modules:VoiceOS:core:database"))
 
     // Unit Testing - JUnit 4 with Robolectric (VoiceOSService SOLID refactoring tests)
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.25")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")  // Updated to match coroutines version
-    testImplementation("androidx.arch.core:core-testing:2.2.0")
-    testImplementation("org.robolectric:robolectric:4.11.1") // JVM-only Android tests (no device needed)
-    testImplementation("androidx.test:core:1.5.0")
-    testImplementation("androidx.test:runner:1.5.2")
-    testImplementation("androidx.test:rules:1.5.0")
-    testImplementation("androidx.test.ext:junit:1.1.5")
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlin.test.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation("androidx.arch.core:core-testing:2.2.0")  // TODO: Add to catalog
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.runner)
+    testImplementation(libs.androidx.test.rules)
+    testImplementation(libs.androidx.test.junit)
 
     // Mocking Frameworks (simplified to avoid conflicts) - LearnApp additions merged
-    testImplementation("org.mockito:mockito-core:5.7.0")      // Updated from LearnApp (was 4.11.0)
-    testImplementation("org.mockito:mockito-inline:5.2.0")    // Added from LearnApp
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
-    testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("org.mockito:mockito-core:5.7.0")  // TODO: Add to catalog
+    testImplementation("org.mockito:mockito-inline:5.2.0")  // TODO: Add to catalog
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")  // TODO: Add to catalog
+    testImplementation(libs.mockk)
     // testImplementation("io.mockk:mockk-agent:1.13.8")
     
     // Service Testing
-    testImplementation("androidx.test:core:1.5.0")
-    testImplementation("androidx.test:rules:1.5.0")
-    testImplementation("androidx.test.ext:junit:1.1.5")
-    testImplementation("androidx.test.ext:truth:1.5.0")
-    testImplementation("com.google.truth:truth:1.1.4")
-    
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.rules)
+    testImplementation(libs.androidx.test.junit)
+    testImplementation("androidx.test.ext:truth:1.5.0")  // TODO: Add to catalog
+    testImplementation("com.google.truth:truth:1.1.4")  // TODO: Add to catalog
+
     // Android Integration Testing
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test:core:1.5.0")
-    androidTestImplementation("androidx.test:runner:1.5.2")
-    androidTestImplementation("androidx.test:rules:1.5.0")
-    androidTestImplementation("androidx.test.ext:truth:1.5.0")
-    androidTestImplementation("com.google.truth:truth:1.1.4")
+    androidTestImplementation(libs.bundles.testing.android)
+    androidTestImplementation("androidx.test.ext:truth:1.5.0")  // TODO: Add to catalog
+    androidTestImplementation("com.google.truth:truth:1.1.4")  // TODO: Add to catalog
 
     // Mockito for androidTest
-    androidTestImplementation("org.mockito:mockito-core:4.11.0")
-    androidTestImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
-    androidTestImplementation("org.mockito:mockito-android:4.11.0")
+    androidTestImplementation("org.mockito:mockito-core:4.11.0")  // TODO: Add to catalog
+    androidTestImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")  // TODO: Add to catalog
+    androidTestImplementation("org.mockito:mockito-android:4.11.0")  // TODO: Add to catalog
 
     // JUnit 4 for androidTest (VoiceOSService SOLID refactoring tests)
-    androidTestImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.arch.core:core-testing:2.2.0")
-    androidTestImplementation("org.robolectric:robolectric:4.11.1")
-    androidTestImplementation("org.jetbrains.kotlin:kotlin-test:1.9.25")
+    androidTestImplementation(libs.junit)
+    androidTestImplementation("androidx.arch.core:core-testing:2.2.0")  // TODO: Add to catalog
+    androidTestImplementation(libs.robolectric)
+    androidTestImplementation(libs.kotlin.test.junit)
 
     // Espresso UI Testing
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.test.espresso:espresso-intents:3.5.1")
-    androidTestImplementation("androidx.test.espresso:espresso-accessibility:3.5.1")
-    androidTestImplementation("androidx.test.espresso:espresso-contrib:3.5.1")
-    androidTestImplementation("androidx.test.espresso:espresso-idling-resource:3.5.1")
-    androidTestImplementation("androidx.test.espresso:espresso-web:3.5.1")
-    
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(libs.androidx.test.espresso.intents)
+    androidTestImplementation("androidx.test.espresso:espresso-accessibility:3.5.1")  // TODO: Add to catalog
+    androidTestImplementation("androidx.test.espresso:espresso-contrib:3.5.1")  // TODO: Add to catalog
+    androidTestImplementation("androidx.test.espresso:espresso-idling-resource:3.5.1")  // TODO: Add to catalog
+    androidTestImplementation("androidx.test.espresso:espresso-web:3.5.1")  // TODO: Add to catalog
+
     // Service Testing & AIDL
-    androidTestImplementation("androidx.test.services:test-services:1.4.2")
-    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.2.0")
-    
+    androidTestImplementation("androidx.test.services:test-services:1.4.2")  // TODO: Add to catalog
+    androidTestImplementation(libs.androidx.test.uiautomator)
+
     // Compose Testing (BOM already declared above)
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.6.8")
-    androidTestImplementation("androidx.compose.ui:ui-test-manifest:1.6.8")
-    
+    androidTestImplementation(libs.bundles.testing.compose)
+    androidTestImplementation(libs.bundles.compose.debug)
+
     // Accessibility Testing
-    androidTestImplementation("androidx.test.espresso:espresso-accessibility:3.5.1")
-    
+    androidTestImplementation("androidx.test.espresso:espresso-accessibility:3.5.1")  // TODO: Add to catalog
+
     // Coroutines Testing - Updated to match coroutines version
-    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
-    
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+
     // Mocking for Android Tests
-    androidTestImplementation("io.mockk:mockk-android:1.13.8")
-    androidTestImplementation("org.mockito:mockito-android:4.11.0")
-    
+    androidTestImplementation(libs.mockk.android)
+    androidTestImplementation("org.mockito:mockito-android:4.11.0")  // TODO: Add to catalog
+
     // Fragment Testing
-    debugImplementation("androidx.fragment:fragment-testing:1.6.2")
-    
+    debugImplementation("androidx.fragment:fragment-testing:1.6.2")  // TODO: Add to catalog
+
     // Navigation Testing
-    androidTestImplementation("androidx.navigation:navigation-testing:2.7.5")
+    androidTestImplementation("androidx.navigation:navigation-testing:2.7.5")  // TODO: Add to catalog
     
     // Performance Testing (commented out to avoid conflicts)
     // androidTestImplementation("androidx.benchmark:benchmark-junit4:1.2.2")

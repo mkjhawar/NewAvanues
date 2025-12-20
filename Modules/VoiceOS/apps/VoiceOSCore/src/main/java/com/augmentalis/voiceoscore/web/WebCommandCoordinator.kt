@@ -154,6 +154,7 @@ class WebCommandCoordinator(
             }
 
             // Convert SQLDelight element to data class
+            // Note: SQLDelight uses Long for boolean columns (0/1)
             val element = ScrapedWebElement(
                 id = sqlDelightElement.id,
                 websiteUrlHash = sqlDelightElement.website_url_hash,
@@ -164,8 +165,8 @@ class WebCommandCoordinator(
                 ariaLabel = sqlDelightElement.aria_label,
                 role = sqlDelightElement.role,
                 parentElementHash = sqlDelightElement.parent_element_hash,
-                clickable = sqlDelightElement.clickable,
-                visible = sqlDelightElement.visible,
+                clickable = sqlDelightElement.clickable == 1L,
+                visible = sqlDelightElement.visible == 1L,
                 bounds = sqlDelightElement.bounds
             )
 
@@ -174,9 +175,10 @@ class WebCommandCoordinator(
 
             if (success) {
                 // Update usage statistics
+                // SQLDelight incrementUsage takes: last_used_at, id (positional parameters)
                 databaseManager.generatedWebCommandQueries.incrementUsage(
-                    commandId = webCommand.id,
-                    timestamp = System.currentTimeMillis()
+                    last_used_at = System.currentTimeMillis(),
+                    id = webCommand.id
                 )
                 Log.i(TAG, "✓ Web command executed successfully: ${webCommand.commandText}")
             } else {

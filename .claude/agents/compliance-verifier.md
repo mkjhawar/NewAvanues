@@ -1,3 +1,8 @@
+---
+name: compliance-verifier
+description: Zero Tolerance rule enforcement specialist
+---
+
 # Compliance Verifier Agent
 
 ## Role

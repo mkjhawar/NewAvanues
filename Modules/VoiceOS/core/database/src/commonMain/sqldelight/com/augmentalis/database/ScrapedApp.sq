@@ -29,6 +29,9 @@ SELECT * FROM scraped_app WHERE appId = ?;
 getByPackage:
 SELECT * FROM scraped_app WHERE packageName = ?;
 
+getByHash:
+SELECT * FROM scraped_app WHERE appHash = ?;
+
 getAll:
 SELECT * FROM scraped_app ORDER BY lastScrapedAt DESC;
 
@@ -43,9 +46,27 @@ WHERE appId = ?;
 incrementScrapeCount:
 UPDATE scraped_app
 SET scrapeCount = scrapeCount + 1, lastScrapedAt = ?
-WHERE packageName = ?;
+WHERE appId = ?;
+
+updateElementCount:
+UPDATE scraped_app
+SET elementCount = ?
+WHERE appId = ?;
+
+updateCommandCount:
+UPDATE scraped_app
+SET commandCount = ?
+WHERE appId = ?;
+
+updateScrapingMode:
+UPDATE scraped_app
+SET scrapingMode = ?
+WHERE appId = ?;
 
 markFullyLearned:
+UPDATE scraped_app SET isFullyLearned = 1, learnCompletedAt = ? WHERE appId = ?;
+
+markAsFullyLearned:
 UPDATE scraped_app SET isFullyLearned = 1, learnCompletedAt = ? WHERE appId = ?;
 
 deleteById:

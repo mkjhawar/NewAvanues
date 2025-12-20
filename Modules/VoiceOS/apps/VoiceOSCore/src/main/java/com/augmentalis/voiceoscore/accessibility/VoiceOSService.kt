@@ -76,10 +76,13 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import java.lang.ref.WeakReference
 import java.util.Locale
@@ -161,6 +164,17 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     private var isVoiceInitialized = false
     private var lastCommandLoaded = 0L
     private val isCommandProcessing = AtomicBoolean(false)
+
+    // Database initialization state machine (FIX 2025-12-19: Task 1.10)
+    // Prevents database access before initialization complete
+    private sealed class InitializationState {
+        object NotStarted : InitializationState()
+        object InProgress : InitializationState()
+        data class Completed(val timestamp: Long) : InitializationState()
+        data class Failed(val error: String) : InitializationState()
+    }
+
+    private val initState = MutableStateFlow<InitializationState>(InitializationState.NotStarted)
 
     // LearnApp integration state
     // FIX (2025-11-30): Use AtomicInteger for thread-safe state tracking
@@ -405,6 +419,71 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         }
     }
 
+    /**
+     * Guard function to ensure database is ready before access.
+     * Suspends until database initialization is complete.
+     *
+     * FIX (2025-12-19): Task 1.10 - Database initialization validation
+     *
+     * @throws IllegalStateException if database initialization failed
+     */
+    private suspend fun <T> withDatabaseReady(block: suspend () -> T): T {
+        val state = initState.first {
+            it is InitializationState.Completed || it is InitializationState.Failed
+        }
+
+        return when (state) {
+            is InitializationState.Completed -> block()
+            is InitializationState.Failed -> {
+                throw IllegalStateException("Database not initialized: ${state.error}")
+            }
+            else -> {
+                throw IllegalStateException("Unexpected state: $state")
+            }
+        }
+    }
+
+    /**
+     * Show error notification to user.
+     * Used for critical initialization failures.
+     *
+     * FIX (2025-12-19): Task 1.10 - Database initialization validation
+     */
+    private fun showErrorNotification(message: String) {
+        try {
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+
+            // Create notification channel for Android O and above
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = android.app.NotificationChannel(
+                    "voiceos_errors",
+                    "VoiceOS Errors",
+                    android.app.NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Critical VoiceOS error notifications"
+                }
+                notificationManager.createNotificationChannel(channel)
+            }
+
+            // Build and show notification
+            val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                android.app.Notification.Builder(this, "voiceos_errors")
+            } else {
+                @Suppress("DEPRECATION")
+                android.app.Notification.Builder(this)
+            }
+                .setContentTitle("VoiceOS Error")
+                .setContentText(message)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setAutoCancel(true)
+                .build()
+
+            notificationManager.notify(1001, notification)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to show error notification", e)
+        }
+    }
+
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -418,6 +497,31 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         // Register for app lifecycle events for hybrid foreground service
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
         serviceScope.launch {
+            // FIX (2025-12-19): Task 1.10 - Wait for database initialization
+            initState.emit(InitializationState.InProgress)
+
+            try {
+                // Wait for database initialization with timeout
+                withTimeout(10_000) {
+                    scrapingDatabase?.databaseManager?.waitForInitialization()
+                        ?: throw IllegalStateException("Database not initialized in onCreate")
+                }
+
+                // Database initialization verified - foreign keys are enabled via VoiceOSDatabaseManager init
+                Log.d(TAG, "Database initialized successfully")
+
+                Log.i(TAG, "Database initialization verified - foreign keys enabled")
+                initState.emit(InitializationState.Completed(System.currentTimeMillis()))
+
+            } catch (e: Exception) {
+                val errorMsg = "VoiceOS initialization failed: ${e.message}"
+                Log.e(TAG, errorMsg, e)
+                initState.emit(InitializationState.Failed(e.message ?: "Unknown error"))
+                showErrorNotification(errorMsg)
+                return@launch // Exit early on failure
+            }
+
+            // Continue with normal initialization only if database is ready
             staticCommandCache.addAll(actionCoordinator.getAllActions())
             observeInstalledApps()
             delay(VoiceOSConstants.Timing.INIT_DELAY_MS) // Small delay to not block service startup
@@ -750,19 +854,9 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             // Initialize hash-based scraping integration (if database initialized)
             if (scrapingDatabase != null) {
                 try {
-                    val dbManager = scrapingDatabase!!.databaseManager
                     scrapingIntegration = AccessibilityScrapingIntegration(
                         context = this@VoiceOSService,
-                        accessibilityService = this@VoiceOSService,
-                        scrapedAppRepository = dbManager.scrapedApps,
-                        scrapedElementRepository = dbManager.scrapedElements,
-                        scrapedHierarchyRepository = dbManager.scrapedHierarchies,
-                        screenContextRepository = dbManager.screenContexts,
-                        elementRelationshipRepository = dbManager.elementRelationships,
-                        elementStateHistoryRepository = dbManager.elementStateHistory,
-                        userInteractionRepository = dbManager.userInteractions,
-                        generatedCommandRepository = dbManager.generatedCommands,
-                        screenTransitionRepository = dbManager.screenTransitions
+                        accessibilityService = this@VoiceOSService
                     )
                     Log.i(TAG, "AccessibilityScrapingIntegration initialized successfully")
                 } catch (e: Exception) {
@@ -780,9 +874,9 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                     voiceCommandProcessor = VoiceCommandProcessor(
                         context = this@VoiceOSService,
                         accessibilityService = this@VoiceOSService,
-                        scrapedAppRepository = dbManager.scrapedApps,
-                        scrapedElementRepository = dbManager.scrapedElements,
-                        generatedCommandRepository = dbManager.generatedCommands
+                        scrapedAppQueries = dbManager.scrapedAppQueries,
+                        scrapedElementQueries = dbManager.scrapedElementQueries,
+                        generatedCommandQueries = dbManager.generatedCommandQueries
                     )
                     Log.i(TAG, "VoiceCommandProcessor initialized successfully")
                 } catch (e: Exception) {
@@ -1346,6 +1440,10 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                     } catch (e: Exception) {
                         Log.e(TAG, "Error processing queued event", e)
                     } finally {
+                        // FIX: Recycle AccessibilityNodeInfo before recycling event
+                        // AccessibilityNodeInfo instances are not auto-recycled and cause 100-250KB leaks per event
+                        val source = queuedEvent.source
+                        source?.recycle()
                         // Recycle the event copy to free memory
                         queuedEvent.recycle()
                     }
@@ -2214,6 +2312,12 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 
     override val windowManager: android.view.WindowManager
         get() = getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
+
+    // Override getPackageManager() to satisfy both AccessibilityService and IVoiceOSContext
+    override fun getPackageManager(): android.content.pm.PackageManager = applicationContext.packageManager
+
+    // Note: getRootNodeInActiveWindow() is provided by IVoiceOSContext interface with default implementation
+    // No need to override getRootInActiveWindow() here - it's already available from AccessibilityService
 
     override fun showToast(message: String) {
         android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show()

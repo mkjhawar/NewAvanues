@@ -23,29 +23,35 @@ class SQLDelightCommandUsageRepository(
     private val queries = database.commandUsageQueries
 
     override suspend fun insert(usage: CommandUsageDTO): Long = withContext(Dispatchers.Default) {
-        queries.insertUsage(
-            command_id = usage.commandId,
-            context_key = usage.contextKey,
-            success = usage.success,
-            timestamp = usage.timestamp
-        )
-        queries.transactionWithResult {
+        database.transactionWithResult {
+            queries.insertUsage(
+                command_id = usage.commandId,
+                context_key = usage.contextKey,
+                success = usage.success,
+                timestamp = usage.timestamp
+            )
             queries.lastInsertRowId().executeAsOne()
         }
     }
 
     override suspend fun getAll(): List<CommandUsageDTO> = withContext(Dispatchers.Default) {
-        queries.getAllUsage().executeAsList().map { it.toDTO() }
+        queries.getAllUsage().executeAsList().map { usage: com.augmentalis.database.command.Command_usage ->
+            usage.toDTO()
+        }
     }
 
     override suspend fun getForCommand(commandId: String): List<CommandUsageDTO> =
         withContext(Dispatchers.Default) {
-            queries.getUsageForCommand(commandId).executeAsList().map { it.toDTO() }
+            queries.getUsageForCommand(commandId).executeAsList().map { usage: com.augmentalis.database.command.Command_usage ->
+                usage.toDTO()
+            }
         }
 
     override suspend fun getForContext(contextKey: String): List<CommandUsageDTO> =
         withContext(Dispatchers.Default) {
-            queries.getUsageForContext(contextKey).executeAsList().map { it.toDTO() }
+            queries.getUsageForContext(contextKey).executeAsList().map { usage: com.augmentalis.database.command.Command_usage ->
+                usage.toDTO()
+            }
         }
 
     override suspend fun getForCommandInContext(

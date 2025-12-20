@@ -346,8 +346,8 @@ class LearnWebActivity : AppCompatActivity() {
                     if (success) {
                         // Increment usage
                         databaseManager.generatedWebCommandQueries.incrementUsage(
-                            commandId = command.id,
-                            timestamp = System.currentTimeMillis()
+                            id = command.id,
+                            last_used_at = System.currentTimeMillis()
                         )
                         Log.d(TAG, "Clicked element: ${command.commandText}")
                     } else {
@@ -359,8 +359,8 @@ class LearnWebActivity : AppCompatActivity() {
                     val success = scrapingEngine.scrollToElement(webView, command.xpath)
                     if (success) {
                         databaseManager.generatedWebCommandQueries.incrementUsage(
-                            commandId = command.id,
-                            timestamp = System.currentTimeMillis()
+                            id = command.id,
+                            last_used_at = System.currentTimeMillis()
                         )
                         Log.d(TAG, "Scrolled to element: ${command.commandText}")
                     } else {
@@ -373,8 +373,8 @@ class LearnWebActivity : AppCompatActivity() {
                     val success = scrapingEngine.scrollToElement(webView, command.xpath)
                     if (success) {
                         databaseManager.generatedWebCommandQueries.incrementUsage(
-                            commandId = command.id,
-                            timestamp = System.currentTimeMillis()
+                            id = command.id,
+                            last_used_at = System.currentTimeMillis()
                         )
                         Log.d(TAG, "Focused element: ${command.commandText}")
                     }

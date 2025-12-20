@@ -36,40 +36,56 @@ class SQLDelightCommandHistoryRepository(
     }
 
     override suspend fun getById(id: Long): CommandHistoryDTO? = withContext(Dispatchers.Default) {
-        queries.getById(id).executeAsOneOrNull()?.toDTO()
+        queries.getById(id).executeAsOneOrNull()?.let { entry: com.augmentalis.database.Command_history_entry ->
+            entry.toDTO()
+        }
     }
 
     override suspend fun getAll(): List<CommandHistoryDTO> = withContext(Dispatchers.Default) {
-        queries.getAll().executeAsList().map { it.toDTO() }
+        queries.getAll().executeAsList().map { entry: com.augmentalis.database.Command_history_entry ->
+            entry.toDTO()
+        }
     }
 
     override suspend fun getByTimeRange(startTime: Long, endTime: Long): List<CommandHistoryDTO> =
         withContext(Dispatchers.Default) {
-            queries.getByTimeRange(startTime, endTime).executeAsList().map { it.toDTO() }
+            queries.getByTimeRange(startTime, endTime).executeAsList().map { entry: com.augmentalis.database.Command_history_entry ->
+                entry.toDTO()
+            }
         }
 
     override suspend fun getAfterTime(timestamp: Long): List<CommandHistoryDTO> =
         withContext(Dispatchers.Default) {
-            queries.getAfterTime(timestamp).executeAsList().map { it.toDTO() }
+            queries.getAfterTime(timestamp).executeAsList().map { entry: com.augmentalis.database.Command_history_entry ->
+                entry.toDTO()
+            }
         }
 
     override suspend fun getSuccessful(): List<CommandHistoryDTO> = withContext(Dispatchers.Default) {
-        queries.getSuccessful().executeAsList().map { it.toDTO() }
+        queries.getSuccessful().executeAsList().map { entry: com.augmentalis.database.Command_history_entry ->
+            entry.toDTO()
+        }
     }
 
     override suspend fun getByEngine(engine: String): List<CommandHistoryDTO> =
         withContext(Dispatchers.Default) {
-            queries.getByEngine(engine).executeAsList().map { it.toDTO() }
+            queries.getByEngine(engine).executeAsList().map { entry: com.augmentalis.database.Command_history_entry ->
+                entry.toDTO()
+            }
         }
 
     override suspend fun getByLanguage(language: String): List<CommandHistoryDTO> =
         withContext(Dispatchers.Default) {
-            queries.getByLanguage(language).executeAsList().map { it.toDTO() }
+            queries.getByLanguage(language).executeAsList().map { entry: com.augmentalis.database.Command_history_entry ->
+                entry.toDTO()
+            }
         }
 
     override suspend fun getRecent(limit: Int): List<CommandHistoryDTO> =
         withContext(Dispatchers.Default) {
-            queries.getRecent(limit.toLong()).executeAsList().map { it.toDTO() }
+            queries.getRecent(limit.toLong()).executeAsList().map { entry: com.augmentalis.database.Command_history_entry ->
+                entry.toDTO()
+            }
         }
 
     override suspend fun getSuccessRate(): Double = withContext(Dispatchers.Default) {
