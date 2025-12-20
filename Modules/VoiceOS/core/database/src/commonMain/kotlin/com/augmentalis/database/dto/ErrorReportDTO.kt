@@ -23,7 +23,7 @@ data class ErrorReportDTO(
 /**
  * Extension to convert SQLDelight entity to DTO.
  */
-fun com.augmentalis.database.Error_report.toDTO(): ErrorReportDTO = ErrorReportDTO(
+fun com.augmentalis.database.app.Error_report.toDTO(): ErrorReportDTO = ErrorReportDTO(
     id = id,
     errorType = errorType,
     message = errorMessage,

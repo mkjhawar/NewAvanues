@@ -11,7 +11,7 @@
 
 package com.augmentalis.database.dto
 
-import com.augmentalis.database.Scraped_hierarchy
+import com.augmentalis.database.element.Scraped_hierarchy
 
 /**
  * DTO for scraped element hierarchy (parent-child relationships)

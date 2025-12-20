@@ -39,7 +39,7 @@ data class AppVersionDTO(
          * @param entity Generated AppVersion entity from SQLDelight
          * @return AppVersionDTO
          */
-        fun from(entity: com.augmentalis.database.App_version): AppVersionDTO {
+        fun from(entity: com.augmentalis.database.app.App_version): AppVersionDTO {
             return AppVersionDTO(
                 packageName = entity.package_name,
                 versionName = entity.version_name,

@@ -12,7 +12,7 @@
 
 package com.augmentalis.database.dto
 
-import com.augmentalis.database.User_interaction
+import com.augmentalis.database.stats.User_interaction
 
 /**
  * DTO for user interactions
