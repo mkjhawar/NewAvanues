@@ -39,7 +39,8 @@ android {
         }
     }
 
-    // Sentry Configuration
+    // Sentry Configuration (disabled - plugin not configured)
+    /*
     configure<io.sentry.android.gradle.extensions.SentryPluginExtension> {
         autoUploadProguardMapping.set(true)
         autoUploadNativeSymbols.set(true)
@@ -47,6 +48,7 @@ android {
             enabled.set(true)
         }
     }
+    */
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -121,9 +123,9 @@ dependencies {
 
     // Testing
     testImplementation(libs.junit)
-    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
     androidTestImplementation(libs.compose.ui.test.junit4)
-    androidTestImplementation(libs.kotlin.test)
+    androidTestImplementation(libs.kotlin.test.junit)
     androidTestImplementation(libs.kotlinx.coroutines.test)
 
     // Debug tooling

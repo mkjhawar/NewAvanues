@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.android.library)
     alias(libs.plugins.compose)
-    alias(libs.plugins.kotlin.compose)
+    // alias(libs.plugins.kotlin.compose)  // Only for Kotlin 2.0+
     alias(libs.plugins.dokka)
     // SQLDelight plugin removed - using BrowserCoreData for database access
 }
@@ -62,7 +62,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // BrowserCoreData - Shared data layer with LRU caching
-                implementation(project(":coredata"))
+                implementation(project(":Modules:WebAvanue:coredata"))
 
                 // Kotlin
                 implementation(libs.kotlinx.coroutines.core)

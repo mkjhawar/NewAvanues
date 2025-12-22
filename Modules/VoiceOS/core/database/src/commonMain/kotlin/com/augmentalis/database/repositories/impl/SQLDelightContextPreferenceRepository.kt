@@ -115,7 +115,7 @@ class SQLDelightContextPreferenceRepository(
         withContext(Dispatchers.Default) {
             database.transactionWithResult {
                 queries.applyTimeDecay(
-                    decayFactor = decayFactor.toLong(),
+                    decayFactor = decayFactor.toDouble(),
                     cutoffTime = currentTime
                 )
             }
