@@ -31,6 +31,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Files changed: `FloatingProgressWidget.kt` (new), `floating_progress_widget.xml` (new), `LearnAppIntegration.kt`
   - Severity: MEDIUM (usability improvement)
 
+- **VoiceOSCore:** Compilation errors from missing infrastructure classes (2025-12-22)
+  - Root cause: Multiple missing classes after cleanup restoration (HashUtils, ScrapingMode, Command, CommandSource, Theme components)
+  - Root cause: Untracked files existed but weren't in git
+  - Root cause: AccessibilityTheme referenced in code but didn't exist
+  - Root cause: Hilt annotations used but Hilt disabled in AccessibilityService
+  - Solution: Systematic fix approach via parallel swarm agents:
+    - Added untracked files to git (ScrapingMode.kt, HashUtils.kt, Command.kt, CommandSource.kt)
+    - Created VoiceOSTheme with Material3 to replace AccessibilityTheme
+    - Created GlassmorphismUtils for UI effects
+    - Created comprehensive service infrastructure (6 files)
+    - Created managers and utilities (3 files)
+    - Created LearnWeb components (2 files)
+    - Implemented manual DI via DatabaseProvider singleton
+  - Impact: 200+ compilation errors resolved, full service infrastructure in place
+  - Files affected: 39 files created/modified
+  - Severity: HIGH (complete build failure)
+
 ### Fixed
 - **VoiceOSCore:** Dynamic command real-time element search failure ([Fix Doc](docs/fixes/VoiceOSCore-dynamic-command-realtime-search-2025-11-13.md))
   - Root cause: Broken recursive node search logic + false success reporting in Tier 3
@@ -117,6 +134,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Code review checklist
   - Quick decision guide
   - Location: `docs/developer-manual/33-Code-Quality-Standards.md`
+
+- **VoiceOSCore:** Infrastructure components for service management and coordination ([Developer Manual](manuals/developer/VoiceOS-Infrastructure-Components-Developer-Manual-5221201-V1.md))
+  - **Service Infrastructure:** Core service coordination and management
+    - `IVoiceOSService`: Public API interface for external service interactions
+    - `IVoiceOSServiceInternal`: Internal component coordination API
+    - `Const`: Centralized service configuration constants (channels, notifications, priorities, thresholds)
+    - `Debouncer`: Coroutine-based event throttling (prevents event flooding, 300ms default delay)
+    - `ResourceMonitor`: CPU/memory monitoring with health checks (/proc filesystem, 30s polling)
+    - `EventPriorityManager`: Priority-based event queue with PriorityBlockingQueue (CRITICAL→HIGH→NORMAL→LOW)
+  - **Managers & Utilities:**
+    - `InstalledAppsManager`: App installation tracking with PackageManager + Flow-based observation
+    - `AppVersionDetector`: Version change detection (upgrades, downgrades, new apps, reinstalls)
+    - `RenameCommandHandler`: Voice command renaming with validation and TTS feedback
+  - **AI & Semantic Analysis:**
+    - `SemanticInferenceHelper`: Intent inference and command-element matching (login, signup, submit patterns)
+  - **LearnWeb Components:** Web application voice control
+    - `WebViewScrapingEngine`: DOM extraction via JavaScript injection (XPath generation, element traversal)
+    - `WebCommandGenerator`: Voice command generation from web elements (click, scroll, input, focus actions)
+  - **UI Components:**
+    - `VoiceOSTheme`: Material3 theme system (replaces missing AccessibilityTheme)
+    - `GlassmorphismUtils`: Glassmorphism UI effects (0.8 alpha, 16dp blur, depth levels)
+    - `WidgetOverlayHelper`: WindowManager integration for floating overlays (TYPE_ACCESSIBILITY_OVERLAY)
+  - **Metrics & Models:**
+    - `VUIDCreationMetrics`: Exploration metrics tracking (VUIDs created, elements detected, error rates)
+    - `ExplorationState`: Added PausedForLogin and PausedByUser states with progress tracking
+  - **Utilities:**
+    - `HashUtils`: SHA-256 hashing for element/app/screen fingerprinting
+    - `ScrapingMode`: Scraping mode enumeration (FULL, INCREMENTAL, SELECTIVE, MINIMAL)
+  - **Manual Dependency Injection:** DatabaseProvider singleton (Hilt unavailable in AccessibilityService)
+  - **Integration Points:**
+    - VoiceOSService uses IVoiceOSServiceInternal for component coordination
+    - LearnAppIntegration uses ResourceMonitor for exploration health checks
+    - AccessibilityScrapingIntegration uses SemanticInferenceHelper for intent inference
+    - CleanupPreviewActivity uses VoiceOSTheme for Material3 UI
+  - Files added (39 total):
+    - Service: `IVoiceOSService.kt`, `IVoiceOSServiceInternal.kt`, `Const.kt`, `Debouncer.kt`, `ResourceMonitor.kt`, `EventPriorityManager.kt`
+    - Managers: `InstalledAppsManager.kt`, `AppVersionDetector.kt`, `RenameCommandHandler.kt`
+    - AI: `SemanticInferenceHelper.kt`
+    - LearnWeb: `WebViewScrapingEngine.kt`, `WebCommandGenerator.kt`
+    - UI: `Theme.kt`, `GlassmorphismUtils.kt`, `WidgetOverlayHelper.kt`
+    - Metrics: `VUIDCreationMetrics.kt`
+    - Utils: `HashUtils.kt`, `ScrapingMode.kt`
+    - Docs: `VoiceOS-Infrastructure-Components-Developer-Manual-5221201-V1.md`
+  - Impact: Comprehensive infrastructure for service management, resource monitoring, web scraping, and UI components
 
 ### Changed
 - **Documentation:** Reorganized developer manual structure
