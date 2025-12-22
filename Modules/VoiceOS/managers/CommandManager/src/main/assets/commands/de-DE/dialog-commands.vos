@@ -1,0 +1,95 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "dialog-commands.vos",
+    "category": "dialog",
+    "display_name": "Dialog Actions",
+    "description": "Voice commands for interacting with dialogs and prompts",
+    "command_count": 4
+  },
+  "locale": "de-DE",
+  "commands": [
+    {
+      "action": "CLOSE",
+      "cmd": "schließen",
+      "syn": [
+        "finish",
+        "end",
+        "stoppen",
+        "shut",
+        "exit",
+        "quit",
+        "leave",
+        "zurück",
+        "return",
+        "cancel",
+        "schließen runter",
+        "shut runter",
+        "finish hoch",
+        "wrap hoch"
+      ]
+    },
+    {
+      "action": "CANCEL",
+      "cmd": "cancel",
+      "syn": [
+        "abort",
+        "dismiss",
+        "no",
+        "decline",
+        "stoppen",
+        "quit",
+        "exit",
+        "zurück",
+        "nevermind",
+        "never mind",
+        "forget it",
+        "schließen",
+        "no thanks",
+        "not interested"
+      ]
+    },
+    {
+      "action": "CONFIRM",
+      "cmd": "confirm",
+      "syn": [
+        "accept",
+        "agree",
+        "yes",
+        "rechts",
+        "ok",
+        "okay",
+        "proceed",
+        "continue",
+        "gehen ahead",
+        "sure",
+        "absolutely",
+        "certainly",
+        "indeed",
+        "correct",
+        "affirmative"
+      ]
+    },
+    {
+      "action": "SUBMIT",
+      "cmd": "submit",
+      "syn": [
+        "send",
+        "gehen",
+        "enter",
+        "confirm",
+        "okay",
+        "done",
+        "finish",
+        "complete",
+        "save",
+        "apply",
+        "send off",
+        "post",
+        "dispatch",
+        "deliver"
+      ]
+    }
+  ]
+}

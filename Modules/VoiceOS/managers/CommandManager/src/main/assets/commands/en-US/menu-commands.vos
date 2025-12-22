@@ -1,0 +1,29 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "menu-commands.vos",
+    "category": "menu",
+    "display_name": "Menu Navigation",
+    "description": "Voice commands for menu navigation",
+    "command_count": 3
+  },
+  "locale": "en-US",
+  "commands": [
+    {
+      "action": "MENU",
+      "cmd": "menu",
+      "syn": ["open menu", "main menu", "menu options", "show menu", "menu list", "navigation menu", "options menu", "menu bar", "menu screen", "menu page", "display menu", "bring up menu", "access menu", "menu please"]
+    },
+    {
+      "action": "BACK",
+      "cmd": "back",
+      "syn": ["go back", "return", "previous", "back button", "navigate back", "go previous", "back page", "previous page", "last page", "return previous", "step back", "move back", "go backwards", "navigate backwards"]
+    },
+    {
+      "action": "RETURN_TO_DASHBOARD",
+      "cmd": "return to dashboard",
+      "syn": ["return to setup", "go to dashboard", "dashboard", "main dashboard", "control panel", "home dashboard", "setup screen", "main screen", "control screen", "setup dashboard", "go to setup", "return to main", "main control", "primary dashboard"]
+    }
+  ]
+}

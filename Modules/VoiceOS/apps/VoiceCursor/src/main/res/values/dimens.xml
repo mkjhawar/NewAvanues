@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ARVision Standard Dimensions -->
+    <dimen name="arvision_corner_radius">20dp</dimen>
+    <dimen name="arvision_touch_target">44dp</dimen>
+    <dimen name="arvision_spacing_small">8dp</dimen>
+    <dimen name="arvision_spacing_medium">16dp</dimen>
+    <dimen name="arvision_spacing_large">24dp</dimen>
+    
+    <!-- Cursor Sizes -->
+    <dimen name="cursor_size_small">32dp</dimen>
+    <dimen name="cursor_size_medium">48dp</dimen>
+    <dimen name="cursor_size_large">64dp</dimen>
+    <dimen name="cursor_size_extra_large">80dp</dimen>
+    
+    <!-- Menu Dimensions -->
+    <dimen name="menu_item_size">@dimen/arvision_touch_target</dimen>
+    <dimen name="menu_padding">@dimen/arvision_spacing_medium</dimen>
+    <dimen name="menu_corner_radius">@dimen/arvision_corner_radius</dimen>
+    <dimen name="menu_elevation">8dp</dimen>
+    
+    <!-- Glass Morphism -->
+    <dimen name="glass_border_width">0.5dp</dimen>
+    <dimen name="glass_blur_radius">32dp</dimen>
+    
+    <!-- Animation -->
+    <dimen name="cursor_animation_distance">4dp</dimen>
+    
+    <!-- Touch Targets -->
+    <dimen name="minimum_touch_target">@dimen/arvision_touch_target</dimen>
+    
+    <!-- Settings UI -->
+    <dimen name="settings_item_height">56dp</dimen>
+    <dimen name="settings_icon_size">24dp</dimen>
+    <dimen name="settings_corner_radius">12dp</dimen>
+</resources>

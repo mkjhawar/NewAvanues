@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Plugin System Settings
+
+  Provides user controls for plugin system features including:
+  - Telemetry opt-in/opt-out (PRIVACY: default OFF)
+  - Developer mode (hot-reload)
+  - Plugin management
+
+  Part of Q12 Implementation - Plugin System
+-->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        android:title="Privacy &amp; Analytics"
+        android:summary="Control what data is collected">
+
+        <!-- CRITICAL: Telemetry Privacy Toggle (Q12 Enhancement 2) -->
+        <SwitchPreferenceCompat
+            android:key="telemetry_enabled"
+            android:title="Action Usage Analytics"
+            android:summary="Help improve VOS by sharing anonymized usage data"
+            android:defaultValue="false"
+            android:icon="@android:drawable/ic_menu_info_details">
+
+            <!-- Detailed explanation shown when tapped -->
+            <intent android:action="android.intent.action.VIEW">
+                <extra android:name="title" android:value="Action Usage Analytics" />
+                <extra android:name="message" android:value="When enabled, VOS collects anonymous usage statistics to help improve the plugin system.\n\nWhat is tracked:\n• Action execution counts\n• Success/failure rates\n• Execution times\n• Error types\n\nWhat is NOT tracked:\n• Actual command text\n• Personal information\n• Location data\n• Any identifiable user data\n\nAll data is stored locally on your device. Nothing is sent to the cloud." />
+            </intent>
+        </SwitchPreferenceCompat>
+
+        <Preference
+            android:key="telemetry_export"
+            android:title="Export Telemetry Data"
+            android:summary="Export your usage data to JSON file"
+            android:dependency="telemetry_enabled"
+            android:icon="@android:drawable/ic_menu_save">
+
+            <intent android:action="android.intent.action.VIEW">
+                <extra android:name="action" android:value="export_telemetry" />
+            </intent>
+        </Preference>
+
+        <Preference
+            android:key="telemetry_clear"
+            android:title="Clear Telemetry Data"
+            android:summary="Delete all collected usage data"
+            android:dependency="telemetry_enabled"
+            android:icon="@android:drawable/ic_menu_delete">
+
+            <intent android:action="android.intent.action.VIEW">
+                <extra android:name="action" android:value="clear_telemetry" />
+                <extra android:name="confirm" android:value="true" />
+            </intent>
+        </Preference>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Plugin Management"
+        android:summary="Manage installed plugins">
+
+        <Preference
+            android:key="plugin_list"
+            android:title="Installed Plugins"
+            android:summary="View and manage plugins"
+            android:icon="@android:drawable/ic_menu_view">
+
+            <intent android:action="android.intent.action.VIEW">
+                <extra android:name="action" android:value="view_plugins" />
+            </intent>
+        </Preference>
+
+        <Preference
+            android:key="plugin_install"
+            android:title="Install Plugin"
+            android:summary="Install plugin from APK or JAR file"
+            android:icon="@android:drawable/ic_menu_add">
+
+            <intent android:action="android.intent.action.VIEW">
+                <extra android:name="action" android:value="install_plugin" />
+            </intent>
+        </Preference>
+
+        <Preference
+            android:key="action_discovery"
+            android:title="Available Actions"
+            android:summary="Browse all available voice commands"
+            android:icon="@android:drawable/ic_menu_search">
+
+            <intent android:action="android.intent.action.VIEW">
+                <extra android:name="action" android:value="action_discovery" />
+            </intent>
+        </Preference>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Developer Options"
+        android:summary="Advanced settings for plugin developers">
+
+        <SwitchPreferenceCompat
+            android:key="hot_reload_enabled"
+            android:title="Hot-Reload Mode"
+            android:summary="Automatically reload plugins when files change"
+            android:defaultValue="false"
+            android:icon="@android:drawable/ic_menu_rotate">
+
+            <intent android:action="android.intent.action.VIEW">
+                <extra android:name="title" android:value="Hot-Reload Mode" />
+                <extra android:name="message" android:value="Hot-Reload allows you to update plugins without restarting VOS.\n\nWhen enabled:\n• Plugin directory is watched for changes\n• Modified plugins are automatically reloaded\n• Great for development and testing\n\nWarning: Only use with trusted plugins. Hot-reload bypasses some security checks." />
+            </intent>
+        </SwitchPreferenceCompat>
+
+        <Preference
+            android:key="reload_all_plugins"
+            android:title="Reload All Plugins"
+            android:summary="Manually reload all plugins"
+            android:dependency="hot_reload_enabled"
+            android:icon="@android:drawable/ic_menu_revert">
+
+            <intent android:action="android.intent.action.VIEW">
+                <extra android:name="action" android:value="reload_all_plugins" />
+            </intent>
+        </Preference>
+
+        <Preference
+            android:key="plugin_logs"
+            android:title="Plugin Logs"
+            android:summary="View plugin execution logs"
+            android:icon="@android:drawable/ic_menu_agenda">
+
+            <intent android:action="android.intent.action.VIEW">
+                <extra android:name="action" android:value="view_plugin_logs" />
+            </intent>
+        </Preference>
+
+        <Preference
+            android:key="trusted_signatures"
+            android:title="Trusted Signatures"
+            android:summary="Manage trusted plugin signatures"
+            android:icon="@android:drawable/ic_lock_lock">
+
+            <intent android:action="android.intent.action.VIEW">
+                <extra android:name="action" android:value="manage_signatures" />
+            </intent>
+        </Preference>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Security"
+        android:summary="Plugin security settings">
+
+        <SwitchPreferenceCompat
+            android:key="require_signature_verification"
+            android:title="Require Signature Verification"
+            android:summary="Only load signed plugins (recommended)"
+            android:defaultValue="true"
+            android:icon="@android:drawable/ic_secure">
+
+            <intent android:action="android.intent.action.VIEW">
+                <extra android:name="title" android:value="Signature Verification" />
+                <extra android:name="message" android:value="When enabled, VOS will only load plugins that have been digitally signed.\n\nThis protects against:\n• Malicious plugins\n• Tampered plugin files\n• Unsigned third-party code\n\nDisable only for development purposes." />
+            </intent>
+        </SwitchPreferenceCompat>
+
+        <SwitchPreferenceCompat
+            android:key="enforce_permissions"
+            android:title="Enforce Plugin Permissions"
+            android:summary="Restrict plugin capabilities via permissions"
+            android:defaultValue="true"
+            android:icon="@android:drawable/ic_lock_power_off" />
+
+        <ListPreference
+            android:key="plugin_execution_timeout"
+            android:title="Plugin Execution Timeout"
+            android:summary="Maximum time a plugin can execute"
+            android:defaultValue="5000"
+            android:entries="@array/timeout_entries"
+            android:entryValues="@array/timeout_values"
+            android:icon="@android:drawable/ic_menu_recent_history" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="About"
+        android:summary="Plugin system information">
+
+        <Preference
+            android:key="plugin_system_version"
+            android:title="Plugin System Version"
+            android:summary="1.0.0 (API v1)"
+            android:selectable="false"
+            android:icon="@android:drawable/ic_dialog_info" />
+
+        <Preference
+            android:key="plugin_documentation"
+            android:title="Developer Documentation"
+            android:summary="Learn how to create plugins"
+            android:icon="@android:drawable/ic_menu_help">
+
+            <intent android:action="android.intent.action.VIEW">
+                <extra android:name="url" android:value="https://docs.voiceos.com/plugins" />
+            </intent>
+        </Preference>
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

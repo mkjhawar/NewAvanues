@@ -1,0 +1,55 @@
+package com.augmentalis.magiccode.plugins.mocks
+
+/**
+ * Mock implementation of ZipExtractor for testing.
+ *
+ * Allows control over ZIP extraction behavior for testing.
+ */
+class MockZipExtractor {
+    var shouldFailExtraction = false
+    var extractionFailureMessage = "Mock extraction failure"
+    var lastExtractedZipPath: String? = null
+    var lastExtractedDestPath: String? = null
+
+    // Callback to simulate file creation during extraction
+    var onExtractZip: ((zipPath: String, destPath: String, fileIO: MockFileIO) -> Unit)? = null
+
+    /**
+     * Extract ZIP archive to destination directory.
+     */
+    fun extractZip(zipPath: String, destPath: String): Boolean {
+        lastExtractedZipPath = zipPath
+        lastExtractedDestPath = destPath
+
+        if (shouldFailExtraction) {
+            throw RuntimeException(extractionFailureMessage)
+        }
+
+        return true
+    }
+
+    /**
+     * List entries in ZIP archive.
+     */
+    fun listZipEntries(zipPath: String): List<String> {
+        return emptyList()
+    }
+
+    /**
+     * Check if ZIP contains a specific entry.
+     */
+    fun containsEntry(zipPath: String, entryPath: String): Boolean {
+        return false
+    }
+
+    /**
+     * Reset mock state.
+     */
+    fun reset() {
+        shouldFailExtraction = false
+        extractionFailureMessage = "Mock extraction failure"
+        lastExtractedZipPath = null
+        lastExtractedDestPath = null
+        onExtractZip = null
+    }
+}
