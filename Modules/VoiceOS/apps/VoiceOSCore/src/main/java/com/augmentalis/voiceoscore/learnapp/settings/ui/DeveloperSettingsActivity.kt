@@ -146,6 +146,15 @@ class DeveloperSettingsActivity : AppCompatActivity() {
                 description = "Automatically detect app launches",
                 type = SettingType.TOGGLE,
                 value = preferences.isAutoDetectEnabled()
+            ),
+
+            // Maintenance section
+            SettingItem(
+                key = "cleanup_commands",
+                label = "Cleanup Deprecated Commands",
+                description = "Remove old commands from previous app versions",
+                type = SettingType.ACTION,
+                value = "Open Cleanup"
             )
         )
     }
@@ -162,6 +171,12 @@ class DeveloperSettingsActivity : AppCompatActivity() {
             "debug_mode" -> preferences.isDebugModeEnabled = newValue as Boolean
             "show_exploration_overlay" -> preferences.showExplorationOverlay = newValue as Boolean
             "auto_detect" -> preferences.setAutoDetectEnabled(newValue as Boolean)
+            "cleanup_commands" -> {
+                // Launch CleanupPreviewActivity
+                val intent = com.augmentalis.voiceoscore.cleanup.ui.CleanupPreviewActivity.createIntent(this)
+                startActivity(intent)
+                return // Don't show "Setting updated" toast for actions
+            }
         }
 
         Toast.makeText(this, "Setting updated", Toast.LENGTH_SHORT).show()
