@@ -12,9 +12,10 @@ Scope: ALL projects in /Volumes/M-Drive/Coding/
 | NO BRANCH CHANGES | NEVER create/switch/delete branches without explicit approval. Ask: "Create/switch to {name}? (Y/n)" |
 | OWN WORK ONLY | ONLY stage/commit/push work done in YOUR session. NEVER commit others' changes |
 | NO CROSS-COMMIT | NEVER commit to other branches without approval. Verify branch before every commit |
+| COMMIT BLOCKERS | When commit is blocked (wrong branch, others' changes staged, pre-commit failures), rectify ALL blocking issues FIRST, then complete the commit. NEVER leave commits incomplete |
 | CROSS-PROJECT CAUTION | When modifying external files, check for conflicts with dependent files |
 | NO STUBS | **ABSOLUTE BAN** on placeholder code. No `// TODO`, no empty functions, no "implement later". Every function MUST be complete. Applies to `.yolo` and `.swarm` |
-| MANDATORY NAMING | Files: `{App}-{Module}-{Desc}-{YDDMMHH}-V#.md` (Y=single digit: 5 for 2025) |
+| MANDATORY NAMING | Files: `{App}-{Module}-{Desc}-{YYMMDD}-V#.md` (YY=year, MM=month, DD=day) |
 | NO HARDWIRING | Never hardcode. Use config/env. ABSOLUTE BAN in .yolo mode |
 | NO DELETE | Never delete code without approval + pros/cons |
 | NO MAIN COMMITS | NEVER commit to main. Use feature/bugfix/hotfix branches |
@@ -28,8 +29,10 @@ Scope: ALL projects in /Volumes/M-Drive/Coding/
 ## API & MCP
 
 **API (preferred - 97% token savings):** `http://localhost:3847`
-- Auto-loads globally. Check: `curl -s http://localhost:3847/health`
-- Manual start: `cd /Volumes/M-Drive/Coding/ideacode/ideacode-api && npm start`
+- **CRITICAL:** At session start, run: `/Volumes/M-Drive/Coding/ideacode/scripts/ensure-api-running.sh`
+- This auto-checks health and starts server if needed
+- Inform user when API is ready before proceeding
+- Manual check: `curl -s http://localhost:3847/health`
 
 **MCP (per-repo, manual):**
 - Check: `/i.mcp status` | Start: `/i.mcp start` | Stop: `/i.mcp stop`
@@ -74,14 +77,14 @@ Scope: ALL projects in /Volumes/M-Drive/Coding/
 
 | Type | Pattern |
 |------|---------|
-| Docs | `App-Module-Desc-YDDMMHH-V#.md` (Y=single digit year) |
+| Docs | `App-Module-Desc-YYMMDD-V#.md` (YY=year, MM=month, DD=day) |
 | Living | `LD-App-Module-Desc-V#.md` |
-| Specs/Plans | `App-{Spec\|Plan}-Feature-YDDMM-V#.md` |
+| Specs/Plans | `App-{Spec\|Plan}-Feature-YYMMDD-V#.md` |
 | Context | `con-{app}-{module}-{desc}-{YYYYMMDD}.md` |
 | Code (TS) | `{app}-{module}-{desc}.ts` |
 | Code (Kotlin/Swift) | `{App}{Module}{Desc}.{kt\|swift}` |
 
-**Examples:** ✅ `AvaConnect-Status-51209-V1.md` | ❌ `Status-251209-V1.md` (no prefix, wrong year format)
+**Examples:** ✅ `AvaConnect-Status-251209-V1.md` | ❌ `Status-251209-V1.md` (missing App-Module prefix)
 
 ---
 
