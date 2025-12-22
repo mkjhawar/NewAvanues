@@ -49,6 +49,7 @@ import com.augmentalis.voiceoscore.accessibility.config.ServiceConfiguration
 import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine
 import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine.UIElement
 import com.augmentalis.voiceoscore.accessibility.managers.ActionCoordinator
+import com.augmentalis.voiceoscore.accessibility.managers.DatabaseManager
 import com.augmentalis.voiceoscore.accessibility.managers.InstalledAppsManager
 import com.augmentalis.voiceoscore.accessibility.monitor.ServiceMonitor
 import com.augmentalis.voiceoscore.accessibility.speech.SpeechConfigurationData
@@ -165,16 +166,13 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     private var lastCommandLoaded = 0L
     private val isCommandProcessing = AtomicBoolean(false)
 
-    // Database initialization state machine (FIX 2025-12-19: Task 1.10)
-    // Prevents database access before initialization complete
-    private sealed class InitializationState {
-        object NotStarted : InitializationState()
-        object InProgress : InitializationState()
-        data class Completed(val timestamp: Long) : InitializationState()
-        data class Failed(val error: String) : InitializationState()
+    // Database manager (extracted from VoiceOSService - P2-8a)
+    // Centralizes database initialization, state machine, and lifecycle
+    private val dbManager by lazy {
+        DatabaseManager(applicationContext).also {
+            Log.d(TAG, "DatabaseManager initialized (lazy)")
+        }
     }
-
-    private val initState = MutableStateFlow<InitializationState>(InitializationState.NotStarted)
 
     // LearnApp integration state
     // FIX (2025-11-30): Use AtomicInteger for thread-safe state tracking
@@ -232,16 +230,9 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         }
     }
 
-    // Database manager for SQLDelight repositories
-    private val databaseManager by lazy {
-        VoiceOSDatabaseManager.getInstance(DatabaseDriverFactory(applicationContext)).also {
-            Log.d(TAG, "VoiceOSDatabaseManager initialized (lazy)")
-        }
-    }
-
     // AppVersionDetector requires IAppVersionRepository
     private val appVersionDetector by lazy {
-        AppVersionDetector(applicationContext, databaseManager.appVersions).also {
+        AppVersionDetector(applicationContext, dbManager.sqlDelightManager.appVersions).also {
             Log.d(TAG, "AppVersionDetector initialized (lazy)")
         }
     }
@@ -251,8 +242,8 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         com.augmentalis.voiceoscore.version.AppVersionManager(
             context = applicationContext,
             detector = appVersionDetector,
-            versionRepo = databaseManager.appVersions,
-            commandRepo = databaseManager.generatedCommands
+            versionRepo = dbManager.sqlDelightManager.appVersions,
+            commandRepo = dbManager.sqlDelightManager.generatedCommands
         ).also {
             Log.d(TAG, "AppVersionManager initialized (lazy)")
         }
@@ -294,10 +285,6 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     // Manages binding to JITLearningService foreground service
     @Volatile
     private var jitServiceBound = false
-
-    // Hash-based persistence database (nullable for safe fallback)
-    // FIX (2025-11-26): Database consolidation - Use VoiceOSAppDatabase (SQLDelight via adapter)
-    private var scrapingDatabase: VoiceOSAppDatabase? = null
 
     // Hash-based scraping integration
     private var scrapingIntegration: AccessibilityScrapingIntegration? = null
@@ -368,15 +355,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             Log.d(TAG, "✓ SYSTEM_ALERT_WINDOW permission granted")
         }
 
-        // FIX (2025-11-26): Initialize SQLDelight database (VoiceOSAppDatabase is typealias for adapter)
-        try {
-            scrapingDatabase = VoiceOSAppDatabase.getInstance(this)
-            Log.i(TAG, "SQLDelight VoiceOSAppDatabase initialized successfully")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize database - will fall back to in-memory cache", e)
-            scrapingDatabase = null
-        }
-
+        // Database initialization moved to onServiceConnected (via DatabaseManager)
         // Initialize rename feature components (Phase 2: On-Demand Command Renaming)
         initializeRenameFeature()
     }
@@ -398,7 +377,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             Log.d(TAG, "✓ RenameHintOverlay initialized")
 
             // Initialize ScreenActivityDetector (requires RenameHintOverlay + database)
-            scrapingDatabase?.let { database ->
+            dbManager.scrapingDatabase?.let { database ->
                 renameHintOverlay?.let { overlay ->
                     screenActivityDetector = ScreenActivityDetector(this, database.databaseManager, overlay)
                     Log.d(TAG, "✓ ScreenActivityDetector initialized")
@@ -416,30 +395,6 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             renameHintOverlay = null
             screenActivityDetector = null
             renameCommandHandler = null
-        }
-    }
-
-    /**
-     * Guard function to ensure database is ready before access.
-     * Suspends until database initialization is complete.
-     *
-     * FIX (2025-12-19): Task 1.10 - Database initialization validation
-     *
-     * @throws IllegalStateException if database initialization failed
-     */
-    private suspend fun <T> withDatabaseReady(block: suspend () -> T): T {
-        val state = initState.first {
-            it is InitializationState.Completed || it is InitializationState.Failed
-        }
-
-        return when (state) {
-            is InitializationState.Completed -> block()
-            is InitializationState.Failed -> {
-                throw IllegalStateException("Database not initialized: ${state.error}")
-            }
-            else -> {
-                throw IllegalStateException("Unexpected state: $state")
-            }
         }
     }
 
@@ -497,26 +452,12 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         // Register for app lifecycle events for hybrid foreground service
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
         serviceScope.launch {
-            // FIX (2025-12-19): Task 1.10 - Wait for database initialization
-            initState.emit(InitializationState.InProgress)
-
+            // P2-8a: Database initialization via DatabaseManager
             try {
-                // Wait for database initialization with timeout
-                withTimeout(10_000) {
-                    scrapingDatabase?.databaseManager?.waitForInitialization()
-                        ?: throw IllegalStateException("Database not initialized in onCreate")
-                }
-
-                // Database initialization verified - foreign keys are enabled via VoiceOSDatabaseManager init
-                Log.d(TAG, "Database initialized successfully")
-
-                Log.i(TAG, "Database initialization verified - foreign keys enabled")
-                initState.emit(InitializationState.Completed(System.currentTimeMillis()))
-
+                dbManager.initialize()
             } catch (e: Exception) {
                 val errorMsg = "VoiceOS initialization failed: ${e.message}"
                 Log.e(TAG, errorMsg, e)
-                initState.emit(InitializationState.Failed(e.message ?: "Unknown error"))
                 showErrorNotification(errorMsg)
                 return@launch // Exit early on failure
             }
@@ -690,7 +631,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             // SOURCE 2: VoiceOSAppDatabase (generated app commands - unified DB)
             try {
                 Log.d(TAG, "Loading commands from VoiceOSAppDatabase...")
-                scrapingDatabase?.let { database ->
+                dbManager.scrapingDatabase?.let { database ->
                     val appCommands = database.databaseManager.generatedCommands.getAll()
                     Log.i(TAG, "  Found ${appCommands.size} commands in VoiceOSAppDatabase")
 
@@ -852,7 +793,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             actionCoordinator.initialize()
 
             // Initialize hash-based scraping integration (if database initialized)
-            if (scrapingDatabase != null) {
+            if (dbManager.scrapingDatabase != null) {
                 try {
                     scrapingIntegration = AccessibilityScrapingIntegration(
                         context = this@VoiceOSService,
@@ -868,15 +809,15 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             }
 
             // Initialize hash-based command processor
-            if (scrapingDatabase != null) {
+            if (dbManager.scrapingDatabase != null) {
                 try {
-                    val dbManager = scrapingDatabase!!.databaseManager
+                    val sqlDelightManager = dbManager.scrapingDatabase!!.databaseManager
                     voiceCommandProcessor = VoiceCommandProcessor(
                         context = this@VoiceOSService,
                         accessibilityService = this@VoiceOSService,
-                        scrapedAppQueries = dbManager.scrapedAppQueries,
-                        scrapedElementQueries = dbManager.scrapedElementQueries,
-                        generatedCommandQueries = dbManager.generatedCommandQueries
+                        scrapedAppQueries = sqlDelightManager.scrapedAppQueries,
+                        scrapedElementQueries = sqlDelightManager.scrapedElementQueries,
+                        generatedCommandQueries = sqlDelightManager.generatedCommandQueries
                     )
                     Log.i(TAG, "VoiceCommandProcessor initialized successfully")
                 } catch (e: Exception) {
@@ -2084,12 +2025,8 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             Log.i(TAG, "✓ VoiceCommandProcessor reference cleared")
         }
 
-        // Note: Database is singleton and managed by Room lifecycle - no explicit cleanup needed
-        if (scrapingDatabase != null) {
-            Log.d(TAG, "Clearing scraping database reference (Room manages lifecycle)...")
-            scrapingDatabase = null
-            Log.i(TAG, "✓ Scraping database reference cleared")
-        }
+        // P2-8a: Database cleanup via DatabaseManager
+        dbManager.cleanup()
 
         // Cleanup LearnApp integration
         // FIX (2025-12-04): Re-enabled cleanup - CRITICAL for fixing ProgressOverlay memory leak
@@ -2567,7 +2504,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     fun getLearnedApps(): List<String> {
         Log.i(TAG, "IPC: getLearnedApps()")
         return try {
-            val database = scrapingDatabase
+            val database = dbManager.scrapingDatabase
             if (database == null) {
                 Log.w(TAG, "Scraping database not initialized")
                 return emptyList()
@@ -2592,7 +2529,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     fun getCommandsForApp(packageName: String): List<String> {
         Log.i(TAG, "IPC: getCommandsForApp(packageName=$packageName)")
         return try {
-            val database = scrapingDatabase
+            val database = dbManager.scrapingDatabase
             if (database == null) {
                 Log.w(TAG, "Scraping database not initialized")
                 return emptyList()
@@ -2623,7 +2560,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
                 return false
             }
 
-            val database = scrapingDatabase
+            val database = dbManager.scrapingDatabase
             if (database == null) {
                 Log.w(TAG, "Scraping database not initialized")
                 return false
