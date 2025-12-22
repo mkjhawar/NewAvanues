@@ -256,8 +256,7 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
 
             // Number commands (e.g., "tap 5", "click 3")
             Regex("(tap|click|select)\\s+(\\d+)").find(command) != null -> {
-                val match = Regex("(tap|click|select)\\s+(\\d+)").find(command)
-                    ?: return@when null // Shouldn't happen since we just checked, but safe
+                val match = Regex("(tap|click|select)\\s+(\\d+)").find(command)!!
                 val number = match.groupValues[2]
                 "click_number:$number"
             }
