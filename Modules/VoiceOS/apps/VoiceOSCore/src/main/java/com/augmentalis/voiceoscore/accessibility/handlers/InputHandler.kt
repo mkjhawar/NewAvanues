@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
+import com.augmentalis.voiceoscore.security.InputValidator
 
 /**
  * Handler for text input and keyboard actions
@@ -118,7 +119,15 @@ class InputHandler(
     
     private fun enterText(text: String): Boolean {
         val focusedNode = findFocusedNode() ?: return false
-        
+
+        // Validate input for security (XSS, SQL injection, length limits)
+        try {
+            InputValidator.validateTextInput(text)
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Input validation failed: ${e.message}")
+            return false
+        }
+
         return if (focusedNode.isEditable) {
             val arguments = Bundle().apply {
                 putCharSequence(

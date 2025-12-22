@@ -22,6 +22,7 @@ import com.augmentalis.voiceoscore.learnapp.detection.AppFramework
 import com.augmentalis.voiceoscore.learnapp.detection.CrossPlatformDetector
 import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
+import com.augmentalis.voiceoscore.security.InputValidator
 import com.augmentalis.voiceoscore.version.AppVersionDetector
 import com.augmentalis.voiceoscore.version.AppVersion
 
@@ -109,8 +110,12 @@ class LearnAppCore(
         mode: ProcessingMode
     ): ElementProcessingResult {
         return try {
+            // 0. Validate inputs for security
+            InputValidator.validatePackageName(packageName)
+
             // 1. Generate UUID
             val uuid = generateUUID(element, packageName)
+            InputValidator.validateUuid(uuid)
             if (developerSettings.isVerboseLoggingEnabled()) {
                 Log.d(TAG, "Generated UUID: $uuid for element: ${element.text}")
             }

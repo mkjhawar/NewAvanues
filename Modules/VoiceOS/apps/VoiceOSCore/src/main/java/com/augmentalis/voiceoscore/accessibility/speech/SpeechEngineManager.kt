@@ -56,11 +56,22 @@ class SpeechEngineManager(private val context: Context) {
     val commandEvents: SharedFlow<CommandEvent> = _commandEvents.asSharedFlow()
 
     private var currentEngine: Any? = null
-    private val engineMutex = Mutex()
     private val isInitializing = AtomicBoolean(false)
-    private val initializationMutex = Mutex()
-    private val engineCleanupMutex = Mutex()
-    private val engineSwitchingMutex = Mutex()
+
+    /**
+     * Single mutex protecting all engine state operations
+     *
+     * Replaces previous 4 mutexes (engineMutex, initializationMutex,
+     * engineCleanupMutex, engineSwitchingMutex) to prevent deadlocks
+     * from nested locking and simplify synchronization logic.
+     *
+     * Protects:
+     * - currentEngine reference changes
+     * - Engine initialization state
+     * - Engine cleanup operations
+     * - Engine switching operations
+     */
+    private val stateMutex = Mutex()
 
     // Additional race condition protections
     private val isDestroying = AtomicBoolean(false)
@@ -164,57 +175,53 @@ class SpeechEngineManager(private val context: Context) {
                 return@launch
             }
 
-            engineSwitchingMutex.withLock {
-                initializationMutex.withLock {
-                    try {
-                        Log.i(
-                            TAG,
-                            "Starting enhanced thread-safe initialization of ${engine.name} (attempt #${initializationAttempts.get()})"
-                        )
+            stateMutex.withLock {
+                try {
+                    Log.i(
+                        TAG,
+                        "Starting enhanced thread-safe initialization of ${engine.name} (attempt #${initializationAttempts.get()})"
+                    )
 
-                        engineInitializationHistory[engine] = currentTime
+                    engineInitializationHistory[engine] = currentTime
 
-                        // Enhanced cleanup of previous engine
-                        cleanupPreviousEngine()
+                    // Enhanced cleanup of previous engine
+                    cleanupPreviousEngine()
+
+                    _speechState.value = _speechState.value.copy(
+                        selectedEngine = engine,
+                        engineStatus = "Initializing ${engine.name}...",
+                        errorMessage = null,
+                        isInitialized = false
+                    )
+
+                    // Create and initialize engine with proper error handling
+                    val newEngine = createEngineInstance(engine)
+                    val initSuccess = initializeEngineInstanceWithRetry(newEngine, engine)
+
+                    if (initSuccess) {
+                        // Update engine reference (already protected by stateMutex)
+                        currentEngine = newEngine
+                        lastSuccessfulEngine = engine
+
+                        setupEngineListeners(newEngine)
 
                         _speechState.value = _speechState.value.copy(
-                            selectedEngine = engine,
-                            engineStatus = "Initializing ${engine.name}...",
-                            errorMessage = null,
-                            isInitialized = false
+                            isInitialized = true,
+                            engineStatus = "${engine.name} ready",
+                            errorMessage = null
                         )
 
-                        // Create and initialize engine with proper error handling
-                        val newEngine = createEngineInstance(engine)
-                        val initSuccess = initializeEngineInstanceWithRetry(newEngine, engine)
-
-                        if (initSuccess) {
-                            // Update engine reference safely
-                            engineMutex.withLock {
-                                currentEngine = newEngine
-                                lastSuccessfulEngine = engine
-                            }
-
-                            setupEngineListeners(newEngine)
-
-                            _speechState.value = _speechState.value.copy(
-                                isInitialized = true,
-                                engineStatus = "${engine.name} ready",
-                                errorMessage = null
-                            )
-
-                            Log.i(TAG, "${engine.name} initialized successfully")
-                        } else {
-                            // Attempt fallback to last successful engine if available
-                            handleInitializationFailure(engine)
-                        }
-
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Exception during ${engine.name} initialization", e)
-                        handleInitializationException(engine, e)
-                    } finally {
-                        isInitializing.set(false)
+                        Log.i(TAG, "${engine.name} initialized successfully")
+                    } else {
+                        // Attempt fallback to last successful engine if available
+                        handleInitializationFailure(engine)
                     }
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "Exception during ${engine.name} initialization", e)
+                    handleInitializationException(engine, e)
+                } finally {
+                    isInitializing.set(false)
                 }
             }
         }
@@ -222,54 +229,55 @@ class SpeechEngineManager(private val context: Context) {
 
     /**
      * Enhanced cleanup of previous engine with proper resource management
+     *
+     * NOTE: Caller must hold stateMutex lock
      */
     private suspend fun cleanupPreviousEngine() {
-        engineCleanupMutex.withLock {
-            try {
-                Log.d(TAG, "Enhanced cleanup of previous engine")
+        try {
+            Log.d(TAG, "Enhanced cleanup of previous engine")
 
-                // Stop any ongoing operations
-                stopListening()
+            // Stop any ongoing operations
+            stopListening()
 
-                // Clean up current engine if exists
-                val engine = currentEngine
-                if (engine != null) {
-                    Log.d(TAG, "Cleaning up engine: ${engine::class.simpleName}")
+            // Clean up current engine if exists
+            val engine = currentEngine
+            if (engine != null) {
+                Log.d(TAG, "Cleaning up engine: ${engine::class.simpleName}")
 
-                    // Engine-specific cleanup
-                    try {
-                        when (engine) {
-                            // is AndroidSTTEngine -> {
-                            //     // AndroidSTT cleanup is handled internally
-                            // }  // DISABLED: User wants only VivokaEngine
+                // Engine-specific cleanup
+                try {
+                    when (engine) {
+                        // is AndroidSTTEngine -> {
+                        //     // AndroidSTT cleanup is handled internally
+                        // }  // DISABLED: User wants only VivokaEngine
 
-                            // is VoskEngine -> {
-                            //     // VoskEngine cleanup
-                            //     engine.destroy()
-                            // }  // DISABLED: Learning dependency
+                        // is VoskEngine -> {
+                        //     // VoskEngine cleanup
+                        //     engine.destroy()
+                        // }  // DISABLED: Learning dependency
 
-                            is VivokaEngine -> {
-                                // VivokaEngine cleanup
-                                engine.destroy()
-                            }
-
-                            // is WhisperEngine -> {
-                            //     // WhisperEngine cleanup
-                            //     engine.destroy()
-                            // }  // DISABLED: Learning dependency
-
-                            else -> {
-                                Log.w(TAG, "Unknown engine type for cleanup: ${engine::class.simpleName}")
-                            }
+                        is VivokaEngine -> {
+                            // VivokaEngine cleanup
+                            engine.destroy()
                         }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Engine cleanup failed (non-critical): ${e.message}")
+
+                        // is WhisperEngine -> {
+                        //     // WhisperEngine cleanup
+                        //     engine.destroy()
+                        // }  // DISABLED: Learning dependency
+
+                        else -> {
+                            Log.w(TAG, "Unknown engine type for cleanup: ${engine::class.simpleName}")
+                        }
                     }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Engine cleanup failed (non-critical): ${e.message}")
                 }
+            }
 
-                currentEngine = null
+            currentEngine = null
 
-                // Small delay to ensure cleanup is complete
+            // Small delay to ensure cleanup is complete
                 delay(200)
 
             } catch (e: Exception) {
@@ -521,7 +529,7 @@ class SpeechEngineManager(private val context: Context) {
         }
 
         engineScope.launch {
-            engineMutex.withLock {
+            stateMutex.withLock {
                 try {
                     val engine = currentEngine
                     if (engine == null) {
@@ -573,7 +581,7 @@ class SpeechEngineManager(private val context: Context) {
     // Root cause: Synchronous speech engine update blocked caller thread
     // Solution: Launch in engineScope with Dispatchers.IO to run in background
     suspend fun updateCommands(commands: List<String>) = withContext(Dispatchers.IO) {
-        engineMutex.withLock {
+        stateMutex.withLock {
             try {
                 when (currentEngine) {
                     is VivokaEngine -> {
@@ -596,7 +604,7 @@ class SpeechEngineManager(private val context: Context) {
      */
     fun stopListening() {
         engineScope.launch {
-            engineMutex.withLock {
+            stateMutex.withLock {
                 try {
                     val engine = currentEngine
                     if (engine != null) {
@@ -668,12 +676,14 @@ class SpeechEngineManager(private val context: Context) {
                     Log.w(TAG, "Initialization still in progress during cleanup, forcing cleanup")
                 }
 
-                // Enhanced cleanup
-                cleanupPreviousEngine()
+                // Enhanced cleanup (requires stateMutex)
+                stateMutex.withLock {
+                    cleanupPreviousEngine()
 
-                // Clear state
-                engineInitializationHistory.clear()
-                lastSuccessfulEngine = null
+                    // Clear state
+                    engineInitializationHistory.clear()
+                    lastSuccessfulEngine = null
+                }
 
                 Log.i(TAG, "Enhanced cleanup completed")
 

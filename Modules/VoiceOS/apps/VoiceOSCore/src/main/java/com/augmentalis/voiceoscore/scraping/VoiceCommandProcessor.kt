@@ -25,6 +25,7 @@ import com.augmentalis.database.dto.ScrapedElementDTO
 import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.database.dto.toScrapedElementDTO
 import com.augmentalis.database.dto.toGeneratedCommandDTO
+import com.augmentalis.voiceoscore.security.InputValidator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -386,6 +387,14 @@ class VoiceCommandProcessor(
      * Separate method for text input with actual text parameter
      */
     suspend fun executeTextInput(voiceInput: String, text: String): CommandResult = withContext(Dispatchers.IO) {
+        // Validate text input for security (XSS, SQL injection, length limits)
+        try {
+            InputValidator.validateTextInput(text)
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Text input validation failed: ${e.message}")
+            return@withContext CommandResult.failure("Invalid input: ${e.message}")
+        }
+
         val result = processCommand(voiceInput)
         if (result.success && result.actionType == "type") {
             // Get the element and set text
