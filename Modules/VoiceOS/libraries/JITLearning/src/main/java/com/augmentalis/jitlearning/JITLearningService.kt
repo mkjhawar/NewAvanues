@@ -1100,7 +1100,8 @@ class JITLearningService : Service() {
     /**
      * Process accessibility event (called from VoiceOSService)
      */
-    fun onAccessibilityEvent(packageName: String, event: android.view.accessibility.AccessibilityEvent) {
+    @Suppress("UNUSED_PARAMETER")
+    fun onAccessibilityEvent(packageName: String, @Suppress("UNUSED_PARAMETER") event: android.view.accessibility.AccessibilityEvent) {
         if (isPaused) return
 
         currentPackageName = packageName

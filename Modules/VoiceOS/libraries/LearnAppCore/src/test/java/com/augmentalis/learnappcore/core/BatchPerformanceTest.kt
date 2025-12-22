@@ -16,12 +16,14 @@ package com.augmentalis.learnappcore.core
 
 import android.content.Context
 import android.graphics.Rect
+import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.database.repositories.IGeneratedCommandRepository
 import com.augmentalis.learnappcore.models.ElementInfo
 import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
@@ -49,6 +51,7 @@ import kotlin.system.measureTimeMillis
 class BatchPerformanceTest {
 
     private lateinit var mockContext: Context
+    private lateinit var mockDatabase: VoiceOSDatabaseManager
     private lateinit var mockCommandsRepository: IGeneratedCommandRepository
     private lateinit var mockUuidGenerator: ThirdPartyUuidGenerator
     private lateinit var learnAppCore: LearnAppCore
@@ -56,15 +59,17 @@ class BatchPerformanceTest {
     @Before
     fun setup() {
         mockContext = mockk(relaxed = true)
+        mockDatabase = mockk(relaxed = true)
         mockCommandsRepository = mockk(relaxed = true)
         mockUuidGenerator = mockk(relaxed = true)
 
-        // Setup repository mock
+        // Setup database mock
+        every { mockDatabase.generatedCommands } returns mockCommandsRepository
         coEvery { mockCommandsRepository.insert(any()) } returns 1L
         coEvery { mockCommandsRepository.insertBatch(any()) } returns Unit
 
-        // Create LearnAppCore instance with repository directly
-        learnAppCore = LearnAppCore(mockContext, mockCommandsRepository, mockUuidGenerator)
+        // Create LearnAppCore instance
+        learnAppCore = LearnAppCore(mockContext, mockDatabase, mockUuidGenerator)
     }
 
     // ============================================================

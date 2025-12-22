@@ -20,6 +20,7 @@ kotlin {
         compilations.all {
             kotlinOptions {
                 jvmTarget = "17"
+                freeCompilerArgs = freeCompilerArgs + listOf("-Xexpect-actual-classes")
             }
         }
     }
