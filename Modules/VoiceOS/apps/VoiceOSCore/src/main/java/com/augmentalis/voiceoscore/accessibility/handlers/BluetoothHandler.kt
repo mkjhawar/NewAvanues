@@ -140,8 +140,14 @@ class BluetoothHandler(
                 }
             }
 
-            val currentState = bluetoothAdapter!!.state == BluetoothAdapter.STATE_ON
-            
+            val adapter = bluetoothAdapter ?: run {
+                Log.e(TAG, "Bluetooth adapter became null")
+                openBluetoothSettings()
+                return true
+            }
+
+            val currentState = adapter.state == BluetoothAdapter.STATE_ON
+
             if (enable && !currentState) {
                 Log.i(TAG, "Enabling Bluetooth")
                 // For API 33+, we can't directly enable/disable Bluetooth
@@ -149,7 +155,7 @@ class BluetoothHandler(
                     openBluetoothSettings()
                 } else {
                     @Suppress("DEPRECATION", "MissingPermission")
-                    bluetoothAdapter!!.enable()
+                    adapter.enable()
                 }
                 true
             } else if (!enable && currentState) {
@@ -158,7 +164,7 @@ class BluetoothHandler(
                     openBluetoothSettings()
                 } else {
                     @Suppress("DEPRECATION", "MissingPermission")
-                    bluetoothAdapter!!.disable()
+                    adapter.disable()
                 }
                 true
             } else {
@@ -181,13 +187,14 @@ class BluetoothHandler(
      * Toggle Bluetooth state
      */
     private fun toggleBluetooth(): Boolean {
-        if (bluetoothAdapter == null) {
+        val adapter = bluetoothAdapter ?: run {
+            Log.w(TAG, "Bluetooth adapter not available")
             openBluetoothSettings()
             return true
         }
 
         return try {
-            val currentState = bluetoothAdapter!!.state == BluetoothAdapter.STATE_ON
+            val currentState = adapter.state == BluetoothAdapter.STATE_ON
             enableBluetooth(!currentState)
         } catch (e: Exception) {
             Log.e(TAG, "Error toggling Bluetooth", e)

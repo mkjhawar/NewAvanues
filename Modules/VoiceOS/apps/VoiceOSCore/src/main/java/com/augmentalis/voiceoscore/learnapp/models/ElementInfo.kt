@@ -132,7 +132,7 @@ data class ElementInfo(
      */
     fun stableId(): String {
         if (elementHash.isNotBlank()) return elementHash
-        if (uuid != null) return uuid!!
+        uuid?.let { return it } // Return UUID if present (already null-checked)
 
         // Create stable ID from element properties
         val parts = listOf(

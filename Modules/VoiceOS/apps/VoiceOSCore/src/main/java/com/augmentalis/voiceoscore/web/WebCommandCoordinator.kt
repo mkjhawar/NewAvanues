@@ -439,8 +439,8 @@ class WebCommandCoordinator(
     ): AccessibilityNodeInfo? {
         try {
             // Strategy 1: Match by text content
-            if (!element.text.isNullOrBlank()) {
-                val nodes = root.findAccessibilityNodeInfosByText(element.text!!)
+            element.text?.takeIf { it.isNotBlank() }?.let { searchText ->
+                val nodes = root.findAccessibilityNodeInfosByText(searchText)
                 if (nodes.isNotEmpty()) {
                     // Find best match by position if multiple
                     return findClosestByBounds(nodes, element.getBoundsX(), element.getBoundsY())
@@ -468,9 +468,10 @@ class WebCommandCoordinator(
             val text = node.text?.toString() ?: ""
             val contentDesc = node.contentDescription?.toString() ?: ""
 
-            val textMatch = !target.text.isNullOrBlank() &&
-                           (text.contains(target.text!!, ignoreCase = true) ||
-                            contentDesc.contains(target.text!!, ignoreCase = true))
+            val textMatch = target.text?.takeIf { it.isNotBlank() }?.let { targetText ->
+                text.contains(targetText, ignoreCase = true) ||
+                contentDesc.contains(targetText, ignoreCase = true)
+            } ?: false
 
             val tagMatch = target.tagName?.let { node.className?.toString()?.contains(it, ignoreCase = true) == true } ?: true
 

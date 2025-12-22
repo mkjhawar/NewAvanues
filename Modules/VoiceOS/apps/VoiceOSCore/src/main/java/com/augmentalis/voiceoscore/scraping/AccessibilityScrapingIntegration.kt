@@ -631,22 +631,24 @@ class AccessibilityScrapingIntegration(
                 }
 
                 // ===== PHASE 2.5: Track Screen Transitions =====
-                if (lastScrapedScreenHash != null && lastScrapedScreenHash != screenHash) {
-                    // Calculate transition time
-                    val currentTime = System.currentTimeMillis()
-                    val transitionTime = if (lastScreenTime > 0) {
-                        currentTime - lastScreenTime
-                    } else null
+                lastScrapedScreenHash?.let { previousHash ->
+                    if (previousHash != screenHash) {
+                        // Calculate transition time
+                        val currentTime = System.currentTimeMillis()
+                        val transitionTime = if (lastScreenTime > 0) {
+                            currentTime - lastScreenTime
+                        } else null
 
-                    // Record the transition
-                    databaseManager.screenTransitionQueries.recordTransition(
-                        fromHash = lastScrapedScreenHash!!,
-                        toHash = screenHash,
-                        transitionTime = transitionTime
-                    )
+                        // Record the transition
+                        databaseManager.screenTransitionQueries.recordTransition(
+                            fromHash = previousHash, // Already null-checked via let
+                            toHash = screenHash,
+                            transitionTime = transitionTime
+                        )
 
-                    Log.d(TAG, "Recorded screen transition: ${lastScrapedScreenHash?.take(8)} → ${screenHash.take(8)}" +
-                          if (transitionTime != null) " (${transitionTime}ms)" else "")
+                        Log.d(TAG, "Recorded screen transition: ${previousHash.take(8)} → ${screenHash.take(8)}" +
+                              if (transitionTime != null) " (${transitionTime}ms)" else "")
+                    }
                 }
 
                 // Update last screen tracking
