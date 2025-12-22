@@ -54,24 +54,10 @@ android {
     }
 }
 
-// KSP configuration for Room
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-    arg("room.incremental", "true")
-    arg("room.generateKotlin", "true")
-}
-
 dependencies {
-    // Room version constant for consistency
-    val roomVersion = "2.6.1"
-    
-    // Room KSP processor
-    ksp("androidx.room:room-compiler:$roomVersion")
-    
-    // Room runtime libraries
-    implementation("androidx.room:room-runtime:$roomVersion")
-    implementation("androidx.room:room-ktx:$roomVersion") // Kotlin extensions and coroutines support
-    
+    // VoiceOS Core Database (SQLDelight KMP)
+    implementation(project(":Modules:VoiceOS:core:database"))
+
     // Android
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
@@ -111,5 +97,3 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
-
-// Room Database configuration is handled via annotations in the Database class
