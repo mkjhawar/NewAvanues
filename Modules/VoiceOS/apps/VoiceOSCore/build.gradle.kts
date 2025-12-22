@@ -17,8 +17,8 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("kotlin-parcelize")
-    id("com.google.dagger.hilt.android")
-    id("com.google.devtools.ksp")
+    // id("com.google.dagger.hilt.android")  // DISABLED: Hilt doesn't support AccessibilityService
+    // id("com.google.devtools.ksp")  // DISABLED: No KSP processors in use (Hilt removed)
     // jacoco  // TEMPORARILY DISABLED - Java 21 compatibility issue
 }
 
@@ -207,15 +207,16 @@ dependencies {
     // Material Design (for UI)
     implementation(libs.androidx.material)
 
-    // Dependency injection (Hilt)
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
+    // Dependency injection (Hilt) - DISABLED: Hilt doesn't support AccessibilityService
+    // Using manual dependency injection via lazy initialization instead
+    // implementation(libs.hilt.android)
+    // ksp(libs.hilt.compiler)
 
-    // Hilt Testing
-    testImplementation("com.google.dagger:hilt-android-testing:2.51.1")  // TODO: Add to catalog
-    kspTest("com.google.dagger:hilt-android-compiler:2.51.1")  // TODO: Add to catalog
-    androidTestImplementation("com.google.dagger:hilt-android-testing:2.51.1")  // TODO: Add to catalog
-    kspAndroidTest("com.google.dagger:hilt-android-compiler:2.51.1")  // TODO: Add to catalog
+    // Hilt Testing - DISABLED: Not needed without Hilt
+    // testImplementation("com.google.dagger:hilt-android-testing:2.51.1")
+    // kspTest("com.google.dagger:hilt-android-compiler:2.51.1")
+    // androidTestImplementation("com.google.dagger:hilt-android-testing:2.51.1")
+    // kspAndroidTest("com.google.dagger:hilt-android-compiler:2.51.1")
 
     // Room Database - REMOVED: All entities migrated to SQLDelight
     // Use SQLDelight repositories from core/database module:
