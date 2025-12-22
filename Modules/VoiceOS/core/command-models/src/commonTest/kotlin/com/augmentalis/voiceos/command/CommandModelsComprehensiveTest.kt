@@ -259,7 +259,7 @@ class CommandErrorTest {
     @Test
     fun testErrorCodeValues() {
         val codes = ErrorCode.values()
-        assertEquals(14, codes.size)
+        assertEquals(13, codes.size)
         assertTrue(codes.contains(ErrorCode.MODULE_NOT_AVAILABLE))
         assertTrue(codes.contains(ErrorCode.COMMAND_NOT_FOUND))
         assertTrue(codes.contains(ErrorCode.PERMISSION_DENIED))
