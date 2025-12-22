@@ -52,6 +52,7 @@ import com.augmentalis.voiceoscore.accessibility.managers.ActionCoordinator
 import com.augmentalis.voiceoscore.accessibility.managers.DatabaseManager
 import com.augmentalis.voiceoscore.accessibility.managers.InstalledAppsManager
 import com.augmentalis.voiceoscore.accessibility.managers.IPCManager
+import com.augmentalis.voiceoscore.accessibility.managers.LifecycleCoordinator
 import com.augmentalis.voiceoscore.accessibility.monitor.ServiceMonitor
 import com.augmentalis.voiceoscore.accessibility.speech.SpeechConfigurationData
 import com.augmentalis.voiceoscore.accessibility.speech.SpeechEngineManager
@@ -106,7 +107,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * - Dependencies are initialized in onCreate() or on first use
  */
 // @dagger.hilt.android.AndroidEntryPoint - DISABLED: Hilt doesn't support AccessibilityService
-class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceOSService, IVoiceOSContext {
+class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSContext {
 
     companion object {
         private const val TAG = "VoiceOSService"
@@ -189,6 +190,14 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         }
     }
 
+    // Lifecycle coordinator (extracted from VoiceOSService - P2-8d)
+    // Manages hybrid foreground service and app lifecycle observation
+    private val lifecycleCoordinator by lazy {
+        LifecycleCoordinator(this).also {
+            Log.d(TAG, "LifecycleCoordinator initialized (lazy)")
+        }
+    }
+
     // LearnApp integration state
     // FIX (2025-11-30): Use AtomicInteger for thread-safe state tracking
     // State: 0=not started, 1=in progress, 2=complete
@@ -204,11 +213,6 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
     // PHASE 3 (2025-12-08): Command Discovery integration
     // Auto-observes ExplorationEngine.state() and triggers discovery flow on completion
     private var discoveryIntegration: CommandDiscoveryIntegration? = null
-
-    // Hybrid foreground service state
-    private var foregroundServiceActive = false
-    private var appInBackground = false
-    private var voiceSessionActive = false
 
     // Configuration
     private lateinit var config: ServiceConfiguration
@@ -464,8 +468,8 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
 
         configureServiceInfo()
 
-        // Register for app lifecycle events for hybrid foreground service
-        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+        // Register for app lifecycle events for hybrid foreground service (P2-8d)
+        lifecycleCoordinator.register()
         serviceScope.launch {
             // P2-8a: Database initialization via DatabaseManager
             try {
@@ -784,20 +788,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         }
     }
 
-    // Lifecycle observer methods for hybrid foreground service management
-    override fun onStart(owner: LifecycleOwner) {
-        super<DefaultLifecycleObserver>.onStart(owner)
-        Log.d(TAG, "App moved to foreground")
-        appInBackground = false
-        evaluateForegroundServiceNeed()
-    }
-
-    override fun onStop(owner: LifecycleOwner) {
-        super<DefaultLifecycleObserver>.onStop(owner)
-        Log.d(TAG, "App moved to background")
-        appInBackground = true
-        evaluateForegroundServiceNeed()
-    }
+    // Lifecycle observation delegated to LifecycleCoordinator (P2-8d)
 
     /**
      * Initialize components with staggered loading
@@ -1488,78 +1479,7 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
         }
     }
 
-    /**
-     * Evaluate whether ForegroundService is needed (hybrid approach)
-     * Only starts ForegroundService on Android 12+ when app is in background with active voice
-     */
-    private fun evaluateForegroundServiceNeed() {
-        val needsForeground = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                && appInBackground
-                && voiceSessionActive
-                && !foregroundServiceActive
-
-        val shouldStopForeground = foregroundServiceActive && (!appInBackground || !voiceSessionActive)
-
-        when {
-            needsForeground -> {
-                Log.d(TAG, "Starting ForegroundService (Android 12+ background requirement)")
-                startForegroundServiceHelper()
-            }
-
-            shouldStopForeground -> {
-                Log.d(TAG, "Stopping ForegroundService (no longer needed)")
-                stopForegroundServiceHelper()
-            }
-
-            else -> {
-                Log.v(TAG, "ForegroundService state: needed=$needsForeground, active=$foregroundServiceActive")
-            }
-        }
-    }
-
-    /**
-     * Start the foreground service when needed
-     */
-    private fun startForegroundServiceHelper() {
-        if (foregroundServiceActive) return
-
-        try {
-            val intent = Intent(this, VoiceOnSentry::class.java).apply {
-                action = ACTION_START_MIC
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
-            } else {
-                startService(intent)
-            }
-
-            foregroundServiceActive = true
-            Log.i(TAG, "ForegroundService started for background mic access")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start ForegroundService", e)
-            foregroundServiceActive = false
-        }
-    }
-
-    /**
-     * Stop the foreground service when no longer needed
-     */
-    private fun stopForegroundServiceHelper() {
-        if (!foregroundServiceActive) return
-
-        try {
-            val intent = Intent(this, VoiceOnSentry::class.java).apply {
-                action = ACTION_STOP_MIC
-            }
-            stopService(intent)
-
-            foregroundServiceActive = false
-            Log.i(TAG, "ForegroundService stopped (no longer needed)")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to stop ForegroundService", e)
-        }
-    }
+    // Foreground service management delegated to LifecycleCoordinator (P2-8d)
 
     /**
      * Handle voice command with caching
@@ -2165,16 +2085,8 @@ class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceO
             Log.e(TAG, "✗ Error cleaning up UIScrapingEngine", e)
         }
 
-        // FIX (2025-12-05): Unregister from ProcessLifecycleOwner to prevent memory leak
-        // Leak signature: bd0178976084c8549ea1a5e0417e0d6ffe34eaa3
-        // Root cause: addObserver(this) in onServiceConnected() without matching removeObserver()
-        try {
-            Log.d(TAG, "Unregistering from ProcessLifecycleOwner...")
-            ProcessLifecycleOwner.get().lifecycle.removeObserver(this)
-            Log.i(TAG, "✓ ProcessLifecycleOwner observer unregistered (memory leak fixed)")
-        } catch (e: Exception) {
-            Log.e(TAG, "✗ Error unregistering lifecycle observer", e)
-        }
+        // P2-8d: Unregister lifecycle coordinator to prevent memory leak
+        lifecycleCoordinator.unregister()
 
         // Cancel coroutines with proper join to ensure all jobs complete
         try {
