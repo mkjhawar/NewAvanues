@@ -26,9 +26,10 @@ import android.provider.Settings
 import android.util.ArrayMap
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.ProcessLifecycleOwner
+// P2-8d: Lifecycle imports no longer needed - delegated to LifecycleCoordinator
+// import androidx.lifecycle.DefaultLifecycleObserver
+// import androidx.lifecycle.LifecycleOwner
+// import androidx.lifecycle.ProcessLifecycleOwner
 import com.augmentalis.commandmanager.CommandManager
 // TEMP DISABLED: import com.augmentalis.commandmanager.database.CommandDatabase
 import com.augmentalis.voiceoscore.learnapp.integration.LearnAppIntegration
@@ -97,14 +98,59 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * VoiceOS Service - Main accessibility service implementation
- * High-performance service with efficient data structures, lazy loading, and caching
- * Now with hybrid ForegroundService approach for optimal battery and memory usage
+ * VoiceOS Service - Orchestration Layer for VoiceOS Accessibility Service
  *
- * HILT Integration:
+ * P2-8e: Refactored to pure orchestration layer following Single Responsibility Principle
+ *
+ * ARCHITECTURE OVERVIEW:
+ * This service acts as the central coordinator, delegating specialized concerns to managers:
+ *
+ * 1. DATABASE LIFECYCLE (DatabaseManager - P2-8a)
+ *    - VoiceOSDatabaseManager (SQLDelight repositories)
+ *    - VoiceOSAppDatabase (scraping database adapter)
+ *    - Initialization state machine with timeout/error handling
+ *    - Safe access guards and cleanup
+ *
+ * 2. INTER-PROCESS COMMUNICATION (IPCManager - P2-8b)
+ *    - Voice recognition control (start/stop)
+ *    - App learning triggers (learnCurrentApp, scrapeScreen)
+ *    - Database queries (getLearnedApps, getCommandsForApp)
+ *    - Dynamic command registration
+ *    - Accessibility action execution
+ *
+ * 3. OVERLAY MANAGEMENT (OverlayManager - P2-8c)
+ *    - Numbered element selection overlays
+ *    - Context menu overlays
+ *    - Command status overlays
+ *    - Confidence indicator overlays
+ *    - Singleton wrapper for OverlayCoordinator
+ *
+ * 4. LIFECYCLE COORDINATION (LifecycleCoordinator - P2-8d)
+ *    - Hybrid foreground service (Android 12+ background mic access)
+ *    - App foreground/background state tracking
+ *    - ProcessLifecycleOwner observation
+ *    - Foreground service start/stop optimization
+ *    - Memory leak prevention (bd0178976084c8549ea1a5e0417e0d6ffe34eaa3)
+ *
+ * REMAINING SERVICE RESPONSIBILITIES:
+ * - AccessibilityService lifecycle (onCreate, onServiceConnected, onDestroy)
+ * - Accessibility event routing (onAccessibilityEvent)
+ * - Integration initialization (LearnApp, scraping, web, voice)
+ * - Command processing coordination (registerVoiceCmd, handleVoiceCommand)
+ * - Manager orchestration and initialization
+ *
+ * DEPENDENCY INJECTION:
  * - NOTE: @AndroidEntryPoint does NOT support AccessibilityService
  * - Using manual dependency injection via lazy initialization
- * - Dependencies are initialized in onCreate() or on first use
+ * - All managers initialized on-demand to minimize startup overhead
+ * - Dependencies wired through constructor injection to managers
+ *
+ * PERFORMANCE OPTIMIZATIONS:
+ * - Lazy manager initialization (dbManager, ipcManager, lifecycleCoordinator, overlayManager)
+ * - Efficient data structures (CopyOnWriteArrayList, ConcurrentHashMap, AtomicBoolean)
+ * - Background coroutine scopes (Dispatchers.IO for command processing)
+ * - Event debouncing and queuing
+ * - Hybrid foreground service (only when needed)
  */
 // @dagger.hilt.android.AndroidEntryPoint - DISABLED: Hilt doesn't support AccessibilityService
 class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSContext {
