@@ -62,7 +62,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // BrowserCoreData - Shared data layer with LRU caching
-                implementation(project(":Modules:WebAvanue:coredata"))
+                implementation(project(":coredata"))
 
                 // Kotlin
                 implementation(libs.kotlinx.coroutines.core)

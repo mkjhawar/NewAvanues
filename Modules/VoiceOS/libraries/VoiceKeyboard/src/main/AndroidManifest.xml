@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <!-- Library manifest - Services and activities are declared in main app -->
-    <!-- Permissions are handled by main app -->
-    
-</manifest>
