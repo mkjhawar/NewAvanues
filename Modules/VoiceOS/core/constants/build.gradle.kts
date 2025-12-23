@@ -28,21 +28,25 @@ kotlin {
         }
     }
 
-    // iOS targets
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach {
-        it.binaries.framework {
-            baseName = "constants"
-        }
-    }
-
     // JVM target
     jvm {
         compilations.all {
             kotlinOptions.jvmTarget = "17"
+        }
+    }
+
+    // iOS targets - only compiled when explicitly requested
+    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+    ) {
+        listOf(
+            iosX64(),
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach {
+            it.binaries.framework {
+                baseName = "constants"
+            }
         }
     }
 
@@ -64,24 +68,29 @@ kotlin {
             dependsOn(commonMain)
         }
 
-        val iosMain by creating {
-            dependsOn(commonMain)
-        }
-
-        val iosX64Main by getting {
-            dependsOn(iosMain)
-        }
-
-        val iosArm64Main by getting {
-            dependsOn(iosMain)
-        }
-
-        val iosSimulatorArm64Main by getting {
-            dependsOn(iosMain)
-        }
-
         val jvmMain by getting {
             dependsOn(commonMain)
+        }
+
+        // iOS source sets - only when native targets are enabled
+        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+        ) {
+            val iosMain by creating {
+                dependsOn(commonMain)
+            }
+
+            val iosX64Main by getting {
+                dependsOn(iosMain)
+            }
+
+            val iosArm64Main by getting {
+                dependsOn(iosMain)
+            }
+
+            val iosSimulatorArm64Main by getting {
+                dependsOn(iosMain)
+            }
         }
     }
 }
@@ -97,32 +106,5 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-}
-
-publishing {
-    publications {
-        publications.withType<MavenPublication> {
-            pom {
-                name.set("VoiceOS Constants")
-                description.set("Centralized constants for VoiceOS platform")
-                url.set("https://github.com/augmentalis/voiceos")
-
-                licenses {
-                    license {
-                        name.set("Proprietary")
-                        url.set("https://augmentalis.com/license")
-                    }
-                }
-
-                developers {
-                    developer {
-                        id.set("manoj")
-                        name.set("Manoj Jhawar")
-                        email.set("manoj@ideahq.net")
-                    }
-                }
-            }
-        }
     }
 }

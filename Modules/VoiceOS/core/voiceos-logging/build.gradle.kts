@@ -24,21 +24,25 @@ kotlin {
         }
     }
 
-    // iOS targets
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach {
-        it.binaries.framework {
-            baseName = "voiceos-logging"
-        }
-    }
-
     // JVM target
     jvm {
         compilations.all {
             kotlinOptions.jvmTarget = "17"
+        }
+    }
+
+    // iOS targets - only compiled when explicitly requested
+    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+    ) {
+        listOf(
+            iosX64(),
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach {
+            it.binaries.framework {
+                baseName = "voiceos-logging"
+            }
         }
     }
 
@@ -67,22 +71,6 @@ kotlin {
             }
         }
 
-        val iosMain by creating {
-            dependsOn(commonMain)
-        }
-
-        val iosX64Main by getting {
-            dependsOn(iosMain)
-        }
-
-        val iosArm64Main by getting {
-            dependsOn(iosMain)
-        }
-
-        val iosSimulatorArm64Main by getting {
-            dependsOn(iosMain)
-        }
-
         val jvmMain by getting {
             dependsOn(commonMain)
         }
@@ -91,6 +79,27 @@ kotlin {
             dependencies {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-junit"))
+            }
+        }
+
+        // iOS source sets - only when native targets are enabled
+        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+        ) {
+            val iosMain by creating {
+                dependsOn(commonMain)
+            }
+
+            val iosX64Main by getting {
+                dependsOn(iosMain)
+            }
+
+            val iosArm64Main by getting {
+                dependsOn(iosMain)
+            }
+
+            val iosSimulatorArm64Main by getting {
+                dependsOn(iosMain)
             }
         }
     }
@@ -107,15 +116,5 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-}
-
-publishing {
-    publications {
-        publications.withType<MavenPublication> {
-            groupId = "com.augmentalis.voiceos"
-            artifactId = "voiceos-logging"
-            version = "1.0.0"
-        }
     }
 }
