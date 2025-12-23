@@ -286,17 +286,56 @@ class LearnAppDeveloperSettings(private val context: Context) {
     /**
      * Get screen processing delay in milliseconds.
      */
-    fun getScreenProcessingDelayMs(): Long = DEFAULT_SCREEN_PROCESSING_DELAY_MS
+    fun getScreenProcessingDelayMs(): Long {
+        return prefs.getLong("screen_processing_delay_ms", DEFAULT_SCREEN_PROCESSING_DELAY_MS)
+    }
+
+    /**
+     * Set screen processing delay in milliseconds.
+     */
+    fun setScreenProcessingDelayMs(delayMs: Long) {
+        prefs.edit().putLong("screen_processing_delay_ms", delayMs.coerceIn(0, 10000)).apply()
+    }
 
     /**
      * Get scroll delay in milliseconds.
      */
-    fun getScrollDelayMs(): Long = DEFAULT_SCROLL_DELAY_MS
+    fun getScrollDelayMs(): Long {
+        return prefs.getLong("scroll_delay_ms", DEFAULT_SCROLL_DELAY_MS)
+    }
+
+    /**
+     * Set scroll delay in milliseconds.
+     */
+    fun setScrollDelayMs(delayMs: Long) {
+        prefs.edit().putLong("scroll_delay_ms", delayMs.coerceIn(0, 10000)).apply()
+    }
 
     /**
      * Get click delay in milliseconds.
      */
-    fun getClickDelayMs(): Long = DEFAULT_CLICK_DELAY_MS
+    fun getClickDelayMs(): Long {
+        return prefs.getLong("click_delay_ms", DEFAULT_CLICK_DELAY_MS)
+    }
+
+    /**
+     * Set click delay in milliseconds.
+     */
+    fun setClickDelayMs(delayMs: Long) {
+        prefs.edit().putLong("click_delay_ms", delayMs.coerceIn(0, 10000)).apply()
+    }
+
+    /**
+     * Get screen change delay in milliseconds.
+     * This is an alias for exploration step delay.
+     */
+    fun getScreenChangeDelayMs(): Long = getExplorationStepDelay()
+
+    /**
+     * Set screen change delay in milliseconds.
+     * This is an alias for exploration step delay.
+     */
+    fun setScreenChangeDelayMs(delayMs: Long) = setExplorationStepDelay(delayMs)
 
     /**
      * Get minimum alias text length.

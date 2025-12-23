@@ -13,6 +13,7 @@ package com.augmentalis.voiceoscore.learnapp.ui
 
 import android.util.Log
 import com.augmentalis.database.repositories.IUserPreferenceRepository
+import com.augmentalis.voiceoscore.learnapp.ui.DeepScanConsentResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

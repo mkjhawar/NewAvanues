@@ -2786,7 +2786,7 @@ class ExplorationEngine(
         // Phase 3 (2025-12-04): Generate voice commands using LearnAppCore
         // NEW FEATURE: Exploration mode now generates voice commands (not just UUIDs)
         var commandCount = 0
-        if (learnAppCore != null) {
+        learnAppCore?.let { core ->
             try {
                 if (developerSettings.isVerboseLoggingEnabled()) {
                     android.util.Log.d("ExplorationEngine",
@@ -2795,7 +2795,7 @@ class ExplorationEngine(
 
                 for (element in elements) {
                     // Process element with BATCH mode (queues for batch insert)
-                    val result = learnAppCore.processElement(
+                    val result = core.processElement(
                         element = element,
                         packageName = packageName,
                         mode = ProcessingMode.BATCH  // Exploration uses BATCH mode
@@ -2811,7 +2811,7 @@ class ExplorationEngine(
                 }
 
                 // Flush batch to database (single transaction)
-                learnAppCore.flushBatch()
+                core.flushBatch()
 
                 android.util.Log.i("ExplorationEngine",
                     "Generated $commandCount voice commands via LearnAppCore")
@@ -2819,7 +2819,7 @@ class ExplorationEngine(
                 android.util.Log.e("ExplorationEngine",
                     "Voice command generation failed: ${commandError.message}", commandError)
             }
-        } else {
+        } ?: run {
             android.util.Log.w("ExplorationEngine",
                 "LearnAppCore not provided - voice commands will NOT be generated (legacy mode)")
         }

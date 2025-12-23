@@ -723,7 +723,7 @@ class JustInTimeLearner(
                 var commandCount = 0
 
                 // If LearnAppCore is available, use it (new path)
-                if (learnAppCore != null) {
+                learnAppCore?.let { core ->
                     for (element in elements) {
                         // Convert to ElementInfo
                         val elementInfo = element.toElementInfo()
@@ -738,7 +738,7 @@ class JustInTimeLearner(
 
                             if (!existing) {
                                 // Use LearnAppCore to process element
-                                val result = learnAppCore.processElement(
+                                val result = core.processElement(
                                     element = elementInfo,
                                     packageName = packageName,
                                     mode = ProcessingMode.IMMEDIATE  // JIT uses immediate insert
@@ -753,7 +753,7 @@ class JustInTimeLearner(
                             }
                         }
                     }
-                } else {
+                } ?: run {
                     // Fallback to old logic if LearnAppCore not provided (backward compatibility)
                     val timestamp = System.currentTimeMillis()
 
@@ -1323,7 +1323,6 @@ class JustInTimeLearner(
                     val uuid = element.uuid ?: return@filter true  // Keep if no UUID
 
                     val existing = databaseManager.scrapedElements.getByUuid(packageName, uuid)
-                        .executeAsOneOrNull()
 
                     existing == null  // Keep only if not found
                 } catch (e: Exception) {

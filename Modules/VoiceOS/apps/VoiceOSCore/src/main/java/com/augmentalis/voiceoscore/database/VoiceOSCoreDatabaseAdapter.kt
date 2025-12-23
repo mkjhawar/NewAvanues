@@ -3,6 +3,9 @@ package com.augmentalis.voiceoscore.database
 import android.content.Context
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabaseManager
+import com.augmentalis.database.repositories.IScreenContextRepository
+import com.augmentalis.database.repositories.IScrapedElementRepository
+import com.augmentalis.database.repositories.IUserPreferenceRepository
 import com.augmentalis.voiceoscore.learnapp.models.AppEntity
 
 /**
@@ -50,6 +53,19 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      */
     val databaseManager: VoiceOSDatabaseManager =
         VoiceOSDatabaseManager.getInstance(DatabaseDriverFactory(context))
+
+    // =========================================================================
+    // Direct Repository Access (for improved ergonomics)
+    // =========================================================================
+
+    val screenContexts: IScreenContextRepository
+        get() = databaseManager.screenContexts
+
+    val scrapedElements: IScrapedElementRepository
+        get() = databaseManager.scrapedElements
+
+    val userPreferences: IUserPreferenceRepository
+        get() = databaseManager.userPreferences
 
     // =========================================================================
     // Helper Methods (for backward compatibility and convenience)
