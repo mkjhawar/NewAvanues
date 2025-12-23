@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.android.library)
     alias(libs.plugins.compose)
-    // alias(libs.plugins.kotlin.compose)  // Only for Kotlin 2.0+
+    //alias(libs.plugins.kotlin.compose)  // Only for Kotlin 2.0+
     alias(libs.plugins.dokka)
     // SQLDelight plugin removed - using BrowserCoreData for database access
 }
@@ -214,6 +214,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
