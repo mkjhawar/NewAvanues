@@ -30,6 +30,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
+import com.augmentalis.voiceoscore.learnapp.settings.LearnAppPreferences
 import com.augmentalis.voiceoscore.learnapp.subscription.DeveloperSubscriptionProvider
 import com.augmentalis.voiceoscore.learnapp.subscription.FeatureGateManager
 import com.augmentalis.voiceoscore.learnapp.subscription.LearningMode
@@ -184,6 +186,11 @@ fun DeveloperSettingsScreen(
                     ).show()
                 }
             )
+
+            Divider()
+
+            // LearnApp Mode Controls Section
+            LearnAppModeControlsSection(context = context)
 
             Divider()
 
@@ -525,5 +532,106 @@ fun CheckboxPreference(
             onCheckedChange = onCheckedChange,
             enabled = enabled
         )
+    }
+}
+
+/**
+ * LearnApp Mode Controls Section
+ *
+ * Toggles for JIT Learning, LearnApp Dev Mode, and Exploration
+ */
+@Composable
+fun LearnAppModeControlsSection(context: Context) {
+    val learnAppPrefs = remember { LearnAppPreferences(context) }
+    val devSettings = remember { LearnAppDeveloperSettings(context) }
+
+    var isJitEnabled by remember { mutableStateOf(learnAppPrefs.isJitLearningEnabled) }
+    var isDevModeEnabled by remember { mutableStateOf(devSettings.isDeveloperModeEnabled()) }
+    var isExplorationEnabled by remember { mutableStateOf(learnAppPrefs.isExplorationEnabled) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "LearnApp Mode Controls",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = "Control which LearnApp modes are active",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // JIT Learning Toggle
+            SwitchPreference(
+                title = "JIT Learning Mode",
+                summary = if (isJitEnabled) {
+                    "ON - Passive learning from accessibility events (always free)"
+                } else {
+                    "OFF - No automatic learning"
+                },
+                checked = isJitEnabled,
+                onCheckedChange = { enabled ->
+                    learnAppPrefs.isJitLearningEnabled = enabled
+                    isJitEnabled = enabled
+                    Toast.makeText(
+                        context,
+                        if (enabled) "JIT Learning enabled" else "JIT Learning disabled",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            )
+
+            // Developer Mode Toggle
+            SwitchPreference(
+                title = "Developer Mode",
+                summary = if (isDevModeEnabled) {
+                    "ON - Debug overlays, verbose logging, and developer tools enabled"
+                } else {
+                    "OFF - Standard user mode"
+                },
+                checked = isDevModeEnabled,
+                onCheckedChange = { enabled ->
+                    devSettings.setDeveloperModeEnabled(enabled)
+                    isDevModeEnabled = enabled
+                    Toast.makeText(
+                        context,
+                        if (enabled) "Developer mode enabled" else "Developer mode disabled",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            )
+
+            // Exploration Toggle
+            SwitchPreference(
+                title = "Active Exploration",
+                summary = if (isExplorationEnabled) {
+                    "ON - Active exploration and deep scanning enabled"
+                } else {
+                    "OFF - Only passive JIT learning"
+                },
+                checked = isExplorationEnabled,
+                onCheckedChange = { enabled ->
+                    learnAppPrefs.isExplorationEnabled = enabled
+                    isExplorationEnabled = enabled
+                    Toast.makeText(
+                        context,
+                        if (enabled) "Exploration enabled" else "Exploration disabled",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            )
+        }
     }
 }

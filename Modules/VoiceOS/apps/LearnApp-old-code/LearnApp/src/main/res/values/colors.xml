@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Ocean Blue XR Theme - User Edition -->
+    <!-- Based on IDEACODE UI Guidelines V2 - Ocean Theme Tokens -->
+
+    <!-- Primary Colors (Ocean Blue) -->
+    <color name="ocean_primary">#3B82F6</color>
+    <color name="ocean_primary_dark">#60A5FA</color>
+    <color name="ocean_primary_container">#DBEAFE</color>
+    <color name="ocean_primary_container_dark">#1E3A5F</color>
+
+    <!-- Secondary Colors -->
+    <color name="ocean_secondary">#06B6D4</color>
+    <color name="ocean_secondary_dark">#22D3EE</color>
+
+    <!-- Semantic Colors -->
+    <color name="ocean_success">#10B981</color>
+    <color name="ocean_success_dark">#34D399</color>
+    <color name="ocean_error">#EF4444</color>
+    <color name="ocean_error_dark">#F87171</color>
+    <color name="ocean_warning">#F59E0B</color>
+    <color name="ocean_warning_dark">#FBBF24</color>
+
+    <!-- Surface Colors (Glassmorphic) -->
+    <color name="ocean_surface_light">#FFFFFF</color>
+    <color name="ocean_surface_dark">#0F172A</color>
+    <color name="ocean_glass_surface">#14FFFFFF</color>
+    <color name="ocean_glass_surface_hover">#1FFFFFFF</color>
+    <color name="ocean_glass_border">#26FFFFFF</color>
+
+    <!-- Background -->
+    <color name="ocean_background_light">#F0F9FF</color>
+    <color name="ocean_background_dark">#0C1929</color>
+
+    <!-- Status Colors -->
+    <color name="status_active">#10B981</color>
+    <color name="status_paused">#F59E0B</color>
+    <color name="status_idle">#6B7280</color>
+    <color name="status_exploring">#3B82F6</color>
+    <color name="status_error">#EF4444</color>
+</resources>

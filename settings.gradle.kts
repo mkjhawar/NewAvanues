@@ -41,8 +41,7 @@ include(":Modules:VoiceOS:core:text-utils")
 include(":Modules:VoiceOS:core:validation")
 
 // VoiceOS Apps
-include(":Modules:VoiceOS:apps:LearnApp")  // Standalone app exploration tool
-include(":Modules:VoiceOS:apps:LearnAppDev")  // Developer edition with Neo4j debugging
+// LearnApp and LearnAppDev removed - functionality integrated into VoiceOSCore (2025-12-23)
 include(":Modules:VoiceOS:apps:VoiceRecognition")
 include(":Modules:VoiceOS:apps:VoiceOSCore")
 include(":Modules:VoiceOS:apps:VoiceOS")  // Main launcher app with onboarding
