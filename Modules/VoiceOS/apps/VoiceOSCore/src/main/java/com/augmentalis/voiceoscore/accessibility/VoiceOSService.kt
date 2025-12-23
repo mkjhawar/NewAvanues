@@ -262,6 +262,10 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     private val pendingEvents = java.util.concurrent.ConcurrentLinkedQueue<android.view.accessibility.AccessibilityEvent>()
     private val MAX_QUEUED_EVENTS = 50
 
+    // FIX (2025-12-22): L-P0-1 - Event deduplication to prevent double-processing
+    // Tracks event IDs that have been processed to avoid duplicate handling
+    private val processedEventIds = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
     // PHASE 3 (2025-12-08): Command Discovery integration
     // Auto-observes ExplorationEngine.state() and triggers discovery flow on completion
     private var discoveryIntegration: CommandDiscoveryIntegration? = null
@@ -1392,12 +1396,69 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     }
 
     /**
+     * Generate unique ID for an accessibility event
+     *
+     * FIX (2025-12-22): L-P0-1 - Event deduplication helper
+     * Creates unique signature from event properties to detect duplicates
+     */
+    private fun getEventId(event: android.view.accessibility.AccessibilityEvent): String {
+        val packageName = event.packageName?.toString() ?: "null"
+        val className = event.className?.toString() ?: "null"
+        val eventType = event.eventType
+        val timestamp = event.eventTime
+        val text = event.text.joinToString("|")
+        return "$packageName:$className:$eventType:$timestamp:$text"
+    }
+
+    /**
+     * Recursively recycle AccessibilityNodeInfo and all descendants
+     *
+     * FIX (2025-12-22): L-P0-2 - Prevent 12.5MB memory leak from node hierarchies
+     * AccessibilityNodeInfo.recycle() only frees the node itself, not children
+     * Each queued event can have 50-100 nodes → 100-250KB leak per event
+     *
+     * @param node Root node to recycle (along with entire tree)
+     */
+    private fun recycleNodeTree(node: android.view.accessibility.AccessibilityNodeInfo?) {
+        if (node == null) return
+
+        try {
+            // Recursively recycle all children first (depth-first)
+            for (i in 0 until node.childCount) {
+                try {
+                    val child = node.getChild(i)
+                    recycleNodeTree(child)
+                } catch (e: Exception) {
+                    // Child may already be recycled or invalid
+                    Log.w(TAG, "Error recycling child node: ${e.message}")
+                }
+            }
+
+            // Finally recycle this node
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                @Suppress("DEPRECATION")
+                node.recycle()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error in recycleNodeTree: ${e.message}")
+        }
+    }
+
+    /**
      * Queue an accessibility event for later processing.
      * Called during LearnApp initialization to prevent event loss.
      *
      * FIX (2025-12-10): Implements event queue solution from spec Section 2.1
+     * FIX (2025-12-22): L-P0-1 - Add event deduplication to prevent double-processing
      */
     private fun queueEvent(event: android.view.accessibility.AccessibilityEvent) {
+        // FIX: Check if event already processed
+        val eventId = getEventId(event)
+        if (processedEventIds.contains(eventId)) {
+            Log.d(TAG, "LEARNAPP_DEBUG: Event already processed, skipping queue: $eventId")
+            return
+        }
+
         if (pendingEvents.size < MAX_QUEUED_EVENTS) {
             // Create a copy of the event to avoid recycling issues
             val eventCopy = android.view.accessibility.AccessibilityEvent.obtain(event)
@@ -1413,6 +1474,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
      * Ensures no events are lost during the initialization window.
      *
      * FIX (2025-12-10): Implements event queue solution from spec Section 2.1
+     * FIX (2025-12-22): L-P0-1 - Mark events as processed to prevent double-processing
      */
     override fun processQueuedEvents() {
         val queueSize = pendingEvents.size
@@ -1424,16 +1486,20 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                 val queuedEvent = pendingEvents.poll()
                 if (queuedEvent != null) {
                     try {
+                        // FIX: Mark event as processed BEFORE forwarding to prevent race
+                        val eventId = getEventId(queuedEvent)
+                        processedEventIds.add(eventId)
+
                         // Forward to LearnApp integration
                         learnAppIntegration?.onAccessibilityEvent(queuedEvent)
                         processedCount++
                     } catch (e: Exception) {
                         Log.e(TAG, "Error processing queued event", e)
                     } finally {
-                        // FIX: Recycle AccessibilityNodeInfo before recycling event
-                        // AccessibilityNodeInfo instances are not auto-recycled and cause 100-250KB leaks per event
+                        // FIX (2025-12-22): L-P0-2 - Recursively recycle entire node hierarchy
+                        // Prevents 100-250KB leak per event from child nodes
                         val source = queuedEvent.source
-                        source?.recycle()
+                        recycleNodeTree(source)
                         // Recycle the event copy to free memory
                         queuedEvent.recycle()
                     }
@@ -1441,6 +1507,20 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             }
 
             Log.i(TAG, "LEARNAPP_DEBUG: Processed $processedCount queued events")
+
+            // FIX: Clean up old event IDs to prevent unbounded memory growth
+            // Keep only last 100 event IDs (represents ~10-20 seconds of events)
+            if (processedEventIds.size > 100) {
+                val toRemove = processedEventIds.size - 100
+                processedEventIds.iterator().let { iter ->
+                    repeat(toRemove) {
+                        if (iter.hasNext()) {
+                            iter.next()
+                            iter.remove()
+                        }
+                    }
+                }
+            }
         }
     }
 

@@ -140,6 +140,9 @@ class IPCManager(
     /**
      * Trigger app learning for currently focused app
      *
+     * FIX (2025-12-22): C-P0-3 - Wait for database initialization to prevent race condition
+     * Ensures database is ready before attempting to scrape/learn
+     *
      * @return JSON response with learning results or error
      */
     fun learnCurrentApp(): String {
@@ -150,34 +153,44 @@ class IPCManager(
                 return """{"error": "Service not ready"}"""
             }
 
-            // Scrape current screen using existing engine
-            val rootNode = accessibilityService.rootInActiveWindow
-            if (rootNode == null) {
-                Log.w(TAG, "No active window available for learning")
-                return """{"error": "No active window"}"""
-            }
+            // FIX: Wait for database to be ready before proceeding
+            runBlocking(Dispatchers.IO) {
+                try {
+                    databaseManager.withDatabaseReady {
+                        // Scrape current screen using existing engine
+                        val rootNode = accessibilityService.rootInActiveWindow
+                        if (rootNode == null) {
+                            Log.w(TAG, "No active window available for learning")
+                            return@withDatabaseReady """{"error": "No active window"}"""
+                        }
 
-            val packageName = rootNode.packageName?.toString() ?: "unknown"
-            val elements = uiScrapingEngine.extractUIElements(null)
-            rootNode.recycle()
+                        val packageName = rootNode.packageName?.toString() ?: "unknown"
+                        val elements = uiScrapingEngine.extractUIElements(null)
+                        rootNode.recycle()
 
-            // Convert to JSON format
-            val result = mapOf(
-                "success" to true,
-                "packageName" to packageName,
-                "elementCount" to elements.size,
-                "elements" to elements.take(50).map { element: UIElement ->  // Limit to 50 for performance
-                    mapOf(
-                        "text" to element.text,
-                        "contentDescription" to (element.contentDescription ?: ""),
-                        "className" to (element.className ?: ""),
-                        "clickable" to element.isClickable,
-                        "depth" to element.depth
-                    )
+                        // Convert to JSON format
+                        val result = mapOf(
+                            "success" to true,
+                            "packageName" to packageName,
+                            "elementCount" to elements.size,
+                            "elements" to elements.take(50).map { element: UIElement ->  // Limit to 50 for performance
+                                mapOf(
+                                    "text" to element.text,
+                                    "contentDescription" to (element.contentDescription ?: ""),
+                                    "className" to (element.className ?: ""),
+                                    "clickable" to element.isClickable,
+                                    "depth" to element.depth
+                                )
+                            }
+                        )
+
+                        prettyGson.toJson(result)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Database not ready for learnCurrentApp", e)
+                    """{"error": "Database not initialized: ${e.message}"}"""
                 }
-            )
-
-            prettyGson.toJson(result)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error learning current app", e)
             """{"error": "${e.message}"}"""
@@ -186,6 +199,9 @@ class IPCManager(
 
     /**
      * Scrape current screen and return JSON representation
+     *
+     * FIX (2025-12-22): C-P0-3 - Wait for database initialization to prevent race condition
+     * Ensures database is ready before attempting to scrape
      *
      * @return JSON response with screen elements or error
      */
@@ -197,32 +213,42 @@ class IPCManager(
                 return """{"error": "Service not ready"}"""
             }
 
-            val rootNode = accessibilityService.rootInActiveWindow
-            if (rootNode == null) {
-                Log.w(TAG, "No active window available for scraping")
-                return """{"error": "No active window"}"""
-            }
+            // FIX: Wait for database to be ready before proceeding
+            runBlocking(Dispatchers.IO) {
+                try {
+                    databaseManager.withDatabaseReady {
+                        val rootNode = accessibilityService.rootInActiveWindow
+                        if (rootNode == null) {
+                            Log.w(TAG, "No active window available for scraping")
+                            return@withDatabaseReady """{"error": "No active window"}"""
+                        }
 
-            val packageName = rootNode.packageName?.toString() ?: "unknown"
-            val elements = uiScrapingEngine.extractUIElements(null)
-            rootNode.recycle()
+                        val packageName = rootNode.packageName?.toString() ?: "unknown"
+                        val elements = uiScrapingEngine.extractUIElements(null)
+                        rootNode.recycle()
 
-            // Convert to simplified JSON format
-            val result = mapOf(
-                "success" to true,
-                "packageName" to packageName,
-                "elementCount" to elements.size,
-                "elements" to elements.take(100).map { element ->
-                    mapOf(
-                        "text" to element.text,
-                        "normalizedText" to element.normalizedText,
-                        "clickable" to element.isClickable,
-                        "className" to (element.className ?: "")
-                    )
+                        // Convert to simplified JSON format
+                        val result = mapOf(
+                            "success" to true,
+                            "packageName" to packageName,
+                            "elementCount" to elements.size,
+                            "elements" to elements.take(100).map { element ->
+                                mapOf(
+                                    "text" to element.text,
+                                    "normalizedText" to element.normalizedText,
+                                    "clickable" to element.isClickable,
+                                    "className" to (element.className ?: "")
+                                )
+                            }
+                        )
+
+                        compactGson.toJson(result)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Database not ready for scrapeScreen", e)
+                    """{"error": "Database not initialized: ${e.message}"}"""
                 }
-            )
-
-            compactGson.toJson(result)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error scraping screen", e)
             """{"error": "${e.message}"}"""

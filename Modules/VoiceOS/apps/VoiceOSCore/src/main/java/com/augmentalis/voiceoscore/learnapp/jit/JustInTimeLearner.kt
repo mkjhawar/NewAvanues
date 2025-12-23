@@ -18,6 +18,8 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
 import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.voiceoscore.accessibility.IVoiceOSServiceInternal
@@ -102,15 +104,23 @@ class JustInTimeLearner(
     }
 
     private val scope = CoroutineScope(Dispatchers.Default + Job())
-    private var lastScreenHash: String? = null
-    private var lastProcessedTime = 0L
+
+    // FIX (2025-12-22): C-P0-1 - Add @Volatile for thread visibility
+    @Volatile private var lastScreenHash: String? = null
+
+    // FIX (2025-12-22): C-P0-2 - Use AtomicLong for debounce check-and-set atomicity
+    private val lastProcessedTime = AtomicLong(0L)
+
     // FIX (2025-11-30): JIT is now always active by default (P1-H4)
     // No consent required - works on any unlearned app automatically
-    private var isActive = true  // Changed from false to true
-    private var currentPackageName: String? = null
+    // FIX (2025-12-22): C-P0-1 - Use AtomicBoolean for thread-safe state
+    private val isActive = AtomicBoolean(true)  // Changed from false to true
+
+    @Volatile private var currentPackageName: String? = null
 
     // FIX (2025-12-11): Add pause state for JITLearningService control
-    private var isPaused = false
+    // FIX (2025-12-22): C-P0-1 - Use AtomicBoolean for thread-safe pause control
+    private val isPaused = AtomicBoolean(false)
 
     // FIX (2025-12-11): Track stats for queryState()
     private var screensLearnedCount = 0
@@ -183,7 +193,7 @@ class JustInTimeLearner(
      */
     suspend fun activate(packageName: String) {
         withContext(Dispatchers.Main) {
-            isActive = true
+            isActive.set(true)
             currentPackageName = packageName
             Log.i(TAG, "JIT learning activated for: $packageName")
 
@@ -239,7 +249,7 @@ class JustInTimeLearner(
      * Deactivate JIT learning.
      */
     fun deactivate() {
-        isActive = false
+        isActive.set(false)
         currentPackageName = null
         lastScreenHash = null
         Log.i(TAG, "JIT learning deactivated")
@@ -249,7 +259,7 @@ class JustInTimeLearner(
      * Check if JIT learning is active for a package.
      */
     fun isActiveForPackage(packageName: String): Boolean {
-        return isActive && currentPackageName == packageName
+        return isActive.get() && currentPackageName == packageName
     }
 
     /**
@@ -264,9 +274,9 @@ class JustInTimeLearner(
      * @param event AccessibilityEvent to process
      */
     fun onAccessibilityEvent(event: AccessibilityEvent) {
-        if (!isActive) return
+        if (!isActive.get()) return
         // FIX (2025-12-11): Check pause state
-        if (isPaused) return
+        if (isPaused.get()) return
 
         val packageName = event.packageName?.toString() ?: return
 
@@ -279,12 +289,19 @@ class JustInTimeLearner(
         // JIT now works as universal fallback for unlearned apps
         // The currentPackageName is only used for explicit activate() calls
 
-        // Debounce screen changes
+        // FIX (2025-12-22): C-P0-2 - Atomic debounce with compareAndSet to prevent race
+        // Prevents duplicate screen processing when multiple events arrive rapidly
         val now = System.currentTimeMillis()
-        if (now - lastProcessedTime < SCREEN_CHANGE_DEBOUNCE_MS) {
+        val last = lastProcessedTime.get()
+        if (now - last < SCREEN_CHANGE_DEBOUNCE_MS) {
             return
         }
-        lastProcessedTime = now
+
+        // Atomic check-and-set: Only one thread can win the CAS operation
+        // If CAS fails, another thread already updated the timestamp, so we skip
+        if (!lastProcessedTime.compareAndSet(last, now)) {
+            return
+        }
 
         // Process screen in background
         scope.launch {
@@ -1352,7 +1369,7 @@ class JustInTimeLearner(
      * Pause JIT learning (called from JITLearningService)
      */
     fun pause() {
-        isPaused = true
+        isPaused.set(true)
         Log.i(TAG, "JIT learning paused")
     }
 
@@ -1360,19 +1377,19 @@ class JustInTimeLearner(
      * Resume JIT learning (called from JITLearningService)
      */
     fun resume() {
-        isPaused = false
+        isPaused.set(false)
         Log.i(TAG, "JIT learning resumed")
     }
 
     /**
      * Check if JIT is currently paused
      */
-    fun isPausedState(): Boolean = isPaused
+    fun isPausedState(): Boolean = isPaused.get()
 
     /**
      * Check if JIT is actively learning
      */
-    fun isLearningActive(): Boolean = isActive && !isPaused
+    fun isLearningActive(): Boolean = isActive.get() && !isPaused.get()
 
     /**
      * Get current stats for queryState()
@@ -1382,7 +1399,7 @@ class JustInTimeLearner(
             screensLearned = screensLearnedCount,
             elementsDiscovered = elementsDiscoveredCount,
             currentPackage = currentPackageName,
-            isActive = isActive && !isPaused
+            isActive = isActive.get() && !isPaused.get()
         )
     }
 
