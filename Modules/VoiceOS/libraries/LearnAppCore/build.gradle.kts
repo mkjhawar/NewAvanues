@@ -15,7 +15,7 @@ plugins {
 
 android {
     namespace = "com.augmentalis.learnappcore"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         minSdk = 29  // Match VoiceOSCore minSdk for compatibility

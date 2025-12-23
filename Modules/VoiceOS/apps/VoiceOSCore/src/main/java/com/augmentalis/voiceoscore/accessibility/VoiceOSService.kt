@@ -1176,7 +1176,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
             // Forward to LearnApp integration for third-party app learning
             if (learnAppIntegration == null) {
-                Log.w(TAG, "LEARNAPP_DEBUG: learnAppIntegration is NULL - cannot forward event!")
+                Log.d(TAG, "LEARNAPP_DEBUG: learnAppIntegration initializing - queuing event")
             }
             learnAppIntegration?.let { integration ->
                 try {

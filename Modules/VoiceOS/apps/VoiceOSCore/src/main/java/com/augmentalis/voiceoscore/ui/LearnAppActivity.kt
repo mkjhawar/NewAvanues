@@ -13,6 +13,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.augmentalis.voiceoscore.ui.setContentWithScrollSupport
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -77,7 +78,7 @@ class LearnAppActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContent {
+        setContentWithScrollSupport {
             VoiceOSTheme {
                 // TODO: Inject IScrapedAppRepository from DI container or service
                 // For now, this will need to be passed from the service that creates this activity

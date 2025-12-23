@@ -36,6 +36,7 @@ import com.augmentalis.voiceoscore.learnapp.subscription.DeveloperSubscriptionPr
 import com.augmentalis.voiceoscore.learnapp.subscription.FeatureGateManager
 import com.augmentalis.voiceoscore.learnapp.subscription.LearningMode
 import com.augmentalis.voiceoscore.learnapp.subscription.SubscriptionTier
+import com.augmentalis.voiceoscore.ui.setContentWithScrollSupport
 import kotlinx.coroutines.launch
 
 /**
@@ -68,7 +69,7 @@ class DeveloperSettingsActivity : ComponentActivity() {
         val featureGateManager = FeatureGateManager(applicationContext)
         val subscriptionProvider = DeveloperSubscriptionProvider(applicationContext)
 
-        setContent {
+        setContentWithScrollSupport {
             MaterialTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),

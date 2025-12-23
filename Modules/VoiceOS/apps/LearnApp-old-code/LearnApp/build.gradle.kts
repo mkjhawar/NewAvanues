@@ -17,7 +17,7 @@ plugins {
 
 android {
     namespace = "com.augmentalis.learnapp"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.augmentalis.learnapp"

@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelProvider
 import com.augmentalis.voiceoscore.cleanup.CleanupManager
 import com.augmentalis.voiceoscore.di.DatabaseProvider
+import com.augmentalis.voiceoscore.ui.setContentWithScrollSupport
 
 /**
  * Activity hosting the cleanup preview screen.
@@ -69,7 +70,7 @@ class CleanupPreviewActivity : ComponentActivity() {
 
         Log.i(TAG, "Cleanup preview activity started")
 
-        setContent {
+        setContentWithScrollSupport {
             MaterialTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
