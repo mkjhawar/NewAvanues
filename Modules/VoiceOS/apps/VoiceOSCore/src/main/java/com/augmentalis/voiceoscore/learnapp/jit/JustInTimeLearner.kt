@@ -597,7 +597,7 @@ class JustInTimeLearner(
                             elementHash = element.elementHash,
                             appId = packageName,
                             uuid = element.uuid,
-                            className = element.className ?: "unknown",
+                            className = element.className,
                             viewIdResourceName = element.viewIdResourceName,
                             text = element.text,
                             contentDescription = element.contentDescription,
@@ -1407,7 +1407,7 @@ class JustInTimeLearner(
     /**
      * Get menu items for a specific menu (for LearnAppPro)
      */
-    suspend fun getMenuItems(menuId: String): List<ElementInfo> {
+    suspend fun getMenuItems(@Suppress("UNUSED_PARAMETER") menuId: String): List<ElementInfo> {
         // Query database for elements that are part of the menu
         // For now, return empty list as menu detection is handled by ExplorationEngine
         return emptyList()
