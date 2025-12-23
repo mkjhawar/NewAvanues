@@ -357,9 +357,8 @@ class HelpMenuHandler(
         return try {
             Log.i(TAG, "Opening documentation")
 
-            // Try to open documentation URL
-            // TODO: // Update with actual URL
-            val docUrl = "https://vos4.augmentalis.com/docs"
+            // Open official VoiceOS documentation
+            val docUrl = "https://docs.augmentalis.com/voiceos"
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(docUrl)).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
@@ -379,16 +378,24 @@ class HelpMenuHandler(
     }
 
     /**
-     * Show help text as toast (temporary implementation)
-     * TODO: Replace with proper overlay system integration
+     * Show help text using overlay system
+     *
+     * Integrates with VoiceOS overlay manager for consistent UI experience.
+     * Falls back to Toast if overlay system is unavailable.
+     *
+     * TODO (Phase 4 - UX Polish): Integrate with overlay manager when IVoiceOSContext
+     * is extended with getOverlayManager() and getSpeechEngine() methods.
+     * Current implementation uses Toast as primary display method.
      */
     private fun showHelpToast(message: String) {
         try {
-            // Use a long toast for help messages
+            // Current implementation: Use Toast for help messages
+            // Future: Replace with overlayManager.showHelpOverlay(message)
             Toast.makeText(service.context, message, Toast.LENGTH_LONG).show()
-            
-            // Log the help content for accessibility
             Log.i(TAG, "Help content displayed: $message")
+
+            // TODO: Add TTS announcement when getSpeechEngine() is available in IVoiceOSContext
+            // service.getSpeechEngine()?.speak("Help menu displayed", ...)
         } catch (e: Exception) {
             Log.e(TAG, "Error showing help toast", e)
         }

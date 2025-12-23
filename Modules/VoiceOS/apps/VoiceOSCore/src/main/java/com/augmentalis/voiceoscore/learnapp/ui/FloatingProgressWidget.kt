@@ -113,11 +113,19 @@ class FloatingProgressWidget private constructor(
     var onResumeClicked: (() -> Unit)? = null
     var onStopClicked: (() -> Unit)? = null
 
+    // TTS for accessibility announcements
+    private var tts: android.speech.tts.TextToSpeech? = null
+    private var ttsReady = false
+    private var lastMilestoneAnnounced = 0  // Track last announced milestone
+
     /**
      * Show the floating widget
      */
     fun show() {
         if (isShowing) return
+
+        // Initialize TTS
+        initTts()
 
         showJob = scope.launch {
             try {
@@ -151,6 +159,7 @@ class FloatingProgressWidget private constructor(
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Failed to dismiss widget", e)
         } finally {
+            shutdownTts()
             widgetView = null
             progressIndicator = null
             progressPercent = null
@@ -174,10 +183,14 @@ class FloatingProgressWidget private constructor(
         if (!isShowing) return
 
         scope.launch(Dispatchers.Main) {
-            progressIndicator?.progress = percent.coerceIn(0, 100)
-            progressPercent?.text = "$percent%"
+            val clampedPercent = percent.coerceIn(0, 100)
+            progressIndicator?.progress = clampedPercent
+            progressPercent?.text = "$clampedPercent%"
             statusText?.text = status
             stats?.let { statsText?.text = it }
+
+            // TTS announcement for milestones (25%, 50%, 75%, 100%)
+            announceMilestoneIfReached(clampedPercent)
         }
     }
 
@@ -248,7 +261,63 @@ class FloatingProgressWidget private constructor(
      */
     fun cleanup() {
         dismiss()
+        shutdownTts()
         debugOverlayManager.reset()
+    }
+
+    // ========================================================================
+    // TTS Accessibility Support
+    // ========================================================================
+
+    /**
+     * Initialize TTS for milestone announcements
+     */
+    private fun initTts() {
+        if (tts == null) {
+            tts = android.speech.tts.TextToSpeech(context) { status ->
+                if (status == android.speech.tts.TextToSpeech.SUCCESS) {
+                    tts?.language = java.util.Locale.getDefault()
+                    ttsReady = true
+                }
+            }
+        }
+    }
+
+    /**
+     * Announce milestone if reached (25%, 50%, 75%, 100%)
+     */
+    private fun announceMilestoneIfReached(percent: Int) {
+        if (!ttsReady) return
+
+        val milestone = when (percent) {
+            in 25..26 -> 25
+            in 50..51 -> 50
+            in 75..76 -> 75
+            100 -> 100
+            else -> 0
+        }
+
+        if (milestone > 0 && milestone != lastMilestoneAnnounced) {
+            val announcement = if (milestone == 100) {
+                "Learning complete"
+            } else {
+                "$milestone percent complete"
+            }
+            tts?.speak(announcement, android.speech.tts.TextToSpeech.QUEUE_ADD, null, "milestone_$milestone")
+            lastMilestoneAnnounced = milestone
+            android.util.Log.d(TAG, "TTS milestone announced: $announcement")
+        }
+    }
+
+    /**
+     * Shutdown TTS resources
+     */
+    private fun shutdownTts() {
+        tts?.stop()
+        tts?.shutdown()
+        tts = null
+        ttsReady = false
+        lastMilestoneAnnounced = 0
     }
 
     // ========================================================================

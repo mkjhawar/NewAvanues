@@ -168,13 +168,20 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      * Increment scrape count for an app by package name
      */
     suspend fun incrementScrapeCount(packageName: String) {
-        val app = databaseManager.scrapedApps.getByPackage(packageName)
-        if (app != null) {
-            val updated = app.copy(
-                scrapeCount = app.scrapeCount + 1,
-                lastScrapedAt = System.currentTimeMillis()
-            )
-            databaseManager.scrapedApps.insert(updated)
+        try {
+            val app = databaseManager.scrapedApps.getByPackage(packageName)
+            if (app != null) {
+                val updated = app.copy(
+                    scrapeCount = app.scrapeCount + 1,
+                    lastScrapedAt = System.currentTimeMillis()
+                )
+                databaseManager.scrapedApps.insert(updated)
+            } else {
+                android.util.Log.w("VoiceOSCoreDatabaseAdapter", "Cannot increment scrape count - app not found: $packageName")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("VoiceOSCoreDatabaseAdapter", "Failed to increment scrape count for $packageName", e)
+            throw e
         }
     }
 
@@ -182,10 +189,20 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      * Update element count for an app by package name
      */
     suspend fun updateElementCount(packageName: String, count: Int) {
-        val app = databaseManager.scrapedApps.getByPackage(packageName)
-        if (app != null) {
-            val updated = app.copy(elementCount = count.toLong())
-            databaseManager.scrapedApps.insert(updated)
+        require(count >= 0) { "Element count must be non-negative: $count" }
+        try {
+            val app = databaseManager.scrapedApps.getByPackage(packageName)
+            if (app != null) {
+                val updated = app.copy(elementCount = count.toLong())
+                databaseManager.scrapedApps.insert(updated)
+            } else {
+                android.util.Log.w("VoiceOSCoreDatabaseAdapter", "Cannot update element count - app not found: $packageName")
+            }
+        } catch (e: IllegalArgumentException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.e("VoiceOSCoreDatabaseAdapter", "Failed to update element count for $packageName", e)
+            throw e
         }
     }
 
@@ -193,10 +210,20 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      * Update command count for an app by package name
      */
     suspend fun updateCommandCount(packageName: String, count: Int) {
-        val app = databaseManager.scrapedApps.getByPackage(packageName)
-        if (app != null) {
-            val updated = app.copy(commandCount = count.toLong())
-            databaseManager.scrapedApps.insert(updated)
+        require(count >= 0) { "Command count must be non-negative: $count" }
+        try {
+            val app = databaseManager.scrapedApps.getByPackage(packageName)
+            if (app != null) {
+                val updated = app.copy(commandCount = count.toLong())
+                databaseManager.scrapedApps.insert(updated)
+            } else {
+                android.util.Log.w("VoiceOSCoreDatabaseAdapter", "Cannot update command count - app not found: $packageName")
+            }
+        } catch (e: IllegalArgumentException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.e("VoiceOSCoreDatabaseAdapter", "Failed to update command count for $packageName", e)
+            throw e
         }
     }
 
@@ -204,13 +231,23 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      * Increment visit count for a screen context by hash
      */
     suspend fun incrementVisitCount(hash: String, time: Long) {
-        val context = databaseManager.screenContexts.getByHash(hash)
-        if (context != null) {
-            val updated = context.copy(
-                visitCount = context.visitCount + 1,
-                lastScraped = time
-            )
-            databaseManager.screenContexts.insert(updated)
+        require(time > 0) { "Time must be positive: $time" }
+        try {
+            val context = databaseManager.screenContexts.getByHash(hash)
+            if (context != null) {
+                val updated = context.copy(
+                    visitCount = context.visitCount + 1,
+                    lastScraped = time
+                )
+                databaseManager.screenContexts.insert(updated)
+            } else {
+                android.util.Log.w("VoiceOSCoreDatabaseAdapter", "Cannot increment visit count - screen context not found: ${hash.take(8)}")
+            }
+        } catch (e: IllegalArgumentException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.e("VoiceOSCoreDatabaseAdapter", "Failed to increment visit count for screen ${hash.take(8)}", e)
+            throw e
         }
     }
 
@@ -219,13 +256,15 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      * Note: This is a batch operation wrapped in transaction for atomicity
      */
     suspend fun updateFormGroupIdBatch(hashes: List<String>, groupId: String?) {
-        databaseManager.transaction {
-            hashes.forEach { hash ->
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            databaseManager.transaction {
                 kotlinx.coroutines.runBlocking {
-                    val element = databaseManager.scrapedElements.getByHash(hash)
-                    if (element != null) {
-                        val updated = element.copy(formGroupId = groupId)
-                        databaseManager.scrapedElements.insert(updated)
+                    hashes.forEach { hash ->
+                        val element = databaseManager.scrapedElements.getByHash(hash)
+                        if (element != null) {
+                            val updated = element.copy(formGroupId = groupId)
+                            databaseManager.scrapedElements.insert(updated)
+                        }
                     }
                 }
             }
@@ -271,71 +310,130 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
     }
 
     /**
+     * Delete all app-specific data for a package
+     *
+     * This includes:
+     * - Scraped elements
+     * - Generated commands
+     * - Screen contexts
+     * - Screen transitions
+     *
+     * @param packageName Package name of the app to clean up
+     */
+    suspend fun deleteAppSpecificElements(packageName: String) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                databaseManager.transaction {
+                    kotlinx.coroutines.runBlocking {
+                        // Delete scraped elements for this app
+                        databaseManager.scrapedElements.deleteByApp(packageName)
+
+                        // Delete generated commands for this app
+                        databaseManager.generatedCommands.deleteCommandsByPackage(packageName)
+
+                        // Delete screen contexts for this app
+                        databaseManager.screenContexts.deleteByApp(packageName)
+
+                        android.util.Log.i("VoiceOSCoreDatabaseAdapter", "Deleted all data for package: $packageName")
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("VoiceOSCoreDatabaseAdapter", "Failed to delete app-specific elements for $packageName", e)
+                throw e
+            }
+        }
+    }
+
+    /**
+     * Filter elements by app package name
+     *
+     * @param packageName Package name to filter by
+     * @return List of elements for the specified package
+     */
+    suspend fun filterByApp(packageName: String): List<com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity> {
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val dtos = databaseManager.scrapedElements.getByApp(packageName)
+                dtos.map { it.toScrapedElementEntity() }
+            } catch (e: Exception) {
+                android.util.Log.e("VoiceOSCoreDatabaseAdapter", "Failed to filter elements by app: $packageName", e)
+                emptyList()
+            }
+        }
+    }
+
+    /**
      * Extension: Insert batch of hierarchy records
      * Note: The old Room entity uses ID-based relationships, but SQLDelight uses hash-based.
      * This is a compatibility shim - caller should migrate to hash-based entities.
      */
     suspend fun insertHierarchyBatch(hierarchies: List<com.augmentalis.voiceoscore.scraping.entities.ScrapedHierarchyEntity>): List<Long> {
-        val ids = mutableListOf<Long>()
-        databaseManager.transaction {
-            hierarchies.forEach { hierarchy ->
-                // WARNING: This won't work correctly - Room entity uses IDs, SQLDelight uses hashes
-                // Caller needs to provide hash-based hierarchy data instead
-                // Using placeholder values to compile, but this needs proper migration
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val ids = mutableListOf<Long>()
+            databaseManager.transaction {
                 kotlinx.coroutines.runBlocking {
-                    databaseManager.scrapedHierarchies.insert(
-                        parentElementHash = hierarchy.parentElementId.toString(), // TODO: Map ID to hash
-                        childElementHash = hierarchy.childElementId.toString(),   // TODO: Map ID to hash
-                        depth = hierarchy.depth.toLong(),
-                        createdAt = System.currentTimeMillis() // Entity doesn't have createdAt field
-                    )
+                    hierarchies.forEach { hierarchy ->
+                        // WARNING: This won't work correctly - Room entity uses IDs, SQLDelight uses hashes
+                        // Caller needs to provide hash-based hierarchy data instead
+                        // Using placeholder values to compile, but this needs proper migration
+                        databaseManager.scrapedHierarchies.insert(
+                            parentElementHash = hierarchy.parentElementId.toString(), // TODO: Map ID to hash
+                            childElementHash = hierarchy.childElementId.toString(),   // TODO: Map ID to hash
+                            depth = hierarchy.depth.toLong(),
+                            createdAt = System.currentTimeMillis() // Entity doesn't have createdAt field
+                        )
+                        ids.add(hierarchy.id)
+                    }
                 }
-                ids.add(hierarchy.id)
             }
+            ids
         }
-        return ids
     }
 
     /**
      * Extension: Insert batch of generated commands
      */
     suspend fun insertCommandBatch(commands: List<com.augmentalis.voiceoscore.scraping.entities.GeneratedCommandEntity>): List<Long> {
-        val ids = mutableListOf<Long>()
-        databaseManager.transaction {
-            commands.forEach { command ->
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val ids = mutableListOf<Long>()
+            databaseManager.transaction {
                 kotlinx.coroutines.runBlocking {
-                    val dto = command.toGeneratedCommandDTO()
-                    databaseManager.generatedCommands.insert(dto)
+                    commands.forEach { command ->
+                        val dto = command.toGeneratedCommandDTO()
+                        databaseManager.generatedCommands.insert(dto)
+                        ids.add(command.id ?: System.currentTimeMillis())
+                    }
                 }
-                ids.add(command.id ?: System.currentTimeMillis())
             }
+            ids
         }
-        return ids
     }
 
     /**
      * Extension: Insert batch of element relationships
      */
     suspend fun insertRelationshipBatch(relationships: List<com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity>): List<Long> {
-        val ids = mutableListOf<Long>()
-        databaseManager.transaction {
-            relationships.forEach { relationship ->
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val ids = mutableListOf<Long>()
+            databaseManager.transaction {
                 kotlinx.coroutines.runBlocking {
-                    val currentTime = System.currentTimeMillis()
-                    databaseManager.elementRelationships.insert(
-                        sourceElementHash = relationship.sourceElementHash,
-                        targetElementHash = relationship.targetElementHash,
-                        relationshipType = relationship.relationshipType,
-                        relationshipData = relationship.relationshipData,
-                        confidence = relationship.confidence.toDouble(),
-                        createdAt = relationship.createdAt,
-                        updatedAt = currentTime // Entity doesn't have updatedAt field, use current time
-                    )
+                    relationships.forEach { relationship ->
+                        val currentTime = System.currentTimeMillis()
+                        databaseManager.elementRelationships.insert(
+                            sourceElementHash = relationship.sourceElementHash,
+                            targetElementHash = relationship.targetElementHash,
+                            relationshipType = relationship.relationshipType,
+                            relationshipData = relationship.relationshipData,
+                            confidence = relationship.confidence.toDouble(),
+                            createdAt = relationship.createdAt,
+                            updatedAt = currentTime // Entity doesn't have updatedAt field, use current time
+                        )
+                        ids.add(relationship.id)
+                    }
                 }
-                ids.add(relationship.id)
             }
+            ids
         }
-        return ids
     }
 
     /**
@@ -360,18 +458,20 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      * Wrapped in transaction for atomicity and performance
      */
     suspend fun insertElementBatch(elements: List<com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity>): List<Long> {
-        val ids = mutableListOf<Long>()
-        databaseManager.transaction {
-            elements.forEach { element ->
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val ids = mutableListOf<Long>()
+            databaseManager.transaction {
                 kotlinx.coroutines.runBlocking {
-                    val dto = element.toScrapedElementDTO()
-                    databaseManager.scrapedElements.insert(dto)
+                    elements.forEach { element ->
+                        val dto = element.toScrapedElementDTO()
+                        databaseManager.scrapedElements.insert(dto)
+                        // Use element hash as ID for now
+                        ids.add(element.id ?: element.elementHash.hashCode().toLong())
+                    }
                 }
-                // Use element hash as ID for now
-                ids.add(element.id ?: element.elementHash.hashCode().toLong())
             }
+            ids
         }
-        return ids
     }
 
     /**

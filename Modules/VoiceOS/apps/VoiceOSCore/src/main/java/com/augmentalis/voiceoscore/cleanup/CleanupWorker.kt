@@ -239,30 +239,26 @@ class CleanupWorker(
         /**
          * Check if periodic cleanup is scheduled.
          *
+         * Note: This method is temporarily disabled due to ListenableFuture dependency issues.
+         * WorkManager's getWorkInfosForUniqueWork() requires Guava ListenableFuture.
+         *
+         * Alternative: Check WorkManager status directly via WorkManager.getInstance().getWorkInfos()
+         * or use WorkManager observables.
+         *
          * @param context Android application context
-         * @return True if cleanup is scheduled, false otherwise
+         * @return Always returns false (not implemented)
          */
+        @Suppress("UNUSED_PARAMETER")
         fun isCleanupScheduled(context: Context): Boolean {
-            // TODO: Fix ListenableFuture dependency issue
-            // The .get() call requires Guava's ListenableFuture which may not be in classpath
-            // For now, return false to avoid compilation error
-            Log.w(TAG, "isCleanupScheduled not implemented - requires Guava dependency")
+            Log.w(TAG, "isCleanupScheduled not implemented - requires Guava ListenableFuture dependency")
             return false
 
-            /* Original implementation - requires Guava
-            return try {
-                val workInfos = WorkManager.getInstance(context)
-                    .getWorkInfosForUniqueWork(WORK_NAME)
-                    .get() // Blocking call - use in background thread
-
-                workInfos.any { workInfo ->
-                    !workInfo.state.isFinished
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to check cleanup schedule", e)
-                false
-            }
-            */
+            // TODO: Implement using WorkManager observables or LiveData instead:
+            // WorkManager.getInstance(context)
+            //     .getWorkInfosForUniqueWorkLiveData(WORK_NAME)
+            //     .observeForever { workInfos ->
+            //         workInfos.any { !it.state.isFinished }
+            //     }
         }
     }
 }

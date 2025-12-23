@@ -58,7 +58,7 @@ import com.augmentalis.voiceoscore.accessibility.managers.InstalledAppsManager
 import com.augmentalis.voiceoscore.accessibility.managers.IPCManager
 import com.augmentalis.voiceoscore.accessibility.managers.LifecycleCoordinator
 import com.augmentalis.voiceoscore.accessibility.monitor.ServiceMonitor
-import com.augmentalis.voiceoscore.accessibility.speech.SpeechConfigurationData
+import com.augmentalis.voiceoscore.accessibility.speech.SpeechConfiguration
 import com.augmentalis.voiceoscore.accessibility.speech.SpeechEngineManager
 import com.augmentalis.voiceoscore.accessibility.utils.Const
 import com.augmentalis.voiceoscore.accessibility.utils.Debouncer
@@ -88,6 +88,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
@@ -207,6 +209,44 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
         }
     }
 
+    /**
+     * FIX (2025-12-22): C2-P1-6 - Service initialization state machine
+     *
+     * States:
+     * - CREATED: Service created via onCreate(), not yet connected
+     * - INITIALIZING: onServiceConnected() called, components initializing
+     * - READY: All components initialized successfully, service operational
+     * - ERROR: Initialization failed, service in degraded state
+     * - DESTROYED: Service destroyed via onDestroy(), cleanup complete
+     *
+     * Thread-safe transitions enforced via ServiceState sealed class and AtomicReference.
+     * Initialization timeout (30s) and retry logic (max 3 attempts) implemented.
+     */
+    sealed class ServiceState {
+        object CREATED : ServiceState() {
+            override fun toString() = "CREATED"
+        }
+        object INITIALIZING : ServiceState() {
+            override fun toString() = "INITIALIZING"
+        }
+        object READY : ServiceState() {
+            override fun toString() = "READY"
+        }
+        data class ERROR(val error: Throwable, val attempt: Int = 1) : ServiceState() {
+            override fun toString() = "ERROR(attempt=$attempt, error=${error.message})"
+        }
+        object DESTROYED : ServiceState() {
+            override fun toString() = "DESTROYED"
+        }
+    }
+
+    // Service state tracking
+    private val serviceState = AtomicReference<ServiceState>(ServiceState.CREATED)
+    private val initializationMutex = Mutex()
+    private val initializationAttempts = AtomicInteger(0)
+    private val MAX_INITIALIZATION_ATTEMPTS = 3
+    private val INITIALIZATION_TIMEOUT_MS = 30_000L // 30 seconds
+
     // Service state
     @JvmField
     internal var isServiceReady = false  // Phase 3: Exposed for IPC companion service (Java-accessible)
@@ -254,7 +294,9 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     // LearnApp integration state
     // FIX (2025-11-30): Use AtomicInteger for thread-safe state tracking
     // State: 0=not started, 1=in progress, 2=complete
+    // FIX (2025-12-22): C2-P1-11 - Add Mutex for race condition protection
     private val learnAppInitState = AtomicInteger(0)
+    private val learnAppInitMutex = Mutex()
     @Volatile
     private var learnAppInitialized = false  // Keep for backward compatibility with debug logs
 
@@ -271,8 +313,14 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     // Auto-observes ExplorationEngine.state() and triggers discovery flow on completion
     private var discoveryIntegration: CommandDiscoveryIntegration? = null
 
-    // Configuration
-    private lateinit var config: ServiceConfiguration
+    /**
+     * FIX (2025-12-22): C2-P1-5 - Convert lateinit to safe access pattern with mutable var
+     *
+     * ServiceConfiguration initialized lazily with default values and can be reloaded.
+     * This prevents UninitializedPropertyAccessException crashes during early service lifecycle.
+     * Made var (not val) to allow configuration updates via broadcast receiver.
+     */
+    private var config: ServiceConfiguration = ServiceConfiguration()
 
     /**
      * FIX (2025-12-22): C-P1-4 & L-P1-3 - Thread-safe command caches
@@ -535,26 +583,103 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    /**
+     * FIX (2025-12-22): C2 - Service Initialization with State Machine, Timeout, and Retry
+     *
+     * INITIALIZATION SEQUENCE (documented):
+     * 1. State transition: CREATED → INITIALIZING
+     * 2. Configuration loading (with defaults fallback)
+     * 3. Service info configuration
+     * 4. Lifecycle coordinator registration
+     * 5. Database initialization (critical path, with timeout)
+     * 6. Component initialization (with rollback on failure)
+     * 7. CommandManager initialization
+     * 8. Voice command registration
+     * 9. State transition: INITIALIZING → READY (or ERROR on failure)
+     *
+     * THREAD SAFETY:
+     * - Mutex guards initialization sequence (prevents concurrent init attempts)
+     * - AtomicReference for state transitions
+     * - AtomicInteger for retry attempt tracking
+     *
+     * TIMEOUT & RETRY:
+     * - 30 second timeout per initialization attempt
+     * - Maximum 3 retry attempts on failure
+     * - Exponential backoff between retries (1s, 2s, 4s)
+     *
+     * ERROR HANDLING:
+     * - Cleanup on initialization failure (rollback partial state)
+     * - Error notification to user
+     * - Service remains in ERROR state (degraded mode)
+     */
     override fun onServiceConnected() {
         super.onServiceConnected()
         Log.i(TAG, "VoiceOS Service connected")
 
-        // Initialize configuration
-        config = ServiceConfiguration.loadFromPreferences(this)
-
         configureServiceInfo()
 
-        // Register for app lifecycle events for hybrid foreground service (P2-8d)
-        lifecycleCoordinator.register()
+        // Launch initialization with state machine
         serviceScope.launch {
-            // P2-8a: Database initialization via DatabaseManager
+            initializeServiceWithRetry()
+        }
+    }
+
+    /**
+     * Initialize service with retry logic and state machine
+     */
+    private suspend fun initializeServiceWithRetry() {
+        while (initializationAttempts.get() < MAX_INITIALIZATION_ATTEMPTS) {
+            val attempt = initializationAttempts.incrementAndGet()
+            Log.i(TAG, "Service initialization attempt $attempt/$MAX_INITIALIZATION_ATTEMPTS")
+
+            try {
+                initializeServiceWithTimeout()
+                // Success - exit retry loop
+                return
+            } catch (e: Exception) {
+                Log.e(TAG, "Initialization attempt $attempt failed", e)
+                serviceState.set(ServiceState.ERROR(e, attempt))
+
+                if (attempt >= MAX_INITIALIZATION_ATTEMPTS) {
+                    // Max attempts reached - give up
+                    val errorMsg = "VoiceOS initialization failed after $attempt attempts: ${e.message}"
+                    Log.e(TAG, errorMsg)
+                    showErrorNotification(errorMsg)
+                    cleanupOnInitializationFailure()
+                    return
+                }
+
+                // Exponential backoff before retry
+                val backoffMs = (1000L shl (attempt - 1)) // 1s, 2s, 4s
+                Log.i(TAG, "Retrying in ${backoffMs}ms...")
+                delay(backoffMs)
+            }
+        }
+    }
+
+    /**
+     * Initialize service with timeout enforcement
+     */
+    private suspend fun initializeServiceWithTimeout() {
+        initializationMutex.withLock {
+            // Prevent re-initialization if already ready
+            if (serviceState.get() is ServiceState.READY) {
+                Log.w(TAG, "Service already initialized, skipping")
+                return@withLock
+            }
+
+        serviceState.set(ServiceState.INITIALIZING)
+        Log.i(TAG, "=== Service Initialization Start (state: INITIALIZING) ===")
+
+        withTimeout(INITIALIZATION_TIMEOUT_MS) {
+            // Register for app lifecycle events for hybrid foreground service (P2-8d)
+            lifecycleCoordinator.register()
+
+            // P2-8a: Database initialization via DatabaseManager (critical path)
             try {
                 dbManager.initialize()
             } catch (e: Exception) {
-                val errorMsg = "VoiceOS initialization failed: ${e.message}"
-                Log.e(TAG, errorMsg, e)
-                showErrorNotification(errorMsg)
-                return@launch // Exit early on failure
+                throw IllegalStateException("Database initialization failed", e)
             }
 
             // Continue with normal initialization only if database is ready
@@ -584,6 +709,45 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                 Log.i(TAG, "onServiceConnected registerReceiver : CHANGE_LANG ")
                 registerReceiver(serviceReceiver, filter)
             }
+
+            // Success - transition to READY
+            serviceState.set(ServiceState.READY)
+            Log.i(TAG, "=== Service Initialization Complete (state: READY) ===")
+        }
+    }
+    }
+
+    /**
+     * Cleanup on initialization failure
+     *
+     * Rollback partial initialization state to prevent memory leaks and resource waste.
+     */
+    private suspend fun cleanupOnInitializationFailure() {
+        Log.w(TAG, "Cleaning up after initialization failure...")
+
+        try {
+            // Stop lifecycle coordinator if started
+            lifecycleCoordinator.unregister()
+
+            // Clear command caches
+            synchronized(cacheLock) {
+                nodeCache.clear()
+                commandCache.clear()
+                staticCommandCache.clear()
+                appsCommand.clear()
+                allRegisteredDynamicCommands.clear()
+            }
+
+            // Cleanup command manager
+            commandManagerInstance?.cleanup()
+            commandManagerInstance = null
+
+            // Cleanup service monitor
+            serviceMonitor = null
+
+            Log.i(TAG, "Cleanup complete")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during cleanup", e)
         }
     }
 
@@ -879,9 +1043,10 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             }
 
             // Initialize hash-based command processor
-            if (dbManager.scrapingDatabase != null) {
+            val scrapingDb = dbManager.scrapingDatabase
+            if (scrapingDb != null) {
                 try {
-                    val sqlDelightManager = dbManager.scrapingDatabase!!.databaseManager
+                    val sqlDelightManager = scrapingDb.databaseManager
                     voiceCommandProcessor = VoiceCommandProcessor(
                         context = this@VoiceOSService,
                         accessibilityService = this@VoiceOSService,
@@ -1276,82 +1441,102 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     /**
      * Initialize LearnApp integration for third-party app learning
      *
+     * FIX (2025-12-22): C2-P1-11 - Thread-safe initialization with Mutex
+     * Prevents race condition when multiple events trigger initialization concurrently.
+     *
      * This integration enables automatic UI exploration and UUID generation
      * for third-party apps. When a new app is launched, the user will be
      * prompted for consent before exploration begins.
      */
     private fun initializeLearnAppIntegration() {
-        Log.i(TAG, "LEARNAPP_DEBUG: ========================================")
-        Log.i(TAG, "LEARNAPP_DEBUG: initializeLearnAppIntegration() CALLED")
-        Log.i(TAG, "LEARNAPP_DEBUG: ========================================")
-        Log.i(TAG, "=== LearnApp Integration Initialization Start ===")
-        try {
-            // Initialize UUIDCreator first (required dependency)
-            Log.d(TAG, "LEARNAPP_DEBUG: About to initialize UUIDCreator...")
-            Log.d(TAG, "Initializing UUIDCreator...")
-            UUIDCreator.initialize(applicationContext)
-            Log.d(TAG, "✓ UUIDCreator initialized")
-            Log.d(TAG, "LEARNAPP_DEBUG: UUIDCreator done")
-
-            Log.d(TAG, "LEARNAPP_DEBUG: About to call LearnAppIntegration.initialize()...")
-            Log.d(TAG, "Attempting to initialize LearnAppIntegration...")
-            Log.d(TAG, "Context: ${applicationContext.javaClass.simpleName}")
-            Log.d(TAG, "Service: ${this.javaClass.simpleName}")
-
-            // Initialize LearnAppIntegration
-            learnAppIntegration = LearnAppIntegration.initialize(applicationContext, this)
-            Log.d(TAG, "LEARNAPP_DEBUG: LearnAppIntegration.initialize() returned: ${learnAppIntegration}")
-
-            Log.i(TAG, "✓ LearnApp integration initialized successfully")
-            Log.d(TAG, "Integration instance: ${learnAppIntegration?.javaClass?.simpleName}")
-            Log.d(TAG, "Features enabled:")
-            Log.d(TAG, "  - App launch detection: ACTIVE")
-            Log.d(TAG, "  - Consent dialog management: ACTIVE")
-            Log.d(TAG, "  - Exploration engine: ACTIVE")
-            Log.d(TAG, "  - Progress overlay: ACTIVE")
-            Log.i(TAG, "LearnApp will now monitor for new third-party app launches")
-            Log.i(TAG, "LEARNAPP_DEBUG: Initialization SUCCESS - learnAppIntegration is ${if (learnAppIntegration != null) "NOT NULL" else "NULL"}")
-
-            // PHASE 3 (2025-12-08): Command Discovery integration
-            // Auto-observes ExplorationEngine.state() via StateFlow
-            // Triggers visual overlay, audio summary, and tutorial when exploration completes
-            Log.d(TAG, "LEARNAPP_DEBUG: Initializing CommandDiscoveryIntegration...")
-            learnAppIntegration?.let { integration ->
-                try {
-                    discoveryIntegration = CommandDiscoveryIntegration(
-                        context = this,
-                        explorationEngine = integration.getExplorationEngine()
-                    )
-                    Log.i(TAG, "✓ Command Discovery integration initialized successfully")
-                    Log.d(TAG, "  - Visual overlay: ACTIVE (10s auto-hide)")
-                    Log.d(TAG, "  - Audio summary: ACTIVE")
-                    Log.d(TAG, "  - Interactive tutorial: ACTIVE")
-                    Log.d(TAG, "  - Command list UI: ACTIVE")
-                    Log.d(TAG, "  - Contextual hints: ACTIVE")
-                    Log.d(TAG, "Auto-observation enabled - no manual wiring needed")
-                } catch (e: Exception) {
-                    Log.e(TAG, "✗ Failed to initialize Command Discovery integration", e)
-                    Log.e(TAG, "  Error type: ${e.javaClass.simpleName}")
-                    Log.e(TAG, "  Error message: ${e.message}")
-                    discoveryIntegration = null
-                }
-            } ?: Log.w(TAG, "Skipping Command Discovery - LearnAppIntegration not available")
-
-        } catch (e: Exception) {
-            Log.e(TAG, "LEARNAPP_DEBUG: EXCEPTION during initialization!")
-            Log.e(TAG, "✗ Failed to initialize LearnApp integration", e)
-            Log.e(TAG, "Error type: ${e.javaClass.simpleName}")
-            Log.e(TAG, "Error message: ${e.message}")
-            Log.e(TAG, "Stack trace:")
-            e.printStackTrace()
-            Log.w(TAG, "Service will continue without LearnApp integration")
-            learnAppIntegration = null
+        // Check if already initialized or in progress
+        if (!learnAppInitState.compareAndSet(0, 1)) {
+            Log.d(TAG, "LEARNAPP_DEBUG: Initialization already in progress or complete (state=${learnAppInitState.get()}), skipping")
+            return
         }
-        Log.i(TAG, "=== LearnApp Integration Initialization Complete ===")
 
-        // Start JIT Learning Service (Phase 3: JIT-LearnApp Separation - 2025-12-18)
-        // Must be called AFTER LearnAppIntegration initializes (provides JITLearnerProvider)
-        startJITService()
+        serviceScope.launch {
+            learnAppInitMutex.withLock {
+                try {
+                    Log.i(TAG, "LEARNAPP_DEBUG: ========================================")
+                    Log.i(TAG, "LEARNAPP_DEBUG: initializeLearnAppIntegration() CALLED")
+                    Log.i(TAG, "LEARNAPP_DEBUG: ========================================")
+                    Log.i(TAG, "=== LearnApp Integration Initialization Start ===")
+
+                    // Initialize UUIDCreator first (required dependency)
+                    Log.d(TAG, "LEARNAPP_DEBUG: About to initialize UUIDCreator...")
+                    Log.d(TAG, "Initializing UUIDCreator...")
+                    UUIDCreator.initialize(applicationContext)
+                    Log.d(TAG, "✓ UUIDCreator initialized")
+                    Log.d(TAG, "LEARNAPP_DEBUG: UUIDCreator done")
+
+                    Log.d(TAG, "LEARNAPP_DEBUG: About to call LearnAppIntegration.initialize()...")
+                    Log.d(TAG, "Attempting to initialize LearnAppIntegration...")
+                    Log.d(TAG, "Context: ${applicationContext.javaClass.simpleName}")
+                    Log.d(TAG, "Service: ${this@VoiceOSService.javaClass.simpleName}")
+
+                    // Initialize LearnAppIntegration
+                    learnAppIntegration = LearnAppIntegration.initialize(applicationContext, this@VoiceOSService)
+                    Log.d(TAG, "LEARNAPP_DEBUG: LearnAppIntegration.initialize() returned: ${learnAppIntegration}")
+
+                    Log.i(TAG, "✓ LearnApp integration initialized successfully")
+                    Log.d(TAG, "Integration instance: ${learnAppIntegration?.javaClass?.simpleName}")
+                    Log.d(TAG, "Features enabled:")
+                    Log.d(TAG, "  - App launch detection: ACTIVE")
+                    Log.d(TAG, "  - Consent dialog management: ACTIVE")
+                    Log.d(TAG, "  - Exploration engine: ACTIVE")
+                    Log.d(TAG, "  - Progress overlay: ACTIVE")
+                    Log.i(TAG, "LearnApp will now monitor for new third-party app launches")
+                    Log.i(TAG, "LEARNAPP_DEBUG: Initialization SUCCESS - learnAppIntegration is ${if (learnAppIntegration != null) "NOT NULL" else "NULL"}")
+
+                    // PHASE 3 (2025-12-08): Command Discovery integration
+                    // Auto-observes ExplorationEngine.state() via StateFlow
+                    // Triggers visual overlay, audio summary, and tutorial when exploration completes
+                    Log.d(TAG, "LEARNAPP_DEBUG: Initializing CommandDiscoveryIntegration...")
+                    learnAppIntegration?.let { integration ->
+                        try {
+                            discoveryIntegration = CommandDiscoveryIntegration(
+                                context = this@VoiceOSService,
+                                explorationEngine = integration.getExplorationEngine()
+                            )
+                            Log.i(TAG, "✓ Command Discovery integration initialized successfully")
+                            Log.d(TAG, "  - Visual overlay: ACTIVE (10s auto-hide)")
+                            Log.d(TAG, "  - Audio summary: ACTIVE")
+                            Log.d(TAG, "  - Interactive tutorial: ACTIVE")
+                            Log.d(TAG, "  - Command list UI: ACTIVE")
+                            Log.d(TAG, "  - Contextual hints: ACTIVE")
+                            Log.d(TAG, "Auto-observation enabled - no manual wiring needed")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "✗ Failed to initialize Command Discovery integration", e)
+                            Log.e(TAG, "  Error type: ${e.javaClass.simpleName}")
+                            Log.e(TAG, "  Error message: ${e.message}")
+                            discoveryIntegration = null
+                        }
+                    } ?: Log.w(TAG, "Skipping Command Discovery - LearnAppIntegration not available")
+
+                    // Mark initialization complete
+                    learnAppInitState.set(2)
+                    learnAppInitialized = true
+
+                    // Start JIT Learning Service (Phase 3: JIT-LearnApp Separation - 2025-12-18)
+                    // Must be called AFTER LearnAppIntegration initializes (provides JITLearnerProvider)
+                    startJITService()
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "LEARNAPP_DEBUG: EXCEPTION during initialization!")
+                    Log.e(TAG, "✗ Failed to initialize LearnApp integration", e)
+                    Log.e(TAG, "Error type: ${e.javaClass.simpleName}")
+                    Log.e(TAG, "Error message: ${e.message}")
+                    Log.e(TAG, "Stack trace:")
+                    e.printStackTrace()
+                    Log.w(TAG, "Service will continue without LearnApp integration")
+                    learnAppIntegration = null
+                    learnAppInitState.set(0) // Reset for potential retry
+                } finally {
+                    Log.i(TAG, "=== LearnApp Integration Initialization Complete ===")
+                }
+            }
+        }
     }
 
     /**
@@ -1365,9 +1550,10 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             try {
                 // Get service instance and wire up provider
                 val jitService = com.augmentalis.jitlearning.JITLearningService.getInstance()
-                if (jitService != null && learnAppIntegration != null) {
+                val integration = learnAppIntegration
+                if (jitService != null && integration != null) {
                     // Set JITLearnerProvider (implemented by LearnAppIntegration)
-                    jitService.setLearnerProvider(learnAppIntegration!!)
+                    jitService.setLearnerProvider(integration)
 
                     // Set AccessibilityService interface for root node access
                     jitService.setAccessibilityService(object : com.augmentalis.jitlearning.JITLearningService.AccessibilityServiceInterface {
@@ -1382,13 +1568,13 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
                     jitServiceBound = true
                     Log.i(TAG, "✓ JIT Learning Service provider wired successfully")
-                    Log.d(TAG, "  - JITLearnerProvider: ${learnAppIntegration!!.javaClass.simpleName}")
+                    Log.d(TAG, "  - JITLearnerProvider: ${integration.javaClass.simpleName}")
                     Log.d(TAG, "  - AccessibilityService interface: PROVIDED")
                     Log.d(TAG, "  - Service ready for LearnApp binding")
                 } else {
                     Log.w(TAG, "Cannot wire JIT service - service or integration is null")
                     Log.w(TAG, "  JIT service: ${if (jitService != null) "OK" else "NULL"}")
-                    Log.w(TAG, "  Integration: ${if (learnAppIntegration != null) "OK" else "NULL"}")
+                    Log.w(TAG, "  Integration: ${if (integration != null) "OK" else "NULL"}")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to wire JIT Learning Service provider", e)
@@ -2108,6 +2294,10 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     override fun onDestroy() {
         Log.i(TAG, "VoiceOS Service destroying - starting cleanup")
 
+        // FIX (2025-12-22): C2 - Transition to DESTROYED state
+        serviceState.set(ServiceState.DESTROYED)
+        Log.d(TAG, "Service state: DESTROYED")
+
         // Cleanup hash-based scraping integration
         scrapingIntegration?.let { integration ->
             try {
@@ -2390,7 +2580,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                 config = ServiceConfiguration.loadFromPreferences(this@VoiceOSService)
                 Log.i(TAG, "CHANGE_LANG onReceive config = $config")
                 speechEngineManager.updateConfiguration(
-                    SpeechConfigurationData(
+                    SpeechConfiguration(
                         language = config.voiceLanguage,
                         mode = SpeechMode.DYNAMIC_COMMAND,
                         enableVAD = true,
@@ -2552,18 +2742,14 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     }
 
     override fun getConfiguration(): Map<String, Any> {
-        return if (::config.isInitialized) {
-            mapOf(
-                "enabled" to config.enabled,
-                "verboseLogging" to config.verboseLogging,
-                "autoStart" to config.autoStart,
-                "voiceLanguage" to config.voiceLanguage,
-                "fingerprintGesturesEnabled" to config.fingerprintGesturesEnabled,
-                "isLowResourceMode" to config.isLowResourceMode
-            )
-        } else {
-            emptyMap()
-        }
+        return mapOf(
+            "enabled" to config.enabled,
+            "verboseLogging" to config.verboseLogging,
+            "autoStart" to config.autoStart,
+            "voiceLanguage" to config.voiceLanguage,
+            "fingerprintGesturesEnabled" to config.fingerprintGesturesEnabled,
+            "isLowResourceMode" to config.isLowResourceMode
+        )
     }
 
     override fun speak(text: String, priority: Int) {
@@ -2639,7 +2825,10 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     override fun getCommandScope(): CoroutineScope = coroutineScopeCommands
 
     // Core service components
-    override fun getCommandManager(): CommandManager = commandManagerInstance!!
+    override fun getCommandManager(): CommandManager {
+        return commandManagerInstance
+            ?: throw IllegalStateException("CommandManager not initialized. Ensure service initialization completed successfully.")
+    }
 
     override fun getDatabaseManager(): DatabaseManager = dbManager
 

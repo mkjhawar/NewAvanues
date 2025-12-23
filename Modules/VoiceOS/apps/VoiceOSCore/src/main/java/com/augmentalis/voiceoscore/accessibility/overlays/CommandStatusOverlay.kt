@@ -10,6 +10,7 @@ package com.augmentalis.voiceoscore.accessibility.overlays
 
 import android.content.Context
 import android.graphics.PixelFormat
+import android.provider.Settings
 import android.speech.tts.TextToSpeech
 import android.view.Gravity
 import android.view.WindowManager
@@ -245,10 +246,38 @@ private fun CommandStatusUI(
     state: CommandState,
     message: String?
 ) {
+    // Check for reduced motion preference (accessibility setting)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefersReducedMotion = remember {
+        try {
+            val animationScale = Settings.Global.getFloat(
+                context.contentResolver,
+                Settings.Global.TRANSITION_ANIMATION_SCALE,
+                1f
+            )
+            animationScale == 0f
+        } catch (e: Exception) {
+            false  // Default to animations enabled if check fails
+        }
+    }
+
+    // Animation specs based on reduced motion preference
+    val enterTransition = if (prefersReducedMotion) {
+        fadeIn(animationSpec = snap())  // No animation, instant appearance
+    } else {
+        fadeIn() + slideInVertically(initialOffsetY = { -it })
+    }
+
+    val exitTransition = if (prefersReducedMotion) {
+        fadeOut(animationSpec = snap())  // No animation, instant disappearance
+    } else {
+        fadeOut() + slideOutVertically(targetOffsetY = { -it })
+    }
+
     AnimatedVisibility(
         visible = command.isNotEmpty(),
-        enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
-        exit = fadeOut() + slideOutVertically(targetOffsetY = { -it })
+        enter = enterTransition,
+        exit = exitTransition
     ) {
         Card(
             modifier = Modifier
@@ -315,11 +344,26 @@ private fun CommandStatusUI(
 private fun StateIcon(state: CommandState) {
     val (icon, color) = getStateIconAndColor(state)
 
-    // Pulsing animation for LISTENING and PROCESSING
+    // Check for reduced motion preference
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefersReducedMotion = remember {
+        try {
+            val animationScale = Settings.Global.getFloat(
+                context.contentResolver,
+                Settings.Global.TRANSITION_ANIMATION_SCALE,
+                1f
+            )
+            animationScale == 0f
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // Pulsing animation for LISTENING and PROCESSING (disabled if reduced motion)
     val infiniteTransition = rememberInfiniteTransition(label = "stateIconAnimation")
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = if (state == CommandState.LISTENING || state == CommandState.PROCESSING) 1.2f else 1f,
+        targetValue = if (!prefersReducedMotion && (state == CommandState.LISTENING || state == CommandState.PROCESSING)) 1.2f else 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(600),
             repeatMode = RepeatMode.Reverse
@@ -327,10 +371,10 @@ private fun StateIcon(state: CommandState) {
         label = "iconScale"
     )
 
-    // Rotation animation for PROCESSING and EXECUTING
+    // Rotation animation for PROCESSING and EXECUTING (disabled if reduced motion)
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = if (state == CommandState.PROCESSING || state == CommandState.EXECUTING) 360f else 0f,
+        targetValue = if (!prefersReducedMotion && (state == CommandState.PROCESSING || state == CommandState.EXECUTING)) 360f else 0f,
         animationSpec = infiniteRepeatable(
             animation = tween(1000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart

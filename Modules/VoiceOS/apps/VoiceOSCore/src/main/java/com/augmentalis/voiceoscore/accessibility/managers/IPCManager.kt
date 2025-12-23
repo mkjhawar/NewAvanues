@@ -19,7 +19,7 @@ import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.speechrecognition.SpeechMode
 import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine
 import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine.UIElement
-import com.augmentalis.voiceoscore.accessibility.speech.SpeechConfigurationData
+import com.augmentalis.voiceoscore.accessibility.speech.SpeechConfiguration
 import com.augmentalis.voiceoscore.accessibility.speech.SpeechEngineManager
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -90,7 +90,7 @@ class IPCManager(
 
             // Update speech configuration with new language
             speechEngineManager.updateConfiguration(
-                SpeechConfigurationData(
+                SpeechConfiguration(
                     language = language,
                     mode = mode,
                     enableVAD = true,

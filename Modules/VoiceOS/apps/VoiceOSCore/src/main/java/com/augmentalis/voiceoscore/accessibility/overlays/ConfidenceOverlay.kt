@@ -10,8 +10,10 @@ package com.augmentalis.voiceoscore.accessibility.overlays
 
 import android.content.Context
 import android.graphics.PixelFormat
+import android.speech.tts.TextToSpeech
 import android.view.Gravity
 import android.view.WindowManager
+import java.util.Locale
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -41,19 +43,25 @@ import com.augmentalis.voiceos.speech.confidence.ConfidenceResult
 
 /**
  * Overlay that displays real-time confidence during speech recognition
+ *
+ * Accessibility: Optional TTS announcements for confidence level changes (enable via settings)
  */
 class ConfidenceOverlay(
     private val context: Context,
-    private val windowManager: WindowManager
+    private val windowManager: WindowManager,
+    private val enableTTS: Boolean = false  // Optional TTS feedback via settings
 ) {
     private var overlayView: ComposeView? = null
     private var lifecycleOwner: ComposeViewLifecycleOwner? = null
     private var isShowing = false
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
 
     // Mutable state for confidence updates
     private var confidenceState by mutableStateOf(0f)
     private var levelState by mutableStateOf(ConfidenceLevel.HIGH)
     private var textState by mutableStateOf("")
+    private var previousLevel: ConfidenceLevel? = null  // Track level changes for TTS
 
     /**
      * Show the confidence overlay with initial result
@@ -64,6 +72,7 @@ class ConfidenceOverlay(
         }
 
         if (!isShowing) {
+            initTtsIfNeeded()
             windowManager.addView(overlayView, createLayoutParams())
             isShowing = true
         }
@@ -78,6 +87,12 @@ class ConfidenceOverlay(
         confidenceState = result.confidence
         levelState = result.level
         textState = result.text
+
+        // TTS announcement on level change (if enabled)
+        if (enableTTS && ttsReady && result.level != previousLevel) {
+            announceLevelChange(result.level)
+            previousLevel = result.level
+        }
     }
 
     /**
@@ -106,9 +121,47 @@ class ConfidenceOverlay(
      */
     fun dispose() {
         hide()
+        shutdownTts()
         lifecycleOwner?.onDestroy()
         lifecycleOwner = null
         overlayView = null
+    }
+
+    /**
+     * Initialize TTS if enabled
+     */
+    private fun initTtsIfNeeded() {
+        if (enableTTS && tts == null) {
+            tts = TextToSpeech(context) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    tts?.language = Locale.getDefault()
+                    ttsReady = true
+                }
+            }
+        }
+    }
+
+    /**
+     * Announce confidence level change
+     */
+    private fun announceLevelChange(level: ConfidenceLevel) {
+        val announcement = when (level) {
+            ConfidenceLevel.HIGH -> "High confidence"
+            ConfidenceLevel.MEDIUM -> "Medium confidence"
+            ConfidenceLevel.LOW -> "Low confidence"
+            ConfidenceLevel.REJECT -> "Confidence too low"
+        }
+        tts?.speak(announcement, TextToSpeech.QUEUE_ADD, null, "confidence_level")
+    }
+
+    /**
+     * Shutdown TTS resources
+     */
+    private fun shutdownTts() {
+        tts?.stop()
+        tts?.shutdown()
+        tts = null
+        ttsReady = false
     }
 
     /**

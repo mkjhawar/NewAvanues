@@ -102,7 +102,7 @@ interface ISpeechEngine {
      *
      * @throws IllegalStateException if engine not initialized
      */
-    fun updateConfiguration(config: SpeechConfigurationData)
+    fun updateConfiguration(config: SpeechConfiguration)
 
     /**
      * Check if engine is currently recognizing speech

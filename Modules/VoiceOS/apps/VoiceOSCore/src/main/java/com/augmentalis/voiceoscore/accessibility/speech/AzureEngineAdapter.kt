@@ -283,7 +283,7 @@ class AzureEngineAdapter(
      * @param config New configuration data
      * @throws IllegalStateException if engine not initialized
      */
-    override fun updateConfiguration(config: SpeechConfigurationData) {
+    override fun updateConfiguration(config: SpeechConfiguration) {
         checkInitialized()
 
         Log.d(TAG, "Updating Azure configuration")

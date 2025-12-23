@@ -60,6 +60,39 @@ import java.util.concurrent.atomic.AtomicLong
  * - Open/Closed: Can add new engines (Whisper, Vosk, Azure) without modifying this class
  * - Single Responsibility: Manages engine lifecycle, delegates creation to factory
  * - Dependency Inversion: New engines depend on ISpeechEngine abstraction
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * THREAD SAFETY & DISPATCHER ARCHITECTURE
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * This class uses Dispatchers.Main for the engine scope because:
+ * 1. Speech recognition callbacks run on main thread (Android API requirement)
+ * 2. TTS operations require main thread context
+ * 3. UI state updates (_speechState) must be on main thread
+ * 4. StateFlow/SharedFlow emissions are main-thread safe
+ *
+ * VoiceOSService uses DIFFERENT dispatchers (intentional design):
+ * - Dispatchers.Default: General coroutines (CPU-bound work)
+ * - Dispatchers.IO: Command processing (I/O-bound work)
+ *
+ * WHY THIS IS CORRECT:
+ * - SpeechEngineManager: Main thread for Android speech APIs + UI updates
+ * - VoiceOSService: Background threads for command processing + business logic
+ * - This separation prevents blocking the main thread during command execution
+ * - Speech callbacks → main thread → emit to SharedFlow → background processing
+ *
+ * SYNCHRONIZATION:
+ * - stateMutex: Protects ALL engine state operations (init, cleanup, switching)
+ * - AtomicBoolean flags: Fast checks before acquiring mutex (performance optimization)
+ * - StateFlow: Thread-safe state broadcasting
+ * - SharedFlow: Thread-safe event emission (buffer overflow = DROP_OLDEST)
+ *
+ * CRITICAL: Do not change dispatchers without careful review!
+ * - Changing to Dispatchers.IO will break speech recognition callbacks
+ * - Changing to Dispatchers.Default will break TTS operations
+ * - Current design is intentional and tested
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 class SpeechEngineManager(
     private val context: Context,
@@ -70,11 +103,11 @@ class SpeechEngineManager(
     val speechState: StateFlow<SpeechState> = _speechState.asStateFlow()
 
     // Command events flow - separate from state for proper event-based architecture
-    private val _commandEvents = MutableSharedFlow<CommandEvent>(
+    private val _commandEvents = MutableSharedFlow<SpeechCommandEvent>(
         extraBufferCapacity = 10,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
-    val commandEvents: SharedFlow<CommandEvent> = _commandEvents.asSharedFlow()
+    val commandEvents: SharedFlow<SpeechCommandEvent> = _commandEvents.asSharedFlow()
 
     /**
      * Current engine instance (HYBRID: Vivoka direct OR ISpeechEngine)
@@ -106,7 +139,7 @@ class SpeechEngineManager(
     private var engineInitializationHistory = mutableMapOf<SpeechEngine, Long>()
 
     private val listenerManager = SpeechListenerManager()
-    private var currentConfiguration = SpeechConfigurationData()
+    private var currentConfiguration = SpeechConfiguration()
     private val engineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     init {
@@ -160,7 +193,7 @@ class SpeechEngineManager(
         // Emit command event for processing (guarantees delivery to all collectors)
         engineScope.launch {
             _commandEvents.emit(
-                CommandEvent(
+                SpeechCommandEvent(
                     command = currentText,
                     confidence = confidence,
                     timestamp = System.currentTimeMillis()
@@ -174,33 +207,46 @@ class SpeechEngineManager(
      * Initialize speech engine with enhanced thread-safe race condition prevention
      *
      * REFACTORED: Uses factory to create engine instead of hard-coded when statement
+     *
+     * THREAD SAFETY:
+     * - Uses stateMutex to protect ALL state changes atomically
+     * - Combines isDestroying and isInitializing checks within mutex
+     * - Explicit error states to prevent "initializing forever" bugs
      */
     fun initializeEngine(engine: SpeechEngine) {
         engineScope.launch {
-            // Check if system is being destroyed
-            if (isDestroying.get()) {
-                Log.w(TAG, "Cannot initialize ${engine.name} - EngineManager is being destroyed")
-                return@launch
-            }
-
-            val currentTime = System.currentTimeMillis()
-            lastInitializationAttempt.set(currentTime)
-            initializationAttempts.incrementAndGet()
-
-            // Prevent too frequent initialization attempts
-            val lastAttempt = engineInitializationHistory[engine] ?: 0L
-            if (currentTime - lastAttempt < 1000L) {
-                Log.w(TAG, "Initialization attempt too frequent for ${engine.name}, waiting...")
-                delay(1000L - (currentTime - lastAttempt))
-            }
-
-            // Prevent concurrent initialization attempts
-            if (!isInitializing.compareAndSet(false, true)) {
-                Log.w(TAG, "Initialization already in progress for ${engine.name}")
-                return@launch
-            }
-
             stateMutex.withLock {
+                // Check both flags atomically within mutex to prevent race conditions
+                if (isDestroying.get()) {
+                    Log.w(TAG, "Cannot initialize ${engine.name} - EngineManager is being destroyed")
+                    _speechState.value = _speechState.value.copy(
+                        isInitialized = false,
+                        engineStatus = "Cannot initialize during shutdown",
+                        errorMessage = "System is shutting down"
+                    )
+                    return@launch
+                }
+
+                if (!isInitializing.compareAndSet(false, true)) {
+                    Log.w(TAG, "Initialization already in progress for ${engine.name}")
+                    _speechState.value = _speechState.value.copy(
+                        engineStatus = "Initialization already in progress",
+                        errorMessage = "Please wait for current initialization to complete"
+                    )
+                    return@launch
+                }
+
+                val currentTime = System.currentTimeMillis()
+                lastInitializationAttempt.set(currentTime)
+                initializationAttempts.incrementAndGet()
+
+                // Prevent too frequent initialization attempts
+                val lastAttempt = engineInitializationHistory[engine] ?: 0L
+                if (currentTime - lastAttempt < 1000L) {
+                    Log.w(TAG, "Initialization attempt too frequent for ${engine.name}, waiting...")
+                    delay(1000L - (currentTime - lastAttempt))
+                }
+
                 try {
                     Log.i(TAG, "Starting enhanced thread-safe initialization of ${engine.name} (attempt #${initializationAttempts.get()})")
 
@@ -244,12 +290,27 @@ class SpeechEngineManager(
 
                         Log.i(TAG, "${engine.name} initialized successfully")
                     } else {
+                        // Set explicit error state (FIXES P1-2)
+                        _speechState.value = _speechState.value.copy(
+                            isInitialized = false,
+                            engineStatus = "Initialization failed",
+                            errorMessage = "Failed to initialize ${engine.name}"
+                        )
+
                         // Attempt fallback to last successful engine if available
                         handleInitializationFailure(engine)
                     }
 
                 } catch (e: Exception) {
                     Log.e(TAG, "Exception during ${engine.name} initialization", e)
+
+                    // Set explicit error state (FIXES P1-2)
+                    _speechState.value = _speechState.value.copy(
+                        isInitialized = false,
+                        engineStatus = "Initialization exception",
+                        errorMessage = "Initialization error: ${e.message}"
+                    )
+
                     handleInitializationException(engine, e)
                 } finally {
                     isInitializing.set(false)
@@ -488,7 +549,7 @@ class SpeechEngineManager(
      *
      * HYBRID: Type checking for Vivoka vs ISpeechEngine
      */
-    fun updateConfiguration(config: SpeechConfigurationData) {
+    fun updateConfiguration(config: SpeechConfiguration) {
         currentConfiguration = config
         currentEngine?.let { engine ->
             when (engine) {
@@ -754,9 +815,11 @@ data class SpeechState(
 }
 
 /**
- * Speech configuration data class
+ * Speech configuration state
+ *
+ * NAMING: Follows "State" suffix convention (matches SpeechState)
  */
-data class SpeechConfigurationData(
+data class SpeechConfiguration(
     val language: String = "en-US",
     val mode: SpeechMode = SpeechMode.DYNAMIC_COMMAND,
     val enableVAD: Boolean = true,
@@ -766,16 +829,20 @@ data class SpeechConfigurationData(
     val enableProfanityFilter: Boolean = false
 ) {
     override fun toString(): String {
-        return "SpeechConfigurationData(language='$language', mode=$mode, enableVAD=$enableVAD, " +
+        return "SpeechConfiguration(language='$language', mode=$mode, enableVAD=$enableVAD, " +
                 "confidenceThreshold=$confidenceThreshold, maxRecordingDuration=$maxRecordingDuration, " +
                 "timeoutDuration=$timeoutDuration, enableProfanityFilter=$enableProfanityFilter)"
     }
 }
 
 /**
- * Command event data class
+ * Speech command event state
+ *
+ * NAMING: "SpeechCommandEvent" to distinguish from CommandModels.CommandEvent
+ * - This is for speech recognition events
+ * - CommandModels.CommandEvent is for command lifecycle events
  */
-data class CommandEvent(
+data class SpeechCommandEvent(
     val command: String,
     val confidence: Float,
     val timestamp: Long = System.currentTimeMillis()

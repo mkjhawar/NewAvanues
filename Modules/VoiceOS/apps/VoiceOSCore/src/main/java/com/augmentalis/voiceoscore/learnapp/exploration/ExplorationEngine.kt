@@ -344,6 +344,12 @@ class ExplorationEngine(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     /**
+     * FIX C5-P1-9 (2025-12-22): Track exploration job for explicit cancellation support
+     * Allows immediate cancellation without waiting for cleanup cycles
+     */
+    private var explorationJob: kotlinx.coroutines.Job? = null
+
+    /**
      * Start timestamp
      */
     private var startTimestamp: Long = 0L
@@ -432,7 +438,11 @@ class ExplorationEngine(
      */
     fun startExploration(packageName: String, sessionId: String? = null) {
         this.currentSessionId = sessionId
-        scope.launch {
+
+        // FIX C5-P1-9 (2025-12-22): Cancel any existing exploration before starting new one
+        explorationJob?.cancel(kotlinx.coroutines.CancellationException("Starting new exploration"))
+
+        explorationJob = scope.launch {
             try {
                 // FIX (2025-12-03): Cleanup resources from previous exploration
                 cleanup()
@@ -3625,6 +3635,10 @@ class ExplorationEngine(
     fun stopExploration() {
         val currentState = _explorationState.value
         if (currentState is ExplorationState.Running) {
+            // FIX C5-P1-9 (2025-12-22): Cancel exploration job explicitly
+            explorationJob?.cancel(kotlinx.coroutines.CancellationException("User stopped exploration"))
+            explorationJob = null
+
             // Cancel all running child coroutines
             scope.coroutineContext[kotlinx.coroutines.Job]?.cancelChildren()
 

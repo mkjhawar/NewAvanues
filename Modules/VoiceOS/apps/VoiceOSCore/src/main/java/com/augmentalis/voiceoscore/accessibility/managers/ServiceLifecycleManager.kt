@@ -23,7 +23,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.augmentalis.voiceoscore.accessibility.config.ServiceConfiguration
-import com.augmentalis.voiceoscore.accessibility.speech.SpeechConfigurationData
+import com.augmentalis.voiceoscore.accessibility.speech.SpeechConfiguration
 import com.augmentalis.voiceoscore.accessibility.speech.SpeechEngineManager
 import com.augmentalis.voiceoscore.accessibility.utils.Const
 import com.augmentalis.voiceoscore.accessibility.utils.Debouncer
@@ -98,7 +98,7 @@ class ServiceLifecycleManager(
                 config = ServiceConfiguration.loadFromPreferences(this@ServiceLifecycleManager.context)
                 Log.i(TAG, "Configuration reloaded: $config")
                 speechEngineManager?.updateConfiguration(
-                    SpeechConfigurationData(
+                    SpeechConfiguration(
                         language = config.voiceLanguage,
                         mode = SpeechMode.DYNAMIC_COMMAND,
                         enableVAD = true,

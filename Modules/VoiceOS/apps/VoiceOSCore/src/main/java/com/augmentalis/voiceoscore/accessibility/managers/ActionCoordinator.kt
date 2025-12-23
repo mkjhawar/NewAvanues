@@ -29,7 +29,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
@@ -342,15 +341,24 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
     /**
      * Execute action synchronously (blocking version for compatibility)
      * WARNING: Only use from background threads!
+     *
+     * FIX C5-P0-1 (2025-12-22): Removed runBlocking to prevent UI thread blocking.
+     * This method is now deprecated and throws an exception to prevent ANR.
+     * Callers should use suspend executeAction() or executeActionAsync() instead.
      */
-    @Deprecated("Use suspend executeAction instead", ReplaceWith("executeAction(action, params)"))
+    @Deprecated(
+        "Removed to prevent ANR. Use suspend executeAction() or executeActionAsync() instead",
+        ReplaceWith("executeAction(action, params)")
+    )
     fun executeActionBlocking(
         action: String,
         params: Map<String, Any> = emptyMap()
     ): Boolean {
-        return runBlocking {
-            executeAction(action, params)
-        }
+        Log.e(TAG, "executeActionBlocking() is deprecated and should not be used - causes ANR!")
+        throw UnsupportedOperationException(
+            "executeActionBlocking() has been removed to prevent ANR. " +
+            "Use suspend executeAction() or executeActionAsync() instead."
+        )
     }
 
     /**

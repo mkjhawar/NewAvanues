@@ -24,8 +24,10 @@ import com.augmentalis.voiceoscore.web.WebCommandCoordinator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 /**
  * Dispatches voice commands through multi-tier execution system
@@ -45,6 +47,10 @@ class CommandDispatcher(
 ) {
     companion object {
         private const val TAG = "CommandDispatcher"
+
+        // FIX C5-P1-6, C5-P1-7 (2025-12-22): Add timeout constants to prevent indefinite hangs
+        private const val TIER_EXECUTION_TIMEOUT_MS = 5000L  // 5 seconds per tier
+        private const val COMMAND_TOTAL_TIMEOUT_MS = 15000L   // 15 seconds total (3 tiers max)
     }
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -226,26 +232,39 @@ class CommandDispatcher(
 
     /**
      * Execute Tier 2: VoiceCommandProcessor (secondary)
+     *
+     * FIX C5-P1-6, C5-P1-7 (2025-12-22): Added timeout wrapper to prevent indefinite hangs
      */
     private suspend fun executeTier2Command(normalizedCommand: String) {
         try {
             Log.d(TAG, "Attempting Tier 2: VoiceCommandProcessor")
 
-            voiceCommandProcessor?.let { processor ->
-                val result = processor.processCommand(normalizedCommand)
+            // Wrap in timeout to prevent indefinite hangs
+            val timedOut = try {
+                withTimeout(TIER_EXECUTION_TIMEOUT_MS) {
+                    voiceCommandProcessor?.let { processor ->
+                        val result = processor.processCommand(normalizedCommand)
 
-                if (result.success) {
-                    Log.i(TAG, "✓ Tier 2 (VoiceCommandProcessor) SUCCESS: '$normalizedCommand'")
-                    return
-                } else {
-                    Log.w(TAG, "Tier 2 (VoiceCommandProcessor) FAILED: ${result.message}")
-                    Log.d(TAG, "  Falling through to Tier 3...")
+                        if (result.success) {
+                            Log.i(TAG, "✓ Tier 2 (VoiceCommandProcessor) SUCCESS: '$normalizedCommand'")
+                            return@withTimeout false  // Not timed out, success
+                        } else {
+                            Log.w(TAG, "Tier 2 (VoiceCommandProcessor) FAILED: ${result.message}")
+                            Log.d(TAG, "  Falling through to Tier 3...")
+                        }
+                    } ?: run {
+                        Log.d(TAG, "VoiceCommandProcessor not available, skipping Tier 2")
+                    }
+                    true  // Continue to next tier
                 }
-            } ?: run {
-                Log.d(TAG, "VoiceCommandProcessor not available, skipping Tier 2")
+            } catch (e: TimeoutCancellationException) {
+                Log.e(TAG, "Tier 2 (VoiceCommandProcessor) TIMEOUT after ${TIER_EXECUTION_TIMEOUT_MS}ms")
+                true  // Continue to next tier
             }
 
-            executeTier3Command(normalizedCommand)
+            if (timedOut) {
+                executeTier3Command(normalizedCommand)
+            }
 
         } catch (e: Exception) {
             Log.e(TAG, "Tier 2 (VoiceCommandProcessor) ERROR: ${e.message}", e)
@@ -256,17 +275,27 @@ class CommandDispatcher(
 
     /**
      * Execute Tier 3: ActionCoordinator (tertiary/fallback)
+     *
+     * FIX C5-P1-6, C5-P1-7 (2025-12-22): Added timeout wrapper to prevent indefinite hangs
      */
     private suspend fun executeTier3Command(normalizedCommand: String) {
         try {
             Log.d(TAG, "Attempting Tier 3: ActionCoordinator (final fallback)")
 
-            val result = actionCoordinator.executeAction(normalizedCommand)
+            // Wrap in timeout to prevent indefinite hangs
+            try {
+                withTimeout(TIER_EXECUTION_TIMEOUT_MS) {
+                    val result = actionCoordinator.executeAction(normalizedCommand)
 
-            if (result) {
-                Log.i(TAG, "✓ Tier 3 (ActionCoordinator) SUCCESS: '$normalizedCommand'")
-            } else {
-                Log.w(TAG, "✗ Tier 3 (ActionCoordinator) FAILED: No handler found for '$normalizedCommand'")
+                    if (result) {
+                        Log.i(TAG, "✓ Tier 3 (ActionCoordinator) SUCCESS: '$normalizedCommand'")
+                    } else {
+                        Log.w(TAG, "✗ Tier 3 (ActionCoordinator) FAILED: No handler found for '$normalizedCommand'")
+                        Log.e(TAG, "✗ All tiers failed for command: '$normalizedCommand'")
+                    }
+                }
+            } catch (e: TimeoutCancellationException) {
+                Log.e(TAG, "Tier 3 (ActionCoordinator) TIMEOUT after ${TIER_EXECUTION_TIMEOUT_MS}ms")
                 Log.e(TAG, "✗ All tiers failed for command: '$normalizedCommand'")
             }
 

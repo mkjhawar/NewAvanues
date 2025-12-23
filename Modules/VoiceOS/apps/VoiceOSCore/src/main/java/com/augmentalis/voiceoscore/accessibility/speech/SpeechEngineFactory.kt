@@ -22,6 +22,51 @@
  * This demonstrates the Open/Closed Principle:
  * - OPEN for extension (add new engines easily)
  * - CLOSED for modification (no changes to manager)
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * DISABLED ENGINES DOCUMENTATION
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * The following engines are currently disabled in this implementation:
+ *
+ * 1. WHISPER ENGINE (OpenAI Whisper.cpp)
+ *    Status: Disabled (throws IllegalArgumentException)
+ *    Reason: Requires manual NDK setup and native library compilation
+ *    Enable: Complete NDK configuration → see build.gradle.kts TODO
+ *    Dependencies:
+ *      - whisper.cpp native library (JNI bindings)
+ *      - GGML model files (150MB-2.5GB depending on model size)
+ *      - NDK r25c or later
+ *    Setup instructions: See WHISPER_SETUP.md (to be created)
+ *    When enabled:
+ *      - Uncomment WhisperEngineAdapter creation in createEngine()
+ *      - Ensure NDK is properly configured in build.gradle.kts
+ *      - Download and configure GGML models
+ *
+ * 2. ANDROID_STT ENGINE (Google Cloud Speech via Android APIs)
+ *    Status: Enabled but may be disabled based on user preference
+ *    Reason: User preference for Vivoka-only operation
+ *    Current: Fully functional via GoogleEngineAdapter
+ *    Disable: To disable, throw IllegalArgumentException similar to WHISPER
+ *    Note: No code changes needed if user wants to re-enable
+ *
+ * 3. VOSK ENGINE (Open-source offline recognition)
+ *    Status: Enabled via VoskEngineAdapter
+ *    Dependencies: VoskEngineAdapter class (implemented)
+ *    Note: Fully functional - no issues
+ *
+ * 4. AZURE ENGINE (Microsoft Azure Cognitive Services)
+ *    Status: Enabled via AzureEngineAdapter
+ *    Dependencies: AzureEngineAdapter class (implemented)
+ *    Note: Fully functional - no issues
+ *
+ * To enable disabled engines:
+ * - Review dependencies and prerequisites above
+ * - Uncomment relevant code in createEngine() method
+ * - Add required native libraries and models
+ * - Run comprehensive integration tests
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 package com.augmentalis.voiceoscore.accessibility.speech
 

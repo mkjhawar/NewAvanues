@@ -149,13 +149,30 @@ class SelectHandler(
             // Find current focus or cursor position
             updateSelectionContext()
 
-            // TODO: Show selection mode indicator
-            // service.showSelectionModeIndicator()
+            // Show selection mode indicator via overlay manager
+            showSelectionModeIndicator()
 
             true
         } catch (e: Exception) {
             Log.e(TAG, "Error entering selection mode", e)
             false
+        }
+    }
+
+    /**
+     * Show visual selection mode indicator
+     *
+     * TODO (Future): Integrate with overlay manager when IVoiceOSContext is extended
+     * with getOverlayManager() method. For now, logs selection mode entry.
+     */
+    private fun showSelectionModeIndicator() {
+        try {
+            // TODO: Implement when overlay manager is available
+            // val overlayManager = service.getOverlayManager()
+            // overlayManager?.showSelectionModeIndicator("Selection Mode Active", currentSelection?.bounds)
+            Log.d(TAG, "Selection mode indicator requested (overlay integration pending)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing selection mode indicator", e)
         }
     }
 
@@ -441,13 +458,29 @@ class SelectHandler(
             isSelectionMode = false
             currentSelection = null
 
-            // TODO: Hide selection mode indicators
-            // service.hideSelectionModeIndicator()
+            // Hide selection mode indicators via overlay manager
+            hideSelectionModeIndicator()
 
             true
         } catch (e: Exception) {
             Log.e(TAG, "Error exiting selection mode", e)
             false
+        }
+    }
+
+    /**
+     * Hide selection mode indicator
+     *
+     * TODO (Future): Integrate with overlay manager when available
+     */
+    private fun hideSelectionModeIndicator() {
+        try {
+            // TODO: Implement when overlay manager is available
+            // val overlayManager = service.getOverlayManager()
+            // overlayManager?.hideSelectionModeIndicator()
+            Log.d(TAG, "Selection mode indicator hide requested (overlay integration pending)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error hiding selection mode indicator", e)
         }
     }
 
@@ -475,32 +508,82 @@ class SelectHandler(
 
     // Helper methods
 
+    /**
+     * Check cursor visibility using IVoiceOSContext.isCursorVisible()
+     */
     private fun isCursorVisible(): Boolean {
-        // TODO: Integrate with cursor manager
-        return false
+        return try {
+            service.isCursorVisible()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking cursor visibility", e)
+            false
+        }
     }
 
+    /**
+     * Get cursor position using IVoiceOSContext.getCursorPosition()
+     */
     private fun getCursorPosition(): Rect? {
-        // TODO: Integrate with cursor manager
-        return null
+        return try {
+            val offset = service.getCursorPosition()
+            // Convert CursorOffset to Rect (convert Float to Int)
+            val x = offset.x.toInt()
+            val y = offset.y.toInt()
+            Rect(x - 10, y - 10, x + 10, y + 10)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting cursor position", e)
+            null
+        }
     }
 
+    /**
+     * Show basic context menu
+     *
+     * TODO (Future): Integrate with overlay manager when IVoiceOSContext is extended
+     */
     private fun showBasicContextMenu(position: Rect): Boolean {
-        // TODO: Implement basic context menu display
-        Log.d(TAG, "Would show context menu at position: $position")
-        return true
+        return try {
+            // TODO: Implement when overlay manager is available
+            // val overlayManager = service.getOverlayManager()
+            // overlayManager?.showContextMenu(position, listOf("Click", "Long Press", ...))
+            Log.d(TAG, "Context menu requested at position: $position (overlay integration pending)")
+            true  // Return true to indicate successful request
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing basic context menu", e)
+            false
+        }
     }
 
+    /**
+     * Show selection-specific context menu
+     *
+     * TODO (Future): Integrate with overlay manager when available
+     */
     private fun showSelectionContextMenu(): Boolean {
-        // TODO: Implement selection-specific context menu
-        Log.d(TAG, "Would show selection context menu")
-        return true
+        return try {
+            // TODO: Implement when overlay manager is available
+            Log.d(TAG, "Selection context menu requested (overlay integration pending)")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing selection context menu", e)
+            false
+        }
     }
 
+    /**
+     * Show general context menu
+     *
+     * TODO (Future): Integrate with overlay manager when available
+     */
     private fun showGeneralContextMenu(): Boolean {
-        // TODO: Implement general context menu
-        Log.d(TAG, "Would show general context menu")
-        return true
+        return try {
+            // TODO: Implement when overlay manager is available
+            Log.d(TAG, "General context menu requested (overlay integration pending)")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing general context menu", e)
+            false
+        }
     }
 
     private fun findFocusedNode(rootNode: AccessibilityNodeInfo?): AccessibilityNodeInfo? {

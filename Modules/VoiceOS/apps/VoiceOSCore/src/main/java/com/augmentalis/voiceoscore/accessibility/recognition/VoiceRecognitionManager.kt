@@ -13,7 +13,7 @@ package com.augmentalis.voiceoscore.accessibility.recognition
 import android.util.Log
 import com.augmentalis.speechrecognition.SpeechEngine
 import com.augmentalis.speechrecognition.SpeechMode
-import com.augmentalis.voiceoscore.accessibility.speech.SpeechConfigurationData
+import com.augmentalis.voiceoscore.accessibility.speech.SpeechConfiguration
 import com.augmentalis.voiceoscore.accessibility.speech.SpeechEngineManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -117,7 +117,7 @@ class VoiceRecognitionManager(
     /**
      * Update speech engine configuration
      */
-    fun updateConfiguration(config: SpeechConfigurationData) {
+    fun updateConfiguration(config: SpeechConfiguration) {
         try {
             Log.d(TAG, "Updating speech configuration: language=${config.language}, mode=${config.mode}")
             speechEngineManager.updateConfiguration(config)
@@ -147,7 +147,7 @@ class VoiceRecognitionManager(
 
             // Update speech configuration with new language
             updateConfiguration(
-                SpeechConfigurationData(
+                SpeechConfiguration(
                     language = language,
                     mode = mode,
                     enableVAD = true,

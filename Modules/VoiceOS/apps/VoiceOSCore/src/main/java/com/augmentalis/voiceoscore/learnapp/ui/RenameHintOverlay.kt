@@ -373,9 +373,24 @@ class RenameHintOverlay(
 
     /**
      * Schedule auto-dismiss after delay
+     *
+     * Accessibility: Announces "Dismissing hint" 500ms before actual dismissal
+     * to give screen reader users time to process the announcement
      */
     private fun scheduleAutoDismiss() {
         cancelAutoDismiss()
+
+        // Schedule pre-dismiss announcement (500ms before dismissal)
+        mainHandler.postDelayed({
+            tts?.speak(
+                "Dismissing hint",
+                TextToSpeech.QUEUE_ADD,
+                null,
+                "pre_dismiss"
+            )
+        }, AUTO_DISMISS_DELAY - 500)
+
+        // Schedule actual dismissal
         autoDismissRunnable = Runnable {
             hide()
         }

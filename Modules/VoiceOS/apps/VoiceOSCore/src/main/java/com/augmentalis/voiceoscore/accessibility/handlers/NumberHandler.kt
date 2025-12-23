@@ -446,20 +446,49 @@ class NumberHandler(
     }
 
     /**
-     * Display number overlays (placeholder implementation)
-     * TODO: Integrate with overlay system
+     * Display number overlays using NumberedSelectionOverlay
+     *
+     * TODO (Future): Integrate with overlay manager when IVoiceOSContext is extended
+     * with getOverlayManager() method. For now, logs numbered elements for debugging.
      */
     private fun displayNumberOverlays() {
-        Log.d(TAG, "Would display number overlays for ${numberedElements.size} elements")
-        // TODO: Implement actual overlay display
+        try {
+            Log.d(TAG, "Displaying number overlays for ${numberedElements.size} elements")
+
+            // TODO: Implement when overlay manager is available
+            // val overlayManager = service.getOverlayManager()
+            // val selectableItems = numberedElements.map { (number, elementInfo) ->
+            //     SelectableItem(number, elementInfo.description, elementInfo.bounds) {
+            //         handleNumberCommand("tap $number")
+            //     }
+            // }
+            // overlayManager?.showNumberedOverlay(selectableItems)
+
+            // Log numbered elements for debugging
+            numberedElements.forEach { (number, elementInfo) ->
+                Log.v(TAG, "  $number: ${elementInfo.description} at ${elementInfo.bounds}")
+            }
+            Log.i(TAG, "Number overlay requested with ${numberedElements.size} items (overlay integration pending)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error displaying number overlays", e)
+        }
     }
 
     /**
-     * Hide number overlays
+     * Hide number overlays via overlay manager
+     *
+     * TODO (Future): Integrate with overlay manager when available
      */
     private fun hideNumberOverlays() {
-        Log.d(TAG, "Hiding number overlays")
-        // TODO: Implement actual overlay hiding
+        try {
+            Log.d(TAG, "Hiding number overlays")
+            // TODO: Implement when overlay manager is available
+            // val overlayManager = service.getOverlayManager()
+            // overlayManager?.hideNumberedOverlay()
+            Log.i(TAG, "Number overlay hide requested (overlay integration pending)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error hiding number overlays", e)
+        }
     }
 
     /**

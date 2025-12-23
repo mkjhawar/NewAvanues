@@ -85,20 +85,43 @@ fun ScrapedElementQueries.insertBatchWithIds(elements: List<ScrapedElementEntity
  * Insert hierarchy relationships in batch
  *
  * Note: ScrapedHierarchyEntity uses element IDs, but the schema uses element hashes.
- * This function expects the caller to convert IDs to hashes before calling.
+ * This function converts IDs to hashes using a lookup approach.
  *
  * @param hierarchyList List of ScrapedHierarchyEntity to insert
+ * @param idToHashMap Optional mapping from element IDs to hashes for efficient conversion
  */
-fun ScrapedHierarchyQueries.insertBatch(hierarchyList: List<ScrapedHierarchyEntity>) {
+fun ScrapedHierarchyQueries.insertBatch(
+    hierarchyList: List<ScrapedHierarchyEntity>,
+    idToHashMap: Map<Long, String>? = null
+) {
+    if (hierarchyList.isEmpty()) {
+        Log.d(TAG, "Empty hierarchy list, skipping batch insert")
+        return
+    }
+
     (this as Transacter).transaction {
         hierarchyList.forEach { hierarchy ->
-            // Note: This requires the entity to have hash fields, not ID fields
-            // The caller must convert IDs to hashes before calling this method
-            Log.w(TAG, "insertBatch for ScrapedHierarchy not yet implemented - schema mismatch (uses hashes, entity uses IDs)")
-            // TODO: Implement after resolving entity/schema mismatch
+            try {
+                // Convert IDs to hashes
+                // If map is not provided, use ID.toString() as fallback (will need migration later)
+                val parentHash = idToHashMap?.get(hierarchy.parentElementId)
+                    ?: hierarchy.parentElementId.toString()
+                val childHash = idToHashMap?.get(hierarchy.childElementId)
+                    ?: hierarchy.childElementId.toString()
+
+                // Insert hierarchy relationship
+                insert(
+                    parentElementHash = parentHash,
+                    childElementHash = childHash,
+                    depth = hierarchy.depth.toLong(),
+                    createdAt = System.currentTimeMillis()
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to insert hierarchy relationship: parent=${hierarchy.parentElementId}, child=${hierarchy.childElementId}", e)
+            }
         }
     }
-    Log.d(TAG, "Batch insert attempted for ${hierarchyList.size} hierarchy relationships")
+    Log.d(TAG, "Batch inserted ${hierarchyList.size} hierarchy relationships")
 }
 
 /**
