@@ -12,7 +12,6 @@
 package com.augmentalis.voiceoscore.accessibility
 
 import android.accessibilityservice.AccessibilityService
-import android.accessibilityservice.GestureDescription
 import android.content.Context
 import android.content.pm.PackageManager
 import android.view.WindowManager
@@ -21,90 +20,70 @@ import com.augmentalis.voiceos.cursor.core.CursorOffset
 
 /**
  * Interface providing context for action handlers
- * Abstracts VoiceOSService dependencies for testability and SOLID compliance
+ *
+ * Aggregate interface combining all context interfaces.
+ * Abstracts VoiceOSService dependencies for testability and SOLID compliance.
+ *
+ * ## Interface Segregation Principle (ISP)
+ *
+ * Extends 4 segregated interfaces following Interface Segregation Principle:
+ * - IServiceContext: Service-level operations (accessibility, system services)
+ * - IDatabaseContext: Database access operations
+ * - IUIContext: UI operations (overlays, toasts, vibration)
+ * - ISpeechContext: Speech and cursor operations
+ *
+ * Phase 1: SOLID Refactoring - Interface Segregation
+ * Clients can depend on specific context interfaces instead of this aggregate interface.
  *
  * VOS4 Exception: Interface justified for Dependency Inversion Principle
  * - Allows handlers to depend on abstraction instead of concrete VoiceOSService
  * - Enables testing with mock implementations
  * - Follows SOLID principle: Depend on abstractions, not concretions
+ *
+ * ## Liskov Substitution Principle (LSP) Contract
+ *
+ * All implementations MUST adhere to the following behavioral contracts:
+ *
+ * ### Property Contracts
+ * - context: MUST be valid application context (never null)
+ * - accessibilityService: MUST be active AccessibilityService instance
+ * - windowManager: MUST be valid WindowManager instance
+ *
+ * ### Nullable Return Contracts
+ * - getRootNodeInActiveWindow(): Returns null when no active window
+ * - getSystemService(): Returns null when service not available
+ * - getCursorPosition(): MUST NOT return null (returns default if cursor unavailable)
+ *
+ * ### Boolean Return Contracts
+ * - performGlobalAction(): Returns false when action cannot be performed
+ * - isCursorVisible(): Returns false when cursor feature disabled/unavailable
+ *
+ * ### Exception Behavior
+ * - Methods MUST NOT throw exceptions for normal operation failures
+ * - Only system-level errors should propagate as exceptions
+ * - Service unavailability returns null/false (NOT throws)
+ *
+ * ### Thread Safety
+ * - All methods MUST be callable from any thread
+ * - Implementations handle thread-switching internally as needed
+ * - No blocking operations on main thread
+ *
+ * @see IServiceContext
+ * @see IDatabaseContext
+ * @see IUIContext
+ * @see ISpeechContext
  */
-interface IVoiceOSContext {
+interface IVoiceOSContext :
+    IServiceContext,
+    IDatabaseContext,
+    IUIContext,
+    ISpeechContext {
 
-    /**
-     * Application context
-     */
-    val context: Context
-
-    /**
-     * Accessibility service instance
-     */
-    val accessibilityService: AccessibilityService
-
-    /**
-     * Window manager for display operations
-     */
-    val windowManager: WindowManager
-
-    /**
-     * Package manager for app operations
-     * Note: AccessibilityService already provides this via context.packageManager
-     */
-    fun getPackageManager(): PackageManager = context.packageManager
-
-    /**
-     * Get root accessibility node of active window
-     * @return Root node or null if no active window
-     * Note: AccessibilityService already provides getRootInActiveWindow() method
-     */
-    fun getRootNodeInActiveWindow(): AccessibilityNodeInfo? = accessibilityService.rootInActiveWindow
-
-    /**
-     * Perform global accessibility action
-     * @param action Global action constant from AccessibilityService
-     * @return true if action was performed
-     */
-    fun performGlobalAction(action: Int): Boolean
-
-    /**
-     * Get app launch commands map
-     * @return Map of command strings to package names
-     */
-    fun getAppCommands(): Map<String, String>
-
-    /**
-     * Get system service by name
-     * @param name Service name constant from Context
-     * @return Service instance or null
-     */
-    fun getSystemService(name: String): Any?
-
-    /**
-     * Start activity with given intent
-     * @param intent Intent to start activity
-     */
-    fun startActivity(intent: android.content.Intent)
-
-    /**
-     * Show toast message to user
-     * @param message Message to display
-     */
-    fun showToast(message: String)
-
-    /**
-     * Vibrate device
-     * @param duration Duration in milliseconds
-     */
-    fun vibrate(duration: Long)
-
-    /**
-     * Check if cursor is currently visible
-     * @return true if cursor is visible, false otherwise
-     */
-    fun isCursorVisible(): Boolean
-
-    /**
-     * Get current cursor position
-     * @return CursorOffset with current X,Y coordinates
-     */
-    fun getCursorPosition(): CursorOffset
+    // All methods inherited from segregated interfaces:
+    // - IServiceContext: context, accessibilityService, getPackageManager(), getRootNodeInActiveWindow(), performGlobalAction(), getSystemService()
+    // - IDatabaseContext: getDatabaseManager()
+    // - IUIContext: windowManager, showToast(), vibrate()
+    // - ISpeechContext: getAppCommands(), startActivity(), isCursorVisible(), getCursorPosition()
+    //
+    // No additional methods needed - this is a pure aggregate interface for backward compatibility
 }

@@ -467,6 +467,27 @@ class LearnAppRepository(
 
 /**
  * Generic repository result type
+ *
+ * ## Liskov Substitution Principle (LSP) Contract
+ *
+ * All implementations MUST follow these behavioral contracts:
+ *
+ * ### Success Case
+ * - MUST contain valid non-null value of type T
+ * - Indicates operation completed successfully
+ * - Value MUST be in valid state (all invariants satisfied)
+ *
+ * ### Failure Case
+ * - MUST contain descriptive reason string (non-empty)
+ * - Cause MAY be null if exception not available
+ * - If cause is present, reason SHOULD include cause message
+ * - MUST NOT be used for expected conditions (use Success with appropriate value)
+ *
+ * ### Exception Handling Guarantees
+ * - Repository methods MUST catch exceptions and return Failure (NOT propagate)
+ * - Database errors wrapped in Failure with clear message
+ * - Constraint violations wrapped in Failure with details
+ * - Only system-level errors should propagate as exceptions
  */
 sealed class RepositoryResult<T> {
     data class Success<T>(val value: T) : RepositoryResult<T>()
@@ -478,6 +499,25 @@ sealed class RepositoryResult<T> {
 
 /**
  * Result of session creation operation
+ *
+ * ## Liskov Substitution Principle (LSP) Contract
+ *
+ * ### Created Case
+ * - MUST return when session created successfully
+ * - sessionId MUST be unique and non-empty
+ * - appWasCreated indicates if parent app was auto-created (true) or existed (false)
+ * - metadataSource MAY be null if metadata not available
+ *
+ * ### Failed Case
+ * - MUST return when session creation fails (NOT throw exception)
+ * - reason MUST be descriptive (e.g., "App with package 'X' not found")
+ * - cause MAY be null if exception not available
+ * - Database errors MUST be wrapped (FK violations, constraint failures, etc.)
+ *
+ * ### Threading Guarantees
+ * - createExplorationSessionSafe() is thread-safe via mutex
+ * - Prevents race conditions in auto-app-creation logic
+ * - Transaction guarantees ACID properties
  */
 sealed class SessionCreationResult {
     data class Created(

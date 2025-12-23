@@ -91,8 +91,10 @@ interface IVoiceOSServiceInternal : IVoiceOSContext {
      * Get database manager
      * Handles all database operations
      * @return DatabaseManager instance
+     *
+     * Overrides IDatabaseContext.getDatabaseManager()
      */
-    fun getDatabaseManager(): DatabaseManager
+    override fun getDatabaseManager(): DatabaseManager
 
     /**
      * Get IPC manager

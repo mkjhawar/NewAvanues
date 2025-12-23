@@ -22,16 +22,54 @@ import kotlinx.coroutines.flow.Flow
  * - Stream recognition results in real-time
  * - Provide confidence scores
  * - Support continuous and single-shot recognition
+ *
+ * ## Liskov Substitution Principle (LSP) Contract
+ *
+ * All implementations MUST adhere to the following behavioral contracts:
+ *
+ * ### Lifecycle Contracts
+ * - initialize() MUST be called before any other operations
+ * - isReady() MUST return false until initialize() succeeds
+ * - startRecognition() MUST fail if isReady() returns false
+ * - release() MUST cleanup all resources and make engine unusable
+ * - Multiple initialize() calls without release() MUST be handled gracefully
+ *
+ * ### State Consistency
+ * - Engine state transitions: UNINITIALIZED -> INITIALIZED -> LISTENING -> STOPPED
+ * - stopRecognition() when not listening is no-op (NOT error)
+ * - release() transitions to UNINITIALIZED state
+ *
+ * ### Exception Behavior
+ * - initialize() returns false on failure (NOT throw)
+ * - startRecognition() emits RecognitionResult.Error on failure
+ * - Network errors emit RecognitionResult.Error (NOT throw)
+ * - Permission errors emit RecognitionResult.Error with PERMISSION_DENIED code
+ *
+ * ### Thread Safety
+ * - All methods MUST be thread-safe
+ * - Flow emissions MUST be synchronized
+ * - State changes MUST be atomic
  */
 interface SpeechEnginePluginInterface {
 
     /**
      * Plugin manifest with metadata
+     *
+     * ## LSP Contract:
+     * - MUST be immutable after construction
+     * - MUST contain valid plugin metadata
      */
     val manifest: PluginManifest
 
     /**
      * Engine metadata
+     *
+     * @return SpeechEngineInfo with engine capabilities
+     *
+     * ## LSP Contract:
+     * - MUST return same info on every call (immutable)
+     * - MUST accurately reflect engine capabilities
+     * - MUST be callable before initialization
      */
     fun provideEngineInfo(): SpeechEngineInfo
 
@@ -40,12 +78,30 @@ interface SpeechEnginePluginInterface {
      *
      * @param context Android context
      * @param config Engine configuration
-     * @return true if initialization succeeded
+     * @return true if initialization succeeded, false otherwise
+     *
+     * ## LSP Contract:
+     * - MUST return true only if engine is ready to recognize speech
+     * - MUST return false on failure (NOT throw exception)
+     * - MUST be idempotent (safe to call multiple times)
+     * - MUST make isReady() return true only after successful initialization
+     * - MUST handle missing permissions gracefully (return false)
+     * - MUST handle missing models gracefully (return false)
+     * - Network errors during init MUST return false
      */
     suspend fun initialize(context: Context, config: SpeechEngineConfig): Boolean
 
     /**
      * Check if engine is initialized and ready
+     *
+     * @return true if ready to recognize speech, false otherwise
+     *
+     * ## LSP Contract:
+     * - MUST return false before initialize() succeeds
+     * - MUST return true after successful initialize()
+     * - MUST return false after release()
+     * - MUST be thread-safe
+     * - MUST NOT throw exceptions
      */
     fun isReady(): Boolean
 
@@ -55,11 +111,29 @@ interface SpeechEnginePluginInterface {
      * @param mode Recognition mode (continuous or single-shot)
      * @param language Target language code (e.g., "en-US")
      * @return Flow of recognition results
+     *
+     * ## LSP Contract:
+     * - MUST emit RecognitionResult.Listening when recognition starts
+     * - MUST emit RecognitionResult.Partial for intermediate results (if supported)
+     * - MUST emit RecognitionResult.Final for final results
+     * - MUST emit RecognitionResult.Error on failures (NOT throw)
+     * - MUST emit RecognitionResult.Stopped when recognition ends
+     * - Flow MUST NOT complete until stopRecognition() or error
+     * - MUST emit Error(NOT_INITIALIZED) if isReady() returns false
+     * - MUST emit Error(UNSUPPORTED_LANGUAGE) for unsupported languages
+     * - MUST be safe to collect from any thread
      */
     fun startRecognition(mode: RecognitionMode, language: String): Flow<RecognitionResult>
 
     /**
      * Stop speech recognition
+     *
+     * ## LSP Contract:
+     * - MUST be idempotent (safe to call when not listening)
+     * - MUST cause recognition Flow to emit Stopped
+     * - MUST NOT throw exceptions
+     * - MUST be thread-safe
+     * - MUST complete quickly (non-blocking)
      */
     suspend fun stopRecognition()
 
@@ -67,6 +141,13 @@ interface SpeechEnginePluginInterface {
      * Set custom vocabulary for better recognition
      *
      * @param vocabulary List of words/phrases to prioritize
+     *
+     * ## LSP Contract:
+     * - MUST handle empty list gracefully (no-op or reset to defaults)
+     * - MUST be no-op if engine doesn't support custom vocabulary
+     * - MUST NOT throw on unsupported feature
+     * - Can be called while recognizing (updates dynamically)
+     * - MUST be thread-safe
      */
     suspend fun setVocabulary(vocabulary: List<String>)
 
@@ -74,11 +155,27 @@ interface SpeechEnginePluginInterface {
      * Get supported languages
      *
      * @return List of language codes this engine supports
+     *
+     * ## LSP Contract:
+     * - MUST return non-empty list (engine must support at least one language)
+     * - MUST be callable before initialization
+     * - MUST return same list on every call (immutable)
+     * - Language codes MUST follow BCP-47 (e.g., "en-US", "es-MX")
+     * - MUST be thread-safe
      */
     fun getSupportedLanguages(): List<LanguageInfo>
 
     /**
      * Release engine resources
+     *
+     * ## LSP Contract:
+     * - MUST stop any ongoing recognition
+     * - MUST release all native resources
+     * - MUST make isReady() return false
+     * - MUST be idempotent (safe to call multiple times)
+     * - MUST NOT throw exceptions
+     * - After release(), initialize() can be called again
+     * - MUST be thread-safe
      */
     suspend fun release()
 }

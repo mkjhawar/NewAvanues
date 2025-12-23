@@ -19,55 +19,96 @@ import com.augmentalis.voiceoscore.learnapp.database.entities.ScreenStateEntity
 /**
  * LearnApp DAO Interface
  *
- * Defines database operations for LearnApp functionality.
+ * Aggregate interface combining all LearnApp database operations.
  * This is an interface layer over SQLDelight - implementations use
  * SQLDelight queries rather than Room annotations.
  *
+ * ## Interface Segregation Principle (ISP)
+ *
+ * Extends 4 segregated interfaces following Interface Segregation Principle:
+ * - ILearnedAppOperations: Learned app CRUD operations
+ * - ISessionOperations: Exploration session operations
+ * - INavigationOperations: Navigation graph operations
+ * - IScreenStateOperations: Screen state operations
+ *
+ * Phase 1: SOLID Refactoring - Interface Segregation
+ * Clients can depend on specific interfaces instead of this aggregate interface.
+ *
+ * ## Liskov Substitution Principle (LSP) Contract
+ *
+ * All implementations MUST adhere to the following behavioral contracts:
+ *
+ * ### Thread Safety
+ * - All methods are suspend functions that MUST be called from coroutines
+ * - Implementations MUST handle concurrent access safely
+ * - Transaction blocks MUST provide ACID guarantees
+ *
+ * ### Exception Behavior
+ * - Implementations MUST NOT throw exceptions for normal operation failures
+ * - Query methods return null when entity not found (NOT throwing)
+ * - Transaction failures should propagate exceptions to caller
+ * - Database errors should throw appropriate exceptions with clear messages
+ *
+ * ### Nullable Return Contracts
+ * - Methods returning nullable types return null when entity doesn't exist
+ * - Methods returning collections return empty list (NOT null) when no results
+ * - Primary key lookups (getLearnedApp, getScreenState, etc.) return null if not found
+ *
+ * ### Side Effects
+ * - Insert operations may fail silently if entity already exists (conflict handling)
+ * - Update operations affect only existing entities (no-op if entity doesn't exist)
+ * - Delete operations are idempotent (no error if entity doesn't exist)
+ *
  * @see com.augmentalis.voiceoscore.learnapp.database.LearnAppDatabaseAdapter
+ * @see ILearnedAppOperations
+ * @see ISessionOperations
+ * @see INavigationOperations
+ * @see IScreenStateOperations
  */
-interface LearnAppDao {
+interface LearnAppDao :
+    ILearnedAppOperations,
+    ISessionOperations,
+    INavigationOperations,
+    IScreenStateOperations {
 
     // ========== Transactions ==========
 
     /**
      * Execute operations in a database transaction
      *
+     * Provides ACID guarantees for the block of operations.
+     *
      * @param block Suspend block to execute within transaction
      * @return Result of the block execution
+     * @throws Exception if transaction fails or is rolled back
+     *
+     * ## LSP Contract:
+     * - MUST provide ACID guarantees (Atomicity, Consistency, Isolation, Durability)
+     * - MUST rollback all changes if any operation fails
+     * - MUST be re-entrant safe (nested transactions handled correctly)
+     * - Implementation MUST run on appropriate dispatcher (not Main thread)
      */
     suspend fun <R> transaction(block: suspend LearnAppDao.() -> R): R
 
     // ========== Learned Apps ==========
+    // Note: Core CRUD operations (insertLearnedApp, getLearnedApp, getAllLearnedApps, deleteLearnedApp)
+    // are inherited from ILearnedAppOperations interface
 
-    /**
-     * Insert a new learned app
-     *
-     * @param app LearnedAppEntity to insert
-     */
-    suspend fun insertLearnedApp(app: LearnedAppEntity)
+    // Additional learned app operations:
 
     /**
      * Insert a learned app with minimal fields (for auto-detect mode)
      *
      * @param app LearnedAppEntity to insert
      * @return Row ID of inserted record, or 0 if conflict
+     *
+     * ## LSP Contract:
+     * - MUST return 0 if app already exists (conflict detection)
+     * - MUST return positive value (1+) if insertion succeeds
+     * - MUST NOT throw on conflict
+     * - Used for auto-detection where conflicts are expected
      */
     suspend fun insertLearnedAppMinimal(app: LearnedAppEntity): Long
-
-    /**
-     * Get a learned app by package name
-     *
-     * @param packageName Package name to look up
-     * @return LearnedAppEntity or null if not found
-     */
-    suspend fun getLearnedApp(packageName: String): LearnedAppEntity?
-
-    /**
-     * Get all learned apps
-     *
-     * @return List of all LearnedAppEntity records
-     */
-    suspend fun getAllLearnedApps(): List<LearnedAppEntity>
 
     /**
      * Update app hash after re-learning
@@ -75,6 +116,12 @@ interface LearnAppDao {
      * @param packageName Package name to update
      * @param newHash New app hash
      * @param timestamp Update timestamp
+     *
+     * ## LSP Contract:
+     * - MUST be no-op if package doesn't exist (NOT throw exception)
+     * - MUST update both hash and timestamp atomically
+     * - MUST be thread-safe
+     * - MUST NOT affect other fields
      */
     suspend fun updateAppHash(packageName: String, newHash: String, timestamp: Long)
 
@@ -84,6 +131,13 @@ interface LearnAppDao {
      * @param packageName Package name to update
      * @param totalScreens New total screens count
      * @param totalElements New total elements count
+     *
+     * ## LSP Contract:
+     * - MUST be no-op if package doesn't exist
+     * - MUST update statistics atomically
+     * - MUST update lastUpdatedAt timestamp automatically
+     * - MUST accept non-negative values only (0+)
+     * - MUST be thread-safe
      */
     suspend fun updateAppStats(packageName: String, totalScreens: Int, totalElements: Int)
 
@@ -91,64 +145,33 @@ interface LearnAppDao {
      * Update a learned app
      *
      * @param app LearnedAppEntity with updated values
+     *
+     * ## LSP Contract:
+     * - MUST be no-op if package doesn't exist
+     * - MUST update all fields except package name (immutable primary key)
+     * - MUST be thread-safe
+     * - Package name is used as lookup key
      */
     suspend fun updateLearnedApp(app: LearnedAppEntity)
 
-    /**
-     * Delete a learned app
-     *
-     * @param app LearnedAppEntity to delete
-     */
-    suspend fun deleteLearnedApp(app: LearnedAppEntity)
-
     // ========== Exploration Sessions ==========
+    // Note: Core CRUD operations (insertExplorationSession, getExplorationSession,
+    // getSessionsForPackage, updateSessionStatus, deleteSessionsForPackage)
+    // are inherited from ISessionOperations interface
 
-    /**
-     * Insert a new exploration session
-     *
-     * @param session ExplorationSessionEntity to insert
-     */
-    suspend fun insertExplorationSession(session: ExplorationSessionEntity)
-
-    /**
-     * Get an exploration session by ID
-     *
-     * @param sessionId Session ID to look up
-     * @return ExplorationSessionEntity or null if not found
-     */
-    suspend fun getExplorationSession(sessionId: String): ExplorationSessionEntity?
-
-    /**
-     * Get all sessions for a package
-     *
-     * @param packageName Package name to look up
-     * @return List of ExplorationSessionEntity records
-     */
-    suspend fun getSessionsForPackage(packageName: String): List<ExplorationSessionEntity>
-
-    /**
-     * Update session status
-     *
-     * @param sessionId Session ID to update
-     * @param status New status
-     * @param completedAt Completion timestamp
-     * @param durationMs Duration in milliseconds
-     */
-    suspend fun updateSessionStatus(sessionId: String, status: String, completedAt: Long, durationMs: Long)
+    // Additional session operations:
 
     /**
      * Delete an exploration session
      *
      * @param session ExplorationSessionEntity to delete
+     *
+     * ## LSP Contract:
+     * - MUST be idempotent (no error if session doesn't exist)
+     * - MUST cascade delete related navigation edges
+     * - MUST be thread-safe
      */
     suspend fun deleteExplorationSession(session: ExplorationSessionEntity)
-
-    /**
-     * Delete all sessions for a package
-     *
-     * @param packageName Package name
-     */
-    suspend fun deleteSessionsForPackage(packageName: String)
 
     /**
      * Get latest session for a package with specific status
@@ -160,13 +183,10 @@ interface LearnAppDao {
     suspend fun getLatestSessionForPackage(packageName: String, status: String): ExplorationSessionEntity?
 
     // ========== Navigation Edges ==========
+    // Note: Core CRUD operations (insertNavigationEdge, getNavigationGraph, deleteNavigationGraph)
+    // are inherited from INavigationOperations interface
 
-    /**
-     * Insert a navigation edge
-     *
-     * @param edge NavigationEdgeEntity to insert
-     */
-    suspend fun insertNavigationEdge(edge: NavigationEdgeEntity)
+    // Additional navigation operations:
 
     /**
      * Insert multiple navigation edges in batch
@@ -174,14 +194,6 @@ interface LearnAppDao {
      * @param edges List of NavigationEdgeEntity to insert
      */
     suspend fun insertNavigationEdges(edges: List<NavigationEdgeEntity>)
-
-    /**
-     * Get navigation graph for a package
-     *
-     * @param packageName Package name
-     * @return List of NavigationEdgeEntity records
-     */
-    suspend fun getNavigationGraph(packageName: String): List<NavigationEdgeEntity>
 
     /**
      * Get outgoing edges from a screen
@@ -208,13 +220,6 @@ interface LearnAppDao {
     suspend fun getEdgesForSession(sessionId: String): List<NavigationEdgeEntity>
 
     /**
-     * Delete navigation graph for a package
-     *
-     * @param packageName Package name
-     */
-    suspend fun deleteNavigationGraph(packageName: String)
-
-    /**
      * Delete navigation edges for a session
      *
      * @param sessionId Session ID
@@ -222,29 +227,10 @@ interface LearnAppDao {
     suspend fun deleteNavigationEdgesForSession(sessionId: String)
 
     // ========== Screen States ==========
+    // Note: Core CRUD operations (insertScreenState, getScreenState, getScreenStatesForPackage)
+    // are inherited from IScreenStateOperations interface
 
-    /**
-     * Insert a screen state
-     *
-     * @param state ScreenStateEntity to insert
-     */
-    suspend fun insertScreenState(state: ScreenStateEntity)
-
-    /**
-     * Get a screen state by hash
-     *
-     * @param hash Screen hash
-     * @return ScreenStateEntity or null if not found
-     */
-    suspend fun getScreenState(hash: String): ScreenStateEntity?
-
-    /**
-     * Get all screen states for a package
-     *
-     * @param packageName Package name
-     * @return List of ScreenStateEntity records
-     */
-    suspend fun getScreenStatesForPackage(packageName: String): List<ScreenStateEntity>
+    // Additional screen state operations:
 
     /**
      * Delete a screen state
