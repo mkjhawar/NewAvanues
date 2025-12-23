@@ -222,13 +222,23 @@ class JitElementCapture(
 
     /**
      * Recursively capture elements from node tree
+     *
+     * FIX (2025-12-22): P-P0-2 - Add depth limit to prevent unbounded traversal
+     * Deeply nested layouts (10+ levels) can cause O(n²) worst case and ANR risk
      */
     private fun captureElementsRecursive(
         node: AccessibilityNodeInfo,
         elements: MutableList<JitCapturedElement>,
         depth: Int,
-        clickableOnly: Boolean = false
+        clickableOnly: Boolean = false,
+        maxDepth: Int = 20  // FIX: Default depth limit to prevent exponential traversal
     ) {
+        // FIX: Check depth limit BEFORE processing
+        if (depth > maxDepth) {
+            Log.w(TAG, "Max depth $maxDepth reached, stopping traversal to prevent ANR")
+            return
+        }
+
         if (elements.size >= MAX_ELEMENTS_PER_SCREEN) return
 
         try {
@@ -245,7 +255,8 @@ class JitElementCapture(
             // Recurse into children
             for (i in 0 until node.childCount) {
                 val child = node.getChild(i) ?: continue
-                captureElementsRecursive(child, elements, depth + 1, clickableOnly)
+                // FIX: Pass maxDepth parameter to recursive call
+                captureElementsRecursive(child, elements, depth + 1, clickableOnly, maxDepth)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Error capturing element at depth $depth", e)

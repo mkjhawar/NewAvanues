@@ -138,6 +138,13 @@ class JustInTimeLearner(
     // FIX (2025-12-11): Event callback for JITLearningService
     private var eventCallback: JITEventCallback? = null
 
+    // FIX (2025-12-22): P-P0-4 - LruCache for hash memoization to prevent O(n×m) computation
+    // Cache scrollable content hashes to avoid recalculating on every screen capture
+    // 5 RecyclerViews × 50 items = 250+ traversals reduced to 5 with caching
+    // Key: node hashCode, Value: content hash string
+    // Size: 100 entries (represents ~10-20 screens of scrollables)
+    private val contentHashCache = android.util.LruCache<Int, String>(100)
+
     /**
      * Event callback interface for JITLearningService integration
      * FIX (2025-12-11): Enables real-time event streaming to LearnApp
@@ -475,10 +482,19 @@ class JustInTimeLearner(
             val scrollables = scrollDetector.findScrollableContainers(rootNode)
 
             if (scrollables.isNotEmpty()) {
-                // Hash visible content in scrollable containers
+                // FIX (2025-12-22): P-P0-4 - Cache hash calculations to prevent O(n×m) recomputation
+                // Check cache before calculating expensive hashes
                 val contentHashes = scrollables.mapNotNull { scrollable ->
                     try {
-                        hashVisibleContent(scrollable)
+                        val nodeId = System.identityHashCode(scrollable)
+
+                        // Check cache first
+                        contentHashCache.get(nodeId) ?: run {
+                            // Cache miss - calculate and cache
+                            val hash = hashVisibleContent(scrollable)
+                            hash?.let { contentHashCache.put(nodeId, it) }
+                            hash
+                        }
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to hash scrollable content: ${e.message}")
                         null
@@ -740,19 +756,26 @@ class JustInTimeLearner(
             try {
                 var commandCount = 0
 
+                // FIX (2025-12-22): P-P0-1 - Batch check existence to prevent N+1 query pattern
+                // Collect all elementHashes and query once instead of per-element
+                val elementHashes = elements.map { it.elementHash }
+                val existingHashes = databaseManager.generatedCommands
+                    .batchCheckExistence(elementHashes)
+                    .executeAsList()
+                    .toSet()  // O(1) lookup
+
                 // If LearnAppCore is available, use it (new path)
                 learnAppCore?.let { core ->
                     for (element in elements) {
                         // Convert to ElementInfo
                         val elementInfo = element.toElementInfo()
 
-                        // Check if command already exists (deduplication)
+                        // FIX: Use batch-queried set for O(1) lookup
                         val label = element.text
                             ?: element.contentDescription
                             ?: element.viewIdResourceName?.substringAfterLast("/")
                         if (label != null && label.length >= 2) {
-                            val existingCommands = databaseManager.generatedCommands.fuzzySearch(label)
-                            val existing = existingCommands.any { it.elementHash == element.elementHash }
+                            val existing = element.elementHash in existingHashes
 
                             if (!existing) {
                                 // Use LearnAppCore to process element
@@ -773,6 +796,7 @@ class JustInTimeLearner(
                     }
                 } ?: run {
                     // Fallback to old logic if LearnAppCore not provided (backward compatibility)
+                    // FIX: Already queried existingHashes above, reuse it here
                     val timestamp = System.currentTimeMillis()
 
                     // Get app version for version-aware commands
@@ -795,8 +819,8 @@ class JustInTimeLearner(
                         }
 
                         val commandText = "$actionType $label".lowercase()
-                        val existingCommands = databaseManager.generatedCommands.fuzzySearch(commandText)
-                        val existing = existingCommands.any { it.elementHash == element.elementHash }
+                        // FIX: Reuse batch-queried set for O(1) lookup (already queried above)
+                        val existing = element.elementHash in existingHashes
 
                         if (!existing) {
                             val commandDTO = GeneratedCommandDTO(
