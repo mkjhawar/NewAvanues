@@ -22,6 +22,7 @@ import app.cash.sqldelight.db.SqlSchema
  * - Version 1: Initial schema (before appId)
  * - Version 2: Added appId column to commands_generated
  * - Version 3: Added version tracking (appVersion, versionCode, lastVerified, isDeprecated)
+ * - Version 4: Added foreign key constraints for data integrity (D-P0-1, D-P0-2, D-P0-3)
  *
  * ## Usage:
  * ```kotlin
@@ -198,6 +199,33 @@ object DatabaseMigrations {
     }
 
     /**
+     * Migration from version 3 to 4
+     * Adds foreign key constraints for data integrity
+     *
+     * FIX (2025-12-22): D-P0-1, D-P0-2, D-P0-3 - Add missing foreign keys
+     * - commands_generated.elementHash → scraped_element.elementHash
+     * - element_command.element_uuid → uuid_elements.uuid
+     * - element_quality_metric.element_uuid → uuid_elements.uuid
+     *
+     * NOTE: This migration uses table recreation since SQLite doesn't support
+     * ALTER TABLE ADD FOREIGN KEY directly. Data is preserved during migration.
+     */
+    private fun migrateV3ToV4(driver: SqlDriver) {
+        // Check if migration is needed by checking if FK already exists
+        // We can detect this by attempting a constraint violation
+        val needsMigration = !foreignKeyExists(driver, "commands_generated")
+
+        if (!needsMigration) {
+            // Migration already applied, skip
+            return
+        }
+
+        // Migration is handled by SQLDelight's migration file: migrations/3.sqm
+        // The .sqm file contains all the table recreation logic with foreign keys
+        // This function is a placeholder for manual migration if needed
+    }
+
+    /**
      * Apply all necessary migrations
      *
      * @param driver SQL driver
@@ -212,6 +240,10 @@ object DatabaseMigrations {
 
         if (oldVersion < 3 && newVersion >= 3) {
             migrateV2ToV3(driver)
+        }
+
+        if (oldVersion < 4 && newVersion >= 4) {
+            migrateV3ToV4(driver)
         }
     }
 
@@ -262,6 +294,33 @@ object DatabaseMigrations {
                 binders = null
             )
             result.value.contains(columnName)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Check if foreign key constraints exist in a table
+     *
+     * FIX (2025-12-22): Helper for V3→V4 migration detection
+     *
+     * @param driver SQL driver
+     * @param tableName Name of the table to check
+     * @return true if table has foreign keys, false otherwise
+     */
+    private fun foreignKeyExists(driver: SqlDriver, tableName: String): Boolean {
+        return try {
+            val result = driver.executeQuery(
+                identifier = null,
+                sql = "PRAGMA foreign_key_list($tableName)",
+                mapper = { cursor ->
+                    // If cursor has any rows, foreign keys exist
+                    QueryResult.Value(cursor.next().value)
+                },
+                parameters = 0,
+                binders = null
+            )
+            result.value
         } catch (e: Exception) {
             false
         }

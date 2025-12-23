@@ -899,6 +899,10 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             isServiceReady = true
             Log.i(TAG, "All components initialized with optimization")
 
+            // FIX (2025-12-22): L-P0-3 - Process events queued during service initialization
+            // Events arriving before isServiceReady=true were queued, now process them
+            processQueuedEvents()
+
             // Log performance metrics
             logPerformanceMetrics()
 
@@ -912,7 +916,16 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (!isServiceReady || event == null) return
+        if (event == null) return
+
+        // FIX (2025-12-22): L-P0-3 - Queue events during service initialization
+        // Events arriving before isServiceReady=true should be queued, not dropped
+        // This prevents event loss during the ~500-1000ms initialization window
+        if (!isServiceReady) {
+            queueEvent(event)
+            Log.d(TAG, "LEARNAPP_DEBUG: Service not ready, event queued (queue size=${pendingEvents.size})")
+            return
+        }
 
         // Phase 3E: Adaptive event filtering based on memory pressure
         // Drop low-priority events (scrolling, focus) under memory pressure
