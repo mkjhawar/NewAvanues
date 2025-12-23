@@ -90,11 +90,5 @@ android {
     }
 }
 
-publishing {
-    repositories {
-        maven {
-            name = "Local"
-            url = uri("${rootProject.projectDir}/../../../.m2/repository")
-        }
-    }
-}
+// Publishing configuration removed to comply with centralized repository management
+// (repositoriesMode = FAIL_ON_PROJECT_REPOS in settings.gradle.kts)
