@@ -292,3 +292,71 @@ object AnimationTokens {
     const val DurationLong: Int = 500
     const val DurationExtraLong: Int = 1000
 }
+
+// ===== RESPONSIVE TOKENS =====
+
+/**
+ * Responsive breakpoint values and device-specific tokens
+ * Based on Material Design 3 breakpoint system
+ */
+object ResponsiveTokens {
+    // Breakpoint thresholds (in DP)
+    val BreakpointXS: Dp = 0.dp      // <600dp width (phones in portrait)
+    val BreakpointSM: Dp = 600.dp    // 600-839dp width (tablets in portrait, phones in landscape)
+    val BreakpointMD: Dp = 840.dp    // 840-1239dp width (tablets in landscape, small desktops)
+    val BreakpointLG: Dp = 1240.dp   // 1240-1439dp width (desktops)
+    val BreakpointXL: Dp = 1440.dp   // ≥1440dp width (large desktops)
+
+    // Device-specific spacing
+    object SpacingByDevice {
+        // Phone spacing
+        val PhoneCompact: Dp = 8.dp
+        val PhoneMedium: Dp = 16.dp
+        val PhoneLarge: Dp = 24.dp
+
+        // Tablet spacing
+        val TabletCompact: Dp = 16.dp
+        val TabletMedium: Dp = 24.dp
+        val TabletLarge: Dp = 32.dp
+
+        // Desktop spacing
+        val DesktopCompact: Dp = 24.dp
+        val DesktopMedium: Dp = 32.dp
+        val DesktopLarge: Dp = 48.dp
+    }
+
+    // Content max widths by breakpoint
+    object MaxContentWidth {
+        val XS: Dp = 360.dp   // Phone portrait
+        val SM: Dp = 600.dp   // Phone landscape / small tablet
+        val MD: Dp = 840.dp   // Tablet
+        val LG: Dp = 1240.dp  // Desktop
+        val XL: Dp = 1440.dp  // Large desktop
+    }
+
+    // Grid columns by breakpoint
+    object GridColumns {
+        const val XS: Int = 4    // Phone
+        const val SM: Int = 8    // Tablet portrait
+        const val MD: Int = 12   // Tablet landscape
+        const val LG: Int = 12   // Desktop
+        const val XL: Int = 12   // Large desktop
+    }
+
+    // Margin/Gutter sizes by breakpoint
+    object MarginsByBreakpoint {
+        val XS: Dp = 16.dp
+        val SM: Dp = 24.dp
+        val MD: Dp = 24.dp
+        val LG: Dp = 32.dp
+        val XL: Dp = 32.dp
+    }
+
+    object GuttersByBreakpoint {
+        val XS: Dp = 16.dp
+        val SM: Dp = 24.dp
+        val MD: Dp = 24.dp
+        val LG: Dp = 24.dp
+        val XL: Dp = 24.dp
+    }
+}
