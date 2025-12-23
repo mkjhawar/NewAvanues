@@ -19,6 +19,7 @@ package com.augmentalis.voiceoscore.learnapp.subscription
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import com.augmentalis.voiceoscore.BuildConfig
 
 /**
  * Feature Gate Manager
@@ -98,9 +99,19 @@ class FeatureGateManager(
      * Check if developer override is enabled
      *
      * Default: TRUE (all features unlocked for testing)
+     *
+     * Production Safety: Developer override is ALWAYS disabled in release builds.
+     * In release builds (BuildConfig.DEBUG == false), this returns false regardless
+     * of the preference value, ensuring subscription enforcement cannot be bypassed.
      */
     fun isDeveloperOverrideEnabled(): Boolean {
-        return prefs.getBoolean(KEY_DEV_OVERRIDE, true)  // Default TRUE
+        // Production safety: Force disable in release builds
+        if (!BuildConfig.DEBUG) {
+            return false
+        }
+
+        // Debug builds: Respect user preference (default TRUE for testing)
+        return prefs.getBoolean(KEY_DEV_OVERRIDE, true)
     }
 
     /**

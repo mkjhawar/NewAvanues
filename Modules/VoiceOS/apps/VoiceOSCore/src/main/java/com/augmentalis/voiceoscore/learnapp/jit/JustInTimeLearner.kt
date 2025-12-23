@@ -17,6 +17,7 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
+import java.security.MessageDigest
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.voiceoscore.accessibility.IVoiceOSServiceInternal
@@ -508,7 +509,7 @@ class JustInTimeLearner(
 
         // MD5 hash for compact representation
         return try {
-            val digest = java.security.MessageDigest.getInstance("MD5")
+            val digest = MessageDigest.getInstance("MD5")
             val hashBytes = digest.digest(signature.toByteArray())
             hashBytes.joinToString("") { "%02x".format(it) }.take(8)  // First 8 chars
         } catch (e: Exception) {
