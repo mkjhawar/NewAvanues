@@ -26,6 +26,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.app.NotificationCompat
+import java.util.concurrent.ConcurrentHashMap
 import com.augmentalis.voiceoscore.learnapp.detection.ExpandableControlDetector
 import com.augmentalis.voiceoscore.learnapp.elements.ElementClassifier
 import com.augmentalis.voiceoscore.learnapp.fingerprinting.ScreenStateManager
@@ -226,10 +227,14 @@ class ExplorationEngine(
      *
      * UPDATE (2025-12-08): Added blocked VUID tracking for separate stats display
      * Format: "XX% of Non-Blocked screens (XX/YYY), ##% of non-blocked entries (aa of zz clickable items)"
+     *
+     * FIX (2025-12-22): C-P1-1 - Use ConcurrentHashMap.newKeySet() for thread safety
+     * Multiple threads (AccessibilityService, Main, Dispatchers.Default) access these sets concurrently
+     * mutableSetOf() is NOT thread-safe → race conditions in VUID tracking
      */
-    private val cumulativeDiscoveredVuids = mutableSetOf<String>()  // All discovered element VUIDs (clickable only)
-    private val cumulativeClickedVuids = mutableSetOf<String>()      // All clicked element VUIDs
-    private val cumulativeBlockedVuids = mutableSetOf<String>()      // All blocked (critical dangerous) VUIDs
+    private val cumulativeDiscoveredVuids = ConcurrentHashMap.newKeySet<String>()  // Thread-safe discovered VUIDs
+    private val cumulativeClickedVuids = ConcurrentHashMap.newKeySet<String>()      // Thread-safe clicked VUIDs
+    private val cumulativeBlockedVuids = ConcurrentHashMap.newKeySet<String>()      // Thread-safe blocked VUIDs
 
     /**
      * Expandable control detector - identifies dropdowns, menus, etc.

@@ -40,8 +40,46 @@ class LearnAppRepository(
 ) {
     private val packageMutexes = ConcurrentHashMap<String, Mutex>()
 
+    /**
+     * FIX (2025-12-22): C-P1-3 - Global transaction mutex for cross-package operations
+     *
+     * Per-package mutexes don't protect against cross-package FK violations.
+     * Example: Thread 1 deletes element from packageA while Thread 2 inserts
+     * command referencing that element from packageB.
+     *
+     * Use this mutex for operations that might span multiple packages:
+     * - Batch operations across apps
+     * - FK-dependent operations where referenced entity is in different package
+     * - Global cleanup operations
+     */
+    private val globalTransactionMutex = Mutex()
+
     private fun getMutexForPackage(packageName: String): Mutex {
         return packageMutexes.getOrPut(packageName) { Mutex() }
+    }
+
+    /**
+     * Execute block with global transaction lock (for cross-package operations)
+     *
+     * Use when operation might affect multiple packages or have cross-package FK dependencies.
+     */
+    private suspend fun <T> withGlobalLock(block: suspend () -> T): T {
+        return globalTransactionMutex.withLock {
+            block()
+        }
+    }
+
+    /**
+     * Execute block with both package and global locks (safest, but slower)
+     *
+     * Use for critical operations that require both package isolation and global consistency.
+     */
+    private suspend fun <T> withPackageAndGlobalLock(packageName: String, block: suspend () -> T): T {
+        return globalTransactionMutex.withLock {
+            getMutexForPackage(packageName).withLock {
+                block()
+            }
+        }
     }
 
     // ========== Learned Apps ==========
