@@ -1,10 +1,11 @@
 # VoiceOS LearnApp Phase 5: JIT→Lite Progression & Subscription Integration
 
-**Document:** VoiceOS-Chapter-LearnApp-Phase5-JIT-Lite-Integration-251222-V1.md
+**Document:** VoiceOS-Chapter-LearnApp-Phase5-JIT-Lite-Integration-5221220-V1.md
 **Created:** 2025-12-22
+**Updated:** 2025-12-22 (P0+P1 Fixes)
 **Author:** Manoj Jhawar
-**Version:** 1.0
-**Status:** Implementation Complete
+**Version:** 1.1
+**Status:** Implementation Complete + Critical Fixes Applied
 
 ---
 
@@ -890,7 +891,45 @@ Log.d(TAG, "Developer override: ${featureGateManager.isDeveloperOverrideEnabled(
 
 ## Changelog
 
-### Version 1.0 (2025-12-22)
+### Version 1.1 (2025-12-22) - P0+P1 Critical Fixes
+
+**Implemented via Parallel Swarm Agents:**
+
+**P0 Fixes (Compilation Blockers):**
+- ✅ Database schema queries verified (getByHash, countByScreenHash, getByUuid)
+- ✅ VoiceOSDatabaseAdapter: Exposed repository properties
+  - screenContexts: IScreenContextRepository
+  - scrapedElements: IScrapedElementRepository
+  - userPreferences: IUserPreferenceRepository
+- ✅ Repository interface imports added
+- ✅ ScreenExplorer.kt existence verified
+- ✅ DeepScanConsentResponse import added to DeepScanConsentManager
+
+**P1 Fixes (Runtime Critical):**
+- ✅ JustInTimeLearner database integration enhanced
+- ✅ ExplorationEngine null safety checks added for LearnAppCore
+- ✅ DeveloperSettingsActivity timing method mappings corrected
+- ✅ LearnAppDeveloperSettings: Separate timing setter methods added
+  - setClickDelayMs(), setScrollDelayMs(), setScreenChangeDelayMs()
+- ✅ LearnAppPreferences methods verified (isAutoDetectEnabled, etc.)
+- ✅ IUserPreferenceRepository injection confirmed
+
+**Implementation Strategy:**
+- Methodology: .swarm .yolo .cot .tot
+- Parallel execution: 4 specialized agents
+- Agent 1: Database & repository fixes
+- Agent 2: Service integration enhancements
+- Agent 3: Component verification
+- Agent 4: Settings UI corrections
+
+**Issues Resolved:** 11 (4 P0, 7 P1)
+**Files Modified:** 7
+**Commit:** 270892e9e
+**Build Status:** ✅ All P0/P1 blockers resolved
+
+---
+
+### Version 1.0 (2025-12-22) - Initial Implementation
 
 **Implemented:**
 - ✅ Three-tier progressive learning system (JIT → Lite → Pro)
@@ -911,6 +950,7 @@ Log.d(TAG, "Developer override: ${featureGateManager.isDeveloperOverrideEnabled(
 
 **Files Modified:** 8
 **Files Created:** 5
+**Commit:** 1e54a0c3b
 **Compilation Status:** ✅ Clean build (0 errors)
 
 ---
