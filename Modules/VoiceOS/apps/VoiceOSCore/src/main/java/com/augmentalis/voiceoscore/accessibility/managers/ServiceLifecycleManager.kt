@@ -368,12 +368,28 @@ class ServiceLifecycleManager(
 
     /**
      * Cleanup resources
+     *
+     * FIX (2025-12-22): L-P1-1 - Ensure observer cleanup to prevent memory leaks
+     *
+     * CRITICAL: This method MUST be called in service onDestroy() within a finally block
+     * to prevent lifecycle observer from holding service reference after destroy.
+     *
+     * Usage pattern:
+     * ```kotlin
+     * override fun onDestroy() {
+     *     try {
+     *         // ... other cleanup
+     *     } finally {
+     *         lifecycleManager.cleanup()  // ALWAYS called, even if exceptions occur
+     *     }
+     * }
+     * ```
      */
     fun cleanup() {
         try {
             Log.d(TAG, "Cleaning up ServiceLifecycleManager...")
 
-            // Unregister lifecycle observer
+            // FIX (2025-12-22): L-P1-1 - Remove lifecycle observer to prevent leak
             ProcessLifecycleOwner.get().lifecycle.removeObserver(this)
             Log.i(TAG, "ProcessLifecycleOwner observer unregistered")
 

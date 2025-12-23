@@ -98,6 +98,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -273,6 +274,18 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     // Configuration
     private lateinit var config: ServiceConfiguration
 
+    /**
+     * FIX (2025-12-22): C-P1-4 & L-P1-3 - Thread-safe command caches
+     *
+     * CopyOnWriteArrayList is thread-safe for individual operations,
+     * but compound operations (clear+addAll, compare+update) need synchronization.
+     *
+     * Use cacheLock to synchronize all compound operations.
+     * This fixes both:
+     * - C-P1-4: Atomic compound operations (clear+addAll)
+     * - L-P1-3: Safe access from both Main and Dispatchers.Default threads
+     */
+    private val cacheLock = Any()
     private val nodeCache: MutableList<UIElement> = CopyOnWriteArrayList()
     private val commandCache: MutableList<String> = CopyOnWriteArrayList()
     private val staticCommandCache: MutableList<String> = CopyOnWriteArrayList()
@@ -1054,8 +1067,11 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                         nodeCache.addAll(commands)
 
                         val normalizedCommand = commands.map { element -> element.normalizedText }
-                        commandCache.clear()
-                        commandCache.addAll(normalizedCommand)
+                        // FIX (2025-12-22): C-P1-4 - Synchronize compound operation
+                        synchronized(cacheLock) {
+                            commandCache.clear()
+                            commandCache.addAll(normalizedCommand)
+                        }
                         Log.d(TAG, "SPEECH_TEST: TYPE_WINDOW_CONTENT_CHANGED commandsStr = $commandCache")
                         if (config.verboseLogging) {
                             Log.d(TAG, "Scraped commands for $packageName: $commandCache")
@@ -1088,8 +1104,11 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                         // Update caches on background thread (prevents ANR)
                         nodeCache.clear()
                         nodeCache.addAll(commands)
-                        commandCache.clear()
-                        commandCache.addAll(normalizedCommand)
+                        // FIX (2025-12-22): C-P1-4 - Synchronize compound operation
+                        synchronized(cacheLock) {
+                            commandCache.clear()
+                            commandCache.addAll(normalizedCommand)
+                        }
 
                         Log.d(TAG, "SPEECH_TEST: TYPE_WINDOW_STATE_CHANGED commandsStr (${normalizedCommand.size} commands) = $commandCache")
                         if (config.verboseLogging) {
@@ -1111,8 +1130,11 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                         nodeCache.clear()
                         nodeCache.addAll(commands)
                         val normalizedCommand = commands.map { element -> element.normalizedText }
-                        commandCache.clear()
-                        commandCache.addAll(normalizedCommand)
+                        // FIX (2025-12-22): C-P1-4 - Synchronize compound operation
+                        synchronized(cacheLock) {
+                            commandCache.clear()
+                            commandCache.addAll(normalizedCommand)
+                        }
                         Log.d(TAG, "SPEECH_TEST: TYPE_VIEW_CLICKED commandsStr = $commandCache")
                         if (config.verboseLogging) {
                             Log.d(TAG, "Scraped commands for $packageName: $commandCache")
@@ -1140,19 +1162,22 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                 while (isActive) {
                     delay(COMMAND_CHECK_INTERVAL_MS)
                     if (isVoiceInitialized && System.currentTimeMillis() - lastCommandLoaded > COMMAND_LOAD_DEBOUNCE_MS) {
-                        if (commandCache != allRegisteredDynamicCommands) {
-                            Log.d(TAG, "SPEECH_TEST: registerVoiceCmd commandsStr = $commandCache")
-                            val allCommands = commandCache + staticCommandCache + appsCommand.keys
+                        // FIX (2025-12-22): C-P1-4 - Synchronize check-then-act pattern
+                        synchronized(cacheLock) {
+                            if (commandCache != allRegisteredDynamicCommands) {
+                                Log.d(TAG, "SPEECH_TEST: registerVoiceCmd commandsStr = $commandCache")
+                                val allCommands = commandCache + staticCommandCache + appsCommand.keys
 
-//                            if (BuildConfig.DEBUG) {
-//                                val objectCommand = prettyGson.toJson(allCommands)
-//                                Log.d(TAG, "RegisterVoiceCmd allCommands = $objectCommand")
-//                            }
-                            // FIX (2025-12-11): updateCommands is now suspend, call directly in coroutine
-                            speechEngineManager.updateCommands(allCommands)
-                            allRegisteredDynamicCommands.clear()
-                            allRegisteredDynamicCommands.addAll(commandCache)
-                            lastCommandLoaded = System.currentTimeMillis()
+//                                if (BuildConfig.DEBUG) {
+//                                    val objectCommand = prettyGson.toJson(allCommands)
+//                                    Log.d(TAG, "RegisterVoiceCmd allCommands = $objectCommand")
+//                                }
+                                // FIX (2025-12-11): updateCommands is now suspend, call directly in coroutine
+                                speechEngineManager.updateCommands(allCommands)
+                                allRegisteredDynamicCommands.clear()
+                                allRegisteredDynamicCommands.addAll(commandCache)
+                                lastCommandLoaded = System.currentTimeMillis()
+                            }
                         }
                     }
                 }
