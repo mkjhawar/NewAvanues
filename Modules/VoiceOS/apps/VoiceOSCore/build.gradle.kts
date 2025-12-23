@@ -251,8 +251,23 @@ dependencies {
     implementation(files("${rootDir}/vivoka/vsdk-csdk-asr-2.0.0.aar"))
     implementation(files("${rootDir}/vivoka/vsdk-csdk-core-1.0.1.aar"))
 
+    // Speech Recognition SDKs (SOLID Phase 2: Factory Pattern)
+
+    // Vosk - Offline speech recognition
     implementation("com.alphacephei:vosk-android:0.3.47") {
         exclude(group = "com.google.guava", module = "listenablefuture")
+    }
+
+    // Whisper.cpp - OpenAI Whisper for Android
+    // COMMENTED OUT: Requires manual NDK build and JNI setup
+    // See: https://github.com/ggerganov/whisper.cpp/tree/master/examples/whisper.android.java
+    // TODO: Add whisper.cpp native library and JNI bindings when ready
+    // implementation("com.whispercpp:whisper:0.1.0")  // Not available in Maven Central
+
+    // Azure Cognitive Services - Cloud speech recognition
+    implementation("com.microsoft.cognitiveservices.speech:client-sdk:1.38.0") {
+        exclude(group = "com.google.guava", module = "listenablefuture")
+        exclude(group = "com.google.code.gson", module = "gson")
     }
 
     implementation("com.intuit.sdp:sdp-android:1.1.1")
