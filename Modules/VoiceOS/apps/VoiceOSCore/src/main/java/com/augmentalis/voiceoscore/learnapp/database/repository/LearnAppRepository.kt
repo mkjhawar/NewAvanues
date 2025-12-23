@@ -232,6 +232,16 @@ class LearnAppRepository(
         return dao.getSessionsForPackage(packageName)
     }
 
+    /**
+     * FIX D-P1-2: Delete individual exploration session
+     *
+     * @param sessionId Session ID to delete
+     */
+    suspend fun deleteExplorationSession(sessionId: String) {
+        val session = dao.getExplorationSession(sessionId)
+        session?.let { dao.deleteExplorationSession(it) }
+    }
+
     // ========== Navigation Graph ==========
 
     suspend fun saveNavigationEdge(
@@ -259,6 +269,15 @@ class LearnAppRepository(
 
     suspend fun deleteNavigationGraph(packageName: String) {
         dao.deleteNavigationGraph(packageName)
+    }
+
+    /**
+     * FIX D-P1-2: Delete navigation edges for a specific session
+     *
+     * @param sessionId Session ID whose edges should be deleted
+     */
+    suspend fun deleteNavigationEdgesForSession(sessionId: String) {
+        dao.deleteNavigationEdgesForSession(sessionId)
     }
 
     // ========== Screen States ==========
@@ -304,6 +323,17 @@ class LearnAppRepository(
 
     suspend fun getScreenStatesForPackage(packageName: String): List<ScreenStateEntity> {
         return dao.getScreenStatesForPackage(packageName)
+    }
+
+    /**
+     * FIX D-P1-2: Delete individual screen state
+     *
+     * @param screenHash Screen hash to delete
+     * @param packageName Package name for the screen
+     */
+    suspend fun deleteScreenState(screenHash: String, packageName: String) {
+        val state = dao.getScreenState(screenHash)
+        state?.let { dao.deleteScreenState(it) }
     }
 
     // ========== Statistics ==========

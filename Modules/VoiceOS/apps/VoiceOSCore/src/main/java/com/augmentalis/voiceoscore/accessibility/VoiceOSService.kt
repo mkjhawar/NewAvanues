@@ -1163,17 +1163,25 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                     delay(COMMAND_CHECK_INTERVAL_MS)
                     if (isVoiceInitialized && System.currentTimeMillis() - lastCommandLoaded > COMMAND_LOAD_DEBOUNCE_MS) {
                         // FIX (2025-12-22): C-P1-4 - Synchronize check-then-act pattern
-                        synchronized(cacheLock) {
+                        // FIX (2025-12-22): Prepare data in synchronized block, suspend call outside
+                        val allCommands = synchronized(cacheLock) {
                             if (commandCache != allRegisteredDynamicCommands) {
                                 Log.d(TAG, "SPEECH_TEST: registerVoiceCmd commandsStr = $commandCache")
-                                val allCommands = commandCache + staticCommandCache + appsCommand.keys
+                                commandCache + staticCommandCache + appsCommand.keys
+                            } else {
+                                null  // No update needed
+                            }
+                        }
 
-//                                if (BuildConfig.DEBUG) {
-//                                    val objectCommand = prettyGson.toJson(allCommands)
-//                                    Log.d(TAG, "RegisterVoiceCmd allCommands = $objectCommand")
-//                                }
-                                // FIX (2025-12-11): updateCommands is now suspend, call directly in coroutine
-                                speechEngineManager.updateCommands(allCommands)
+                        // Suspend call outside synchronized block
+                        if (allCommands != null) {
+//                            if (BuildConfig.DEBUG) {
+//                                val objectCommand = prettyGson.toJson(allCommands)
+//                                Log.d(TAG, "RegisterVoiceCmd allCommands = $objectCommand")
+//                            }
+                            // FIX (2025-12-11): updateCommands is now suspend, call directly in coroutine
+                            speechEngineManager.updateCommands(allCommands)
+                            synchronized(cacheLock) {
                                 allRegisteredDynamicCommands.clear()
                                 allRegisteredDynamicCommands.addAll(commandCache)
                                 lastCommandLoaded = System.currentTimeMillis()

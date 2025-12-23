@@ -13,6 +13,7 @@ package com.augmentalis.learnappcore.models
 
 import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
+import androidx.core.util.Pools
 
 /**
  * Exploration Behavior Enum
@@ -456,7 +457,7 @@ data class ElementInfo(
     companion object {
         // FIX (2025-12-22): P-P0-3 - Object pool for Rect to reduce GC pressure
         // 100 elements × 16 bytes = 1.6KB per screen → 90% reduction in allocations
-        private val rectPool = android.util.Pools.SynchronizedPool<Rect>(50)
+        private val rectPool = Pools.SynchronizedPool<Rect>(50)
 
         /**
          * Obtain Rect from pool or create new if pool empty

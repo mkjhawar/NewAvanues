@@ -102,10 +102,12 @@ interface JITLearnerProvider {
     fun getCurrentRootNode(): AccessibilityNodeInfo?
 
     /** Check if screen has been learned */
-    fun hasScreen(screenHash: String): Boolean
+    // FIX L-P1-2 (2025-12-22): Converted to suspend function to eliminate runBlocking ANR risk
+    suspend fun hasScreen(screenHash: String): Boolean
 
     /** Get all learned screen hashes for a package */
-    fun getLearnedScreenHashes(packageName: String): List<String>
+    // FIX L-P1-2 (2025-12-22): Converted to suspend function to eliminate runBlocking ANR risk
+    suspend fun getLearnedScreenHashes(packageName: String): List<String>
 
     /** Set event callback for JIT events */
     fun setEventCallback(callback: JITEventCallback?)
@@ -454,8 +456,11 @@ class JITLearningService : Service() {
 
 
             Log.d(TAG, "Get learned screen hashes for: $packageName")
-            // FIX (2025-12-11): Query from database via provider
-            return learnerProvider?.getLearnedScreenHashes(packageName) ?: emptyList()
+            // FIX L-P1-2 (2025-12-22): Call suspend function with runBlocking in AIDL context
+            // Note: This is acceptable as AIDL binder threads are not the main thread
+            return kotlinx.coroutines.runBlocking {
+                learnerProvider?.getLearnedScreenHashes(packageName) ?: emptyList()
+            }
         }
 
         // ================================================================

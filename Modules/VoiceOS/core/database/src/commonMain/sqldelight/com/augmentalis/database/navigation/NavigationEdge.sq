@@ -96,6 +96,10 @@ ORDER BY timestamp ASC;
 deleteNavigationGraph:
 DELETE FROM navigation_edges WHERE package_name = ?;
 
+-- FIX D-P1-2: Delete navigation edges for a specific session
+deleteNavigationEdgesForSession:
+DELETE FROM navigation_edges WHERE session_id = ?;
+
 -- Count edges for package
 getTotalEdgesForPackage:
 SELECT COUNT(*) FROM navigation_edges WHERE package_name = ?;

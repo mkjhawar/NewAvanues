@@ -56,6 +56,10 @@ WHERE session_id = ?;
 deleteSessionsForPackage:
 DELETE FROM exploration_sessions WHERE package_name = ?;
 
+-- FIX D-P1-2: Delete individual exploration session by session_id
+deleteExplorationSession:
+DELETE FROM exploration_sessions WHERE session_id = ?;
+
 -- Count sessions
 count:
 SELECT COUNT(*) FROM exploration_sessions;

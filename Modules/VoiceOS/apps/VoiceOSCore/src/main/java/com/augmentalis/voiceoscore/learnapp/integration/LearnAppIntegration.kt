@@ -1372,10 +1372,11 @@ class LearnAppIntegration private constructor(
 
     /**
      * Check if screen has been learned
-     * FIX (2025-12-17): Use Dispatchers.Default to avoid blocking Main thread
+     * FIX L-P1-2 (2025-12-22): Converted to suspend function to eliminate runBlocking ANR risk
+     * Now uses proper suspend pattern with withContext(Dispatchers.IO)
      */
-    override fun hasScreen(screenHash: String): Boolean {
-        return kotlinx.coroutines.runBlocking(Dispatchers.Default) {
+    override suspend fun hasScreen(screenHash: String): Boolean {
+        return withContext(Dispatchers.IO) {
             justInTimeLearner.hasScreen(screenHash)
         }
     }
@@ -1383,10 +1384,11 @@ class LearnAppIntegration private constructor(
     /**
      * Get all learned screen hashes for a package
      * FIX (2025-12-11): P2 feature implementation
-     * FIX (2025-12-17): Use Dispatchers.Default to avoid blocking Main thread
+     * FIX L-P1-2 (2025-12-22): Converted to suspend function to eliminate runBlocking ANR risk
+     * Now uses proper suspend pattern with withContext(Dispatchers.IO)
      */
-    override fun getLearnedScreenHashes(packageName: String): List<String> {
-        return kotlinx.coroutines.runBlocking(Dispatchers.Default) {
+    override suspend fun getLearnedScreenHashes(packageName: String): List<String> {
+        return withContext(Dispatchers.IO) {
             try {
                 databaseManager.screenContexts.getByPackage(packageName)
                     .map { it.screenHash }

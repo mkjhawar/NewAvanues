@@ -757,12 +757,18 @@ class JustInTimeLearner(
                 var commandCount = 0
 
                 // FIX (2025-12-22): P-P0-1 - Batch check existence to prevent N+1 query pattern
+                // FIX (2025-12-22): P-P0-1 - Batch check existence to prevent N+1 query pattern
                 // Collect all elementHashes and query once instead of per-element
                 val elementHashes = elements.map { it.elementHash }
-                val existingHashes = databaseManager.generatedCommands
-                    .batchCheckExistence(elementHashes)
-                    .executeAsList()
-                    .toSet()  // O(1) lookup
+                val existingHashes = try {
+                    databaseManager.generatedCommandQueries
+                        .batchCheckExistence(elementHashes)
+                        .executeAsList()
+                        .toSet()  // O(1) lookup
+                } catch (e: Exception) {
+                    Log.w(TAG, "Batch check existence failed, falling back to empty set: ${e.message}")
+                    emptySet()
+                }
 
                 // If LearnAppCore is available, use it (new path)
                 learnAppCore?.let { core ->

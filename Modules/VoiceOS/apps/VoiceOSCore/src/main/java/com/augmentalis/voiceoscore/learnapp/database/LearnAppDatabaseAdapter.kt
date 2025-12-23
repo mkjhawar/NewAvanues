@@ -112,15 +112,20 @@ private class LearnAppDaoAdapter(
      * Unconfined dispatcher can run on Main thread if called from Main thread context,
      * causing ANR. Default dispatcher ensures work is always off Main thread.
      *
+     * FIX (2025-12-22): D-P1-1 - Removed redundant dispatcher switch in transaction method.
+     * The databaseManager.transaction() already handles threading via Dispatchers.Default.
+     * Wrapping it again causes double dispatcher switches and minor performance overhead.
+     * The runBlocking bridge is kept to convert suspend -> non-suspend for transaction block.
+     *
      * NOTE (2025-11-30): All DAO methods use withContext(Dispatchers.IO) even though they are
      * typically called from coroutines. This is INTENTIONAL - it ensures thread safety regardless
      * of the caller's dispatcher context. The overhead of dispatcher switches is negligible
      * compared to database I/O, and this pattern provides a defensive layer of thread safety.
      */
     override suspend fun <R> transaction(block: suspend LearnAppDao.() -> R): R {
-        // Remove outer withContext wrapper - databaseManager.transaction handles threading
+        // FIX D-P1-1: Remove outer dispatcher wrapper - databaseManager.transaction handles threading
         return databaseManager.transaction {
-            runBlocking(Dispatchers.Default) {
+            runBlocking {
                 this@LearnAppDaoAdapter.block()
             }
         }
@@ -307,8 +312,8 @@ private class LearnAppDaoAdapter(
     }
 
     override suspend fun deleteExplorationSession(session: ExplorationSessionEntity) = withContext(Dispatchers.IO) {
-        // Need to add deleteExplorationSession query to ExplorationSession.sq
-        // For now, deleteSessionsForPackage will cascade delete
+        // FIX D-P1-2: Implement delete individual exploration session
+        databaseManager.explorationSessionQueries.deleteExplorationSession(session.sessionId)
     }
 
     override suspend fun deleteSessionsForPackage(packageName: String) = withContext(Dispatchers.IO) {
@@ -419,8 +424,8 @@ private class LearnAppDaoAdapter(
     }
 
     override suspend fun deleteNavigationEdgesForSession(sessionId: String) = withContext(Dispatchers.IO) {
-        // Need to add deleteNavigationEdgesForSession query to NavigationEdge.sq
-        // For now, do nothing (cascade delete from parent session works)
+        // FIX D-P1-2: Implement delete navigation edges for session
+        databaseManager.navigationEdgeQueries.deleteNavigationEdgesForSession(sessionId)
     }
 
     // ========== Screen States ==========
@@ -467,8 +472,8 @@ private class LearnAppDaoAdapter(
     }
 
     override suspend fun deleteScreenState(state: ScreenStateEntity) = withContext(Dispatchers.IO) {
-        // Need to add deleteScreenState query to ScreenState.sq
-        // For now, do nothing (cascade delete from parent app works)
+        // FIX D-P1-2: Implement delete individual screen state
+        databaseManager.screenStateQueries.deleteScreenState(state.screenHash, state.packageName)
     }
 
     override suspend fun deleteScreenStatesForPackage(packageName: String) = withContext(Dispatchers.IO) {
