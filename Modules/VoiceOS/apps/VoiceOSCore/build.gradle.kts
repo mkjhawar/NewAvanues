@@ -246,10 +246,8 @@ dependencies {
     implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))      // From LearnApp
     implementation(project(":Modules:VoiceOS:libraries:VoiceUIElements"))    // From LearnApp
 
-    // Vivoka VSDK
-    implementation(files("${rootDir}/vivoka/vsdk-6.0.0.aar"))
-    implementation(files("${rootDir}/vivoka/vsdk-csdk-asr-2.0.0.aar"))
-    implementation(files("${rootDir}/vivoka/vsdk-csdk-core-1.0.1.aar"))
+    // Vivoka VSDK (via wrapper module to avoid AAR-in-AAR issues)
+    implementation(project(":Modules:VoiceOS:libraries:VivokaSDK"))
 
     // Speech Recognition SDKs (SOLID Phase 2: Factory Pattern)
 
