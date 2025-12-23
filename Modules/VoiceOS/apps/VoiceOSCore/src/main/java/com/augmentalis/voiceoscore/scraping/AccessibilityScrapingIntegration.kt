@@ -418,18 +418,24 @@ class AccessibilityScrapingIntegration(
 
             val commands = commandGenerator.generateCommandsForElements(elementsWithIds.map { it.toDTO() })
 
-            // Validation: Ensure all commands have valid element hashes
-            require(commands.all { it.elementHash.isNotBlank() }) {
-                "All generated commands must have valid element hashes"
+            // CRITICAL FIX: Handle empty commands list (prevents crash in insertBatch)
+            // This can happen when no actionable elements are found (e.g., splash screens, loading screens)
+            if (commands.isEmpty()) {
+                Log.d(TAG, "No commands generated (no actionable elements found)")
+            } else {
+                // Validation: Ensure all commands have valid element hashes
+                require(commands.all { it.elementHash.isNotBlank() }) {
+                    "All generated commands must have valid element hashes"
+                }
+
+                Log.d(TAG, "Generated ${commands.size} commands with valid element hashes")
+
+                // Insert commands
+                databaseManager.generatedCommands.insertBatch(commands)
+
+                // Update command count
+                databaseManager.scrapedAppQueries.updateCommandCount(commands.size.toLong(), appId)
             }
-
-            Log.d(TAG, "Generated ${commands.size} commands with valid element hashes")
-
-            // Insert commands
-            databaseManager.generatedCommands.insertBatch(commands)
-
-            // Update command count
-            databaseManager.scrapedAppQueries.updateCommandCount(commands.size.toLong(), appId)
 
             // ===== PHASE 5: Create/Update Screen Context (Phase 2) =====
             val screenHash = java.security.MessageDigest.getInstance("MD5")
@@ -1251,9 +1257,15 @@ class AccessibilityScrapingIntegration(
                     // Get all elements with real database IDs and convert to DTOs
                     val allElements = databaseManager.scrapedElementQueries.getElementsByAppId(appId).executeAsList()
                     val commands = commandGenerator.generateCommandsForElements(allElements.map { it.toScrapedElementDTO() })
-                    databaseManager.generatedCommands.insertBatch(commands)
-                    databaseManager.scrapedAppQueries.updateCommandCount(commands.size.toLong(), appId)
-                    Log.d(TAG, "Generated ${commands.size} total commands")
+
+                    // CRITICAL FIX: Handle empty commands list (prevents crash in insertBatch)
+                    if (commands.isEmpty()) {
+                        Log.d(TAG, "No commands generated (no actionable elements found)")
+                    } else {
+                        databaseManager.generatedCommands.insertBatch(commands)
+                        databaseManager.scrapedAppQueries.updateCommandCount(commands.size.toLong(), appId)
+                        Log.d(TAG, "Generated ${commands.size} total commands")
+                    }
                 }
 
                 Log.i(TAG, "=== LearnApp Complete: ${elements.size} total, $newCount new, $updatedCount updated ===")

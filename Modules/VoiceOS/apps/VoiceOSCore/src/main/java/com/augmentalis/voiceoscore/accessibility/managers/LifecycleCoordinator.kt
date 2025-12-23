@@ -65,11 +65,20 @@ class LifecycleCoordinator(
      * Register with ProcessLifecycleOwner
      *
      * Call from VoiceOSService.onServiceConnected()
+     *
+     * CRITICAL: Must be called on main thread (Android lifecycle requirement).
+     * Uses runBlocking + Dispatchers.Main to ensure thread safety.
      */
     fun register() {
         try {
             Log.d(TAG, "Registering with ProcessLifecycleOwner...")
-            ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+
+            // CRITICAL FIX: addObserver() must be called on main thread
+            // Android framework enforces this in LifecycleRegistry.enforceMainThreadIfNeeded()
+            kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Main) {
+                ProcessLifecycleOwner.get().lifecycle.addObserver(this@LifecycleCoordinator)
+            }
+
             Log.i(TAG, "✓ Registered with ProcessLifecycleOwner for lifecycle events")
         } catch (e: Exception) {
             Log.e(TAG, "Error registering lifecycle observer", e)
@@ -81,11 +90,20 @@ class LifecycleCoordinator(
      *
      * Call from VoiceOSService.onDestroy()
      * Prevents memory leak (Leak signature: bd0178976084c8549ea1a5e0417e0d6ffe34eaa3)
+     *
+     * CRITICAL: Must be called on main thread (Android lifecycle requirement).
+     * Uses runBlocking + Dispatchers.Main to ensure thread safety.
      */
     fun unregister() {
         try {
             Log.d(TAG, "Unregistering from ProcessLifecycleOwner...")
-            ProcessLifecycleOwner.get().lifecycle.removeObserver(this)
+
+            // CRITICAL FIX: removeObserver() must be called on main thread
+            // Android framework enforces this in LifecycleRegistry.enforceMainThreadIfNeeded()
+            kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Main) {
+                ProcessLifecycleOwner.get().lifecycle.removeObserver(this@LifecycleCoordinator)
+            }
+
             Log.i(TAG, "✓ ProcessLifecycleOwner observer unregistered (memory leak fixed)")
         } catch (e: Exception) {
             Log.e(TAG, "✗ Error unregistering lifecycle observer", e)
