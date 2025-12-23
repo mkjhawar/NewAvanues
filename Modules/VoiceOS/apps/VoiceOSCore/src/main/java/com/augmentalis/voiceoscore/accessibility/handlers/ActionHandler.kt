@@ -42,4 +42,24 @@ interface ActionHandler {
      * @return List of supported action strings
      */
     fun getSupportedActions(): List<String> = emptyList()
+
+    /**
+     * Check if this handler can handle the given action (String overload)
+     *
+     * @param action The action to check
+     * @return True if this handler can handle the action
+     */
+    fun canHandle(action: String): Boolean = true
+
+    /**
+     * Initialize the handler
+     * Called when the handler is registered
+     */
+    fun initialize() {}
+
+    /**
+     * Dispose the handler
+     * Called when the handler is unregistered
+     */
+    fun dispose() {}
 }

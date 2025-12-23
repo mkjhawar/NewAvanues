@@ -61,5 +61,10 @@ enum class ActionCategory {
     /**
      * Accessibility actions (speak, describe, etc.)
      */
-    ACCESSIBILITY
+    ACCESSIBILITY,
+
+    /**
+     * Custom actions (user-defined, extensions, etc.)
+     */
+    CUSTOM
 }

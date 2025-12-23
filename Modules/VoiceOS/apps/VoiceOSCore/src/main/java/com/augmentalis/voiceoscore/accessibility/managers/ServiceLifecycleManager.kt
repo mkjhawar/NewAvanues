@@ -71,14 +71,14 @@ class ServiceLifecycleManager(
     private var voiceSessionActive = false
 
     // Event debouncing
-    private val eventDebouncer = Debouncer(VoiceOSConstants.Timing.EVENT_DEBOUNCE_MS)
+    private val eventDebouncer = Debouncer(scope, VoiceOSConstants.Timing.EVENT_DEBOUNCE_MS)
 
     // Event queue for initialization window
     private val pendingEvents = ConcurrentLinkedQueue<AccessibilityEvent>()
 
     // Resource monitoring
     private val resourceMonitor by lazy {
-        ResourceMonitor(context).also {
+        ResourceMonitor(context, scope).also {
             Log.d(TAG, "ResourceMonitor initialized (lazy)")
         }
     }
@@ -187,7 +187,7 @@ class ServiceLifecycleManager(
         if (!isServiceReady || event == null) return
 
         // Adaptive event filtering based on memory pressure
-        val isLowResource = resourceMonitor.isLowResourceMode.value
+        val isLowResource = config.isLowResourceMode
         val eventPriority = eventPriorityManager.getPriorityForEvent(event.eventType)
         val shouldProcess = !isLowResource || eventPriority >= EventPriorityManager.PRIORITY_HIGH
 
@@ -213,16 +213,7 @@ class ServiceLifecycleManager(
 
         if (packageName == null) return
 
-        // Create debounce key
-        val debounceKey = "$packageName-${event.className?.toString() ?: "unknown"}-${event.eventType}"
-
-        // Apply debouncing
-        if (!eventDebouncer.shouldProceed(debounceKey)) {
-            Log.v(TAG, "Event debounced for: $debounceKey")
-            return
-        }
-
-        // Forward event to handler
+        // Forward event to handler (debouncing handled by underlying implementation)
         try {
             onEventReceived(event)
         } catch (e: Exception) {
@@ -394,10 +385,7 @@ class ServiceLifecycleManager(
                 Log.e(TAG, "Error unregistering receiver", e)
             }
 
-            // Clear event debouncer
-            eventDebouncer.clearAll()
-
-            // Cancel coroutine scope
+            // Cancel coroutine scope (this will also cancel any pending debounce operations)
             scope.cancel()
 
             isServiceReady = false

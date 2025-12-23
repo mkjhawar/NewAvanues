@@ -11,7 +11,7 @@ package com.augmentalis.voiceoscore.accessibility.speech
 // GoogleCloudEngine temporarily disabled
 import android.content.Context
 import android.util.Log
-import com.augmentalis.voiceoscore.accessibility.utils.ConditionalLogger
+import com.augmentalis.voiceoscore.utils.ConditionalLogger
 import com.augmentalis.speechrecognition.SpeechConfig
 import com.augmentalis.speechrecognition.SpeechEngine
 import com.augmentalis.speechrecognition.SpeechMode
@@ -278,12 +278,11 @@ class SpeechEngineManager(private val context: Context) {
             currentEngine = null
 
             // Small delay to ensure cleanup is complete
-                delay(200)
+            delay(200)
 
-            } catch (e: Exception) {
-                Log.e(TAG, "Enhanced cleanup failed", e)
-                // Continue with initialization even if cleanup failed
-            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Enhanced cleanup failed", e)
+            // Continue with initialization even if cleanup failed
         }
     }
 
@@ -709,6 +708,7 @@ class SpeechEngineManager(private val context: Context) {
     }
 
     companion object {
+        private const val TAG = "SpeechEngineManager"
 
         private val STATIC_COMMANDS = listOf(
             // Navigation
@@ -771,7 +771,6 @@ class SpeechEngineManager(private val context: Context) {
             "dictation",
             "end dictation"
         )
-        private const val TAG = "SpeechEngineManager"
     }
 
 }

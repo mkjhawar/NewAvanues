@@ -27,6 +27,7 @@ import android.os.Build
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.app.NotificationCompat
 import com.augmentalis.voiceoscore.learnapp.detection.ExpandableControlDetector
+import com.augmentalis.voiceoscore.learnapp.elements.ElementClassifier
 import com.augmentalis.voiceoscore.learnapp.fingerprinting.ScreenStateManager
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationProgress
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationState
@@ -35,6 +36,7 @@ import com.augmentalis.voiceoscore.learnapp.models.ScreenState
 import com.augmentalis.voiceoscore.learnapp.navigation.NavigationGraphBuilder
 import com.augmentalis.voiceoscore.learnapp.tracking.ElementClickTracker
 import com.augmentalis.voiceoscore.learnapp.detection.LauncherDetector
+import com.augmentalis.voiceoscore.learnapp.ui.ChecklistManager
 import com.augmentalis.voiceoscore.learnapp.window.WindowManager
 import com.augmentalis.voiceoscore.learnapp.window.WindowInfo
 import com.augmentalis.voiceoscore.learnapp.window.WindowType
@@ -236,7 +238,7 @@ class ExplorationEngine(
     /**
      * Checklist manager - real-time element exploration tracking
      */
-    private val checklistManager = ChecklistManager()
+    private val checklistManager = ChecklistManager(context)
     private val expandableDetector = ExpandableControlDetector
 
     /**

@@ -54,20 +54,18 @@ class QualityIndicatorOverlay(
      * Called when screen content changes or overlay is shown.
      */
     fun updateElementQuality() {
-        overlayScope.launch {
-            try {
-                val rootNode = accessibilityService.rootInActiveWindow ?: return@launch
+        try {
+            val rootNode = accessibilityService.rootInActiveWindow ?: return
 
-                // Clear existing scores
-                elementQualityScores.clear()
+            // Clear existing scores
+            elementQualityScores.clear()
 
-                // Scan all visible elements
-                scanNode(rootNode)
+            // Scan all visible elements
+            scanNode(rootNode)
 
-                rootNode.recycle()
-            } catch (e: Exception) {
-                android.util.Log.e("QualityIndicatorOverlay", "Error updating element quality", e)
-            }
+            rootNode.recycle()
+        } catch (e: Exception) {
+            android.util.Log.e("QualityIndicatorOverlay", "Error updating element quality", e)
         }
     }
 
@@ -323,10 +321,5 @@ class QualityIndicatorOverlay(
                 )
             }
         }
-    }
-
-    override fun onOverlayShown() {
-        super.onOverlayShown()
-        updateElementQuality()
     }
 }

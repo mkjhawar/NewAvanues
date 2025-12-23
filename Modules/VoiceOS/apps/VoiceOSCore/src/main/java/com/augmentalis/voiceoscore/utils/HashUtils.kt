@@ -19,13 +19,24 @@ object HashUtils {
      * Calculate a hash for an app based on package name and version
      *
      * @param packageName The app's package name
+     * @param versionCode The app's version code (Int or Long)
+     * @return A hash string representing this app version
+     */
+    fun calculateAppHash(packageName: String, versionCode: Int): String {
+        val input = "$packageName:$versionCode"
+        val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
+        return bytes.joinToString("") { "%02x".format(it) }.substring(0, 16)
+    }
+
+    /**
+     * Calculate a hash for an app based on package name and version (Long overload)
+     *
+     * @param packageName The app's package name
      * @param versionCode The app's version code
      * @return A hash string representing this app version
      */
     fun calculateAppHash(packageName: String, versionCode: Long): String {
-        val input = "$packageName:$versionCode"
-        val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
-        return bytes.joinToString("") { "%02x".format(it) }.substring(0, 16)
+        return calculateAppHash(packageName, versionCode.toInt())
     }
 
     /**

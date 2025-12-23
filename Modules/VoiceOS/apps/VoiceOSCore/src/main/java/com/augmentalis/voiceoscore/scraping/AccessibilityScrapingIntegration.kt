@@ -28,6 +28,7 @@ import com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity
 import com.augmentalis.voiceoscore.scraping.entities.RelationshipType
 import com.augmentalis.voiceoscore.scraping.entities.toDTO
 import com.augmentalis.voiceoscore.database.*  // Extension functions for batch operations
+import com.augmentalis.voiceoscore.utils.HashUtils
 import com.augmentalis.database.dto.toScrapedElementDTO
 import com.augmentalis.uuidcreator.UUIDCreator
 import com.augmentalis.uuidcreator.alias.UuidAliasManager

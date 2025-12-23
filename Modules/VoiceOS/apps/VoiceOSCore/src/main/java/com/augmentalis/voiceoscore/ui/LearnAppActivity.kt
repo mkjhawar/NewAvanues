@@ -58,10 +58,10 @@ import com.augmentalis.voiceoscore.scraping.AccessibilityScrapingIntegration
 import com.augmentalis.voiceoscore.scraping.LearnAppResult
 import com.augmentalis.database.repositories.IScrapedAppRepository
 import com.augmentalis.database.dto.ScrapedAppDTO
-import com.augmentalis.voiceoscore.accessibility.ui.theme.AccessibilityTheme
-import com.augmentalis.voiceoscore.accessibility.ui.utils.DepthLevel
-import com.augmentalis.voiceoscore.accessibility.ui.utils.GlassMorphismConfig
-import com.augmentalis.voiceoscore.accessibility.ui.utils.glassMorphism
+import com.augmentalis.voiceoscore.ui.VoiceOSTheme
+import com.augmentalis.voiceoscore.ui.DepthLevel
+import com.augmentalis.voiceoscore.ui.GlassMorphismConfig
+import com.augmentalis.voiceoscore.ui.glassMorphism
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -78,7 +78,7 @@ class LearnAppActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            AccessibilityTheme {
+            VoiceOSTheme {
                 // TODO: Inject IScrapedAppRepository from DI container or service
                 // For now, this will need to be passed from the service that creates this activity
                 LearnAppScreen(

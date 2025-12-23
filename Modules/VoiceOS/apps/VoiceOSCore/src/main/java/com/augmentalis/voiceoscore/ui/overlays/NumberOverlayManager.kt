@@ -85,15 +85,8 @@ class NumberOverlayManager(
      */
     private fun setupRenderer() {
         renderer = NumberBadgeView(context).apply {
-            setStyle(config.styleVariant.toStyle())
-            setRenderConfig(RenderConfig(
-                hardwareAcceleration = config.hardwareAcceleration,
-                paintPooling = true,
-                cacheTextBounds = true,
-                partialInvalidation = true,
-                maxOverlaysPerFrame = 100,
-                targetFrameTimeMs = 16
-            ))
+            setStyle(config.style)
+            setRenderConfig(config.renderConfig)
         }
 
         layoutParams = createLayoutParams()
@@ -268,24 +261,17 @@ class NumberOverlayManager(
             this@NumberOverlayManager.config = newConfig
 
             // Update renderer style
-            renderer?.setStyle(newConfig.styleVariant.toStyle())
+            renderer?.setStyle(newConfig.style)
 
             // Update render config
-            renderer?.setRenderConfig(RenderConfig(
-                hardwareAcceleration = newConfig.hardwareAcceleration,
-                paintPooling = true,
-                cacheTextBounds = true,
-                partialInvalidation = true,
-                maxOverlaysPerFrame = 100,
-                targetFrameTimeMs = 16
-            ))
+            renderer?.setRenderConfig(newConfig.renderConfig)
 
             // Refresh if showing
             if (isShowing) {
                 renderer?.setOverlays(currentOverlays)
             }
 
-            Log.d(TAG, "Configuration updated: ${newConfig.styleVariant}")
+            Log.d(TAG, "Configuration updated: ${newConfig.renderConfig.styleVariant}")
         }
     }
 
@@ -294,9 +280,9 @@ class NumberOverlayManager(
      */
     fun onWindowFocusChanged(hasFocus: Boolean) {
         scope.launch {
-            if (!hasFocus && config.hideOnWindowFocusLoss) {
+            if (!hasFocus && config.renderConfig.hideOnWindowFocusLoss) {
                 hide()
-            } else if (hasFocus && config.enabled && currentOverlays.isNotEmpty()) {
+            } else if (hasFocus && config.renderConfig.enabled && currentOverlays.isNotEmpty()) {
                 show(currentOverlays)
             }
 

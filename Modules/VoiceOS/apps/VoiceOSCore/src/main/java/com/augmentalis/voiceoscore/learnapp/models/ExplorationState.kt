@@ -1,22 +1,65 @@
 /**
- * ExplorationState.kt - VoiceOS component
+ * ExplorationState.kt - Sealed class representing exploration states
  *
- * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Created: 2025-12-22
+ * Author: Manoj Jhawar
+ * Code-Reviewed-By: CCA
+ * Created: 2025-10-08
+ * Updated: 2025-12-22
  *
- * Defines states for app exploration
+ * Sealed class hierarchy for exploration state machine
  */
+
 package com.augmentalis.voiceoscore.learnapp.models
 
 /**
- * State of the exploration engine
+ * Exploration State
+ *
+ * Represents the current state of app exploration using a state machine pattern.
+ *
+ * ## State Transitions
+ *
+ * ```
+ * Idle → ConsentRequested → Running → Completed
+ *                         ↓           ↓
+ *                    Cancelled    PausedForLogin
+ *                                     ↓
+ *                                 Running
+ *                                     ↓
+ *                                PausedByUser
+ *                                     ↓
+ *                                 Running
+ *                                     ↓
+ *                                  Failed
+ * ```
+ *
+ * @since 1.0.0
  */
 sealed class ExplorationState {
+
     /**
-     * Idle state - not currently exploring
+     * Idle state - no exploration in progress
      */
     object Idle : ExplorationState()
+
+    /**
+     * Consent requested - waiting for user approval
+     *
+     * @property packageName Package name of app requesting consent
+     * @property appName Human-readable app name
+     */
+    data class ConsentRequested(
+        val packageName: String,
+        val appName: String
+    ) : ExplorationState()
+
+    /**
+     * Consent cancelled - user declined to learn app
+     *
+     * @property packageName Package name of declined app
+     */
+    data class ConsentCancelled(
+        val packageName: String
+    ) : ExplorationState()
 
     /**
      * Preparing to start exploration
@@ -26,38 +69,56 @@ sealed class ExplorationState {
     data class Preparing(val packageName: String) : ExplorationState()
 
     /**
-     * Currently running exploration
+     * Running - exploration in progress
      *
-     * @param packageName The app being explored
-     * @param currentScreen Current screen being explored
-     * @param screensExplored Number of screens explored so far
-     * @param elementsProcessed Number of elements processed so far
-     * @param progress Progress percentage (0.0-1.0)
+     * @property packageName Package being explored
+     * @property progress Current progress stats
      */
     data class Running(
         val packageName: String,
-        val currentScreen: String,
-        val screensExplored: Int,
-        val elementsProcessed: Int,
-        val progress: Float
+        val progress: ExplorationProgress
     ) : ExplorationState()
 
     /**
-     * Exploration paused
+     * Paused for login - login screen detected, waiting for user to login
+     *
+     * @property packageName Package being explored
+     * @property progress Progress before pause
+     */
+    data class PausedForLogin(
+        val packageName: String,
+        val progress: ExplorationProgress
+    ) : ExplorationState()
+
+    /**
+     * Paused by user - user manually paused exploration
+     *
+     * @property packageName Package being explored
+     * @property progress Progress before pause
+     */
+    data class PausedByUser(
+        val packageName: String,
+        val progress: ExplorationProgress
+    ) : ExplorationState()
+
+    /**
+     * Exploration paused (generic)
      *
      * @param packageName The app being explored
+     * @param progress Progress before pause
      * @param reason Reason for pause
      */
     data class Paused(
         val packageName: String,
+        val progress: ExplorationProgress,
         val reason: String
     ) : ExplorationState()
 
     /**
-     * Exploration completed successfully
+     * Completed - exploration finished successfully
      *
-     * @param packageName The app that was explored
-     * @param stats Summary statistics
+     * @property packageName Package that was explored
+     * @property stats Final exploration statistics
      */
     data class Completed(
         val packageName: String,
@@ -65,26 +126,15 @@ sealed class ExplorationState {
     ) : ExplorationState()
 
     /**
-     * Exploration failed
+     * Failed - exploration failed due to error
      *
-     * @param packageName The app being explored
-     * @param error Error message
-     * @param throwable Optional exception
+     * @property packageName Package that was being explored
+     * @property error The error that caused failure
+     * @property partialProgress Progress before failure (if any)
      */
     data class Failed(
         val packageName: String,
-        val error: String,
-        val throwable: Throwable? = null
+        val error: Throwable,
+        val partialProgress: ExplorationProgress? = null
     ) : ExplorationState()
 }
-
-/**
- * Statistics from exploration
- */
-data class ExplorationStats(
-    val totalScreens: Int = 0,
-    val totalElements: Int = 0,
-    val commandsGenerated: Int = 0,
-    val durationMs: Long = 0,
-    val errors: Int = 0
-)

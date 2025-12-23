@@ -16,8 +16,8 @@ import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.commandmanager.CommandManager
-import com.augmentalis.commandmanager.models.Command
-import com.augmentalis.commandmanager.models.CommandSource
+import com.augmentalis.voiceos.command.Command
+import com.augmentalis.voiceos.command.CommandSource
 import com.augmentalis.database.ScrapedAppQueries
 import com.augmentalis.database.element.ScrapedElementQueries
 import com.augmentalis.database.GeneratedCommandQueries
@@ -26,6 +26,7 @@ import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.database.dto.toScrapedElementDTO
 import com.augmentalis.database.dto.toGeneratedCommandDTO
 import com.augmentalis.voiceoscore.security.InputValidator
+import com.augmentalis.voiceoscore.utils.HashUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray

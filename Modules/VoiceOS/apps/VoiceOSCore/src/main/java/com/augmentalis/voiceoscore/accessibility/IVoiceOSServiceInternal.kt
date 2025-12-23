@@ -43,9 +43,11 @@ import kotlinx.coroutines.CoroutineScope
  *
  * NOT intended for external use - see IVoiceOSService for public API
  *
+ * Extends IVoiceOSContext to inherit context access methods
+ *
  * Implementation: VoiceOSService
  */
-interface IVoiceOSServiceInternal {
+interface IVoiceOSServiceInternal : IVoiceOSContext {
 
     /**
      * Service context and resources
@@ -57,17 +59,8 @@ interface IVoiceOSServiceInternal {
      */
     fun getApplicationContext(): Context
 
-    /**
-     * Get accessibility service instance
-     * @return AccessibilityService instance
-     */
-    fun getAccessibilityService(): AccessibilityService
-
-    /**
-     * Get window manager
-     * @return WindowManager for overlay operations
-     */
-    fun getWindowManager(): WindowManager
+    // Note: getAccessibilityService() and getWindowManager() are inherited from IVoiceOSContext as properties
+    // The property getters satisfy these method requirements
 
     /**
      * Get service coroutine scope
@@ -109,39 +102,34 @@ interface IVoiceOSServiceInternal {
     fun getIPCManager(): IPCManager
 
     /**
-     * Get speech engine manager
+     * Speech engine manager
      * Manages TTS and speech synthesis
-     * @return SpeechEngineManager instance
      */
-    fun getSpeechEngineManager(): SpeechEngineManager
+    val speechEngineManager: SpeechEngineManager
 
     /**
-     * Get voice recognition manager
-     * Manages voice input and recognition
-     * @return VoiceRecognitionManager instance or null
+     * Voice recognition manager
+     * Manages voice input and recognition (may be null)
      */
-    fun getVoiceRecognitionManager(): VoiceRecognitionManager?
+    val voiceRecognitionManager: VoiceRecognitionManager?
 
     /**
-     * Get UI scraping engine
+     * UI scraping engine
      * Extracts UI elements from accessibility tree
-     * @return UIScrapingEngine instance
      */
-    fun getUIScrapingEngine(): UIScrapingEngine
+    val uiScrapingEngine: UIScrapingEngine
 
     /**
-     * Get overlay manager
+     * Overlay manager
      * Manages all service overlays
-     * @return OverlayManager instance
      */
-    fun getOverlayManager(): OverlayManager
+    val overlayManager: OverlayManager
 
     /**
-     * Get action coordinator
+     * Action coordinator
      * Coordinates complex multi-step actions
-     * @return ActionCoordinator instance
      */
-    fun getActionCoordinator(): ActionCoordinator
+    val actionCoordinator: ActionCoordinator
 
     /**
      * Service state and lifecycle

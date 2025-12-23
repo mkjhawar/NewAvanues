@@ -12,5 +12,17 @@ data class ScreenState(
     val packageName: String,
     val activityName: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
-    val elements: List<Any> = emptyList()
-)
+    val elementCount: Int = 0,
+    val isVisited: Boolean = false,
+    val depth: Int = 0,
+    val elements: List<Any> = emptyList(),
+    val allElements: List<ElementInfo> = emptyList(),
+    val totalElements: Int = 0
+) {
+    /**
+     * Mark screen as visited
+     *
+     * @return New screen state with isVisited = true
+     */
+    fun markAsVisited(): ScreenState = copy(isVisited = true)
+}

@@ -19,6 +19,7 @@ package com.augmentalis.voiceoscore.learnapp.ai.quantized
 import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
+import com.augmentalis.voiceoscore.learnapp.ai.LLMPromptFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

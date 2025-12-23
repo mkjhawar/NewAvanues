@@ -12,19 +12,22 @@
 package com.augmentalis.voiceoscore.learnapp.integration
 
 import android.content.Context
+import android.graphics.PixelFormat
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.Gravity
 import android.view.View
+import android.view.WindowManager
+import android.view.animation.AlphaAnimation
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.augmentalis.voiceoscore.learnapp.exploration.ExplorationEngine
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationState
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationStats
-import com.augmentalis.voiceoscore.learnapp.ui.widgets.WidgetOverlayHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -62,6 +65,7 @@ class CommandDiscoveryIntegration(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
     private var isActive = false
     private var overlayView: View? = null
@@ -138,6 +142,10 @@ class CommandDiscoveryIntegration(
                 Log.d(TAG, "Consent cancelled for package: ${state.packageName}")
             }
 
+            is ExplorationState.Preparing -> {
+                Log.d(TAG, "Preparing exploration for: ${state.packageName}")
+            }
+
             is ExplorationState.Running -> {
                 Log.d(TAG, "Exploration running: ${state.progress.currentScreen}")
             }
@@ -209,19 +217,18 @@ class CommandDiscoveryIntegration(
         val appName = getAppName(packageName)
         overlayView = createDiscoveryOverlayView(appName, stats)
 
-        val params = WidgetOverlayHelper.createOverlayLayoutParams(
+        val params = createOverlayLayoutParams(
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL,
-            y = 100,
-            focusable = false,
-            touchable = true
+            y = 100
         )
 
         overlayView?.let { view ->
-            if (WidgetOverlayHelper.addOverlay(context, view, params)) {
-                WidgetOverlayHelper.fadeIn(view, OVERLAY_FADE_DURATION_MS)
+            try {
+                windowManager.addView(view, params)
+                fadeIn(view, OVERLAY_FADE_DURATION_MS)
                 Log.d(TAG, "Discovery overlay shown for: $appName")
-            } else {
-                Log.e(TAG, "Failed to show discovery overlay")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to show discovery overlay", e)
             }
         }
     }
@@ -238,19 +245,18 @@ class CommandDiscoveryIntegration(
         val appName = getAppName(packageName)
         overlayView = createErrorOverlayView(appName, errorMessage)
 
-        val params = WidgetOverlayHelper.createOverlayLayoutParams(
+        val params = createOverlayLayoutParams(
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL,
-            y = 100,
-            focusable = false,
-            touchable = true
+            y = 100
         )
 
         overlayView?.let { view ->
-            if (WidgetOverlayHelper.addOverlay(context, view, params)) {
-                WidgetOverlayHelper.fadeIn(view, OVERLAY_FADE_DURATION_MS)
+            try {
+                windowManager.addView(view, params)
+                fadeIn(view, OVERLAY_FADE_DURATION_MS)
                 Log.d(TAG, "Error overlay shown for: $appName")
-            } else {
-                Log.e(TAG, "Failed to show error overlay")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to show error overlay", e)
             }
         }
     }
@@ -473,8 +479,12 @@ class CommandDiscoveryIntegration(
         autoHideJob = null
 
         overlayView?.let { view ->
-            WidgetOverlayHelper.fadeOut(view, OVERLAY_FADE_DURATION_MS) {
-                WidgetOverlayHelper.removeOverlay(context, view)
+            fadeOut(view, OVERLAY_FADE_DURATION_MS) {
+                try {
+                    windowManager.removeView(view)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error removing overlay view", e)
+                }
             }
         }
         overlayView = null
@@ -495,6 +505,60 @@ class CommandDiscoveryIntegration(
             Log.w(TAG, "Could not get app name for: $packageName", e)
             packageName.substringAfterLast(".")
         }
+    }
+
+    /**
+     * Create overlay layout parameters.
+     *
+     * @param gravity Gravity for positioning
+     * @param y Y offset from gravity anchor
+     * @return WindowManager.LayoutParams configured for overlay
+     */
+    private fun createOverlayLayoutParams(gravity: Int, y: Int): WindowManager.LayoutParams {
+        return WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                @Suppress("DEPRECATION")
+                WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
+            },
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            this.gravity = gravity
+            this.y = y
+        }
+    }
+
+    /**
+     * Fade in animation for view.
+     *
+     * @param view View to fade in
+     * @param durationMs Animation duration in milliseconds
+     */
+    private fun fadeIn(view: View, durationMs: Long) {
+        val animation = AlphaAnimation(0f, 1f).apply {
+            duration = durationMs
+        }
+        view.startAnimation(animation)
+    }
+
+    /**
+     * Fade out animation for view with completion callback.
+     *
+     * @param view View to fade out
+     * @param durationMs Animation duration in milliseconds
+     * @param onComplete Callback after animation completes
+     */
+    private fun fadeOut(view: View, durationMs: Long, onComplete: () -> Unit) {
+        val animation = AlphaAnimation(1f, 0f).apply {
+            duration = durationMs
+        }
+        view.startAnimation(animation)
+        mainHandler.postDelayed(onComplete, durationMs)
     }
 
     /**

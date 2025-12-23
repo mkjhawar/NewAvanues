@@ -23,6 +23,10 @@ import com.augmentalis.database.dto.QualityMetricDTO
 import com.augmentalis.voiceoscore.accessibility.ui.overlays.BaseOverlay
 import com.augmentalis.voiceoscore.accessibility.ui.overlays.OverlayType
 import com.augmentalis.voiceoscore.commands.ElementCommandManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /**
  * Post-learning overlay that appears after app exploration.
@@ -152,7 +156,7 @@ class PostLearningOverlay(
                     onRecordAudio = { callback ->
                         // Use existing SpeechEngineManager to capture voice command
                         // Speech engine is already listening, just collect next command event
-                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                        CoroutineScope(Dispatchers.Main).launch {
                             try {
                                 // Collect next speech command
                                 speechEngineManager.commandEvents.first { event ->

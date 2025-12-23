@@ -276,7 +276,7 @@ class ElementCommandManager(
     suspend fun batchUpdateQualityMetrics(metrics: List<QualityMetricDTO>) =
         withContext(Dispatchers.IO) {
             metrics.forEach { metric ->
-                qualityRepository.insert(metric)
+                qualityRepository.insertOrUpdate(metric)
 
                 // Update cache
                 cacheMutex.withLock {
@@ -359,7 +359,7 @@ class ElementCommandManager(
                 manualCommandCount = manualCommandCount,
                 commandCount = commands.size
             )
-            qualityRepository.insert(updatedMetric)
+            qualityRepository.insertOrUpdate(updatedMetric)
 
             // Update cache
             cacheMutex.withLock {

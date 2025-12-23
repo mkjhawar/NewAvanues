@@ -15,6 +15,7 @@ import android.content.Context
 import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.GeneratedCommandDTO
@@ -32,6 +33,12 @@ import com.augmentalis.voiceoscore.version.AppVersionDetector
 import com.augmentalis.voiceoscore.version.AppVersion
 import com.augmentalis.voiceoscore.version.ScreenHashCalculator
 import com.augmentalis.database.dto.ScrapedElementDTO
+// Phase 5 (2025-12-22): JIT→Lite progression imports
+import com.augmentalis.voiceoscore.learnapp.subscription.FeatureGateManager
+import com.augmentalis.voiceoscore.learnapp.subscription.LearningMode
+import com.augmentalis.voiceoscore.learnapp.subscription.FeatureGateResult
+import com.augmentalis.voiceoscore.learnapp.ui.DeepScanConsentManager
+import com.augmentalis.voiceoscore.learnapp.detection.ExpandableControlDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -63,6 +70,8 @@ import kotlinx.coroutines.withContext
  * @param voiceOSService Service reference for command registration (nullable for tests)
  * @param versionDetector App version detector for version-aware command creation
  * @param screenHashCalculator Screen hash calculator for rescan optimization (Phase 2 Task 1.1)
+ * @param featureGateManager Feature gate manager for subscription checks (Phase 5: JIT→Lite progression)
+ * @param deepScanConsentManager Deep scan consent manager for user consent (Phase 5: JIT→Lite progression)
  */
 class JustInTimeLearner(
     private val context: Context,
@@ -71,7 +80,9 @@ class JustInTimeLearner(
     private val voiceOSService: IVoiceOSServiceInternal? = null,  // FIX: Added for command registration
     private val learnAppCore: com.augmentalis.voiceoscore.learnapp.core.LearnAppCore? = null,  // Phase 2: LearnAppCore integration
     private val versionDetector: AppVersionDetector? = null,  // Version-aware command creation
-    private val screenHashCalculator: ScreenHashCalculator = ScreenHashCalculator  // P2 Task 1.1: Hash-based rescan optimization
+    private val screenHashCalculator: ScreenHashCalculator = ScreenHashCalculator,  // P2 Task 1.1: Hash-based rescan optimization
+    private val featureGateManager: FeatureGateManager? = null,  // Phase 5: JIT→Lite progression
+    private val deepScanConsentManager: DeepScanConsentManager? = null  // Phase 5: JIT→Lite progression
 ) {
     companion object {
         private const val TAG = "JustInTimeLearner"
@@ -108,6 +119,10 @@ class JustInTimeLearner(
     private var totalScreensProcessed = 0
     private var screensSkippedByHash = 0
     private var screensRescanned = 0
+
+    // Phase 5 (2025-12-22): Track deep scanned screens to avoid re-asking
+    // Maps "packageName:screenHash" to true when deep scan completed
+    private val deepScannedScreens = mutableSetOf<String>()
 
     // FIX (2025-12-11): Event callback for JITLearningService
     private var eventCallback: JITEventCallback? = null
@@ -284,6 +299,15 @@ class JustInTimeLearner(
     /**
      * Learn the current screen passively.
      *
+     * ENHANCED (2025-12-22): Hash-based deduplication with app version validation
+     * - Step 1: Calculate screen hash (cheap operation)
+     * - Step 2: Check database for existing screen with matching hash
+     * - Step 3: If exists AND version matches: Load from cache, skip scraping
+     * - Step 4: If exists BUT version changed: Mark for rescan
+     * - Step 5: If new: Full scrape with VUID-based element deduplication
+     *
+     * Battery savings: ~80% skip rate for unchanged screens
+     *
      * FIX (2025-11-30): Now accepts packageName parameter and triggers command generation.
      *
      * @param event AccessibilityEvent containing screen info
@@ -301,46 +325,71 @@ class JustInTimeLearner(
             return
         }
 
-        // FIX (2025-12-02): Calculate screen hash using ScreenStateManager (structure-based)
-        val screenHash = calculateScreenHash(packageName)
+        // 1. Calculate screen hash first (cheap operation)
+        val currentHash = calculateScreenHash(packageName)
 
         // Skip if same screen as last time
-        if (screenHash == lastScreenHash) {
+        if (currentHash == lastScreenHash) {
             return
         }
-        lastScreenHash = screenHash
+        lastScreenHash = currentHash
 
-        // FIX (2025-12-02): Check if screen already captured (deduplication)
-        // Avoids re-traversing visited screens, saving battery and processing time
-        if (isScreenAlreadyCaptured(packageName, screenHash)) {
-            Log.i(TAG, "Screen already captured, skipping: $packageName - Hash: $screenHash")
-            return
+        // 2. Check database for existing screen with matching hash
+        val existingScreen = getScreenByHash(currentHash, packageName)
+
+        if (existingScreen != null) {
+            // 3. Validate app version
+            val currentVersion = versionDetector?.getVersion(packageName)?.versionName
+
+            if (existingScreen.appVersion == currentVersion) {
+                // FAST PATH: Load from cache, skip scraping
+                val elapsed = System.currentTimeMillis() - startTime
+                Log.d(TAG, "Screen $currentHash already learned (v${currentVersion}) - loading from DB in ${elapsed}ms")
+
+                loadCommandsFromCache(existingScreen)
+
+                // Still check for hidden menus (Lite upgrade opportunity)
+                checkForHiddenMenus(packageName)
+
+                // Update stats and metrics
+                totalScreensProcessed++
+                screensSkippedByHash++
+                screensLearnedCount++
+                eventCallback?.onScreenLearned(packageName, currentHash, existingScreen.elementCount)
+
+                val skipRate = getSkipPercentage()
+                Log.i(TAG, "Hash-based skip achieved ${elapsed}ms savings [Skip rate: ${String.format("%.1f", skipRate)}%]")
+
+                return
+            } else {
+                // Version changed - rescan
+                totalScreensProcessed++
+                screensRescanned++
+                Log.i(TAG, "App version changed: ${existingScreen.appVersion} → $currentVersion - rescanning screen $currentHash")
+            }
         }
 
-        // P2 Task 1.1: Capture elements EARLY for hash comparison (before expensive operations)
-        // This enables hash-based rescan optimization by checking if screen changed
+        // 4. NEW SCREEN: Full scrape with VUID deduplication
+        // Capture elements for new/changed screens
         val capturedElements = elementCapture?.captureScreenElements(packageName) ?: emptyList()
 
-        // P2 Task 1.1: Check if we should rescan based on hash comparison
-        // This achieves 80% time savings by skipping unchanged screens
-        totalScreensProcessed++
-        if (!shouldRescanScreen(packageName, screenHash, capturedElements)) {
-            screensSkippedByHash++
-            val elapsed = System.currentTimeMillis() - startTime
-            Log.i(TAG, "Skipped rescan (hash match) in ${elapsed}ms - $packageName [Skip rate: ${getSkipPercentage()}%]")
+        // VUID-based deduplication: Filter out elements already in database
+        val newElements = deduplicateByVUID(capturedElements, packageName)
+        val deduplicatedCount = capturedElements.size - newElements.size
 
-            // Update stats even when skipping (screen was processed, just not persisted)
-            screensLearnedCount++
-            eventCallback?.onScreenLearned(packageName, screenHash, 0)
-            return  // Skip expensive operations: persistence, command generation
+        if (deduplicatedCount > 0) {
+            Log.i(TAG, "VUID deduplication: filtered $deduplicatedCount/${capturedElements.size} existing elements")
         }
 
         // Screen is new or changed - proceed with full processing
-        screensRescanned++
-        Log.i(TAG, "Rescanning screen (new/changed): $packageName - Hash: $screenHash")
+        if (existingScreen == null) {
+            totalScreensProcessed++
+            screensRescanned++
+        }
+        Log.i(TAG, "Processing new/changed screen: $packageName - Hash: $currentHash - Elements: ${newElements.size}")
 
-        // Save screen to database with captured elements
-        saveScreenToDatabase(packageName, screenHash, event, capturedElements)
+        // Save screen to database with deduplicated elements
+        saveScreenToDatabase(packageName, currentHash, event, newElements)
 
         // Update progress
         updateLearningProgress(packageName)
@@ -351,8 +400,12 @@ class JustInTimeLearner(
             voiceOSService?.onNewCommandsGenerated()
         }
 
+        // Phase 5 (2025-12-22): Check for hidden menus/drawers after screen learning
+        // This enables seamless JIT→Lite progression when user has subscription
+        checkForHiddenMenus(packageName, currentHash)
+
         val elapsed = System.currentTimeMillis() - startTime
-        Log.d(TAG, "JIT learned screen in ${elapsed}ms - $packageName")
+        Log.d(TAG, "JIT learned screen in ${elapsed}ms - $packageName [Battery savings from deduplication: ${deduplicatedCount} elements]")
     }
 
     /**
@@ -383,12 +436,12 @@ class JustInTimeLearner(
     /**
      * Calculate hash for screen identity using ScreenStateManager.
      *
-     * FIX (2025-12-02): Replaced content-dependent hashing with structure-based hashing
-     * Uses ScreenStateManager for unified hashing algorithm (same as LearnApp)
-     * Supports popup/dialog detection with stable hashing
+     * ENHANCED (2025-12-22): Hybrid hashing - structure + content
+     * Combines structure-based hash (layout) with content-based hash (visible text)
+     * Enables detection of scrolled content while maintaining popup detection
      *
      * @param packageName Package name of the app
-     * @return Screen hash from ScreenStateManager, or fallback hash if unavailable
+     * @return Hybrid screen hash (structure-content), or fallback hash if unavailable
      */
     private suspend fun calculateScreenHash(packageName: String): String {
         // Get root node from accessibility service
@@ -397,12 +450,104 @@ class JustInTimeLearner(
         // Use ScreenStateManager for unified hashing if available
         return if (rootNode != null && screenStateManager != null) {
             val screenState = screenStateManager!!.captureScreenState(rootNode, packageName)
-            screenState.hash
+            val structureHash = screenState.hash
+
+            // ENHANCEMENT: Add content hash for scrollable containers
+            val scrollDetector = com.augmentalis.voiceoscore.learnapp.scrolling.ScrollDetector()
+            val scrollables = scrollDetector.findScrollableContainers(rootNode)
+
+            if (scrollables.isNotEmpty()) {
+                // Hash visible content in scrollable containers
+                val contentHashes = scrollables.mapNotNull { scrollable ->
+                    try {
+                        hashVisibleContent(scrollable)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to hash scrollable content: ${e.message}")
+                        null
+                    }
+                }
+
+                if (contentHashes.isNotEmpty()) {
+                    // Combined hash: structure + content
+                    "$structureHash-${contentHashes.joinToString("|")}"
+                } else {
+                    structureHash  // No content hash, use structure only
+                }
+            } else {
+                structureHash  // No scrollables, use structure only
+            }
         } else {
             // Fallback to timestamp-based hash if ScreenStateManager unavailable
             // This should rarely happen in production
             Log.w(TAG, "ScreenStateManager unavailable, using fallback hash")
             System.currentTimeMillis().toString()
+        }
+    }
+
+    /**
+     * Hash visible content in a scrollable container.
+     *
+     * Creates content signature from visible text elements to detect
+     * when user scrolls and new content becomes visible.
+     *
+     * @param scrollableNode Scrollable container node
+     * @return Content hash (MD5 of visible texts)
+     */
+    private fun hashVisibleContent(scrollableNode: AccessibilityNodeInfo): String {
+        val visibleTexts = mutableListOf<String>()
+
+        // Collect text from visible children
+        traverseForVisibleText(scrollableNode, visibleTexts)
+
+        // Create signature from texts
+        if (visibleTexts.isEmpty()) {
+            return "empty"
+        }
+
+        val signature = visibleTexts.joinToString("|")
+
+        // MD5 hash for compact representation
+        return try {
+            val digest = java.security.MessageDigest.getInstance("MD5")
+            val hashBytes = digest.digest(signature.toByteArray())
+            hashBytes.joinToString("") { "%02x".format(it) }.take(8)  // First 8 chars
+        } catch (e: Exception) {
+            signature.hashCode().toString()  // Fallback to hashCode
+        }
+    }
+
+    /**
+     * Traverse tree collecting visible text.
+     *
+     * @param node Current node
+     * @param results Mutable list to collect text
+     */
+    private fun traverseForVisibleText(
+        node: AccessibilityNodeInfo,
+        results: MutableList<String>
+    ) {
+        // Only collect from visible nodes
+        if (node.isVisibleToUser) {
+            node.text?.toString()?.takeIf { it.isNotBlank() }?.let {
+                results.add(it.trim())
+            }
+            node.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let {
+                results.add(it.trim())
+            }
+        }
+
+        // Recurse children
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { child ->
+                try {
+                    traverseForVisibleText(child, results)
+                } finally {
+                    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        @Suppress("DEPRECATION")
+                        child.recycle()
+                    }
+                }
+            }
         }
     }
 
@@ -613,7 +758,7 @@ class JustInTimeLearner(
                     val timestamp = System.currentTimeMillis()
 
                     // Get app version for version-aware commands
-                    val appVersion = versionDetector?.getCurrentVersion(packageName) ?: AppVersion.UNKNOWN
+                    val appVersion = versionDetector?.getVersion(packageName) ?: AppVersion("unknown", 0L)
 
                     for (element in elements) {
                         val label = element.text
@@ -753,12 +898,449 @@ class JustInTimeLearner(
         ).show()
     }
 
+    // ========================================================================
+    // JIT → LITE PROGRESSION (2025-12-22)
+    // ========================================================================
+
+    /**
+     * Check for hidden menus/drawers after screen learning.
+     *
+     * Phase 5 (2025-12-22): Seamless JIT→Lite progression.
+     * Detects expandable controls (menus, drawers) and offers deep scan
+     * if user has Lite subscription.
+     *
+     * @param packageName Package name of the app
+     * @param screenHash Current screen hash
+     */
+    private suspend fun checkForHiddenMenus(packageName: String, screenHash: String) {
+        // Check if already deep scanned this screen
+        if (hasDeepScannedScreen(packageName, screenHash)) {
+            return
+        }
+
+        // Detect expandable controls
+        val hasHiddenMenus = hasHiddenMenuItems()
+
+        if (hasHiddenMenus) {
+            Log.d(TAG, "Hidden menus detected on screen: $packageName - $screenHash")
+
+            // Check if user has Lite access
+            when (featureGateManager?.canUseMode(LearningMode.LITE)) {
+                is FeatureGateResult.Allowed -> {
+                    // Has access - check consent
+                    if (deepScanConsentManager?.needsConsent(packageName) == true) {
+                        val rootNode = accessibilityService?.rootInActiveWindow
+                        if (rootNode != null) {
+                            val expandables = ExpandableControlDetector.findExpandableControls(rootNode)
+                            deepScanConsentManager.showConsentDialog(
+                                packageName,
+                                getAppName(packageName),
+                                expandables.size
+                            )
+                            Log.i(TAG, "Showing deep scan consent dialog for $packageName (${expandables.size} expandables)")
+                        }
+                    }
+                }
+                is FeatureGateResult.Blocked -> {
+                    // No access - could show upgrade offer here in the future
+                    Log.d(TAG, "Hidden menus detected but no Lite subscription for $packageName")
+                }
+                null -> {
+                    // Feature gate not available (testing without gate)
+                    Log.d(TAG, "FeatureGateManager not available, skipping deep scan offer")
+                }
+            }
+        }
+    }
+
+    /**
+     * Check if screen has already been deep scanned.
+     *
+     * @param packageName Package name
+     * @param screenHash Screen hash
+     * @return true if already deep scanned, false otherwise
+     */
+    private fun hasDeepScannedScreen(packageName: String, screenHash: String): Boolean {
+        val key = "$packageName:$screenHash"
+        return deepScannedScreens.contains(key)
+    }
+
+    /**
+     * Mark screen as deep scanned to avoid re-asking.
+     *
+     * @param packageName Package name
+     * @param screenHash Screen hash
+     */
+    private fun markScreenDeepScanned(packageName: String, screenHash: String) {
+        val key = "$packageName:$screenHash"
+        deepScannedScreens.add(key)
+        Log.d(TAG, "Marked screen as deep scanned: $key")
+    }
+
+    /**
+     * Get app display name from package name.
+     *
+     * @param packageName Package name to look up
+     * @return App display name or package name if not found
+     */
+    private fun getAppName(packageName: String): String {
+        return try {
+            val pm = context.packageManager
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            pm.getApplicationLabel(appInfo).toString()
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not get app name for: $packageName", e)
+            packageName.substringAfterLast(".")
+        }
+    }
+
+    /**
+     * Handle deep scan consent granted by user.
+     *
+     * Called when user approves deep scan via consent dialog.
+     * Runs deep scan on current screen and marks it as scanned.
+     *
+     * @param packageName Package name to deep scan
+     */
+    suspend fun onDeepScanConsentGranted(packageName: String) {
+        Log.i(TAG, "User granted deep scan consent for $packageName")
+
+        // Get current screen hash
+        val screenHash = calculateScreenHash(packageName)
+
+        // Run deep scan (builds on JIT data)
+        val result = deepScanCurrentScreen(packageName)
+
+        Log.i(TAG, "Deep scan result: $result")
+
+        // Mark screen as deep scanned to avoid re-asking
+        markScreenDeepScanned(packageName, screenHash)
+    }
+
+    // ========================================================================
+    // DEEP SCAN FOR MENUS/DRAWERS (2025-12-22)
+    // ========================================================================
+
+    /**
+     * Deep scan current screen for hidden menu/drawer items.
+     *
+     * Detects expandable controls (menus, drawers, dropdowns), expands them,
+     * captures hidden elements, and collapses them back.
+     *
+     * Called when user approves deep scan via popup dialog.
+     *
+     * @param packageName Package name of the app
+     * @return DeepScanResult with statistics
+     */
+    suspend fun deepScanCurrentScreen(packageName: String): DeepScanResult {
+        val startTime = System.currentTimeMillis()
+        val rootNode = accessibilityService?.rootInActiveWindow
+
+        if (rootNode == null) {
+            return DeepScanResult(
+                success = false,
+                expandablesFound = 0,
+                expandablesScanned = 0,
+                newElementsDiscovered = 0,
+                duration = System.currentTimeMillis() - startTime,
+                error = "Root node unavailable"
+            )
+        }
+
+        try {
+            Log.i(TAG, "Starting deep scan for $packageName")
+
+            // 1. Find all expandable controls (menus, drawers, dropdowns)
+            val expandableDetector = com.augmentalis.voiceoscore.learnapp.detection.ExpandableControlDetector
+            val expandables = expandableDetector.findExpandableControls(rootNode)
+
+            if (expandables.isEmpty()) {
+                Log.i(TAG, "No expandable controls found")
+                return DeepScanResult(
+                    success = true,
+                    expandablesFound = 0,
+                    expandablesScanned = 0,
+                    newElementsDiscovered = 0,
+                    duration = System.currentTimeMillis() - startTime
+                )
+            }
+
+            Log.i(TAG, "Found ${expandables.size} expandable controls")
+
+            var expandablesScanned = 0
+            var totalNewElements = 0
+            val allCapturedElements = mutableListOf<JitCapturedElement>()
+
+            // 2. Process each expandable
+            for (expandable in expandables) {
+                try {
+                    val info = expandableDetector.getExpansionInfo(expandable)
+
+                    // Skip if already expanded or low confidence
+                    if (info.isExpanded || info.confidence < 0.5f) {
+                        Log.d(TAG, "Skipping expandable (expanded=${info.isExpanded}, confidence=${info.confidence})")
+                        continue
+                    }
+
+                    Log.i(TAG, "Scanning ${info.expansionType}: ${info.reason}")
+
+                    // 3. Expand the control
+                    val expanded = expandable.performAction(AccessibilityNodeInfo.ACTION_EXPAND)
+                    if (!expanded) {
+                        Log.w(TAG, "Failed to expand control")
+                        continue
+                    }
+
+                    // Wait for animation
+                    delay(500)
+
+                    // 4. Capture expanded content
+                    val newElements = elementCapture?.captureScreenElements(packageName) ?: emptyList()
+                    Log.i(TAG, "Captured ${newElements.size} elements from expanded control")
+
+                    allCapturedElements.addAll(newElements)
+                    totalNewElements += newElements.size
+                    expandablesScanned++
+
+                    // 5. Collapse back
+                    expandable.performAction(AccessibilityNodeInfo.ACTION_COLLAPSE)
+                    delay(300)
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error scanning expandable control", e)
+                } finally {
+                    // Recycle node if needed
+                    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        try {
+                            @Suppress("DEPRECATION")
+                            expandable.recycle()
+                        } catch (e: Exception) {
+                            // Ignore recycle errors
+                        }
+                    }
+                }
+            }
+
+            // 6. Generate commands for newly discovered elements
+            if (allCapturedElements.isNotEmpty()) {
+                generateCommandsForElements(packageName, allCapturedElements)
+
+                // Trigger command registration
+                withContext(Dispatchers.Main) {
+                    voiceOSService?.onNewCommandsGenerated()
+                }
+            }
+
+            val duration = System.currentTimeMillis() - startTime
+            Log.i(TAG, "Deep scan complete: ${expandablesScanned}/${expandables.size} scanned, $totalNewElements new elements, ${duration}ms")
+
+            return DeepScanResult(
+                success = true,
+                expandablesFound = expandables.size,
+                expandablesScanned = expandablesScanned,
+                newElementsDiscovered = totalNewElements,
+                duration = duration
+            )
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Deep scan failed", e)
+            return DeepScanResult(
+                success = false,
+                expandablesFound = 0,
+                expandablesScanned = 0,
+                newElementsDiscovered = 0,
+                duration = System.currentTimeMillis() - startTime,
+                error = e.message
+            )
+        }
+    }
+
+    /**
+     * Check if screen has hidden menu/drawer items that need deep scan.
+     *
+     * Called automatically during screen learning to detect if we should
+     * prompt user for deep scan.
+     *
+     * @return true if expandable controls found, false otherwise
+     */
+    suspend fun hasHiddenMenuItems(): Boolean {
+        val rootNode = accessibilityService?.rootInActiveWindow ?: return false
+
+        val expandableDetector = com.augmentalis.voiceoscore.learnapp.detection.ExpandableControlDetector
+        val expandables = expandableDetector.findExpandableControls(rootNode)
+
+        // Filter for collapsed, high-confidence expandables
+        val collapsedExpandables = expandables.count { expandable ->
+            try {
+                val info = expandableDetector.getExpansionInfo(expandable)
+                !info.isExpanded && info.confidence >= 0.5f
+            } catch (e: Exception) {
+                false
+            } finally {
+                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    try {
+                        @Suppress("DEPRECATION")
+                        expandable.recycle()
+                    } catch (e: Exception) {
+                        // Ignore
+                    }
+                }
+            }
+        }
+
+        Log.d(TAG, "Found $collapsedExpandables collapsed expandable controls")
+        return collapsedExpandables > 0
+    }
+
+    /**
+     * Deep Scan Result
+     *
+     * Statistics from deep scan operation.
+     */
+    data class DeepScanResult(
+        val success: Boolean,
+        val expandablesFound: Int,
+        val expandablesScanned: Int,
+        val newElementsDiscovered: Int,
+        val duration: Long,
+        val error: String? = null
+    ) {
+        override fun toString(): String {
+            return if (success) {
+                "Deep Scan: $expandablesScanned/$expandablesFound scanned, $newElementsDiscovered elements, ${duration}ms"
+            } else {
+                "Deep Scan Failed: ${error ?: "Unknown error"}"
+            }
+        }
+    }
+
+    // ================================================================
+    // HASH-BASED DEDUPLICATION HELPERS (2025-12-22)
+    // ================================================================
+
+    /**
+     * Data class representing screen metadata with app version
+     *
+     * Used for hash-based deduplication to determine if screen needs rescanning
+     */
+    data class ScreenData(
+        val screenHash: String,
+        val packageName: String,
+        val elementCount: Int,
+        val appVersion: String?
+    )
+
+    /**
+     * Get screen by hash with app version validation
+     *
+     * Queries database for existing screen with matching hash and package.
+     * Returns screen metadata including app version for version-aware deduplication.
+     *
+     * @param hash Screen hash to lookup
+     * @param packageName Package name to match
+     * @return ScreenData if exists, null otherwise
+     */
+    private suspend fun getScreenByHash(hash: String, packageName: String): ScreenData? {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Check screen_context table for matching hash
+                val screenContext = databaseManager.screenContexts.getByHash(hash)
+
+                if (screenContext != null && screenContext.packageName == packageName) {
+                    // Get app version from app_version table
+                    val appVersion = databaseManager.appVersionQueries.getAppVersion(packageName).executeAsOneOrNull()
+
+                    ScreenData(
+                        screenHash = screenContext.screenHash,
+                        packageName = screenContext.packageName,
+                        elementCount = screenContext.elementCount.toInt(),
+                        appVersion = appVersion?.version_name
+                    )
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting screen by hash: $hash", e)
+                null
+            }
+        }
+    }
+
+    /**
+     * Load pre-generated commands from cache
+     *
+     * Loads existing voice commands for cached screen from database
+     * and notifies VoiceOSService they're available.
+     *
+     * @param screen Cached screen data
+     */
+    private suspend fun loadCommandsFromCache(screen: ScreenData) {
+        withContext(Dispatchers.IO) {
+            try {
+                // Commands are already in database via screen_hash FK
+                // Just notify service to reload commands
+                withContext(Dispatchers.Main) {
+                    voiceOSService?.onNewCommandsGenerated()
+                }
+
+                Log.d(TAG, "Loaded ${screen.elementCount} commands from cache for screen ${screen.screenHash}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading commands from cache", e)
+            }
+        }
+    }
+
+    /**
+     * Check for hidden menus (overload for compatibility)
+     *
+     * Checks if current screen has expandable controls without screen hash parameter.
+     *
+     * @param packageName Package name of the app
+     */
+    private suspend fun checkForHiddenMenus(packageName: String) {
+        val currentHash = calculateScreenHash(packageName)
+        checkForHiddenMenus(packageName, currentHash)
+    }
+
+    /**
+     * Deduplicate elements by VUID
+     *
+     * Filters out elements that already exist in database by checking UUID.
+     * Prevents duplicate element capture and command generation.
+     *
+     * @param elements List of captured elements
+     * @param packageName Package name of the app
+     * @return Filtered list containing only new elements
+     */
+    private suspend fun deduplicateByVUID(
+        elements: List<JitCapturedElement>,
+        packageName: String
+    ): List<JitCapturedElement> {
+        return withContext(Dispatchers.IO) {
+            elements.filter { element ->
+                try {
+                    // Check if element with this UUID already exists
+                    val uuid = element.uuid ?: return@filter true  // Keep if no UUID
+
+                    val existing = databaseManager.scrapedElements.getByUuid(packageName, uuid)
+                        .executeAsOneOrNull()
+
+                    existing == null  // Keep only if not found
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error checking VUID for element: ${e.message}")
+                    true  // Keep on error (safer than dropping)
+                }
+            }
+        }
+    }
+
     /**
      * Clean up resources.
      */
     fun destroy() {
         deactivate()
         eventCallback = null
+        deepScannedScreens.clear()
         // Coroutine scope will be cancelled automatically
     }
 

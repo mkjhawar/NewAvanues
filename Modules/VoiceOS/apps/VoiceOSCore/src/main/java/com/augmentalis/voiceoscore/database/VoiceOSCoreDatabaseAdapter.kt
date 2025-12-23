@@ -3,7 +3,7 @@ package com.augmentalis.voiceoscore.database
 import android.content.Context
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabaseManager
-import com.augmentalis.voiceoscore.database.entities.AppEntity
+import com.augmentalis.voiceoscore.learnapp.models.AppEntity
 
 /**
  * Simplified database adapter - direct SQLDelight access with helper methods
@@ -498,7 +498,7 @@ private fun AppEntity.toScrapedAppDTO(): com.augmentalis.database.dto.ScrapedApp
         appId = this.packageName,
         packageName = this.packageName,
         versionCode = this.versionCode,
-        versionName = this.versionName,
+        versionName = this.versionName ?: "",
         appHash = this.packageName.hashCode().toString(),
         isFullyLearned = if (this.isFullyLearned == true) 1L else 0L,
         learnCompletedAt = if (this.isFullyLearned == true) timestamp else null,

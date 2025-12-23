@@ -216,7 +216,7 @@ class LearnAppIntegration private constructor(
         // Create AppVersionDetector for tracking app versions in generated commands
         val versionDetector = AppVersionDetector(
             context = context,
-            appVersionRepository = databaseManager.appVersions
+            repository = databaseManager.appVersions
         )
 
         // Phase 3 (2025-12-04): Initialize LearnAppCore for unified element processing
@@ -1734,8 +1734,8 @@ class LearnAppIntegration private constructor(
     suspend fun generateLLMPrompt(
         packageName: String,
         userGoal: String,
-        format: com.augmentalis.voiceoscore.learnapp.ai.quantized.LLMPromptFormat =
-            com.augmentalis.voiceoscore.learnapp.ai.quantized.LLMPromptFormat.COMPACT
+        format: com.augmentalis.voiceoscore.learnapp.ai.LLMPromptFormat =
+            com.augmentalis.voiceoscore.learnapp.ai.LLMPromptFormat.COMPACT
     ): String? {
         return avuQuantizerIntegration.generateLLMPrompt(packageName, userGoal, format)
     }

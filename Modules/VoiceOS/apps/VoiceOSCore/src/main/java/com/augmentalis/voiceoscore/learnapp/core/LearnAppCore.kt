@@ -19,12 +19,13 @@ import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import com.augmentalis.voiceoscore.learnapp.detection.AppFramework
-import com.augmentalis.voiceoscore.learnapp.detection.CrossPlatformDetector
 import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 import com.augmentalis.voiceoscore.security.InputValidator
 import com.augmentalis.voiceoscore.version.AppVersionDetector
 import com.augmentalis.voiceoscore.version.AppVersion
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * LearnApp Core - Shared Business Logic
@@ -121,7 +122,7 @@ class LearnAppCore(
             }
 
             // 2. Get app version for version-aware commands
-            val appVersion = versionDetector?.getCurrentVersion(packageName) ?: AppVersion.UNKNOWN
+            val appVersion = versionDetector?.getVersion(packageName) ?: AppVersion("unknown", 0L)
 
             // 3. Generate voice command with version info
             // Returns null if label is filtered (too short, numeric, etc.) - this is expected behavior
@@ -277,16 +278,11 @@ class LearnAppCore(
         element: ElementInfo,
         uuid: String,
         packageName: String = "",
-        appVersion: AppVersion = AppVersion.UNKNOWN
+        appVersion: AppVersion = AppVersion("unknown", 0L)
     ): GeneratedCommandDTO? {
         // Detect app framework (cached)
-        val framework = if (packageName.isNotEmpty() && element.node != null) {
-            frameworkCache.getOrPut(packageName) {
-                CrossPlatformDetector.detectFramework(context, packageName, element.node)
-            }
-        } else {
-            AppFramework.NATIVE
-        }
+        // Note: CrossPlatformDetector not yet implemented, defaulting to NATIVE
+        val framework = AppFramework.NATIVE
 
         // Extract label (text > contentDescription > resourceId > FALLBACK)
         val label = element.text.takeIf { it.isNotBlank() }
@@ -748,26 +744,24 @@ class LearnAppCore(
         val startTime = System.currentTimeMillis()
         val count = batchQueue.size
 
-        try {
-            // Batch insert with transaction for 20x performance improvement
-            // Using transaction batches all inserts into single atomic operation
-            database.transaction {
-                batchQueue.forEach { command ->
-                    database.generatedCommands.insert(command)
-                }
+        withContext(Dispatchers.IO) {
+            try {
+                // Batch insert with transaction for 20x performance improvement
+                // Using repository's insertBatch which handles transaction internally
+                database.generatedCommands.insertBatch(batchQueue)
+
+                val elapsedMs = System.currentTimeMillis() - startTime
+                val rate = count * 1000 / elapsedMs.coerceAtLeast(1)
+                Log.i(TAG, "Flushed $count commands in ${elapsedMs}ms (~$rate commands/sec) [batch optimized]")
+
+                // Clear queue
+                batchQueue.clear()
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to flush batch queue", e)
+                // Keep queue intact for retry
+                throw e
             }
-
-            val elapsedMs = System.currentTimeMillis() - startTime
-            val rate = count * 1000 / elapsedMs.coerceAtLeast(1)
-            Log.i(TAG, "Flushed $count commands in ${elapsedMs}ms (~$rate commands/sec) [batch optimized]")
-
-            // Clear queue
-            batchQueue.clear()
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to flush batch queue", e)
-            // Keep queue intact for retry
-            throw e
         }
     }
 

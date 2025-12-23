@@ -14,6 +14,8 @@ import android.content.Context
 import android.graphics.Rect
 import android.util.Log
 import android.view.WindowManager
+import com.augmentalis.voiceoscore.accessibility.overlays.MenuItem
+import com.augmentalis.voiceoscore.accessibility.overlays.CommandState
 
 /**
  * Coordinates overlay display across different overlay types
@@ -89,7 +91,11 @@ class OverlayCoordinator(private val context: Context) {
     fun showContextMenu(x: Float, y: Float, options: List<String>) {
         try {
             Log.d(TAG, "Showing context menu at ($x, $y) with ${options.size} options")
-            contextMenuOverlay.show(options, Rect(x.toInt(), y.toInt(), x.toInt(), y.toInt()))
+            val menuItems = options.map { option ->
+                MenuItem(id = option, label = option, action = {})
+            }
+            val position = android.graphics.Point(x.toInt(), y.toInt())
+            contextMenuOverlay.showMenuAt(menuItems, position)
             Log.i(TAG, "Context menu shown successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Error showing context menu", e)
@@ -115,7 +121,11 @@ class OverlayCoordinator(private val context: Context) {
     fun showCommandStatus(message: String, isSuccess: Boolean = true) {
         try {
             Log.d(TAG, "Showing command status: $message (success: $isSuccess)")
-            commandStatusOverlay.show(message, isSuccess)
+            val state = if (isSuccess)
+                CommandState.SUCCESS
+            else
+                CommandState.ERROR
+            commandStatusOverlay.showStatus(message, state, message)
             Log.i(TAG, "Command status shown successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Error showing command status", e)
@@ -141,7 +151,18 @@ class OverlayCoordinator(private val context: Context) {
     fun showConfidenceOverlay(confidence: Float, bounds: Rect) {
         try {
             Log.d(TAG, "Showing confidence overlay: $confidence at $bounds")
-            confidenceOverlay.show(confidence, bounds)
+            val confidenceResult = com.augmentalis.voiceos.speech.confidence.ConfidenceResult(
+                text = "",
+                confidence = confidence,
+                level = when {
+                    confidence >= 0.8f -> com.augmentalis.voiceos.speech.confidence.ConfidenceLevel.HIGH
+                    confidence >= 0.6f -> com.augmentalis.voiceos.speech.confidence.ConfidenceLevel.MEDIUM
+                    else -> com.augmentalis.voiceos.speech.confidence.ConfidenceLevel.LOW
+                },
+                alternates = emptyList(),
+                scoringMethod = com.augmentalis.voiceos.speech.confidence.ScoringMethod.VIVOKA_SDK
+            )
+            confidenceOverlay.show(confidenceResult)
             Log.i(TAG, "Confidence overlay shown successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Error showing confidence overlay", e)
@@ -203,11 +224,11 @@ class OverlayCoordinator(private val context: Context) {
     fun cleanup() {
         try {
             Log.d(TAG, "Cleaning up OverlayCoordinator...")
-            // Dispose all initialized overlays
-            if (::numberedOverlay.isInitialized) numberedOverlay.dispose()
-            if (::contextMenuOverlay.isInitialized) contextMenuOverlay.dispose()
-            if (::commandStatusOverlay.isInitialized) commandStatusOverlay.dispose()
-            if (::confidenceOverlay.isInitialized) confidenceOverlay.dispose()
+            // Dispose all overlays (lazy delegates are always initialized when accessed)
+            try { numberedOverlay.dispose() } catch (e: Exception) { Log.e(TAG, "Error disposing numberedOverlay", e) }
+            try { contextMenuOverlay.dispose() } catch (e: Exception) { Log.e(TAG, "Error disposing contextMenuOverlay", e) }
+            try { commandStatusOverlay.dispose() } catch (e: Exception) { Log.e(TAG, "Error disposing commandStatusOverlay", e) }
+            try { confidenceOverlay.dispose() } catch (e: Exception) { Log.e(TAG, "Error disposing confidenceOverlay", e) }
             Log.i(TAG, "OverlayCoordinator cleaned up successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Error cleaning up OverlayCoordinator", e)

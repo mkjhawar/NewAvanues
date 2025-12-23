@@ -86,6 +86,25 @@ data class VUIDCreationMetrics(
         }
     }
 
+    /**
+     * Get detailed report string for logging
+     *
+     * @return Detailed report with all metrics
+     */
+    fun toReportString(): String {
+        return buildString {
+            appendLine("VUID Creation Report:")
+            appendLine("  VUIDs Created: $vuidsCreated")
+            appendLine("  Elements Detected: $elementsDetected")
+            appendLine("  Elements Filtered: $filteredCount")
+            appendLine("  Errors: $errorCount")
+            appendLine("  Creation Rate: ${String.format("%.2f", getCreationRate())}%")
+            appendLine("  Filter Rate: ${String.format("%.2f", getFilterRate())}%")
+            appendLine("  Error Rate: ${String.format("%.2f", getErrorRate())}%")
+            appendLine("  Healthy: ${if (isHealthy()) "Yes" else "No"}")
+        }
+    }
+
     companion object {
         /**
          * Create empty metrics

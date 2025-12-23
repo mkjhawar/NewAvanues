@@ -75,8 +75,9 @@
 
         <!-- LearnApp Developer Settings Activity -->
         <!-- Provides comprehensive developer settings for LearnApp configuration -->
+        <!-- Updated 2025-12-22: Moved to settings package with subscription control -->
         <activity
-            android:name="com.augmentalis.voiceoscore.learnapp.settings.ui.DeveloperSettingsActivity"
+            android:name="com.augmentalis.voiceoscore.settings.DeveloperSettingsActivity"
             android:exported="false"
             android:label="Developer Settings" />
 
