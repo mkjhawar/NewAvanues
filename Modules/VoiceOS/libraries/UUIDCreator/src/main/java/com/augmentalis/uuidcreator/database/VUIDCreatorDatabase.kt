@@ -1,13 +1,13 @@
 /**
- * VUIDCreatorDatabase.kt - UUID database access (IUUIDRepository implementation)
- * Path: modules/libraries/UUIDCreator/src/main/java/com/augmentalis/uuidcreator/database/UUIDCreatorDatabase.kt
+ * VUIDCreatorDatabase.kt - VUID database access (IVUIDRepository implementation)
+ * Path: modules/libraries/UUIDCreator/src/main/java/com/augmentalis/uuidcreator/database/VUIDCreatorDatabase.kt
  *
  * Author: VoiceOS Restoration Team
  * Created: 2025-11-27
- * Modified: 2025-12-17 (Implements IUUIDRepository for UuidAliasManager compatibility)
+ * Modified: 2025-12-24 (UUID→VUID migration: updated all type references)
  *
- * Implementation of IUUIDRepository that provides in-memory storage
- * for UUID elements, hierarchies, analytics, and aliases.
+ * Implementation of IVUIDRepository that provides in-memory storage
+ * for VUID elements, hierarchies, analytics, and aliases.
  */
 
 package com.augmentalis.uuidcreator.database
@@ -23,26 +23,26 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * VUID Creator Database
  *
- * Implements IUUIDRepository with in-memory storage for UUID management.
+ * Implements IVUIDRepository with in-memory storage for VUID management.
  * Provides alias management, element storage, hierarchy tracking, and analytics.
  *
  * **Features:**
- * - Implements IUUIDRepository interface
+ * - Implements IVUIDRepository interface
  * - In-memory storage for fast access
  * - Thread-safe via ConcurrentHashMap
  * - Compatible with UuidAliasManager
  *
  * **Usage:**
  * ```kotlin
- * val uuidDb = UUIDCreatorDatabase.getInstance(context)
- * val aliasManager = UuidAliasManager(uuidDb)
+ * val vuidDb = UUIDCreatorDatabase.getInstance(context)
+ * val aliasManager = UuidAliasManager(vuidDb)
  * ```
  *
  * @property context Application context
  */
 class UUIDCreatorDatabase private constructor(
     private val context: Context
-) : IUUIDRepository {
+) : IVUIDRepository {
 
     companion object {
         @Volatile
@@ -64,19 +64,19 @@ class UUIDCreatorDatabase private constructor(
     }
 
     // In-memory storage
-    private val elements = ConcurrentHashMap<String, UUIDElementDTO>()
-    private val hierarchies = ConcurrentHashMap<String, MutableList<UUIDHierarchyDTO>>()
-    private val analytics = ConcurrentHashMap<String, UUIDAnalyticsDTO>()
-    private val aliases = ConcurrentHashMap<String, UUIDAliasDTO>()
-    private val aliasesByUuid = ConcurrentHashMap<String, MutableList<UUIDAliasDTO>>()
+    private val elements = ConcurrentHashMap<String, VUIDElementDTO>()
+    private val hierarchies = ConcurrentHashMap<String, MutableList<VUIDHierarchyDTO>>()
+    private val analytics = ConcurrentHashMap<String, VUIDAnalyticsDTO>()
+    private val aliases = ConcurrentHashMap<String, VUIDAliasDTO>()
+    private val aliasesByUuid = ConcurrentHashMap<String, MutableList<VUIDAliasDTO>>()
 
     // ==================== Element Operations ====================
 
-    override suspend fun insertElement(element: UUIDElementDTO) {
+    override suspend fun insertElement(element: VUIDElementDTO) {
         elements[element.uuid] = element
     }
 
-    override suspend fun updateElement(element: UUIDElementDTO) {
+    override suspend fun updateElement(element: VUIDElementDTO) {
         elements[element.uuid] = element
     }
 
@@ -84,27 +84,27 @@ class UUIDCreatorDatabase private constructor(
         elements.remove(uuid)
     }
 
-    override suspend fun getElementByUuid(uuid: String): UUIDElementDTO? {
+    override suspend fun getElementByUuid(uuid: String): VUIDElementDTO? {
         return elements[uuid]
     }
 
-    override suspend fun getAllElements(): List<UUIDElementDTO> {
+    override suspend fun getAllElements(): List<VUIDElementDTO> {
         return elements.values.toList()
     }
 
-    override suspend fun getElementsByType(type: String): List<UUIDElementDTO> {
+    override suspend fun getElementsByType(type: String): List<VUIDElementDTO> {
         return elements.values.filter { it.type == type }
     }
 
-    override suspend fun getChildrenOfParent(parentUuid: String): List<UUIDElementDTO> {
+    override suspend fun getChildrenOfParent(parentUuid: String): List<VUIDElementDTO> {
         return elements.values.filter { it.parentUuid == parentUuid }
     }
 
-    override suspend fun getEnabledElements(): List<UUIDElementDTO> {
+    override suspend fun getEnabledElements(): List<VUIDElementDTO> {
         return elements.values.filter { it.isEnabled }
     }
 
-    override suspend fun searchByName(query: String): List<UUIDElementDTO> {
+    override suspend fun searchByName(query: String): List<VUIDElementDTO> {
         val lowerQuery = query.lowercase()
         return elements.values.filter {
             it.name?.lowercase()?.contains(lowerQuery) == true ||
@@ -122,7 +122,7 @@ class UUIDCreatorDatabase private constructor(
 
     // ==================== Hierarchy Operations ====================
 
-    override suspend fun insertHierarchy(hierarchy: UUIDHierarchyDTO) {
+    override suspend fun insertHierarchy(hierarchy: VUIDHierarchyDTO) {
         val list = hierarchies.getOrPut(hierarchy.parentUuid) { mutableListOf() }
         list.add(hierarchy)
     }
@@ -131,37 +131,37 @@ class UUIDCreatorDatabase private constructor(
         hierarchies.remove(parentUuid)
     }
 
-    override suspend fun getHierarchyByParent(parentUuid: String): List<UUIDHierarchyDTO> {
+    override suspend fun getHierarchyByParent(parentUuid: String): List<VUIDHierarchyDTO> {
         return hierarchies[parentUuid] ?: emptyList()
     }
 
-    override suspend fun getAllHierarchy(): List<UUIDHierarchyDTO> {
+    override suspend fun getAllHierarchy(): List<VUIDHierarchyDTO> {
         return hierarchies.values.flatten()
     }
 
     // ==================== Analytics Operations ====================
 
-    override suspend fun insertAnalytics(analytics: UUIDAnalyticsDTO) {
+    override suspend fun insertAnalytics(analytics: VUIDAnalyticsDTO) {
         this.analytics[analytics.uuid] = analytics
     }
 
-    override suspend fun updateAnalytics(analytics: UUIDAnalyticsDTO) {
+    override suspend fun updateAnalytics(analytics: VUIDAnalyticsDTO) {
         this.analytics[analytics.uuid] = analytics
     }
 
-    override suspend fun getAnalyticsByUuid(uuid: String): UUIDAnalyticsDTO? {
+    override suspend fun getAnalyticsByUuid(uuid: String): VUIDAnalyticsDTO? {
         return analytics[uuid]
     }
 
-    override suspend fun getAllAnalytics(): List<UUIDAnalyticsDTO> {
+    override suspend fun getAllAnalytics(): List<VUIDAnalyticsDTO> {
         return analytics.values.toList()
     }
 
-    override suspend fun getMostAccessed(limit: Int): List<UUIDAnalyticsDTO> {
+    override suspend fun getMostAccessed(limit: Int): List<VUIDAnalyticsDTO> {
         return analytics.values.sortedByDescending { it.accessCount }.take(limit)
     }
 
-    override suspend fun getRecentlyAccessed(limit: Int): List<UUIDAnalyticsDTO> {
+    override suspend fun getRecentlyAccessed(limit: Int): List<VUIDAnalyticsDTO> {
         return analytics.values.sortedByDescending { it.lastAccessed }.take(limit)
     }
 
@@ -214,7 +214,7 @@ class UUIDCreatorDatabase private constructor(
 
     // ==================== Alias Operations ====================
 
-    override suspend fun insertAlias(alias: UUIDAliasDTO) {
+    override suspend fun insertAlias(alias: VUIDAliasDTO) {
         aliases[alias.alias] = alias
         val list = aliasesByUuid.getOrPut(alias.uuid) { mutableListOf() }
         list.add(alias)
@@ -232,11 +232,11 @@ class UUIDCreatorDatabase private constructor(
         list.forEach { aliases.remove(it.alias) }
     }
 
-    override suspend fun getAliasByName(alias: String): UUIDAliasDTO? {
+    override suspend fun getAliasByName(alias: String): VUIDAliasDTO? {
         return aliases[alias]
     }
 
-    override suspend fun getAliasesForUuid(uuid: String): List<UUIDAliasDTO> {
+    override suspend fun getAliasesForUuid(uuid: String): List<VUIDAliasDTO> {
         return aliasesByUuid[uuid] ?: emptyList()
     }
 
@@ -248,11 +248,11 @@ class UUIDCreatorDatabase private constructor(
         return aliases.containsKey(alias)
     }
 
-    override suspend fun getAllAliases(): List<UUIDAliasDTO> {
+    override suspend fun getAllAliases(): List<VUIDAliasDTO> {
         return aliases.values.toList()
     }
 
-    override suspend fun insertAliasesBatch(aliases: List<UUIDAliasDTO>) {
+    override suspend fun insertAliasesBatch(aliases: List<VUIDAliasDTO>) {
         aliases.forEach { alias ->
             this.aliases[alias.alias] = alias
             val list = aliasesByUuid.getOrPut(alias.uuid) { mutableListOf() }

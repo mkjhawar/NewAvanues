@@ -7,6 +7,9 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import com.augmentalis.magiccode.generator.parser.VosParser
+import com.augmentalis.magiccode.generator.parser.JsonDSLParser
+import com.augmentalis.magiccode.generator.parser.CompactSyntaxParser
 
 /**
  * Text Document Service for MagicUI Language Server
@@ -26,6 +29,11 @@ class MagicUITextDocumentService : TextDocumentService {
 
     // Document cache: URI -> content
     private val documents = ConcurrentHashMap<String, String>()
+
+    // Parsers
+    private val vosParser = VosParser()
+    private val jsonDslParser = JsonDSLParser()
+    private val compactSyntaxParser = CompactSyntaxParser()
 
     fun connect(client: LanguageClient) {
         this.client = client
@@ -149,7 +157,7 @@ class MagicUITextDocumentService : TextDocumentService {
      * Publish diagnostics (errors/warnings) to client
      */
     private fun publishDiagnostics(uri: String, content: String) {
-        val diagnostics = validateDocument(content)
+        val diagnostics = validateDocument(uri, content)
 
         val params = PublishDiagnosticsParams().apply {
             this.uri = uri
@@ -160,33 +168,87 @@ class MagicUITextDocumentService : TextDocumentService {
     }
 
     /**
-     * Validate document and return diagnostics
+     * Validate document and return diagnostics using appropriate parser
      */
-    private fun validateDocument(content: String): List<Diagnostic> {
+    private fun validateDocument(uri: String, content: String): List<Diagnostic> {
         val diagnostics = mutableListOf<Diagnostic>()
 
-        // TODO: Implement actual validation using parsers
-        // For now, just basic syntax checking
+        if (content.trim().isEmpty()) {
+            return diagnostics
+        }
 
-        // Example: Check for invalid component names
-        val lines = content.lines()
-        lines.forEachIndexed { index, line ->
-            if (line.trim().startsWith("InvalidComponent:")) {
-                diagnostics.add(
-                    Diagnostic().apply {
-                        range = Range(
-                            Position(index, 0),
-                            Position(index, line.length)
-                        )
-                        severity = DiagnosticSeverity.Error
-                        message = "Unknown component: InvalidComponent"
-                        source = "magicui"
-                    }
-                )
+        // Determine file type from URI
+        val fileType = determineFileType(uri, content)
+
+        // Use appropriate parser for validation
+        val validationResult = when (fileType) {
+            FileType.JSON -> jsonDslParser.validate(content)
+            FileType.YAML -> vosParser.validate(content)
+            FileType.COMPACT -> compactSyntaxParser.validate(content)
+            FileType.UNKNOWN -> {
+                // Try to infer from content
+                when {
+                    content.trim().startsWith("{") -> jsonDslParser.validate(content)
+                    content.trim().startsWith("Magic") -> compactSyntaxParser.validate(content)
+                    else -> vosParser.validate(content)
+                }
             }
         }
 
+        // Convert validation errors to LSP diagnostics
+        validationResult.errors.forEach { error ->
+            diagnostics.add(
+                Diagnostic().apply {
+                    range = Range(
+                        Position(error.line, 0),
+                        Position(error.line, 100) // End of line approximation
+                    )
+                    severity = DiagnosticSeverity.Error
+                    message = error.message
+                    source = "magicui-${fileType.name.lowercase()}"
+                }
+            )
+        }
+
+        // Convert validation warnings to LSP diagnostics
+        validationResult.warnings.forEach { warning ->
+            diagnostics.add(
+                Diagnostic().apply {
+                    range = Range(
+                        Position(warning.line, 0),
+                        Position(warning.line, 100)
+                    )
+                    severity = DiagnosticSeverity.Warning
+                    message = warning.message
+                    source = "magicui-${fileType.name.lowercase()}"
+                }
+            )
+        }
+
+        logger.debug("Validated document: ${diagnostics.size} diagnostics (${validationResult.errors.size} errors, ${validationResult.warnings.size} warnings)")
+
         return diagnostics
+    }
+
+    /**
+     * Determine file type from URI and content
+     */
+    private fun determineFileType(uri: String, content: String): FileType {
+        return when {
+            uri.endsWith(".magic.json") || uri.endsWith(".json") -> FileType.JSON
+            uri.endsWith(".magic.yaml") || uri.endsWith(".yaml") || uri.endsWith(".yml") -> FileType.YAML
+            uri.endsWith(".magicui") || uri.endsWith(".ucd") -> FileType.COMPACT
+            content.trim().startsWith("{") -> FileType.JSON
+            content.trim().startsWith("Magic") || content.trim().startsWith("Ava") -> FileType.COMPACT
+            else -> FileType.YAML // Default to YAML
+        }
+    }
+
+    /**
+     * File type enum
+     */
+    private enum class FileType {
+        JSON, YAML, COMPACT, UNKNOWN
     }
 
     /**
