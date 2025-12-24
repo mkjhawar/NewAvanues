@@ -25,7 +25,7 @@ data class VUIDAnalyticsDTO(
 /**
  * Convert SQLDelight entity to DTO.
  */
-fun Uuid_analytics.toVUIDAnalyticsDTO(): UUIDAnalyticsDTO = VUIDAnalyticsDTO(
+fun Uuid_analytics.toVUIDAnalyticsDTO(): VUIDAnalyticsDTO = VUIDAnalyticsDTO(
     uuid = uuid,
     accessCount = access_count,
     firstAccessed = first_accessed,

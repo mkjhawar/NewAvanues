@@ -1,7 +1,7 @@
 /**
- * SQLDelightUUIDRepository.kt - SQLDelight implementation of UUID repository
+ * SQLDelightVUIDRepository.kt - SQLDelight implementation of VUID repository
  *
- * Provides database operations for UUID elements using SQLDelight.
+ * Provides database operations for VUID elements using SQLDelight.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -22,11 +22,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * SQLDelight implementation of IUUIDRepository.
+ * SQLDelight implementation of IVUIDRepository.
  */
-class SQLDelightUUIDRepository(
+class SQLDelightVUIDRepository(
     private val database: VoiceOSDatabase
-) : IUUIDRepository {
+) : IVUIDRepository {
 
     private val elementQueries = database.uUIDElementQueries
     private val hierarchyQueries = database.uUIDHierarchyQueries
@@ -35,7 +35,7 @@ class SQLDelightUUIDRepository(
 
     // ==================== Element Operations ====================
 
-    override suspend fun insertElement(element: UUIDElementDTO) = withContext(Dispatchers.Default) {
+    override suspend fun insertElement(element: VUIDElementDTO) = withContext(Dispatchers.Default) {
         elementQueries.insertElement(
             uuid = element.uuid,
             name = element.name,
@@ -50,7 +50,7 @@ class SQLDelightUUIDRepository(
         )
     }
 
-    override suspend fun updateElement(element: UUIDElementDTO) = withContext(Dispatchers.Default) {
+    override suspend fun updateElement(element: VUIDElementDTO) = withContext(Dispatchers.Default) {
         elementQueries.updateElement(
             name = element.name,
             type = element.type,
@@ -68,27 +68,27 @@ class SQLDelightUUIDRepository(
         elementQueries.deleteElement(uuid)
     }
 
-    override suspend fun getElementByUuid(uuid: String): UUIDElementDTO? = withContext(Dispatchers.Default) {
+    override suspend fun getElementByUuid(uuid: String): VUIDElementDTO? = withContext(Dispatchers.Default) {
         elementQueries.getElementByUuid(uuid).executeAsOneOrNull()?.toVUIDElementDTO()
     }
 
-    override suspend fun getAllElements(): List<UUIDElementDTO> = withContext(Dispatchers.Default) {
+    override suspend fun getAllElements(): List<VUIDElementDTO> = withContext(Dispatchers.Default) {
         elementQueries.getAllElements().executeAsList().map { it.toVUIDElementDTO() }
     }
 
-    override suspend fun getElementsByType(type: String): List<UUIDElementDTO> = withContext(Dispatchers.Default) {
+    override suspend fun getElementsByType(type: String): List<VUIDElementDTO> = withContext(Dispatchers.Default) {
         elementQueries.getElementsByType(type).executeAsList().map { it.toVUIDElementDTO() }
     }
 
-    override suspend fun getChildrenOfParent(parentUuid: String): List<UUIDElementDTO> = withContext(Dispatchers.Default) {
+    override suspend fun getChildrenOfParent(parentUuid: String): List<VUIDElementDTO> = withContext(Dispatchers.Default) {
         elementQueries.getChildrenOfParent(parentUuid).executeAsList().map { it.toVUIDElementDTO() }
     }
 
-    override suspend fun getEnabledElements(): List<UUIDElementDTO> = withContext(Dispatchers.Default) {
+    override suspend fun getEnabledElements(): List<VUIDElementDTO> = withContext(Dispatchers.Default) {
         elementQueries.getEnabledElements().executeAsList().map { it.toVUIDElementDTO() }
     }
 
-    override suspend fun searchByName(query: String): List<UUIDElementDTO> = withContext(Dispatchers.Default) {
+    override suspend fun searchByName(query: String): List<VUIDElementDTO> = withContext(Dispatchers.Default) {
         elementQueries.searchByName(query).executeAsList().map { it.toVUIDElementDTO() }
     }
 
@@ -102,7 +102,7 @@ class SQLDelightUUIDRepository(
 
     // ==================== Hierarchy Operations ====================
 
-    override suspend fun insertHierarchy(hierarchy: UUIDHierarchyDTO) = withContext(Dispatchers.Default) {
+    override suspend fun insertHierarchy(hierarchy: VUIDHierarchyDTO) = withContext(Dispatchers.Default) {
         hierarchyQueries.insertHierarchy(
             parent_uuid = hierarchy.parentUuid,
             child_uuid = hierarchy.childUuid,
@@ -116,17 +116,17 @@ class SQLDelightUUIDRepository(
         hierarchyQueries.deleteByParent(parentUuid)
     }
 
-    override suspend fun getHierarchyByParent(parentUuid: String): List<UUIDHierarchyDTO> = withContext(Dispatchers.Default) {
+    override suspend fun getHierarchyByParent(parentUuid: String): List<VUIDHierarchyDTO> = withContext(Dispatchers.Default) {
         hierarchyQueries.getChildrenOfParent(parentUuid).executeAsList().map { it.toVUIDHierarchyDTO() }
     }
 
-    override suspend fun getAllHierarchy(): List<UUIDHierarchyDTO> = withContext(Dispatchers.Default) {
+    override suspend fun getAllHierarchy(): List<VUIDHierarchyDTO> = withContext(Dispatchers.Default) {
         hierarchyQueries.getAllHierarchy().executeAsList().map { it.toVUIDHierarchyDTO() }
     }
 
     // ==================== Analytics Operations ====================
 
-    override suspend fun insertAnalytics(analytics: UUIDAnalyticsDTO) = withContext(Dispatchers.Default) {
+    override suspend fun insertAnalytics(analytics: VUIDAnalyticsDTO) = withContext(Dispatchers.Default) {
         analyticsQueries.insertAnalytics(
             uuid = analytics.uuid,
             access_count = analytics.accessCount,
@@ -139,7 +139,7 @@ class SQLDelightUUIDRepository(
         )
     }
 
-    override suspend fun updateAnalytics(analytics: UUIDAnalyticsDTO) = withContext(Dispatchers.Default) {
+    override suspend fun updateAnalytics(analytics: VUIDAnalyticsDTO) = withContext(Dispatchers.Default) {
         analyticsQueries.insertAnalytics(
             uuid = analytics.uuid,
             access_count = analytics.accessCount,
@@ -152,19 +152,19 @@ class SQLDelightUUIDRepository(
         )
     }
 
-    override suspend fun getAnalyticsByUuid(uuid: String): UUIDAnalyticsDTO? = withContext(Dispatchers.Default) {
+    override suspend fun getAnalyticsByUuid(uuid: String): VUIDAnalyticsDTO? = withContext(Dispatchers.Default) {
         analyticsQueries.getAnalyticsByUuid(uuid).executeAsOneOrNull()?.toVUIDAnalyticsDTO()
     }
 
-    override suspend fun getAllAnalytics(): List<UUIDAnalyticsDTO> = withContext(Dispatchers.Default) {
+    override suspend fun getAllAnalytics(): List<VUIDAnalyticsDTO> = withContext(Dispatchers.Default) {
         analyticsQueries.getAllAnalytics().executeAsList().map { it.toVUIDAnalyticsDTO() }
     }
 
-    override suspend fun getMostAccessed(limit: Int): List<UUIDAnalyticsDTO> = withContext(Dispatchers.Default) {
+    override suspend fun getMostAccessed(limit: Int): List<VUIDAnalyticsDTO> = withContext(Dispatchers.Default) {
         analyticsQueries.getMostAccessed(limit.toLong()).executeAsList().map { it.toVUIDAnalyticsDTO() }
     }
 
-    override suspend fun getRecentlyAccessed(limit: Int): List<UUIDAnalyticsDTO> = withContext(Dispatchers.Default) {
+    override suspend fun getRecentlyAccessed(limit: Int): List<VUIDAnalyticsDTO> = withContext(Dispatchers.Default) {
         analyticsQueries.getRecentlyAccessed(limit.toLong()).executeAsList().map { it.toVUIDAnalyticsDTO() }
     }
 
@@ -189,7 +189,7 @@ class SQLDelightUUIDRepository(
 
     // ==================== Alias Operations ====================
 
-    override suspend fun insertAlias(alias: UUIDAliasDTO) = withContext(Dispatchers.Default) {
+    override suspend fun insertAlias(alias: VUIDAliasDTO) = withContext(Dispatchers.Default) {
         aliasQueries.insertAlias(
             alias = alias.alias,
             uuid = alias.uuid,
@@ -206,11 +206,11 @@ class SQLDelightUUIDRepository(
         aliasQueries.deleteAliasesForUuid(uuid)
     }
 
-    override suspend fun getAliasByName(alias: String): UUIDAliasDTO? = withContext(Dispatchers.Default) {
+    override suspend fun getAliasByName(alias: String): VUIDAliasDTO? = withContext(Dispatchers.Default) {
         aliasQueries.getAliasByName(alias).executeAsOneOrNull()?.toVUIDAliasDTO()
     }
 
-    override suspend fun getAliasesForUuid(uuid: String): List<UUIDAliasDTO> = withContext(Dispatchers.Default) {
+    override suspend fun getAliasesForUuid(uuid: String): List<VUIDAliasDTO> = withContext(Dispatchers.Default) {
         aliasQueries.getAliasesForUuid(uuid).executeAsList().map { it.toVUIDAliasDTO() }
     }
 
@@ -222,7 +222,7 @@ class SQLDelightUUIDRepository(
         aliasQueries.aliasExists(alias).executeAsOne() > 0
     }
 
-    override suspend fun getAllAliases(): List<UUIDAliasDTO> = withContext(Dispatchers.Default) {
+    override suspend fun getAllAliases(): List<VUIDAliasDTO> = withContext(Dispatchers.Default) {
         aliasQueries.getAllAliases().executeAsList().map { it.toVUIDAliasDTO() }
     }
 
@@ -246,7 +246,7 @@ class SQLDelightUUIDRepository(
      *
      * @param aliases List of alias DTOs to insert
      */
-    override suspend fun insertAliasesBatch(aliases: List<UUIDAliasDTO>) = withContext(Dispatchers.Default) {
+    override suspend fun insertAliasesBatch(aliases: List<VUIDAliasDTO>) = withContext(Dispatchers.Default) {
         database.transaction {
             aliases.forEach { alias ->
                 aliasQueries.insertAlias(

@@ -281,7 +281,7 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * Get all aliases for UUID
      */
-    suspend fun getAliasesByUuid(uuid: String): List<UUIDAliasDTO> = withContext(dispatcher) {
+    suspend fun getAliasesByUuid(uuid: String): List<VUIDAliasDTO> = withContext(dispatcher) {
         repository.getAliasesForUuid(uuid)
     }
 
@@ -497,7 +497,7 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * Convert UUIDElement model to DTO
      */
-    private fun UUIDElement.toDTO(): UUIDElementDTO {
+    private fun UUIDElement.toDTO(): VUIDElementDTO {
         return VUIDElementDTO(
             uuid = this.uuid,
             name = this.name,
@@ -515,7 +515,7 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * Convert DTO to UUIDElement model
      */
-    private fun UUIDElementDTO.toModel(
+    private fun VUIDElementDTO.toModel(
         children: MutableList<String> = mutableListOf(),
         actions: Map<String, (Map<String, Any>) -> Unit> = emptyMap()
     ): UUIDElement {

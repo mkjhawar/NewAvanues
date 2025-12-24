@@ -27,7 +27,7 @@ data class VUIDElementDTO(
 /**
  * Convert SQLDelight entity to DTO.
  */
-fun Uuid_elements.toVUIDElementDTO(): UUIDElementDTO = VUIDElementDTO(
+fun Uuid_elements.toVUIDElementDTO(): VUIDElementDTO = VUIDElementDTO(
     uuid = uuid,
     name = name,
     type = type,

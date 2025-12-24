@@ -23,7 +23,7 @@ data class VUIDHierarchyDTO(
 /**
  * Convert SQLDelight entity to DTO.
  */
-fun Uuid_hierarchy.toVUIDHierarchyDTO(): UUIDHierarchyDTO = VUIDHierarchyDTO(
+fun Uuid_hierarchy.toVUIDHierarchyDTO(): VUIDHierarchyDTO = VUIDHierarchyDTO(
     id = id,
     parentUuid = parent_uuid,
     childUuid = child_uuid,

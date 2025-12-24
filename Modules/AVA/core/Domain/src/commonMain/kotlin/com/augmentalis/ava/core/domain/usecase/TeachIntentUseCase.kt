@@ -9,6 +9,7 @@ import com.augmentalis.ava.core.common.Result
 import com.augmentalis.ava.core.domain.model.TrainExample
 import com.augmentalis.ava.core.domain.model.TrainExampleSource
 import com.augmentalis.ava.core.domain.repository.TrainExampleRepository
+import kotlinx.datetime.Clock
 
 /**
  * Use case for teaching AVA new intents through training examples.
@@ -77,7 +78,7 @@ class TeachIntentUseCase(
                 intent = intent.trim(),
                 locale = locale,
                 source = source,
-                createdAt = System.currentTimeMillis(),
+                createdAt = Clock.System.now().toEpochMilliseconds(),
                 usageCount = 0,
                 lastUsed = null
             )

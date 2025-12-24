@@ -1,7 +1,7 @@
 /**
- * IUUIDRepository.kt - Interface for UUID element repository
+ * IVUIDRepository.kt - Interface for VUID element repository
  *
- * Defines the contract for UUID element storage operations.
+ * Defines the contract for VUID element storage operations.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -14,52 +14,52 @@ import com.augmentalis.database.dto.VUIDAnalyticsDTO
 import com.augmentalis.database.dto.VUIDAliasDTO
 
 /**
- * Repository interface for UUID element operations.
+ * Repository interface for VUID element operations.
  */
-interface IUUIDRepository {
+interface IVUIDRepository {
 
     // ==================== Element Operations ====================
 
-    suspend fun insertElement(element: UUIDElementDTO)
-    suspend fun updateElement(element: UUIDElementDTO)
+    suspend fun insertElement(element: VUIDElementDTO)
+    suspend fun updateElement(element: VUIDElementDTO)
     suspend fun deleteElement(uuid: String)
-    suspend fun getElementByUuid(uuid: String): UUIDElementDTO?
-    suspend fun getAllElements(): List<UUIDElementDTO>
-    suspend fun getElementsByType(type: String): List<UUIDElementDTO>
-    suspend fun getChildrenOfParent(parentUuid: String): List<UUIDElementDTO>
-    suspend fun getEnabledElements(): List<UUIDElementDTO>
-    suspend fun searchByName(query: String): List<UUIDElementDTO>
+    suspend fun getElementByUuid(uuid: String): VUIDElementDTO?
+    suspend fun getAllElements(): List<VUIDElementDTO>
+    suspend fun getElementsByType(type: String): List<VUIDElementDTO>
+    suspend fun getChildrenOfParent(parentUuid: String): List<VUIDElementDTO>
+    suspend fun getEnabledElements(): List<VUIDElementDTO>
+    suspend fun searchByName(query: String): List<VUIDElementDTO>
     suspend fun countElements(): Long
     suspend fun countElementsByType(type: String): Long
 
     // ==================== Hierarchy Operations ====================
 
-    suspend fun insertHierarchy(hierarchy: UUIDHierarchyDTO)
+    suspend fun insertHierarchy(hierarchy: VUIDHierarchyDTO)
     suspend fun deleteHierarchyByParent(parentUuid: String)
-    suspend fun getHierarchyByParent(parentUuid: String): List<UUIDHierarchyDTO>
-    suspend fun getAllHierarchy(): List<UUIDHierarchyDTO>
+    suspend fun getHierarchyByParent(parentUuid: String): List<VUIDHierarchyDTO>
+    suspend fun getAllHierarchy(): List<VUIDHierarchyDTO>
 
     // ==================== Analytics Operations ====================
 
-    suspend fun insertAnalytics(analytics: UUIDAnalyticsDTO)
-    suspend fun updateAnalytics(analytics: UUIDAnalyticsDTO)
-    suspend fun getAnalyticsByUuid(uuid: String): UUIDAnalyticsDTO?
-    suspend fun getAllAnalytics(): List<UUIDAnalyticsDTO>
-    suspend fun getMostAccessed(limit: Int): List<UUIDAnalyticsDTO>
-    suspend fun getRecentlyAccessed(limit: Int): List<UUIDAnalyticsDTO>
+    suspend fun insertAnalytics(analytics: VUIDAnalyticsDTO)
+    suspend fun updateAnalytics(analytics: VUIDAnalyticsDTO)
+    suspend fun getAnalyticsByUuid(uuid: String): VUIDAnalyticsDTO?
+    suspend fun getAllAnalytics(): List<VUIDAnalyticsDTO>
+    suspend fun getMostAccessed(limit: Int): List<VUIDAnalyticsDTO>
+    suspend fun getRecentlyAccessed(limit: Int): List<VUIDAnalyticsDTO>
     suspend fun incrementAccessCount(uuid: String, timestamp: Long)
     suspend fun recordExecution(uuid: String, executionTimeMs: Long, success: Boolean, timestamp: Long)
 
     // ==================== Alias Operations ====================
 
-    suspend fun insertAlias(alias: UUIDAliasDTO)
+    suspend fun insertAlias(alias: VUIDAliasDTO)
     suspend fun deleteAliasByName(alias: String)
     suspend fun deleteAliasesForUuid(uuid: String)
-    suspend fun getAliasByName(alias: String): UUIDAliasDTO?
-    suspend fun getAliasesForUuid(uuid: String): List<UUIDAliasDTO>
+    suspend fun getAliasByName(alias: String): VUIDAliasDTO?
+    suspend fun getAliasesForUuid(uuid: String): List<VUIDAliasDTO>
     suspend fun getUuidByAlias(alias: String): String?
     suspend fun aliasExists(alias: String): Boolean
-    suspend fun getAllAliases(): List<UUIDAliasDTO>
+    suspend fun getAllAliases(): List<VUIDAliasDTO>
 
     /**
      * Batch insert aliases in single transaction (PERFORMANCE OPTIMIZATION)
@@ -77,7 +77,7 @@ interface IUUIDRepository {
      *
      * @param aliases List of alias DTOs to insert
      */
-    suspend fun insertAliasesBatch(aliases: List<UUIDAliasDTO>)
+    suspend fun insertAliasesBatch(aliases: List<VUIDAliasDTO>)
 
     // ==================== Bulk Operations ====================
 

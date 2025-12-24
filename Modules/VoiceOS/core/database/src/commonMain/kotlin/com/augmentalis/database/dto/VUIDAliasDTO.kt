@@ -22,7 +22,7 @@ data class VUIDAliasDTO(
 /**
  * Convert SQLDelight entity to DTO.
  */
-fun Uuid_aliases.toVUIDAliasDTO(): UUIDAliasDTO = VUIDAliasDTO(
+fun Uuid_aliases.toVUIDAliasDTO(): VUIDAliasDTO = VUIDAliasDTO(
     id = id,
     alias = alias,
     uuid = uuid,

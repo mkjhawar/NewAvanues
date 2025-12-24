@@ -10,6 +10,7 @@ import com.augmentalis.ava.core.domain.model.Message
 import com.augmentalis.ava.core.domain.model.MessageRole
 import com.augmentalis.ava.core.domain.repository.ConversationRepository
 import com.augmentalis.ava.core.domain.repository.MessageRepository
+import kotlinx.datetime.Clock
 
 /**
  * Use case for sending a message in a conversation.
@@ -62,7 +63,7 @@ class SendMessageUseCase(
                 conversationId = conversationId,
                 role = role,
                 content = content,
-                timestamp = System.currentTimeMillis(),
+                timestamp = Clock.System.now().toEpochMilliseconds(),
                 intent = intent,
                 confidence = confidence,
                 metadata = metadata
@@ -84,6 +85,6 @@ class SendMessageUseCase(
      * Platform-specific implementation can override this
      */
     private fun generateMessageId(): String {
-        return "msg_${System.currentTimeMillis()}_${(0..999999).random()}"
+        return "msg_${Clock.System.now().toEpochMilliseconds()}_${(0..999999).random()}"
     }
 }

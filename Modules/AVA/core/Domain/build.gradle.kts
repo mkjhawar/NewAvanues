@@ -38,6 +38,7 @@ kotlin {
             dependencies {
                 implementation(project(":Modules:AVA:core:Utils"))
                 implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.datetime)
             }
         }
 

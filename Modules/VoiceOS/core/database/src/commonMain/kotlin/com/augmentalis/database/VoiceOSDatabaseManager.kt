@@ -164,7 +164,7 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
     val commandHistory: ICommandHistoryRepository = SQLDelightCommandHistoryRepository(database)
     val userPreferences: IUserPreferenceRepository = SQLDelightUserPreferenceRepository(database)
     val errorReports: IErrorReportRepository = SQLDelightErrorReportRepository(database)
-    val uuids: IUUIDRepository = SQLDelightUUIDRepository(database)
+    val uuids: IVUIDRepository = SQLDelightVUIDRepository(database)
     val plugins: IPluginRepository = SQLDelightPluginRepository(database)
 
     // CommandManager repositories
