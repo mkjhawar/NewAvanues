@@ -11,9 +11,7 @@ package com.augmentalis.voiceoscore.ui
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import com.augmentalis.voiceoscore.ui.setContentWithScrollSupport
+import com.augmentalis.voiceoscore.ui.ContentCaptureSafeComposeActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -73,12 +71,12 @@ import kotlinx.coroutines.withContext
  * Provides UI for triggering comprehensive app learning via LearnApp mode.
  * Users can select an app and trigger full UI traversal to discover all elements.
  */
-class LearnAppActivity : ComponentActivity() {
+class LearnAppActivity : ContentCaptureSafeComposeActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentWithScrollSupport {
+        setContentSafely {
             VoiceOSTheme {
                 // TODO: Inject IScrapedAppRepository from DI container or service
                 // For now, this will need to be passed from the service that creates this activity

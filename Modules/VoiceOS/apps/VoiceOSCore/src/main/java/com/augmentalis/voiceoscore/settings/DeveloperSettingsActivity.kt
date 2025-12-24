@@ -15,8 +15,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
+import com.augmentalis.voiceoscore.ui.ContentCaptureSafeComposeActivity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -36,7 +35,6 @@ import com.augmentalis.voiceoscore.learnapp.subscription.DeveloperSubscriptionPr
 import com.augmentalis.voiceoscore.learnapp.subscription.FeatureGateManager
 import com.augmentalis.voiceoscore.learnapp.subscription.LearningMode
 import com.augmentalis.voiceoscore.learnapp.subscription.SubscriptionTier
-import com.augmentalis.voiceoscore.ui.setContentWithScrollSupport
 import kotlinx.coroutines.launch
 
 /**
@@ -49,7 +47,7 @@ import kotlinx.coroutines.launch
  * - Current mode display
  * - Force rescan button
  */
-class DeveloperSettingsActivity : ComponentActivity() {
+class DeveloperSettingsActivity : ContentCaptureSafeComposeActivity() {
 
     companion object {
         private const val TAG = "DeveloperSettings"
@@ -69,7 +67,7 @@ class DeveloperSettingsActivity : ComponentActivity() {
         val featureGateManager = FeatureGateManager(applicationContext)
         val subscriptionProvider = DeveloperSubscriptionProvider(applicationContext)
 
-        setContentWithScrollSupport {
+        setContentSafely {
             MaterialTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),

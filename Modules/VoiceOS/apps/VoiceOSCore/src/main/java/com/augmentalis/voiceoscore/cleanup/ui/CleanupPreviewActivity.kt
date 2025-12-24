@@ -15,8 +15,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
+import com.augmentalis.voiceoscore.ui.ContentCaptureSafeComposeActivity
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -25,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelProvider
 import com.augmentalis.voiceoscore.cleanup.CleanupManager
 import com.augmentalis.voiceoscore.di.DatabaseProvider
-import com.augmentalis.voiceoscore.ui.setContentWithScrollSupport
 
 /**
  * Activity hosting the cleanup preview screen.
@@ -33,7 +31,7 @@ import com.augmentalis.voiceoscore.ui.setContentWithScrollSupport
  *
  * Note: Hilt is not available in VoiceOSCore module (doesn't support AccessibilityService)
  */
-class CleanupPreviewActivity : ComponentActivity() {
+class CleanupPreviewActivity : ContentCaptureSafeComposeActivity() {
 
     companion object {
         private const val TAG = "CleanupPreviewActivity"
@@ -70,7 +68,7 @@ class CleanupPreviewActivity : ComponentActivity() {
 
         Log.i(TAG, "Cleanup preview activity started")
 
-        setContentWithScrollSupport {
+        setContentSafely {
             MaterialTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
