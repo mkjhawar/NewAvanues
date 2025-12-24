@@ -10,6 +10,10 @@ import java.util.concurrent.ConcurrentHashMap
 import com.augmentalis.magiccode.generator.parser.VosParser
 import com.augmentalis.magiccode.generator.parser.JsonDSLParser
 import com.augmentalis.magiccode.generator.parser.CompactSyntaxParser
+import com.augmentalis.magiccode.generator.ast.ComponentNode
+import com.augmentalis.magiccode.generator.ast.ScreenNode
+import com.augmentalis.magiccode.generator.ast.ComponentType
+import com.augmentalis.magiccode.generator.ast.AvaUINode
 
 /**
  * Text Document Service for MagicUI Language Server
@@ -227,6 +231,11 @@ class MagicUITextDocumentService : TextDocumentService {
 
         logger.debug("Validated document: ${diagnostics.size} diagnostics (${validationResult.errors.size} errors, ${validationResult.warnings.size} warnings)")
 
+        // Add semantic validation on top of parser validation
+        addSemanticValidation(diagnostics, content, uri)
+
+        logger.debug("Total diagnostics after semantic validation: ${diagnostics.size}")
+
         return diagnostics
     }
 
@@ -249,6 +258,223 @@ class MagicUITextDocumentService : TextDocumentService {
      */
     private enum class FileType {
         JSON, YAML, COMPACT, UNKNOWN
+    }
+
+    /**
+     * Add semantic validation rules on top of parser validation
+     */
+    private fun addSemanticValidation(diagnostics: MutableList<Diagnostic>, content: String, uri: String) {
+        try {
+            val fileType = determineFileType(uri, content)
+
+            // Parse content to AST for semantic analysis
+            val parseResult: Any? = when (fileType) {
+                FileType.JSON -> {
+                    val result = jsonDslParser.parseComponent(content)
+                    if (result.isSuccess) result.getOrNull() else null
+                }
+                FileType.YAML -> {
+                    val result = vosParser.parseComponent(content)
+                    if (result.isSuccess) result.getOrNull() else null
+                }
+                FileType.COMPACT -> {
+                    val result = compactSyntaxParser.parseComponent(content)
+                    if (result.isSuccess) result.getOrNull() else null
+                }
+                FileType.UNKNOWN -> return
+            }
+
+            if (parseResult == null) return
+
+            // Extract root component for validation
+            val rootComponent: ComponentNode? = when (parseResult) {
+                is ScreenNode -> parseResult.root
+                is ComponentNode -> parseResult
+                else -> null
+            }
+
+            if (rootComponent == null) return
+
+            // Perform semantic validation
+            validateComponentTree(rootComponent, diagnostics, 0)
+
+        } catch (e: Exception) {
+            logger.debug("Semantic validation skipped: ${e.message}")
+        }
+    }
+
+    /**
+     * Recursively validate component tree
+     */
+    private fun validateComponentTree(component: ComponentNode, diagnostics: MutableList<Diagnostic>, depth: Int) {
+        // Component-specific validation
+        validateComponentRules(component, diagnostics)
+
+        // Property value validation
+        validatePropertyValues(component, diagnostics)
+
+        // Required field validation
+        validateRequiredFields(component, diagnostics)
+
+        // Hierarchy depth validation
+        if (depth > 10) {
+            diagnostics.add(createWarning(0, "Component nesting depth exceeds 10 levels, consider refactoring"))
+        }
+
+        // Validate children recursively
+        component.children.forEach { child ->
+            if (child is ComponentNode) {
+                validateComponentTree(child, diagnostics, depth + 1)
+                validateParentChildRelationship(component, child, diagnostics)
+            }
+        }
+    }
+
+    /**
+     * Validate component-specific rules
+     */
+    private fun validateComponentRules(component: ComponentNode, diagnostics: MutableList<Diagnostic>) {
+        when (component.type) {
+            ComponentType.BUTTON -> {
+                if (!component.properties.containsKey("text") && !component.properties.containsKey("icon")) {
+                    diagnostics.add(createWarning(0, "Button should have 'text' or 'icon' property"))
+                }
+            }
+            ComponentType.TEXT_FIELD -> {
+                if (!component.properties.containsKey("vuid") && !component.properties.containsKey("id")) {
+                    diagnostics.add(createWarning(0, "TextField should have 'vuid' for data binding"))
+                }
+            }
+            ComponentType.IMAGE -> {
+                if (!component.properties.containsKey("src") && !component.properties.containsKey("icon")) {
+                    diagnostics.add(createError(0, "Image must have 'src' or 'icon' property"))
+                }
+            }
+            ComponentType.CONTAINER, ComponentType.ROW, ComponentType.COLUMN -> {
+                if (component.children.isEmpty()) {
+                    diagnostics.add(createWarning(0, "${component.type} should contain child components"))
+                }
+            }
+            else -> { /* No specific rules for this component type */ }
+        }
+    }
+
+    /**
+     * Validate property values
+     */
+    private fun validatePropertyValues(component: ComponentNode, diagnostics: MutableList<Diagnostic>) {
+        component.properties.forEach { (key, value) ->
+            when (key) {
+                "color", "backgroundColor", "borderColor" -> {
+                    if (!isValidColor(value.toString())) {
+                        diagnostics.add(createWarning(0, "Invalid color value: $value"))
+                    }
+                }
+                "width", "height", "padding", "margin" -> {
+                    if (!isValidSize(value.toString())) {
+                        diagnostics.add(createWarning(0, "Invalid size value: $value (use dp, sp, px, or %)"))
+                    }
+                }
+                "alignment", "gravity" -> {
+                    val validAlignments = setOf("start", "center", "end", "top", "bottom", "left", "right")
+                    if (value.toString().lowercase() !in validAlignments) {
+                        diagnostics.add(createWarning(0, "Invalid alignment value: $value"))
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Validate required fields
+     */
+    private fun validateRequiredFields(component: ComponentNode, diagnostics: MutableList<Diagnostic>) {
+        // All components should have vuid for voice navigation
+        if (!component.properties.containsKey("vuid") && !component.properties.containsKey("id")) {
+            diagnostics.add(createInfo(0, "Consider adding 'vuid' property for voice navigation"))
+        }
+
+        // Interactive components should have event handlers
+        val interactiveTypes = setOf(
+            ComponentType.BUTTON, ComponentType.CHECKBOX, ComponentType.SWITCH,
+            ComponentType.TEXT_FIELD, ComponentType.SLIDER, ComponentType.RADIO
+        )
+        if (component.type in interactiveTypes && component.eventHandlers.isEmpty()) {
+            diagnostics.add(createInfo(0, "Interactive component should have event handler (onClick, onChange, etc.)"))
+        }
+    }
+
+    /**
+     * Validate parent-child relationships
+     */
+    private fun validateParentChildRelationship(parent: ComponentNode, child: ComponentNode, diagnostics: MutableList<Diagnostic>) {
+        // ScrollView should not contain another ScrollView
+        if (parent.type == ComponentType.SCROLL_VIEW && child.type == ComponentType.SCROLL_VIEW) {
+            diagnostics.add(createWarning(0, "ScrollView should not contain another ScrollView"))
+        }
+
+        // Card nesting depth check
+        if (parent.type == ComponentType.CARD && child.type == ComponentType.CARD) {
+            diagnostics.add(createInfo(0, "Consider avoiding direct Card nesting for better UX"))
+        }
+    }
+
+    /**
+     * Helper: Validate color value
+     */
+    private fun isValidColor(value: String): Boolean {
+        // Hex colors: #RGB, #RRGGBB, #AARRGGBB
+        if (value.matches(Regex("^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$"))) return true
+
+        // Named colors
+        val namedColors = setOf("red", "blue", "green", "black", "white", "gray", "yellow", "orange", "purple")
+        if (value.lowercase() in namedColors) return true
+
+        return false
+    }
+
+    /**
+     * Helper: Validate size value
+     */
+    private fun isValidSize(value: String): Boolean {
+        // Numeric values with units: 16dp, 12sp, 100px, 50%
+        return value.matches(Regex("^\\d+(\\.\\d+)?(dp|sp|px|%)$"))
+    }
+
+    /**
+     * Helper: Create error diagnostic
+     */
+    private fun createError(line: Int, message: String): Diagnostic {
+        return Diagnostic().apply {
+            range = Range(Position(line, 0), Position(line, 100))
+            severity = DiagnosticSeverity.Error
+            this.message = message
+            source = "magicui-semantic"
+        }
+    }
+
+    /**
+     * Helper: Create warning diagnostic
+     */
+    private fun createWarning(line: Int, message: String): Diagnostic {
+        return Diagnostic().apply {
+            range = Range(Position(line, 0), Position(line, 100))
+            severity = DiagnosticSeverity.Warning
+            this.message = message
+            source = "magicui-semantic"
+        }
+    }
+
+    /**
+     * Helper: Create info diagnostic
+     */
+    private fun createInfo(line: Int, message: String): Diagnostic {
+        return Diagnostic().apply {
+            range = Range(Position(line, 0), Position(line, 100))
+            severity = DiagnosticSeverity.Information
+            this.message = message
+            source = "magicui-semantic"
+        }
     }
 
     /**
