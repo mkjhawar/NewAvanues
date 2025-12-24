@@ -981,10 +981,88 @@ class MagicUITextDocumentService : TextDocumentService {
      * Get definition locations for symbol at position
      */
     private fun getDefinitionLocations(content: String, position: Position, uri: String): List<Location> {
-        // TODO: Implement go-to-definition (e.g., navigate to VUID definition)
-        // For now, return empty list
+        val lines = content.lines()
+        if (position.line >= lines.size) {
+            return emptyList()
+        }
+
+        val currentLine = lines[position.line]
+
+        // Try to extract VUID at cursor position
+        val vuid = extractVuidAtPosition(currentLine, position.character)
+
+        if (vuid != null && isValidVuidFormat(vuid)) {
+            // Search for VUID definition in document
+            val definitionLocation = findVuidDefinition(content, vuid, uri)
+            if (definitionLocation != null) {
+                return listOf(definitionLocation)
+            }
+        }
 
         return emptyList()
+    }
+
+    /**
+     * Extract VUID at cursor position
+     */
+    private fun extractVuidAtPosition(line: String, character: Int): String? {
+        // Extract word at cursor
+        val beforeCursor = line.substring(0, minOf(character, line.length))
+        val afterCursor = line.substring(minOf(character, line.length))
+
+        val wordBefore = beforeCursor.split(Regex("[\\s:,\"']")).lastOrNull() ?: ""
+        val wordAfter = afterCursor.split(Regex("[\\s:,\"']")).firstOrNull() ?: ""
+        val word = wordBefore + wordAfter
+
+        // Check if it looks like a VUID
+        return if (word.matches(Regex("^[a-z0-9-]+$")) && word.contains("-")) {
+            word
+        } else {
+            null
+        }
+    }
+
+    /**
+     * Validate VUID format
+     */
+    private fun isValidVuidFormat(vuid: String): Boolean {
+        // VUID format: lowercase letters, numbers, hyphens
+        // Example: button-submit, login-email-field
+        return vuid.matches(Regex("^[a-z][a-z0-9-]*[a-z0-9]$")) &&
+               vuid.length >= 3 &&
+               vuid.length <= 64
+    }
+
+    /**
+     * Find VUID definition in document
+     */
+    private fun findVuidDefinition(content: String, vuid: String, uri: String): Location? {
+        val lines = content.lines()
+
+        // Search for vuid: <target> pattern
+        lines.forEachIndexed { index, line ->
+            if (line.contains("vuid:") && line.contains(vuid)) {
+                // Found definition
+                val range = Range(
+                    Position(index, 0),
+                    Position(index, line.length)
+                )
+                return Location(uri, range)
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * Generate VUID suggestion based on component type and context
+     */
+    private fun generateVuidSuggestion(componentType: String?, context: String?): String {
+        val prefix = componentType?.lowercase()?.replace(Regex("[^a-z0-9]"), "-") ?: "component"
+        val suffix = context?.lowercase()?.replace(Regex("[^a-z0-9]"), "-") ?: "item"
+        val random = (1000..9999).random()
+
+        return "$prefix-$suffix-$random"
     }
 
     /**
