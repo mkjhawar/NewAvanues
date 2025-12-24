@@ -26,6 +26,31 @@ Repository: NewAvanues - Main Monorepo (AVA, VoiceOS, WebAvanue, Cockpit, NLU)
 | Database | SQLDelight (NOT Room) |
 | DI | Koin |
 | Web | Tauri + React + TypeScript |
+| Language Server | Kotlin LSP (for DSL/tooling) |
+| Web Components | React + TypeScript (embeddable UI) |
+| IDE Plugins | VS Code (TypeScript) + IntelliJ (Kotlin + JCEF) |
+
+---
+
+## LSP ARCHITECTURE (AVAMagic Tooling)
+
+**Layer 1: Core Language Server (Kotlin)**
+- DSL parsing, validation, code generation
+- Implements: Language Server Protocol (LSP)
+- Size: ~25MB (shared across all tools)
+- Reuses: ThemeCompiler.kt, VUIDCreator, existing MagicUI logic
+
+**Layer 2: Web UI Components (React + TypeScript)**
+- Theme color picker, property inspector, live preview
+- Monaco Editor integration (VS Code's editor)
+- Size: ~5MB (cached, embeddable everywhere)
+
+**Layer 3: Platform Integrations**
+- VS Code Extension: TypeScript + LSP client (~2MB)
+- IntelliJ Plugin: Kotlin + JCEF browser (~3MB)
+- Standalone Apps: Compose Desktop + CEF OR Tauri v2
+
+**Total Ecosystem:** ~45MB (90% code reuse across all tools)
 
 ---
 
@@ -75,4 +100,4 @@ Repository: NewAvanues - Main Monorepo (AVA, VoiceOS, WebAvanue, Cockpit, NLU)
 
 ---
 
-Updated: 2025-12-17 | Version: 12.1.0
+Updated: 2025-12-24 | Version: 12.2.0

@@ -18,6 +18,7 @@
 
 package com.augmentalis.shared.nlu.classifier
 
+import kotlinx.datetime.Clock
 import com.augmentalis.shared.nlu.matcher.EmbeddingProvider
 import com.augmentalis.shared.nlu.matcher.FuzzyMatcher
 import com.augmentalis.shared.nlu.matcher.PatternMatcher
@@ -112,7 +113,7 @@ class EnhancedHybridClassifier(
             return EnhancedClassificationResult.empty()
         }
 
-        val startTime = System.currentTimeMillis()
+        val startTime = Clock.System.now().toEpochMilliseconds()
         totalClassifications++
 
         // Check negative samples first (fast rejection)
@@ -122,7 +123,7 @@ class EnhancedHybridClassifier(
                 matches = emptyList(),
                 method = MatchMethod.UNKNOWN,
                 confidence = 0f,
-                processingTimeMs = System.currentTimeMillis() - startTime,
+                processingTimeMs = Clock.System.now().toEpochMilliseconds() - startTime,
                 signals = ClassificationSignals.empty(),
                 isNegativeSample = true
             )
@@ -142,7 +143,7 @@ class EnhancedHybridClassifier(
                 matches = listOf(calibrated),
                 method = MatchMethod.EXACT,
                 confidence = calibrated.score,
-                processingTimeMs = System.currentTimeMillis() - startTime,
+                processingTimeMs = Clock.System.now().toEpochMilliseconds() - startTime,
                 signals = signals,
                 usedFastPath = true
             )
@@ -160,7 +161,7 @@ class EnhancedHybridClassifier(
             matches = ensembleResult.matches,
             method = ensembleResult.method,
             confidence = ensembleResult.confidence,
-            processingTimeMs = System.currentTimeMillis() - startTime,
+            processingTimeMs = Clock.System.now().toEpochMilliseconds() - startTime,
             signals = signals,
             needsVerification = needsVerification,
             verificationHint = if (needsVerification) {

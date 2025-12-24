@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
+    alias(libs.plugins.sqldelight)
 }
 
 kotlin {
@@ -42,10 +43,13 @@ kotlin {
         // Common code (shared across all platforms)
         val commonMain by getting {
             dependencies {
-                implementation(project(":core:Utils"))
-                implementation(project(":core:Domain"))
+                implementation(project(":Modules:AVA:core:Utils"))
+                implementation(project(":Modules:AVA:core:Domain"))
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.datetime)
+                implementation(libs.sqldelight.runtime)
+                implementation(libs.sqldelight.coroutines.extensions)
             }
         }
 
@@ -59,11 +63,14 @@ kotlin {
         // Android-specific code
         val androidMain by getting {
             dependencies {
-                implementation(project(":core:Data"))
+                implementation(project(":Modules:AVA:core:Data"))
                 implementation(libs.kotlinx.coroutines.android)
                 implementation(libs.onnxruntime.android)
                 implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
                 // Timber provided by Common module
+
+                // SQLDelight Android driver
+                implementation(libs.sqldelight.android.driver)
 
                 // ADR-013: WorkManager for background embedding computation
                 implementation("androidx.work:work-runtime-ktx:2.9.0")
@@ -143,4 +150,12 @@ android {
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     sourceSets["main"].res.srcDirs("src/androidMain/res")
+}
+
+sqldelight {
+    databases {
+        create("SharedNluDatabase") {
+            packageName.set("com.augmentalis.shared.nlu.db")
+        }
+    }
 }

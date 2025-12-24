@@ -174,6 +174,27 @@ class AndroidIntentRepository(
     }
 
     /**
+     * Extension to convert SelectWithEmbeddings result to domain model
+     */
+    private fun com.augmentalis.shared.nlu.db.SelectWithEmbeddings.toUnifiedIntent(): UnifiedIntent {
+        val patterns = queries.selectPatterns(id).executeAsList()
+        val synonyms = queries.selectSynonyms(id).executeAsList()
+
+        return UnifiedIntent(
+            id = id,
+            canonicalPhrase = canonical_phrase,
+            patterns = patterns,
+            synonyms = synonyms,
+            embedding = embedding.toFloatArray(),  // Non-null in this query
+            category = category,
+            actionId = action_id,
+            priority = priority.toInt(),
+            locale = locale,
+            source = source
+        )
+    }
+
+    /**
      * Convert FloatArray to ByteArray for storage
      */
     private fun FloatArray.toByteArray(): ByteArray {

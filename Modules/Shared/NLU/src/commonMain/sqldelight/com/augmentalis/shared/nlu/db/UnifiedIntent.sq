@@ -87,8 +87,8 @@ WHERE ip.pattern = ?;
 -- Get intent by synonym (exact)
 selectBySynonym:
 SELECT ui.* FROM unified_intent ui
-INNER JOIN intent_synonym is ON ui.id = is.intent_id
-WHERE is.synonym = ?;
+INNER JOIN intent_synonym syn ON ui.id = syn.intent_id
+WHERE syn.synonym = ?;
 
 -- Insert intent
 insertIntent:
