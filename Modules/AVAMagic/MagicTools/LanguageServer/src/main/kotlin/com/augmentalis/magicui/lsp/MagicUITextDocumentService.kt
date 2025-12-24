@@ -483,60 +483,499 @@ class MagicUITextDocumentService : TextDocumentService {
     private fun getCompletionItems(content: String, position: Position): List<CompletionItem> {
         val items = mutableListOf<CompletionItem>()
 
-        // TODO: Implement smart completion based on context
-        // For now, provide basic component suggestions
+        // Analyze context to provide smart suggestions
+        val context = analyzeCompletionContext(content, position)
 
-        // Component suggestions
-        val components = listOf(
-            "Button", "TextField", "Card", "Text", "Image",
-            "Column", "Row", "Container", "Divider", "Checkbox"
-        )
-
-        components.forEach { component ->
-            items.add(
-                CompletionItem(component).apply {
-                    kind = CompletionItemKind.Class
-                    detail = "MagicUI Component"
-                    documentation = Either.forLeft("A $component component")
-                    insertText = "$component:\n  "
-                    insertTextFormat = InsertTextFormat.Snippet
-                }
-            )
-        }
-
-        // Property suggestions (when inside a component)
-        val properties = listOf(
-            "text", "onClick", "enabled", "visible", "vuid",
-            "modifiers", "style", "theme"
-        )
-
-        properties.forEach { property ->
-            items.add(
-                CompletionItem(property).apply {
-                    kind = CompletionItemKind.Property
-                    detail = "Component Property"
-                    insertText = "$property: "
-                }
-            )
+        when (context.type) {
+            CompletionContext.COMPONENT_NAME -> {
+                items.addAll(getComponentCompletions())
+            }
+            CompletionContext.PROPERTY_NAME -> {
+                items.addAll(getPropertyCompletions(context.componentType))
+            }
+            CompletionContext.PROPERTY_VALUE -> {
+                items.addAll(getValueCompletions(context.propertyName, context.componentType))
+            }
+            CompletionContext.EVENT_HANDLER -> {
+                items.addAll(getEventHandlerCompletions())
+            }
+            else -> {
+                // Provide general suggestions
+                items.addAll(getComponentCompletions())
+                items.addAll(getPropertyCompletions(null))
+            }
         }
 
         return items
     }
 
     /**
+     * Analyze context to determine what kind of completion to provide
+     */
+    private fun analyzeCompletionContext(content: String, position: Position): CompletionContextInfo {
+        val lines = content.lines()
+        if (position.line >= lines.size) {
+            return CompletionContextInfo(CompletionContext.UNKNOWN)
+        }
+
+        val currentLine = lines[position.line]
+        val textBeforeCursor = currentLine.substring(0, minOf(position.character, currentLine.length))
+
+        // Check if we're in a property value context
+        if (textBeforeCursor.contains(":")) {
+            val propertyName = textBeforeCursor.substringBeforeLast(":").trim().split(" ").last()
+            return CompletionContextInfo(
+                type = CompletionContext.PROPERTY_VALUE,
+                propertyName = propertyName
+            )
+        }
+
+        // Check if we're in an event handler context
+        if (textBeforeCursor.trim().startsWith("on")) {
+            return CompletionContextInfo(CompletionContext.EVENT_HANDLER)
+        }
+
+        // Check if we're indented (likely a property)
+        if (textBeforeCursor.startsWith("  ") || textBeforeCursor.startsWith("\t")) {
+            return CompletionContextInfo(CompletionContext.PROPERTY_NAME)
+        }
+
+        // Default to component name
+        return CompletionContextInfo(CompletionContext.COMPONENT_NAME)
+    }
+
+    /**
+     * Get component completions with snippets
+     */
+    private fun getComponentCompletions(): List<CompletionItem> {
+        val components = mapOf(
+            "Button" to "vuid: \${1:button-id}\n  text: \${2:Click me}\n  onClick: \${3:handleClick}",
+            "TextField" to "vuid: \${1:field-id}\n  placeholder: \${2:Enter text}\n  onChange: \${3:handleChange}",
+            "Card" to "vuid: \${1:card-id}\n  children:\n    - \${2}",
+            "Text" to "vuid: \${1:text-id}\n  text: \${2:Hello World}",
+            "Image" to "vuid: \${1:image-id}\n  src: \${2:image.png}",
+            "Column" to "vuid: \${1:column-id}\n  children:\n    - \${2}",
+            "Row" to "vuid: \${1:row-id}\n  children:\n    - \${2}",
+            "Container" to "vuid: \${1:container-id}\n  children:\n    - \${2}",
+            "Checkbox" to "vuid: \${1:checkbox-id}\n  checked: \${2:false}\n  onChange: \${3:handleCheck}",
+            "Switch" to "vuid: \${1:switch-id}\n  enabled: \${2:true}\n  onChange: \${3:handleSwitch}"
+        )
+
+        return components.map { (name, snippet) ->
+            CompletionItem(name).apply {
+                kind = CompletionItemKind.Class
+                detail = "MagicUI $name Component"
+                documentation = Either.forLeft(getComponentDocumentation(name))
+                insertText = "$name:\n  $snippet"
+                insertTextFormat = InsertTextFormat.Snippet
+                sortText = "0$name" // Sort components first
+            }
+        }
+    }
+
+    /**
+     * Get property completions based on component type
+     */
+    private fun getPropertyCompletions(componentType: String?): List<CompletionItem> {
+        val commonProps = listOf(
+            "vuid" to "Unique voice identifier for navigation",
+            "visible" to "Component visibility (true/false)",
+            "enabled" to "Component enabled state (true/false)",
+            "style" to "Custom styling object",
+            "modifiers" to "Layout modifiers"
+        )
+
+        val typeSpecificProps = when (componentType?.lowercase()) {
+            "button", "textfield", "checkbox", "switch" -> listOf(
+                "onClick" to "Click event handler",
+                "onChange" to "Change event handler"
+            )
+            "text" -> listOf(
+                "text" to "Text content",
+                "fontSize" to "Font size (dp, sp)",
+                "color" to "Text color (hex or named)"
+            )
+            "image" -> listOf(
+                "src" to "Image source URL",
+                "alt" to "Alternative text",
+                "width" to "Image width",
+                "height" to "Image height"
+            )
+            else -> emptyList()
+        }
+
+        return (commonProps + typeSpecificProps).map { (name, description) ->
+            CompletionItem(name).apply {
+                kind = CompletionItemKind.Property
+                detail = "Component Property"
+                documentation = Either.forLeft(description)
+                insertText = "$name: "
+                sortText = "1$name" // Sort properties after components
+            }
+        }
+    }
+
+    /**
+     * Get value completions for specific properties
+     */
+    private fun getValueCompletions(propertyName: String?, componentType: String?): List<CompletionItem> {
+        return when (propertyName?.lowercase()) {
+            "color", "backgroundcolor", "bordercolor" -> getColorCompletions()
+            "alignment", "gravity" -> getAlignmentCompletions()
+            "visible", "enabled", "checked" -> getBooleanCompletions()
+            else -> emptyList()
+        }
+    }
+
+    /**
+     * Get color value completions
+     */
+    private fun getColorCompletions(): List<CompletionItem> {
+        val colors = mapOf(
+            "red" to "#FF0000",
+            "blue" to "#0000FF",
+            "green" to "#00FF00",
+            "black" to "#000000",
+            "white" to "#FFFFFF",
+            "gray" to "#808080",
+            "yellow" to "#FFFF00",
+            "orange" to "#FFA500",
+            "purple" to "#800080"
+        )
+
+        return colors.map { (name, hex) ->
+            CompletionItem(name).apply {
+                kind = CompletionItemKind.Color
+                detail = hex
+                documentation = Either.forLeft("Color: $name ($hex)")
+                insertText = name
+            }
+        }
+    }
+
+    /**
+     * Get alignment value completions
+     */
+    private fun getAlignmentCompletions(): List<CompletionItem> {
+        val alignments = listOf("start", "center", "end", "top", "bottom", "left", "right")
+
+        return alignments.map { alignment ->
+            CompletionItem(alignment).apply {
+                kind = CompletionItemKind.Enum
+                detail = "Alignment value"
+                insertText = alignment
+            }
+        }
+    }
+
+    /**
+     * Get boolean value completions
+     */
+    private fun getBooleanCompletions(): List<CompletionItem> {
+        return listOf("true", "false").map { value ->
+            CompletionItem(value).apply {
+                kind = CompletionItemKind.Value
+                detail = "Boolean value"
+                insertText = value
+            }
+        }
+    }
+
+    /**
+     * Get event handler completions
+     */
+    private fun getEventHandlerCompletions(): List<CompletionItem> {
+        val handlers = mapOf(
+            "onClick" to "Click event handler",
+            "onChange" to "Change event handler",
+            "onSubmit" to "Submit event handler",
+            "onFocus" to "Focus event handler",
+            "onBlur" to "Blur event handler"
+        )
+
+        return handlers.map { (name, description) ->
+            CompletionItem(name).apply {
+                kind = CompletionItemKind.Event
+                detail = description
+                insertText = "$name: \${1:handleEvent}"
+                insertTextFormat = InsertTextFormat.Snippet
+            }
+        }
+    }
+
+    /**
+     * Get component documentation
+     */
+    private fun getComponentDocumentation(componentName: String): String {
+        return when (componentName) {
+            "Button" -> "Interactive button component with click handling"
+            "TextField" -> "Text input field with validation and change handling"
+            "Card" -> "Container with elevation and rounded corners"
+            "Text" -> "Display text with customizable styling"
+            "Image" -> "Display images from URLs or assets"
+            "Column" -> "Vertical layout container"
+            "Row" -> "Horizontal layout container"
+            "Container" -> "Generic container for grouping components"
+            "Checkbox" -> "Checkbox input for boolean values"
+            "Switch" -> "Toggle switch for boolean values"
+            else -> "MagicUI component"
+        }
+    }
+
+    /**
+     * Completion context types
+     */
+    private enum class CompletionContext {
+        COMPONENT_NAME, PROPERTY_NAME, PROPERTY_VALUE, EVENT_HANDLER, UNKNOWN
+    }
+
+    /**
+     * Completion context information
+     */
+    private data class CompletionContextInfo(
+        val type: CompletionContext,
+        val componentType: String? = null,
+        val propertyName: String? = null
+    }
+
+    /**
      * Get hover information for symbol at position
      */
     private fun getHoverInfo(content: String, position: Position): Hover {
-        // TODO: Implement hover documentation lookup
-        // For now, return basic info
-
-        val markedString = MarkupContent().apply {
-            kind = "markdown"
-            value = "**MagicUI Component**\n\nHover documentation coming soon..."
+        val lines = content.lines()
+        if (position.line >= lines.size) {
+            return createEmptyHover()
         }
 
-        return Hover(markedString)
+        val currentLine = lines[position.line]
+
+        // Try to identify what we're hovering over
+        val hoverContext = analyzeHoverContext(currentLine, position.character)
+
+        val documentation = when {
+            hoverContext.componentName != null -> {
+                getComponentHoverDocumentation(hoverContext.componentName)
+            }
+            hoverContext.propertyName != null -> {
+                getPropertyHoverDocumentation(hoverContext.propertyName, hoverContext.propertyValue)
+            }
+            hoverContext.vuid != null -> {
+                getVuidHoverDocumentation(hoverContext.vuid)
+            }
+            else -> null
+        }
+
+        return if (documentation != null) {
+            val markedString = MarkupContent().apply {
+                kind = "markdown"
+                value = documentation
+            }
+            Hover(markedString)
+        } else {
+            createEmptyHover()
+        }
     }
+
+    /**
+     * Analyze hover context to determine what user is hovering over
+     */
+    private fun analyzeHoverContext(line: String, character: Int): HoverContextInfo {
+        // Extract word at cursor position
+        val beforeCursor = line.substring(0, minOf(character, line.length))
+        val afterCursor = line.substring(minOf(character, line.length))
+
+        val wordBefore = beforeCursor.split(Regex("[\\s:,]")).lastOrNull() ?: ""
+        val wordAfter = afterCursor.split(Regex("[\\s:,]")).firstOrNull() ?: ""
+        val word = wordBefore + wordAfter
+
+        // Check if it's a component name (starts with uppercase)
+        if (word.isNotEmpty() && word[0].isUpperCase()) {
+            return HoverContextInfo(componentName = word)
+        }
+
+        // Check if it's a property (contains colon)
+        if (line.contains(":")) {
+            val parts = line.split(":")
+            val propName = parts[0].trim()
+            val propValue = if (parts.size > 1) parts[1].trim() else null
+            return HoverContextInfo(propertyName = propName, propertyValue = propValue)
+        }
+
+        // Check if it's a VUID
+        if (word.startsWith("VUID-") || word.contains("vuid")) {
+            return HoverContextInfo(vuid = word)
+        }
+
+        return HoverContextInfo()
+    }
+
+    /**
+     * Get hover documentation for component
+     */
+    private fun getComponentHoverDocumentation(componentName: String): String {
+        val baseDoc = when (componentName) {
+            "Button" -> """
+                ### Button Component
+                Interactive button for user actions
+
+                **Properties:**
+                - `text`: Button label text
+                - `icon`: Optional icon
+                - `onClick`: Click event handler
+                - `enabled`: Enable/disable state
+                - `vuid`: Voice unique identifier
+
+                **Example:**
+                ```yaml
+                Button:
+                  vuid: submit-btn
+                  text: Submit Form
+                  onClick: handleSubmit
+                ```
+            """.trimIndent()
+
+            "TextField" -> """
+                ### TextField Component
+                Text input field with validation
+
+                **Properties:**
+                - `placeholder`: Placeholder text
+                - `value`: Current value
+                - `onChange`: Change event handler
+                - `vuid`: Voice unique identifier
+                - `validation`: Validation rules
+
+                **Example:**
+                ```yaml
+                TextField:
+                  vuid: email-input
+                  placeholder: Enter email
+                  onChange: handleEmailChange
+                ```
+            """.trimIndent()
+
+            "Card" -> """
+                ### Card Component
+                Container with elevation and rounded corners
+
+                **Properties:**
+                - `elevation`: Shadow depth
+                - `children`: Child components
+                - `backgroundColor`: Card background color
+                - `padding`: Inner padding
+
+                **Example:**
+                ```yaml
+                Card:
+                  vuid: profile-card
+                  elevation: 4
+                  children:
+                    - Text: ...
+                ```
+            """.trimIndent()
+
+            else -> """
+                ### $componentName Component
+                MagicUI component for building user interfaces
+
+                **Common Properties:**
+                - `vuid`: Voice unique identifier
+                - `visible`: Visibility state
+                - `enabled`: Enabled state
+            """.trimIndent()
+        }
+
+        return baseDoc
+    }
+
+    /**
+     * Get hover documentation for property
+     */
+    private fun getPropertyHoverDocumentation(propertyName: String, propertyValue: String?): String {
+        return when (propertyName) {
+            "vuid" -> """
+                ### VUID (Voice Unique Identifier)
+                Unique identifier for voice navigation and component access
+
+                **Format:** `component-type-descriptor`
+                **Example:** `login-submit-button`
+
+                Used by VoiceOS to navigate and interact with UI elements.
+            """.trimIndent()
+
+            "onClick", "onChange", "onSubmit" -> """
+                ### Event Handler: $propertyName
+                Callback function triggered on ${propertyName.substring(2)} event
+
+                **Expected Format:** Function reference or inline handler
+                **Example:** `$propertyName: handleUserAction`
+            """.trimIndent()
+
+            "color", "backgroundColor", "borderColor" -> """
+                ### Color Property: $propertyName
+                ${if (propertyValue != null) "**Current:** `$propertyValue`\n\n" else ""}
+                **Accepted Formats:**
+                - Hex: `#RGB`, `#RRGGBB`, `#AARRGGBB`
+                - Named: red, blue, green, black, white, gray, yellow, orange, purple
+
+                **Examples:** `#FF0000`, `red`, `#80FF0000`
+            """.trimIndent()
+
+            "width", "height", "padding", "margin" -> """
+                ### Size Property: $propertyName
+                ${if (propertyValue != null) "**Current:** `$propertyValue`\n\n" else ""}
+                **Accepted Units:**
+                - `dp` - Density-independent pixels (recommended)
+                - `sp` - Scale-independent pixels (for text)
+                - `px` - Physical pixels
+                - `%` - Percentage of parent
+
+                **Examples:** `16dp`, `14sp`, `100px`, `50%`
+            """.trimIndent()
+
+            else -> """
+                ### Property: $propertyName
+                ${if (propertyValue != null) "**Value:** `$propertyValue`" else "Component property"}
+            """.trimIndent()
+        }
+    }
+
+    /**
+     * Get hover documentation for VUID
+     */
+    private fun getVuidHoverDocumentation(vuid: String): String {
+        return """
+            ### VUID: `$vuid`
+            Voice Unique Identifier for component navigation
+
+            **Usage:**
+            - Voice commands: "Click $vuid", "Focus $vuid"
+            - Programmatic access: `findByVuid("$vuid")`
+            - Analytics tracking
+
+            **Navigation:** Use Go-to-Definition (F12) to navigate to component
+        """.trimIndent()
+    }
+
+    /**
+     * Create empty hover when no documentation available
+     */
+    private fun createEmptyHover(): Hover {
+        return Hover(MarkupContent().apply {
+            kind = "markdown"
+            value = ""
+        })
+    }
+
+    /**
+     * Hover context information
+     */
+    private data class HoverContextInfo(
+        val componentName: String? = null,
+        val propertyName: String? = null,
+        val propertyValue: String? = null,
+        val vuid: String? = null
+    )
 
     /**
      * Get definition locations for symbol at position
