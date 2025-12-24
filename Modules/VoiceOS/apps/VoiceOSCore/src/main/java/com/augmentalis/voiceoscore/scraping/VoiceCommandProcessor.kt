@@ -70,6 +70,12 @@ class VoiceCommandProcessor(
     private val packageManager: PackageManager = context.packageManager
     private val commandManager: CommandManager = CommandManager.getInstance(context)
 
+    // Element validator for crash prevention (Schema v4)
+    private val elementValidator: ElementValidator = ElementValidator(context.resources)
+
+    // Element matcher for dynamic content fallback (Schema v4)
+    private val elementMatcher: ElementMatcher = ElementMatcher()
+
     /**
      * Process a voice command
      *
@@ -262,15 +268,33 @@ class VoiceCommandProcessor(
                 return@withContext false
             }
 
-            // Find target node by hash
-            val targetNode = findNodeByHash(rootNode, element.elementHash)
+            // Find target node by hash (exact match)
+            var targetNode = findNodeByHash(rootNode, element.elementHash)
+
+            // If exact match fails, try fallback strategies for dynamic content
             if (targetNode == null) {
-                Log.e(TAG, "Target node not found by hash: ${element.elementHash}")
+                Log.w(TAG, "Exact hash match failed, trying fallback strategies: ${element.elementHash}")
+                val matchResult = elementMatcher.findBestMatch(element, rootNode, allowFallback = true)
+                if (matchResult != null) {
+                    Log.i(TAG, "Fallback match found: strategy=${matchResult.strategy}, confidence=${matchResult.confidence}")
+                    targetNode = matchResult.node
+                } else {
+                    Log.e(TAG, "Target node not found (exact + fallback failed): ${element.elementHash}")
+                    rootNode.recycle()
+                    return@withContext false
+                }
+            } else {
+                Log.d(TAG, "Found target node (exact match): ${targetNode.className}")
+            }
+
+            // Validate element before action execution (CRITICAL - prevents crashes)
+            if (!elementValidator.isValidForInteraction(targetNode)) {
+                Log.w(TAG, "Element validation failed for: ${element.elementHash}")
+                Log.w(TAG, "Element bounds: ${elementValidator.getBoundsString(targetNode)}")
+                targetNode.recycle()
                 rootNode.recycle()
                 return@withContext false
             }
-
-            Log.d(TAG, "Found target node: ${targetNode.className}")
 
             // Execute appropriate action
             val success = when (actionType) {
@@ -407,10 +431,15 @@ class VoiceCommandProcessor(
                         val rootNode = accessibilityService.rootInActiveWindow
                         val targetNode = rootNode?.let { findNodeByHash(it, element.elementHash) }
                         if (targetNode != null) {
-                            val bundle = Bundle().apply {
-                                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+                            // Validate before text input
+                            if (elementValidator.isValidForInteraction(targetNode)) {
+                                val bundle = Bundle().apply {
+                                    putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+                                }
+                                targetNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, bundle)
+                            } else {
+                                Log.w(TAG, "Text input validation failed for: ${element.elementHash}")
                             }
-                            targetNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, bundle)
                             targetNode.recycle()
                             rootNode.recycle()
                         }
