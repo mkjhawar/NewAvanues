@@ -6,7 +6,6 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.compose)
 }
 
 kotlin {
@@ -38,10 +37,12 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(compose.runtime)
-                implementation(compose.foundation)
-                implementation(compose.material3)
-                implementation(compose.ui)
+                // Compose libraries
+                implementation(platform("androidx.compose:compose-bom:2024.06.00"))
+                implementation("androidx.compose.runtime:runtime")
+                implementation("androidx.compose.foundation:foundation")
+                implementation("androidx.compose.material3:material3")
+                implementation("androidx.compose.ui:ui")
             }
         }
 

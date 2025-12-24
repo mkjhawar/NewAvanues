@@ -27,6 +27,22 @@ dependencyResolutionManagement {
     }
 }
 
+// AVA Core Modules
+include(":Modules:AVA:core:Domain")
+include(":Modules:AVA:core:Utils")
+include(":Modules:AVA:core:Data")
+include(":Modules:AVA:core:Theme")
+
+// AVA Feature Modules
+include(":Modules:AVA:Actions")
+include(":Modules:AVA:Chat")
+include(":Modules:AVA:LLM")
+include(":Modules:AVA:memory")
+include(":Modules:AVA:Overlay")
+include(":Modules:AVA:RAG")
+include(":Modules:AVA:Teach")
+include(":Modules:AVA:WakeWord")
+
 // VoiceOS Core Modules
 include(":Modules:VoiceOS:core:database")
 include(":Modules:VoiceOS:core:accessibility-types")

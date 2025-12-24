@@ -14,8 +14,8 @@
 
 package com.augmentalis.uuidcreator.alias
 
-import com.augmentalis.database.dto.UUIDAliasDTO
-import com.augmentalis.database.repositories.IUUIDRepository
+import com.augmentalis.database.dto.VUIDAliasDTO
+import com.augmentalis.database.repositories.IVUIDRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Before
@@ -87,7 +87,7 @@ class BatchDeduplicationPerformanceTest {
     fun `batch deduplication should make only 2 database calls`() = runBlocking {
         // Setup: Mock repository to track calls
         val existingAliases = listOf(
-            UUIDAliasDTO(1, "button", "existing-uuid-1", true, System.currentTimeMillis())
+            VUIDAliasDTO(1, "button", "existing-uuid-1", true, System.currentTimeMillis())
         )
         whenever(mockRepository.getAllAliases()).thenReturn(existingAliases)
         whenever(mockRepository.insertAliasesBatch(any())).thenReturn(Unit)
@@ -158,8 +158,8 @@ class BatchDeduplicationPerformanceTest {
     fun `deduplication should respect existing database aliases`() = runBlocking {
         // Setup: Database has existing aliases
         val existingAliases = listOf(
-            UUIDAliasDTO(1, "button", "existing-uuid-1", true, System.currentTimeMillis()),
-            UUIDAliasDTO(2, "button-1", "existing-uuid-2", true, System.currentTimeMillis())
+            VUIDAliasDTO(1, "button", "existing-uuid-1", true, System.currentTimeMillis()),
+            VUIDAliasDTO(2, "button-1", "existing-uuid-2", true, System.currentTimeMillis())
         )
         whenever(mockRepository.getAllAliases()).thenReturn(existingAliases)
         whenever(mockRepository.insertAliasesBatch(any())).thenReturn(Unit)

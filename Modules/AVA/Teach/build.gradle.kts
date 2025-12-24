@@ -1,8 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.compose)
-    kotlin("plugin.serialization") version "1.9.21"
+    alias(libs.plugins.kotlin.serialization)
 }
 
 // Note: Hilt plugin removed - annotation processing happens in consuming Android app module
@@ -20,8 +19,8 @@ kotlin {
         commonMain {
             dependencies {
                 // Core modules - KMP compatible
-                implementation(project(":core:Domain"))
-                implementation(project(":core:Utils"))
+                implementation(project(":Modules:AVA:core:Domain"))
+                implementation(project(":Modules:AVA:core:Utils"))
 
                 // Kotlin Coroutines
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")

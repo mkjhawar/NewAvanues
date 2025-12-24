@@ -40,8 +40,8 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // AVA Core modules (KMP-compatible only)
-                implementation(project(":core:Utils"))
-                implementation(project(":core:Domain"))
+                implementation(project(":Modules:AVA:core:Utils"))
+                implementation(project(":Modules:AVA:core:Domain"))
                 // Note: Core:Data is Android-only, moved to androidMain
 
                 // Coroutines
@@ -58,10 +58,10 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 // AVA Core modules (Android-only)
-                implementation(project(":core:Data"))
+                implementation(project(":Modules:AVA:core:Data"))
 
                 // AVA Feature modules
-                implementation(project(":LLM"))
+                implementation(project(":Modules:AVA:LLM"))
 
                 // Compose dependencies
                 implementation(platform("androidx.compose:compose-bom:2023.10.01"))

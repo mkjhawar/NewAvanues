@@ -16,7 +16,7 @@ package com.augmentalis.learnappcore.processors
 import com.augmentalis.learnappcore.models.ElementInfo
 
 /**
- * UUID Generator Interface
+ * VUID Generator Interface
  *
  * Responsibilities:
  * - Generate deterministic UUIDs from element properties

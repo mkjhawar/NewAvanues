@@ -59,7 +59,7 @@ import kotlinx.coroutines.withContext
  * - BATCH mode: ~50ms for 100 elements (20x faster)
  *
  * @param commandRepository Repository for command persistence
- * @param uuidGenerator Third-party UUID generator for element identification
+ * @param vuidGenerator Third-party UUID generator for element identification
  */
 class LearnAppCore(
     context: Context,
@@ -186,7 +186,7 @@ class LearnAppCore(
      * Uses third-party UUID generator to create deterministic UUID
      * based on element properties and package name.
      *
-     * UUID format: {packageName}.v{version}.{type}-{hash}
+     * VUID format: {packageName}.v{version}.{type}-{hash}
      *
      * @param element Element to generate UUID for
      * @param packageName App package name
@@ -263,7 +263,7 @@ class LearnAppCore(
      * - Command format: "{actionType} {label}" (lowercase)
      *
      * @param element Element to generate command for
-     * @param uuid Pre-generated UUID for this element
+     * @param vuid Pre-generated UUID for this element
      * @param packageName Package name for framework detection
      * @return GeneratedCommandDTO or null ONLY for non-actionable elements with poor labels
      */

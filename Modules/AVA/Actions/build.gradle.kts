@@ -39,8 +39,8 @@ kotlin {
         // Common code (shared across all platforms)
         val commonMain by getting {
             dependencies {
-                implementation(project(":core:Utils"))
-                implementation(project(":core:Domain"))
+                implementation(project(":Modules:AVA:core:Utils"))
+                implementation(project(":Modules:AVA:core:Domain"))
                 implementation(libs.kotlinx.coroutines.core)
             }
         }
@@ -55,7 +55,7 @@ kotlin {
         // Android-specific code
         val androidMain by getting {
             dependencies {
-                implementation(project(":core:Data"))
+                implementation(project(":Modules:AVA:core:Data"))
                 implementation(libs.kotlinx.coroutines.android)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.hilt.android)
@@ -88,7 +88,7 @@ kotlin {
         // Desktop-specific code (stubs for now)
         val desktopMain by getting {
             dependencies {
-                implementation(libs.kotlinx.coroutines.swing)
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.8.1")
             }
         }
     }

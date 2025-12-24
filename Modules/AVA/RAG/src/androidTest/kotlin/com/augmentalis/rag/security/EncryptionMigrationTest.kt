@@ -19,7 +19,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.nio.ByteBuffer
-import java.util.UUID
+import com.augmentalis.ava.core.data.util.VuidHelper
 
 /**
  * Integration tests for encryption migration
@@ -288,7 +288,7 @@ class EncryptionMigrationTest {
     // Helper methods
 
     private fun createTestDocument(): String {
-        val docId = UUID.randomUUID().toString()
+        val docId = VuidHelper.randomVUID()
         database.rAGDocumentQueries.insert(
             id = docId,
             title = "Test Document",
@@ -337,7 +337,7 @@ class EncryptionMigrationTest {
         }
 
         database.rAGChunkQueries.insert(
-            id = UUID.randomUUID().toString(),
+            id = VuidHelper.randomVUID(),
             document_id = documentId,
             chunk_index = index.toLong(),
             content = "Test chunk $index",

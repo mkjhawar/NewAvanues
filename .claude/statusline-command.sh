@@ -1,8 +1,10 @@
 #!/bin/bash
 
-# Claude Code Enhanced Status Line (v11.0)
-# Format: IDEACODE v# | API | repo | branch | git-stats | context-indicator | model | CLI version | RESTART CLIENT
-# Features: Auto-save at 80%, context warnings, git status, version tracking, API status colors
+# Claude Code Enhanced Status Line (v11.4.0)
+# Format: IDEACODE v# | API-R:provider | repo | branch | git-stats | CXT: %% (K/K) | context-indicator | model | CLI version | RESTART CLIENT
+# Features: Auto-save at 80%, context warnings, git status, version tracking, API status colors, RAG detection
+# Indicators: API (basic), API-R:O (RAG+Ollama), API-R:AI (RAG+OpenAI), >>API-R:O<< (needs restart)
+# RAG Providers: :O (Ollama - free, local), :AI (OpenAI - cloud, paid)
 # Colors: Green API (running), Red flashing API (needs restart), Red RESTART CLIENT (version/instruction changes)
 
 # Read JSON input from stdin
@@ -18,6 +20,22 @@ version="$running_version"
 
 # Get short model name (e.g., "Sonnet 4.5")
 model_short=$(echo "$model_name" | sed 's/Claude //' | sed 's/3.5//' | xargs)
+
+# Get context window limit for model
+get_context_limit() {
+    local model="$1"
+    case "$model" in
+        *"Opus 4.5"*) echo "200000" ;;
+        *"Sonnet 4.5"*) echo "200000" ;;
+        *"Haiku 4.5"*) echo "200000" ;;
+        *"Opus 3"*) echo "200000" ;;
+        *"Sonnet 3.5"*) echo "200000" ;;
+        *"Haiku 3"*) echo "200000" ;;
+        *) echo "200000" ;;  # Default fallback
+    esac
+}
+
+context_limit=$(get_context_limit "$model_name")
 
 # Extract cost and session info from Claude Code JSON
 session_id=$(echo "$input" | jq -r '.session_id // ""')
@@ -81,48 +99,61 @@ if git -C "$cwd" rev-parse --git-dir > /dev/null 2>&1; then
     fi
 fi
 
-# Context status - simple indicator based on transcript size
+# Context status - enhanced with token usage display
 transcript_path=$(echo "$input" | jq -r '.transcript_path // ""')
 context_indicator=""
 context_saved=""
+context_display=""
 
 if [[ -f "$transcript_path" ]]; then
     transcript_size=$(wc -c < "$transcript_path" 2>/dev/null || echo "0")
 
-    # Check if context was saved
-    save_marker="$HOME/.claude/.context_saved_$(basename "$transcript_path")"
-    if [[ -f "$save_marker" ]]; then
-        context_saved=" SAVED"
-    fi
-
-    # Simple size-based indicator (transcript bytes, not token estimation)
-    # Small: <500KB, Medium: 500KB-1MB, Large: 1MB-2MB, Critical: >2MB
+    # Status-based context indicator: OK, COMPACT, or CLEAR-{filename}
+    # Thresholds: <1MB = OK, 1MB-2MB = COMPACT, >2MB = CLEAR (create handover)
     if [[ $transcript_size -gt 2000000 ]]; then
-        context_indicator="[!] /compact now$context_saved"
-        # Auto-save if not already saved
-        if [[ ! -f "$save_marker" ]]; then
-            save_dir="$cwd/contextsave"
-            mkdir -p "$save_dir" 2>/dev/null
-            timestamp=$(date +%Y%m%d-%H%M%S)
-            save_file="$save_dir/context-$timestamp.md"
+        # CLEAR state - create handover document
+        save_dir="$cwd/contextsave"
+        mkdir -p "$save_dir" 2>/dev/null
+        timestamp=$(date +%Y%m%d-%H%M)
+        handover_file="handover-$timestamp.md"
+        handover_path="$save_dir/$handover_file"
+
+        # Create handover document if not already exists
+        if [[ ! -f "$handover_path" ]]; then
             {
-                echo "# Context Save - $timestamp"
-                echo "**Repository:** $repo:$branch"
-                echo "**Saved:** $(date)"
+                echo "# Handover Document - $timestamp"
+                echo ""
+                echo "**Repository:** $repo"
+                echo "**Branch:** $branch"
+                echo "**Created:** $(date)"
+                echo ""
+                echo "## Context Summary"
+                echo "This conversation has exceeded the context window limit (>2MB)."
+                echo "Use this handover document to resume work after running /clear."
+                echo ""
+                echo "## Next Steps"
+                echo "1. Review the conversation transcript below"
+                echo "2. Run /clear to start fresh"
+                echo "3. Reference this document to resume where you left off"
+                echo ""
                 echo "---"
+                echo ""
+                echo "## Full Conversation Transcript"
+                echo ""
                 cat "$transcript_path"
-            } > "$save_file" 2>/dev/null && touch "$save_marker"
-            context_saved=" SAVED"
-            context_indicator="[!] /compact now$context_saved"
-            # Cleanup old saves
-            cd "$save_dir" 2>/dev/null && ls -t context-*.md 2>/dev/null | tail -n +4 | xargs rm -f 2>/dev/null
+            } > "$handover_path" 2>/dev/null
+
+            # Cleanup old handovers (keep last 3)
+            cd "$save_dir" 2>/dev/null && ls -t handover-*.md 2>/dev/null | tail -n +4 | xargs rm -f 2>/dev/null
         fi
+
+        context_display="CXT: CLEAR-$handover_file"
     elif [[ $transcript_size -gt 1000000 ]]; then
-        context_indicator="[*] consider /compact$context_saved"
-    elif [[ $transcript_size -gt 500000 ]]; then
-        context_indicator="[~] growing$context_saved"
+        # COMPACT state - getting full, should compact soon
+        context_display="CXT: COMPACT"
     else
-        context_indicator="ok$context_saved"
+        # OK state - normal usage
+        context_display="CXT: OK"
     fi
 fi
 
@@ -149,8 +180,15 @@ fi
 
 # Track IDEACODE version changes and instruction file changes
 restart_needed=false
+
+# Get repo name for repo-specific tracking
+repo_name=$(basename "$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || basename "$cwd")
+
+# Global version tracking (IDEACODE framework version applies to all repos)
 version_last_file="$HOME/.claude/.ideacode_version_last"
-checksum_file="$HOME/.claude/.instruction_checksums"
+
+# Per-repo checksum tracking (prevents false warnings when switching repos)
+checksum_file="$HOME/.claude/.instruction_checksums_${repo_name}"
 
 # Check IDEACODE version change
 if [[ -f "$version_last_file" ]]; then
@@ -163,17 +201,24 @@ else
 fi
 
 # Check instruction file changes (CLAUDE.md and config files)
+# Get git repo root (consistent regardless of subfolder)
+git_root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || echo "$cwd")
+
 instruction_files=(
     "/Volumes/M-Drive/Coding/.claude/CLAUDE.md"
-    "$cwd/.claude/CLAUDE.md"
-    "$cwd/.ideacode/config.ideacode"
+    "$git_root/.claude/CLAUDE.md"
+    "$git_root/.ideacode/config.ideacode"
 )
 
 current_checksums=""
 for file in "${instruction_files[@]}"; do
     if [[ -f "$file" ]]; then
         checksum=$(md5 -q "$file" 2>/dev/null || echo "")
-        current_checksums="${current_checksums}${file}:${checksum}\n"
+        if [[ -n "$current_checksums" ]]; then
+            current_checksums="${current_checksums}"$'\n'"${file}:${checksum}"
+        else
+            current_checksums="${file}:${checksum}"
+        fi
     fi
 done
 
@@ -183,13 +228,13 @@ if [[ -f "$checksum_file" ]]; then
         restart_needed=true
     fi
 else
-    printf "%b" "$current_checksums" > "$checksum_file" 2>/dev/null
+    echo "$current_checksums" > "$checksum_file" 2>/dev/null
 fi
 
 # Always update tracking files to current state (allows cross-session eventual consistency)
 # This prevents lock-in where restart_needed stays true indefinitely
 echo "$ideacode_version" > "$version_last_file" 2>/dev/null
-printf "%b" "$current_checksums" > "$checksum_file" 2>/dev/null
+echo "$current_checksums" > "$checksum_file" 2>/dev/null
 
 # Build statusline
 status_parts=()
@@ -200,12 +245,41 @@ status_parts+=("IDEACODE v${ideacode_version}")
 # Check if IDEACODE API is running, auto-start if not
 api_marker="$HOME/.claude/.ideacode_api_started"
 api_status=""
+
+# Check if RAG is available (database exists and has data)
+rag_available=false
+rag_provider=""
+rag_db="/Volumes/M-Drive/Coding/ideacode/ideacode-api/data/rag.db"
+if [[ -f "$rag_db" ]]; then
+    # Check if database has indexed data (commands table has rows)
+    rag_count=$(sqlite3 "$rag_db" "SELECT COUNT(*) FROM command_library;" 2>/dev/null || echo "0")
+    if [[ "$rag_count" -gt 0 ]]; then
+        rag_available=true
+        # Get the active provider with most embeddings (the one actually used)
+        rag_provider=$(sqlite3 "$rag_db" "SELECT provider FROM embeddings_metadata WHERE is_active=1 ORDER BY total_embeddings DESC LIMIT 1;" 2>/dev/null || echo "")
+        # Short provider name: ollama -> O, openai -> AI
+        case "$rag_provider" in
+            "ollama") rag_provider=":O" ;;
+            "openai") rag_provider=":AI" ;;
+            *) rag_provider="" ;;
+        esac
+    fi
+fi
+
 if curl -s --connect-timeout 0.5 http://localhost:3847/health > /dev/null 2>&1; then
-    # API is running - show >> << if restart needed, plain if normal
+    # API is running - show API-R:provider if RAG available, API if not
     if [[ "$restart_needed" == true ]]; then
-        api_status=">>API<<"
+        if [[ "$rag_available" == true ]]; then
+            api_status=">>API-R${rag_provider}<<"
+        else
+            api_status=">>API<<"
+        fi
     else
-        api_status="API"
+        if [[ "$rag_available" == true ]]; then
+            api_status="API-R${rag_provider}"
+        else
+            api_status="API"
+        fi
     fi
     touch "$api_marker" 2>/dev/null
 else
@@ -220,9 +294,17 @@ else
             sleep 0.5
             if curl -s --connect-timeout 0.5 http://localhost:3847/health > /dev/null 2>&1; then
                 if [[ "$restart_needed" == true ]]; then
-                    api_status=">>API<<"
+                    if [[ "$rag_available" == true ]]; then
+                        api_status=">>API-R${rag_provider}<<"
+                    else
+                        api_status=">>API<<"
+                    fi
                 else
-                    api_status="API"
+                    if [[ "$rag_available" == true ]]; then
+                        api_status="API-R${rag_provider}"
+                    else
+                        api_status="API"
+                    fi
                 fi
             fi
         fi
@@ -249,8 +331,8 @@ fi
 # Git stats (if any changes)
 [[ -n "$git_stats" ]] && status_parts+=("$git_stats")
 
-# Context indicator
-[[ -n "$context_indicator" ]] && status_parts+=("$context_indicator")
+# Context display (token usage)
+[[ -n "$context_display" ]] && status_parts+=("$context_display")
 
 # Model
 status_parts+=("$model_short")
@@ -262,9 +344,9 @@ else
     status_parts+=("v${version}")
 fi
 
-# Add RESTART CLIENT message if needed (version or instruction changes)
+# Add restart message if needed (version or instruction changes)
 if [[ "$restart_needed" == true ]]; then
-    status_parts+=(">>RESTART CLIENT<<")
+    status_parts+=("restart")
 fi
 
 # Manually join with " | " separator

@@ -23,7 +23,7 @@ import kotlinx.datetime.Instant
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.util.UUID
+import com.augmentalis.ava.core.data.util.VuidHelper
 
 /**
  * DocumentIngestionHandler - Single Responsibility: Document Ingestion
@@ -92,7 +92,7 @@ class DocumentIngestionHandler(
                     )
 
                 // Create document
-                val documentId = UUID.randomUUID().toString()
+                val documentId = VuidHelper.randomVUID()
                 val now = Clock.System.now()
 
                 // Insert document using SQLDelight

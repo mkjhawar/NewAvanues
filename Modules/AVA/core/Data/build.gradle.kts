@@ -22,9 +22,9 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // Core modules
-                implementation(project(":core:Domain"))
-                implementation(project(":core:Utils"))
-                implementation(project(":SharedPlatform"))
+                implementation(project(":Modules:AVA:core:Domain"))
+                implementation(project(":Modules:AVA:core:Utils"))
+                //implementation(project(":Modules:AVA:SharedPlatform"))  // TODO: SharedPlatform not found in current structure
 
                 // Kotlin Coroutines
                 implementation(libs.kotlinx.coroutines.core)
@@ -40,7 +40,7 @@ kotlin {
 
         val commonTest by getting {
             dependencies {
-                implementation(libs.kotlin.test)
+                implementation(kotlin("test"))
                 implementation(libs.kotlinx.coroutines.test)
             }
         }
@@ -51,11 +51,11 @@ kotlin {
                 api(libs.sqldelight.android.driver)
 
                 // DataStore (Android-specific for developer preferences)
-                implementation(libs.androidx.datastore.preferences)
+                implementation("androidx.datastore:datastore-preferences:1.0.0")
 
                 // Dagger Hilt for dependency injection (Android-specific)
                 implementation(libs.hilt.android)
-                implementation(libs.androidx.hilt.common)
+                // androidx.hilt.common is provided transitively
             }
         }
 
@@ -65,16 +65,16 @@ kotlin {
                 implementation(libs.mockk)
                 implementation(libs.robolectric)
                 implementation(libs.androidx.test.core)
-                implementation(libs.androidx.test.core.ktx)
+                implementation(libs.androidx.test.junit.ktx)
             }
         }
 
         val androidInstrumentedTest by getting {
             dependencies {
-                implementation(libs.androidx.test.ext.junit)
+                implementation(libs.androidx.test.junit)
                 implementation(libs.androidx.test.runner)
                 implementation(libs.androidx.test.core)
-                implementation(libs.androidx.test.core.ktx)
+                implementation(libs.androidx.test.junit.ktx)
             }
         }
 
@@ -88,7 +88,7 @@ kotlin {
             iosSimulatorArm64Main.dependsOn(this)
             dependencies {
                 // iOS-specific SQLDelight driver
-                api(libs.sqldelight.native.driver)
+                api("app.cash.sqldelight:native-driver:2.0.1")
             }
         }
 

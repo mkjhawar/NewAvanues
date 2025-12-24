@@ -41,11 +41,11 @@ import com.augmentalis.voiceoscore.learnapp.ui.ChecklistManager
 import com.augmentalis.voiceoscore.learnapp.window.WindowManager
 import com.augmentalis.voiceoscore.learnapp.window.WindowInfo
 import com.augmentalis.voiceoscore.learnapp.window.WindowType
-import com.augmentalis.uuidcreator.UUIDCreator
+import com.augmentalis.uuidcreator.VUIDCreator
 import com.augmentalis.uuidcreator.alias.UuidAliasManager
-import com.augmentalis.uuidcreator.models.UUIDElement
-import com.augmentalis.uuidcreator.models.UUIDMetadata
-import com.augmentalis.uuidcreator.models.UUIDAccessibility
+import com.augmentalis.uuidcreator.models.VUIDElement
+import com.augmentalis.uuidcreator.models.VUIDMetadata
+import com.augmentalis.uuidcreator.models.VUIDAccessibility
 import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 // Phase 3 (2025-12-04): LearnAppCore integration for voice command generation
 import com.augmentalis.voiceoscore.learnapp.core.LearnAppCore
@@ -134,7 +134,7 @@ interface ExplorationDebugCallback {
  *
  * Main engine orchestrating DFS exploration of entire app.
  * Coordinates all components: screen exploration, element classification,
- * UUID generation, navigation graph building, etc.
+ * VUID generation, navigation graph building, etc.
  *
  * ## Usage Example
  *

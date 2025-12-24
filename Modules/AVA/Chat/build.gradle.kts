@@ -7,14 +7,14 @@ plugins {
 
 dependencies {
     // Core dependencies
-    implementation(project(":core:Utils"))
-    implementation(project(":core:Domain"))
-    implementation(project(":core:Data"))
-    implementation(project(":core:Theme"))  // Ocean Glass Design System
-    implementation(project(":SharedNLU"))
-    implementation(project(":Actions"))
-    implementation(project(":LLM"))
-    implementation(project(":RAG"))  // RAG Phase 2: Chat UI Integration
+    implementation(project(":Modules:AVA:core:Utils"))
+    implementation(project(":Modules:AVA:core:Domain"))
+    implementation(project(":Modules:AVA:core:Data"))
+    implementation(project(":Modules:AVA:core:Theme"))  // Ocean Glass Design System
+    //implementation(project(":Modules:AVA:SharedNLU"))  // TODO: SharedNLU not found in current structure
+    implementation(project(":Modules:AVA:Actions"))
+    implementation(project(":Modules:AVA:LLM"))
+    implementation(project(":Modules:AVA:RAG"))  // RAG Phase 2: Chat UI Integration
 
     // Hilt Dependency Injection
     implementation(libs.hilt.android)

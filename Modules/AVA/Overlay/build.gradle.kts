@@ -8,7 +8,6 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
 }
 
 android {
@@ -52,14 +51,14 @@ android {
 
 dependencies {
     // Core modules
-    implementation(project(":core:Domain"))
-    implementation(project(":core:Data"))
-    implementation(project(":core:Utils"))
+    implementation(project(":Modules:AVA:core:Domain"))
+    implementation(project(":Modules:AVA:core:Data"))
+    implementation(project(":Modules:AVA:core:Utils"))
 
     // Feature modules for integration
-    implementation(project(":SharedNLU"))
-    implementation(project(":Chat"))
-    implementation(project(":LLM"))
+    //implementation(project(":Modules:AVA:SharedNLU"))  // TODO: SharedNLU not found in current structure
+    implementation(project(":Modules:AVA:Chat"))
+    implementation(project(":Modules:AVA:LLM"))
 
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")

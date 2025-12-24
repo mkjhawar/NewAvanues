@@ -15,17 +15,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.debugInspectorInfo
-import com.augmentalis.uuidcreator.UUIDCreator
-import com.augmentalis.uuidcreator.models.UUIDElement
-import com.augmentalis.uuidcreator.models.UUIDPosition
-import com.augmentalis.uuidcreator.models.UUIDMetadata
+import com.augmentalis.uuidcreator.VUIDCreator
+import com.augmentalis.uuidcreator.models.VUIDElement
+import com.augmentalis.uuidcreator.models.VUIDPosition
+import com.augmentalis.uuidcreator.models.VUIDMetadata
 import java.util.UUID
 
 /**
  * Compose modifier for UUID registration and management
  * 
  * @param manager UUIDManager instance (defaults to singleton)
- * @param uuid Custom UUID (generated if null)
+ * @param vuid Custom UUID (generated if null)
  * @param name Human-readable name for the element
  * @param type Element type (button, text, etc.)
  * @param description Optional description for accessibility
@@ -93,7 +93,7 @@ fun Modifier.assignUUID(
 )
 
 /**
- * UUID modifier for buttons with click action
+ * VUID modifier for buttons with click action
  */
 fun Modifier.uuidButton(
     name: String,
@@ -110,7 +110,7 @@ fun Modifier.uuidButton(
 )
 
 /**
- * UUID modifier for text inputs with focus and text actions
+ * VUID modifier for text inputs with focus and text actions
  */
 fun Modifier.uuidTextInput(
     name: String,
@@ -132,7 +132,7 @@ fun Modifier.uuidTextInput(
 )
 
 /**
- * UUID modifier for navigable elements with spatial position
+ * VUID modifier for navigable elements with spatial position
  */
 fun Modifier.uuidNavigable(
     name: String? = null,
@@ -160,7 +160,7 @@ fun Modifier.uuidNavigable(
 )
 
 /**
- * UUID modifier for containers with child management
+ * VUID modifier for containers with child management
  */
 fun Modifier.uuidContainer(
     name: String,

@@ -183,7 +183,7 @@ object CustomUuidGenerator {
     /**
      * Check if UUID has custom format
      *
-     * @param uuid UUID string to check
+     * @param vuid UUID string to check
      * @return true if custom format detected
      */
     fun isCustomFormat(uuid: String): Boolean {
@@ -194,7 +194,7 @@ object CustomUuidGenerator {
     /**
      * Extract prefix from custom UUID
      *
-     * @param uuid Custom UUID
+     * @param vuid Custom UUID
      * @return Prefix or null if standard format
      */
     fun extractPrefix(uuid: String): String? {
@@ -204,7 +204,7 @@ object CustomUuidGenerator {
     /**
      * Extract base UUID from custom UUID
      *
-     * @param uuid Custom UUID
+     * @param vuid Custom UUID
      * @return Base UUID (RFC 4122 compliant)
      */
     fun extractBaseUuid(uuid: String): String {

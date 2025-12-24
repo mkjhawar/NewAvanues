@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.Locale
-import java.util.UUID
+import com.augmentalis.ava.core.data.util.VuidHelper
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -224,7 +224,7 @@ class TTSManager @Inject constructor(
             )
         }
 
-        val utteranceId = UUID.randomUUID().toString()
+        val utteranceId = VuidHelper.randomVUID()
 
         // Register completion callback
         onComplete?.let { callback ->
@@ -295,7 +295,7 @@ class TTSManager @Inject constructor(
             )
         }
 
-        val utteranceId = UUID.randomUUID().toString()
+        val utteranceId = VuidHelper.randomVUID()
 
         // Register completion callback
         onComplete?.let { callback ->

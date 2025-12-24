@@ -34,7 +34,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import java.io.File
 import java.nio.ByteBuffer
-import java.util.UUID
+import com.augmentalis.ava.core.data.util.VuidHelper
 
 /**
  * SQLite-backed RAG repository using SQLDelight for KMP compatibility

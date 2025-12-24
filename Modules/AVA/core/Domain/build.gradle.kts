@@ -36,7 +36,7 @@ kotlin {
         // Common code (pure domain models and repository interfaces)
         val commonMain by getting {
             dependencies {
-                implementation(project(":core:Utils"))
+                implementation(project(":Modules:AVA:core:Utils"))
                 implementation(libs.kotlinx.coroutines.core)
             }
         }

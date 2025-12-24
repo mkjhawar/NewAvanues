@@ -257,7 +257,7 @@ class JITLearningService : Service() {
     private val registeredElements = NodeCache(maxSize = 100)
 
     /**
-     * UUID→Node lookup cache for O(1) performance
+     * VUID→Node lookup cache for O(1) performance
      *
      * Performance optimization:
      * - Before: O(n) tree traversal per click (450ms average for 500-node tree)

@@ -31,7 +31,7 @@ interface INodeCache {
     /**
      * Get cached node by UUID.
      *
-     * @param uuid Element UUID
+     * @param vuid Element UUID
      * @return Cached node or null if not found
      */
     fun getNode(uuid: String): AccessibilityNodeInfo?
@@ -39,7 +39,7 @@ interface INodeCache {
     /**
      * Cache node with UUID.
      *
-     * @param uuid Element UUID
+     * @param vuid Element UUID
      * @param node Accessibility node to cache
      */
     fun cacheNode(uuid: String, node: AccessibilityNodeInfo)
@@ -66,7 +66,7 @@ interface INodeCache {
      * Searches tree for node matching UUID. Uses cache first, then searches.
      *
      * @param root Root node to search from
-     * @param uuid Target UUID
+     * @param vuid Target UUID
      * @return Found node or null
      */
     fun findNodeByUuid(root: AccessibilityNodeInfo, uuid: String): AccessibilityNodeInfo?

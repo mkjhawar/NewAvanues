@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabaseManager
-import com.augmentalis.uuidcreator.api.IUUIDManager
+import com.augmentalis.uuidcreator.api.IVUIDManager
 import com.augmentalis.uuidcreator.core.*
 import com.augmentalis.uuidcreator.database.repository.SQLDelightUUIDRepositoryAdapter
 import com.augmentalis.uuidcreator.models.*
@@ -17,19 +17,19 @@ import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Main UUIDCreator library class
- * Universal Unique Identifier System for Voice & Spatial UI Control
+ * Main VUIDCreator library class
+ * Voice Unique Identifier System for Voice & Spatial UI Control
  *
- * Framework-agnostic UUID management with Room persistence
+ * Framework-agnostic VUID management with SQLDelight persistence
  *
- * @property context Application context for Room database
+ * @property context Application context for database
  */
-open class UUIDCreator(
+open class VUIDCreator(
     private val context: Context
-) : IUUIDManager {
+) : IVUIDManager {
 
     companion object {
-        private const val TAG = "UUIDCreator"
+        private const val TAG = "VUIDCreator"
         private const val COMMAND_TIMEOUT = 5000L
         private const val MAX_COMMAND_HISTORY = 100
 
@@ -37,7 +37,7 @@ open class UUIDCreator(
          * Global singleton instance (requires initialization)
          */
         @Volatile
-        private var INSTANCE: UUIDCreator? = null
+        private var INSTANCE: VUIDCreator? = null
 
         /**
          * Initialize singleton instance
@@ -47,9 +47,9 @@ open class UUIDCreator(
          * @param context Application context
          */
         @JvmStatic
-        fun initialize(context: Context): UUIDCreator {
+        fun initialize(context: Context): VUIDCreator {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: UUIDCreator(context.applicationContext).also {
+                INSTANCE ?: VUIDCreator(context.applicationContext).also {
                     INSTANCE = it
                     // Trigger lazy loading in background
                     CoroutineScope(Dispatchers.IO).launch {
@@ -65,9 +65,9 @@ open class UUIDCreator(
          * @throws IllegalStateException if not initialized
          */
         @JvmStatic
-        fun getInstance(): UUIDCreator {
+        fun getInstance(): VUIDCreator {
             return INSTANCE ?: throw IllegalStateException(
-                "UUIDCreator not initialized. Call UUIDCreator.initialize(context) first."
+                "VUIDCreator not initialized. Call VUIDCreator.initialize(context) first."
             )
         }
 
@@ -75,10 +75,10 @@ open class UUIDCreator(
          * Quick static access methods
          */
         @JvmStatic
-        fun create(context: Context): UUIDCreator = UUIDCreator(context)
+        fun create(context: Context): VUIDCreator = VUIDCreator(context)
 
         @JvmStatic
-        fun generate(): String = UUIDGenerator.generate()
+        fun generate(): String = VUIDGenerator.generate()
     }
 
     // Database and repository (SQLDelight-based)
@@ -86,7 +86,7 @@ open class UUIDCreator(
     private val repository = SQLDelightUUIDRepositoryAdapter(databaseManager.uuids)
 
     // Registry with hybrid storage
-    private val registry = UUIDRegistry(repository)
+    private val registry = VUIDRegistry(repository)
     private val targetResolver = TargetResolver(registry)
     private val spatialNavigator = SpatialNavigator(registry)
 
@@ -112,7 +112,7 @@ open class UUIDCreator(
                 if (!isLoaded) {
                     repository.loadCache()
                     isLoaded = true
-                    Log.d(TAG, "UUIDCreator database loaded: ${repository.getCount()} elements")
+                    Log.d(TAG, "VUIDCreator database loaded: ${repository.getCount()} elements")
                 }
             }
         }
@@ -130,17 +130,17 @@ open class UUIDCreator(
     val commandResults: SharedFlow<CommandResult> = _commandResults.asSharedFlow()
     
     /**
-     * Generate a new UUID
+     * Generate a new VUID
      */
-    override fun generateUUID(): String = UUIDGenerator.generate()
+    override fun generateVUID(): String = VUIDGenerator.generate()
     
     /**
-     * Register an element with UUID
+     * Register an element with VUID
      *
      * Note: Uses Dispatchers.Unconfined in runBlocking to prevent thread starvation
      * when called from coroutine contexts.
      */
-    override fun registerElement(element: UUIDElement): String {
+    override fun registerElement(element: VUIDElement): String {
         return runBlocking(Dispatchers.Unconfined) {
             registry.register(element)
         }
@@ -152,31 +152,31 @@ open class UUIDCreator(
      * Note: Uses Dispatchers.Unconfined in runBlocking to prevent thread starvation
      * when called from coroutine contexts.
      */
-    override fun unregisterElement(uuid: String): Boolean {
+    override fun unregisterElement(vuid: String): Boolean {
         return runBlocking(Dispatchers.Unconfined) {
-            registry.unregister(uuid)
+            registry.unregister(vuid)
         }
     }
     
     /**
-     * Find element by UUID
+     * Find element by VUID
      */
-    override fun findByUUID(uuid: String): UUIDElement? = registry.findByUUID(uuid)
+    override fun findByVUID(vuid: String): VUIDElement? = registry.findByVUID(vuid)
     
     /**
      * Find elements by name
      */
-    override fun findByName(name: String): List<UUIDElement> = registry.findByName(name)
-    
+    override fun findByName(name: String): List<VUIDElement> = registry.findByName(name)
+
     /**
      * Find elements by type
      */
-    override fun findByType(type: String): List<UUIDElement> = registry.findByType(type)
+    override fun findByType(type: String): List<VUIDElement> = registry.findByType(type)
     
     /**
      * Find element by position
      */
-    override fun findByPosition(position: Int): UUIDElement? {
+    override fun findByPosition(position: Int): VUIDElement? {
         val result = spatialNavigator.navigateToPosition(position)
         return result.target
     }
@@ -184,7 +184,7 @@ open class UUIDCreator(
     /**
      * Find elements in direction
      */
-    override fun findInDirection(fromUUID: String, direction: String): UUIDElement? {
+    override fun findInDirection(fromVUID: String, direction: String): VUIDElement? {
         val dir = when (direction.lowercase()) {
             "left" -> SpatialNavigator.Direction.LEFT
             "right" -> SpatialNavigator.Direction.RIGHT
@@ -198,16 +198,16 @@ open class UUIDCreator(
             "last" -> SpatialNavigator.Direction.LAST
             else -> return null
         }
-        
-        val result = spatialNavigator.navigate(fromUUID, dir)
+
+        val result = spatialNavigator.navigate(fromVUID, dir)
         return result.target
     }
     
     /**
      * Execute action on element
      */
-    override suspend fun executeAction(uuid: String, action: String, parameters: Map<String, Any>): Boolean {
-        val element = registry.findByUUID(uuid) ?: return false
+    override suspend fun executeAction(vuid: String, action: String, parameters: Map<String, Any>): Boolean {
+        val element = registry.findByVUID(vuid) ?: return false
         
         if (!element.isEnabled) return false
         
@@ -265,7 +265,7 @@ open class UUIDCreator(
     /**
      * Get all registered elements
      */
-    override fun getAllElements(): List<UUIDElement> = registry.getAllElements()
+    override fun getAllElements(): List<VUIDElement> = registry.getAllElements()
     
     /**
      * Clear all registrations
@@ -280,16 +280,16 @@ open class UUIDCreator(
     }
     
     /**
-     * Create element with UUID
+     * Create element with VUID
      */
     fun createElement(
         name: String? = null,
         type: String = "unknown",
         position: UUIDPosition? = null,
         actions: Map<String, (Map<String, Any>) -> Unit> = emptyMap()
-    ): UUIDElement {
-        return UUIDElement(
-            uuid = generateUUID(),
+    ): VUIDElement {
+        return VUIDElement(
+            uuid = generateVUID(),
             name = name,
             type = type,
             position = position,
@@ -298,9 +298,9 @@ open class UUIDCreator(
     }
     
     /**
-     * Register element with automatic UUID generation
+     * Register element with automatic VUID generation
      */
-    fun registerWithAutoUUID(
+    fun registerWithAutoVUID(
         name: String? = null,
         type: String = "unknown",
         position: UUIDPosition? = null,
@@ -318,13 +318,13 @@ open class UUIDCreator(
     /**
      * Navigate spatially
      */
-    fun navigate(fromUUID: String, direction: String): UUIDElement? = findInDirection(fromUUID, direction)
-    
+    fun navigate(fromVUID: String, direction: String): VUIDElement? = findInDirection(fromVUID, direction)
+
     /**
      * Find nearest element
      */
-    fun findNearest(fromUUID: String): UUIDElement? {
-        return spatialNavigator.findNearest(fromUUID)?.target
+    fun findNearest(fromVUID: String): VUIDElement? {
+        return spatialNavigator.findNearest(fromVUID)?.target
     }
     
     /**
@@ -333,9 +333,9 @@ open class UUIDCreator(
     private fun parseVoiceCommand(command: String): ParsedCommand {
         val normalizedCommand = command.lowercase().trim()
         
-        // Direct UUID patterns
-        val uuidPattern = Regex("(click|select|focus)\\s+(?:element\\s+)?(?:with\\s+)?uuid[\\s-]+([a-zA-Z0-9-]+)")
-        uuidPattern.find(normalizedCommand)?.let { match ->
+        // Direct VUID patterns
+        val vuidPattern = Regex("(click|select|focus)\\s+(?:element\\s+)?(?:with\\s+)?(?:vuid|uuid)[\\s-]+([a-zA-Z0-9-]+)")
+        vuidPattern.find(normalizedCommand)?.let { match ->
             return ParsedCommand(
                 action = match.groupValues[1],
                 targetRequest = TargetResolver.TargetRequest(TargetResolver.TargetType.UUID, match.groupValues[2])

@@ -1,0 +1,88 @@
+-- VUIDAlias.sq
+-- SQLDelight schema for VUID aliases
+-- Migrated from UUIDAlias.sq (nomenclature update)
+
+CREATE TABLE vuid_aliases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    alias TEXT NOT NULL UNIQUE,
+    vuid TEXT NOT NULL,
+    is_primary INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (vuid) REFERENCES vuid_elements(vuid) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_vuid_alias_alias ON vuid_aliases(alias);
+CREATE INDEX idx_vuid_alias_vuid ON vuid_aliases(vuid);
+
+-- Get all aliases
+getAllAliases:
+SELECT * FROM vuid_aliases ORDER BY created_at DESC;
+
+-- Get alias by ID
+getAliasById:
+SELECT * FROM vuid_aliases WHERE id = ?;
+
+-- Get alias by name
+getAliasByName:
+SELECT * FROM vuid_aliases WHERE alias = ?;
+
+-- Get aliases for VUID
+getAliasesForVuid:
+SELECT * FROM vuid_aliases WHERE vuid = ? ORDER BY is_primary DESC, created_at ASC;
+
+-- Get primary alias for VUID
+getPrimaryAliasForVuid:
+SELECT * FROM vuid_aliases WHERE vuid = ? AND is_primary = 1 LIMIT 1;
+
+-- Get VUID by alias
+getVuidByAlias:
+SELECT vuid FROM vuid_aliases WHERE alias = ?;
+
+-- Check if alias exists
+aliasExists:
+SELECT COUNT(*) FROM vuid_aliases WHERE alias = ?;
+
+-- Insert alias
+insertAlias:
+INSERT OR REPLACE INTO vuid_aliases (alias, vuid, is_primary, created_at)
+VALUES (?, ?, ?, ?);
+
+-- Update alias
+updateAlias:
+UPDATE vuid_aliases SET alias = ?, is_primary = ? WHERE id = ?;
+
+-- Set primary alias (clears other primaries for same VUID)
+setPrimaryAlias:
+UPDATE vuid_aliases SET is_primary = CASE WHEN id = ? THEN 1 ELSE 0 END WHERE vuid = ?;
+
+-- Clear primary for VUID
+clearPrimaryForVuid:
+UPDATE vuid_aliases SET is_primary = 0 WHERE vuid = ?;
+
+-- Delete alias by ID
+deleteAlias:
+DELETE FROM vuid_aliases WHERE id = ?;
+
+-- Delete alias by name
+deleteAliasByName:
+DELETE FROM vuid_aliases WHERE alias = ?;
+
+-- Delete aliases for VUID
+deleteAliasesForVuid:
+DELETE FROM vuid_aliases WHERE vuid = ?;
+
+-- Count aliases
+countAliases:
+SELECT COUNT(*) FROM vuid_aliases;
+
+-- Count aliases for VUID
+countAliasesForVuid:
+SELECT COUNT(*) FROM vuid_aliases WHERE vuid = ?;
+
+-- Search aliases
+searchAliases:
+SELECT * FROM vuid_aliases WHERE alias LIKE '%' || ? || '%' ORDER BY is_primary DESC, created_at DESC;
+
+-- Delete all aliases
+deleteAll:
+DELETE FROM vuid_aliases;

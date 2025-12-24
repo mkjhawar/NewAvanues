@@ -42,7 +42,7 @@ import com.augmentalis.voiceoscore.learnapp.commands.RenameCommandHandler
 import com.augmentalis.voiceoscore.learnapp.commands.RenameResult
 import com.augmentalis.speechrecognition.SpeechEngine
 import com.augmentalis.speechrecognition.SpeechMode
-import com.augmentalis.uuidcreator.UUIDCreator
+import com.augmentalis.uuidcreator.VUIDCreator
 import com.augmentalis.voiceos.command.Command
 import com.augmentalis.voiceos.command.CommandContext
 import com.augmentalis.voiceos.command.CommandSource

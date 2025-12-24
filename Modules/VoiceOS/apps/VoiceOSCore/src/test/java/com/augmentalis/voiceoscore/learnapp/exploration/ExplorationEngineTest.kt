@@ -21,7 +21,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.database.VoiceOSDatabaseManager
-import com.augmentalis.uuidcreator.UUIDCreator
+import com.augmentalis.uuidcreator.VUIDCreator
 import com.augmentalis.uuidcreator.alias.UuidAliasManager
 import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import com.augmentalis.voiceoscore.learnapp.core.LearnAppCore

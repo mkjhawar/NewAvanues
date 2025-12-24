@@ -33,7 +33,7 @@ interface ICommandGenerator {
      * Generate voice command from element.
      *
      * @param element Element to generate command for
-     * @param uuid Pre-generated UUID
+     * @param vuid Pre-generated UUID
      * @param packageName Package name for framework detection
      * @param framework Detected app framework
      * @return Generated command DTO or null if not actionable

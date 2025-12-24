@@ -30,12 +30,12 @@ import com.augmentalis.voiceoscore.scraping.entities.toDTO
 import com.augmentalis.voiceoscore.database.*  // Extension functions for batch operations
 import com.augmentalis.voiceoscore.utils.HashUtils
 import com.augmentalis.database.dto.toScrapedElementDTO
-import com.augmentalis.uuidcreator.UUIDCreator
+import com.augmentalis.uuidcreator.VUIDCreator
 import com.augmentalis.uuidcreator.alias.UuidAliasManager
 import com.augmentalis.uuidcreator.database.UUIDCreatorDatabase
-import com.augmentalis.uuidcreator.models.UUIDAccessibility
-import com.augmentalis.uuidcreator.models.UUIDElement
-import com.augmentalis.uuidcreator.models.UUIDMetadata
+import com.augmentalis.uuidcreator.models.VUIDAccessibility
+import com.augmentalis.uuidcreator.models.VUIDElement
+import com.augmentalis.uuidcreator.models.VUIDMetadata
 import com.augmentalis.uuidcreator.thirdparty.AccessibilityFingerprint
 import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import kotlinx.coroutines.CoroutineScope
@@ -110,7 +110,7 @@ class AccessibilityScrapingIntegration(
     // Phase 3: Interaction learning preferences
     private val preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 
-    // UUID Creator components for universal element identification
+    // VUID Creator components for universal element identification
     private val uuidCreator: UUIDCreator = UUIDCreator.initialize(context)
     private val uuidCreatorDatabase: UUIDCreatorDatabase = UUIDCreatorDatabase.getInstance(context)
     private val thirdPartyGenerator: ThirdPartyUuidGenerator = ThirdPartyUuidGenerator(context)

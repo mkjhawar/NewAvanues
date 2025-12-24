@@ -45,7 +45,7 @@ import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 import com.augmentalis.voiceoscore.learnapp.ui.ConsentDialogManager
 import com.augmentalis.voiceoscore.learnapp.ui.FloatingProgressWidget
 import com.augmentalis.voiceoscore.scraping.AccessibilityScrapingIntegration
-import com.augmentalis.uuidcreator.UUIDCreator
+import com.augmentalis.uuidcreator.VUIDCreator
 import com.augmentalis.uuidcreator.alias.UuidAliasManager
 // TEMP DISABLED (Room migration): import com.augmentalis.uuidcreator.database.UUIDCreatorDatabase
 import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
@@ -155,7 +155,7 @@ class LearnAppIntegration private constructor(
     private var loginPromptOverlay: LoginPromptOverlay? = null
 
     /**
-     * UUIDCreator components
+     * VUIDCreator components
      */
     private val uuidCreator: UUIDCreator
     private val thirdPartyGenerator: ThirdPartyUuidGenerator

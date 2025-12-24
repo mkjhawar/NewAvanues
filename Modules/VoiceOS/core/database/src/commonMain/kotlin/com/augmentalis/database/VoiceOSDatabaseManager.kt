@@ -15,7 +15,7 @@ import com.augmentalis.database.repositories.ICommandRepository
 import com.augmentalis.database.repositories.ICommandHistoryRepository
 import com.augmentalis.database.repositories.IUserPreferenceRepository
 import com.augmentalis.database.repositories.IErrorReportRepository
-import com.augmentalis.database.repositories.IUUIDRepository
+import com.augmentalis.database.repositories.IVUIDRepository
 import com.augmentalis.database.repositories.IVoiceCommandRepository
 import com.augmentalis.database.repositories.ICommandUsageRepository
 import com.augmentalis.database.repositories.IContextPreferenceRepository
@@ -36,7 +36,7 @@ import com.augmentalis.database.repositories.impl.SQLDelightCommandRepository
 import com.augmentalis.database.repositories.impl.SQLDelightCommandHistoryRepository
 import com.augmentalis.database.repositories.impl.SQLDelightUserPreferenceRepository
 import com.augmentalis.database.repositories.impl.SQLDelightErrorReportRepository
-import com.augmentalis.database.repositories.impl.SQLDelightUUIDRepository
+import com.augmentalis.database.repositories.impl.SQLDelightVUIDRepository
 import com.augmentalis.database.repositories.impl.SQLDelightVoiceCommandRepository
 import com.augmentalis.database.repositories.impl.SQLDelightCommandUsageRepository
 import com.augmentalis.database.repositories.impl.SQLDelightContextPreferenceRepository
@@ -214,7 +214,7 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
     val screenContextQueries get() = database.screenContextQueries
     val screenTransitionQueries get() = database.screenTransitionQueries
     val userSequenceQueries get() = database.userSequenceQueries
-    // UUID queries for UUIDCreator module
+    // VUID queries for UUIDCreator module
     val uuidElementQueries get() = database.uUIDElementQueries
     val uuidHierarchyQueries get() = database.uUIDHierarchyQueries
     val uuidAnalyticsQueries get() = database.uUIDAnalyticsQueries

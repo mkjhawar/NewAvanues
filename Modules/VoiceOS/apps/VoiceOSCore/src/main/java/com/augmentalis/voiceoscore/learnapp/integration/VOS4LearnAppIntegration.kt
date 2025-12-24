@@ -27,7 +27,7 @@ import com.augmentalis.voiceoscore.learnapp.exploration.ExplorationStrategy
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationState
 import com.augmentalis.voiceoscore.learnapp.ui.ConsentDialogManager
 import com.augmentalis.voiceoscore.learnapp.ui.ProgressOverlayManager
-import com.augmentalis.uuidcreator.UUIDCreator
+import com.augmentalis.uuidcreator.VUIDCreator
 import com.augmentalis.uuidcreator.alias.UuidAliasManager
 import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import kotlinx.coroutines.CoroutineScope
@@ -99,7 +99,7 @@ class VOS4LearnAppIntegration private constructor(
     private val repository: LearnAppRepository
 
     /**
-     * UUIDCreator components
+     * VUIDCreator components
      */
     private val uuidCreator: UUIDCreator
     private val thirdPartyGenerator: ThirdPartyUuidGenerator

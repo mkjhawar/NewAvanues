@@ -1,0 +1,88 @@
+-- VUIDHierarchy.sq
+-- SQLDelight schema for VUID hierarchy relationships
+-- Migrated from UUIDHierarchy.sq (nomenclature update)
+
+CREATE TABLE vuid_hierarchy (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_vuid TEXT NOT NULL,
+    child_vuid TEXT NOT NULL,
+    depth INTEGER NOT NULL DEFAULT 0,
+    path TEXT NOT NULL,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (parent_vuid) REFERENCES vuid_elements(vuid) ON DELETE CASCADE,
+    FOREIGN KEY (child_vuid) REFERENCES vuid_elements(vuid) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_vuid_hierarchy_parent ON vuid_hierarchy(parent_vuid);
+CREATE INDEX idx_vuid_hierarchy_child ON vuid_hierarchy(child_vuid);
+CREATE INDEX idx_vuid_hierarchy_depth ON vuid_hierarchy(depth);
+CREATE INDEX idx_vuid_hierarchy_path ON vuid_hierarchy(path);
+
+-- Get all hierarchy relationships
+getAllHierarchy:
+SELECT * FROM vuid_hierarchy ORDER BY path, order_index;
+
+-- Get hierarchy by ID
+getHierarchyById:
+SELECT * FROM vuid_hierarchy WHERE id = ?;
+
+-- Get children of parent
+getChildrenOfParent:
+SELECT * FROM vuid_hierarchy WHERE parent_vuid = ? ORDER BY order_index;
+
+-- Get parent of child
+getParentOfChild:
+SELECT * FROM vuid_hierarchy WHERE child_vuid = ?;
+
+-- Get all descendants of parent (all depths)
+getDescendantsOfParent:
+SELECT * FROM vuid_hierarchy WHERE path LIKE ? || '%' ORDER BY depth, order_index;
+
+-- Get direct children only (depth = 0)
+getDirectChildren:
+SELECT * FROM vuid_hierarchy WHERE parent_vuid = ? AND depth = 0 ORDER BY order_index;
+
+-- Get hierarchy by path
+getHierarchyByPath:
+SELECT * FROM vuid_hierarchy WHERE path = ?;
+
+-- Insert hierarchy relationship
+insertHierarchy:
+INSERT OR REPLACE INTO vuid_hierarchy (parent_vuid, child_vuid, depth, path, order_index)
+VALUES (?, ?, ?, ?, ?);
+
+-- Update order index
+updateOrderIndex:
+UPDATE vuid_hierarchy SET order_index = ? WHERE id = ?;
+
+-- Update path
+updatePath:
+UPDATE vuid_hierarchy SET path = ? WHERE id = ?;
+
+-- Delete hierarchy by ID
+deleteHierarchy:
+DELETE FROM vuid_hierarchy WHERE id = ?;
+
+-- Delete by parent
+deleteByParent:
+DELETE FROM vuid_hierarchy WHERE parent_vuid = ?;
+
+-- Delete by child
+deleteByChild:
+DELETE FROM vuid_hierarchy WHERE child_vuid = ?;
+
+-- Count children of parent
+countChildrenOfParent:
+SELECT COUNT(*) FROM vuid_hierarchy WHERE parent_vuid = ?;
+
+-- Count total relationships
+countRelationships:
+SELECT COUNT(*) FROM vuid_hierarchy;
+
+-- Get max order index for parent
+getMaxOrderIndex:
+SELECT MAX(order_index) FROM vuid_hierarchy WHERE parent_vuid = ?;
+
+-- Delete all hierarchy
+deleteAll:
+DELETE FROM vuid_hierarchy;

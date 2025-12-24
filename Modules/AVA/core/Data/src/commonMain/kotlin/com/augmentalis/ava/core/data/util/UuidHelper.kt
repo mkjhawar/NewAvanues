@@ -3,19 +3,21 @@ package com.augmentalis.ava.core.data.util
 import kotlin.random.Random
 
 /**
- * Cross-platform UUID generator
+ * Cross-platform VUID (Voice Universal Identifier) generator
  *
- * Generates RFC 4122 version 4 UUIDs (random-based).
+ * Generates RFC 4122 version 4 VUIDs (random-based).
  * This is a simple implementation for KMP compatibility.
+ *
+ * VUID replaces UUID for better voice-centric semantics across the AVA platform.
  */
-object UuidHelper {
+object VuidHelper {
 
     /**
-     * Generate a random UUID string
+     * Generate a random VUID string
      *
-     * @return UUID string in format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+     * @return VUID string in format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
      */
-    fun randomUUID(): String {
+    fun randomVUID(): String {
         val random = Random.Default
 
         // Generate 16 random bytes

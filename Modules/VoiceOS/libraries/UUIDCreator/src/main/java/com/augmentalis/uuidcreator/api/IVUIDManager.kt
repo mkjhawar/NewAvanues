@@ -3,66 +3,66 @@ package com.augmentalis.uuidcreator.api
 import com.augmentalis.uuidcreator.models.*
 
 /**
- * Public API interface for UUIDManager library
- * Framework-agnostic UUID management and targeting system
+ * Public API interface for VUIDManager library
+ * Framework-agnostic VUID (VoiceUniqueID) management and targeting system
  */
-interface IUUIDManager {
-    
+interface IVUIDManager {
+
     /**
-     * Generate a new UUID
+     * Generate a new VUID
      */
-    fun generateUUID(): String
-    
+    fun generateVUID(): String
+
     /**
-     * Register an element with UUID
+     * Register an element with VUID
      */
-    fun registerElement(element: UUIDElement): String
-    
+    fun registerElement(element: VUIDElement): String
+
     /**
      * Unregister an element
      */
-    fun unregisterElement(uuid: String): Boolean
-    
+    fun unregisterElement(vuid: String): Boolean
+
     /**
-     * Find element by UUID
+     * Find element by VUID
      */
-    fun findByUUID(uuid: String): UUIDElement?
-    
+    fun findByVUID(vuid: String): VUIDElement?
+
     /**
      * Find elements by name
      */
-    fun findByName(name: String): List<UUIDElement>
-    
+    fun findByName(name: String): List<VUIDElement>
+
     /**
      * Find elements by type
      */
-    fun findByType(type: String): List<UUIDElement>
-    
+    fun findByType(type: String): List<VUIDElement>
+
     /**
      * Find element by position
      */
-    fun findByPosition(position: Int): UUIDElement?
-    
+    fun findByPosition(position: Int): VUIDElement?
+
     /**
      * Find elements in direction
      */
-    fun findInDirection(fromUUID: String, direction: String): UUIDElement?
-    
+    fun findInDirection(fromVUID: String, direction: String): VUIDElement?
+
     /**
      * Execute action on element
      */
-    suspend fun executeAction(uuid: String, action: String, parameters: Map<String, Any> = emptyMap()): Boolean
-    
+    suspend fun executeAction(vuid: String, action: String, parameters: Map<String, Any> = emptyMap()): Boolean
+
     /**
      * Process voice command
      */
     suspend fun processVoiceCommand(command: String): UUIDCommandResult
-    
+
     /**
      * Get all registered elements
      */
-    fun getAllElements(): List<UUIDElement>
-    
+    fun getAllElements(): List<VUIDElement>
+
     /**
      * Clear all registrations
      */

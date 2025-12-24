@@ -117,7 +117,7 @@ publishing {
     publications {
         create<MavenPublication>("release") {
             groupId = "com.augmentalis"
-            artifactId = "uuidcreator"
+            artifactId = "vuidcreator"
             version = "1.0.0"
 
             afterEvaluate {

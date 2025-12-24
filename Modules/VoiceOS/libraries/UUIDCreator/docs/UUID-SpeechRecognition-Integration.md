@@ -1,20 +1,20 @@
 /**
- * UUID-Based Command Management System for Speech Recognition
- * Path: /libraries/UUIDManager/docs/UUID-SpeechRecognition-Integration.md
- * 
+ * VUID-Based Command Management System for Speech Recognition
+ * Path: /libraries/UUIDCreator/docs/UUID-SpeechRecognition-Integration.md
+ *
  * Created: 2025-01-27
  * Author: Manoj Jhawar
- * Module: UUIDManager + SpeechRecognition
- * 
- * Purpose: Define UUID strategy for command concepts, phrases, and contexts
+ * Module: VUIDCreator + SpeechRecognition
+ *
+ * Purpose: Define VUID strategy for command concepts, phrases, and contexts
  * to enable efficient grammar building, caching, and context-aware loading.
  */
 
-# UUID-Based Command Management System
+# VUID-Based Command Management System
 
 ## Executive Summary
 
-Implementing UUIDs for speech recognition commands provides stable identities that enable:
+Implementing VUIDs (Voice-Optimized Unique Identifiers) for speech recognition commands provides stable identities that enable:
 - **30-50% faster** context switching through set operations
 - **Zero duplicates** in grammar through concept deduplication
 - **Precise cache invalidation** reducing unnecessary rebuilds by 70%
@@ -22,22 +22,22 @@ Implementing UUIDs for speech recognition commands provides stable identities th
 
 ## UUID Version Guide
 
-### UUID Versions Explained
+### VUID Versions Explained
 ```kotlin
 /**
- * UUIDv1: Timestamp + MAC address (not recommended - privacy concerns)
- * UUIDv3: MD5 hash of namespace + name (deprecated, use v5)
- * UUIDv4: Random (good for unique IDs, not deterministic)
- * UUIDv5: SHA-1 hash of namespace + name (deterministic, recommended)
- * UUIDv6: Timestamp-ordered (draft, not widely supported)
- * UUIDv7: Timestamp-ordered + random (best for sortable IDs)
+ * VUIDv1: Timestamp + MAC address (not recommended - privacy concerns)
+ * VUIDv3: MD5 hash of namespace + name (deprecated, use v5)
+ * VUIDv4: Random (good for unique IDs, not deterministic)
+ * VUIDv5: SHA-1 hash of namespace + name (deterministic, recommended)
+ * VUIDv6: Timestamp-ordered (draft, not widely supported)
+ * VUIDv7: Timestamp-ordered + random (best for sortable IDs)
  */
 ```
 
 ### Our Strategy
-- **UUIDv7**: For persistent stored commands (sortable by creation time)
-- **UUIDv5**: For ephemeral scraped commands (deterministic regeneration)
-- **UUIDv4**: For session-specific temporary items
+- **VUIDv7**: For persistent stored commands (sortable by creation time)
+- **VUIDv5**: For ephemeral scraped commands (deterministic regeneration)
+- **VUIDv4**: For session-specific temporary items
 
 ## Architecture
 
@@ -51,12 +51,12 @@ Implementing UUIDs for speech recognition commands provides stable identities th
  */
 
 // Example mapping
-CommandConcept(uuid="7f3b9c4a-...") -> "OPEN_SETTINGS" intent
-├── Phrase(uuid="a4c2d8f1-...", text="open settings")
-├── Phrase(uuid="b5d3e9f2-...", text="go to settings")
-└── Phrase(uuid="c6e4f0g3-...", text="launch preferences")
+CommandConcept(vuid="7f3b9c4a-...") -> "OPEN_SETTINGS" intent
+├── Phrase(vuid="a4c2d8f1-...", text="open settings")
+├── Phrase(vuid="b5d3e9f2-...", text="go to settings")
+└── Phrase(vuid="c6e4f0g3-...", text="launch preferences")
 
-Context(uuid="8e4c0d5b-...") -> "com.android.settings/.MainSettings"
+Context(vuid="8e4c0d5b-...") -> "com.android.settings/.MainSettings"
 └── Contains: [OPEN_SETTINGS, NAVIGATE_BACK, SEARCH, ...]
 ```
 
@@ -68,20 +68,20 @@ Context(uuid="8e4c0d5b-...") -> "com.android.settings/.MainSettings"
 @Entity
 data class CommandConceptEntity(
     @Id var id: Long = 0,
-    
+
     @Unique
     @Index
-    var uuid: String = "",  // UUIDv7 for persistent, v5 for scraped
-    
+    var vuid: String = "",  // VUIDv7 for persistent, v5 for scraped
+
     var canonicalName: String = "",  // e.g., "OPEN_SETTINGS"
     var category: String = "",       // e.g., "NAVIGATION", "SYSTEM"
     var packageName: String = "",    // Source package
-    
+
     @Index
     var frequency: Int = 0,          // Global usage count
     var lastUsed: Long = 0,
     var confidence: Float = 1.0f,
-    
+
     var metadata: String = "",       // JSON for extra data
     var isActive: Boolean = true,
     var createdAt: Long = System.currentTimeMillis()
@@ -90,24 +90,24 @@ data class CommandConceptEntity(
 @Entity
 data class PhraseEntity(
     @Id var id: Long = 0,
-    
+
     @Unique
     @Index
-    var uuid: String = "",           // UUIDv5(conceptUuid, normalizedText)
-    
+    var vuid: String = "",           // VUIDv5(conceptVuid, normalizedText)
+
     @Index
-    var conceptUuid: String = "",    // Links to CommandConceptEntity
-    
+    var conceptVuid: String = "",    // Links to CommandConceptEntity
+
     var text: String = "",           // Actual phrase text
     var normalizedText: String = "", // Lowercase, trimmed
     var locale: String = "en-US",
-    
+
     var weight: Float = 1.0f,        // Preference weight
     var successRate: Float = 0.0f,   // Recognition success rate
-    
+
     @Index
     var source: String = "",         // "USER", "SYSTEM", "SCRAPED"
-    
+
     var isActive: Boolean = true,
     var createdAt: Long = System.currentTimeMillis()
 )
@@ -115,35 +115,35 @@ data class PhraseEntity(
 @Entity
 data class ContextEntity(
     @Id var id: Long = 0,
-    
+
     @Unique
     @Index
-    var uuid: String = "",           // UUIDv5(appPackage, screenClass)
-    
+    var vuid: String = "",           // VUIDv5(appPackage, screenClass)
+
     var contextKey: String = "",     // "package/class" or semantic key
     var appPackage: String = "",
     var screenClass: String = "",
-    
+
     var tags: String = "",           // JSON array of tags
     var screenSignature: String = "", // Hash of UI structure
-    
+
     var lastSeen: Long = System.currentTimeMillis()
 )
 
 @Entity
 data class ContextCommandMapEntity(
     @Id var id: Long = 0,
-    
+
     @Index
-    var contextUuid: String = "",
-    
+    var contextVuid: String = "",
+
     @Index
-    var commandUuid: String = "",    // CommandConceptEntity.uuid
-    
+    var commandVuid: String = "",    // CommandConceptEntity.vuid
+
     var weight: Float = 1.0f,        // Importance in this context
     var position: Int = 0,           // Order priority
     var addedAt: Long = System.currentTimeMillis(),
-    
+
     @Index
     var isActive: Boolean = true
 )
@@ -152,15 +152,15 @@ data class ContextCommandMapEntity(
 @Entity
 data class GrammarCacheEntity(
     @Id var id: Long = 0,
-    
+
     @Unique
     @Index
-    var contextUuid: String = "",
-    
+    var contextVuid: String = "",
+
     var grammarJson: String = "",    // Cached grammar JSON
-    var commandUuids: String = "",   // JSON array of UUIDs
-    var phraseMap: String = "",      // JSON map: text -> conceptUuid
-    
+    var commandVuids: String = "",   // JSON array of VUIDs
+    var phraseMap: String = "",      // JSON map: text -> conceptVuid
+
     var size: Int = 0,
     var hash: String = "",           // SHA-256 of grammar
     var createdAt: Long = System.currentTimeMillis(),
@@ -170,57 +170,57 @@ data class GrammarCacheEntity(
 
 ## Implementation
 
-### UUID Generation Strategy
+### VUID Generation Strategy
 
 ```kotlin
-class CommandUUIDManager(
+class CommandVUIDManager(
     private val namespace: UUID = UUID.fromString("6ba7b814-9dad-11d1-80b4-00c04fd430c8") // URL namespace
 ) {
-    
+
     /**
-     * Generate UUID for command concept
+     * Generate VUID for command concept
      */
-    fun generateConceptUUID(canonicalName: String, category: String): String {
-        // For persistent concepts, use UUIDv7 (timestamp-ordered)
+    fun generateConceptVUID(canonicalName: String, category: String): String {
+        // For persistent concepts, use VUIDv7 (timestamp-ordered)
         return if (isPersistentConcept(category)) {
-            UUIDv7.generate().toString()
+            VUIDv7.generate().toString()
         } else {
-            // For ephemeral, use deterministic UUIDv5
-            generateDeterministicUUID("concept:$category:$canonicalName")
+            // For ephemeral, use deterministic VUIDv5
+            generateDeterministicVUID("concept:$category:$canonicalName")
         }
     }
-    
+
     /**
-     * Generate UUID for phrase variant
+     * Generate VUID for phrase variant
      */
-    fun generatePhraseUUID(conceptUuid: String, normalizedText: String, locale: String): String {
-        // Always deterministic - same phrase for same concept generates same UUID
-        return generateDeterministicUUID("phrase:$conceptUuid:$locale:$normalizedText")
+    fun generatePhraseVUID(conceptVuid: String, normalizedText: String, locale: String): String {
+        // Always deterministic - same phrase for same concept generates same VUID
+        return generateDeterministicVUID("phrase:$conceptVuid:$locale:$normalizedText")
     }
-    
+
     /**
-     * Generate UUID for context
+     * Generate VUID for context
      */
-    fun generateContextUUID(packageName: String, className: String): String {
-        // Deterministic - same screen always gets same UUID
-        return generateDeterministicUUID("context:$packageName:$className")
+    fun generateContextVUID(packageName: String, className: String): String {
+        // Deterministic - same screen always gets same VUID
+        return generateDeterministicVUID("context:$packageName:$className")
     }
-    
+
     /**
-     * UUIDv5 implementation (deterministic)
+     * VUIDv5 implementation (deterministic)
      */
-    private fun generateDeterministicUUID(name: String): String {
+    private fun generateDeterministicVUID(name: String): String {
         val md = MessageDigest.getInstance("SHA-1")
         md.update(toBytes(namespace))
         md.update(name.toByteArray(Charsets.UTF_8))
-        
+
         val sha1Bytes = md.digest()
         sha1Bytes[6] = (sha1Bytes[6].toInt() and 0x0f or 0x50).toByte() // Version 5
         sha1Bytes[8] = (sha1Bytes[8].toInt() and 0x3f or 0x80).toByte() // Variant
-        
-        return toUUID(sha1Bytes).toString()
+
+        return toVUID(sha1Bytes).toString()
     }
-    
+
     /**
      * Generate fingerprint for fast lookups
      */

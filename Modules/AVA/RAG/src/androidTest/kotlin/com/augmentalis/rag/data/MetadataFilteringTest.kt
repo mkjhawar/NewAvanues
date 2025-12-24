@@ -19,7 +19,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.util.UUID
+import com.augmentalis.ava.core.data.util.VuidHelper
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 
@@ -437,7 +437,7 @@ class MetadataFilteringTest {
         fileSize: Long? = null,
         createdAt: Instant = Clock.System.now()
     ): Document {
-        val docId = UUID.randomUUID().toString()
+        val docId = VuidHelper.randomVUID()
 
         // Create test file
         val extension = fileType.extension
@@ -458,7 +458,7 @@ class MetadataFilteringTest {
 
         // Create chunks manually
         val chunk = Chunk(
-            id = UUID.randomUUID().toString(),
+            id = VuidHelper.randomVUID(),
             documentId = docId,
             content = content,
             chunkIndex = 0,

@@ -15,7 +15,7 @@ import java.util.UUID
 /**
  * Voice target registration - EXACT copy from legacy implementation
  * 
- * @param uuid Unique identifier
+ * @param vuid Unique identifier
  * @param name Element name/label
  * @param type Element type
  * @param description Optional description

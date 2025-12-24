@@ -39,11 +39,11 @@ android {
 
 dependencies {
     // AVA Core modules
-    implementation(project(":core:Domain"))
-    implementation(project(":core:Utils"))
+    implementation(project(":Modules:AVA:core:Domain"))
+    implementation(project(":Modules:AVA:core:Utils"))
 
     // AVA LLM module for ApiKeyManager (Porcupine API key)
-    implementation(project(":LLM"))
+    implementation(project(":Modules:AVA:LLM"))
 
     // Hilt Dependency Injection
     implementation(libs.hilt.android)

@@ -59,7 +59,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.util.Locale
-import java.util.UUID
+import com.augmentalis.ava.core.data.util.VuidHelper
 import javax.inject.Inject
 
 /**
@@ -673,7 +673,7 @@ class ChatViewModel @Inject constructor(
             }
 
             val welcomeMessage = Message(
-                id = UUID.randomUUID().toString(),
+                id = VuidHelper.randomVUID(),
                 conversationId = conversationId,
                 role = MessageRole.ASSISTANT,
                 content = welcomeContent,
@@ -1296,7 +1296,7 @@ class ChatViewModel @Inject constructor(
 
                 // 1. Create user message
                 val userMessage = Message(
-                    id = UUID.randomUUID().toString(),
+                    id = VuidHelper.randomVUID(),
                     conversationId = conversationId,
                     role = MessageRole.USER,
                     content = text.trim(),
@@ -1402,7 +1402,7 @@ class ChatViewModel @Inject constructor(
 
                     // Create AVA message with action feedback
                     val avaMessage = Message(
-                        id = UUID.randomUUID().toString(),
+                        id = VuidHelper.randomVUID(),
                         conversationId = conversationId,
                         role = MessageRole.ASSISTANT,
                         content = actionFeedback,
@@ -1543,7 +1543,7 @@ class ChatViewModel @Inject constructor(
 
                 // 5. Create AVA message with intent and confidence
                 val avaMessage = Message(
-                    id = UUID.randomUUID().toString(),
+                    id = VuidHelper.randomVUID(),
                     conversationId = conversationId,
                     role = MessageRole.ASSISTANT,
                     content = responseContent,

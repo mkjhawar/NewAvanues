@@ -1,30 +1,30 @@
 /**
- * UUIDRegistry.kt - Central registry for UUID elements
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/uuidcreator/core/UUIDRegistry.kt
+ * VUIDRegistry.kt - Central registry for VUID elements
+ * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/uuidcreator/core/VUIDRegistry.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
  * Created: 2024-08-20
- * Updated: 2025-10-08 - Migrated to Room hybrid storage
+ * Updated: 2025-12-23 - Renamed UUID → VUID (VoiceUniqueID)
  *
- * Thread-safe storage and lookup with Room persistence via UUIDRepository
+ * Thread-safe storage and lookup with SQLDelight persistence via repository
  */
 
 package com.augmentalis.uuidcreator.core
 
 import com.augmentalis.uuidcreator.database.repository.SQLDelightUUIDRepositoryAdapter
-import com.augmentalis.uuidcreator.models.UUIDElement
+import com.augmentalis.uuidcreator.models.VUIDElement
 import kotlinx.coroutines.flow.*
 
 /**
- * Central registry for UUID elements
+ * Central registry for VUID elements
  *
- * Now delegates to SQLDelightUUIDRepositoryAdapter for hybrid storage (SQLDelight + in-memory cache).
+ * Delegates to SQLDelightUUIDRepositoryAdapter for hybrid storage (SQLDelight + in-memory cache).
  * Maintains backward-compatible API while adding persistence.
  *
  * @property repository Hybrid storage repository (SQLDelight database + in-memory cache)
  */
-class UUIDRegistry(
+class VUIDRegistry(
     private val repository: SQLDelightUUIDRepositoryAdapter
 ) {
     
@@ -35,23 +35,23 @@ class UUIDRegistry(
      * Registration events
      */
     sealed class RegistrationEvent {
-        data class ElementRegistered(val element: UUIDElement) : RegistrationEvent()
-        data class ElementUnregistered(val uuid: String) : RegistrationEvent()
-        data class ElementUpdated(val element: UUIDElement) : RegistrationEvent()
+        data class ElementRegistered(val element: VUIDElement) : RegistrationEvent()
+        data class ElementUnregistered(val vuid: String) : RegistrationEvent()
+        data class ElementUpdated(val element: VUIDElement) : RegistrationEvent()
     }
     
     /**
      * Register an element
      *
-     * Persists to Room database and updates in-memory cache.
+     * Persists to SQLDelight database and updates in-memory cache.
      */
-    suspend fun register(element: UUIDElement): String {
+    suspend fun register(element: VUIDElement): String {
         // Delegate to repository (handles database + cache + indexes)
         repository.insert(element)
 
         // Update parent's children list in cache
-        element.parent?.let { parentUuid ->
-            repository.getByUuid(parentUuid)?.addChild(element.uuid)
+        element.parent?.let { parentVuid ->
+            repository.getByUuid(parentVuid)?.addChild(element.uuid)
         }
 
         _registrations.emit(RegistrationEvent.ElementRegistered(element))
@@ -61,22 +61,22 @@ class UUIDRegistry(
     /**
      * Unregister an element
      *
-     * Removes from Room database and in-memory cache.
+     * Removes from SQLDelight database and in-memory cache.
      * Recursively unregisters children.
      */
-    suspend fun unregister(uuid: String): Boolean {
-        val element = repository.getByUuid(uuid) ?: return false
+    suspend fun unregister(vuid: String): Boolean {
+        val element = repository.getByUuid(vuid) ?: return false
 
         // Unregister children recursively
-        element.children.toList().forEach { childUuid ->
-            unregister(childUuid)
+        element.children.toList().forEach { childVuid ->
+            unregister(childVuid)
         }
 
         // Delete from repository (handles database + cache + indexes)
-        val deleted = repository.deleteByUuid(uuid)
+        val deleted = repository.deleteByUuid(vuid)
 
         if (deleted) {
-            _registrations.emit(RegistrationEvent.ElementUnregistered(uuid))
+            _registrations.emit(RegistrationEvent.ElementUnregistered(vuid))
         }
 
         return deleted
@@ -85,9 +85,9 @@ class UUIDRegistry(
     /**
      * Update an existing element
      *
-     * Updates Room database and in-memory cache.
+     * Updates SQLDelight database and in-memory cache.
      */
-    suspend fun update(element: UUIDElement): Boolean {
+    suspend fun update(element: VUIDElement): Boolean {
         if (!repository.exists(element.uuid)) return false
 
         // Delegate to repository (handles database + cache + indexes)
@@ -96,16 +96,16 @@ class UUIDRegistry(
         _registrations.emit(RegistrationEvent.ElementUpdated(element))
         return true
     }
-    
+
     /**
-     * Find element by UUID
+     * Find element by VUID
      */
-    fun findByUUID(uuid: String): UUIDElement? = repository.getByUuid(uuid)
+    fun findByVUID(vuid: String): VUIDElement? = repository.getByUuid(vuid)
 
     /**
      * Find elements by name (partial match)
      */
-    fun findByName(name: String, exactMatch: Boolean = false): List<UUIDElement> {
+    fun findByName(name: String, exactMatch: Boolean = false): List<VUIDElement> {
         return if (exactMatch) {
             repository.getByName(name).sortedBy { it.priority }
         } else {
@@ -118,29 +118,29 @@ class UUIDRegistry(
     /**
      * Find elements by type
      */
-    fun findByType(type: String): List<UUIDElement> {
+    fun findByType(type: String): List<VUIDElement> {
         return repository.getByType(type).sortedBy { it.position?.index ?: Int.MAX_VALUE }
     }
 
     /**
      * Find children of element
      */
-    fun findChildren(parentUuid: String): List<UUIDElement> {
-        return repository.getChildren(parentUuid).sortedBy { it.position?.index ?: Int.MAX_VALUE }
+    fun findChildren(parentVuid: String): List<VUIDElement> {
+        return repository.getChildren(parentVuid).sortedBy { it.position?.index ?: Int.MAX_VALUE }
     }
 
     /**
      * Find parent of element
      */
-    fun findParent(uuid: String): UUIDElement? {
-        val element = repository.getByUuid(uuid) ?: return null
+    fun findParent(vuid: String): VUIDElement? {
+        val element = repository.getByUuid(vuid) ?: return null
         return element.parent?.let { repository.getByUuid(it) }
     }
     
     /**
      * Find elements by position
      */
-    fun findByPosition(index: Int): List<UUIDElement> {
+    fun findByPosition(index: Int): List<VUIDElement> {
         return repository.getAll().filter {
             it.position?.index == index
         }.sortedBy { it.priority }
@@ -149,7 +149,7 @@ class UUIDRegistry(
     /**
      * Find elements in spatial area
      */
-    fun findInArea(minX: Float, minY: Float, maxX: Float, maxY: Float): List<UUIDElement> {
+    fun findInArea(minX: Float, minY: Float, maxX: Float, maxY: Float): List<VUIDElement> {
         return repository.getAll().filter { element ->
             element.position?.let { pos ->
                 pos.x >= minX && pos.x <= maxX && pos.y >= minY && pos.y <= maxY
@@ -165,34 +165,34 @@ class UUIDRegistry(
         type: String? = null,
         description: String? = null,
         enabledOnly: Boolean = true
-    ): List<UUIDElement> {
+    ): List<VUIDElement> {
         return repository.getAll().filter { element ->
             if (enabledOnly && !element.isEnabled) return@filter false
             element.matches(name, type, description)
         }.sortedBy { it.priority }
     }
-    
+
     /**
      * Get all elements
      */
-    fun getAllElements(): List<UUIDElement> = repository.getAll()
+    fun getAllElements(): List<VUIDElement> = repository.getAll()
 
     /**
      * Get enabled elements only
      */
-    fun getEnabledElements(): List<UUIDElement> = repository.getAll().filter { it.isEnabled }
+    fun getEnabledElements(): List<VUIDElement> = repository.getAll().filter { it.isEnabled }
 
     /**
      * Clear all registrations
      *
-     * Clears both Room database and in-memory cache.
+     * Clears both SQLDelight database and in-memory cache.
      */
     suspend fun clear() {
-        val clearedUuids = repository.getAll().map { it.uuid }
+        val clearedVuids = repository.getAll().map { it.uuid }
         repository.deleteAll()
 
-        clearedUuids.forEach { uuid ->
-            _registrations.emit(RegistrationEvent.ElementUnregistered(uuid))
+        clearedVuids.forEach { vuid ->
+            _registrations.emit(RegistrationEvent.ElementUnregistered(vuid))
         }
     }
 
@@ -218,7 +218,7 @@ class UUIDRegistry(
     /**
      * Check if element exists
      */
-    fun exists(uuid: String): Boolean = repository.exists(uuid)
+    fun exists(vuid: String): Boolean = repository.exists(vuid)
 
     /**
      * Get element count
@@ -238,7 +238,7 @@ class UUIDRegistry(
      * @param limit Maximum number of elements to return (default: 10)
      * @return List of recently accessed elements
      */
-    suspend fun getRecentlyAccessedElements(limit: Int = 10): List<UUIDElement> {
+    suspend fun getRecentlyAccessedElements(limit: Int = 10): List<VUIDElement> {
         return repository.getRecentlyUsed(limit)
     }
 }

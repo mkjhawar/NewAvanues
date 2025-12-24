@@ -84,7 +84,7 @@ fun Modifier.glassMorphism(
 }
 
 /**
- * UUID Manager color palette
+ * VUID Manager color palette
  */
 object UUIDColors {
     // Status colors
