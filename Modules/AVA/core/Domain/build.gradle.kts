@@ -14,10 +14,14 @@ kotlin {
     }
 
     // iOS targets
+    val iosX64Target = iosX64()
+    val iosArm64Target = iosArm64()
+    val iosSimulatorArm64Target = iosSimulatorArm64()
+
     listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
+        iosX64Target,
+        iosArm64Target,
+        iosSimulatorArm64Target
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "Domain"
@@ -52,8 +56,22 @@ kotlin {
         // Android-specific (currently none needed)
         val androidMain by getting
 
-        // iOS-specific (currently none needed)
-        // Note: iOS source set hierarchy is auto-configured by kotlin.mpp.applyDefaultHierarchyTemplate
+        // iOS-specific
+        val iosMain by creating {
+            dependsOn(commonMain)
+        }
+
+        val iosX64Main by getting {
+            dependsOn(iosMain)
+        }
+
+        val iosArm64Main by getting {
+            dependsOn(iosMain)
+        }
+
+        val iosSimulatorArm64Main by getting {
+            dependsOn(iosMain)
+        }
 
         // Desktop-specific (currently none needed)
         val desktopMain by getting
