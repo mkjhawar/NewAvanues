@@ -43,6 +43,9 @@ include(":Modules:AVA:RAG")
 include(":Modules:AVA:Teach")
 include(":Modules:AVA:WakeWord")
 
+// Shared Modules (cross-platform KMP libraries)
+include(":Modules:Shared:NLU")
+
 // VoiceOS Core Modules
 include(":Modules:VoiceOS:core:database")
 include(":Modules:VoiceOS:core:accessibility-types")
