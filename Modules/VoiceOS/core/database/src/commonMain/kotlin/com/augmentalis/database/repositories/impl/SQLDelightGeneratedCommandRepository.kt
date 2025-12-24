@@ -15,6 +15,8 @@ import com.augmentalis.database.dto.toGeneratedCommandDTO
 import com.augmentalis.database.repositories.IGeneratedCommandRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * SQLDelight implementation of IGeneratedCommandRepository.
@@ -185,10 +187,7 @@ class SQLDelightGeneratedCommandRepository(
         require(confidence in 0.0..1.0) { "Confidence must be between 0.0 and 1.0, got: $confidence" }
 
         // Serialize synonyms list to JSON string
-        val synonymsJson = kotlinx.serialization.json.Json.encodeToString(
-            kotlinx.serialization.builtins.ListSerializer(kotlinx.serialization.builtins.serializer()),
-            synonyms
-        )
+        val synonymsJson = Json.encodeToString(synonyms)
 
         // Update database
         queries.updateSynonymsAndConfidence(
