@@ -26,6 +26,12 @@ CREATE TABLE commands_generated (
     -- ADR-014: Unified Learning columns
     synced_to_ava INTEGER NOT NULL DEFAULT 0,
     synced_at INTEGER,
+
+    -- Schema v4: Foreign key integrity (2025-12-23)
+    -- Ensures commands are automatically deleted when their element is removed
+    -- Prevents orphaned commands and maintains referential integrity
+    FOREIGN KEY (elementHash) REFERENCES scraped_element(elementHash) ON DELETE CASCADE,
+
     UNIQUE(elementHash, commandText)  -- FIX (2025-12-05): Prevent duplicate commands
 );
 
@@ -315,6 +321,16 @@ LIMIT ?;
 -- Vacuum database to reclaim space
 vacuumDatabase:
 VACUUM;
+
+-- ====================LLM Integration Queries ====================
+
+-- Update command synonyms and confidence from LLM response (Schema v4)
+-- Used after LLM generates enhanced synonyms for better voice recognition
+-- Example: LLM enhances "submit" → ["sign in", "log in", "authenticate"]
+updateSynonymsAndConfidence:
+UPDATE commands_generated
+SET synonyms = ?, confidence = ?
+WHERE id = ?;
 
 -- ==================== Performance Optimization Queries ====================
 

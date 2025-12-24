@@ -138,6 +138,30 @@ interface IGeneratedCommandRepository {
     suspend fun update(command: GeneratedCommandDTO)
 
     /**
+     * Update command synonyms and confidence from LLM response (Schema v4).
+     *
+     * Used after LLM generates enhanced synonyms for better voice recognition.
+     * This is a specialized update method that only modifies synonym-related fields,
+     * which is more efficient than loading and updating the entire command entity.
+     *
+     * **Use Case:**
+     * ```kotlin
+     * // After LLM API call
+     * val llmResponse = llmEnhancer.generateSynonyms(context)
+     * repository.updateCommandSynonyms(
+     *     id = command.id,
+     *     synonyms = llmResponse.synonyms,
+     *     confidence = llmResponse.confidence
+     * )
+     * ```
+     *
+     * @param id Command ID to update
+     * @param synonyms List of synonym strings (will be JSON-serialized)
+     * @param confidence Updated confidence score (0.0-1.0)
+     */
+    suspend fun updateCommandSynonyms(id: Long, synonyms: List<String>, confidence: Double)
+
+    /**
      * Get all commands with pagination support.
      *
      * Prevents memory issues when retrieving large datasets.

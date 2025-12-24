@@ -180,6 +180,24 @@ class SQLDelightGeneratedCommandRepository(
         )
     }
 
+    override suspend fun updateCommandSynonyms(id: Long, synonyms: List<String>, confidence: Double) = withContext(Dispatchers.Default) {
+        // Validate confidence range
+        require(confidence in 0.0..1.0) { "Confidence must be between 0.0 and 1.0, got: $confidence" }
+
+        // Serialize synonyms list to JSON string
+        val synonymsJson = kotlinx.serialization.json.Json.encodeToString(
+            kotlinx.serialization.builtins.ListSerializer(kotlinx.serialization.builtins.serializer()),
+            synonyms
+        )
+
+        // Update database
+        queries.updateSynonymsAndConfidence(
+            synonyms = synonymsJson,
+            confidence = confidence,
+            id = id
+        )
+    }
+
     override suspend fun getAllPaginated(limit: Int, offset: Int): List<GeneratedCommandDTO> = withContext(Dispatchers.Default) {
         require(limit in 1..1000) { "Limit must be between 1 and 1000 (got $limit)" }
         require(offset >= 0) { "Offset must be non-negative (got $offset)" }
