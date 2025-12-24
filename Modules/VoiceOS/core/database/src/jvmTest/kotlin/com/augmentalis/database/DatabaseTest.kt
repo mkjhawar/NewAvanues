@@ -169,10 +169,60 @@ class DatabaseTest {
 
     // ==================== GeneratedCommand Tests ====================
 
+    /**
+     * Helper function to set up foreign key dependencies for generated commands.
+     * Creates scraped_app and scraped_element records required by FK constraints.
+     */
+    private fun setupCommandDependencies(appId: String = "com.test.app", elementHashes: List<String>) {
+        val now = System.currentTimeMillis()
+
+        // Create scraped_app (required by scraped_element FK)
+        database.scrapedAppQueries.insert(
+            appId, appId, 1, "1.0.0", "testhash",
+            0, null, "DYNAMIC", 1, 10, 5, now, now
+        )
+
+        // Create scraped_element entries (required by commands_generated FK)
+        elementHashes.forEach { hash ->
+            database.scrapedElementQueries.insert(
+                elementHash = hash,
+                appId = appId,
+                uuid = null,
+                className = "android.widget.Button",
+                viewIdResourceName = null,
+                text = "Test Button",
+                contentDescription = null,
+                bounds = "0,0,100,100",
+                isClickable = 1,
+                isLongClickable = 0,
+                isEditable = 0,
+                isScrollable = 0,
+                isCheckable = 0,
+                isFocusable = 1,
+                isEnabled = 1,
+                depth = 1,
+                indexInParent = 0,
+                scrapedAt = now,
+                semanticRole = null,
+                inputType = null,
+                visualWeight = null,
+                isRequired = 0,
+                formGroupId = null,
+                placeholderText = null,
+                validationPattern = null,
+                backgroundColor = null,
+                screen_hash = null
+            )
+        }
+    }
+
     @Test
     fun testGeneratedCommandInsertAndSearch() {
         val queries = database.generatedCommandQueries
         val now = System.currentTimeMillis()
+
+        // Setup FK dependencies (Schema v4)
+        setupCommandDependencies(elementHashes = listOf("hash1", "hash2"))
 
         // Schema v3: Added appId, appVersion, versionCode, lastVerified, isDeprecated
         queries.insert("hash1", "click submit button", "click", 0.85, null, 0, 0, null, now,
@@ -189,6 +239,9 @@ class DatabaseTest {
     fun testGeneratedCommandApproval() {
         val queries = database.generatedCommandQueries
         val now = System.currentTimeMillis()
+
+        // Setup FK dependencies (Schema v4)
+        setupCommandDependencies(elementHashes = listOf("hash1"))
 
         // Schema v3: Added appId, appVersion, versionCode, lastVerified, isDeprecated
         queries.insert("hash1", "test command", "click", 0.8, null, 0, 0, null, now,

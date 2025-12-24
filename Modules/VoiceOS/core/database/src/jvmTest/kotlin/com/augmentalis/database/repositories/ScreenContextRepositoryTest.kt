@@ -341,6 +341,9 @@ class ScreenContextRepositoryTest : BaseRepositoryTest() {
     fun testEmptyStringFields() = runTest {
         val repo = databaseManager.screenContexts
 
+        // Setup FK dependency - ensure app with empty string ID exists (Schema v4)
+        ensureScrapedAppExists("")
+
         val screen = createScreenContext(
             screenHash = "",
             appId = "",
