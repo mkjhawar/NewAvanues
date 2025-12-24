@@ -29,7 +29,7 @@ package com.augmentalis.uuidcreator.models
  */
 @Deprecated(
     message = "Use VUIDElement instead of UUIDElement. UUID has been replaced with VUID (VoiceUniqueID) for universal identification.",
-    replaceWith = ReplaceWith("VUIDElement", "com.augmentalis.vuidcreator.models.VUIDElement"),
+    replaceWith = ReplaceWith("VUIDElement", "com.augmentalis.uuidcreator.models.VUIDElement"),
     level = DeprecationLevel.WARNING
 )
 typealias UUIDElement = VUIDElement
@@ -39,7 +39,7 @@ typealias UUIDElement = VUIDElement
  */
 @Deprecated(
     message = "Use VUIDHierarchy instead of UUIDHierarchy. UUID has been replaced with VUID (VoiceUniqueID).",
-    replaceWith = ReplaceWith("VUIDHierarchy", "com.augmentalis.vuidcreator.models.VUIDHierarchy"),
+    replaceWith = ReplaceWith("VUIDHierarchy", "com.augmentalis.uuidcreator.models.VUIDHierarchy"),
     level = DeprecationLevel.WARNING
 )
 typealias UUIDHierarchy = VUIDHierarchy
@@ -49,7 +49,7 @@ typealias UUIDHierarchy = VUIDHierarchy
  */
 @Deprecated(
     message = "Use VUIDMetadata instead of UUIDMetadata. UUID has been replaced with VUID (VoiceUniqueID).",
-    replaceWith = ReplaceWith("VUIDMetadata", "com.augmentalis.vuidcreator.models.VUIDMetadata"),
+    replaceWith = ReplaceWith("VUIDMetadata", "com.augmentalis.uuidcreator.models.VUIDMetadata"),
     level = DeprecationLevel.WARNING
 )
 typealias UUIDMetadata = VUIDMetadata
@@ -59,7 +59,7 @@ typealias UUIDMetadata = VUIDMetadata
  */
 @Deprecated(
     message = "Use VUIDPosition instead of UUIDPosition. UUID has been replaced with VUID (VoiceUniqueID).",
-    replaceWith = ReplaceWith("VUIDPosition", "com.augmentalis.vuidcreator.models.VUIDPosition"),
+    replaceWith = ReplaceWith("VUIDPosition", "com.augmentalis.uuidcreator.models.VUIDPosition"),
     level = DeprecationLevel.WARNING
 )
 typealias UUIDPosition = VUIDPosition
@@ -69,7 +69,7 @@ typealias UUIDPosition = VUIDPosition
  */
 @Deprecated(
     message = "Use VUIDCommandResult instead of UUIDCommandResult. UUID has been replaced with VUID (VoiceUniqueID).",
-    replaceWith = ReplaceWith("VUIDCommandResult", "com.augmentalis.vuidcreator.models.VUIDCommandResult"),
+    replaceWith = ReplaceWith("VUIDCommandResult", "com.augmentalis.uuidcreator.models.VUIDCommandResult"),
     level = DeprecationLevel.WARNING
 )
 typealias UUIDCommandResult = VUIDCommandResult
@@ -79,7 +79,7 @@ typealias UUIDCommandResult = VUIDCommandResult
  */
 @Deprecated(
     message = "Use VUIDAccessibility instead of UUIDAccessibility. UUID has been replaced with VUID (VoiceUniqueID).",
-    replaceWith = ReplaceWith("VUIDAccessibility", "com.augmentalis.vuidcreator.models.VUIDAccessibility"),
+    replaceWith = ReplaceWith("VUIDAccessibility", "com.augmentalis.uuidcreator.models.VUIDAccessibility"),
     level = DeprecationLevel.WARNING
 )
 typealias UUIDAccessibility = VUIDAccessibility
@@ -89,7 +89,7 @@ typealias UUIDAccessibility = VUIDAccessibility
  */
 @Deprecated(
     message = "Use VUIDBounds instead of UUIDBounds. UUID has been replaced with VUID (VoiceUniqueID).",
-    replaceWith = ReplaceWith("VUIDBounds", "com.augmentalis.vuidcreator.models.VUIDBounds"),
+    replaceWith = ReplaceWith("VUIDBounds", "com.augmentalis.uuidcreator.models.VUIDBounds"),
     level = DeprecationLevel.WARNING
 )
 typealias UUIDBounds = VUIDBounds

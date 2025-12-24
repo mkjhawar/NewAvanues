@@ -2,12 +2,11 @@
  * VUIDElement.kt - Core data model for VUID-managed elements
  * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/uuidcreator/models/VUIDElement.kt
  *
- * Migration: UUID → VUID (VoiceUniqueID)
- * Author: AVAMagic Ecosystem v2.0
- * Created: 2025-12-23
+ * Author: Manoj Jhawar
+ * Code-Reviewed-By: CCA
+ * Created: 2024-08-20
  *
- * Data model representing a UI element with VUID (VoiceUniqueID) and metadata.
- * VUID uses standard UUID v4 format but with Voice-specific terminology.
+ * Data model representing a UI element with VUID and metadata
  */
 
 package com.augmentalis.uuidcreator.models
@@ -17,10 +16,7 @@ import java.util.UUID
 /**
  * Core data model for VUID-managed elements
  *
- * VUID (VoiceUniqueID) uses standard UUID v4 format internally,
- * but provides Voice-specific terminology and semantics.
- *
- * @param vuid Unique identifier for this element (UUID v4 format)
+ * @param vuid Unique identifier for this element (Voice UUID)
  * @param name Human-readable name/label
  * @param type Element type (button, text, etc.)
  * @param description Optional description for accessibility
@@ -46,20 +42,20 @@ data class VUIDElement(
     val metadata: VUIDMetadata? = null,
     val timestamp: Long = System.currentTimeMillis()
 ) {
-
+    
     /**
      * Check if this element has a specific action
      */
     fun hasAction(action: String): Boolean = actions.containsKey(action)
-
+    
     /**
      * Execute an action on this element
      */
     fun executeAction(action: String, parameters: Map<String, Any> = emptyMap()): Boolean {
         if (!isEnabled) return false
-
+        
         val actionHandler = actions[action] ?: actions["default"] ?: return false
-
+        
         return try {
             actionHandler(parameters)
             true
@@ -67,7 +63,7 @@ data class VUIDElement(
             false
         }
     }
-
+    
     /**
      * Check if this element is a child of the given parent
      */
@@ -100,7 +96,7 @@ data class VUIDElement(
     fun getSummary(): String {
         return "VUIDElement(vuid=$vuid, name=$name, type=$type, enabled=$isEnabled, children=${children.size})"
     }
-
+    
     /**
      * Check if element matches search criteria
      */
@@ -112,55 +108,15 @@ data class VUIDElement(
         if (searchName != null && name?.contains(searchName, ignoreCase = true) != true) {
             return false
         }
-
+        
         if (searchType != null && !type.equals(searchType, ignoreCase = true)) {
             return false
         }
-
+        
         if (searchDescription != null && description?.contains(searchDescription, ignoreCase = true) != true) {
             return false
         }
-
+        
         return true
-    }
-
-    /**
-     * Convert to deprecated UUIDElement for backwards compatibility
-     */
-    @Deprecated("Use VUIDElement directly")
-    fun toUUIDElement(): UUIDElement = UUIDElement(
-        uuid = vuid,
-        name = name,
-        type = type,
-        description = description,
-        parent = parent,
-        children = children,
-        position = position?.toUUIDPosition(),
-        actions = actions,
-        isEnabled = isEnabled,
-        priority = priority,
-        metadata = metadata?.toUUIDMetadata(),
-        timestamp = timestamp
-    )
-
-    companion object {
-        /**
-         * Convert from deprecated UUIDElement
-         */
-        @Deprecated("Use VUIDElement constructor directly")
-        fun fromUUIDElement(element: UUIDElement): VUIDElement = VUIDElement(
-            vuid = element.uuid,
-            name = element.name,
-            type = element.type,
-            description = element.description,
-            parent = element.parent,
-            children = element.children,
-            position = element.position?.let { VUIDPosition.fromUUIDPosition(it) },
-            actions = element.actions,
-            isEnabled = element.isEnabled,
-            priority = element.priority,
-            metadata = element.metadata?.let { VUIDMetadata.fromUUIDMetadata(it) },
-            timestamp = element.timestamp
-        )
     }
 }
