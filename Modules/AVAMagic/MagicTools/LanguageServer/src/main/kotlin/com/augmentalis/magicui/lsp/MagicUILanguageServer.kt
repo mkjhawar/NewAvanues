@@ -45,10 +45,7 @@ class MagicUILanguageServer : LanguageServer, LanguageClientAware {
             definitionProvider = Either.forLeft(true)
 
             // Diagnostic support (error checking)
-            diagnosticProvider = DiagnosticRegistrationOptions().apply {
-                interFileDependencies = false
-                workspaceDiagnostics = false
-            }
+            diagnosticProvider = DiagnosticRegistrationOptions()
 
             // Document formatting
             documentFormattingProvider = Either.forLeft(true)

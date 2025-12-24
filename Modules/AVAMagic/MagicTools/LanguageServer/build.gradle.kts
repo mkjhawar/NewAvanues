@@ -7,10 +7,6 @@ plugins {
 group = "com.augmentalis.magicui"
 version = "1.0.0"
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     // LSP4J - Language Server Protocol implementation
     implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.21.1")
@@ -25,12 +21,12 @@ dependencies {
     implementation("org.slf4j:slf4j-api:2.0.9")
     implementation("ch.qos.logback:logback-classic:1.4.14")
 
-    // Reuse existing AVAMagic components
-    implementation(project(":Modules:AVAMagic:MagicUI:Components:ThemeBuilder"))
-    implementation(project(":Modules:AVAMagic:MagicUI:CodeGen:Parser"))
-    implementation(project(":Modules:AVAMagic:MagicUI:CodeGen:Generators"))
-    implementation(project(":Modules:VoiceOS:libraries:VUIDCreator"))
-    implementation(project(":Modules:AVAMagic:MagicUI:Components:Core"))
+    // TODO: Re-enable when modules are added to settings.gradle.kts
+    // implementation(project(":Modules:AVAMagic:MagicUI:Components:ThemeBuilder"))
+    // implementation(project(":Modules:AVAMagic:MagicUI:CodeGen:Parser"))
+    // implementation(project(":Modules:AVAMagic:MagicUI:CodeGen:Generators"))
+    // implementation(project(":Modules:VoiceOS:libraries:VUIDCreator"))
+    // implementation(project(":Modules:AVAMagic:MagicUI:Components:Core"))
 
     // Testing
     testImplementation(kotlin("test"))

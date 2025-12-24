@@ -7,13 +7,8 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
-import com.augmentalis.magiccode.generator.parser.VosParser
-import com.augmentalis.magiccode.generator.parser.JsonDSLParser
-import com.augmentalis.magiccode.generator.parser.CompactSyntaxParser
-import com.augmentalis.magiccode.generator.ast.ComponentNode
-import com.augmentalis.magiccode.generator.ast.ScreenNode
-import com.augmentalis.magiccode.generator.ast.ComponentType
-import com.augmentalis.magiccode.generator.ast.AvaUINode
+// TODO: Replace with actual imports when modules are available
+import com.augmentalis.magicui.lsp.stubs.*
 
 /**
  * Text Document Service for MagicUI Language Server
