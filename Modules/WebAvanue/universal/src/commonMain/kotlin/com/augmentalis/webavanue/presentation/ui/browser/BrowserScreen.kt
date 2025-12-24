@@ -1,5 +1,6 @@
 package com.augmentalis.webavanue.ui.screen.browser
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -72,6 +73,7 @@ import kotlinx.coroutines.launch
  * @param onNavigateToXRSettings Callback to navigate to XR settings screen
  * @param modifier Modifier for customization
  */
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun BrowserScreen(
     tabViewModel: TabViewModel,
@@ -309,7 +311,7 @@ fun BrowserScreen(
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
-            // TODO: Phase 4 - Keyboard shortcuts (onPreviewKeyEvent not available in common)
+        // TODO: Phase 4 - Keyboard shortcuts (onPreviewKeyEvent not available in common)
     ) {
         // Detect landscape orientation based on constraints
         isLandscape = maxWidth > maxHeight
@@ -342,107 +344,107 @@ fun BrowserScreen(
                 exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
             ) {
                 AddressBar(
-                url = urlInput,
-                canGoBack = activeTab?.canGoBack ?: false,
-                canGoForward = activeTab?.canGoForward ?: false,
-                isDesktopMode = isDesktopMode,
-                isReadingMode = activeTab?.isReadingMode ?: false,
-                isArticleAvailable = activeTab?.readingModeArticle != null,
-                isFavorite = isFavorite,
-                tabCount = tabs.size,
-                tabs = tabs,
-                activeTabId = activeTab?.tab?.id,
-                favorites = favorites,
-                onUrlChange = { newUrl ->
-                    urlInput = newUrl
-                },
-                onGo = {
-                    if (urlInput.isNotBlank()) {
-                        tabViewModel.navigateToUrl(urlInput)
-                    }
-                },
-                onBack = {
-                    webViewController.goBack()
-                },
-                onForward = {
-                    webViewController.goForward()
-                },
-                onRefresh = {
-                    webViewController.reload()
-                },
-                onDesktopModeToggle = {
-                    val newMode = !isDesktopMode
-                    webViewController.setDesktopMode(newMode)
-                    tabViewModel.setDesktopMode(newMode)
-                    // Reload current page to apply new user agent
-                    webViewController.reload()
-                },
-                onReadingModeToggle = {
-                    tabViewModel.toggleReadingMode()
-                },
-                onFavoriteClick = {
-                    // Legacy callback - now handled by dropdown
-                    showAddToFavoritesDialog = true
-                },
-                onTabClick = { tabId ->
-                    tabViewModel.switchTab(tabId)
-                },
-                onTabClose = { tabId ->
-                    tabViewModel.closeTab(tabId)
-                },
-                onNewTab = {
-                    // FIX: Show dialog to prompt for URL instead of creating blank tab
-                    showAddPageDialog = true
-                },
-                onFavoriteNavigate = { favorite ->
-                    tabViewModel.navigateToUrl(favorite.url)
-                },
-                onAddFavorite = {
-                    // FIX: Use async addFavorite with duplicate prevention and crash protection
-                    activeTab?.let { tab ->
-                        scope.launch {
-                            try {
-                                val success = favoriteViewModel.addFavorite(
-                                    url = tab.tab.url,
-                                    title = tab.tab.title.ifBlank { tab.tab.url },
-                                    favicon = tab.tab.favicon
-                                )
-                                if (!success) {
-                                    // Duplicate detected - show error via dialog
-                                    showAddToFavoritesDialog = true
+                    url = urlInput,
+                    canGoBack = activeTab?.canGoBack ?: false,
+                    canGoForward = activeTab?.canGoForward ?: false,
+                    isDesktopMode = isDesktopMode,
+                    isReadingMode = activeTab?.isReadingMode ?: false,
+                    isArticleAvailable = activeTab?.readingModeArticle != null,
+                    isFavorite = isFavorite,
+                    tabCount = tabs.size,
+                    tabs = tabs,
+                    activeTabId = activeTab?.tab?.id,
+                    favorites = favorites,
+                    onUrlChange = { newUrl ->
+                        urlInput = newUrl
+                    },
+                    onGo = {
+                        if (urlInput.isNotBlank()) {
+                            tabViewModel.navigateToUrl(urlInput)
+                        }
+                    },
+                    onBack = {
+                        webViewController.goBack()
+                    },
+                    onForward = {
+                        webViewController.goForward()
+                    },
+                    onRefresh = {
+                        webViewController.reload()
+                    },
+                    onDesktopModeToggle = {
+                        val newMode = !isDesktopMode
+                        webViewController.setDesktopMode(newMode)
+                        tabViewModel.setDesktopMode(newMode)
+                        // Reload current page to apply new user agent
+                        webViewController.reload()
+                    },
+                    onReadingModeToggle = {
+                        tabViewModel.toggleReadingMode()
+                    },
+                    onFavoriteClick = {
+                        // Legacy callback - now handled by dropdown
+                        showAddToFavoritesDialog = true
+                    },
+                    onTabClick = { tabId ->
+                        tabViewModel.switchTab(tabId)
+                    },
+                    onTabClose = { tabId ->
+                        tabViewModel.closeTab(tabId)
+                    },
+                    onNewTab = {
+                        // FIX: Show dialog to prompt for URL instead of creating blank tab
+                        showAddPageDialog = true
+                    },
+                    onFavoriteNavigate = { favorite ->
+                        tabViewModel.navigateToUrl(favorite.url)
+                    },
+                    onAddFavorite = {
+                        // FIX: Use async addFavorite with duplicate prevention and crash protection
+                        activeTab?.let { tab ->
+                            scope.launch {
+                                try {
+                                    val success = favoriteViewModel.addFavorite(
+                                        url = tab.tab.url,
+                                        title = tab.tab.title.ifBlank { tab.tab.url },
+                                        favicon = tab.tab.favicon
+                                    )
+                                    if (!success) {
+                                        // Duplicate detected - show error via dialog
+                                        showAddToFavoritesDialog = true
+                                    }
+                                } catch (e: Exception) {
+                                    println("BrowserScreen: Error adding favorite: ${e.message}")
+                                    e.printStackTrace()
                                 }
-                            } catch (e: Exception) {
-                                println("BrowserScreen: Error adding favorite: ${e.message}")
-                                e.printStackTrace()
                             }
                         }
+                    },
+                    onShowFavorites = {
+                        showSpatialFavorites = true
+                    },
+                    onHistoryClick = onNavigateToHistory,
+                    onSettingsClick = onNavigateToSettings,
+                    onTabSwitcherClick = {
+                        showTabSwitcher = true
+                    },
+                    isCommandBarVisible = isCommandBarVisible,
+                    onCommandBarToggle = {
+                        isCommandBarVisible = !isCommandBarVisible
+                    },
+                    isListening = isListening,
+                    onStartListening = {
+                        // Start voice recognition - for now just show indicator
+                        // Actual voice recognition will be triggered from Android Activity
+                        isListening = true
+                        // Show command bar briefly when listening starts
+                        showCommandBarBriefly()
+                        // Auto-stop after 5 seconds (demo timeout)
+                        scope.launch {
+                            kotlinx.coroutines.delay(5000L)
+                            isListening = false
+                        }
                     }
-                },
-                onShowFavorites = {
-                    showSpatialFavorites = true
-                },
-                onHistoryClick = onNavigateToHistory,
-                onSettingsClick = onNavigateToSettings,
-                onTabSwitcherClick = {
-                    showTabSwitcher = true
-                },
-                isCommandBarVisible = isCommandBarVisible,
-                onCommandBarToggle = {
-                    isCommandBarVisible = !isCommandBarVisible
-                },
-                isListening = isListening,
-                onStartListening = {
-                    // Start voice recognition - for now just show indicator
-                    // Actual voice recognition will be triggered from Android Activity
-                    isListening = true
-                    // Show command bar briefly when listening starts
-                    showCommandBarBriefly()
-                    // Auto-stop after 5 seconds (demo timeout)
-                    scope.launch {
-                        kotlinx.coroutines.delay(5000L)
-                        isListening = false
-                    }
-                }
                 )
             }  // End AnimatedVisibility for AddressBar
 
@@ -478,7 +480,15 @@ fun BrowserScreen(
                         },
                         onProgressChange = { },
                         canGoBack = { canGoBack -> tabViewModel.updateTabNavigation(tabState.tab.id, canGoBack = canGoBack) },
-                        canGoForward = { canGoForward -> tabViewModel.updateTabNavigation(tabState.tab.id, canGoForward = canGoForward) },
+                        canGoForward = { canGoForward ->
+                            tabViewModel.updateTabNavigation(
+                                tabState.tab.id,
+                                canGoForward = canGoForward
+                            )
+                        },
+                        onOpenInNewTab = { newUrl ->
+                            tabViewModel.createTab(url = newUrl)
+                        },
                         sessionData = tabState.tab.sessionData,
                         onSessionDataChange = { sessionData ->
                             val updatedTab = tabState.tab.copy(sessionData = sessionData)
@@ -487,6 +497,7 @@ fun BrowserScreen(
                         securityViewModel = securityViewModel,
                         onDownloadStart = downloadViewModel?.let { vm ->
                             { request: DownloadRequest ->
+                                var shouldDownload = true
                                 // Check WiFi-only setting
                                 if (settings?.downloadOverWiFiOnly == true) {
                                     try {
@@ -501,7 +512,7 @@ fun BrowserScreen(
                                                     duration = androidx.compose.material3.SnackbarDuration.Long
                                                 )
                                             }
-                                            return@let  // Don't start download
+                                            shouldDownload = false
                                         }
                                     } catch (e: Exception) {
                                         // NetworkChecker not initialized or platform-specific error
@@ -509,26 +520,28 @@ fun BrowserScreen(
                                         println("BrowserScreen: WiFi check failed: ${e.message}")
                                     }
                                 }
-
-                                // Check if we should ask for download location
-                                if (settings?.askDownloadLocation == true) {
-                                    // Show dialog to select location
-                                    pendingDownloadRequest = request
-                                    pendingDownloadSourceUrl = tabState.tab.url
-                                    pendingDownloadSourceTitle = tabState.tab.title
-                                    showDownloadLocationDialog = true
-                                } else {
-                                    // Start download directly with default or saved path from settings
-                                    vm.startDownload(
-                                        url = request.url,
-                                        filename = request.filename,
-                                        mimeType = request.mimeType,
-                                        fileSize = request.contentLength,
-                                        sourcePageUrl = tabState.tab.url,
-                                        sourcePageTitle = tabState.tab.title,
-                                        customPath = settings?.downloadPath?.ifBlank { null }
-                                    )
+                                if (shouldDownload) {
+                                    // Check if we should ask for download location
+                                    if (settings?.askDownloadLocation == true) {
+                                        // Show dialog to select location
+                                        pendingDownloadRequest = request
+                                        pendingDownloadSourceUrl = tabState.tab.url
+                                        pendingDownloadSourceTitle = tabState.tab.title
+                                        showDownloadLocationDialog = true
+                                    } else {
+                                        // Start download directly with default or saved path from settings
+                                        vm.startDownload(
+                                            url = request.url,
+                                            filename = request.filename,
+                                            mimeType = request.mimeType,
+                                            fileSize = request.contentLength,
+                                            sourcePageUrl = tabState.tab.url,
+                                            sourcePageTitle = tabState.tab.title,
+                                            customPath = settings?.downloadPath?.ifBlank { null }
+                                        )
+                                    }
                                 }
+
                             }
                         },
                         initialScale = 0.75f,  // DEPRECATED: Kept for backward compatibility, actual scale set by WebViewContainer
@@ -589,9 +602,15 @@ fun BrowserScreen(
                                                 favoriteViewModel.removeFavorite(fav.id)
                                             }
                                         } else {
-                                            favoriteViewModel.addFavorite(url = url, title = tab.tab.title.ifBlank { url }, favicon = tab.tab.favicon)
+                                            favoriteViewModel.addFavorite(
+                                                url = url,
+                                                title = tab.tab.title.ifBlank { url },
+                                                favicon = tab.tab.favicon
+                                            )
                                         }
-                                    } catch (e: Exception) { e.printStackTrace() }
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
                                 }
                             }
                         },
@@ -1002,7 +1021,9 @@ fun BrowserScreen(
         ) {
             OceanComponents.FloatingActionButton(
                 onClick = { showVoiceHelp = !showVoiceHelp },
-                modifier = Modifier
+                modifier = Modifier,
+                containerColor = null,
+                contentColor = null
             ) {
                 OceanComponents.Icon(
                     imageVector = Icons.Default.HelpOutline,
@@ -1044,9 +1065,17 @@ fun BrowserScreen(
                         "reopen tab" -> {} // TODO: implement reopen tab
 
                         // Zoom commands
-                        "zoom in" -> { webViewController.zoomIn(); tabViewModel.zoomIn() }
-                        "zoom out" -> { webViewController.zoomOut(); tabViewModel.zoomOut() }
-                        "reset zoom" -> { webViewController.setZoomLevel(100); tabViewModel.setZoomLevel(100) }
+                        "zoom in" -> {
+                            webViewController.zoomIn(); tabViewModel.zoomIn()
+                        }
+
+                        "zoom out" -> {
+                            webViewController.zoomOut(); tabViewModel.zoomOut()
+                        }
+
+                        "reset zoom" -> {
+                            webViewController.setZoomLevel(100); tabViewModel.setZoomLevel(100)
+                        }
 
                         // Mode commands
                         "desktop mode" -> {
@@ -1054,11 +1083,13 @@ fun BrowserScreen(
                             tabViewModel.setDesktopMode(true)
                             webViewController.reload()
                         }
+
                         "mobile mode" -> {
                             webViewController.setDesktopMode(false)
                             tabViewModel.setDesktopMode(false)
                             webViewController.reload()
                         }
+
                         "reader mode" -> {
                             // Extract article and enter reading mode
                             scope.launch {
@@ -1076,6 +1107,7 @@ fun BrowserScreen(
                                 }
                             }
                         }
+
                         "fullscreen" -> {} // TODO: implement fullscreen
 
                         // Feature commands
@@ -1149,7 +1181,11 @@ fun BrowserScreen(
                             newPageUrl
                         }
                         // FIX BUG #4: Apply global desktop mode when creating new tabs
-                        tabViewModel.createTab(url = formattedUrl, title = formattedUrl, isDesktopMode = settings?.useDesktopMode == true)
+                        tabViewModel.createTab(
+                            url = formattedUrl,
+                            title = formattedUrl,
+                            isDesktopMode = settings?.useDesktopMode == true
+                        )
                     } else {
                         tabViewModel.createTab(url = "", title = "New Tab", isDesktopMode = settings?.useDesktopMode == true)
                     }

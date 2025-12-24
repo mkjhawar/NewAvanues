@@ -38,6 +38,7 @@ class SettingsApplicator {
      */
     fun applySettings(webView: WebView, settings: BrowserSettings): Result<Unit> {
         return try {
+            Log.i("NaveenViewModel", "applySettings: $settings")
             // Validate and auto-correct settings
             val validationResult = SettingsValidation.validate(settings)
 

@@ -77,7 +77,9 @@ fun FindInPageBar(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp),
-        variant = SurfaceVariant.Elevated
+        variant = SurfaceVariant.Elevated,
+        shape = null,
+        onClick = null
     ) {
         Row(
             modifier = Modifier
@@ -155,7 +157,8 @@ fun FindInPageBar(
                 OceanComponents.Icon(
                     imageVector = Icons.Default.ArrowUpward,
                     contentDescription = "Previous match (Shift+Enter)",
-                    variant = if (totalMatches > 0) IconVariant.Primary else IconVariant.Disabled
+                    variant = if (totalMatches > 0) IconVariant.Primary else IconVariant.Disabled,
+                    modifier = Modifier
                 )
             }
 
@@ -168,7 +171,8 @@ fun FindInPageBar(
                 OceanComponents.Icon(
                     imageVector = Icons.Default.ArrowDownward,
                     contentDescription = "Next match (Enter)",
-                    variant = if (totalMatches > 0) IconVariant.Primary else IconVariant.Disabled
+                    variant = if (totalMatches > 0) IconVariant.Primary else IconVariant.Disabled,
+                    modifier = Modifier
                 )
             }
 
@@ -194,12 +198,14 @@ fun FindInPageBar(
                     focusManager.clearFocus()
                     onClose()
                 },
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(36.dp),
+                enabled = true
             ) {
                 OceanComponents.Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Close find bar (Escape)",
-                    variant = IconVariant.Secondary
+                    variant = IconVariant.Secondary,
+                    modifier = Modifier
                 )
             }
         }

@@ -244,6 +244,7 @@ fun ScreenshotMenuItem(
  *
  * Call this from voice command or other automation
  */
+/*
 @Composable
 fun rememberScreenshotCapture(
     webView: Any?,
@@ -273,9 +274,11 @@ fun rememberScreenshotCapture(
                         is ScreenshotResult.Success -> {
                             onComplete(result.filepath)
                         }
+
                         is ScreenshotResult.Error -> {
                             onError(result.error)
                         }
+
                         is ScreenshotResult.Progress -> {
                             // Ignore progress for programmatic capture
                         }
@@ -285,3 +288,4 @@ fun rememberScreenshotCapture(
         }
     }
 }
+*/
