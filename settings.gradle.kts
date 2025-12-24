@@ -93,5 +93,8 @@ include(":Modules:VoiceOS:libraries:VoiceUIElements")
 include(":Modules:WebAvanue:coredata")   // Data layer: repositories, database, models
 include(":Modules:WebAvanue:universal")  // UI layer: ViewModels, screens, platform code
 
+// AVAMagic Modules
+include(":Modules:AVAMagic:MagicTools:LanguageServer")  // MagicUI Language Server (LSP)
+
 // Android App
 include(":android:apps:webavanue")
