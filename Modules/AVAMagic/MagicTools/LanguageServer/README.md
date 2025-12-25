@@ -251,8 +251,31 @@ Proprietary - Augmentalis ES
 - VUID utilities
 - 30 comprehensive tests
 
+## Documentation
+
+### Complete Documentation Set
+
+- **[User Manual](../../../../Docs/AVAMagic/Manuals/User/MagicUI-LSP-User-Manual-251224-V1.md)** - Installation, getting started, features, troubleshooting
+- **[Developer Manual](../../../../Docs/AVAMagic/Manuals/Developer/MagicUI-LSP-Developer-Manual-251224-V1.md)** - Architecture, implementation details, extending the server
+- **[Examples](./EXAMPLES.md)** - Practical code examples for common use cases
+- **[README](./README.md)** - This file (quick reference)
+
+### Quick Links
+
+| Documentation | Purpose | Audience |
+|---------------|---------|----------|
+| User Manual | Installation, usage, configuration | End users, UI developers |
+| Developer Manual | Architecture, testing, extending | Contributors, advanced users |
+| Examples | Copy-paste code snippets | All users |
+| README | Quick reference, feature overview | Everyone |
+
 ## Support
 
 For issues and questions:
 - Create an issue in the project repository
 - Contact: Manoj Jhawar <manoj@ideahq.net>
+
+**Before requesting support:**
+- Check the [User Manual](../../../../Docs/AVAMagic/Manuals/User/MagicUI-LSP-User-Manual-251224-V1.md) for troubleshooting
+- Review [Examples](./EXAMPLES.md) for similar use cases
+- Consult the [Developer Manual](../../../../Docs/AVAMagic/Manuals/Developer/MagicUI-LSP-Developer-Manual-251224-V1.md) for technical details
