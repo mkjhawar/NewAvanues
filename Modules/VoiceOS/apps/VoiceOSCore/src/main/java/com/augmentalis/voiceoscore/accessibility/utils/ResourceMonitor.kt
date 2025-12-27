@@ -1,330 +1,395 @@
 /**
- * ResourceMonitor.kt - System resource monitoring for performance optimization
+ * ResourceMonitor.kt - Resource monitoring utility
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
- * Created: 2025-10-31
+ * Created: 2025-12-22
  *
- * Phase 3D: Resource Monitoring - Production Readiness
- *
- * Monitors system resources (memory, CPU) to enable intelligent throttling
- * of expensive operations during high memory pressure or low battery conditions.
+ * Purpose: Monitors service health metrics (memory, CPU) to prevent resource exhaustion
+ * Provides early warning for resource constraints
  */
 package com.augmentalis.voiceoscore.accessibility.utils
 
 import android.app.ActivityManager
 import android.content.Context
+import android.os.Build
 import android.os.Debug
+import android.os.Process
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.FileReader
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Resource Monitor
+ * Resource monitoring utility for service health tracking
  *
- * Lightweight monitoring utility for tracking system resource usage.
- * Enables adaptive performance tuning based on current device state.
+ * Monitors:
+ * - Memory usage (heap, native, total)
+ * - CPU usage (process level)
+ * - Resource thresholds with warnings
  *
- * ## Features:
- * - Memory usage tracking (heap, native, total)
- * - Memory pressure detection
- * - Throttle recommendations
- * - Performance-conscious (<5ms overhead)
+ * Thread-safe and coroutine-based periodic monitoring
  *
- * ## Usage:
- * ```kotlin
- * val monitor = ResourceMonitor(context)
- *
- * // Check memory stats
- * val stats = monitor.getMemoryStats()
- * Log.i(TAG, "Memory: ${stats.usedHeapMB}MB/${stats.maxHeapMB}MB")
- *
- * // Check if should throttle
- * if (monitor.shouldThrottle()) {
- *     // Skip expensive operations
- *     return
+ * Usage:
+ * ```
+ * val monitor = ResourceMonitor(context, scope)
+ * monitor.start { status ->
+ *     when (status.level) {
+ *         ResourceLevel.CRITICAL -> handleCritical()
+ *         ResourceLevel.WARNING -> handleWarning()
+ *         else -> {}
+ *     }
  * }
- *
- * // Log stats for debugging
- * monitor.logMemoryStats("MyComponent")
  * ```
  */
-class ResourceMonitor(private val context: Context) {
+class ResourceMonitor(
+    private val context: Context,
+    private val scope: CoroutineScope,
+    private val intervalMs: Long = Const.RESOURCE_MONITOR_INTERVAL_MS
+) {
 
     companion object {
         private const val TAG = "ResourceMonitor"
-
-        // Memory pressure thresholds
-        private const val MEMORY_PRESSURE_THRESHOLD = 0.85f  // 85% heap usage = high pressure
-        private const val MEMORY_CRITICAL_THRESHOLD = 0.95f  // 95% heap usage = critical
-
-        // Throttle level thresholds
-        private const val THROTTLE_LOW_THRESHOLD = 0.70f     // 70% heap usage
-        private const val THROTTLE_MEDIUM_THRESHOLD = 0.80f  // 80% heap usage
-        private const val THROTTLE_HIGH_THRESHOLD = 0.90f    // 90% heap usage
-
-        // Available memory thresholds (for system-wide pressure)
-        private const val LOW_MEMORY_MB = 100  // <100MB available = system pressure
-    }
-
-    private val activityManager: ActivityManager =
-        context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-
-    private val runtime = Runtime.getRuntime()
-
-    /**
-     * Memory statistics data class
-     *
-     * @property usedHeapMB Heap memory used (MB)
-     * @property maxHeapMB Maximum heap memory available (MB)
-     * @property usedNativeMB Native memory used (MB)
-     * @property totalUsedMB Total memory used (heap + native) (MB)
-     * @property availableMB System available memory (MB)
-     * @property usagePercentage Heap usage percentage (0.0-1.0)
-     */
-    data class MemoryStats(
-        val usedHeapMB: Long,
-        val maxHeapMB: Long,
-        val usedNativeMB: Long,
-        val totalUsedMB: Long,
-        val availableMB: Long,
-        val usagePercentage: Float
-    )
-
-    /**
-     * Throttle level recommendation
-     */
-    enum class ThrottleLevel {
-        NONE,      // No throttling needed (<70% memory)
-        LOW,       // Light throttling (70-80% memory)
-        MEDIUM,    // Moderate throttling (80-90% memory)
-        HIGH       // Aggressive throttling (>90% memory)
+        private const val BYTES_IN_MB = 1024 * 1024
     }
 
     /**
-     * Get current memory statistics
-     *
-     * Performance: <2ms on typical devices
-     *
-     * @return MemoryStats containing current memory usage
+     * Resource usage level
      */
-    fun getMemoryStats(): MemoryStats {
-        Log.d(TAG, "getMemoryStats() called")
-        // Heap memory (from Runtime)
-        val maxHeap = runtime.maxMemory()
-        val totalHeap = runtime.totalMemory()
-        val freeHeap = runtime.freeMemory()
-        val usedHeap = totalHeap - freeHeap
+    enum class ResourceLevel {
+        NORMAL,     // Everything OK
+        WARNING,    // Approaching limits
+        CRITICAL    // Immediate action needed
+    }
 
-        // Native memory (from Debug)
-        val nativeHeapSize = Debug.getNativeHeapSize()
-        val nativeHeapAllocated = Debug.getNativeHeapAllocatedSize()
+    /**
+     * Resource status snapshot
+     */
+    data class ResourceStatus(
+        val timestamp: Long = System.currentTimeMillis(),
+        val memoryUsedMb: Long = 0,
+        val memoryMaxMb: Long = 0,
+        val memoryUsagePercent: Int = 0,
+        val nativeMemoryMb: Long = 0,
+        val cpuUsagePercent: Double = 0.0,
+        val level: ResourceLevel = ResourceLevel.NORMAL,
+        val warnings: List<String> = emptyList()
+    ) {
+        /**
+         * Check if status indicates problems
+         */
+        fun hasIssues(): Boolean = level != ResourceLevel.NORMAL
 
-        // System available memory (from ActivityManager)
-        val memInfo = ActivityManager.MemoryInfo()
-        activityManager.getMemoryInfo(memInfo)
-        val availableMemory = memInfo.availMem
+        /**
+         * Get human-readable summary
+         */
+        fun getSummary(): String {
+            return buildString {
+                append("Memory: $memoryUsedMb/$memoryMaxMb MB (${memoryUsagePercent}%)")
+                if (nativeMemoryMb > 0) {
+                    append(", Native: $nativeMemoryMb MB")
+                }
+                append(", CPU: ${"%.1f".format(cpuUsagePercent)}%")
+                append(", Level: $level")
+                if (warnings.isNotEmpty()) {
+                    append(", Warnings: ${warnings.joinToString(", ")}")
+                }
+            }
+        }
+    }
 
-        // Convert to MB for readability
-        val usedHeapMB = usedHeap / (1024 * 1024)
-        val maxHeapMB = maxHeap / (1024 * 1024)
-        val usedNativeMB = nativeHeapAllocated / (1024 * 1024)
-        val totalUsedMB = usedHeapMB + usedNativeMB
-        val availableMB = availableMemory / (1024 * 1024)
+    /**
+     * Callback for resource status updates
+     */
+    fun interface StatusCallback {
+        fun onStatusUpdate(status: ResourceStatus)
+    }
 
-        // Calculate usage percentage
-        val usagePercentage = usedHeap.toFloat() / maxHeap.toFloat()
+    private val activityManager: ActivityManager? =
+        context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
 
-        return MemoryStats(
-            usedHeapMB = usedHeapMB,
-            maxHeapMB = maxHeapMB,
-            usedNativeMB = usedNativeMB,
-            totalUsedMB = totalUsedMB,
-            availableMB = availableMB,
-            usagePercentage = usagePercentage
+    private val isMonitoring = AtomicBoolean(false)
+    private var monitoringJob: Job? = null
+    private var statusCallback: StatusCallback? = null
+
+    // CPU monitoring state
+    private val lastCpuTime = AtomicLong(0)
+    private val lastAppTime = AtomicLong(0)
+
+    /**
+     * Latest resource status
+     */
+    @Volatile
+    private var latestStatus: ResourceStatus = ResourceStatus()
+
+    /**
+     * Start resource monitoring
+     *
+     * @param callback Callback invoked on each status update
+     */
+    fun start(callback: StatusCallback? = null) {
+        if (isMonitoring.getAndSet(true)) {
+            Log.w(TAG, "Resource monitoring already running")
+            return
+        }
+
+        statusCallback = callback
+        Log.i(TAG, "Starting resource monitoring (interval: ${intervalMs}ms)")
+
+        monitoringJob = scope.launch {
+            while (isActive && isMonitoring.get()) {
+                try {
+                    val status = collectResourceStatus()
+                    latestStatus = status
+
+                    // Log warnings and critical issues
+                    when (status.level) {
+                        ResourceLevel.WARNING -> {
+                            Log.w(TAG, "Resource warning: ${status.getSummary()}")
+                        }
+                        ResourceLevel.CRITICAL -> {
+                            Log.e(TAG, "Resource critical: ${status.getSummary()}")
+                        }
+                        else -> {
+                            Log.d(TAG, "Resources normal: ${status.getSummary()}")
+                        }
+                    }
+
+                    // Notify callback
+                    statusCallback?.onStatusUpdate(status)
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error collecting resource status", e)
+                }
+
+                delay(intervalMs)
+            }
+        }
+    }
+
+    /**
+     * Stop resource monitoring
+     */
+    fun stop() {
+        if (!isMonitoring.getAndSet(false)) {
+            return
+        }
+
+        Log.i(TAG, "Stopping resource monitoring")
+        monitoringJob?.cancel()
+        monitoringJob = null
+        statusCallback = null
+    }
+
+    /**
+     * Get current resource status
+     * Returns cached status if monitoring is active
+     *
+     * @param forceUpdate Force fresh collection even if monitoring
+     * @return Current resource status
+     */
+    fun getStatus(forceUpdate: Boolean = false): ResourceStatus {
+        return if (forceUpdate || !isMonitoring.get()) {
+            collectResourceStatus()
+        } else {
+            latestStatus
+        }
+    }
+
+    /**
+     * Collect current resource status
+     *
+     * @return Fresh resource status snapshot
+     */
+    private fun collectResourceStatus(): ResourceStatus {
+        val memoryInfo = getMemoryInfo()
+        val cpuUsage = getCpuUsage()
+
+        val warnings = mutableListOf<String>()
+        var level = ResourceLevel.NORMAL
+
+        // Check memory thresholds
+        if (memoryInfo.memoryUsagePercent >= Const.MEMORY_CRITICAL_THRESHOLD) {
+            level = ResourceLevel.CRITICAL
+            warnings.add("Memory critical: ${memoryInfo.memoryUsagePercent}%")
+        } else if (memoryInfo.memoryUsagePercent >= Const.MEMORY_WARNING_THRESHOLD) {
+            if (level == ResourceLevel.NORMAL) level = ResourceLevel.WARNING
+            warnings.add("Memory high: ${memoryInfo.memoryUsagePercent}%")
+        }
+
+        // Check CPU thresholds
+        if (cpuUsage >= Const.CPU_CRITICAL_THRESHOLD) {
+            level = ResourceLevel.CRITICAL
+            warnings.add("CPU critical: ${"%.1f".format(cpuUsage)}%")
+        } else if (cpuUsage >= Const.CPU_WARNING_THRESHOLD) {
+            if (level == ResourceLevel.NORMAL) level = ResourceLevel.WARNING
+            warnings.add("CPU high: ${"%.1f".format(cpuUsage)}%")
+        }
+
+        return ResourceStatus(
+            memoryUsedMb = memoryInfo.memoryUsedMb,
+            memoryMaxMb = memoryInfo.memoryMaxMb,
+            memoryUsagePercent = memoryInfo.memoryUsagePercent,
+            nativeMemoryMb = memoryInfo.nativeMemoryMb,
+            cpuUsagePercent = cpuUsage,
+            level = level,
+            warnings = warnings
         )
     }
 
     /**
-     * Check if memory pressure is high
-     *
-     * High memory pressure indicates the app should reduce memory-intensive operations
-     * to avoid OOM crashes or GC thrashing.
-     *
-     * @return true if memory pressure is high (>85% heap usage)
+     * Memory information data class
      */
-    fun isMemoryPressureHigh(): Boolean {
-        val stats = getMemoryStats()
-        return stats.usagePercentage >= MEMORY_PRESSURE_THRESHOLD
-    }
+    private data class MemoryInfo(
+        val memoryUsedMb: Long,
+        val memoryMaxMb: Long,
+        val memoryUsagePercent: Int,
+        val nativeMemoryMb: Long
+    )
 
     /**
-     * Check if memory pressure is critical
-     *
-     * Critical pressure indicates immediate risk of OOM.
-     *
-     * @return true if memory pressure is critical (>95% heap usage)
+     * Get memory usage information
      */
-    fun isMemoryPressureCritical(): Boolean {
-        val stats = getMemoryStats()
-        return stats.usagePercentage >= MEMORY_CRITICAL_THRESHOLD
-    }
+    private fun getMemoryInfo(): MemoryInfo {
+        val runtime = Runtime.getRuntime()
+        val usedMemory = (runtime.totalMemory() - runtime.freeMemory()) / BYTES_IN_MB
+        val maxMemory = runtime.maxMemory() / BYTES_IN_MB
+        val usagePercent = if (maxMemory > 0) {
+            ((usedMemory.toDouble() / maxMemory) * 100).toInt()
+        } else 0
 
-    /**
-     * Check if operations should be throttled
-     *
-     * Combines memory pressure and system available memory to determine
-     * if expensive operations should be skipped or delayed.
-     *
-     * @return true if throttling recommended
-     */
-    fun shouldThrottle(): Boolean {
-        Log.d(TAG, "shouldThrottle() called")
-        val stats = getMemoryStats()
-
-        // Throttle if heap usage is high
-        if (stats.usagePercentage >= MEMORY_PRESSURE_THRESHOLD) {
-            return true
+        // Get native memory if available
+        val nativeMemory = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Debug.getNativeHeapAllocatedSize() / BYTES_IN_MB
+        } else {
+            0L
         }
 
-        // Throttle if system has low available memory
-        if (stats.availableMB < LOW_MEMORY_MB) {
-            return true
-        }
-
-        return false
+        return MemoryInfo(
+            memoryUsedMb = usedMemory,
+            memoryMaxMb = maxMemory,
+            memoryUsagePercent = usagePercent,
+            nativeMemoryMb = nativeMemory
+        )
     }
 
     /**
-     * Get throttle recommendation level
-     *
-     * Provides granular throttling recommendations based on current memory state.
-     * Allows callers to implement adaptive behavior (e.g., reduce depth vs skip entirely).
-     *
-     * @return ThrottleLevel recommendation
+     * Get CPU usage percentage
+     * Returns process-level CPU usage
      */
-    fun getThrottleRecommendation(): ThrottleLevel {
-        val stats = getMemoryStats()
-
-        return when {
-            stats.usagePercentage >= THROTTLE_HIGH_THRESHOLD -> ThrottleLevel.HIGH
-            stats.usagePercentage >= THROTTLE_MEDIUM_THRESHOLD -> ThrottleLevel.MEDIUM
-            stats.usagePercentage >= THROTTLE_LOW_THRESHOLD -> ThrottleLevel.LOW
-            else -> ThrottleLevel.NONE
-        }
-    }
-
-    /**
-     * Log memory statistics to logcat
-     *
-     * Formats memory stats for easy debugging. Use at INFO level for periodic monitoring
-     * or WARN level when pressure is detected.
-     *
-     * @param tag Tag to identify the logging component
-     */
-    fun logMemoryStats(tag: String) {
-        val stats = getMemoryStats()
-        val level = getThrottleRecommendation()
-
-        val message = "Memory: ${stats.usedHeapMB}MB/${stats.maxHeapMB}MB " +
-                     "(${(stats.usagePercentage * 100).toInt()}%) - " +
-                     "Native: ${stats.usedNativeMB}MB - " +
-                     "Available: ${stats.availableMB}MB - " +
-                     "Status: $level"
-
-        when (level) {
-            ThrottleLevel.HIGH -> Log.w(tag, message)
-            ThrottleLevel.MEDIUM -> Log.i(tag, message)
-            else -> Log.i(tag, message)
-        }
-    }
-
-    /**
-     * Get current CPU usage percentage
-     *
-     * Note: CPU monitoring is more expensive than memory monitoring (~5-10ms).
-     * Use sparingly or cache results.
-     *
-     * @return CPU usage percentage (0-100), or -1 if unavailable
-     */
-    fun getCpuUsage(): Float {
-        Log.d(TAG, "getCpuUsage() called")
+    private fun getCpuUsage(): Double {
         return try {
-            // Read /proc/stat for total CPU time
-            val reader = BufferedReader(FileReader("/proc/stat"))
-            val cpuLine = reader.readLine()
-            reader.close()
+            val pid = Process.myPid()
+            val cpuInfo = readProcessCpuInfo(pid)
 
-            // Parse: cpu user nice system idle iowait irq softirq
-            val tokens = cpuLine.split("\\s+".toRegex())
-            if (tokens.size < 8) {
-                Log.w(TAG, "Unable to parse /proc/stat: insufficient tokens")
-                return -1f
+            val currentCpuTime = cpuInfo.first
+            val currentAppTime = cpuInfo.second
+
+            val lastCpu = lastCpuTime.get()
+            val lastApp = lastAppTime.get()
+
+            if (lastCpu > 0 && lastApp > 0) {
+                val cpuDiff = currentCpuTime - lastCpu
+                val appDiff = currentAppTime - lastApp
+
+                lastCpuTime.set(currentCpuTime)
+                lastAppTime.set(currentAppTime)
+
+                if (cpuDiff > 0) {
+                    (appDiff.toDouble() / cpuDiff) * 100.0
+                } else {
+                    0.0
+                }
+            } else {
+                // First measurement, store baseline
+                lastCpuTime.set(currentCpuTime)
+                lastAppTime.set(currentAppTime)
+                0.0
             }
-
-            val user = tokens[1].toLongOrNull() ?: 0
-            val nice = tokens[2].toLongOrNull() ?: 0
-            val system = tokens[3].toLongOrNull() ?: 0
-            val idle = tokens[4].toLongOrNull() ?: 0
-            val iowait = tokens[5].toLongOrNull() ?: 0
-
-            val totalCpu = user + nice + system + idle + iowait
-            val totalActive = user + nice + system + iowait
-
-            if (totalCpu == 0L) {
-                return 0f
-            }
-
-            // Return percentage
-            (totalActive.toFloat() / totalCpu.toFloat()) * 100f
-
-        } catch (e: IOException) {
-            Log.w(TAG, "Error reading CPU stats: ${e.message}")
-            -1f
         } catch (e: Exception) {
-            Log.w(TAG, "Unexpected error getting CPU stats: ${e.message}")
-            -1f
+            Log.w(TAG, "Failed to get CPU usage", e)
+            0.0
         }
     }
 
     /**
-     * Get formatted memory status string
-     *
-     * Useful for UI display or quick logging.
-     *
-     * @return Formatted string like "45MB/128MB (35%)"
+     * Read CPU time from /proc filesystem
+     * Returns pair of (total CPU time, app CPU time)
      */
-    fun getMemoryStatusString(): String {
-        val stats = getMemoryStats()
-        return "${stats.usedHeapMB}MB/${stats.maxHeapMB}MB " +
-               "(${(stats.usagePercentage * 100).toInt()}%)"
+    private fun readProcessCpuInfo(pid: Int): Pair<Long, Long> {
+        var totalCpuTime = 0L
+        var appCpuTime = 0L
+
+        try {
+            // Read total CPU time from /proc/stat
+            BufferedReader(FileReader("/proc/stat")).use { reader ->
+                val line = reader.readLine()
+                val tokens = line.split("\\s+".toRegex())
+                if (tokens.isNotEmpty() && tokens[0] == "cpu") {
+                    for (i in 1 until tokens.size.coerceAtMost(9)) {
+                        totalCpuTime += tokens[i].toLongOrNull() ?: 0L
+                    }
+                }
+            }
+
+            // Read app CPU time from /proc/[pid]/stat
+            BufferedReader(FileReader("/proc/$pid/stat")).use { reader ->
+                val line = reader.readLine()
+                val tokens = line.split("\\s+".toRegex())
+                if (tokens.size >= 15) {
+                    val utime = tokens[13].toLongOrNull() ?: 0L
+                    val stime = tokens[14].toLongOrNull() ?: 0L
+                    appCpuTime = utime + stime
+                }
+            }
+        } catch (e: IOException) {
+            Log.w(TAG, "Failed to read CPU info from /proc", e)
+        } catch (e: NumberFormatException) {
+            Log.w(TAG, "Failed to parse CPU info", e)
+        }
+
+        return Pair(totalCpuTime, appCpuTime)
     }
 
     /**
-     * Check if system is under low memory condition
-     *
-     * Uses ActivityManager to check if system-wide low memory threshold is crossed.
-     *
-     * @return true if system is in low memory state
+     * Check if monitoring is active
      */
-    fun isLowMemory(): Boolean {
-        val memInfo = ActivityManager.MemoryInfo()
-        activityManager.getMemoryInfo(memInfo)
-        return memInfo.lowMemory
+    fun isMonitoring(): Boolean = isMonitoring.get()
+
+    /**
+     * Trigger garbage collection
+     * Use sparingly, only in critical memory situations
+     */
+    fun requestGarbageCollection() {
+        Log.i(TAG, "Requesting garbage collection")
+        System.gc()
     }
 
     /**
-     * Get low memory threshold in bytes
-     *
-     * Returns the system's low memory threshold (when isLowMemory becomes true).
-     *
-     * @return Low memory threshold in bytes
+     * Get memory pressure level from ActivityManager
+     * Requires ActivityManager.MemoryInfo
      */
-    fun getLowMemoryThreshold(): Long {
-        val memInfo = ActivityManager.MemoryInfo()
-        activityManager.getMemoryInfo(memInfo)
-        return memInfo.threshold
+    fun getMemoryPressure(): String {
+        return try {
+            val memInfo = ActivityManager.MemoryInfo()
+            activityManager?.getMemoryInfo(memInfo)
+
+            when {
+                memInfo.lowMemory -> "LOW"
+                memInfo.availMem < memInfo.threshold * 1.5 -> "MODERATE"
+                else -> "NORMAL"
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to get memory pressure", e)
+            "UNKNOWN"
+        }
     }
 }

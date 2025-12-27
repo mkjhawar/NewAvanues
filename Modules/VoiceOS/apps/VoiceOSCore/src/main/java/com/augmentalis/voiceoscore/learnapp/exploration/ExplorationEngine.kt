@@ -26,6 +26,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.app.NotificationCompat
+import java.util.concurrent.ConcurrentHashMap
 import com.augmentalis.voiceoscore.learnapp.detection.ExpandableControlDetector
 import com.augmentalis.voiceoscore.learnapp.elements.ElementClassifier
 import com.augmentalis.voiceoscore.learnapp.fingerprinting.ScreenStateManager
@@ -34,11 +35,12 @@ import com.augmentalis.voiceoscore.learnapp.models.ExplorationState
 import com.augmentalis.voiceoscore.learnapp.models.ExplorationStats
 import com.augmentalis.voiceoscore.learnapp.models.ScreenState
 import com.augmentalis.voiceoscore.learnapp.navigation.NavigationGraphBuilder
-import com.augmentalis.voiceoscore.learnapp.scrolling.ScrollDetector
-import com.augmentalis.voiceoscore.learnapp.scrolling.ScrollExecutor
 import com.augmentalis.voiceoscore.learnapp.tracking.ElementClickTracker
 import com.augmentalis.voiceoscore.learnapp.detection.LauncherDetector
+import com.augmentalis.voiceoscore.learnapp.ui.ChecklistManager
 import com.augmentalis.voiceoscore.learnapp.window.WindowManager
+import com.augmentalis.voiceoscore.learnapp.window.WindowInfo
+import com.augmentalis.voiceoscore.learnapp.window.WindowType
 import com.augmentalis.uuidcreator.UUIDCreator
 import com.augmentalis.uuidcreator.alias.UuidAliasManager
 import com.augmentalis.uuidcreator.models.UUIDElement
@@ -49,6 +51,10 @@ import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import com.augmentalis.voiceoscore.learnapp.core.LearnAppCore
 import com.augmentalis.voiceoscore.learnapp.core.ProcessingMode
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
+// Phase 3 (2025-12-08): VUIDMetrics integration for observability
+import com.augmentalis.voiceoscore.learnapp.metrics.VUIDCreationMetricsCollector
+import com.augmentalis.voiceoscore.learnapp.metrics.VUIDCreationDebugOverlay
+import com.augmentalis.voiceoscore.learnapp.metrics.VUIDMetricsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -60,6 +66,68 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+
+/**
+ * Debug callback interface for screen exploration events
+ *
+ * Provides real-time updates about screen exploration progress,
+ * including element discovery, click tracking, and navigation.
+ *
+ * REWRITTEN (2025-12-08): Added onElementClicked and onElementBlocked for item tracking.
+ *
+ * @since 2025-12-08 (Debug Overlay Feature)
+ */
+interface ExplorationDebugCallback {
+    /**
+     * Called when a screen is explored and elements are discovered
+     *
+     * @param elements List of discovered elements on current screen
+     * @param screenHash Unique hash of the current screen state
+     * @param activityName Current activity name
+     * @param packageName Target app package
+     * @param parentScreenHash Hash of the screen we navigated from (null if root)
+     */
+    fun onScreenExplored(
+        elements: List<com.augmentalis.voiceoscore.learnapp.models.ElementInfo>,
+        screenHash: String,
+        activityName: String,
+        packageName: String,
+        parentScreenHash: String?
+    )
+
+    /**
+     * Called when an element click causes navigation to a new screen
+     *
+     * @param elementKey Identifier for the clicked element (screenHash:stableId)
+     * @param destinationScreenHash Hash of the screen navigated to
+     */
+    fun onElementNavigated(elementKey: String, destinationScreenHash: String)
+
+    /**
+     * Called when exploration progress is updated
+     *
+     * @param progress Current progress percentage (0-100)
+     */
+    fun onProgressUpdated(progress: Int)
+
+    /**
+     * Called when an element is clicked (2025-12-08)
+     *
+     * @param stableId Element stable ID
+     * @param screenHash Screen where element was clicked
+     * @param vuid VUID if assigned
+     */
+    fun onElementClicked(stableId: String, screenHash: String, vuid: String?) {}
+
+    /**
+     * Called when an element is blocked (critical dangerous) (2025-12-08)
+     *
+     * @param stableId Element stable ID
+     * @param screenHash Screen where element was found
+     * @param reason Blocking reason
+     */
+    fun onElementBlocked(stableId: String, screenHash: String, reason: String) {}
+}
 
 /**
  * Exploration Engine
@@ -123,31 +191,23 @@ class ExplorationEngine(
 
     /**
      * Screen state manager
-     *
-     * FIX (2025-11-24): Pass accessibilityService for popup/dialog detection
      */
-    private val screenStateManager = ScreenStateManager(accessibilityService)
+    private val screenStateManager = ScreenStateManager()
 
     /**
      * Element classifier
      */
-    private val elementClassifier = ElementClassifier(accessibilityService)
+    private val elementClassifier = ElementClassifier()
 
     /**
      * Screen explorer
      */
-    private val screenExplorer = ScreenExplorer(
-        context = context,
-        screenStateManager = screenStateManager,
-        elementClassifier = elementClassifier,
-        scrollDetector = ScrollDetector(),
-        scrollExecutor = ScrollExecutor(context)
-    )
+    private val screenExplorer = ScreenExplorer(elementClassifier)
 
     /**
-     * Launcher detector - device-agnostic launcher detection
+     * Launcher detector - device-agnostic launcher detection (singleton, uses object methods)
      */
-    private val launcherDetector = LauncherDetector(accessibilityService.applicationContext)
+    private val launcherDetector = LauncherDetector
 
     /**
      * Window manager - multi-window detection system
@@ -156,8 +216,25 @@ class ExplorationEngine(
 
     /**
      * Element click tracker - per-element progress tracking
+     * NOTE: This tracker may be cleared on intent relaunch for fresh-scrape logic
      */
     private val clickTracker = ElementClickTracker()
+
+    /**
+     * FIX (2025-12-08): Global cumulative tracking - NEVER cleared during exploration
+     * These track ALL exploration progress regardless of intent relaunches
+     * Used for final completion percentage calculation
+     *
+     * UPDATE (2025-12-08): Added blocked VUID tracking for separate stats display
+     * Format: "XX% of Non-Blocked screens (XX/YYY), ##% of non-blocked entries (aa of zz clickable items)"
+     *
+     * FIX (2025-12-22): C-P1-1 - Use ConcurrentHashMap.newKeySet() for thread safety
+     * Multiple threads (AccessibilityService, Main, Dispatchers.Default) access these sets concurrently
+     * mutableSetOf() is NOT thread-safe → race conditions in VUID tracking
+     */
+    private val cumulativeDiscoveredVuids = ConcurrentHashMap.newKeySet<String>()  // Thread-safe discovered VUIDs
+    private val cumulativeClickedVuids = ConcurrentHashMap.newKeySet<String>()      // Thread-safe clicked VUIDs
+    private val cumulativeBlockedVuids = ConcurrentHashMap.newKeySet<String>()      // Thread-safe blocked VUIDs
 
     /**
      * Expandable control detector - identifies dropdowns, menus, etc.
@@ -166,8 +243,22 @@ class ExplorationEngine(
     /**
      * Checklist manager - real-time element exploration tracking
      */
-    private val checklistManager = ChecklistManager()
-    private val expandableDetector = ExpandableControlDetector(context)
+    private val checklistManager = ChecklistManager(context)
+    private val expandableDetector = ExpandableControlDetector
+
+    /**
+     * PHASE 3 (2025-12-08): VUID Metrics tracking for observability
+     *
+     * Tracks real-time VUID creation stats, displays debug overlay, and persists metrics to database.
+     */
+    private val metricsCollector = VUIDCreationMetricsCollector()
+    private val metricsRepository = VUIDMetricsRepository()
+    private val debugOverlay by lazy {
+        VUIDCreationDebugOverlay(
+            context,
+            context.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+        )
+    }
 
     /**
      * Navigation graph builder
@@ -215,6 +306,27 @@ class ExplorationEngine(
     }
 
     /**
+     * Termination reason tracking (P1 Diagnostic Fix - 2025-12-07)
+     *
+     * Tracks why exploration ended to help diagnose partial learning issues.
+     * Logged at exploration completion for debugging.
+     */
+    enum class TerminationReason {
+        COMPLETED,            // Normal completion - all screens explored
+        TIMEOUT,              // Auto-pause timeout expired (login/permission)
+        RECOVERY_FAILED,      // Couldn't recover to target app after external navigation
+        CONSECUTIVE_FAILURES, // Too many consecutive click failures
+        STACK_EXHAUSTED,      // DFS stack empty (normal completion path)
+        MAX_DURATION,         // Overall exploration timeout reached
+        USER_STOPPED          // User manually stopped exploration
+    }
+
+    /**
+     * Current termination reason (set when exploration ends)
+     */
+    private var terminationReason: TerminationReason? = null
+
+    /**
      * Exploration state flow
      */
     private val _explorationState = MutableStateFlow<ExplorationState>(ExplorationState.Idle)
@@ -230,6 +342,12 @@ class ExplorationEngine(
      * Coroutine scope
      */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /**
+     * FIX C5-P1-9 (2025-12-22): Track exploration job for explicit cancellation support
+     * Allows immediate cancellation without waiting for cleanup cycles
+     */
+    private var explorationJob: kotlinx.coroutines.Job? = null
 
     /**
      * Start timestamp
@@ -285,6 +403,32 @@ class ExplorationEngine(
     private val clickedStableIds = mutableSetOf<String>()
 
     /**
+     * Debug callback for real-time exploration events
+     *
+     * Set via [setDebugCallback] to receive notifications about screen
+     * exploration, element discovery, and navigation events. Used by
+     * debug overlay to visualize exploration progress.
+     *
+     * @since 2025-12-08 (Debug Overlay Feature)
+     */
+    private var debugCallback: ExplorationDebugCallback? = null
+
+    init {
+        // PHASE 3 (2025-12-08): VUID metrics repository is ready to use
+        android.util.Log.d("ExplorationEngine", "VUID metrics repository initialized")
+    }
+
+    /**
+     * Set the debug callback for exploration events
+     *
+     * @param callback Callback to receive debug events (null to disable)
+     */
+    fun setDebugCallback(callback: ExplorationDebugCallback?) {
+        debugCallback = callback
+        android.util.Log.d("ExplorationEngine", "📊 Debug callback ${if (callback != null) "enabled" else "disabled"}")
+    }
+
+    /**
      * Start exploration
      *
      * Begins DFS exploration of app.
@@ -294,7 +438,11 @@ class ExplorationEngine(
      */
     fun startExploration(packageName: String, sessionId: String? = null) {
         this.currentSessionId = sessionId
-        scope.launch {
+
+        // FIX C5-P1-9 (2025-12-22): Cancel any existing exploration before starting new one
+        explorationJob?.cancel(kotlinx.coroutines.CancellationException("Starting new exploration"))
+
+        explorationJob = scope.launch {
             try {
                 // FIX (2025-12-03): Cleanup resources from previous exploration
                 cleanup()
@@ -305,12 +453,20 @@ class ExplorationEngine(
                 clickTracker.clear() // Clear click tracking for new session
                 clickFailures.clear() // Clear telemetry for new session
                 clickedStableIds.clear() // VOS-HYBRID-CLITE: Clear stableId tracking for new session
+                terminationReason = null // P1 Fix: Reset termination tracking for new session
                 startTimestamp = System.currentTimeMillis()
                 dangerousElementsSkipped = 0
                 loginScreensDetected = 0
                 scrollableContainersFound = 0
 
                 android.util.Log.i("ExplorationEngine", "🚀 Starting exploration of: $packageName")
+
+                // PHASE 3 (2025-12-08): Reset metrics and show debug overlay
+                metricsCollector.reset()
+                debugOverlay.setMetricsCollector(metricsCollector)
+                if (developerSettings.isDebugOverlayEnabled()) {
+                    debugOverlay.show(packageName)
+                }
 
                 // FIX: Check if system app (partial support - read-only)
                 if (isSystemApp(packageName)) {
@@ -384,23 +540,27 @@ class ExplorationEngine(
                 exploreAppIterative(packageName, maxDepth = 10)
 
                 // Exploration completed - check completion status
-                val clickStats = clickTracker.getStats()
-                android.util.Log.i("ExplorationEngine", "📊 Exploration Statistics:")
-                android.util.Log.i("ExplorationEngine", clickStats.toLogString())
+                // FIX (2025-12-08): Use cumulative tracking instead of clickTracker for accurate stats
+                val cumulativeCompleteness = if (cumulativeDiscoveredVuids.isNotEmpty()) {
+                    (cumulativeClickedVuids.size.toFloat() / cumulativeDiscoveredVuids.size.toFloat()) * 100f
+                } else {
+                    0f
+                }
+                android.util.Log.i("ExplorationEngine", "📊 Exploration Statistics (CUMULATIVE):")
+                android.util.Log.i("ExplorationEngine", "   VUIDs: ${cumulativeClickedVuids.size}/${cumulativeDiscoveredVuids.size} clicked")
+                android.util.Log.i("ExplorationEngine", "   Completeness: ${cumulativeCompleteness.toInt()}%")
 
-                // Mark app as fully learned if completeness >= 95%
-                if (clickStats.overallCompleteness >= developerSettings.getCompletenessThresholdPercent()) {
-                    android.util.Log.i("ExplorationEngine", "✅ App fully learned (${clickStats.overallCompleteness}%)!")
-                    android.util.Log.i("ExplorationEngine", "   ${clickStats.clickedElements}/${clickStats.totalElements} elements clicked")
-                    android.util.Log.i("ExplorationEngine", "   ${clickStats.fullyExploredScreens}/${clickStats.totalScreens} screens fully explored")
+                // Mark app as fully learned if completeness >= threshold (using cumulative stats)
+                if (cumulativeCompleteness >= developerSettings.getCompletenessThresholdPercent()) {
+                    android.util.Log.i("ExplorationEngine", "✅ App fully learned (${cumulativeCompleteness.toInt()}%)!")
+                    android.util.Log.i("ExplorationEngine", "   ${cumulativeClickedVuids.size}/${cumulativeDiscoveredVuids.size} VUIDs clicked")
 
                     // Mark app as fully learned in database
                     repository.markAppAsFullyLearned(packageName, System.currentTimeMillis())
                 } else {
-                    android.util.Log.w("ExplorationEngine", "⚠️ App partially learned (${clickStats.overallCompleteness}%)")
-                    android.util.Log.w("ExplorationEngine", "   ${clickStats.clickedElements}/${clickStats.totalElements} elements clicked")
-                    android.util.Log.w("ExplorationEngine", "   ${clickStats.fullyExploredScreens}/${clickStats.totalScreens} screens fully explored")
-                    android.util.Log.w("ExplorationEngine", "   Not marking as fully learned (threshold: 95%)")
+                    android.util.Log.w("ExplorationEngine", "⚠️ App partially learned (${cumulativeCompleteness.toInt()}%)")
+                    android.util.Log.w("ExplorationEngine", "   ${cumulativeClickedVuids.size}/${cumulativeDiscoveredVuids.size} VUIDs clicked")
+                    android.util.Log.w("ExplorationEngine", "   Not marking as fully learned (threshold: ${developerSettings.getCompletenessThresholdPercent().toInt()}%)")
                 }
 
                 val stats = createExplorationStats(packageName)
@@ -460,6 +620,31 @@ class ExplorationEngine(
         val explorationStack = java.util.Stack<ExplorationFrame>()
         val visitedScreens = mutableSetOf<String>()
 
+        // FIX (2025-12-07): Track navigation paths to prevent re-entry loops
+        // Key: "parentHash->childHash", Value: visit count
+        // Issue: Same screen reached via different paths causes infinite re-exploration
+        // Solution: Track parent->child transitions and limit revisits
+        val navigationPaths = mutableMapOf<String, Int>()
+        val maxPathRevisits = 2  // Allow at most 2 visits per navigation path
+
+        // FIX (2025-12-07): Track which elements lead to which screens
+        // Key: "sourceScreenHash:elementStableId", Value: destination screen hash
+        // This allows skipping elements that lead to already-fully-explored screens
+        val elementToDestinationScreen = mutableMapOf<String, String>()
+
+        // FIX (2025-12-07): Track already-registered element UUIDs to prevent re-scraping
+        // Issue: Screens with ViewPager + vertical scroll cause same elements to be
+        // re-scraped and re-registered when switching tabs or scrolling back
+        // Key: element stableId, Value: generated UUID
+        val registeredElementUuids = mutableSetOf<String>()
+
+        // FIX (2025-12-08): Clear cumulative tracking at START of new exploration session
+        // These class-level sets preserve progress across intent relaunches within a session
+        // but are cleared for each new app exploration
+        cumulativeDiscoveredVuids.clear()
+        cumulativeClickedVuids.clear()
+        cumulativeBlockedVuids.clear()  // UPDATE (2025-12-08): Clear blocked tracking too
+
         // Initialize checklist tracking
         checklistManager.startChecklist(packageName)
 
@@ -501,15 +686,43 @@ class ExplorationEngine(
         // Add root screen to checklist
         checklistManager.addScreen(
             screenHash = rootScreenState.hash,
-            screenTitle = rootScreenState.activityName ?: "Root Screen",
-            elements = rootElementsWithUuids
+            screenName = rootScreenState.activityName ?: "Root Screen",
+            elementCount = rootElementsWithUuids.size
         )
 
         // Register screen with clickTracker for progress tracking
-        clickTracker.registerScreen(
-            rootScreenState.hash,
-            rootElementsWithUuids.mapNotNull { it.uuid }
-        )
+        // P4 Fix (2025-12-07): Exclude critical dangerous elements from total count
+        // These elements are never clicked, so including them inflates totalElements
+        // and causes artificially low completeness percentages
+        // NOTE: Critical elements still get UUIDs (for voice commands) but aren't counted for completeness
+        val criticalElements = rootElementsWithUuids.filter { isCriticalDangerousElement(it) }
+        val clickableElements = rootElementsWithUuids.filter { !isCriticalDangerousElement(it) }
+        val clickableUuids = clickableElements.mapNotNull { it.uuid }
+        clickTracker.registerScreen(rootScreenState.hash, clickableUuids)
+
+        // FIX (2025-12-08): Add to cumulative tracking (class-level, survives intent relaunches)
+        cumulativeDiscoveredVuids.addAll(clickableUuids)
+
+        // UPDATE (2025-12-08): Track blocked VUIDs separately for stats display
+        val blockedUuids = criticalElements.mapNotNull { it.uuid }
+        cumulativeBlockedVuids.addAll(blockedUuids)
+
+        // Log skipped critical elements with details and fire debug callbacks
+        if (criticalElements.isNotEmpty()) {
+            android.util.Log.i("ExplorationEngine-P4",
+                "📊 Screen ${rootScreenState.hash.take(8)}: Registered ${clickableUuids.size} clickable, " +
+                "excluded ${criticalElements.size} critical dangerous elements:")
+            criticalElements.forEach { elem ->
+                val desc = elem.text.ifEmpty { elem.contentDescription.ifEmpty { elem.className } }
+                val hasUuid = elem.uuid != null
+                android.util.Log.i("ExplorationEngine-P4",
+                    "   🚫 \"$desc\" [UUID: ${if (hasUuid) "✓" else "✗"}] - still actionable via voice but excluded from completeness")
+
+                // DEBUG (2025-12-08): Fire blocked callback for debug overlay
+                val reason = getCriticalDangerReason(elem) ?: "Critical dangerous element"
+                debugCallback?.onElementBlocked(elem.stableId(), rootScreenState.hash, reason)
+            }
+        }
 
         android.util.Log.i("ExplorationEngine",
             "🚀 Starting ITERATIVE DFS exploration of $packageName (max depth: $maxDepth)")
@@ -518,6 +731,7 @@ class ExplorationEngine(
         while (explorationStack.isNotEmpty()) {
             // Phase 2: Check pause state before each iteration
             // FIX (2025-12-06): Added timeout logic to prevent waiting forever when auto-paused
+            // P3 Fix (2025-12-07): Added warning at 50% timeout
             if (_pauseState.value != ExplorationPauseState.RUNNING) {
                 val pauseState = _pauseState.value
                 android.util.Log.i("ExplorationEngine", "⏸️ Exploration paused - waiting for resume (state: $pauseState)")
@@ -529,16 +743,61 @@ class ExplorationEngine(
                     Long.MAX_VALUE  // Infinite for manual user pause
                 }
 
-                // Wait for resume with timeout
-                val resumed = withTimeoutOrNull(timeout) {
-                    _pauseState.first { it == ExplorationPauseState.RUNNING }
-                    true
-                } ?: false
+                // P3 Fix: Wait with warning at 50% timeout
+                if (pauseState == ExplorationPauseState.PAUSED_AUTO) {
+                    val warningTimeout = timeout / 2  // 5 minutes
 
-                if (!resumed) {
-                    android.util.Log.w("ExplorationEngine",
-                        "⚠️ Pause timeout reached (${timeout / 60000} minutes) - terminating exploration")
-                    break
+                    // First phase: wait up to 50% timeout
+                    val resumedEarly = withTimeoutOrNull(warningTimeout) {
+                        _pauseState.first { it == ExplorationPauseState.RUNNING }
+                        true
+                    } ?: false
+
+                    if (!resumedEarly && _pauseState.value != ExplorationPauseState.RUNNING) {
+                        // Show warning - 50% time remaining
+                        android.util.Log.w("ExplorationEngine",
+                            "⏰ TIMEOUT_WARNING: ${warningTimeout / 60000} minutes remaining before auto-pause expires")
+                        android.util.Log.w("ExplorationEngine",
+                            "💡 TIP: Complete login/permission action or tap 'Continue' to resume exploration")
+
+                        // Emit warning state for UI notification
+                        val currentState = _explorationState.value
+                        if (currentState is ExplorationState.Running) {
+                            _explorationState.value = currentState.copy(
+                                progress = currentState.progress.copy(
+                                    currentScreen = "⏰ Waiting for login/permission (${warningTimeout / 60000}min left)..."
+                                )
+                            )
+                        }
+
+                        // Second phase: wait remaining 50%
+                        val resumedLate = withTimeoutOrNull(warningTimeout) {
+                            _pauseState.first { it == ExplorationPauseState.RUNNING }
+                            true
+                        } ?: false
+
+                        if (!resumedLate) {
+                            terminationReason = TerminationReason.TIMEOUT
+                            android.util.Log.w("ExplorationEngine",
+                                "⚠️ Pause timeout reached (${timeout / 60000} minutes) - terminating exploration")
+                            android.util.Log.w("ExplorationEngine",
+                                "🔍 TERMINATION_REASON: TIMEOUT - Auto-pause (login/permission) timed out after ${timeout / 60000} minutes")
+                            break
+                        }
+                    }
+                } else {
+                    // Manual pause - wait indefinitely
+                    val resumed = withTimeoutOrNull(timeout) {
+                        _pauseState.first { it == ExplorationPauseState.RUNNING }
+                        true
+                    } ?: false
+
+                    if (!resumed) {
+                        terminationReason = TerminationReason.TIMEOUT
+                        android.util.Log.w("ExplorationEngine",
+                            "⚠️ Pause timeout reached - terminating exploration")
+                        break
+                    }
                 }
 
                 android.util.Log.i("ExplorationEngine", "▶️ Exploration resumed - continuing DFS loop")
@@ -546,7 +805,10 @@ class ExplorationEngine(
 
             // Check timeout
             if (System.currentTimeMillis() - startTime > maxDuration) {
+                terminationReason = TerminationReason.MAX_DURATION
                 android.util.Log.w("ExplorationEngine", "Exploration timeout reached")
+                android.util.Log.w("ExplorationEngine",
+                    "🔍 TERMINATION_REASON: MAX_DURATION - Overall exploration timeout (${maxDuration / 60000} minutes) reached")
                 break
             }
 
@@ -563,10 +825,13 @@ class ExplorationEngine(
 
             // VOS-HYBRID-CLITE (2025-12-04): Use fresh-scrape exploration for this screen
             // This replaces the element-by-element loop with stale node refreshing
+            // FIX (2025-12-07): Pass visitedScreens and elementToDestination for loop prevention
             val clickedOnScreen = exploreScreenWithFreshScrape(
                 frame = currentFrame,
                 packageName = packageName,
-                clickedIds = clickedStableIds
+                clickedIds = clickedStableIds,
+                visitedScreens = visitedScreens,
+                elementToDestination = elementToDestinationScreen
             )
 
             if (developerSettings.isVerboseLoggingEnabled()) {
@@ -610,6 +875,14 @@ class ExplorationEngine(
                             // Clear the entire stack
                             explorationStack.clear()
 
+                            // P2 Fix (2025-12-07): Clear click tracker to match fresh exploration
+                            // Without this, totalElements is inflated by stale screen registrations,
+                            // causing low completeness percentage (e.g., 16%)
+                            val oldStats = clickTracker.getStats()
+                            clickTracker.clear()
+                            android.util.Log.i("ExplorationEngine",
+                                "🔄 P2 Fix: Cleared clickTracker (had ${oldStats.totalElements} elements from ${oldStats.totalScreens} stale screens)")
+
                             // Re-explore from current screen (app entry point)
                             val freshRoot = accessibilityService.rootInActiveWindow
                             if (freshRoot != null) {
@@ -634,10 +907,14 @@ class ExplorationEngine(
                                     )
 
                                     // Register screen with clickTracker for progress tracking
-                                    clickTracker.registerScreen(
-                                        freshState.hash,
-                                        freshElements.mapNotNull { it.uuid }
-                                    )
+                                    // P4 Fix: Exclude critical dangerous elements
+                                    val freshClickableUuids = freshElements
+                                        .filter { !isCriticalDangerousElement(it) }
+                                        .mapNotNull { it.uuid }
+                                    clickTracker.registerScreen(freshState.hash, freshClickableUuids)
+
+                                    // FIX (2025-12-08): Add to cumulative tracking (class-level, survives intent relaunches)
+                                    cumulativeDiscoveredVuids.addAll(freshClickableUuids)
 
                                     val freshFrame = ExplorationFrame(
                                         screenHash = freshState.hash,
@@ -675,10 +952,14 @@ class ExplorationEngine(
                                             )
 
                                             // Update screen registration with current element count
-                                            clickTracker.registerScreen(
-                                                freshState.hash,
-                                                resumeElements.mapNotNull { it.uuid }
-                                            )
+                                            // P4 Fix: Exclude critical dangerous elements
+                                            val resumeClickableUuids = resumeElements
+                                                .filter { !isCriticalDangerousElement(it) }
+                                                .mapNotNull { it.uuid }
+                                            clickTracker.registerScreen(freshState.hash, resumeClickableUuids)
+
+                                            // FIX (2025-12-08): Add to cumulative tracking (class-level, survives intent relaunches)
+                                            cumulativeDiscoveredVuids.addAll(resumeClickableUuids)
 
                                             val resumeFrame = ExplorationFrame(
                                                 screenHash = freshState.hash,
@@ -713,9 +994,23 @@ class ExplorationEngine(
                     postExploreRoot, packageName, currentFrame.depth + 1
                 )
 
-                if (postExploreState.hash != currentFrame.screenHash &&
-                    postExploreState.hash !in visitedScreens &&
-                    currentFrame.depth + 1 <= maxDepth) {
+                // FIX (2025-12-07): Track navigation path to detect re-entry loops
+                val navPathKey = "${currentFrame.screenHash.take(8)}->${postExploreState.hash.take(8)}"
+                val pathVisitCount = navigationPaths.getOrDefault(navPathKey, 0)
+
+                // Check both: not visited AND path not exceeded max revisits
+                val shouldExploreScreen = postExploreState.hash != currentFrame.screenHash &&
+                    (postExploreState.hash !in visitedScreens || pathVisitCount < maxPathRevisits) &&
+                    currentFrame.depth + 1 <= maxDepth
+
+                if (shouldExploreScreen) {
+                    // Increment path visit count
+                    navigationPaths[navPathKey] = pathVisitCount + 1
+
+                    if (pathVisitCount > 0) {
+                        android.util.Log.i("ExplorationEngine-PathTrack",
+                            "🔄 Re-visiting path $navPathKey (visit #${pathVisitCount + 1}/$maxPathRevisits)")
+                    }
 
                     // New screen discovered - push onto stack
                     val newExploration = screenExplorer.exploreScreen(
@@ -745,14 +1040,18 @@ class ExplorationEngine(
 
                         checklistManager.addScreen(
                             screenHash = postExploreState.hash,
-                            screenTitle = postExploreState.activityName ?: "Screen #${visitedScreens.size}",
-                            elements = newElementsWithUuids
+                            screenName = postExploreState.activityName ?: "Screen #${visitedScreens.size}",
+                            elementCount = newElementsWithUuids.size
                         )
 
-                        clickTracker.registerScreen(
-                            postExploreState.hash,
-                            newElementsWithUuids.mapNotNull { it.uuid }
-                        )
+                        // P4 Fix: Exclude critical dangerous elements from total count
+                        val newClickableUuids = newElementsWithUuids
+                            .filter { !isCriticalDangerousElement(it) }
+                            .mapNotNull { it.uuid }
+                        clickTracker.registerScreen(postExploreState.hash, newClickableUuids)
+
+                        // FIX (2025-12-08): Add to cumulative tracking (class-level, survives intent relaunches)
+                        cumulativeDiscoveredVuids.addAll(newClickableUuids)
 
                         if (developerSettings.isVerboseLoggingEnabled()) {
                             android.util.Log.d("ExplorationEngine",
@@ -762,6 +1061,10 @@ class ExplorationEngine(
 
                         continue
                     }
+                } else if (pathVisitCount >= maxPathRevisits) {
+                    // FIX (2025-12-07): Log when path loop is blocked
+                    android.util.Log.i("ExplorationEngine-PathTrack",
+                        "🛑 Blocking re-entry loop: $navPathKey exceeded max revisits ($pathVisitCount/$maxPathRevisits)")
                 }
             }
 
@@ -771,7 +1074,7 @@ class ExplorationEngine(
                     "📝 Registering ${currentFrame.elements.size} elements for screen ${currentFrame.screenHash.take(8)}...")
             }
 
-            val elementUuids = registerElements(currentFrame.elements, packageName)
+            val elementUuids = registerElements(currentFrame.elements, packageName, registeredElementUuids)
 
             navigationGraphBuilder.addScreen(
                 screenState = currentFrame.screenState,
@@ -803,11 +1106,54 @@ class ExplorationEngine(
             }
         }
 
+        // Set termination reason if not already set (normal completion)
+        if (terminationReason == null) {
+            terminationReason = TerminationReason.STACK_EXHAUSTED
+        }
+
+        // Log termination reason for diagnostics
+        // FIX (2025-12-08): Use cumulative tracking for final stats instead of clickTracker
+        // clickTracker.getStats() only reflects post-last-clear data (loses progress on intent relaunch)
+        // Cumulative sets preserve ALL exploration progress throughout the session
+        //
+        // UPDATE (2025-12-08): Show blocked vs non-blocked separately per user request
+        // Format: "XX% of Non-Blocked items (XX/YYY), ZZ blocked items"
+        val nonBlockedCount = cumulativeDiscoveredVuids.size
+        val clickedCount = cumulativeClickedVuids.size
+        val blockedCount = cumulativeBlockedVuids.size
+        val totalCount = nonBlockedCount + blockedCount  // All discovered items (clickable + blocked)
+
+        val cumulativeCompleteness = if (nonBlockedCount > 0) {
+            (clickedCount.toFloat() / nonBlockedCount.toFloat()) * 100f
+        } else {
+            0f
+        }
+
+        // Log both for comparison (debugging)
+        val clickTrackerStats = clickTracker.getStats()
         android.util.Log.i("ExplorationEngine",
             "🏁 Iterative DFS complete. Explored ${visitedScreens.size} unique screens")
+        android.util.Log.i("ExplorationEngine",
+            "🔍 TERMINATION_REASON: $terminationReason")
 
-        // Export checklist to file
-        val checklistPath = "/sdcard/Download/learnapp-checklist-${packageName.substringAfterLast('.')}-${System.currentTimeMillis()}.md"
+        // UPDATE (2025-12-08): New stats format showing blocked vs non-blocked separately
+        // Format requested: "XX% of Non-Blocked screens (XX/YYY), ##% of non-blocked entries (aa of zz clickable items)"
+        android.util.Log.i("ExplorationEngine",
+            "📊 Final Stats: ${cumulativeCompleteness.toInt()}% of non-blocked items " +
+            "(${clickedCount}/${nonBlockedCount} clicked), ${blockedCount} blocked items skipped")
+        android.util.Log.i("ExplorationEngine",
+            "📊 Breakdown: ${clickedCount} clicked + ${nonBlockedCount - clickedCount} unclicked + ${blockedCount} blocked = ${totalCount} total VUIDs")
+        android.util.Log.i("ExplorationEngine",
+            "📊 Screens: ${visitedScreens.size} total visited")
+
+        // Legacy format for comparison (debugging)
+        android.util.Log.d("ExplorationEngine",
+            "📊 [DEBUG] clickTracker stats (may be post-clear): ${clickTrackerStats.clickedElements}/${clickTrackerStats.totalElements} " +
+            "(${clickTrackerStats.overallCompleteness.toInt()}%)")
+
+        // Export checklist to file (use Environment API instead of hardcoded /sdcard)
+        val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+        val checklistPath = "${downloadsDir.absolutePath}/learnapp-checklist-${packageName.substringAfterLast('.')}-${System.currentTimeMillis()}.md"
         checklistManager.exportToFile(checklistPath)
 
         // Log checklist summary
@@ -824,9 +1170,19 @@ class ExplorationEngine(
         packageName: String
     ): List<com.augmentalis.voiceoscore.learnapp.models.ElementInfo> {
         val startTime = System.currentTimeMillis()
+
+        // PHASE 3 (2025-12-08): Track element detection
+        elements.forEach { _ ->
+            metricsCollector.onElementDetected()
+        }
+
         val elementsWithUuids = elements.map { element ->
             element.node?.let { node ->
                 val uuid = thirdPartyGenerator.generateUuid(node, packageName)
+
+                // PHASE 3 (2025-12-08): Track VUID creation
+                metricsCollector.onVUIDCreated()
+
                 element.copy(uuid = uuid)
             } ?: element
         }
@@ -1008,22 +1364,55 @@ class ExplorationEngine(
      * @param frame Current exploration frame
      * @param packageName Target app package name
      * @param clickedIds Set to track clicked element stableIds (modified in place)
+     * @param visitedScreens Set of fully-explored screen hashes
+     * @param elementToDestination Map of element→destination screen for loop prevention
      * @return Number of elements successfully clicked
      */
     private suspend fun exploreScreenWithFreshScrape(
         frame: ExplorationFrame,
         packageName: String,
-        clickedIds: MutableSet<String>
+        clickedIds: MutableSet<String>,
+        visitedScreens: Set<String> = emptySet(),
+        elementToDestination: MutableMap<String, String> = mutableMapOf()
     ): Int {
         var clickCount = 0
         var consecutiveFailures = 0
         val maxConsecutiveFailures = developerSettings.getMaxConsecutiveClickFailures()
         val screenStartHash = frame.screenHash
 
+        // FIX (2025-12-07): Added per-screen exploration timeout to prevent infinite loops
+        // on screens with dynamic/loading content (Teams channels, social feeds)
+        val screenExplorationTimeout = 120_000L  // 2 minutes max per screen
+        val screenStartTime = System.currentTimeMillis()
+
+        // FIX (2025-12-07): Cap clicks at totalElements + buffer to prevent over-clicking loops
+        // Issue: Same screen re-entered via different navigation paths causes 260%+ click counts
+        // Solution: Hard cap based on registered element count with small buffer for dynamic content
+        val registeredProgress = clickTracker.getScreenProgress(screenStartHash)
+        val maxClicksForScreen = if (registeredProgress != null) {
+            registeredProgress.totalClickableElements + 2  // +2 buffer for dynamic elements
+        } else {
+            frame.elements.size + 2
+        }
+
         android.util.Log.i("ExplorationEngine-HybridCLite",
-            "🔄 Starting fresh-scrape exploration for screen ${screenStartHash.take(8)}...")
+            "🔄 Starting fresh-scrape exploration for screen ${screenStartHash.take(8)}... (max clicks: $maxClicksForScreen)")
 
         while (consecutiveFailures < maxConsecutiveFailures) {
+            // FIX (2025-12-07): Check click cap to prevent over-clicking
+            if (clickCount >= maxClicksForScreen) {
+                android.util.Log.i("ExplorationEngine-HybridCLite",
+                    "🛑 Click cap reached ($clickCount/$maxClicksForScreen) on ${screenStartHash.take(8)}... - preventing over-click loop")
+                break
+            }
+
+            // Check per-screen timeout
+            if (System.currentTimeMillis() - screenStartTime > screenExplorationTimeout) {
+                android.util.Log.w("ExplorationEngine-HybridCLite",
+                    "⏰ Per-screen exploration timeout (${screenExplorationTimeout/1000}s) reached on ${screenStartHash.take(8)}... " +
+                    "- clicked $clickCount elements before timeout")
+                break
+            }
             // Step 1: Fresh scrape - get current screen elements
             val rootNode = accessibilityService.rootInActiveWindow
             if (rootNode == null) {
@@ -1039,8 +1428,20 @@ class ExplorationEngine(
                 break
             }
 
-            // Fresh exploration
-            val freshExploration = screenExplorer.exploreScreen(rootNode, packageName, frame.depth)
+            // Fresh exploration (with timeout protection for scrollable containers)
+            // FIX (2025-12-07): Wrap exploreScreen in timeout to prevent hangs on infinite scrollables
+            val freshExploration = kotlinx.coroutines.withTimeoutOrNull(45_000L) {
+                screenExplorer.exploreScreen(rootNode, packageName, frame.depth)
+            }
+
+            if (freshExploration == null) {
+                android.util.Log.w("ExplorationEngine-HybridCLite",
+                    "⏰ Fresh scrape timeout (45s) - screen has complex scrollables. Continuing with visible elements only.")
+                consecutiveFailures++
+                delay(developerSettings.getScrollDelayMs())
+                continue
+            }
+
             if (freshExploration !is ScreenExplorationResult.Success) {
                 android.util.Log.w("ExplorationEngine-HybridCLite", "Fresh scrape failed")
                 consecutiveFailures++
@@ -1048,12 +1449,49 @@ class ExplorationEngine(
                 continue
             }
 
+            // PHASE 3 (2025-12-08): Track element detection
+            freshExploration.allElements.forEach { _ ->
+                metricsCollector.onElementDetected()
+            }
+
+            // DEBUG (2025-12-08): Fire debug callback with screen elements
+            debugCallback?.onScreenExplored(
+                elements = freshExploration.safeClickableElements,
+                screenHash = screenStartHash,
+                activityName = frame.screenState.activityName ?: "Unknown",
+                packageName = packageName,
+                parentScreenHash = frame.parentScreenHash
+            )
+
             // Step 2: Filter out clicked elements and sort by stability
             // FIX (2025-12-05): Sort dangerous buttons last to minimize early navigation
             // FIX (2025-12-05): SKIP critical dangerous elements entirely (exit, power off, etc.)
+            // FIX (2025-12-07): Skip elements that lead to already-fully-explored screens
             val unclickedElements = freshExploration.safeClickableElements
                 .filter { it.stableId() !in clickedIds }
-                .filter { !isCriticalDangerousElement(it) }  // NEVER click critical elements
+                .filter { element ->
+                    // PHASE 3 (2025-12-08): Track filtering for critical dangerous elements
+                    if (isCriticalDangerousElement(element)) {
+                        metricsCollector.onElementFiltered(element, "Critical dangerous element")
+                        false  // NEVER click critical elements
+                    } else {
+                        true
+                    }
+                }
+                .filter { element ->
+                    // Skip elements that we know lead to already-visited screens
+                    val elementKey = "${screenStartHash}:${element.stableId()}"
+                    val destinationScreen = elementToDestination[elementKey]
+                    if (destinationScreen != null && destinationScreen in visitedScreens) {
+                        // PHASE 3 (2025-12-08): Track filtering for already-visited destinations
+                        metricsCollector.onElementFiltered(element, "Leads to already-visited screen")
+                        android.util.Log.i("ExplorationEngine-HybridCLite",
+                            "🔄 Skipping '${element.text.ifEmpty { element.contentDescription }}' - leads to already-visited ${destinationScreen.take(8)}...")
+                        false
+                    } else {
+                        true
+                    }
+                }
                 .sortedWith(compareBy<com.augmentalis.voiceoscore.learnapp.models.ElementInfo> {
                     // Dangerous elements go last (higher = later)
                     if (isDangerousElement(it)) 1 else 0
@@ -1121,11 +1559,20 @@ class ExplorationEngine(
                 clickCount++
                 consecutiveFailures = 0
 
-                // Also update tracking systems if UUID available
+                // Also update tracking systems if VUID available
                 element.node?.let { node ->
-                    val uuid = thirdPartyGenerator.generateUuid(node, packageName)
-                    clickTracker.markElementClicked(frame.screenHash, uuid)
-                    checklistManager.markElementCompleted(frame.screenHash, uuid)
+                    val vuid = thirdPartyGenerator.generateUuid(node, packageName)
+
+                    // PHASE 3 (2025-12-08): Track VUID creation
+                    metricsCollector.onVUIDCreated()
+
+                    clickTracker.markElementClicked(frame.screenHash, vuid)
+                    checklistManager.markElementCompleted(frame.screenHash, vuid)
+                    // FIX (2025-12-08): Add to cumulative clicked tracking (class-level, survives intent relaunches)
+                    cumulativeClickedVuids.add(vuid)
+
+                    // DEBUG (2025-12-08): Fire clicked callback for debug overlay
+                    debugCallback?.onElementClicked(stableId, screenStartHash, vuid)
                 }
 
                 // Wait for UI to settle
@@ -1138,8 +1585,15 @@ class ExplorationEngine(
                         postClickRoot, packageName, frame.depth
                     )
                     if (postClickState.hash != screenStartHash) {
+                        // FIX (2025-12-07): Record element→destination mapping for loop prevention
+                        val elementKey = "${screenStartHash}:${stableId}"
+                        elementToDestination[elementKey] = postClickState.hash
+
+                        // DEBUG (2025-12-08): Fire navigation callback for debug overlay
+                        debugCallback?.onElementNavigated(elementKey, postClickState.hash)
+
                         android.util.Log.i("ExplorationEngine-HybridCLite",
-                            "📍 Screen changed from ${screenStartHash.take(8)}... to ${postClickState.hash.take(8)}...")
+                            "📍 Screen changed from ${screenStartHash.take(8)}... to ${postClickState.hash.take(8)}... (mapped: $elementKey)")
                         // Screen navigation detected - let caller handle it
                         break
                     }
@@ -1155,8 +1609,12 @@ class ExplorationEngine(
         }
 
         if (consecutiveFailures >= maxConsecutiveFailures) {
+            // Note: This sets a local flag but doesn't terminate the whole exploration
+            // It only stops exploring THIS screen. The main loop continues.
             android.util.Log.w("ExplorationEngine-HybridCLite",
-                "⚠️ Reached $maxConsecutiveFailures consecutive failures, stopping")
+                "⚠️ Reached $maxConsecutiveFailures consecutive failures, stopping screen exploration")
+            android.util.Log.w("ExplorationEngine-HybridCLite",
+                "🔍 SCREEN_TERMINATION: CONSECUTIVE_FAILURES on screen ${frame.screenHash.take(8)}...")
         }
 
         android.util.Log.i("ExplorationEngine-HybridCLite",
@@ -1349,7 +1807,13 @@ class ExplorationEngine(
             // Destructive account actions
             "delete account", "deactivate account", "remove account", "close account",
             // Factory/system reset
-            "factory reset", "wipe data", "erase all", "format"
+            "factory reset", "wipe data", "erase all", "format",
+            // CRITICAL: Call/meeting actions (2025-12-08) - NEVER initiate calls
+            "call", "make a call", "make call", "start call", "audio call", "video call",
+            "dial", "answer", "join call", "join meeting", "new meeting", "schedule meeting",
+            "instant meeting", "meet now", "call_control", "call_end", "calls_call",
+            // CRITICAL: Reply actions (2025-12-08) - can send messages
+            "reply"
         )
 
         val isCritical = criticalPatterns.any { pattern ->
@@ -1363,6 +1827,84 @@ class ExplorationEngine(
         }
 
         return isCritical
+    }
+
+    /**
+     * Get the reason why an element is critically dangerous (2025-12-08)
+     *
+     * @param element Element to check
+     * @return Reason string or null if not dangerous
+     */
+    private fun getCriticalDangerReason(element: com.augmentalis.voiceoscore.learnapp.models.ElementInfo): String? {
+        val text = element.text.lowercase()
+        val contentDesc = element.contentDescription.lowercase()
+        val resourceId = element.resourceId.lowercase()
+        val combinedText = "$text $contentDesc $resourceId"
+
+        // Critical patterns with their reasons
+        val criticalPatternsWithReasons = listOf(
+            // System power actions
+            "power off" to "Power off (CRITICAL)",
+            "poweroff" to "Power off (CRITICAL)",
+            "shut down" to "Shutdown (CRITICAL)",
+            "shutdown" to "Shutdown (CRITICAL)",
+            "restart" to "Restart (CRITICAL)",
+            "reboot" to "Reboot (CRITICAL)",
+            "sleep" to "Sleep (CRITICAL)",
+            "hibernate" to "Hibernate (CRITICAL)",
+            "turn off" to "Turn off (CRITICAL)",
+            // App termination
+            "exit" to "Exit (CRITICAL)",
+            "quit" to "Quit (CRITICAL)",
+            "close app" to "Close app (CRITICAL)",
+            "force stop" to "Force stop (CRITICAL)",
+            "force close" to "Force close (CRITICAL)",
+            // Session termination
+            "sign out" to "Sign out",
+            "signout" to "Sign out",
+            "log out" to "Log out",
+            "logout" to "Log out",
+            "sign-out" to "Sign out",
+            "log-out" to "Log out",
+            // Destructive account actions
+            "delete account" to "Delete account",
+            "deactivate account" to "Deactivate account",
+            "remove account" to "Remove account",
+            "close account" to "Close account",
+            // Factory/system reset
+            "factory reset" to "Factory reset (CRITICAL)",
+            "wipe data" to "Wipe data (CRITICAL)",
+            "erase all" to "Erase all (CRITICAL)",
+            "format" to "Format (CRITICAL)",
+            // Call/meeting actions
+            "call" to "Call (CRITICAL)",
+            "make a call" to "Make call (CRITICAL)",
+            "make call" to "Make call (CRITICAL)",
+            "start call" to "Start call (CRITICAL)",
+            "audio call" to "Audio call (CRITICAL)",
+            "video call" to "Video call (CRITICAL)",
+            "dial" to "Dial (CRITICAL)",
+            "answer" to "Answer (CRITICAL)",
+            "join call" to "Join call (CRITICAL)",
+            "join meeting" to "Join meeting (CRITICAL)",
+            "new meeting" to "New meeting (CRITICAL)",
+            "schedule meeting" to "Schedule meeting (CRITICAL)",
+            "instant meeting" to "Instant meeting (CRITICAL)",
+            "meet now" to "Meet now (CRITICAL)",
+            "call_control" to "Call control (CRITICAL)",
+            "call_end" to "End call (CRITICAL)",
+            "calls_call" to "Call item (CRITICAL)",
+            // Reply actions
+            "reply" to "Reply (sends message)"
+        )
+
+        for ((pattern, reason) in criticalPatternsWithReasons) {
+            if (combinedText.contains(pattern)) {
+                return reason
+            }
+        }
+
+        return null
     }
 
     /**
@@ -1393,7 +1935,7 @@ class ExplorationEngine(
         }
 
         // Check depth limit
-        if (depth > strategy.getMaxDepth()) {
+        if (depth > strategy.maxDepth) {
             return
         }
 
@@ -1506,6 +2048,11 @@ class ExplorationEngine(
                 val allElementsToRegister = explorationResult.allElements
                 val tempUuidMap = mutableMapOf<com.augmentalis.voiceoscore.learnapp.models.ElementInfo, String>()
 
+                // PHASE 3 (2025-12-08): Track element detection
+                allElementsToRegister.forEach { _ ->
+                    metricsCollector.onElementDetected()
+                }
+
                 if (developerSettings.isVerboseLoggingEnabled()) {
                     android.util.Log.d("ExplorationEngine-Perf",
                         "⚡ Click-Before-Register: Pre-generating UUIDs for ${allElementsToRegister.size} elements...")
@@ -1517,6 +2064,9 @@ class ExplorationEngine(
                         val uuid = thirdPartyGenerator.generateUuid(node, packageName)
                         element.uuid = uuid
                         tempUuidMap[element] = uuid
+
+                        // PHASE 3 (2025-12-08): Track VUID creation
+                        metricsCollector.onVUIDCreated()
                     }
                 }
                 val uuidGenElapsed = System.currentTimeMillis() - uuidGenStartTime
@@ -1598,6 +2148,9 @@ class ExplorationEngine(
 
                     // Check if should explore
                     if (!strategy.shouldExplore(element)) {
+                        // PHASE 3 (2025-12-08): Track strategy filtering
+                        metricsCollector.onElementFiltered(element, "Strategy rejected")
+
                         if (developerSettings.isVerboseLoggingEnabled()) {
                             android.util.Log.d("ExplorationEngine-Skip",
                                 "STRATEGY REJECTED: \"$elementDesc\" ($elementType) - UUID: ${element.uuid}")
@@ -1608,6 +2161,9 @@ class ExplorationEngine(
                     // Get UUID from temp map (pre-generated in Step 1)
                     val elementUuid = tempUuidMap[element]
                     if (elementUuid == null) {
+                        // PHASE 3 (2025-12-08): Track filtering for elements without UUID
+                        metricsCollector.onElementFiltered(element, "No UUID generated")
+
                         android.util.Log.w("ExplorationEngine-Skip",
                             "NO UUID: \"$elementDesc\" ($elementType) - Skipping")
                         continue
@@ -1674,6 +2230,8 @@ class ExplorationEngine(
                             }
 
                             clickTracker.markElementClicked(explorationResult.screenState.hash, elementUuid)
+                            // FIX (2025-12-08): Add to cumulative clicked tracking (class-level, survives intent relaunches)
+                            cumulativeClickedVuids.add(elementUuid)
                             delay(developerSettings.getScrollDelayMs())
                             continue
                         }
@@ -1723,8 +2281,10 @@ class ExplorationEngine(
                         }
                     }
 
-                    // Mark element as clicked in tracker (using temp UUID)
+                    // Mark element as clicked in tracker (using temp VUID)
                     clickTracker.markElementClicked(explorationResult.screenState.hash, elementUuid)
+                    // FIX (2025-12-08): Add to cumulative clicked tracking (class-level, survives intent relaunches)
+                    cumulativeClickedVuids.add(elementUuid)
 
                     // Log click success
                     if (developerSettings.isVerboseLoggingEnabled()) {
@@ -2119,17 +2679,41 @@ class ExplorationEngine(
      */
     private suspend fun registerElements(
         elements: List<com.augmentalis.voiceoscore.learnapp.models.ElementInfo>,
-        packageName: String
+        packageName: String,
+        registeredUuids: MutableSet<String>? = null
     ): List<String> {
         val startTime = System.currentTimeMillis()
 
+        // PHASE 3 (2025-12-08): Track element detection
+        elements.forEach { _ ->
+            metricsCollector.onElementDetected()
+        }
+
         // Step 1: Generate UUIDs and register elements (fast, no DB)
         val uuidElementMap = mutableMapOf<String, com.augmentalis.voiceoscore.learnapp.models.ElementInfo>()
+        var skippedCount = 0
 
         for (element in elements) {
             element.node?.let { node ->
+                // FIX (2025-12-07): Skip already-registered elements (ViewPager + scroll optimization)
+                val stableId = element.stableId()
+                if (registeredUuids != null && stableId in registeredUuids) {
+                    skippedCount++
+                    // PHASE 3 (2025-12-08): Track filtering for already-registered elements
+                    metricsCollector.onElementFiltered(element, "Already registered")
+                    // Still need to return UUID if element already has one
+                    element.uuid?.let { return@let }
+                    return@let
+                }
+
                 // Generate UUID
                 val uuid = thirdPartyGenerator.generateUuid(node, packageName)
+
+                // PHASE 3 (2025-12-08): Track VUID creation
+                metricsCollector.onVUIDCreated()
+
+                // Mark as registered
+                registeredUuids?.add(stableId)
 
                 // Create UUIDElement
                 val uuidElement = UUIDElement(
@@ -2217,7 +2801,7 @@ class ExplorationEngine(
         // Phase 3 (2025-12-04): Generate voice commands using LearnAppCore
         // NEW FEATURE: Exploration mode now generates voice commands (not just UUIDs)
         var commandCount = 0
-        if (learnAppCore != null) {
+        learnAppCore?.let { core ->
             try {
                 if (developerSettings.isVerboseLoggingEnabled()) {
                     android.util.Log.d("ExplorationEngine",
@@ -2226,7 +2810,7 @@ class ExplorationEngine(
 
                 for (element in elements) {
                     // Process element with BATCH mode (queues for batch insert)
-                    val result = learnAppCore.processElement(
+                    val result = core.processElement(
                         element = element,
                         packageName = packageName,
                         mode = ProcessingMode.BATCH  // Exploration uses BATCH mode
@@ -2242,7 +2826,7 @@ class ExplorationEngine(
                 }
 
                 // Flush batch to database (single transaction)
-                learnAppCore.flushBatch()
+                core.flushBatch()
 
                 android.util.Log.i("ExplorationEngine",
                     "Generated $commandCount voice commands via LearnAppCore")
@@ -2250,7 +2834,7 @@ class ExplorationEngine(
                 android.util.Log.e("ExplorationEngine",
                     "Voice command generation failed: ${commandError.message}", commandError)
             }
-        } else {
+        } ?: run {
             android.util.Log.w("ExplorationEngine",
                 "LearnAppCore not provided - voice commands will NOT be generated (legacy mode)")
         }
@@ -2260,7 +2844,13 @@ class ExplorationEngine(
         if (developerSettings.isVerboseLoggingEnabled()) {
             android.util.Log.d("ExplorationEngine-Perf",
                 "PERF: element_registration duration_ms=$elapsedMs elements=${elements.size} " +
-                "commands=$commandCount deduplications=$deduplicationCount rate=${if (elapsedMs > 0) elements.size * 1000 / elapsedMs else 0}/sec")
+                "skipped=$skippedCount commands=$commandCount deduplications=$deduplicationCount rate=${if (elapsedMs > 0) elements.size * 1000 / elapsedMs else 0}/sec")
+        }
+
+        // FIX (2025-12-07): Log when elements were skipped due to prior registration
+        if (skippedCount > 0) {
+            android.util.Log.i("ExplorationEngine",
+                "⏭️ Skipped $skippedCount already-registered elements (ViewPager/scroll optimization)")
         }
 
         return uuidElementMap.keys.toList()
@@ -2415,7 +3005,7 @@ class ExplorationEngine(
      */
     @Suppress("UNNECESSARY_SAFE_CALL")  // Element properties can be null at runtime despite type inference
     private suspend fun exploreWindow(
-        window: WindowManager.WindowInfo,
+        window: WindowInfo,
         packageName: String,
         depth: Int
     ) {
@@ -2883,7 +3473,7 @@ class ExplorationEngine(
             appName = packageName,
             screensExplored = stats.totalScreensVisited,
             estimatedTotalScreens = maxOf(20, stats.totalScreensDiscovered + 10),
-            elementsDiscovered = navigationGraphBuilder.getNodeCount(),
+            elementsDiscovered = if (::navigationGraphBuilder.isInitialized) navigationGraphBuilder.getNodeCount() else 0,
             currentDepth = depth,
             currentScreen = "Screen ${stats.totalScreensVisited}",
             elapsedTimeMs = elapsed
@@ -2893,6 +3483,13 @@ class ExplorationEngine(
             packageName = packageName,
             progress = progress
         )
+
+        // DEBUG (2025-12-08): Fire progress callback for debug overlay
+        val progressPercent = if (progress.estimatedTotalScreens > 0) {
+            ((progress.screensExplored.toFloat() / progress.estimatedTotalScreens) * 100).toInt()
+                .coerceIn(0, 100)
+        } else 0
+        debugCallback?.onProgressUpdated(progressPercent)
     }
 
     /**
@@ -2910,7 +3507,7 @@ class ExplorationEngine(
             appName = packageName,
             screensExplored = stats.totalScreensVisited,
             estimatedTotalScreens = maxOf(20, stats.totalScreensDiscovered + 10),
-            elementsDiscovered = navigationGraphBuilder.getNodeCount(),
+            elementsDiscovered = if (::navigationGraphBuilder.isInitialized) navigationGraphBuilder.getNodeCount() else 0,
             currentDepth = depth,
             currentScreen = "Screen ${stats.totalScreensVisited}",
             elapsedTimeMs = elapsed
@@ -2925,12 +3522,29 @@ class ExplorationEngine(
      */
     private suspend fun createExplorationStats(packageName: String): ExplorationStats {
         val stats = screenStateManager.getStats()
-        val graph = navigationGraphBuilder.build()
+        val graph = if (::navigationGraphBuilder.isInitialized) {
+            navigationGraphBuilder.build()
+        } else {
+            // Return empty graph if builder not initialized
+            android.util.Log.w("ExplorationEngine", "navigationGraphBuilder not initialized, using empty graph")
+            NavigationGraphBuilder(packageName).build()
+        }
         val graphStats = graph.getStats()
         val elapsed = System.currentTimeMillis() - startTimestamp
 
-        // Get actual completeness from click tracker
-        val clickStats = clickTracker.getStats()
+        // FIX (2025-12-08): Use cumulative tracking for completeness instead of clickTracker
+        // clickTracker may have been cleared during intent relaunches
+        //
+        // UPDATE (2025-12-08): Calculate blocked vs non-blocked for stats display
+        val statsNonBlockedCount = cumulativeDiscoveredVuids.size
+        val statsClickedCount = cumulativeClickedVuids.size
+        val statsBlockedCount = cumulativeBlockedVuids.size
+
+        val cumulativeCompleteness = if (statsNonBlockedCount > 0) {
+            (statsClickedCount.toFloat() / statsNonBlockedCount.toFloat()) * 100f
+        } else {
+            0f
+        }
 
         // Generate AI context from navigation graph
         try {
@@ -2973,7 +3587,11 @@ class ExplorationEngine(
             dangerousElementsSkipped = dangerousElementsSkipped,
             loginScreensDetected = loginScreensDetected,
             scrollableContainersFound = scrollableContainersFound,
-            completeness = clickStats.overallCompleteness  // FIX: Pass actual completeness percentage
+            completeness = cumulativeCompleteness,  // FIX (2025-12-08): Use cumulative tracking for accurate completeness
+            // UPDATE (2025-12-08): Blocked vs non-blocked tracking for stats display
+            clickedElements = statsClickedCount,
+            nonBlockedElements = statsNonBlockedCount,
+            blockedElements = statsBlockedCount
         )
     }
 
@@ -3017,6 +3635,10 @@ class ExplorationEngine(
     fun stopExploration() {
         val currentState = _explorationState.value
         if (currentState is ExplorationState.Running) {
+            // FIX C5-P1-9 (2025-12-22): Cancel exploration job explicitly
+            explorationJob?.cancel(kotlinx.coroutines.CancellationException("User stopped exploration"))
+            explorationJob = null
+
             // Cancel all running child coroutines
             scope.coroutineContext[kotlinx.coroutines.Job]?.cancelChildren()
 
@@ -3030,6 +3652,24 @@ class ExplorationEngine(
                         packageName = currentState.packageName,
                         stats = stats
                     )
+
+                    // PHASE 3 (2025-12-08): Generate and save VUID metrics
+                    try {
+                        val metrics = metricsCollector.buildMetrics(currentState.packageName)
+
+                        // Log final report
+                        android.util.Log.i("ExplorationEngine", "=== VUID CREATION METRICS ===")
+                        android.util.Log.i("ExplorationEngine", metrics.toReportString())
+
+                        // Save to database
+                        metricsRepository.saveMetrics(metrics)
+                        android.util.Log.d("ExplorationEngine", "Metrics saved to database")
+                    } catch (e: Exception) {
+                        android.util.Log.e("ExplorationEngine", "Failed to save metrics", e)
+                    }
+
+                    // Hide debug overlay
+                    debugOverlay.hide()
 
                     // Cleanup resources
                     cleanup()
@@ -3074,7 +3714,7 @@ class ExplorationEngine(
             // Persist pause state to database
             currentSessionId?.let { sessionId ->
                 try {
-                    repository.savePauseState(currentState.packageName, _pauseState.value)
+                    repository.savePauseState(currentState.packageName, _pauseState.value.name)
                     android.util.Log.i("ExplorationEngine", "✅ Pause state persisted to database")
                 } catch (e: Exception) {
                     android.util.Log.e("ExplorationEngine", "Failed to persist pause state", e)
@@ -3107,7 +3747,7 @@ class ExplorationEngine(
 
             // Persist resume state to database
             try {
-                repository.savePauseState(currentState.packageName, ExplorationPauseState.RUNNING)
+                repository.savePauseState(currentState.packageName, ExplorationPauseState.RUNNING.name)
                 android.util.Log.i("ExplorationEngine", "✅ Resume state persisted to database")
             } catch (e: Exception) {
                 android.util.Log.e("ExplorationEngine", "Failed to persist resume state", e)
@@ -3138,6 +3778,9 @@ class ExplorationEngine(
         if (developerSettings.isVerboseLoggingEnabled()) {
             android.util.Log.d("ExplorationEngine", "Cleaning up resources...")
         }
+
+        // PHASE 3 (2025-12-08): Hide debug overlay
+        debugOverlay.hide()
 
         // Clear screen state manager (releases AccessibilityNodeInfo references)
         screenStateManager.clear()

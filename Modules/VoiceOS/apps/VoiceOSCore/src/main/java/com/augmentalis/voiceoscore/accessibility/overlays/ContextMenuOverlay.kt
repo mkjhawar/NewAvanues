@@ -11,8 +11,10 @@ package com.augmentalis.voiceoscore.accessibility.overlays
 import android.content.Context
 import android.graphics.PixelFormat
 import android.graphics.Point
+import android.speech.tts.TextToSpeech
 import android.view.Gravity
 import android.view.WindowManager
+import java.util.Locale
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -23,6 +25,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,6 +37,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.augmentalis.voiceoscore.accessibility.ui.overlays.ComposeViewLifecycleOwner
 
 /**
  * Data class representing a menu item
@@ -63,12 +70,15 @@ class ContextMenuOverlay(
     private val windowManager: WindowManager
 ) {
     private var overlayView: ComposeView? = null
+    private var lifecycleOwner: ComposeViewLifecycleOwner? = null
     private var isShowing = false
+    private var tts: TextToSpeech? = null
+    private var highlightedItemState by mutableStateOf<String?>(null)
 
     // Mutable state for menu
-    private var itemsState = mutableStateOf<List<MenuItem>>(emptyList())
-    private var titleState = mutableStateOf<String?>(null)
-    private var positionState = mutableStateOf(Point(0, 0))
+    private var itemsState by mutableStateOf<List<MenuItem>>(emptyList())
+    private var titleState by mutableStateOf<String?>(null)
+    private var positionState by mutableStateOf(Point(0, 0))
 
     /**
      * Show menu at center of screen
@@ -92,21 +102,40 @@ class ContextMenuOverlay(
             overlayView = createOverlayView()
         }
 
-        itemsState.value = items
-        titleState.value = title
-        position?.let { positionState.value = it }
+        itemsState = items
+        titleState = title
+        position?.let { positionState = it }
 
         if (!isShowing) {
+            initTts()
             windowManager.addView(overlayView, createLayoutParams(position))
             isShowing = true
         }
+
+        val menuDescription = if (title != null) {
+            "$title menu opened with ${items.size} options"
+        } else {
+            "Menu opened with ${items.size} options"
+        }
+        announceForAccessibility(menuDescription)
     }
 
     /**
      * Update menu items without recreating overlay
      */
     fun updateItems(items: List<MenuItem>) {
-        itemsState.value = items
+        itemsState = items
+    }
+
+    /**
+     * Highlight menu item
+     */
+    fun highlightItem(id: String) {
+        highlightedItemState = id
+        val item = itemsState.find { it.id == id }
+        item?.let {
+            announceForAccessibility("${it.label} highlighted")
+        }
     }
 
     /**
@@ -116,8 +145,10 @@ class ContextMenuOverlay(
         overlayView?.let {
             if (isShowing) {
                 try {
+                    announceForAccessibility("Menu closed")
                     windowManager.removeView(it)
                     isShowing = false
+                    shutdownTts()
                 } catch (e: IllegalArgumentException) {
                     // View not attached, ignore
                 }
@@ -129,7 +160,7 @@ class ContextMenuOverlay(
      * Select item by ID
      */
     fun selectItemById(id: String): Boolean {
-        val item = itemsState.value.find { it.id == id && it.enabled }
+        val item = itemsState.find { it.id == id && it.enabled }
         return if (item != null) {
             item.action()
             true
@@ -142,7 +173,7 @@ class ContextMenuOverlay(
      * Select item by number (for voice commands)
      */
     fun selectItemByNumber(number: Int): Boolean {
-        val item = itemsState.value.find { it.number == number && it.enabled }
+        val item = itemsState.find { it.number == number && it.enabled }
         return if (item != null) {
             item.action()
             true
@@ -161,6 +192,9 @@ class ContextMenuOverlay(
      */
     fun dispose() {
         hide()
+        shutdownTts()
+        lifecycleOwner?.onDestroy()
+        lifecycleOwner = null
         overlayView = null
     }
 
@@ -168,15 +202,21 @@ class ContextMenuOverlay(
      * Create the compose view for the overlay
      */
     private fun createOverlayView(): ComposeView {
-        return ComposeView(context).apply {
-            setContent {
-                val items by remember { itemsState }
-                val title by remember { titleState }
+        val owner = ComposeViewLifecycleOwner().also {
+            lifecycleOwner = it
+            it.onCreate()
+        }
 
+        return ComposeView(context).apply {
+            setViewTreeLifecycleOwner(owner)
+            setViewTreeSavedStateRegistryOwner(owner)
+            setContent {
                 ContextMenuUI(
-                    items = items,
-                    title = title,
-                    onDismiss = { hide() }
+                    items = itemsState,
+                    title = titleState,
+                    highlightedItem = highlightedItemState,
+                    onDismiss = { hide() },
+                    onItemHighlight = { id -> highlightItem(id) }
                 )
             }
         }
@@ -205,6 +245,35 @@ class ContextMenuOverlay(
             }
         }
     }
+
+    /**
+     * Initialize Text-to-Speech
+     */
+    private fun initTts() {
+        if (tts == null) {
+            tts = TextToSpeech(context) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    tts?.language = Locale.getDefault()
+                }
+            }
+        }
+    }
+
+    /**
+     * Announce message for accessibility
+     */
+    private fun announceForAccessibility(message: String) {
+        tts?.speak(message, TextToSpeech.QUEUE_ADD, null, "accessibility_announcement")
+    }
+
+    /**
+     * Shutdown Text-to-Speech
+     */
+    private fun shutdownTts() {
+        tts?.stop()
+        tts?.shutdown()
+        tts = null
+    }
 }
 
 /**
@@ -214,7 +283,9 @@ class ContextMenuOverlay(
 private fun ContextMenuUI(
     items: List<MenuItem>,
     title: String?,
-    onDismiss: () -> Unit
+    highlightedItem: String?,
+    onDismiss: () -> Unit,
+    onItemHighlight: (String) -> Unit
 ) {
     AnimatedVisibility(
         visible = items.isNotEmpty(),
@@ -244,7 +315,10 @@ private fun ContextMenuUI(
 
                 // Menu items
                 items.forEach { item ->
-                    ContextMenuItemUI(item = item)
+                    ContextMenuItemUI(
+                        item = item,
+                        isHighlighted = item.id == highlightedItem
+                    )
                 }
 
                 // Voice instruction
@@ -280,13 +354,17 @@ private fun MenuTitle(title: String) {
  * Individual context menu item
  */
 @Composable
-private fun ContextMenuItemUI(item: MenuItem) {
+private fun ContextMenuItemUI(
+    item: MenuItem,
+    isHighlighted: Boolean = false
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = item.enabled) { item.action() }
             .background(
-                if (!item.enabled) Color.Transparent
+                if (isHighlighted) Color(0xFF2196F3).copy(alpha = 0.2f)
+                else if (!item.enabled) Color.Transparent
                 else Color.Transparent
             )
             .padding(horizontal = 16.dp, vertical = 12.dp),

@@ -6,15 +6,30 @@
  * Code-Reviewed-By: CCA
  * Created: 2025-10-09
  * Modified: 2025-10-18 (Phase 3: State-aware command generation)
+ * Modified: 2025-12-18 (Room → SQLDelight migration)
  */
 package com.augmentalis.voiceoscore.scraping
 
 import android.content.Context
-import com.augmentalis.voiceoscore.database.VoiceOSAppDatabase
-import com.augmentalis.voiceoscore.scraping.entities.GeneratedCommandEntity
-import com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity
-import com.augmentalis.voiceoscore.scraping.entities.StateType
+import com.augmentalis.database.dto.GeneratedCommandDTO
+import com.augmentalis.database.dto.ScrapedElementDTO
+import com.augmentalis.database.ElementStateHistoryQueries
+import com.augmentalis.database.stats.UserInteractionQueries
 import org.json.JSONArray
+
+/**
+ * State type constants for element state tracking
+ */
+object StateType {
+    const val ENABLED = "ENABLED"
+    const val DISABLED = "DISABLED"
+    const val CHECKED = "CHECKED"
+    const val UNCHECKED = "UNCHECKED"
+    const val SELECTED = "SELECTED"
+    const val UNSELECTED = "UNSELECTED"
+    const val EXPANDED = "EXPANDED"
+    const val COLLAPSED = "COLLAPSED"
+}
 
 /**
  * Command Generator
@@ -35,10 +50,11 @@ import org.json.JSONArray
  * - Synonyms: ["tap submit", "press submit", "send", "submit button"]
  * - Confidence: 0.95 (high - clear text label)
  */
-class CommandGenerator(private val context: Context) {
-
-    // CoT: Use unified database (migrated from AppScrapingDatabase)
-    private val database: VoiceOSAppDatabase = VoiceOSAppDatabase.getInstance(context)
+class CommandGenerator(
+    private val context: Context,
+    private val elementStateHistoryQueries: ElementStateHistoryQueries,
+    private val userInteractionQueries: UserInteractionQueries
+) {
 
     companion object {
         private const val TAG = "CommandGenerator"
@@ -75,33 +91,33 @@ class CommandGenerator(private val context: Context) {
     /**
      * Generate commands for a scraped element
      *
-     * @param element ScrapedElementEntity to generate commands for
+     * @param element ScrapedElementDTO to generate commands for
      * @return List of generated commands (may be empty if element has no actionable text)
      */
-    suspend fun generateCommands(element: ScrapedElementEntity): List<GeneratedCommandEntity> {
-        val commands = mutableListOf<GeneratedCommandEntity>()
+    suspend fun generateCommands(element: ScrapedElementDTO): List<GeneratedCommandDTO> {
+        val commands = mutableListOf<GeneratedCommandDTO>()
 
         // Extract meaningful text from element
         val elementText = extractElementText(element) ?: return emptyList()
 
         // Generate commands based on element capabilities
-        if (element.isClickable) {
+        if (element.isClickable != 0L) {
             commands.addAll(generateClickCommands(element, elementText))
         }
 
-        if (element.isLongClickable) {
+        if (element.isLongClickable != 0L) {
             commands.addAll(generateLongClickCommands(element, elementText))
         }
 
-        if (element.isEditable) {
+        if (element.isEditable != 0L) {
             commands.addAll(generateInputCommands(element, elementText))
         }
 
-        if (element.isScrollable) {
+        if (element.isScrollable != 0L) {
             commands.addAll(generateScrollCommands(element, elementText))
         }
 
-        if (element.isFocusable && !element.isClickable) {
+        if (element.isFocusable != 0L && element.isClickable == 0L) {
             commands.addAll(generateFocusCommands(element, elementText))
         }
 
@@ -114,29 +130,37 @@ class CommandGenerator(private val context: Context) {
      *
      * Priority: text > contentDescription > viewId
      */
-    private fun extractElementText(element: ScrapedElementEntity): String? {
-        return when {
-            !element.text.isNullOrBlank() -> element.text.trim()
-            !element.contentDescription.isNullOrBlank() -> element.contentDescription.trim()
-            !element.viewIdResourceName.isNullOrBlank() -> {
-                // Extract readable part from view ID (e.g., "submit_button" from "com.example:id/submit_button")
-                element.viewIdResourceName
-                    .substringAfterLast('/')
-                    .replace('_', ' ')
-                    .trim()
-            }
-            else -> null
+    private fun extractElementText(element: ScrapedElementDTO): String? {
+        val text = element.text
+        if (!text.isNullOrBlank()) {
+            return text.trim()
         }
+
+        val contentDesc = element.contentDescription
+        if (!contentDesc.isNullOrBlank()) {
+            return contentDesc.trim()
+        }
+
+        val viewId = element.viewIdResourceName
+        if (!viewId.isNullOrBlank()) {
+            // Extract readable part from view ID (e.g., "submit_button" from "com.example:id/submit_button")
+            return viewId
+                .substringAfterLast('/')
+                .replace('_', ' ')
+                .trim()
+        }
+
+        return null
     }
 
     /**
      * Generate click commands
      */
     private fun generateClickCommands(
-        element: ScrapedElementEntity,
+        element: ScrapedElementDTO,
         text: String
-    ): List<GeneratedCommandEntity> {
-        val commands = mutableListOf<GeneratedCommandEntity>()
+    ): List<GeneratedCommandDTO> {
+        val commands = mutableListOf<GeneratedCommandDTO>()
         val normalizedText = text.lowercase().trim()
 
         // Calculate confidence based on text quality
@@ -147,12 +171,18 @@ class CommandGenerator(private val context: Context) {
         val synonyms = generateClickSynonyms(normalizedText)
 
         commands.add(
-            GeneratedCommandEntity(
+            GeneratedCommandDTO(
+                id = 0, // Will be assigned by database
                 elementHash = element.elementHash,
                 commandText = primaryCommand,
                 actionType = "click",
-                confidence = confidence,
-                synonyms = JSONArray(synonyms).toString()
+                confidence = confidence.toDouble(),
+                synonyms = JSONArray(synonyms).toString(),
+                isUserApproved = 0,
+                usageCount = 0,
+                lastUsed = null,
+                createdAt = System.currentTimeMillis(),
+                appId = element.appId
             )
         )
 
@@ -163,10 +193,10 @@ class CommandGenerator(private val context: Context) {
      * Generate long click commands
      */
     private fun generateLongClickCommands(
-        element: ScrapedElementEntity,
+        element: ScrapedElementDTO,
         text: String
-    ): List<GeneratedCommandEntity> {
-        val commands = mutableListOf<GeneratedCommandEntity>()
+    ): List<GeneratedCommandDTO> {
+        val commands = mutableListOf<GeneratedCommandDTO>()
         val normalizedText = text.lowercase().trim()
         val confidence = calculateConfidence(text, element) * 0.9f // Slightly lower confidence
 
@@ -174,12 +204,18 @@ class CommandGenerator(private val context: Context) {
         val synonyms = LONG_CLICK_VERBS.map { "$it $normalizedText" }
 
         commands.add(
-            GeneratedCommandEntity(
+            GeneratedCommandDTO(
+                id = 0,
                 elementHash = element.elementHash,
                 commandText = primaryCommand,
                 actionType = "long_click",
-                confidence = confidence,
-                synonyms = JSONArray(synonyms).toString()
+                confidence = confidence.toDouble(),
+                synonyms = JSONArray(synonyms).toString(),
+                isUserApproved = 0,
+                usageCount = 0,
+                lastUsed = null,
+                createdAt = System.currentTimeMillis(),
+                appId = element.appId
             )
         )
 
@@ -190,10 +226,10 @@ class CommandGenerator(private val context: Context) {
      * Generate input commands for editable fields
      */
     private fun generateInputCommands(
-        element: ScrapedElementEntity,
+        element: ScrapedElementDTO,
         text: String
-    ): List<GeneratedCommandEntity> {
-        val commands = mutableListOf<GeneratedCommandEntity>()
+    ): List<GeneratedCommandDTO> {
+        val commands = mutableListOf<GeneratedCommandDTO>()
         val normalizedText = text.lowercase().trim()
         val confidence = calculateConfidence(text, element)
 
@@ -201,12 +237,18 @@ class CommandGenerator(private val context: Context) {
         val synonyms = INPUT_VERBS.map { "$it $normalizedText" }
 
         commands.add(
-            GeneratedCommandEntity(
+            GeneratedCommandDTO(
+                id = 0,
                 elementHash = element.elementHash,
                 commandText = primaryCommand,
                 actionType = "type",
-                confidence = confidence,
-                synonyms = JSONArray(synonyms).toString()
+                confidence = confidence.toDouble(),
+                synonyms = JSONArray(synonyms).toString(),
+                isUserApproved = 0,
+                usageCount = 0,
+                lastUsed = null,
+                createdAt = System.currentTimeMillis(),
+                appId = element.appId
             )
         )
 
@@ -217,10 +259,10 @@ class CommandGenerator(private val context: Context) {
      * Generate scroll commands
      */
     private fun generateScrollCommands(
-        element: ScrapedElementEntity,
+        element: ScrapedElementDTO,
         text: String
-    ): List<GeneratedCommandEntity> {
-        val commands = mutableListOf<GeneratedCommandEntity>()
+    ): List<GeneratedCommandDTO> {
+        val commands = mutableListOf<GeneratedCommandDTO>()
         val normalizedText = text.lowercase().trim()
         val confidence = calculateConfidence(text, element) * 0.8f
 
@@ -229,12 +271,18 @@ class CommandGenerator(private val context: Context) {
         val synonyms = SCROLL_VERBS.map { "$it $normalizedText" }
 
         commands.add(
-            GeneratedCommandEntity(
+            GeneratedCommandDTO(
+                id = 0,
                 elementHash = element.elementHash,
                 commandText = primaryCommand,
                 actionType = "scroll",
-                confidence = confidence,
-                synonyms = JSONArray(synonyms).toString()
+                confidence = confidence.toDouble(),
+                synonyms = JSONArray(synonyms).toString(),
+                isUserApproved = 0,
+                usageCount = 0,
+                lastUsed = null,
+                createdAt = System.currentTimeMillis(),
+                appId = element.appId
             )
         )
 
@@ -245,10 +293,10 @@ class CommandGenerator(private val context: Context) {
      * Generate focus commands
      */
     private fun generateFocusCommands(
-        element: ScrapedElementEntity,
+        element: ScrapedElementDTO,
         text: String
-    ): List<GeneratedCommandEntity> {
-        val commands = mutableListOf<GeneratedCommandEntity>()
+    ): List<GeneratedCommandDTO> {
+        val commands = mutableListOf<GeneratedCommandDTO>()
         val normalizedText = text.lowercase().trim()
         val confidence = calculateConfidence(text, element) * 0.7f
 
@@ -256,12 +304,18 @@ class CommandGenerator(private val context: Context) {
         val synonyms = FOCUS_VERBS.map { "$it $normalizedText" }
 
         commands.add(
-            GeneratedCommandEntity(
+            GeneratedCommandDTO(
+                id = 0,
                 elementHash = element.elementHash,
                 commandText = primaryCommand,
                 actionType = "focus",
-                confidence = confidence,
-                synonyms = JSONArray(synonyms).toString()
+                confidence = confidence.toDouble(),
+                synonyms = JSONArray(synonyms).toString(),
+                isUserApproved = 0,
+                usageCount = 0,
+                lastUsed = null,
+                createdAt = System.currentTimeMillis(),
+                appId = element.appId
             )
         )
 
@@ -307,14 +361,17 @@ class CommandGenerator(private val context: Context) {
      *
      * @return Confidence score between 0.0 and 1.0
      */
-    private fun calculateConfidence(text: String, element: ScrapedElementEntity): Float {
+    private fun calculateConfidence(text: String, element: ScrapedElementDTO): Float {
         var confidence = 0.5f // Base confidence
 
         // Text source bonus
+        val elementText = element.text
+        val contentDesc = element.contentDescription
+        val viewId = element.viewIdResourceName
         when {
-            !element.text.isNullOrBlank() -> confidence += 0.3f // Direct text label
-            !element.contentDescription.isNullOrBlank() -> confidence += 0.2f // Content description
-            !element.viewIdResourceName.isNullOrBlank() -> confidence += 0.1f // View ID fallback
+            !elementText.isNullOrBlank() -> confidence += 0.3f // Direct text label
+            !contentDesc.isNullOrBlank() -> confidence += 0.2f // Content description
+            !viewId.isNullOrBlank() -> confidence += 0.1f // View ID fallback
         }
 
         // Text length bonus (normalized)
@@ -333,7 +390,7 @@ class CommandGenerator(private val context: Context) {
             className.contains("button") -> 0.2f
             className.contains("imagebutton") -> 0.15f
             className.contains("edittext") -> 0.15f
-            className.contains("textview") && element.isClickable -> 0.1f
+            className.contains("textview") && element.isClickable != 0L -> 0.1f
             else -> 0.0f
         }
         confidence += typeBonus
@@ -351,7 +408,7 @@ class CommandGenerator(private val context: Context) {
     /**
      * Batch generate commands for multiple elements
      */
-    suspend fun generateCommandsForElements(elements: List<ScrapedElementEntity>): List<GeneratedCommandEntity> {
+    suspend fun generateCommandsForElements(elements: List<ScrapedElementDTO>): List<GeneratedCommandDTO> {
         return elements.flatMap { element ->
             generateCommands(element)
         }
@@ -371,20 +428,22 @@ class CommandGenerator(private val context: Context) {
      * - Expandable item collapsed → generates "expand [text]"
      * - Expandable item expanded → generates "collapse [text]"
      *
-     * @param element ScrapedElementEntity to generate commands for
+     * @param element ScrapedElementDTO to generate commands for
      * @return List of state-aware generated commands
      */
-    suspend fun generateStateAwareCommands(element: ScrapedElementEntity): List<GeneratedCommandEntity> {
-        val commands = mutableListOf<GeneratedCommandEntity>()
+    suspend fun generateStateAwareCommands(element: ScrapedElementDTO): List<GeneratedCommandDTO> {
+        val commands = mutableListOf<GeneratedCommandDTO>()
 
         // Extract meaningful text from element
         val elementText = extractElementText(element) ?: return emptyList()
         val normalizedText = elementText.lowercase().trim()
 
         // Check for checkable elements (checkboxes, radio buttons, toggle switches)
-        if (element.isCheckable) {
-            val currentState = database.databaseManager.elementStateHistory
+        if (element.isCheckable != 0L) {
+            val currentState = elementStateHistoryQueries
                 .getCurrentState(element.elementHash, StateType.CHECKED)
+                .executeAsOneOrNull()
+
             val isChecked = currentState?.newValue?.toBoolean() ?: false
 
             commands.addAll(
@@ -396,8 +455,10 @@ class CommandGenerator(private val context: Context) {
         if (element.className.contains("ExpandableListView") ||
             element.className.contains("Expandable")) {
 
-            val currentState = database.databaseManager.elementStateHistory
+            val currentState = elementStateHistoryQueries
                 .getCurrentState(element.elementHash, StateType.EXPANDED)
+                .executeAsOneOrNull()
+
             val isExpanded = currentState?.newValue?.toBoolean() ?: false
 
             commands.addAll(
@@ -406,8 +467,10 @@ class CommandGenerator(private val context: Context) {
         }
 
         // Check for selectable elements
-        val selectableState = database.databaseManager.elementStateHistory
+        val selectableState = elementStateHistoryQueries
             .getCurrentState(element.elementHash, StateType.SELECTED)
+            .executeAsOneOrNull()
+
         if (selectableState != null) {
             val isSelected = selectableState.newValue?.toBoolean() ?: false
             commands.addAll(
@@ -428,43 +491,55 @@ class CommandGenerator(private val context: Context) {
      * @return List of generated commands
      */
     private fun generateCheckableCommands(
-        element: ScrapedElementEntity,
+        element: ScrapedElementDTO,
         text: String,
         isChecked: Boolean
-    ): List<GeneratedCommandEntity> {
-        val commands = mutableListOf<GeneratedCommandEntity>()
+    ): List<GeneratedCommandDTO> {
+        val commands = mutableListOf<GeneratedCommandDTO>()
         val confidence = calculateConfidence(text, element)
 
         if (isChecked) {
             // Element is checked → generate "uncheck" commands
             commands.add(
-                GeneratedCommandEntity(
+                GeneratedCommandDTO(
+                    id = 0,
                     elementHash = element.elementHash,
                     commandText = "uncheck $text",
                     actionType = "click",
-                    confidence = confidence,
+                    confidence = confidence.toDouble(),
                     synonyms = JSONArray(listOf(
                         "untick $text",
                         "deselect $text",
                         "turn off $text",
                         "disable $text"
-                    )).toString()
+                    )).toString(),
+                    isUserApproved = 0,
+                    usageCount = 0,
+                    lastUsed = null,
+                    createdAt = System.currentTimeMillis(),
+                    appId = element.appId
                 )
             )
         } else {
             // Element is unchecked → generate "check" commands
             commands.add(
-                GeneratedCommandEntity(
+                GeneratedCommandDTO(
+                    id = 0,
                     elementHash = element.elementHash,
                     commandText = "check $text",
                     actionType = "click",
-                    confidence = confidence,
+                    confidence = confidence.toDouble(),
                     synonyms = JSONArray(listOf(
                         "tick $text",
                         "select $text",
                         "turn on $text",
                         "enable $text"
-                    )).toString()
+                    )).toString(),
+                    isUserApproved = 0,
+                    usageCount = 0,
+                    lastUsed = null,
+                    createdAt = System.currentTimeMillis(),
+                    appId = element.appId
                 )
             )
         }
@@ -481,43 +556,55 @@ class CommandGenerator(private val context: Context) {
      * @return List of generated commands
      */
     private fun generateExpandableCommands(
-        element: ScrapedElementEntity,
+        element: ScrapedElementDTO,
         text: String,
         isExpanded: Boolean
-    ): List<GeneratedCommandEntity> {
-        val commands = mutableListOf<GeneratedCommandEntity>()
+    ): List<GeneratedCommandDTO> {
+        val commands = mutableListOf<GeneratedCommandDTO>()
         val confidence = calculateConfidence(text, element)
 
         if (isExpanded) {
             // Element is expanded → generate "collapse" commands
             commands.add(
-                GeneratedCommandEntity(
+                GeneratedCommandDTO(
+                    id = 0,
                     elementHash = element.elementHash,
                     commandText = "collapse $text",
                     actionType = "click",
-                    confidence = confidence,
+                    confidence = confidence.toDouble(),
                     synonyms = JSONArray(listOf(
                         "close $text",
                         "fold $text",
                         "minimize $text",
                         "hide $text"
-                    )).toString()
+                    )).toString(),
+                    isUserApproved = 0,
+                    usageCount = 0,
+                    lastUsed = null,
+                    createdAt = System.currentTimeMillis(),
+                    appId = element.appId
                 )
             )
         } else {
             // Element is collapsed → generate "expand" commands
             commands.add(
-                GeneratedCommandEntity(
+                GeneratedCommandDTO(
+                    id = 0,
                     elementHash = element.elementHash,
                     commandText = "expand $text",
                     actionType = "click",
-                    confidence = confidence,
+                    confidence = confidence.toDouble(),
                     synonyms = JSONArray(listOf(
                         "open $text",
                         "unfold $text",
                         "show $text",
                         "reveal $text"
-                    )).toString()
+                    )).toString(),
+                    isUserApproved = 0,
+                    usageCount = 0,
+                    lastUsed = null,
+                    createdAt = System.currentTimeMillis(),
+                    appId = element.appId
                 )
             )
         }
@@ -534,39 +621,51 @@ class CommandGenerator(private val context: Context) {
      * @return List of generated commands
      */
     private fun generateSelectableCommands(
-        element: ScrapedElementEntity,
+        element: ScrapedElementDTO,
         text: String,
         isSelected: Boolean
-    ): List<GeneratedCommandEntity> {
-        val commands = mutableListOf<GeneratedCommandEntity>()
+    ): List<GeneratedCommandDTO> {
+        val commands = mutableListOf<GeneratedCommandDTO>()
         val confidence = calculateConfidence(text, element)
 
         if (isSelected) {
             // Element is selected → generate "deselect" commands
             commands.add(
-                GeneratedCommandEntity(
+                GeneratedCommandDTO(
+                    id = 0,
                     elementHash = element.elementHash,
                     commandText = "deselect $text",
                     actionType = "click",
-                    confidence = confidence,
+                    confidence = confidence.toDouble(),
                     synonyms = JSONArray(listOf(
                         "unselect $text",
                         "clear selection $text"
-                    )).toString()
+                    )).toString(),
+                    isUserApproved = 0,
+                    usageCount = 0,
+                    lastUsed = null,
+                    createdAt = System.currentTimeMillis(),
+                    appId = element.appId
                 )
             )
         } else {
             // Element is not selected → generate "select" commands
             commands.add(
-                GeneratedCommandEntity(
+                GeneratedCommandDTO(
+                    id = 0,
                     elementHash = element.elementHash,
                     commandText = "select $text",
                     actionType = "click",
-                    confidence = confidence,
+                    confidence = confidence.toDouble(),
                     synonyms = JSONArray(listOf(
                         "choose $text",
                         "pick $text"
-                    )).toString()
+                    )).toString(),
+                    isUserApproved = 0,
+                    usageCount = 0,
+                    lastUsed = null,
+                    createdAt = System.currentTimeMillis(),
+                    appId = element.appId
                 )
             )
         }
@@ -580,20 +679,23 @@ class CommandGenerator(private val context: Context) {
      * Boosts confidence for frequently interacted elements and adjusts based on
      * success/failure ratio from interaction history.
      *
-     * @param element ScrapedElementEntity to generate commands for
+     * @param element ScrapedElementDTO to generate commands for
      * @return List of generated commands with adjusted confidence scores
      */
-    suspend fun generateInteractionWeightedCommands(element: ScrapedElementEntity): List<GeneratedCommandEntity> {
+    suspend fun generateInteractionWeightedCommands(element: ScrapedElementDTO): List<GeneratedCommandDTO> {
         // Generate base commands
         val baseCommands = generateCommands(element)
 
         // Get interaction count for this element
-        val interactionCount = database.databaseManager.userInteractions
+        val interactionCount = userInteractionQueries
             .getInteractionCount(element.elementHash)
+            .executeAsOne()
+            .toInt()
 
-        // Get success/failure ratio
-        val ratio = database.databaseManager.userInteractions
+        // Get success/failure ratio (currently returns 1.0 as default since we don't track success/failure)
+        val successRatio = userInteractionQueries
             .getSuccessFailureRatio(element.elementHash)
+            .executeAsOneOrNull()
 
         // Calculate confidence boost based on interaction frequency
         val frequencyBoost = when {
@@ -604,12 +706,9 @@ class CommandGenerator(private val context: Context) {
             else -> 0.0f                     // Rarely/never used
         }
 
-        // Calculate success rate penalty/boost
-        val successRate = if (ratio != null && (ratio.successful + ratio.failed) > 0) {
-            ratio.successful.toFloat() / (ratio.successful + ratio.failed)
-        } else {
-            1.0f  // No data = assume 100% success
-        }
+        // For now, we don't track success/failure, so assume 100% success rate
+        // TODO: Add success/failure tracking to UserInteraction table
+        val successRate = successRatio?.toFloat() ?: 1.0f
 
         val successBoost = when {
             successRate >= 0.9f -> 0.05f     // Very reliable
@@ -623,7 +722,7 @@ class CommandGenerator(private val context: Context) {
         // Apply confidence boost to all commands
         return baseCommands.map { command ->
             command.copy(
-                confidence = (command.confidence + totalBoost).coerceIn(0.0f, 1.0f)
+                confidence = (command.confidence + totalBoost).coerceIn(0.0, 1.0)
             )
         }
     }
