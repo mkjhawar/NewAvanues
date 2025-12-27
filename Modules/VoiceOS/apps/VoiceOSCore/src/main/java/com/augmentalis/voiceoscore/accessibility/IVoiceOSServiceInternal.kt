@@ -1,377 +1,162 @@
 /**
- * IVoiceOSServiceInternal.kt - Internal service interface for component coordination
+ * IVoiceOSServiceInternal.kt - Internal interface for VoiceOSService implementations
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
- * Created: 2025-12-16
- * Updated: 2025-12-22
+ * Created: 2025-10-15
  *
- * Purpose: Internal API for service components (managers, handlers) to coordinate with VoiceOSService
- * Provides access to internal service functionality not exposed in public API
+ * RENAMED (2025-12-01): Was IVoiceOSService.kt - renamed to avoid collision with
+ * IVoiceOSService.aidl which generates a Java interface with the same fully-qualified name.
+ * The AIDL interface is for IPC (cross-process), this interface is for internal use.
  *
- * VOS4 Exception: Interface justified for internal component coordination
- * - Separates internal coordination contract from public API
- * - Enables testing of internal components with mock service
- * - Maintains clear boundaries between public and internal APIs
+ * This interface defines the contract that all VoiceOSService implementations must follow.
+ * Used by the wrapper pattern to support both legacy and refactored implementations.
  */
 package com.augmentalis.voiceoscore.accessibility
 
 import android.accessibilityservice.AccessibilityService
-import android.content.Context
-import android.view.WindowManager
-import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.commandmanager.CommandManager
-import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine
-import com.augmentalis.voiceoscore.accessibility.managers.ActionCoordinator
-import com.augmentalis.voiceoscore.accessibility.managers.DatabaseManager
-import com.augmentalis.voiceoscore.accessibility.managers.IPCManager
-import com.augmentalis.voiceoscore.accessibility.overlays.OverlayManager
-import com.augmentalis.voiceoscore.accessibility.recognition.VoiceRecognitionManager
-import com.augmentalis.voiceoscore.accessibility.speech.SpeechEngineManager
-import kotlinx.coroutines.CoroutineScope
+import android.view.accessibility.AccessibilityEvent
+import com.augmentalis.voiceos.cursor.core.CursorOffset
 
 /**
- * Internal interface for VoiceOS service component coordination
+ * Internal interface for VoiceOSService implementations
  *
- * Used by internal service components:
- * - Managers (DatabaseManager, IPCManager, etc.)
- * - Handlers (ActionHandler implementations)
- * - Recognition and speech engines
- * - Overlay components
- * - Integration components (LearnAppIntegration, JustInTimeLearner)
+ * Defines the public API that must be supported by both legacy and refactored
+ * implementations. This enables the wrapper to transparently switch between
+ * implementations while maintaining functional equivalence.
  *
- * NOT intended for external use - see IVoiceOSService for public API
+ * NOTE: This is separate from IVoiceOSService.aidl which is for IPC.
  *
- * Extends IVoiceOSContext to inherit context access methods
- *
- * Implementation: VoiceOSService
+ * Method Categories:
+ * 1. Service Lifecycle: onCreate, onServiceConnected, onDestroy
+ * 2. Accessibility Events: onAccessibilityEvent, onInterrupt
+ * 3. Cursor Control: showCursor, hideCursor, toggleCursor, centerCursor, clickCursor
+ * 4. State Queries: isServiceRunning, getCursorPosition, isCursorVisible
+ * 5. Command Handling: executeCommand (static), onNewCommandsGenerated
+ * 6. Fallback Management: enableFallbackMode
  */
-interface IVoiceOSServiceInternal : IVoiceOSContext {
+interface IVoiceOSServiceInternal {
 
     /**
-     * Service context and resources
+     * Called when the service is first created
+     * Must initialize all core components
      */
+    fun onCreate()
 
     /**
-     * Get application context
-     * @return Application context
+     * Called when the service is connected to the accessibility framework
+     * Must configure service info and start component initialization
      */
-    fun getApplicationContext(): Context
-
-    // Note: getAccessibilityService() and getWindowManager() are inherited from IVoiceOSContext as properties
-    // The property getters satisfy these method requirements
+    fun onServiceConnected()
 
     /**
-     * Get service coroutine scope
-     * Primary scope for service operations (Dispatchers.Default)
-     * @return Service-level CoroutineScope
+     * Called when an accessibility event occurs
+     * @param event The accessibility event to process
      */
-    fun getServiceScope(): CoroutineScope
+    fun onAccessibilityEvent(event: AccessibilityEvent?)
 
     /**
-     * Get command processing scope
-     * Dedicated scope for I/O-heavy command operations (Dispatchers.IO)
-     * @return Command processing CoroutineScope
+     * Called when the service is interrupted
      */
-    fun getCommandScope(): CoroutineScope
+    fun onInterrupt()
 
     /**
-     * Core service components
+     * Called when the service is destroyed
+     * Must cleanup all resources and cancel coroutines
      */
+    fun onDestroy()
 
     /**
-     * Get command manager
-     * Manages command registration and lookup
-     * @return CommandManager instance
+     * Show the voice cursor overlay
+     * @return true if successful, false otherwise
      */
-    fun getCommandManager(): CommandManager
+    fun showCursor(): Boolean
 
     /**
-     * Get database manager
-     * Handles all database operations
-     * @return DatabaseManager instance
-     *
-     * Overrides IDatabaseContext.getDatabaseManager()
+     * Hide the voice cursor overlay
+     * @return true if successful, false otherwise
      */
-    override fun getDatabaseManager(): DatabaseManager
+    fun hideCursor(): Boolean
 
     /**
-     * Get IPC manager
-     * Handles inter-process communication
-     * @return IPCManager instance
+     * Toggle cursor visibility
+     * @return true if successful, false otherwise
      */
-    fun getIPCManager(): IPCManager
+    fun toggleCursor(): Boolean
 
     /**
-     * Speech engine manager
-     * Manages TTS and speech synthesis
+     * Center cursor on screen
+     * @return true if successful, false otherwise
      */
-    val speechEngineManager: SpeechEngineManager
+    fun centerCursor(): Boolean
 
     /**
-     * Voice recognition manager
-     * Manages voice input and recognition (may be null)
+     * Perform click at current cursor position
+     * @return true if successful, false otherwise
      */
-    val voiceRecognitionManager: VoiceRecognitionManager?
+    fun clickCursor(): Boolean
 
     /**
-     * UI scraping engine
-     * Extracts UI elements from accessibility tree
+     * Get current cursor position
+     * @return CursorOffset with current X,Y coordinates
      */
-    val uiScrapingEngine: UIScrapingEngine
+    fun getCursorPosition(): CursorOffset
 
     /**
-     * Overlay manager
-     * Manages all service overlays
+     * Check if cursor is currently visible
+     * @return true if cursor is visible, false otherwise
      */
-    val overlayManager: OverlayManager
+    fun isCursorVisible(): Boolean
 
     /**
-     * Action coordinator
-     * Coordinates complex multi-step actions
-     */
-    val actionCoordinator: ActionCoordinator
-
-    /**
-     * Service state and lifecycle
-     */
-
-    /**
-     * Check if service is fully initialized
-     * @return true if ready for operations
-     */
-    fun isInitialized(): Boolean
-
-    /**
-     * Set service initialization state
-     * @param initialized true when initialization complete
-     */
-    fun setInitialized(initialized: Boolean)
-
-    /**
-     * Check if voice recognition is initialized
-     * @return true if voice recognition ready
-     */
-    fun isVoiceInitialized(): Boolean
-
-    /**
-     * Set voice initialization state
-     * @param initialized true when voice recognition ready
-     */
-    fun setVoiceInitialized(initialized: Boolean)
-
-    /**
-     * Request service restart
-     * Triggers graceful restart of service
-     */
-    fun requestRestart()
-
-    /**
-     * Command lifecycle notifications
-     */
-
-    /**
-     * Called when new commands have been generated or updated
-     * VoiceOSService should refresh the speech recognition engine
-     * with the updated command list
-     *
-     * Used by LearnAppIntegration and JustInTimeLearner
+     * Called when new commands are generated (e.g., after app scraping)
+     * Triggers re-registration of database commands with speech engine
      */
     fun onNewCommandsGenerated()
 
     /**
-     * Accessibility operations
+     * Enable fallback mode when CommandManager is unavailable
+     * Called by ServiceMonitor during graceful degradation
      */
+    fun enableFallbackMode()
 
     /**
-     * Get root node with retry logic
-     * Retries if initial attempt fails
-     *
-     * @param maxRetries Maximum retry attempts
-     * @param delayMs Delay between retries
-     * @return Root node or null
+     * Get installed app commands
+     * @return Map of app command names to package names
      */
-    fun getRootNodeWithRetry(maxRetries: Int = 3, delayMs: Long = 100): AccessibilityNodeInfo?
+    fun getAppCommands(): Map<String, String>
 
-    /**
-     * Find nodes matching criteria
-     * Uses UIScrapingEngine for efficient searching
-     *
-     * @param predicate Filter predicate
-     * @return List of matching nodes
-     */
-    fun findNodes(predicate: (UIScrapingEngine.UIElement) -> Boolean): List<UIScrapingEngine.UIElement>
+    companion object {
+        /**
+         * Check if service is currently running
+         * @return true if service instance exists, false otherwise
+         */
+        @JvmStatic
+        fun isServiceRunning(): Boolean {
+            // Stub implementation - will be provided by VoiceOSService
+            return getInstance() != null
+        }
 
-    /**
-     * Refresh UI element cache
-     * Forces re-scraping of accessibility tree
-     */
-    fun refreshUICache()
+        /**
+         * Execute a voice command via the service
+         * @param commandText The command text to execute
+         * @return true if command was executed, false otherwise
+         */
+        @JvmStatic
+        fun executeCommand(commandText: String): Boolean {
+            // Stub implementation - will be provided by VoiceOSService
+            return false
+        }
 
-    /**
-     * Command cache management
-     */
-
-    /**
-     * Get all cached commands
-     * Includes static and dynamic commands
-     * @return List of command strings
-     */
-    fun getCachedCommands(): List<String>
-
-    /**
-     * Get static commands only
-     * System commands that don't change
-     * @return List of static command strings
-     */
-    fun getStaticCommands(): List<String>
-
-    /**
-     * Get dynamic commands only
-     * Context-specific commands that change
-     * @return List of dynamic command strings
-     */
-    fun getDynamicCommands(): List<String>
-
-    /**
-     * Add dynamic command to cache
-     * @param command Command string to add
-     */
-    fun addDynamicCommand(command: String)
-
-    /**
-     * Remove dynamic command from cache
-     * @param command Command string to remove
-     */
-    fun removeDynamicCommand(command: String)
-
-    /**
-     * Clear all dynamic commands
-     * Preserves static commands
-     */
-    fun clearDynamicCommands()
-
-    /**
-     * Reload command cache
-     * Refreshes from database and managers
-     */
-    fun reloadCommands()
-
-    /**
-     * Event handling
-     */
-
-    /**
-     * Queue accessibility event for processing
-     * Uses priority queue for event ordering
-     *
-     * @param event AccessibilityEvent to process
-     * @param priority Event priority
-     */
-    fun queueAccessibilityEvent(
-        event: android.view.accessibility.AccessibilityEvent,
-        priority: Int = 2
-    )
-
-    /**
-     * Process queued events
-     * Drains event queue in priority order
-     */
-    fun processQueuedEvents()
-
-    /**
-     * Notifications and feedback
-     */
-
-    /**
-     * Update service notification
-     * Updates foreground service notification
-     *
-     * @param title Notification title
-     * @param message Notification message
-     */
-    fun updateNotification(title: String, message: String)
-
-    /**
-     * Show error notification
-     * Displays error in notification area
-     *
-     * @param error Error message
-     */
-    fun showErrorNotification(error: String)
-
-    /**
-     * Send feedback to user
-     * Uses appropriate feedback method (speech, vibration, toast)
-     *
-     * @param message Feedback message
-     * @param type Feedback type (speech, vibration, toast, all)
-     */
-    fun sendFeedback(message: String, type: FeedbackType = FeedbackType.SPEECH)
-
-    /**
-     * Feedback type enum
-     */
-    enum class FeedbackType {
-        SPEECH,     // TTS only
-        VIBRATION,  // Haptic only
-        TOAST,      // Toast message only
-        ALL         // All feedback methods
+        /**
+         * Get the current service instance
+         * @return Current service instance or null if not available
+         */
+        @JvmStatic
+        fun getInstance(): AccessibilityService? {
+            // Stub implementation - will be injected by VoiceOSService
+            return null
+        }
     }
-
-    /**
-     * Configuration and settings
-     */
-
-    /**
-     * Get configuration value
-     * @param key Configuration key
-     * @return Configuration value or null
-     */
-    fun getConfigValue(key: String): Any?
-
-    /**
-     * Set configuration value
-     * @param key Configuration key
-     * @param value Configuration value
-     */
-    fun setConfigValue(key: String, value: Any)
-
-    /**
-     * Apply configuration changes
-     * Triggers reconfiguration of affected components
-     */
-    fun applyConfigChanges()
-
-    /**
-     * Monitoring and diagnostics
-     */
-
-    /**
-     * Log service metric
-     * Records metric for monitoring
-     *
-     * @param metric Metric name
-     * @param value Metric value
-     */
-    fun logMetric(metric: String, value: Any)
-
-    /**
-     * Get service metrics
-     * @return Map of metric names to values
-     */
-    fun getMetrics(): Map<String, Any>
-
-    /**
-     * Check resource health
-     * @return true if resources within safe limits
-     */
-    fun checkResourceHealth(): Boolean
-
-    /**
-     * Request garbage collection
-     * Use only when necessary (low memory situation)
-     */
-    fun requestGC()
 }

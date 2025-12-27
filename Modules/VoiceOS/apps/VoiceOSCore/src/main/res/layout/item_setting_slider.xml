@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  item_setting_slider.xml - Layout for slider settings
+  item_setting_slider.xml - Layout for slider/percentage settings
 
   Author: Manoj Jhawar
   Code-Reviewed-By: CCA
-  Created: 2025-12-17
+  Created: 2025-12-05
 -->
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -20,14 +20,13 @@
         android:orientation="vertical"
         android:padding="12dp">
 
-        <!-- Header Row -->
+        <!-- Label Row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <!-- Label -->
             <TextView
                 android:id="@+id/setting_label"
                 android:layout_width="0dp"
@@ -37,15 +36,13 @@
                 android:textStyle="bold"
                 android:textColor="@android:color/black" />
 
-            <!-- Current Value -->
             <TextView
                 android:id="@+id/setting_value_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
                 android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/holo_blue_dark" />
+                android:textColor="@android:color/holo_blue_dark"
+                android:textStyle="bold" />
 
         </LinearLayout>
 

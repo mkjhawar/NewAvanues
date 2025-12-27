@@ -1,8 +1,9 @@
 /**
  * ExplorationStats.kt - Final exploration statistics
+ * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/models/ExplorationStats.kt
  *
- * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
+ * Code-Reviewed-By: CCA
  * Created: 2025-10-08
  *
  * Data class for final exploration statistics (after completion)
@@ -15,6 +16,39 @@ package com.augmentalis.voiceoscore.learnapp.models
  *
  * Final statistics after exploration completes.
  * Saved to database and shown to user.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val stats = ExplorationStats(
+ *     packageName = "com.instagram.android",
+ *     appName = "Instagram",
+ *     totalScreens = 25,
+ *     totalElements = 456,
+ *     totalEdges = 89,
+ *     durationMs = 180000L,  // 3 minutes
+ *     maxDepth = 12,
+ *     dangerousElementsSkipped = 3,
+ *     loginScreensDetected = 0,
+ *     scrollableContainersFound = 15
+ * )
+ *
+ * println(stats)  // Pretty-printed summary
+ * ```
+ *
+ * @property packageName Package name of explored app
+ * @property appName Human-readable app name
+ * @property totalScreens Total unique screens discovered
+ * @property totalElements Total UI elements mapped
+ * @property totalEdges Total navigation edges (transitions)
+ * @property durationMs Total exploration time in milliseconds
+ * @property maxDepth Maximum DFS depth reached
+ * @property dangerousElementsSkipped Number of dangerous elements skipped
+ * @property loginScreensDetected Number of login screens detected
+ * @property scrollableContainersFound Number of scrollable containers found
+ * @property completeness Overall exploration completeness percentage (0-100)
+ *
+ * @since 1.0.0
  */
 data class ExplorationStats(
     val packageName: String,
@@ -27,18 +61,13 @@ data class ExplorationStats(
     val dangerousElementsSkipped: Int = 0,
     val loginScreensDetected: Int = 0,
     val scrollableContainersFound: Int = 0,
-    /** Overall exploration completeness percentage (0-100) */
-    val completeness: Float = 0f,
-    /** Number of elements that were clicked */
-    val clickedElements: Int = 0,
-    /** Number of elements that could be clicked (non-blocked) */
-    val nonBlockedElements: Int = 0,
-    /** Number of elements that were blocked (dangerous/critical) */
-    val blockedElements: Int = 0
+    val completeness: Float = 0f
 ) {
 
     /**
      * Format duration as MM:SS
+     *
+     * @return Formatted duration string
      */
     fun formatDuration(): String {
         val totalSeconds = durationMs / 1000
@@ -49,6 +78,8 @@ data class ExplorationStats(
 
     /**
      * Calculate average elements per screen
+     *
+     * @return Average number of elements per screen
      */
     fun averageElementsPerScreen(): Float {
         if (totalScreens == 0) return 0f
@@ -57,6 +88,8 @@ data class ExplorationStats(
 
     /**
      * Calculate average edges per screen
+     *
+     * @return Average number of outgoing edges per screen
      */
     fun averageEdgesPerScreen(): Float {
         if (totalScreens == 0) return 0f
@@ -64,6 +97,25 @@ data class ExplorationStats(
     }
 
     override fun toString(): String {
-        return "Stats($appName: $totalScreens screens, $totalElements elements, ${formatDuration()})"
+        return """
+            Exploration Complete: $appName
+
+            📊 Statistics:
+            - Screens Explored: $totalScreens
+            - Elements Mapped: $totalElements
+            - Navigation Edges: $totalEdges
+            - Max Depth: $maxDepth
+            - Duration: ${formatDuration()}
+            - Completeness: ${"%.1f".format(completeness)}%
+
+            🛡️ Safety:
+            - Dangerous Elements Skipped: $dangerousElementsSkipped
+            - Login Screens Detected: $loginScreensDetected
+
+            📜 Details:
+            - Scrollable Containers: $scrollableContainersFound
+            - Avg Elements/Screen: ${"%.1f".format(averageElementsPerScreen())}
+            - Avg Edges/Screen: ${"%.1f".format(averageEdgesPerScreen())}
+        """.trimIndent()
     }
 }

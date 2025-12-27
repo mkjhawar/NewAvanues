@@ -1,7 +1,6 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.ksp)
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
     id("kotlin-parcelize")
 }
 
@@ -10,7 +9,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        minSdk = 29  // Android 9 (Pie) - Minimum supported (aligned with project-wide standard)
+        minSdk = 28  // Android 9 (Pie) - Minimum supported (aligned with project-wide standard)
         // targetSdk removed - deprecated for libraries
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -35,27 +34,18 @@ android {
         jvmTarget = "17"
     }
     
-    // Add KSP generated sources 
-    sourceSets {
-        getByName("debug") {
-            java.srcDir("${layout.buildDirectory.get()}/generated/ksp/debug/kotlin")
-        }
-        getByName("release") {
-            java.srcDir("${layout.buildDirectory.get()}/generated/ksp/release/kotlin")
-        }
-    }
     
     buildFeatures {
         compose = true
     }
     
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"  // Compatible with Kotlin 1.9.24
+        kotlinCompilerExtensionVersion = "1.5.15"  // Compatible with Kotlin 1.9.25
     }
 }
 
 dependencies {
-    // VoiceOS Core Database (SQLDelight KMP)
+    // SQLDelight KMP Database (migrated from Room)
     implementation(project(":Modules:VoiceOS:core:database"))
 
     // Android
@@ -96,4 +86,9 @@ dependencies {
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+// Re-enable tests for this module (overrides root project's disable)
+tasks.withType<Test> {
+    enabled = true
 }

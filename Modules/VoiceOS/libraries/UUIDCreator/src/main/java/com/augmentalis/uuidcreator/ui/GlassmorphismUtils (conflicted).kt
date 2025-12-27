@@ -1,0 +1,188 @@
+/**
+ * GlassmorphismUtils.kt - Glassmorphism UI utilities for UUIDManager
+ * 
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ * Author: VOS4 Development Team
+ * Created: 2025-01-02
+ * 
+ * Provides glassmorphism visual effects for UUID management UI
+ */
+package com.augmentalis.uuidcreator.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+
+/**
+ * Glass morphism configuration for UUID cards
+ */
+data class GlassMorphismConfig(
+    val cornerRadius: Dp = 16.dp,
+    val backgroundOpacity: Float = 0.1f,
+    val borderOpacity: Float = 0.2f,
+    val borderWidth: Dp = 1.dp,
+    val tintColor: Color = Color(0xFF6A4C93),
+    val tintOpacity: Float = 0.15f,
+    val blurRadius: Dp = 0.dp
+)
+
+/**
+ * Depth level for layered effects
+ */
+@JvmInline
+value class DepthLevel(val value: Float)
+
+/**
+ * Glass morphism modifier for UUID components
+ */
+fun Modifier.glassMorphism(
+    config: GlassMorphismConfig = GlassMorphismConfig(),
+    depth: DepthLevel = DepthLevel(1.0f)
+): Modifier {
+    val adjustedConfig = config.copy(
+        backgroundOpacity = config.backgroundOpacity * depth.value,
+        borderOpacity = config.borderOpacity * depth.value,
+        tintOpacity = config.tintOpacity * depth.value
+    )
+    
+    return this
+        .background(
+            brush = Brush.verticalGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = adjustedConfig.backgroundOpacity),
+                    adjustedConfig.tintColor.copy(alpha = adjustedConfig.tintOpacity),
+                    Color.White.copy(alpha = adjustedConfig.backgroundOpacity * 0.5f)
+                )
+            ),
+            shape = RoundedCornerShape(adjustedConfig.cornerRadius)
+        )
+        .border(
+            width = adjustedConfig.borderWidth,
+            brush = Brush.verticalGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = adjustedConfig.borderOpacity),
+                    Color.Transparent,
+                    Color.White.copy(alpha = adjustedConfig.borderOpacity * 0.5f)
+                )
+            ),
+            shape = RoundedCornerShape(adjustedConfig.cornerRadius)
+        )
+        .let { modifier ->
+            if (adjustedConfig.blurRadius > 0.dp) {
+                modifier.blur(adjustedConfig.blurRadius)
+            } else {
+                modifier
+            }
+        }
+}
+
+/**
+ * VUID Manager color palette
+ */
+object UUIDColors {
+    // Status colors
+    val StatusActive = Color(0xFF4CAF50)        // Green
+    val StatusInactive = Color(0xFF9E9E9E)      // Gray
+    val StatusFocused = Color(0xFF2196F3)       // Blue
+    val StatusSelected = Color(0xFFFF9800)      // Orange
+    val StatusError = Color(0xFFFF5252)         // Red
+    
+    // Element type colors
+    val TypeButton = Color(0xFF6A4C93)          // Purple
+    val TypeText = Color(0xFF00BCD4)            // Cyan
+    val TypeImage = Color(0xFFE91E63)           // Pink
+    val TypeContainer = Color(0xFF3F51B5)       // Indigo
+    val TypeList = Color(0xFF4CAF50)            // Green
+    val TypeForm = Color(0xFFFF5722)            // Deep Orange
+    val TypeDialog = Color(0xFF9C27B0)          // Deep Purple
+    val TypeMenu = Color(0xFF795548)            // Brown
+    
+    // Navigation colors
+    val NavUp = Color(0xFF2196F3)               // Blue
+    val NavDown = Color(0xFF03A9F4)             // Light Blue
+    val NavLeft = Color(0xFF00BCD4)             // Cyan
+    val NavRight = Color(0xFF009688)            // Teal
+    val NavForward = Color(0xFF4CAF50)          // Green
+    val NavBackward = Color(0xFFFF9800)         // Orange
+    
+    // UI accent colors
+    val Primary = Color(0xFF6A4C93)             // Purple
+    val Secondary = Color(0xFF00BCD4)           // Cyan
+    val Accent = Color(0xFFE91E63)              // Pink
+    val Success = Color(0xFF4CAF50)             // Green
+    val Warning = Color(0xFFFF9800)             // Orange
+    val Error = Color(0xFFFF5252)               // Red
+    
+    // Registry status colors
+    val RegistryEmpty = Color(0xFF9E9E9E)       // Gray
+    val RegistryLow = Color(0xFF4CAF50)         // Green
+    val RegistryMedium = Color(0xFFFF9800)      // Orange
+    val RegistryHigh = Color(0xFFFF5252)        // Red
+}
+
+/**
+ * Pre-defined glass morphism configs for UUID components
+ */
+object UUIDGlassConfigs {
+    val Primary = GlassMorphismConfig(
+        tintColor = UUIDColors.Primary,
+        cornerRadius = 16.dp
+    )
+    
+    val Registry = GlassMorphismConfig(
+        tintColor = UUIDColors.Primary,
+        cornerRadius = 16.dp,
+        backgroundOpacity = 0.12f
+    )
+    
+    val ElementCard = GlassMorphismConfig(
+        tintColor = UUIDColors.TypeContainer,
+        cornerRadius = 12.dp,
+        backgroundOpacity = 0.08f
+    )
+    
+    val NavigationCard = GlassMorphismConfig(
+        tintColor = UUIDColors.NavForward,
+        cornerRadius = 12.dp
+    )
+    
+    val CommandCard = GlassMorphismConfig(
+        tintColor = UUIDColors.TypeButton,
+        cornerRadius = 12.dp
+    )
+    
+    val StatisticsCard = GlassMorphismConfig(
+        tintColor = UUIDColors.Secondary,
+        cornerRadius = 16.dp
+    )
+    
+    val TargetCard = GlassMorphismConfig(
+        tintColor = UUIDColors.StatusFocused,
+        cornerRadius = 12.dp
+    )
+    
+    val HistoryCard = GlassMorphismConfig(
+        tintColor = UUIDColors.TypeList,
+        cornerRadius = 12.dp,
+        backgroundOpacity = 0.06f
+    )
+    
+    val Warning = GlassMorphismConfig(
+        tintColor = UUIDColors.Warning,
+        cornerRadius = 12.dp,
+        backgroundOpacity = 0.15f
+    )
+    
+    val Error = GlassMorphismConfig(
+        tintColor = UUIDColors.Error,
+        cornerRadius = 12.dp,
+        backgroundOpacity = 0.15f
+    )
+}

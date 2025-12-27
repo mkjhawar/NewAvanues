@@ -1,11 +1,12 @@
 /**
- * ExplorationStrategy.kt - Strategy pattern for app exploration
+ * ExplorationStrategy.kt - Defines exploration strategy
+ * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/exploration/ExplorationStrategy.kt
  *
- * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
- * Created: 2025-12-17
+ * Code-Reviewed-By: CCA
+ * Created: 2025-10-08
  *
- * Defines exploration strategy for discovering app screens.
+ * Strategy pattern for app exploration algorithms
  */
 
 package com.augmentalis.voiceoscore.learnapp.exploration
@@ -13,177 +14,206 @@ package com.augmentalis.voiceoscore.learnapp.exploration
 import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
 
 /**
- * Exploration Strategy Interface
+ * Exploration Strategy
  *
- * Strategy pattern for determining exploration order and priorities.
+ * Defines strategy for ordering and selecting elements during exploration.
+ * Default implementation uses Depth-First Search (DFS).
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val strategy = DFSExplorationStrategy()
+ *
+ * val elements = listOf(...) // Safe clickable elements
+ * val ordered = strategy.orderElements(elements)
+ *
+ * // Explore in order
+ * ordered.forEach { element ->
+ *     clickAndExplore(element)
+ * }
+ * ```
+ *
+ * @since 1.0.0
  */
 interface ExplorationStrategy {
-    /**
-     * Get next element to explore from list
-     */
-    fun getNextElement(elements: List<ElementInfo>): ElementInfo?
-
-    /**
-     * Prioritize elements for exploration
-     */
-    fun prioritize(elements: List<ElementInfo>): List<ElementInfo>
-
-    /**
-     * Should continue exploring this screen
-     */
-    fun shouldContinue(explored: Int, total: Int): Boolean
-
-    /**
-     * Maximum depth to explore
-     */
-    val maxDepth: Int
-
-    /**
-     * Strategy name for logging
-     */
-    val name: String
-
-    /**
-     * Get maximum exploration time in milliseconds
-     */
-    fun getMaxExplorationTime(): Long = 300_000L  // 5 minutes default
-
-    /**
-     * Get maximum back navigation attempts
-     */
-    fun getMaxBackNavigationAttempts(): Int = 3
-
-    /**
-     * Get screen hash similarity threshold (0.0-1.0)
-     */
-    fun getScreenHashSimilarityThreshold(): Float = 0.8f
 
     /**
      * Order elements for exploration
+     *
+     * Determines the order in which elements should be explored.
+     *
+     * @param elements List of safe clickable elements
+     * @return Ordered list of elements
      */
-    fun orderElements(elements: List<ElementInfo>): List<ElementInfo> = prioritize(elements)
+    fun orderElements(elements: List<ElementInfo>): List<ElementInfo>
 
     /**
-     * Should explore this element
+     * Check if element should be explored
+     *
+     * Additional filtering beyond safe/dangerous classification.
+     *
+     * @param element Element to check
+     * @return true if should explore
      */
-    fun shouldExplore(element: ElementInfo): Boolean = element.isClickable
+    fun shouldExplore(element: ElementInfo): Boolean {
+        return true  // Default: explore all safe elements
+    }
 
     /**
-     * Minimum confidence threshold for element classification
+     * Get max depth limit
+     *
+     * @return Max DFS depth
      */
-    fun getMinConfidenceThreshold(): Float = 0.5f
+    fun getMaxDepth(): Int {
+        return 100  // Increased from 50 to allow deeper exploration
+    }
 
     /**
-     * Get login timeout in milliseconds
+     * Get max exploration time (milliseconds)
+     *
+     * Dynamic timeout based on app complexity:
+     * - Base: 1 hour (for complex apps)
+     * - User can configure this via settings
+     *
+     * FIX: Previous 30-minute timeout was too short for complex apps
+     *
+     * @return Max time in milliseconds
      */
-    fun getLoginTimeoutMs(): Long = 30_000L  // 30 seconds default
+    fun getMaxExplorationTime(): Long {
+        return 60 * 60 * 1000L  // 60 minutes (1 hour)
+    }
 
     /**
-     * Get click retry delay in milliseconds
+     * Calculate dynamic timeout based on discovered complexity
+     *
+     * Can be called periodically during exploration to adjust timeout.
+     * Formula: min(maxTimeout, elementCount * 2 seconds)
+     *
+     * @param elementCount Number of elements discovered so far
+     * @return Recommended timeout in milliseconds
      */
-    fun getClickRetryDelayMs(): Long = 500L
-
-    /**
-     * Get expansion wait delay in milliseconds
-     */
-    fun getExpansionWaitDelayMs(): Long = 200L
-
-    companion object {
-        /** Minimum confidence threshold constant */
-        const val MIN_CONFIDENCE_THRESHOLD = 0.5f
+    fun calculateDynamicTimeout(elementCount: Int): Long {
+        val baseTimeout = getMaxExplorationTime()
+        val dynamicTimeout = elementCount * 2000L  // 2 seconds per element
+        return minOf(baseTimeout, maxOf(dynamicTimeout, 30 * 60 * 1000L))  // At least 30 min
     }
 }
 
 /**
- * Depth-First Exploration Strategy
+ * DFS Exploration Strategy
  *
- * Explores elements depth-first, prioritizing deeper navigation.
+ * Depth-First Search strategy - explores elements in order found,
+ * going deep before exploring siblings.
+ *
+ * @since 1.0.0
  */
-class DFSExplorationStrategy(
-    override val maxDepth: Int = 10
-) : ExplorationStrategy {
+class DFSExplorationStrategy : ExplorationStrategy {
 
-    override val name: String = "DFS"
+    /**
+     * Order elements (DFS keeps original order)
+     *
+     * @param elements List of elements
+     * @return Ordered list (unchanged for DFS)
+     */
+    override fun orderElements(elements: List<ElementInfo>): List<ElementInfo> {
+        // DFS explores elements in the order they appear
+        // Prioritize buttons over other elements
+        val buttons = elements.filter { it.isButton() }
+        val others = elements.filter { !it.isButton() }
 
-    override fun getNextElement(elements: List<ElementInfo>): ElementInfo? {
-        return elements.firstOrNull()
+        return buttons + others
     }
 
-    override fun prioritize(elements: List<ElementInfo>): List<ElementInfo> {
-        // Prioritize clickable elements, then by position
-        return elements.sortedWith(
-            compareByDescending<ElementInfo> { it.isClickable }
-                .thenBy { it.bounds.top }
-                .thenBy { it.bounds.left }
-        )
-    }
+    override fun getMaxDepth(): Int = 100  // Increased for deeper exploration
 
-    override fun shouldContinue(explored: Int, total: Int): Boolean {
-        return explored < total
-    }
+    override fun getMaxExplorationTime(): Long = 60 * 60 * 1000L  // 60 minutes
 }
 
 /**
- * Breadth-First Exploration Strategy
+ * BFS Exploration Strategy
  *
- * Explores all elements on current screen before navigating deeper.
- */
-class BFSExplorationStrategy(
-    override val maxDepth: Int = 10
-) : ExplorationStrategy {
-
-    override val name: String = "BFS"
-
-    override fun getNextElement(elements: List<ElementInfo>): ElementInfo? {
-        return elements.firstOrNull()
-    }
-
-    override fun prioritize(elements: List<ElementInfo>): List<ElementInfo> {
-        // Sort by visual position (top to bottom, left to right)
-        return elements.sortedWith(
-            compareBy<ElementInfo> { it.bounds.top }
-                .thenBy { it.bounds.left }
-        )
-    }
-
-    override fun shouldContinue(explored: Int, total: Int): Boolean {
-        return explored < total
-    }
-}
-
-/**
- * Hybrid Exploration Strategy
+ * Breadth-First Search strategy - explores all elements at current level
+ * before going deeper.
  *
- * Combines DFS and BFS based on screen complexity.
+ * @since 1.0.0
  */
-class HybridExplorationStrategy(
-    override val maxDepth: Int = 10,
-    private val complexityThreshold: Int = 50
-) : ExplorationStrategy {
+class BFSExplorationStrategy : ExplorationStrategy {
 
-    override val name: String = "Hybrid"
-
-    override fun getNextElement(elements: List<ElementInfo>): ElementInfo? {
-        return elements.firstOrNull()
-    }
-
-    override fun prioritize(elements: List<ElementInfo>): List<ElementInfo> {
-        return if (elements.size > complexityThreshold) {
-            // Use BFS-style for complex screens
-            elements.sortedWith(
-                compareBy<ElementInfo> { it.bounds.top }
-                    .thenBy { it.bounds.left }
-            )
-        } else {
-            // Use DFS-style for simpler screens
-            elements.sortedWith(
-                compareByDescending<ElementInfo> { it.isClickable }
-                    .thenBy { it.bounds.top }
-            )
+    /**
+     * Order elements (BFS would require queue-based exploration)
+     *
+     * Note: True BFS requires different traversal algorithm,
+     * this just orders elements by importance.
+     *
+     * @param elements List of elements
+     * @return Ordered list
+     */
+    override fun orderElements(elements: List<ElementInfo>): List<ElementInfo> {
+        // Prioritize by element type
+        return elements.sortedBy { element ->
+            when {
+                element.isButton() -> 0
+                element.hasMeaningfulContent() -> 1
+                else -> 2
+            }
         }
     }
 
-    override fun shouldContinue(explored: Int, total: Int): Boolean {
-        return explored < total
+    override fun getMaxDepth(): Int = 100  // Increased for deeper exploration
+
+    override fun getMaxExplorationTime(): Long = 60 * 60 * 1000L  // 60 minutes
+}
+
+/**
+ * Prioritized Exploration Strategy
+ *
+ * Explores elements based on priority heuristics:
+ * 1. Buttons with meaningful text
+ * 2. Clickable images (icons)
+ * 3. Other clickable elements
+ *
+ * @since 1.0.0
+ */
+class PrioritizedExplorationStrategy : ExplorationStrategy {
+
+    /**
+     * Order elements by priority
+     *
+     * @param elements List of elements
+     * @return Ordered list
+     */
+    override fun orderElements(elements: List<ElementInfo>): List<ElementInfo> {
+        return elements.sortedBy { calculatePriority(it) }
     }
+
+    /**
+     * Calculate priority score (lower = higher priority)
+     *
+     * @param element Element to score
+     * @return Priority score
+     */
+    private fun calculatePriority(element: ElementInfo): Int {
+        var priority = 100
+
+        // Buttons have high priority
+        if (element.isButton()) {
+            priority -= 50
+        }
+
+        // Elements with text have higher priority
+        if (element.text.isNotBlank()) {
+            priority -= 20
+        }
+
+        // Elements with content description
+        if (element.contentDescription.isNotBlank()) {
+            priority -= 10
+        }
+
+        return priority
+    }
+
+    override fun getMaxDepth(): Int = 100  // Increased for deeper exploration
+
+    override fun getMaxExplorationTime(): Long = 60 * 60 * 1000L  // 60 minutes
 }

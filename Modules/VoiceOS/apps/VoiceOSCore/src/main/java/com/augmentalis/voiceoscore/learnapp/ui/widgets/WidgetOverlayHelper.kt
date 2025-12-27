@@ -1,81 +1,154 @@
 /**
- * WidgetOverlayHelper.kt - VoiceOS component
+ * WidgetOverlayHelper.kt - Centralized WindowManager overlay operations
+ * Path: modules/apps/LearnApp/src/main/java/com/augmentalis/learnapp/ui/widgets/WidgetOverlayHelper.kt
  *
- * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Created: 2025-12-22
+ * Author: Manoj Jhawar
+ * Code-Reviewed-By: CCA
+ * Created: 2025-10-24
  *
- * Helper for widget-based overlays in AccessibilityService context
+ * Utility class for managing WindowManager overlay operations with thread safety.
+ * Addresses ViewTreeLifecycleOwner issues by using direct WindowManager APIs.
  */
+
 package com.augmentalis.voiceoscore.learnapp.ui.widgets
 
-import android.content.Context
 import android.graphics.PixelFormat
-import android.os.Build
-import android.view.Gravity
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.WindowManager
+import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
 
-object WidgetOverlayHelper {
+/**
+ * Widget Overlay Helper
+ *
+ * Centralized utility for WindowManager overlay operations with thread safety.
+ *
+ * ## Purpose
+ *
+ * Provides thread-safe WindowManager operations for displaying overlays
+ * in AccessibilityService context without Compose lifecycle dependencies.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val helper = WidgetOverlayHelper(context, windowManager)
+ * val params = helper.createOverlayParams()
+ *
+ * // Show overlay (automatically on main thread)
+ * helper.showOverlay(view, params)
+ *
+ * // Dismiss overlay (automatically on main thread)
+ * helper.dismissOverlay(view)
+ * ```
+ *
+ * ## Thread Safety
+ *
+ * All public methods ensure execution on main thread via Handler.post().
+ * Safe to call from any thread.
+ *
+ * @property windowManager WindowManager instance
+ *
+ * @since 1.0.0
+ */
+class WidgetOverlayHelper(
+    private val windowManager: WindowManager
+) {
 
     /**
-     * Create centered dialog layout parameters for overlays
+     * Main thread handler for UI operations
      */
-    fun createCenteredDialogParams(): WindowManager.LayoutParams {
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    /**
+     * Show overlay
+     *
+     * Adds view to WindowManager on main thread. Checks if view is already
+     * attached to prevent IllegalStateException.
+     *
+     * @param view View to display as overlay
+     * @param params WindowManager layout parameters
+     */
+    fun showOverlay(view: View, params: WindowManager.LayoutParams) {
+        ensureMainThread {
+            // Only add if not already attached
+            if (view.parent == null) {
+                try {
+                    windowManager.addView(view, params)
+                } catch (e: Exception) {
+                    // Log error but don't crash
+                    android.util.Log.e(
+                        "WidgetOverlayHelper",
+                        "Failed to add overlay view",
+                        e
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Dismiss overlay
+     *
+     * Removes view from WindowManager on main thread. Checks if view is
+     * attached to prevent IllegalArgumentException.
+     *
+     * @param view View to remove from overlay
+     */
+    fun dismissOverlay(view: View) {
+        ensureMainThread {
+            // Only remove if currently attached
+            if (view.parent != null) {
+                try {
+                    windowManager.removeView(view)
+                } catch (e: Exception) {
+                    // Log error but don't crash
+                    android.util.Log.e(
+                        "WidgetOverlayHelper",
+                        "Failed to remove overlay view",
+                        e
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Create overlay parameters
+     *
+     * Creates WindowManager.LayoutParams configured for accessibility overlay.
+     * Uses TYPE_ACCESSIBILITY_OVERLAY for AccessibilityService context.
+     *
+     * @param type Window type (default: TYPE_ACCESSIBILITY_OVERLAY)
+     * @return Configured layout parameters
+     */
+    fun createOverlayParams(
+        type: Int = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+    ): WindowManager.LayoutParams {
         return WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                @Suppress("DEPRECATION")
-                WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
-            },
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            type,
+            FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.CENTER
-        }
+        )
     }
 
     /**
-     * Add overlay to WindowManager
+     * Ensure main thread
+     *
+     * Executes block on main thread. If already on main thread, executes
+     * immediately. Otherwise, posts to main thread handler.
+     *
+     * @param block Code to execute on main thread
      */
-    fun addOverlay(context: Context, view: View, params: WindowManager.LayoutParams) {
-        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        try {
-            windowManager.addView(view, params)
-        } catch (e: Exception) {
-            android.util.Log.e("WidgetOverlayHelper", "Error adding overlay", e)
+    fun ensureMainThread(block: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            // Already on main thread, execute immediately
+            block()
+        } else {
+            // Post to main thread
+            mainHandler.post(block)
         }
-    }
-
-    /**
-     * Remove overlay from WindowManager
-     */
-    fun removeOverlay(context: Context, view: View) {
-        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        try {
-            windowManager.removeView(view)
-        } catch (e: Exception) {
-            android.util.Log.w("WidgetOverlayHelper", "Error removing overlay", e)
-        }
-    }
-
-    fun createOverlay(context: Context): View? {
-        return null
-    }
-
-    fun showOverlay(view: View) {
-        // Stub implementation
-    }
-
-    fun hideOverlay(view: View) {
-        // Stub implementation
-    }
-
-    fun updateOverlay(view: View, data: Any) {
-        // Stub implementation
     }
 }

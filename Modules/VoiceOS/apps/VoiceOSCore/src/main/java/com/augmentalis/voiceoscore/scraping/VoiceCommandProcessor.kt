@@ -5,7 +5,7 @@
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
  * Created: 2025-10-09
- * Modified: 2025-10-18 (Integrated CommandManager for static commands)
+ * Modified: 2025-11-12 (YOLO FIX: Removed fuzzy matching, use real-time element search instead)
  */
 package com.augmentalis.voiceoscore.scraping
 
@@ -18,17 +18,21 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.commandmanager.CommandManager
 import com.augmentalis.voiceos.command.Command
 import com.augmentalis.voiceos.command.CommandSource
-import com.augmentalis.database.ScrapedAppQueries
-import com.augmentalis.database.element.ScrapedElementQueries
-import com.augmentalis.database.GeneratedCommandQueries
-import com.augmentalis.database.dto.ScrapedElementDTO
-import com.augmentalis.database.dto.GeneratedCommandDTO
-import com.augmentalis.database.dto.toScrapedElementDTO
-import com.augmentalis.database.dto.toGeneratedCommandDTO
-import com.augmentalis.voiceoscore.security.InputValidator
-import com.augmentalis.voiceoscore.utils.HashUtils
+import com.augmentalis.voiceoscore.commands.DatabaseCommandHandler
+import com.augmentalis.voiceoscore.utils.ConditionalLogger
+import com.augmentalis.voiceos.logging.PIILoggingWrapper
+import com.augmentalis.voiceoscore.utils.forEachChild
+import com.augmentalis.voiceoscore.utils.useNode
+import com.augmentalis.voiceoscore.utils.useNodeOrNull
+import com.augmentalis.voiceoscore.database.VoiceOSCoreDatabaseAdapter
+import com.augmentalis.voiceoscore.database.toScrapedElementEntity
+import com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity
+import com.augmentalis.database.VoiceOSDatabaseManager
+import com.augmentalis.database.DatabaseDriverFactory
+import com.augmentalis.voiceos.hash.HashUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 
 /**
@@ -53,10 +57,7 @@ import org.json.JSONArray
  */
 class VoiceCommandProcessor(
     private val context: Context,
-    private val accessibilityService: AccessibilityService,
-    private val scrapedAppQueries: ScrapedAppQueries,
-    private val scrapedElementQueries: ScrapedElementQueries,
-    private val generatedCommandQueries: GeneratedCommandQueries
+    private val accessibilityService: AccessibilityService
 ) {
 
     companion object {
@@ -67,14 +68,28 @@ class VoiceCommandProcessor(
         private const val FUZZY_MATCH_THRESHOLD = 0.7f
     }
 
+    // FIX (2025-12-01): Replaced non-existent VoiceOSAppDatabase with VoiceOSCoreDatabaseAdapter
+    // VoiceOSCoreDatabaseAdapter provides access to VoiceOSDatabaseManager for all database operations
+    private val databaseAdapter: VoiceOSCoreDatabaseAdapter by lazy {
+        VoiceOSCoreDatabaseAdapter.getInstance(context)
+    }
+
+    // Direct access to SQLDelight database manager for queries
+    private val databaseManager: VoiceOSDatabaseManager
+        get() = databaseAdapter.databaseManager
     private val packageManager: PackageManager = context.packageManager
     private val commandManager: CommandManager = CommandManager.getInstance(context)
 
-    // Element validator for crash prevention (Schema v4)
-    private val elementValidator: ElementValidator = ElementValidator(context.resources)
+    // CoT: Database command handler for voice commands (v4.1.1)
+    // Handles 20 voice commands for database interaction (stats, migration, queries, management)
+    // FIX (2025-12-01): Pass databaseAdapter instead of non-existent database
+    private val databaseCommandHandler: DatabaseCommandHandler by lazy {
+        DatabaseCommandHandler(context, databaseAdapter)
+    }
 
-    // Element matcher for dynamic content fallback (Schema v4)
-    private val elementMatcher: ElementMatcher = ElementMatcher()
+    // FIX (2025-12-01): Tier 3 property-based element search engine
+    // Part of Voice Command Element Persistence feature
+    private val elementSearchEngine: ElementSearchEngine = ElementSearchEngine(accessibilityService)
 
     /**
      * Process a voice command
@@ -82,9 +97,11 @@ class VoiceCommandProcessor(
      * @param voiceInput Raw voice input from speech recognition
      * @return CommandResult indicating success/failure and details
      */
-    suspend fun processCommand(voiceInput: String): CommandResult = withContext(Dispatchers.IO) {
+    suspend fun processCommand(voiceInput: String): CommandResult = withTimeout(5000L) {
+        withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Processing voice command: '$voiceInput'")
+            // PII Redaction: Sanitize user voice input before logging
+            PIILoggingWrapper.d(TAG, "Processing voice command: '$voiceInput'")
 
             // Normalize input
             val normalizedInput = voiceInput.lowercase().trim()
@@ -92,59 +109,118 @@ class VoiceCommandProcessor(
             // Get current app package name
             val currentPackage = getCurrentPackageName()
             if (currentPackage == null) {
-                Log.w(TAG, "Could not determine current app package")
+                ConditionalLogger.w(TAG) { "Could not determine current app package" }
                 return@withContext CommandResult.failure("Could not identify current app")
             }
 
-            Log.d(TAG, "Current app package: $currentPackage")
+            ConditionalLogger.d(TAG) { "Current app package: $currentPackage" }
 
             // Get app hash
             val appInfo = try {
                 packageManager.getPackageInfo(currentPackage, 0)
             } catch (e: Exception) {
-                Log.e(TAG, "Error getting package info for $currentPackage", e)
+                Log.e(TAG, "Failed to retrieve package metadata for app '$currentPackage': Could not access PackageManager. " +
+                    "Possible causes: app uninstalled, permission denied, or package metadata corrupted. " +
+                    "Impact: Unable to determine app version and calculate app hash for command matching.", e)
                 return@withContext CommandResult.failure("Could not get app information")
             }
 
             val appHash = HashUtils.calculateAppHash(currentPackage, appInfo.versionCode)
-            Log.d(TAG, "App hash: $appHash")
+            ConditionalLogger.d(TAG) { "App hash: $appHash" }
 
-            // Check if app has been scraped
-            val scrapedApp = scrapedAppQueries.getByPackage(currentPackage).executeAsOneOrNull()
+            // Check if app has been scraped (now using SQLDelight)
+            // FIX (2025-12-01): Use getById - appHash is the appId
+            val scrapedApp = databaseManager.scrapedApps.getById(appHash)
             if (scrapedApp == null) {
-                Log.w(TAG, "App has not been scraped yet: $currentPackage")
-                return@withContext CommandResult.failure("App not yet learned. Please wait for learning to complete.")
-            }
+                ConditionalLogger.w(TAG) { "App has not been scraped yet: $currentPackage - trying real-time fallback" }
 
-            // Find matching command (dynamic app-specific commands)
-            val matchedCommand = findMatchingCommand(scrapedApp.packageName, normalizedInput)
-            if (matchedCommand == null) {
-                Log.w(TAG, "No dynamic command found for: '$normalizedInput', trying static commands")
+                // YOLO FIX: Try real-time element search instead of failing immediately
+                val realtimeResult = tryRealtimeElementSearch(voiceInput)
+                if (realtimeResult.success) {
+                    return@withContext realtimeResult
+                }
 
-                // Try static commands from CommandManager
+                // If real-time search also fails, try database and static commands
+                val databaseResult = databaseCommandHandler.handleCommand(normalizedInput)
+                if (databaseResult != null) {
+                    return@withContext CommandResult.success(
+                        message = databaseResult,
+                        actionType = "database_command",
+                        elementHash = null
+                    )
+                }
+
                 return@withContext tryStaticCommand(normalizedInput, voiceInput)
             }
 
-            Log.i(TAG, "Matched command: ${matchedCommand.commandText} (confidence: ${matchedCommand.confidence})")
+            // Find matching command (dynamic app-specific commands)
+            // FIX (2025-12-01): scrapedApp is now ScrapedAppDTO, not entity
+            val matchedCommand = findMatchingCommand(scrapedApp.appId, normalizedInput)
+            if (matchedCommand == null) {
+                // PII Redaction: Sanitize normalized input before logging
+                PIILoggingWrapper.w(TAG, "No dynamic command found for: '$normalizedInput', trying real-time element search")
+
+                // CoT: Command Priority Order (v4.2.0 - YOLO FIX)
+                // 1. Dynamic commands (app-specific, exact match) ✓ already tried above
+                // 2. Real-time element search (searches accessibility tree by text/content-desc) ← NEW
+                // 3. Database commands (VoiceOS-specific database queries)
+                // 4. Static system commands (Android system operations)
+                //
+                // Rationale: Real-time search is more accurate than fuzzy matching.
+                // Example: "Clear history" should find "Clear history" button, not "Clear" button.
+                // This fix prevents wrong command execution due to partial fuzzy matches.
+
+                // Try real-time element search (v4.2.0)
+                val realtimeResult = tryRealtimeElementSearch(voiceInput)
+                if (realtimeResult.success) {
+                    ConditionalLogger.i(TAG) { "✓ Real-time element search succeeded" }
+                    return@withContext realtimeResult
+                }
+
+                // Try database commands (v4.1.1)
+                val databaseResult = databaseCommandHandler.handleCommand(normalizedInput)
+                if (databaseResult != null) {
+                    ConditionalLogger.i(TAG) { "✓ Database command executed successfully" }
+                    return@withContext CommandResult.success(
+                        message = databaseResult,
+                        actionType = "database_command",
+                        elementHash = null
+                    )
+                }
+
+                // Try static commands from CommandManager
+                ConditionalLogger.w(TAG) { "No database command found, trying static commands" }
+                return@withContext tryStaticCommand(normalizedInput, voiceInput)
+            }
+
+            // PII Redaction: Sanitize command text before logging
+            PIILoggingWrapper.i(TAG, "Matched command: ${matchedCommand.commandText} (confidence: ${matchedCommand.confidence})")
 
             // Get associated element by hash (stable across sessions)
-            val element = scrapedElementQueries.getByHash(matchedCommand.elementHash).executeAsOneOrNull()?.toScrapedElementDTO()
-            if (element == null) {
-                Log.w(TAG, "Element not found for command '${matchedCommand.commandText}' (hash=${matchedCommand.elementHash})")
-                Log.w(TAG, "Element may no longer exist or UI has changed. Consider re-scraping.")
+            // FIX (2025-12-01): Use databaseManager directly instead of non-existent database.databaseManager
+            val elementDto = databaseManager.scrapedElements.getByHash(matchedCommand.elementHash)
+            if (elementDto == null) {
+                // PII Redaction: Sanitize command text before logging
+                PIILoggingWrapper.w(TAG, "Element not found for command '${matchedCommand.commandText}' (hash=${matchedCommand.elementHash})")
+                ConditionalLogger.w(TAG) { "Element may no longer exist or UI has changed. Consider re-scraping." }
                 return@withContext CommandResult.elementNotFound(
                     commandText = matchedCommand.commandText,
                     elementHash = matchedCommand.elementHash
                 )
             }
 
+            // Convert DTO to Entity
+            val element = elementDto.toScrapedElementEntity()
+
             // Execute action on element
             val success = executeAction(element, matchedCommand.actionType)
 
             if (success) {
                 // Update usage statistics
-                generatedCommandQueries.incrementUsage(matchedCommand.id, System.currentTimeMillis())
-                Log.i(TAG, "✓ Command executed successfully: ${matchedCommand.commandText}")
+                // FIX (2025-12-01): Use databaseManager directly
+                databaseManager.generatedCommands.incrementUsage(matchedCommand.id, System.currentTimeMillis())
+                // PII Redaction: Sanitize command text before logging
+                PIILoggingWrapper.i(TAG, "✓ Command executed successfully: ${matchedCommand.commandText}")
 
                 CommandResult.success(
                     message = "Executed: ${matchedCommand.commandText}",
@@ -152,29 +228,45 @@ class VoiceCommandProcessor(
                     elementHash = element.elementHash
                 )
             } else {
-                Log.w(TAG, "✗ Action execution failed for: ${matchedCommand.commandText}")
+                // PII Redaction: Sanitize command text before logging
+                PIILoggingWrapper.w(TAG, "✗ Action execution failed for: ${matchedCommand.commandText}")
                 CommandResult.failure("Failed to execute action: ${matchedCommand.actionType}")
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error processing voice command", e)
+            Log.e(TAG, "Unexpected error during voice command processing pipeline: ${e::class.simpleName}. " +
+                "Possible causes: database access failure, accessibility service disruption, timeout, or state inconsistency. " +
+                "Impact: Command execution aborted; user will need to retry. Details: ${e.message}", e)
             CommandResult.failure("Error: ${e.message}")
+        }
         }
     }
 
     /**
      * Find matching command in database using fuzzy matching
+     *
+     * IMPORTANT: Fuzzy matching can cause incorrect command execution.
+     * Example: "Clear history" might match "Clear" if fuzzy matching returns first partial match.
+     * Fix: Collect all matches, score them, and return best match. If best match score is low,
+     * return null to trigger real-time element search instead.
      */
-    private suspend fun findMatchingCommand(packageName: String, input: String): GeneratedCommandDTO? {
-        // Get all commands for the app and convert to DTOs
-        val commands = generatedCommandQueries.getByPackage(packageName).executeAsList().map { it.toGeneratedCommandDTO() }
+    // FIX (2025-12-01): Changed return type to GeneratedCommandDTO since we're using SQLDelight
+    private suspend fun findMatchingCommand(appId: String, input: String): com.augmentalis.database.dto.GeneratedCommandDTO? {
+        // Get all commands for the app via SQLDelight
+        // FIX (2025-12-01): Get elements first, then get commands for each element
+        // Commands are linked to elements, not directly to apps
+        val elements = databaseManager.scrapedElements.getByApp(appId)
+        val commands = elements.flatMap { element ->
+            databaseManager.generatedCommands.getByElement(element.elementHash)
+        }
 
-        Log.d(TAG, "Searching ${commands.size} commands for match")
+        ConditionalLogger.d(TAG) { "Searching ${commands.size} commands for match" }
 
         // Try exact match first
         for (command in commands) {
             if (command.commandText.equals(input, ignoreCase = true)) {
-                Log.d(TAG, "Found exact match: ${command.commandText}")
+                // PII Redaction: Sanitize command text before logging
+                PIILoggingWrapper.d(TAG, "Found exact match: ${command.commandText}")
                 return command
             }
 
@@ -182,32 +274,18 @@ class VoiceCommandProcessor(
             val synonyms = parseSynonyms(command.synonyms ?: "[]")
             for (synonym in synonyms) {
                 if (synonym.equals(input, ignoreCase = true)) {
-                    Log.d(TAG, "Found synonym match: $synonym -> ${command.commandText}")
+                    // PII Redaction: Sanitize synonym and command text before logging
+                    PIILoggingWrapper.d(TAG, "Found synonym match: $synonym -> ${command.commandText}")
                     return command
                 }
             }
         }
 
-        // Try fuzzy match (contains)
-        for (command in commands) {
-            if (input.contains(command.commandText, ignoreCase = true) ||
-                command.commandText.contains(input, ignoreCase = true)) {
-                Log.d(TAG, "Found fuzzy match: ${command.commandText}")
-                return command
-            }
-
-            // Check synonyms for fuzzy match
-            val synonyms = parseSynonyms(command.synonyms ?: "[]")
-            for (synonym in synonyms) {
-                if (input.contains(synonym, ignoreCase = true) ||
-                    synonym.contains(input, ignoreCase = true)) {
-                    Log.d(TAG, "Found fuzzy synonym match: $synonym -> ${command.commandText}")
-                    return command
-                }
-            }
-        }
-
-        // No match found
+        // YOLO FIX: Instead of fuzzy matching, return null to trigger real-time element search
+        // Real-time search is more accurate than fuzzy matching for partial matches
+        // Old behavior: fuzzy match would return "Clear" for "Clear history"
+        // New behavior: real-time search finds "Clear history" button directly
+        PIILoggingWrapper.d(TAG, "No exact match found for: '$input' - will try real-time element search")
         return null
     }
 
@@ -223,7 +301,8 @@ class VoiceCommandProcessor(
      */
     private suspend fun tryStaticCommand(normalizedInput: String, originalVoiceInput: String): CommandResult {
         try {
-            Log.d(TAG, "Trying static command: '$normalizedInput'")
+            // PII Redaction: Sanitize normalized input before logging
+            PIILoggingWrapper.d(TAG, "Trying static command: '$normalizedInput'")
 
             // Create Command object for CommandManager
             val command = Command(
@@ -238,7 +317,8 @@ class VoiceCommandProcessor(
             val cmdResult = commandManager.executeCommand(command)
 
             return if (cmdResult.success) {
-                Log.i(TAG, "✓ Static command executed successfully: $normalizedInput")
+                // PII Redaction: Sanitize normalized input before logging
+                PIILoggingWrapper.i(TAG, "✓ Static command executed successfully: $normalizedInput")
                 CommandResult.success(
                     message = "Executed: $normalizedInput",
                     actionType = "static_command",
@@ -246,10 +326,14 @@ class VoiceCommandProcessor(
                 )
             } else {
                 Log.w(TAG, "✗ Static command execution failed: ${cmdResult.error?.message}")
-                CommandResult.failure("Command not recognized: '$originalVoiceInput'")
+                // PII Redaction: Sanitize original voice input before logging
+                PIILoggingWrapper.w(TAG, "Command not recognized: '$originalVoiceInput'")
+                CommandResult.failure("Command not recognized")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error executing static command", e)
+            Log.e(TAG, "Failed to execute static system command for input '$normalizedInput': CommandManager.executeCommand() threw exception. " +
+                "Possible causes: command registry corrupted, permission denied, or service unavailable. " +
+                "Impact: System command will not execute; fallback to user feedback or manual action. Details: ${e.message}", e)
             return CommandResult.failure("Command not recognized: '$originalVoiceInput'")
         }
     }
@@ -257,7 +341,7 @@ class VoiceCommandProcessor(
     /**
      * Execute action on UI element
      */
-    private suspend fun executeAction(element: ScrapedElementDTO, actionType: String): Boolean = withContext(Dispatchers.Main) {
+    private suspend fun executeAction(element: ScrapedElementEntity, actionType: String): Boolean = withContext(Dispatchers.Main) {
         try {
             Log.d(TAG, "Executing action: $actionType on element: ${element.elementHash}")
 
@@ -268,33 +352,31 @@ class VoiceCommandProcessor(
                 return@withContext false
             }
 
-            // Find target node by hash (exact match)
+            // Find target node by hash
             var targetNode = findNodeByHash(rootNode, element.elementHash)
-
-            // If exact match fails, try fallback strategies for dynamic content
             if (targetNode == null) {
-                Log.w(TAG, "Exact hash match failed, trying fallback strategies: ${element.elementHash}")
-                val matchResult = elementMatcher.findBestMatch(element, rootNode, allowFallback = true)
-                if (matchResult != null) {
-                    Log.i(TAG, "Fallback match found: strategy=${matchResult.strategy}, confidence=${matchResult.confidence}")
-                    targetNode = matchResult.node
-                } else {
-                    Log.e(TAG, "Target node not found (exact + fallback failed): ${element.elementHash}")
+                Log.w(TAG, "Target node not found by hash: ${element.elementHash} - trying text-based fallback")
+
+                // YOLO FIX: Try text-based fallback using element's text or content description
+                val searchText = element.text ?: element.contentDescription
+                if (!searchText.isNullOrBlank()) {
+                    val nodes = findNodesByText(rootNode, searchText)
+                    if (nodes.isNotEmpty()) {
+                        targetNode = nodes.first()
+                        Log.i(TAG, "✓ Found node via text fallback: $searchText")
+                        // Cleanup other nodes
+                        nodes.drop(1).forEach { it.recycle() }
+                    }
+                }
+
+                if (targetNode == null) {
+                    Log.e(TAG, "Target node not found by hash or text: ${element.elementHash}")
                     rootNode.recycle()
                     return@withContext false
                 }
-            } else {
-                Log.d(TAG, "Found target node (exact match): ${targetNode.className}")
             }
 
-            // Validate element before action execution (CRITICAL - prevents crashes)
-            if (!elementValidator.isValidForInteraction(targetNode)) {
-                Log.w(TAG, "Element validation failed for: ${element.elementHash}")
-                Log.w(TAG, "Element bounds: ${elementValidator.getBoundsString(targetNode)}")
-                targetNode.recycle()
-                rootNode.recycle()
-                return@withContext false
-            }
+            Log.d(TAG, "Found target node: ${targetNode.className}")
 
             // Execute appropriate action
             val success = when (actionType) {
@@ -333,7 +415,9 @@ class VoiceCommandProcessor(
             return@withContext success
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error executing action", e)
+            Log.e(TAG, "Failed to execute UI action on element due to accessibility operation error: Unexpected exception during action dispatch. " +
+                "Possible causes: node was recycled prematurely, accessibility service stopped, or window changed during action. " +
+                "Impact: UI element action will not be performed; command execution returns false. Details: ${e.message}", e)
             return@withContext false
         }
     }
@@ -341,7 +425,10 @@ class VoiceCommandProcessor(
     /**
      * Find node by hash in accessibility tree
      *
-     * Uses recursive depth-first search
+     * Uses recursive depth-first search with safe resource management.
+     * 
+     * CRITICAL FIX (2025-11-13): Ensures all child nodes are recycled even when exceptions occur.
+     * Previous implementation would leak AccessibilityNodeInfo instances on exception paths.
      */
     private fun findNodeByHash(node: AccessibilityNodeInfo, targetHash: String): AccessibilityNodeInfo? {
         try {
@@ -360,19 +447,25 @@ class VoiceCommandProcessor(
                 return node
             }
 
-            // Search children
+            // Search children with safe resource management
+            // CRITICAL: Child nodes MUST be recycled in all code paths to prevent memory leaks
             for (i in 0 until node.childCount) {
                 val child = node.getChild(i) ?: continue
-                val found = findNodeByHash(child, targetHash)
-                if (found != null) {
+                try {
+                    val found = findNodeByHash(child, targetHash)
+                    if (found != null) {
+                        return found
+                    }
+                } finally {
+                    // ALWAYS recycle child, even if exception occurred
                     child.recycle()
-                    return found
                 }
-                child.recycle()
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error finding node by hash", e)
+            Log.e(TAG, "Failed to search accessibility tree for node matching hash '$targetHash': Exception during tree traversal. " +
+                "Possible causes: node recycled during traversal, tree structure changed, or hash calculation mismatch. " +
+                "Impact: Target UI element will not be found; command execution will fail. Details: ${e.message}", e)
         }
 
         return null
@@ -388,7 +481,9 @@ class VoiceCommandProcessor(
             rootNode?.recycle()
             packageName
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting current package name", e)
+            Log.e(TAG, "Failed to retrieve foreground app package name from accessibility service: Cannot access root window node. " +
+                "Possible causes: accessibility service not initialized, window focus lost, or framework error. " +
+                "Impact: Current app cannot be identified; voice command processing cannot begin. Details: ${e.message}", e)
             null
         }
     }
@@ -398,10 +493,12 @@ class VoiceCommandProcessor(
      */
     private fun parseSynonyms(synonymsJson: String): List<String> {
         return try {
-            val jsonArray = JSONArray(synonymsJson)
-            (0 until jsonArray.length()).map { jsonArray.getString(it) }
+            com.augmentalis.voiceos.json.JsonConverters.parseSynonyms(synonymsJson)
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing synonyms JSON", e)
+            Log.e(TAG, "Failed to parse synonyms JSON array: Invalid JSON format or structure. " +
+                "Possible causes: corrupted database entry, invalid JSON serialization, or schema mismatch. " +
+                "Impact: Synonyms will not be available for command matching; fuzzy matching will be less effective. " +
+                "Details: ${e.message}", e)
             emptyList()
         }
     }
@@ -412,34 +509,22 @@ class VoiceCommandProcessor(
      * Separate method for text input with actual text parameter
      */
     suspend fun executeTextInput(voiceInput: String, text: String): CommandResult = withContext(Dispatchers.IO) {
-        // Validate text input for security (XSS, SQL injection, length limits)
-        try {
-            InputValidator.validateTextInput(text)
-        } catch (e: IllegalArgumentException) {
-            Log.w(TAG, "Text input validation failed: ${e.message}")
-            return@withContext CommandResult.failure("Invalid input: ${e.message}")
-        }
-
         val result = processCommand(voiceInput)
         if (result.success && result.actionType == "type") {
             // Get the element and set text
             val elementHash = result.elementHash
             if (elementHash != null) {
                 withContext(Dispatchers.Main) {
-                    val element = scrapedElementQueries.getByHash(elementHash).executeAsOneOrNull()?.toScrapedElementDTO()
+                    // FIX (2025-12-01): Use databaseManager directly
+                    val element = databaseManager.scrapedElements.getByHash(elementHash)
                     if (element != null) {
                         val rootNode = accessibilityService.rootInActiveWindow
                         val targetNode = rootNode?.let { findNodeByHash(it, element.elementHash) }
                         if (targetNode != null) {
-                            // Validate before text input
-                            if (elementValidator.isValidForInteraction(targetNode)) {
-                                val bundle = Bundle().apply {
-                                    putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
-                                }
-                                targetNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, bundle)
-                            } else {
-                                Log.w(TAG, "Text input validation failed for: ${element.elementHash}")
+                            val bundle = Bundle().apply {
+                                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
                             }
+                            targetNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, bundle)
                             targetNode.recycle()
                             rootNode.recycle()
                         }
@@ -449,6 +534,379 @@ class VoiceCommandProcessor(
         }
         result
     }
+
+    // ==================== DYNAMIC COMMAND FALLBACK MECHANISM ====================
+    // YOLO FIX: Multi-tier fallback for voice commands when hash-based lookup fails
+
+    /**
+     * Tier 3: Property-based element search
+     *
+     * FIX (2025-12-01): New Tier 3 search using ElementSearchEngine.
+     * Searches by viewId, bounds+text, class+description before falling back to text-only.
+     *
+     * @param voiceInput Original voice input (e.g., "click submit button")
+     * @return CommandResult indicating success/failure
+     */
+    private suspend fun tryPropertyBasedSearch(voiceInput: String): CommandResult {
+        try {
+            val (action, target) = parseVoiceCommand(voiceInput)
+            if (target.isBlank()) {
+                return CommandResult.failure("Could not extract target from command")
+            }
+
+            Log.d(TAG, "Tier 3: Property-based search for target='$target', action='$action'")
+
+            // Create search criteria from target text
+            val criteria = ElementSearchCriteria.fromVoiceTarget(target)
+
+            // Search using ElementSearchEngine (priority: viewId > bounds+text > class+desc > text)
+            val node = elementSearchEngine.findElement(criteria)
+
+            if (node != null) {
+                try {
+                    val success = executeActionOnNode(node, action)
+                    if (success) {
+                        Log.i(TAG, "✓ Tier 3 (property-based) SUCCESS: '$voiceInput'")
+                        return CommandResult.success(
+                            message = "Executed: $voiceInput (tier-3)",
+                            actionType = action
+                        )
+                    }
+                } finally {
+                    node.recycle()
+                }
+            }
+
+            Log.d(TAG, "Tier 3: No match found, falling back to text-based search")
+            return CommandResult.failure("No property match found")
+        } catch (e: Exception) {
+            Log.e(TAG, "Tier 3 search error", e)
+            return CommandResult.failure("Tier 3 search failed: ${e.message}")
+        }
+    }
+
+    /**
+     * Try real-time element search when hash-based lookup fails
+     *
+     * 3-Tier real-time fallback strategy:
+     * - Tier 3: Property-based search (viewId > bounds+text > class+desc) - <20ms
+     * - Tier 4: Text-based search (Android API + recursive) - <50ms
+     *
+     * FIX (2025-11-13): Now uses extension functions for safe node lifecycle management.
+     * Prevents memory leaks and ensures proper cleanup even on exceptions.
+     *
+     * FIX (2025-12-01): Now tries Tier 3 property-based search FIRST before text fallback.
+     *
+     * @param voiceInput Original voice input (e.g., "click submit button")
+     * @return CommandResult indicating success/failure
+     */
+    private suspend fun tryRealtimeElementSearch(voiceInput: String): CommandResult = withContext(Dispatchers.Main) {
+        try {
+            // FIX (2025-12-01): Try Tier 3 property-based search first (faster, more reliable)
+            val tier3Result = tryPropertyBasedSearch(voiceInput)
+            if (tier3Result.success) {
+                return@withContext tier3Result
+            }
+            Log.d(TAG, "Tier 3 failed, falling back to Tier 4 text-based search")
+
+            // Parse voice command into action and target first
+            val (action, target) = parseVoiceCommand(voiceInput)
+
+            if (target.isBlank()) {
+                Log.w(TAG, "Real-time search: Could not extract target from command: $voiceInput")
+                return@withContext CommandResult.failure("Could not extract target from command")
+            }
+
+            ConditionalLogger.d(TAG) { "Real-time search: action=$action, target=$target" }
+
+            // FIX (2025-11-24): Search ALL windows including dialogs/popups
+            // Issue: Previous code only searched rootInActiveWindow, missing dialog windows
+            // Solution: Try main window first, then search all windows if not found
+
+            var matchedNodes = mutableListOf<AccessibilityNodeInfo>()
+
+            // Strategy 1: Search main active window first (fastest, most common case)
+            accessibilityService.rootInActiveWindow.useNodeOrNull { rootNode ->
+                matchedNodes.addAll(findNodesByText(rootNode, target))
+            }
+
+            // Strategy 2: If not found in main window, search ALL windows (dialogs, popups, overlays)
+            if (matchedNodes.isEmpty()) {
+                ConditionalLogger.d(TAG) { "Real-time search: Not found in main window, searching all windows..." }
+
+                val windows = accessibilityService.windows
+                ConditionalLogger.d(TAG) { "Real-time search: Found ${windows.size} windows to search" }
+
+                for (window in windows) {
+                    try {
+                        window.root?.let { windowRoot ->
+                            val windowMatches = findNodesByText(windowRoot, target)
+                            if (windowMatches.isNotEmpty()) {
+                                ConditionalLogger.d(TAG) { "Real-time search: Found ${windowMatches.size} matches in window type=${window.type}, layer=${window.layer}" }
+                                matchedNodes.addAll(windowMatches)
+                                // Don't recycle windowRoot - it's owned by window
+                            }
+                        }
+                    } catch (e: Exception) {
+                        ConditionalLogger.e(TAG, e) { "Error searching window: ${window.type}" }
+                    }
+                }
+            }
+
+            ConditionalLogger.d(TAG) { "Real-time search: Found ${matchedNodes.size} total potential matches for '$target'" }
+
+            // Execute action on best match if found
+            if (matchedNodes.isNotEmpty()) {
+                val bestMatch = matchedNodes.first()
+                ConditionalLogger.d(TAG) { "Real-time search: Attempting action '$action' on best match" }
+
+                val success = executeActionOnNode(bestMatch, action)
+
+                // Cleanup matched nodes (caller's responsibility per findNodesByText contract)
+                matchedNodes.forEach { it.recycle() }
+
+                if (success) {
+                    Log.i(TAG, "✓ Real-time element search succeeded: $voiceInput")
+                    return@withContext CommandResult.success(
+                        message = "Executed: $voiceInput (real-time)",
+                        actionType = action
+                    )
+                } else {
+                    Log.w(TAG, "✗ Real-time search: Action execution failed for: $voiceInput")
+                    return@withContext CommandResult.failure("Action execution failed")
+                }
+            } else {
+                Log.w(TAG, "✗ Real-time search: No matching elements found for '$target'")
+                return@withContext CommandResult.failure("Element not found in real-time search")
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in real-time element search", e)
+            return@withContext CommandResult.failure("Real-time search failed: ${e.message}")
+        }
+    }
+
+    /**
+     * Parse voice command into action and target
+     *
+     * Examples:
+     * - "click submit button" → ("click", "submit button")
+     * - "tap login" → ("click", "login")
+     * - "long press menu" → ("long_click", "menu")
+     */
+    private fun parseVoiceCommand(voiceInput: String): Pair<String, String> {
+        val normalized = voiceInput.lowercase().trim()
+
+        // Determine action
+        val action = when {
+            normalized.startsWith("click ") || normalized.startsWith("tap ") -> "click"
+            normalized.startsWith("long press ") || normalized.startsWith("hold ") -> "long_click"
+            normalized.startsWith("scroll ") -> "scroll"
+            normalized.startsWith("focus ") -> "focus"
+            else -> "click" // default action
+        }
+
+        // Extract target (everything after action keyword)
+        val target = normalized
+            .removePrefix("click ")
+            .removePrefix("tap ")
+            .removePrefix("long press ")
+            .removePrefix("hold ")
+            .removePrefix("scroll ")
+            .removePrefix("focus ")
+            .trim()
+
+        return Pair(action, target)
+    }
+
+    /**
+     * Find nodes by text or content description
+     *
+     * IMPORTANT: Caller is responsible for recycling all nodes in the returned list.
+     *
+     * Search Strategy:
+     * 1. Try Android's built-in exact text search first (fast)
+     * 2. If no results, fall back to recursive partial match search (slower but more flexible)
+     *
+     * FIX (2025-11-13): Added detailed logging for debugging search issues.
+     *
+     * @param root Root node to search from (NOT recycled by this function)
+     * @param searchText Text to search for (case-insensitive)
+     * @return List of matching nodes (CALLER MUST RECYCLE THESE)
+     */
+    private fun findNodesByText(root: AccessibilityNodeInfo, searchText: String): List<AccessibilityNodeInfo> {
+        val results = mutableListOf<AccessibilityNodeInfo>()
+        val startTime = System.currentTimeMillis()
+
+        try {
+            // Try Android's built-in text search first (exact match)
+            val exactMatches = root.findAccessibilityNodeInfosByText(searchText)
+            if (!exactMatches.isNullOrEmpty()) {
+                results.addAll(exactMatches)
+                ConditionalLogger.d(TAG) { "Real-time search: Found ${exactMatches.size} exact matches via Android API in ${System.currentTimeMillis() - startTime}ms" }
+            }
+
+            // If no exact matches, search recursively for partial matches
+            if (results.isEmpty()) {
+                ConditionalLogger.d(TAG) { "Real-time search: No exact matches, trying recursive partial search..." }
+                searchNodeRecursively(root, searchText, results)
+                ConditionalLogger.d(TAG) { "Real-time search: Recursive search found ${results.size} partial matches in ${System.currentTimeMillis() - startTime}ms" }
+            }
+
+        } catch (e: Exception) {
+            ConditionalLogger.e(TAG, e) { "Error finding nodes by text: searchText='$searchText'" }
+        }
+
+        ConditionalLogger.d(TAG) { "Real-time search: Total ${results.size} nodes found for '$searchText' in ${System.currentTimeMillis() - startTime}ms" }
+        return results
+    }
+
+    /**
+     * Recursively search for nodes matching text
+     *
+     * CRITICAL FIX (2025-11-13): Now uses forEachChild extension for safe child iteration.
+     *
+     * Previous Bug: Manual recycling check `if (child !in results)` was always true because
+     * child nodes are never directly added to results - only their descendants are.
+     * This caused ALL children to be recycled prematurely, breaking tree traversal.
+     *
+     * New Approach: forEachChild extension handles recycling automatically.
+     * Children are recycled after processing regardless of whether descendants were added.
+     * This is correct because only leaf nodes (actual matches) are added to results.
+     *
+     * NOTE: Caller must recycle all nodes in the results list.
+     *
+     * @param node Current node being searched
+     * @param searchText Text to search for (case-insensitive)
+     * @param results Mutable list to accumulate matching nodes
+     */
+    private fun searchNodeRecursively(
+        node: AccessibilityNodeInfo,
+        searchText: String,
+        results: MutableList<AccessibilityNodeInfo>
+    ) {
+        try {
+            val text = node.text?.toString()?.lowercase() ?: ""
+            val contentDesc = node.contentDescription?.toString()?.lowercase() ?: ""
+            val searchLower = searchText.lowercase()
+
+            // Check if this node matches
+            if ((text.contains(searchLower) || contentDesc.contains(searchLower)) &&
+                (node.isClickable || node.isFocusable)) {
+                results.add(node)
+                ConditionalLogger.v(TAG) { "Real-time search: Match found - text='$text', contentDesc='$contentDesc', clickable=${node.isClickable}" }
+            }
+
+            // Search children with automatic safe recycling
+            // FIX: Use forEachChild extension - handles recycling correctly
+            // Each child is recycled after recursion, regardless of matches found
+            node.forEachChild { child ->
+                searchNodeRecursively(child, searchText, results)
+            }
+
+        } catch (e: Exception) {
+            ConditionalLogger.e(TAG, e) { "Error in recursive node search" }
+        }
+    }
+
+    /**
+     * Execute action on specific node (not by hash)
+     *
+     * FIX (2025-11-23): Enhanced with fallback strategies for robust real-time commands
+     * - Strategy 1: Try direct action on node
+     * - Strategy 2: Try focusing first, then action
+     * - Strategy 3: Try scrolling into view, then action
+     * - Strategy 4: Try action on parent node (if node not clickable)
+     * - Strategy 5: Try action on parent's parent (2 levels up)
+     *
+     * This fixes "display size and text" failing in Settings and bottom nav items
+     *
+     * @param node The node to perform action on
+     * @param actionType Action to perform (click, long_click, etc.)
+     * @return true if action succeeded
+     */
+    private fun executeActionOnNode(node: AccessibilityNodeInfo, actionType: String): Boolean {
+        val action = when (actionType) {
+            "click" -> AccessibilityNodeInfo.ACTION_CLICK
+            "long_click" -> AccessibilityNodeInfo.ACTION_LONG_CLICK
+            "focus" -> AccessibilityNodeInfo.ACTION_FOCUS
+            "scroll" -> AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+            else -> return false
+        }
+
+        return try {
+            // Strategy 1: Try direct action
+            if (node.performAction(action)) {
+                Log.d(TAG, "✓ Real-time: Direct $actionType succeeded")
+                return true
+            }
+
+            // Strategy 2: Try focusing first, then action
+            if (node.isFocusable && !node.isFocused) {
+                if (node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)) {
+                    Thread.sleep(100) // Brief delay for focus to settle
+                    if (node.performAction(action)) {
+                        Log.d(TAG, "✓ Real-time: $actionType succeeded after focus")
+                        return true
+                    }
+                }
+            }
+
+            // Strategy 3: Try scrolling into view first
+            if (node.isVisibleToUser) {
+                // FIX: ACTION_SHOW_ON_SCREEN is not a constant on AccessibilityNodeInfo
+                // It's an AccessibilityAction introduced in API 23+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    if (node.performAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)) {
+                        Thread.sleep(100) // Brief delay for scroll animation
+                        if (node.performAction(action)) {
+                            Log.d(TAG, "✓ Real-time: $actionType succeeded after scroll-into-view")
+                            return true
+                        }
+                    }
+                }
+            }
+
+            // Strategy 4: Try action on parent node (if current node not clickable)
+            val parent = node.parent
+            if (parent != null && parent.isClickable) {
+                try {
+                    if (parent.performAction(action)) {
+                        Log.d(TAG, "✓ Real-time: $actionType succeeded on parent node")
+                        return true
+                    }
+                } finally {
+                    parent.recycle()
+                }
+            }
+
+            // Strategy 5: Try action on grandparent node (2 levels up)
+            val grandparent = node.parent?.parent
+            if (grandparent != null && grandparent.isClickable) {
+                try {
+                    if (grandparent.performAction(action)) {
+                        Log.d(TAG, "✓ Real-time: $actionType succeeded on grandparent node")
+                        return true
+                    }
+                } finally {
+                    grandparent.recycle()
+                }
+            }
+
+            // All strategies failed
+            Log.w(TAG, "✗ Real-time: All $actionType strategies failed. Node details: " +
+                    "clickable=${node.isClickable}, focusable=${node.isFocusable}, " +
+                    "visible=${node.isVisibleToUser}, enabled=${node.isEnabled}, " +
+                    "bounds=${node.getBoundsInScreen(android.graphics.Rect())}")
+            false
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error executing $actionType on node: ${e.message}", e)
+            false
+        }
+    }
+
+    // ==================== END FALLBACK MECHANISM ====================
 }
 
 /**
@@ -458,21 +916,23 @@ data class CommandResult(
     val success: Boolean,
     val message: String,
     val actionType: String? = null,
-    val elementHash: String? = null
+    val elementHash: String? = null,
+    val suggestions: String? = null  // NEW: Element suggestions for failed commands
 ) {
     companion object {
         fun success(message: String, actionType: String? = null, elementHash: String? = null) =
-            CommandResult(true, message, actionType, elementHash)
+            CommandResult(true, message, actionType, elementHash, null)
 
-        fun failure(message: String) =
-            CommandResult(false, message)
+        fun failure(message: String, suggestions: String? = null) =
+            CommandResult(false, message, null, null, suggestions)
 
         fun elementNotFound(commandText: String, elementHash: String) =
             CommandResult(
                 success = false,
                 message = "Element not found for command '$commandText'. UI may have changed.",
                 actionType = null,
-                elementHash = elementHash
+                elementHash = elementHash,
+                suggestions = null
             )
     }
 }

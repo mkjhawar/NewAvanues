@@ -11,8 +11,10 @@
 
 package com.augmentalis.voiceoscore.learnapp.scrolling
 
+import android.content.Context
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
+import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 import kotlinx.coroutines.delay
 import java.security.MessageDigest
 
@@ -45,7 +47,16 @@ import java.security.MessageDigest
  *
  * @since 1.0.0
  */
-class ScrollExecutor {
+class ScrollExecutor(
+    private val context: Context
+) {
+
+    /**
+     * Developer settings for scroll configuration
+     */
+    private val developerSettings by lazy {
+        LearnAppDeveloperSettings(context)
+    }
 
     /**
      * Scroll detector
@@ -80,49 +91,66 @@ class ScrollExecutor {
      *
      * Scrolls down until no new elements appear, then scrolls back to top.
      *
+     * FIX (2025-12-04): Added element limiting and enhanced scroll end detection
+     * - Limits to MAX_ELEMENTS_PER_SCROLLABLE = 20
+     * - 3-strategy scroll end detection: hash unchanged, element count, iteration limit
+     *
      * @param scrollable Scrollable container
      * @return List of all elements
      */
     suspend fun scrollVerticallyAndCollect(scrollable: AccessibilityNodeInfo): List<ElementInfo> {
         val allElements = mutableSetOf<ElementInfo>()
         var previousHash = ""
+        var previousElementCount = 0
         var unchangedCount = 0
-        val maxAttempts = 50
 
         // Scroll down and collect
-        repeat(maxAttempts) {
+        repeat(developerSettings.getMaxVerticalScrollIterations()) { iteration ->
+            // Check if we've reached element limit
+            if (allElements.size >= developerSettings.getMaxElementsPerScrollable()) {
+                return@repeat  // Strategy 3: Element limit reached
+            }
+
             // Collect visible elements
             val currentElements = collectVisibleElements(scrollable)
             allElements.addAll(currentElements)
 
-            // Hash elements to detect if we've reached the end
+            // Strategy 1: Hash-based scroll end detection
             val currentHash = hashElements(currentElements)
+            val currentElementCount = currentElements.size
 
             if (currentHash == previousHash) {
                 unchangedCount++
                 if (unchangedCount >= 2) {
-                    return@repeat  // Reached end
+                    return@repeat  // Strategy 1: Hash unchanged twice - reached end
                 }
             } else {
                 unchangedCount = 0
             }
 
+            // Strategy 2: Element count unchanged
+            if (currentElementCount == previousElementCount && currentElementCount > 0) {
+                return@repeat  // Strategy 2: Same elements visible - reached end
+            }
+
             previousHash = currentHash
+            previousElementCount = currentElementCount
 
             // Try to scroll forward
             val scrolled = scrollable.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
             if (!scrolled) {
-                return@repeat  // Can't scroll anymore
+                return@repeat  // Strategy 1: Can't scroll anymore
             }
 
             // Wait for scroll animation
-            delay(300)
+            delay(developerSettings.getScrollDelayMs())
         }
 
         // Scroll back to top
         scrollBackToTop(scrollable)
 
-        return allElements.toList()
+        // Limit to MAX_ELEMENTS_PER_SCROLLABLE
+        return allElements.take(developerSettings.getMaxElementsPerScrollable())
     }
 
     /**
@@ -130,47 +158,64 @@ class ScrollExecutor {
      *
      * Scrolls right until no new elements appear.
      *
+     * FIX (2025-12-04): Added element limiting and enhanced scroll end detection
+     * - Limits to MAX_ELEMENTS_PER_SCROLLABLE = 20
+     * - 3-strategy scroll end detection: hash unchanged, element count, iteration limit
+     *
      * @param scrollable Scrollable container
      * @return List of all elements
      */
     suspend fun scrollHorizontallyAndCollect(scrollable: AccessibilityNodeInfo): List<ElementInfo> {
         val allElements = mutableSetOf<ElementInfo>()
         var previousHash = ""
+        var previousElementCount = 0
         var unchangedCount = 0
-        val maxAttempts = 20  // Horizontal scrolls usually shorter
 
-        repeat(maxAttempts) {
+        repeat(developerSettings.getMaxHorizontalScrollIterations()) {
+            // Check if we've reached element limit
+            if (allElements.size >= developerSettings.getMaxElementsPerScrollable()) {
+                return@repeat  // Strategy 3: Element limit reached
+            }
+
             // Collect visible elements
             val currentElements = collectVisibleElements(scrollable)
             allElements.addAll(currentElements)
 
-            // Hash to detect end
+            // Strategy 1: Hash-based scroll end detection
             val currentHash = hashElements(currentElements)
+            val currentElementCount = currentElements.size
 
             if (currentHash == previousHash) {
                 unchangedCount++
                 if (unchangedCount >= 2) {
-                    return@repeat
+                    return@repeat  // Strategy 1: Hash unchanged twice - reached end
                 }
             } else {
                 unchangedCount = 0
             }
 
+            // Strategy 2: Element count unchanged
+            if (currentElementCount == previousElementCount && currentElementCount > 0) {
+                return@repeat  // Strategy 2: Same elements visible - reached end
+            }
+
             previousHash = currentHash
+            previousElementCount = currentElementCount
 
             // Scroll forward (right)
             val scrolled = scrollable.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
             if (!scrolled) {
-                return@repeat
+                return@repeat  // Strategy 1: Can't scroll anymore
             }
 
-            delay(300)
+            delay(developerSettings.getScrollDelayMs())
         }
 
         // Scroll back to start
         scrollBackToStart(scrollable)
 
-        return allElements.toList()
+        // Limit to MAX_ELEMENTS_PER_SCROLLABLE
+        return allElements.take(developerSettings.getMaxElementsPerScrollable())
     }
 
     /**
@@ -197,6 +242,9 @@ class ScrollExecutor {
     /**
      * Traverse container (DFS)
      *
+     * FIX (2025-12-04): Added child limit to prevent memory exhaustion
+     * - Limits to MAX_CHILDREN_PER_CONTAINER = 50
+     *
      * @param node Current node
      * @param visitor Visitor function
      */
@@ -206,7 +254,10 @@ class ScrollExecutor {
     ) {
         visitor(node)
 
-        for (i in 0 until node.childCount) {
+        // Limit children per container to prevent memory exhaustion
+        val maxChildren = minOf(node.childCount, developerSettings.getMaxChildrenPerScrollContainer())
+
+        for (i in 0 until maxChildren) {
             node.getChild(i)?.let { child ->
                 try {
                     traverseContainer(child, visitor)
@@ -223,14 +274,18 @@ class ScrollExecutor {
     /**
      * Hash elements to detect duplicates
      *
-     * Creates hash from element bounds and text to detect if scroll position changed.
+     * Creates hash from element properties to detect if scroll position changed.
+     *
+     * FIX (2025-12-04): Enhanced hashing algorithm
+     * - Uses: className|resourceId|text|contentDescription|bounds
+     * - Provides better deduplication accuracy
      *
      * @param elements List of elements
      * @return Hash string
      */
     private fun hashElements(elements: List<ElementInfo>): String {
         val signature = elements.joinToString("\n") { element ->
-            "${element.bounds}|${element.text}|${element.contentDescription}"
+            "${element.className}|${element.resourceId}|${element.text}|${element.contentDescription}|${element.bounds}"
         }
 
         val digest = MessageDigest.getInstance("MD5")
@@ -254,7 +309,7 @@ class ScrollExecutor {
                 return@repeat  // Reached top
             }
 
-            delay(100)
+            delay(developerSettings.getClickRetryDelayMs())
         }
     }
 
@@ -274,7 +329,7 @@ class ScrollExecutor {
                 return@repeat
             }
 
-            delay(100)
+            delay(developerSettings.getClickRetryDelayMs())
         }
     }
 

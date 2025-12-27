@@ -1,526 +1,310 @@
 /**
- * NumberHandler.kt - Number overlay display and control handler
+ * NumberHandler.kt - Handler for numbered element interactions
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Migration Team
- * Code-Reviewed-By: CCA
- * Created: 2025-09-03
+ * Author: VOS4 Development Team
+ * Created: 2025-11-26
+ * Implemented: 2025-11-27
  */
 package com.augmentalis.voiceoscore.accessibility.handlers
 
 import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import android.widget.Toast
-import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.augmentalis.voiceoscore.accessibility.VoiceOSService
 
 /**
- * Handler for number overlay display and interaction
- * Shows numbered overlays on UI elements for voice selection
+ * Handler for numbered element interactions
+ *
+ * Provides voice commands to show numbered overlays on interactive elements
+ * and select them by number for interaction.
  */
 class NumberHandler(
-    private val service: IVoiceOSContext
+    private val service: VoiceOSService
 ) : ActionHandler {
 
     companion object {
         private const val TAG = "NumberHandler"
-        
-        // Supported actions
+
         val SUPPORTED_ACTIONS = listOf(
             "show numbers",
             "hide numbers",
-            "numbers on",
-            "numbers off",
-            "toggle numbers",
-            "number overlay",
-            "label elements",
-            "click number",
-            "select number",
-            "tap number"
+            "clear numbers",
+            "number", "select number", "tap number",
+            "one", "two", "three", "four", "five",
+            "six", "seven", "eight", "nine"
         )
     }
-
-    private var isNumberOverlayVisible = false
-    private var numberedElements = mutableMapOf<Int, ElementInfo>()
-    private var currentNumberCount = 0
-    private val numberScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     /**
      * Information about a numbered UI element
      */
     data class ElementInfo(
-        val node: AccessibilityNodeInfo,
         val bounds: Rect,
         val description: String,
         val isClickable: Boolean,
-        val isScrollable: Boolean
+        val viewIdResourceName: String? = null,
+        val className: String? = null,
+        val text: String? = null
     )
 
-    override fun initialize() {
-        Log.d(TAG, "Initializing NumberHandler")
-        // Initialize number overlay system
-    }
+    /**
+     * Current numbered elements mapping
+     * Maps number -> ElementInfo
+     */
+    private val numberedElements = mutableMapOf<Int, ElementInfo>()
 
-    override fun canHandle(action: String): Boolean {
-        return SUPPORTED_ACTIONS.any { supportedAction -> action.contains(supportedAction, ignoreCase = true) } || isNumberCommand(action)
-    }
-
-    override fun getSupportedActions(): List<String> {
-        return SUPPORTED_ACTIONS
-    }
+    /**
+     * Whether number overlay is currently shown
+     */
+    private var isNumberOverlayVisible = false
 
     override fun execute(
         category: ActionCategory,
         action: String,
         params: Map<String, Any>
     ): Boolean {
-        Log.d(TAG, "Executing number action: $action")
+        val normalizedAction = action.lowercase().trim()
+
+        Log.d(TAG, "Executing number action: $normalizedAction")
 
         return when {
-            // Show number overlay
-            action.contains("show numbers", ignoreCase = true) ||
-            action.contains("numbers on", ignoreCase = true) ||
-            action.contains("label elements", ignoreCase = true) ||
-            action.contains("number overlay", ignoreCase = true) -> {
-                showNumberOverlay()
+            // Show numbers
+            normalizedAction == "show numbers" -> {
+                showNumbers()
+                true
             }
 
-            // Hide number overlay
-            action.contains("hide numbers", ignoreCase = true) ||
-            action.contains("numbers off", ignoreCase = true) -> {
-                hideNumberOverlay()
+            // Hide/Clear numbers
+            normalizedAction == "hide numbers" ||
+            normalizedAction == "clear numbers" -> {
+                clearNumbers()
+                true
             }
 
-            // Toggle number overlay
-            action.contains("toggle numbers", ignoreCase = true) -> {
-                toggleNumberOverlay()
-            }
+            // Select by number: "number 5", "tap number 3", "select number 7"
+            normalizedAction.startsWith("number ") ||
+            normalizedAction.startsWith("tap number ") ||
+            normalizedAction.startsWith("select number ") -> {
+                val numberStr = normalizedAction
+                    .removePrefix("number ")
+                    .removePrefix("tap number ")
+                    .removePrefix("select number ")
+                    .trim()
 
-            // Handle number commands (e.g., "click 5", "tap 3", "select 7")
-            isNumberCommand(action) -> {
-                handleNumberCommand(action)
-            }
-
-            else -> {
-                Log.w(TAG, "Unknown number action: $action")
-                false
-            }
-        }
-    }
-
-    /**
-     * Show number overlay on interactive elements
-     */
-    private fun showNumberOverlay(): Boolean {
-        return try {
-            if (isNumberOverlayVisible) {
-                Log.d(TAG, "Number overlay already visible")
-                return true
-            }
-
-            Log.i(TAG, "Showing number overlay")
-            
-            val rootNode = service.getRootNodeInActiveWindow()
-            if (rootNode == null) {
-                Log.w(TAG, "No root node available")
-                return false
-            }
-
-            // Clear previous numbering
-            clearNumberedElements()
-
-            // Find and number interactive elements
-            val interactiveElements = findInteractiveElements(rootNode)
-            
-            if (interactiveElements.isEmpty()) {
-                Log.w(TAG, "No interactive elements found")
-                showFeedback("No interactive elements found on screen")
-                return false
-            }
-
-            // Assign numbers to elements
-            interactiveElements.forEachIndexed { index, elementInfo ->
-                val number = index + 1
-                numberedElements[number] = elementInfo
-                currentNumberCount = number
-            }
-
-            isNumberOverlayVisible = true
-
-            // Show overlay visualization
-            displayNumberOverlays()
-
-            // Provide feedback
-            showFeedback("Showing ${numberedElements.size} numbered elements. Say 'tap [number]' to interact or 'hide numbers' to close.")
-
-            // Auto-hide after timeout
-            numberScope.launch {
-                delay(30000) // 30 seconds
-                if (isNumberOverlayVisible) {
-                    hideNumberOverlay()
+                val number = numberStr.toIntOrNull()
+                if (number != null) {
+                    selectNumber(number)
+                } else {
+                    Log.w(TAG, "Invalid number: $numberStr")
+                    false
                 }
             }
 
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Error showing number overlay", e)
-            false
-        }
-    }
-
-    /**
-     * Hide number overlay
-     */
-    private fun hideNumberOverlay(): Boolean {
-        return try {
-            if (!isNumberOverlayVisible) {
-                Log.d(TAG, "Number overlay already hidden")
-                return true
+            // Direct number selection: "one", "two", etc.
+            normalizedAction in listOf("one", "two", "three", "four", "five", "six", "seven", "eight", "nine") -> {
+                val number = when (normalizedAction) {
+                    "one" -> 1
+                    "two" -> 2
+                    "three" -> 3
+                    "four" -> 4
+                    "five" -> 5
+                    "six" -> 6
+                    "seven" -> 7
+                    "eight" -> 8
+                    "nine" -> 9
+                    else -> null
+                }
+                if (number != null) {
+                    selectNumber(number)
+                } else {
+                    false
+                }
             }
 
-            Log.i(TAG, "Hiding number overlay")
-            
-            isNumberOverlayVisible = false
-            clearNumberedElements()
+            else -> false
+        }
+    }
 
-            // Hide overlay visualization
-            hideNumberOverlays()
+    override fun canHandle(action: String): Boolean {
+        val normalizedAction = action.lowercase().trim()
+        return SUPPORTED_ACTIONS.any { supportedAction ->
+            normalizedAction.startsWith(supportedAction)
+        }
+    }
 
-            showFeedback("Number overlay hidden")
+    override fun getSupportedActions(): List<String> {
+        return SUPPORTED_ACTIONS
+    }
 
-            true
+    /**
+     * Show numbered overlay for interactive elements
+     * Collects clickable elements from current screen and assigns numbers
+     */
+    private fun showNumbers() {
+        try {
+            val rootNode = service.rootInActiveWindow
+            if (rootNode == null) {
+                Log.w(TAG, "No root node available for showing numbers")
+                return
+            }
+
+            // Clear previous mappings
+            numberedElements.clear()
+
+            // Collect clickable elements
+            val clickableElements = mutableListOf<AccessibilityNodeInfo>()
+            collectClickableElements(rootNode, clickableElements)
+
+            // Assign numbers to elements
+            clickableElements.forEachIndexed { index, node ->
+                if (index < 9) { // Limit to 9 numbers for voice simplicity
+                    val number = index + 1
+                    val elementInfo = createElementInfo(node)
+                    numberedElements[number] = elementInfo
+                }
+            }
+
+            // TODO: Show actual overlay UI
+            // This would integrate with NumberOverlay component
+            isNumberOverlayVisible = true
+
+            Log.d(TAG, "Showing numbers for ${numberedElements.size} elements")
+
+            // Note: recycle() removed - Android handles AccessibilityNodeInfo cleanup automatically
+            // clickableElements.forEach { it.recycle() }
+            // rootNode.recycle()
+
         } catch (e: Exception) {
-            Log.e(TAG, "Error hiding number overlay", e)
-            false
+            Log.e(TAG, "Error showing numbers", e)
         }
     }
 
     /**
-     * Toggle number overlay visibility
+     * Select element by number
      */
-    private fun toggleNumberOverlay(): Boolean {
-        return if (isNumberOverlayVisible) {
-            hideNumberOverlay()
-        } else {
-            showNumberOverlay()
-        }
-    }
-
-    /**
-     * Handle number-based commands (e.g., "tap 5", "click 3")
-     */
-    private fun handleNumberCommand(action: String): Boolean {
+    private fun selectNumber(number: Int): Boolean {
         if (!isNumberOverlayVisible) {
-            Log.w(TAG, "Number overlay not visible for command: $action")
-            showFeedback("Show numbers first by saying 'show numbers'")
+            Log.w(TAG, "Number overlay not visible, cannot select number")
             return false
         }
 
-        return try {
-            val number = extractNumberFromCommand(action)
-            if (number == null) {
-                Log.w(TAG, "Could not extract number from command: $action")
+        val elementInfo = numberedElements[number]
+        if (elementInfo == null) {
+            Log.w(TAG, "No element mapped to number $number")
+            return false
+        }
+
+        try {
+            // Find the node again and perform click
+            val rootNode = service.rootInActiveWindow
+            if (rootNode == null) {
+                Log.w(TAG, "No root node available for number selection")
                 return false
             }
 
-            val elementInfo = numberedElements[number]
-            if (elementInfo == null) {
-                Log.w(TAG, "No element found for number: $number")
-                showFeedback("Number $number not found. Available: 1-$currentNumberCount")
-                return false
-            }
+            val targetNode = findNodeByBounds(rootNode, elementInfo.bounds)
+            if (targetNode != null) {
+                val result = targetNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                // Note: recycle() removed - Android handles cleanup automatically
+                // targetNode.recycle()
+                // rootNode.recycle()
 
-            Log.d(TAG, "Executing action on element $number: ${elementInfo.description}")
+                if (result) {
+                    Log.d(TAG, "Successfully clicked number $number")
+                    // Clear numbers after successful selection
+                    clearNumbers()
+                }
 
-            // Determine action type
-            val success = when {
-                action.contains("click", ignoreCase = true) ||
-                action.contains("tap", ignoreCase = true) ||
-                action.contains("select", ignoreCase = true) -> {
-                    clickElement(elementInfo)
-                }
-                action.contains("scroll", ignoreCase = true) -> {
-                    scrollElement(elementInfo)
-                }
-                action.contains("long", ignoreCase = true) -> {
-                    longPressElement(elementInfo)
-                }
-                else -> {
-                    // Default to click
-                    clickElement(elementInfo)
-                }
-            }
-
-            if (success) {
-                showFeedback("Tapped element $number: ${elementInfo.description}")
-                
-                // Hide overlay after successful interaction
-                numberScope.launch {
-                    delay(1000)
-                    hideNumberOverlay()
-                }
+                return result
             } else {
-                showFeedback("Could not interact with element $number")
+                Log.w(TAG, "Could not find node for number $number")
+                // Note: recycle() removed - Android handles cleanup automatically
+                // rootNode.recycle()
+                return false
             }
 
-            success
         } catch (e: Exception) {
-            Log.e(TAG, "Error handling number command", e)
-            false
+            Log.e(TAG, "Error selecting number $number", e)
+            return false
         }
     }
 
     /**
-     * Find interactive elements on screen
+     * Clear numbered overlay
      */
-    private fun findInteractiveElements(rootNode: AccessibilityNodeInfo): List<ElementInfo> {
-        val elements = mutableListOf<ElementInfo>()
-        
-        try {
-            findInteractiveElementsRecursive(rootNode, elements)
-            
-            // Sort by position (top to bottom, left to right)
-            elements.sortWith { a, b ->
-                when {
-                    a.bounds.top != b.bounds.top -> a.bounds.top - b.bounds.top
-                    else -> a.bounds.left - b.bounds.left
-                }
-            }
-            
-            Log.d(TAG, "Found ${elements.size} interactive elements")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error finding interactive elements", e)
-        }
-        
-        return elements
-    }
-
-    /**
-     * Recursively find interactive elements
-     */
-    private fun findInteractiveElementsRecursive(
-        node: AccessibilityNodeInfo,
-        elements: MutableList<ElementInfo>
-    ) {
-        try {
-            // Check if this node is interactive
-            if (isInteractiveElement(node)) {
-                val bounds = Rect()
-                node.getBoundsInScreen(bounds)
-                
-                // Skip elements that are too small or off-screen
-                if (bounds.width() > 20 && bounds.height() > 20 && 
-                    bounds.left >= 0 && bounds.top >= 0) {
-                    
-                    val description = getElementDescription(node)
-                    val elementInfo = ElementInfo(
-                        node = node,
-                        bounds = bounds,
-                        description = description,
-                        isClickable = node.isClickable,
-                        isScrollable = node.isScrollable
-                    )
-                    
-                    elements.add(elementInfo)
-                    Log.v(TAG, "Added element: $description at $bounds")
-                }
-            }
-
-            // Recursively check children
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i)
-                child?.let {
-                    findInteractiveElementsRecursive(it, elements)
-                    // it.recycle() // Deprecated - Android handles this automatically
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error in recursive element finding", e)
-        }
-    }
-
-    /**
-     * Check if a node is interactive
-     */
-    private fun isInteractiveElement(node: AccessibilityNodeInfo): Boolean {
-        return node.isClickable || 
-               node.isScrollable || 
-               node.isCheckable || 
-               node.isEditable ||
-               node.isFocusable ||
-               node.actionList.any { 
-                   it.id == AccessibilityNodeInfo.ACTION_CLICK ||
-                   it.id == AccessibilityNodeInfo.ACTION_LONG_CLICK ||
-                   it.id == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD ||
-                   it.id == AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
-               }
-    }
-
-    /**
-     * Get description for an element
-     */
-    private fun getElementDescription(node: AccessibilityNodeInfo): String {
-        return when {
-            !node.contentDescription.isNullOrEmpty() -> node.contentDescription.toString()
-            !node.text.isNullOrEmpty() -> node.text.toString()
-            !node.className.isNullOrEmpty() -> node.className.toString().substringAfterLast('.')
-            else -> "Element"
-        }
-    }
-
-    /**
-     * Click on an element
-     */
-    private fun clickElement(elementInfo: ElementInfo): Boolean {
-        return try {
-            elementInfo.node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error clicking element", e)
-            false
-        }
-    }
-
-    /**
-     * Long press on an element
-     */
-    private fun longPressElement(elementInfo: ElementInfo): Boolean {
-        return try {
-            elementInfo.node.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error long pressing element", e)
-            false
-        }
-    }
-
-    /**
-     * Scroll an element
-     */
-    private fun scrollElement(elementInfo: ElementInfo): Boolean {
-        return try {
-            elementInfo.node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error scrolling element", e)
-            false
-        }
-    }
-
-    /**
-     * Check if action is a number command
-     */
-    private fun isNumberCommand(action: String): Boolean {
-        val words = action.lowercase().split(" ")
-        return words.any { word ->
-            word.toIntOrNull() != null && 
-            (words.contains("tap") || words.contains("click") || words.contains("select") || 
-             words.contains("scroll") || words.contains("long"))
-        }
-    }
-
-    /**
-     * Extract number from command text
-     */
-    private fun extractNumberFromCommand(action: String): Int? {
-        val words = action.lowercase().split(" ")
-        return words.firstNotNullOfOrNull { it.toIntOrNull() }
-    }
-
-    /**
-     * Clear numbered elements
-     */
-    private fun clearNumberedElements() {
-        numberedElements.forEach { (_, _) ->
-            try {
-                // elementInfo.node.recycle() // Deprecated - Android handles this automatically
-            } catch (e: Exception) {
-                Log.w(TAG, "Error recycling node", e)
-            }
-        }
+    private fun clearNumbers() {
         numberedElements.clear()
-        currentNumberCount = 0
+        isNumberOverlayVisible = false
+
+        // TODO: Hide actual overlay UI
+        Log.d(TAG, "Cleared number overlay")
     }
 
     /**
-     * Display number overlays using NumberedSelectionOverlay
-     *
-     * TODO (Future): Integrate with overlay manager when IVoiceOSContext is extended
-     * with getOverlayManager() method. For now, logs numbered elements for debugging.
+     * Recursively collect clickable elements
      */
-    private fun displayNumberOverlays() {
-        try {
-            Log.d(TAG, "Displaying number overlays for ${numberedElements.size} elements")
+    private fun collectClickableElements(
+        node: AccessibilityNodeInfo,
+        result: MutableList<AccessibilityNodeInfo>
+    ) {
+        if (node.isClickable && node.isVisibleToUser) {
+            result.add(AccessibilityNodeInfo.obtain(node))
+        }
 
-            // TODO: Implement when overlay manager is available
-            // val overlayManager = service.getOverlayManager()
-            // val selectableItems = numberedElements.map { (number, elementInfo) ->
-            //     SelectableItem(number, elementInfo.description, elementInfo.bounds) {
-            //         handleNumberCommand("tap $number")
-            //     }
-            // }
-            // overlayManager?.showNumberedOverlay(selectableItems)
-
-            // Log numbered elements for debugging
-            numberedElements.forEach { (number, elementInfo) ->
-                Log.v(TAG, "  $number: ${elementInfo.description} at ${elementInfo.bounds}")
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child != null) {
+                collectClickableElements(child, result)
+                // Note: recycle() removed - Android handles cleanup automatically
+                // child.recycle()
             }
-            Log.i(TAG, "Number overlay requested with ${numberedElements.size} items (overlay integration pending)")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error displaying number overlays", e)
         }
     }
 
     /**
-     * Hide number overlays via overlay manager
-     *
-     * TODO (Future): Integrate with overlay manager when available
+     * Create ElementInfo from AccessibilityNodeInfo
      */
-    private fun hideNumberOverlays() {
-        try {
-            Log.d(TAG, "Hiding number overlays")
-            // TODO: Implement when overlay manager is available
-            // val overlayManager = service.getOverlayManager()
-            // overlayManager?.hideNumberedOverlay()
-            Log.i(TAG, "Number overlay hide requested (overlay integration pending)")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error hiding number overlays", e)
+    private fun createElementInfo(node: AccessibilityNodeInfo): ElementInfo {
+        val bounds = Rect()
+        node.getBoundsInScreen(bounds)
+
+        return ElementInfo(
+            bounds = bounds,
+            description = node.contentDescription?.toString() ?: node.text?.toString() ?: "",
+            isClickable = node.isClickable,
+            viewIdResourceName = node.viewIdResourceName,
+            className = node.className?.toString(),
+            text = node.text?.toString()
+        )
+    }
+
+    /**
+     * Find node by screen bounds
+     */
+    private fun findNodeByBounds(
+        root: AccessibilityNodeInfo,
+        targetBounds: Rect
+    ): AccessibilityNodeInfo? {
+        val nodeBounds = Rect()
+        root.getBoundsInScreen(nodeBounds)
+
+        if (nodeBounds == targetBounds) {
+            return AccessibilityNodeInfo.obtain(root)
         }
-    }
 
-    /**
-     * Show user feedback
-     */
-    private fun showFeedback(message: String) {
-        try {
-            Toast.makeText(service.context, message, Toast.LENGTH_SHORT).show()
-            Log.i(TAG, "Feedback: $message")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error showing feedback", e)
+        for (i in 0 until root.childCount) {
+            val child = root.getChild(i)
+            if (child != null) {
+                val result = findNodeByBounds(child, targetBounds)
+                // Note: recycle() removed - Android handles cleanup automatically
+                // child.recycle()
+                if (result != null) {
+                    return result
+                }
+            }
         }
-    }
 
-    /**
-     * Get current numbered elements (for external access)
-     */
-    fun getNumberedElements(): Map<Int, ElementInfo> {
-        return numberedElements.toMap()
-    }
-
-    /**
-     * Check if number overlay is visible
-     */
-    fun isNumberOverlayActive(): Boolean {
-        return isNumberOverlayVisible
-    }
-
-    override fun dispose() {
-        Log.d(TAG, "Disposing NumberHandler")
-        numberScope.cancel()
-        hideNumberOverlay()
-        clearNumberedElements()
+        return null
     }
 }

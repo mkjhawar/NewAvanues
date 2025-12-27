@@ -9,7 +9,7 @@
 package com.augmentalis.voiceoscore.accessibility.managers
 
 import android.util.Log
-import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
+import com.augmentalis.voiceoscore.accessibility.VoiceOSService
 import com.augmentalis.voiceoscore.accessibility.handlers.ActionCategory
 import com.augmentalis.voiceoscore.accessibility.handlers.ActionHandler
 import com.augmentalis.voiceoscore.accessibility.handlers.AppHandler
@@ -24,11 +24,14 @@ import com.augmentalis.voiceoscore.accessibility.handlers.NumberHandler
 import com.augmentalis.voiceoscore.accessibility.handlers.SelectHandler
 import com.augmentalis.voiceoscore.accessibility.handlers.SystemHandler
 import com.augmentalis.voiceoscore.accessibility.handlers.UIHandler
+import com.augmentalis.voiceoscore.utils.CommandMetricsCollector
+import com.augmentalis.voiceoscore.utils.MetricsSummary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
@@ -36,9 +39,8 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Coordinates action execution across multiple handlers
  * Direct implementation except for ActionHandler interface usage
- * Now uses IVoiceOSContext for Dependency Inversion Principle compliance
  */
-class ActionCoordinator(private val context: IVoiceOSContext) {
+class ActionCoordinator(private val service: VoiceOSService) {
 
     companion object {
         private const val TAG = "ActionCoordinator"
@@ -48,8 +50,11 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
     // Handler registry - uses interface for polymorphic storage
     private val handlers = ConcurrentHashMap<ActionCategory, MutableList<ActionHandler>>()
 
-    // Performance metrics
+    // Performance metrics (legacy - kept for backwards compatibility)
     private val metrics = ConcurrentHashMap<String, MetricData>()
+
+    // Enhanced metrics collection (Phase 3)
+    private val metricsCollector = CommandMetricsCollector()
 
     // Coroutine scope for async handler operations
     private val coordinatorScope = CoroutineScope(
@@ -76,34 +81,24 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
         Log.d(TAG, "Initializing ActionCoordinator")
 
         // Register handlers - lazy initialization
-        registerHandler(ActionCategory.SYSTEM, SystemHandler(context))
-        registerHandler(ActionCategory.APP, AppHandler(context))
-        registerHandler(ActionCategory.DEVICE, DeviceHandler(context))
-        registerHandler(ActionCategory.INPUT, InputHandler(context))
-        registerHandler(ActionCategory.NAVIGATION, NavigationHandler(context))
-        registerHandler(ActionCategory.UI, UIHandler(context))
-        registerHandler(ActionCategory.GESTURE, GestureHandler(context))
-        //registerHandler(ActionCategory.GAZE, GazeHandler(context))
+        registerHandler(ActionCategory.SYSTEM, SystemHandler(service))
+        registerHandler(ActionCategory.APP, AppHandler(service))
+        registerHandler(ActionCategory.DEVICE, DeviceHandler(service))
+        registerHandler(ActionCategory.INPUT, InputHandler(service))
+        registerHandler(ActionCategory.NAVIGATION, NavigationHandler(service))
+        registerHandler(ActionCategory.UI, UIHandler(service))
+        registerHandler(ActionCategory.GESTURE, GestureHandler(service))
+        //registerHandler(ActionCategory.GAZE, GazeHandler(service))
 
         // Add DragHandler to GESTURE category (multiple handlers per category)
-        val dragHandler = DragHandler(context)
+        val dragHandler = DragHandler(service)
         registerHandler(ActionCategory.GESTURE, dragHandler)
 
         // Register new migrated handlers from Legacy Avenue
-        registerHandler(ActionCategory.DEVICE, BluetoothHandler(context))
-        registerHandler(ActionCategory.UI, HelpMenuHandler(context))
-        registerHandler(ActionCategory.UI, SelectHandler(context))
-        registerHandler(ActionCategory.UI, NumberHandler(context))
-
-        // Set cursor manager reference for DragHandler
-        try {
-//            val cursorManager = service.getCursorManager()
-//            if (cursorManager != null) {
-//                dragHandler.setCursorManager(cursorManager)
-//            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not set cursor manager for DragHandler", e)
-        }
+        registerHandler(ActionCategory.DEVICE, BluetoothHandler(service))
+        registerHandler(ActionCategory.UI, HelpMenuHandler(service))
+        registerHandler(ActionCategory.UI, SelectHandler(service))
+        registerHandler(ActionCategory.UI, NumberHandler(service))
 
         // Initialize all handlers
         handlers.values.flatten().forEach { handler ->
@@ -135,6 +130,7 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
     /**
      * Process voice command text and route to appropriate handler
      * This method is called by SpeechRecognitionIntegration -> UnifiedCommandProcessor
+     * PHASE 2 Issue #21: Converted to suspend function
      */
     suspend fun processCommand(commandText: String): Boolean {
         if (commandText.isBlank()) {
@@ -255,7 +251,7 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
 
             // Number commands (e.g., "tap 5", "click 3")
             Regex("(tap|click|select)\\s+(\\d+)").find(command) != null -> {
-                val match = Regex("(tap|click|select)\\s+(\\d+)").find(command)!!
+                val match = Regex("(tap|click|select)\\s+(\\d+)").find(command) ?: return "unknown"
                 val number = match.groupValues[2]
                 "click_number:$number"
             }
@@ -282,11 +278,12 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
 
     /**
      * Execute an action by routing to appropriate handler
+     * PHASE 2 Issue #21: Converted to suspend function, removed runBlocking
      */
     suspend fun executeAction(
         action: String,
         params: Map<String, Any> = emptyMap()
-    ): Boolean = withContext(Dispatchers.Default) {
+    ): Boolean {
         val startTime = System.currentTimeMillis()
 
         // Find handler that can handle this action
@@ -294,15 +291,15 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
         if (handler == null) {
             Log.w(TAG, "No handler found for action: $action")
             recordMetric(action, System.currentTimeMillis() - startTime, false)
-            return@withContext false
+            return false
         }
 
         // Determine category
         val category = handlers.entries.find { it.value.contains(handler) }?.key
             ?: ActionCategory.CUSTOM
 
-        try {
-            // Execute with timeout
+        return try {
+            // Execute with timeout - using proper suspend function instead of runBlocking
             val result = withTimeoutOrNull(HANDLER_TIMEOUT_MS) {
                 handler.execute(category, action, params)
             } ?: false
@@ -339,30 +336,8 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
     }
 
     /**
-     * Execute action synchronously (blocking version for compatibility)
-     * WARNING: Only use from background threads!
-     *
-     * FIX C5-P0-1 (2025-12-22): Removed runBlocking to prevent UI thread blocking.
-     * This method is now deprecated and throws an exception to prevent ANR.
-     * Callers should use suspend executeAction() or executeActionAsync() instead.
-     */
-    @Deprecated(
-        "Removed to prevent ANR. Use suspend executeAction() or executeActionAsync() instead",
-        ReplaceWith("executeAction(action, params)")
-    )
-    fun executeActionBlocking(
-        action: String,
-        params: Map<String, Any> = emptyMap()
-    ): Boolean {
-        Log.e(TAG, "executeActionBlocking() is deprecated and should not be used - causes ANR!")
-        throw UnsupportedOperationException(
-            "executeActionBlocking() has been removed to prevent ANR. " +
-            "Use suspend executeAction() or executeActionAsync() instead."
-        )
-    }
-
-    /**
      * Process voice command with confidence scoring
+     * PHASE 2 Issue #21: Converted to suspend function
      */
     suspend fun processVoiceCommand(text: String, confidence: Float): Boolean {
         val startTime = System.currentTimeMillis()
@@ -404,6 +379,7 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
 
     /**
      * Process voice command with additional context and variations
+     * PHASE 2 Issue #21: Converted to suspend function
      */
     private suspend fun processVoiceCommandWithContext(
         command: String,
@@ -551,19 +527,52 @@ class ActionCoordinator(private val context: IVoiceOSContext) {
      * Record performance metric
      */
     private fun recordMetric(action: String, timeMs: Long, success: Boolean) {
+        // Update legacy metrics (backwards compatibility)
         metrics.getOrPut(action) { MetricData() }.apply {
             count++
             totalTimeMs += timeMs
             lastExecutionMs = timeMs
             if (success) successCount++
         }
+
+        // Update enhanced metrics (Phase 3)
+        metricsCollector.recordCommand(
+            command = action,
+            success = success,
+            durationMs = timeMs,
+            errorType = if (!success) "EXECUTION_FAILED" else null
+        )
     }
 
     /**
-     * Get performance metrics
+     * Get performance metrics (legacy)
      */
     fun getMetrics(): Map<String, MetricData> {
         return metrics.toMap()
+    }
+
+    /**
+     * Get comprehensive metrics summary (Phase 3)
+     *
+     * Provides detailed analytics including:
+     * - Success/failure rates
+     * - Execution time statistics (min, max, avg, p95)
+     * - Top 10 most used commands
+     * - Error pattern analysis
+     * - Unique commands tracked
+     *
+     * @return MetricsSummary with comprehensive analytics
+     */
+    fun getMetricsSummary(): MetricsSummary {
+        return metricsCollector.getSummary()
+    }
+
+    /**
+     * Reset all metrics
+     */
+    fun resetMetrics() {
+        metrics.clear()
+        metricsCollector.reset()
     }
 
     /**

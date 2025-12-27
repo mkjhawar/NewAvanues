@@ -203,29 +203,14 @@ data class AccessibilityFingerprint(
      * ## Hash Components Priority
      *
      * 1. **Resource ID** (highest priority - most stable)
-     * 2. **Hierarchy Path** (structural position) - EXCEPT for RecyclerView items
+     * 2. **Hierarchy Path** (structural position)
      * 3. **Class Name** (component type)
      * 4. **Text + Content Description** (content-based)
      * 5. **Package + Version** (namespace)
      *
-     * ## RecyclerView Content-Based Hashing (Schema v4 - 2025-12-23)
-     *
-     * RecyclerView items use content-based hashing instead of position-based
-     * to maintain stable hashes when items scroll or reorder.
-     *
-     * Detected by:
-     * - Parent className contains "RecyclerView"
-     * - Parent className contains "ListView"
-     * - Parent className contains "GridView"
-     *
-     * For RecyclerView items, hierarchy path is EXCLUDED from hash.
-     *
      * @return 12-character hex hash string
      */
     fun generateHash(): String {
-        // Detect if this is a RecyclerView/ListView/GridView item
-        val isScrollableListItem = isScrollableListItem()
-
         // Build canonical string representation
         val components = buildList {
             // Most stable components first
@@ -234,14 +219,9 @@ data class AccessibilityFingerprint(
 
             resourceId?.let { add("res:$it") }
             className?.let { add("cls:$it") }
+            add("path:$hierarchyPath")
 
-            // CRITICAL: For RecyclerView items, use content-based hashing
-            // instead of position-based hashing to maintain stability
-            if (!isScrollableListItem) {
-                add("path:$hierarchyPath")
-            }
-
-            // Content-based (REQUIRED for RecyclerView items)
+            // Content-based (less stable, but useful fallback)
             text?.let { add("txt:$it") }
             contentDescription?.let { add("desc:$it") }
 
@@ -251,11 +231,6 @@ data class AccessibilityFingerprint(
             // Flags
             add("click:$isClickable")
             add("enabled:$isEnabled")
-
-            // For RecyclerView items, add content hash marker
-            if (isScrollableListItem) {
-                add("recycler:content-based")
-            }
         }
 
         val canonical = components.joinToString("|")
@@ -266,36 +241,6 @@ data class AccessibilityFingerprint(
 
         // Return first 12 characters for compact UUID
         return hex.take(12)
-    }
-
-    /**
-     * Detect if element is a scrollable list item (RecyclerView, ListView, GridView).
-     *
-     * These items should use content-based hashing instead of position-based
-     * hashing because their position in the hierarchy changes as the list scrolls.
-     *
-     * Detection heuristics:
-     * 1. Parent className contains "RecyclerView"
-     * 2. Parent className contains "ListView"
-     * 3. Parent className contains "GridView"
-     * 4. hierarchyPath has pattern indicating list position (e.g., "/0/1/*/3")
-     *
-     * @return true if element is likely a scrollable list item
-     */
-    private fun isScrollableListItem(): Boolean {
-        val cls = className ?: return false
-
-        // Check if parent is a known scrollable container
-        // Note: We rely on hierarchyPath pattern since we don't have direct parent access
-        // Pattern: RecyclerView items typically have path like "/0/1/2" where the last
-        // index changes as you scroll
-        return cls.contains("RecyclerView", ignoreCase = true) ||
-                cls.contains("ListView", ignoreCase = true) ||
-                cls.contains("GridView", ignoreCase = true) ||
-                // Check if resource ID indicates recycler item
-                (resourceId?.contains("recycler", ignoreCase = true) == true) ||
-                (resourceId?.contains("list_item", ignoreCase = true) == true) ||
-                (resourceId?.contains("grid_item", ignoreCase = true) == true)
     }
 
     /**

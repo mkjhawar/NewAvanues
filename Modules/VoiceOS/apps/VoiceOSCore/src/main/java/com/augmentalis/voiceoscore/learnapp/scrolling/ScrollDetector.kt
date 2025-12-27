@@ -202,6 +202,45 @@ class ScrollDetector {
             action.id == AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id
         }
     }
+
+    /**
+     * Check if scrollable is a dropdown (all items visible)
+     *
+     * Dropdowns are scrollable containers where all items are visible at once.
+     * Unlike scrollable lists, dropdowns don't require scrolling to see all options.
+     *
+     * Dropdown heuristics:
+     * 1. Small item count (typically < 10)
+     * 2. Cannot scroll (all items visible)
+     * 3. Spinner class name
+     *
+     * @param node Node to check
+     * @return true if dropdown, false if scrollable list
+     */
+    fun isDropdown(node: AccessibilityNodeInfo): Boolean {
+        val collectionInfo = node.collectionInfo ?: return false
+        val className = node.className?.toString() ?: ""
+
+        // Explicit spinner/dropdown class names
+        if (className.contains("Spinner", ignoreCase = true) ||
+            className.contains("DropDown", ignoreCase = true)) {
+            return true
+        }
+
+        // Small item count + not scrollable = dropdown
+        if (collectionInfo.rowCount <= 10 && !node.isScrollable) {
+            return true
+        }
+
+        // All items visible (item count matches child count)
+        if (collectionInfo.rowCount > 0 &&
+            node.childCount > 0 &&
+            collectionInfo.rowCount == node.childCount) {
+            return true
+        }
+
+        return false
+    }
 }
 
 /**

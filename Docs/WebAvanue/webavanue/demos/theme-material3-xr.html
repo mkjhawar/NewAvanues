@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material 3 Extended (XR) Theme</title>
+    <style>
+        /* Material 3 XR Theme System - Production Ready */
+        :root {
+            /* Material 3 Dynamic Color Scheme */
+            --md-primary: #6750a4;
+            --md-on-primary: #ffffff;
+            --md-primary-container: #eaddff;
+            --md-on-primary-container: #21005e;
+
+            --md-secondary: #625b71;
+            --md-on-secondary: #ffffff;
+            --md-secondary-container: #e8def8;
+            --md-on-secondary-container: #1e192b;
+
+            --md-tertiary: #7d5260;
+            --md-on-tertiary: #ffffff;
+
+            --md-surface: #1c1b1f;
+            --md-surface-variant: #49454e;
+            --md-surface-container-lowest: #0f0d13;
+            --md-surface-container-low: #1c1b1f;
+            --md-surface-container: #201f26;
+            --md-surface-container-high: #2b2930;
+            --md-surface-container-highest: #36343b;
+
+            --md-on-surface: #e6e1e6;
+            --md-on-surface-variant: #cac4cf;
+
+            --md-outline: #948f99;
+            --md-outline-variant: #49454e;
+
+            /* XR-specific depth layers (optimized for GPU) */
+            --md-elevation-0: none;
+            --md-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.15);
+            --md-elevation-2: 0 2px 6px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.15);
+            --md-elevation-3: 0 4px 8px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.15);
+            --md-elevation-4: 0 6px 10px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.15);
+            --md-elevation-5: 0 8px 12px rgba(0, 0, 0, 0.3), 0 4px 6px rgba(0, 0, 0, 0.15);
+
+            /* XR spatial depth - using transform3d for GPU acceleration */
+            --md-spatial-offset-1: translateZ(1px);
+            --md-spatial-offset-2: translateZ(2px);
+            --md-spatial-offset-3: translateZ(4px);
+            --md-spatial-offset-4: translateZ(8px);
+
+            /* Motion tokens - optimized durations */
+            --md-motion-emphasized: cubic-bezier(0.2, 0, 0, 1);
+            --md-motion-standard: cubic-bezier(0.4, 0, 0.2, 1);
+            --md-motion-duration-short: 200ms;
+            --md-motion-duration-medium: 300ms;
+            --md-motion-duration-long: 400ms;
+
+            /* Shape tokens */
+            --md-shape-corner-none: 0;
+            --md-shape-corner-small: 8px;
+            --md-shape-corner-medium: 12px;
+            --md-shape-corner-large: 16px;
+            --md-shape-corner-extra-large: 28px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--md-surface-container-lowest);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            /* Hardware acceleration */
+            transform: translateZ(0);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Phone frame */
+        .phone {
+            width: 390px;
+            height: 844px;
+            background: var(--md-surface-container-lowest);
+            border-radius: 50px;
+            padding: 12px;
+            box-shadow: var(--md-elevation-5);
+            transition: all var(--md-motion-duration-long) var(--md-motion-emphasized);
+            position: relative;
+            /* GPU acceleration */
+            will-change: transform;
+        }
+
+        body.landscape .phone {
+            width: 844px;
+            height: 390px;
+        }
+
+        .notch {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 160px;
+            height: 30px;
+            background: var(--md-surface-container-lowest);
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+            transition: all var(--md-motion-duration-long) var(--md-motion-emphasized);
+        }
+
+        body.landscape .notch {
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 160px;
+            border-radius: 0 20px 20px 0;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--md-surface);
+            border-radius: 38px;
+            overflow: hidden;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Material 3 Components with XR depth */
+        .nav-cluster {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            /* GPU layer */
+            transform: translateZ(0);
+        }
+
+        .nav-pod {
+            background: var(--md-surface-container-high);
+            border: 1px solid var(--md-outline-variant);
+            box-shadow: var(--md-elevation-2);
+            display: flex;
+            gap: 4px;
+            padding: 6px;
+            border-radius: var(--md-shape-corner-large);
+            /* State layer for hover/press */
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Material state layer (efficient overlay) */
+        .nav-pod::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--md-on-surface);
+            opacity: 0;
+            transition: opacity var(--md-motion-duration-short) var(--md-motion-standard);
+            pointer-events: none;
+        }
+
+        .nav-pod:hover::before {
+            opacity: 0.08;
+        }
+
+        .btn {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--md-shape-corner-small);
+            border: none;
+            background: transparent;
+            color: var(--md-on-surface);
+            font-size: 20px;
+            cursor: pointer;
+            transition: all var(--md-motion-duration-short) var(--md-motion-standard);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            /* Prevent layout thrashing */
+            will-change: background-color;
+        }
+
+        /* State layer for buttons */
+        .btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: var(--md-on-surface);
+            opacity: 0;
+            transition: opacity var(--md-motion-duration-short);
+        }
+
+        .btn:hover::before {
+            opacity: 0.08;
+        }
+
+        .btn:active::before {
+            opacity: 0.12;
+        }
+
+        .btn.disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+        }
+
+        .address-bar {
+            flex: 1;
+            background: var(--md-surface-container-highest);
+            border: 1px solid var(--md-outline-variant);
+            box-shadow: var(--md-elevation-3);
+            padding: 8px 16px;
+            border-radius: var(--md-shape-corner-extra-large);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 56px;
+            /* Optimized for animations */
+            transform: translateZ(0);
+        }
+
+        .url-box {
+            flex: 1;
+            height: 40px;
+            background: var(--md-surface-container);
+            border: 1px solid var(--md-outline-variant);
+            border-radius: var(--md-shape-corner-medium);
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .url-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--md-on-surface);
+            font-size: 15px;
+            outline: none;
+        }
+
+        .url-input::placeholder {
+            color: var(--md-on-surface-variant);
+            opacity: 0.6;
+        }
+
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--md-shape-corner-small);
+            border: none;
+            background: transparent;
+            color: var(--md-on-surface-variant);
+            cursor: pointer;
+            transition: all var(--md-motion-duration-short);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .icon-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: var(--md-on-surface);
+            opacity: 0;
+            transition: opacity var(--md-motion-duration-short);
+        }
+
+        .icon-btn:hover::before {
+            opacity: 0.08;
+        }
+
+        .badge {
+            min-width: 28px;
+            height: 28px;
+            padding: 0 8px;
+            border-radius: var(--md-shape-corner-small);
+            background: var(--md-primary);
+            color: var(--md-on-primary);
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--md-elevation-1);
+        }
+
+        .webview {
+            flex: 1;
+            border-radius: var(--md-shape-corner-large);
+            background: var(--md-surface-container);
+            border: 1px solid var(--md-outline-variant);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--md-on-surface-variant);
+        }
+
+        /* Landscape mode */
+        body.landscape .screen {
+            padding: 12px 20px;
+            gap: 8px;
+        }
+
+        body.landscape .address-bar {
+            order: 3;
+        }
+
+        body.landscape .nav-pod:first-child {
+            order: 1;
+        }
+
+        body.landscape .nav-pod:last-child {
+            order: 2;
+        }
+
+        .fixed-btn {
+            position: fixed;
+            bottom: 20px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--md-shape-corner-medium);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            background: var(--md-surface-container-high);
+            border: 1px solid var(--md-outline-variant);
+            color: var(--md-on-surface);
+            transition: all var(--md-motion-duration-short);
+            box-shadow: var(--md-elevation-2);
+            position: relative;
+        }
+
+        .fixed-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: var(--md-on-surface);
+            opacity: 0;
+            transition: opacity var(--md-motion-duration-short);
+        }
+
+        .fixed-btn:hover::before {
+            opacity: 0.08;
+        }
+
+        .fixed-btn:hover {
+            box-shadow: var(--md-elevation-3);
+        }
+
+        .orient-btn {
+            left: 20px;
+        }
+
+        .orient-label {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--md-on-surface-variant);
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone">
+        <div class="orient-label" id="orientLabel">PORTRAIT MODE</div>
+        <div class="notch"></div>
+        <div class="screen">
+            <div class="nav-cluster">
+                <div class="nav-pod">
+                    <button class="btn disabled">◀</button>
+                    <button class="btn disabled">▶</button>
+                    <button class="btn">↻</button>
+                </div>
+                <div class="address-bar">
+                    <div class="url-box">
+                        <span style="opacity: 0.6;">🔒</span>
+                        <input class="url-input" type="text" value="https://example.com" placeholder="Enter URL...">
+                        <button class="icon-btn" style="color: #f59e0b;">★</button>
+                    </div>
+                    <div class="badge">3</div>
+                </div>
+                <div class="nav-pod">
+                    <button class="btn">☰</button>
+                </div>
+            </div>
+            <div class="webview">
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; opacity: 0.3; margin-bottom: 12px;">🎨</div>
+                    <div>Material 3 Extended (XR)</div>
+                    <div style="font-size: 13px; margin-top: 8px; opacity: 0.5;">
+                        GPU optimized • State layers • Dynamic color
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="fixed-btn orient-btn" onclick="toggleOrientation()">
+        <span id="orientText">Switch to Landscape</span>
+    </button>
+
+    <script>
+        function toggleOrientation() {
+            const body = document.body;
+            const text = document.getElementById('orientText');
+            const label = document.getElementById('orientLabel');
+
+            if (body.classList.contains('landscape')) {
+                body.classList.remove('landscape');
+                text.textContent = 'Switch to Landscape';
+                label.textContent = 'PORTRAIT MODE';
+            } else {
+                body.classList.add('landscape');
+                text.textContent = 'Switch to Portrait';
+                label.textContent = 'LANDSCAPE MODE';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,19 +1,16 @@
 /**
- * ScrapedAppEntity.kt - App metadata for accessibility scraping database
+ * ScrapedAppEntity.kt - App metadata for accessibility scraping
+ *
+ * Migrated from Room to SQLDelight (Phase 2)
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Code-Reviewed-By: CCA
- * Created: 2025-10-09
- * Migrated to SQLDelight: 2025-12-17
+ * Author: VOS4 Scraping Migration Specialist (Agent 2)
+ * Created: 2025-11-27
  */
 package com.augmentalis.voiceoscore.scraping.entities
 
 /**
  * Entity representing a scraped application
- *
- * MIGRATION NOTE: This entity has been migrated to use SQLDelight.
- * The schema is defined in: core/database/src/commonMain/sqldelight/com/augmentalis/database/ScrapedApp.sq
  *
  * This entity stores high-level metadata about apps that have been analyzed
  * by the accessibility service. The app_hash serves as a unique fingerprint
@@ -21,30 +18,32 @@ package com.augmentalis.voiceoscore.scraping.entities
  *
  * @property appId Unique identifier (UUID) generated for this app scraping session
  * @property packageName Android package name (e.g., "com.example.app")
+ * @property appName Human-readable app name (e.g., "Example App")
  * @property versionCode Android version code (integer)
  * @property versionName Android version name (e.g., "1.2.3")
  * @property appHash MD5 hash of packageName + versionCode for version detection
- * @property isFullyLearned Whether app has been fully learned via LearnApp mode
- * @property learnCompletedAt Timestamp when LearnApp mode completed (null if not completed)
- * @property scrapingMode Current scraping mode (DYNAMIC or LEARN_APP)
+ * @property firstScraped Timestamp when app was first scraped (milliseconds)
+ * @property lastScraped Timestamp when app was last scraped (milliseconds)
  * @property scrapeCount Number of times app has been scraped
  * @property elementCount Total number of UI elements scraped from this app
  * @property commandCount Total number of voice commands generated for this app
- * @property firstScrapedAt Timestamp when app was first scraped (milliseconds)
- * @property lastScrapedAt Timestamp when app was last scraped (milliseconds)
+ * @property isFullyLearned Whether app has been fully learned via LearnApp mode
+ * @property learnCompletedAt Timestamp when LearnApp mode completed (null if not completed)
+ * @property scrapingMode Current scraping mode (DYNAMIC or LEARN_APP)
  */
 data class ScrapedAppEntity(
     val appId: String,
     val packageName: String,
-    val versionCode: Long,
+    val appName: String,
+    val versionCode: Int,
     val versionName: String,
     val appHash: String,
-    val isFullyLearned: Long = 0,
+    val firstScraped: Long,
+    val lastScraped: Long,
+    val scrapeCount: Int = 1,
+    val elementCount: Int = 0,
+    val commandCount: Int = 0,
+    val isFullyLearned: Boolean = false,
     val learnCompletedAt: Long? = null,
-    val scrapingMode: String = "DYNAMIC",
-    val scrapeCount: Long = 0,
-    val elementCount: Long = 0,
-    val commandCount: Long = 0,
-    val firstScrapedAt: Long,
-    val lastScrapedAt: Long
+    val scrapingMode: String = "DYNAMIC"
 )

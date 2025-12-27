@@ -1,198 +1,227 @@
 /**
- * VoiceRecognitionManager.kt - Speech recognition lifecycle management
+ * VoiceRecognitionManager.kt - Integration manager for voice recognition
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
- * Created: 2025-12-17
- *
- * Responsibility: Manages speech recognition engine initialization, lifecycle, and command processing
+ * Created: 2025-08-28
  */
 package com.augmentalis.voiceoscore.accessibility.recognition
 
+import android.content.Context
 import android.util.Log
-import com.augmentalis.speechrecognition.SpeechEngine
-import com.augmentalis.speechrecognition.SpeechMode
-import com.augmentalis.voiceoscore.accessibility.speech.SpeechConfiguration
-import com.augmentalis.voiceoscore.accessibility.speech.SpeechEngineManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicBoolean
+import com.augmentalis.voiceoscore.accessibility.managers.ActionCoordinator
+import com.augmentalis.voiceoscore.utils.ConditionalLogger
+import kotlinx.coroutines.*
 
 /**
- * Manages voice recognition initialization, state, and command event processing
+ * Manager class that integrates VoiceRecognitionBinder with the VoiceAccessibility service
+ * Example usage for voice recognition integration
  */
 class VoiceRecognitionManager(
-    private val speechEngineManager: SpeechEngineManager,
-    private val onCommandReceived: (command: String, confidence: Float) -> Unit
+    private val actionCoordinator: ActionCoordinator
 ) {
+    
     companion object {
         private const val TAG = "VoiceRecognitionManager"
+        private const val DEFAULT_ENGINE = "google"
+        private const val DEFAULT_LANGUAGE = "en-US"
+        private const val CONNECTION_TIMEOUT_MS = 10000L
     }
-
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-
-    @Volatile
+    
+    private var voiceRecognitionBinder: VoiceRecognitionBinder? = null
     private var isInitialized = false
-
+    private val managerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    
     /**
-     * Initialize speech recognition engine and start monitoring
+     * Initialize voice recognition integration
      */
-    fun initialize() {
-        Log.i(TAG, "Initializing voice recognition...")
-
-        // Start engine initialization asynchronously with Vivoka
-        // TODO: Make engine selection user-configurable (Vivoka/Vosk)
-        speechEngineManager.initializeEngine(SpeechEngine.VIVOKA)
-
-        // ARCHITECTURE: Split into two separate collectors
-        // 1. State collection: Monitor engine lifecycle (initialization, listening status)
-        // 2. Command event collection: Process voice commands as discrete events
-
-        scope.launch {
-            // Collector 1: Monitor engine state for lifecycle management
-            launch {
-                speechEngineManager.speechState.collectLatest { state ->
-                    Log.d(TAG, "Engine state = $state")
-
-                    // Only start listening when engine is fully initialized
-                    if (state.isInitialized && !state.isListening && !isInitialized) {
-                        isInitialized = true
-                        delay(200) // Small delay to ensure engine is fully ready
-                        startListening()
-                    }
+    fun initialize(context: Context) {
+        if (isInitialized) {
+            ConditionalLogger.w(TAG) { "Already initialized" }
+            return
+        }
+        
+        ConditionalLogger.d(TAG) { "Initializing VoiceRecognitionManager" }
+        
+        try {
+            // Create the binder with ActionCoordinator
+            voiceRecognitionBinder = VoiceRecognitionBinder(actionCoordinator)
+            
+            // Connect to the service
+            managerScope.launch {
+                connectToService(context)
+            }
+            
+            isInitialized = true
+            ConditionalLogger.i(TAG) { "VoiceRecognitionManager initialized successfully" }
+            
+        } catch (e: Exception) {
+            ConditionalLogger.e(TAG, e) { "Error initializing VoiceRecognitionManager" }
+        }
+    }
+    
+    /**
+     * Connect to the voice recognition service
+     */
+    private suspend fun connectToService(context: Context) {
+        ConditionalLogger.d(TAG) { "Connecting to VoiceRecognitionService" }
+        
+        val binder = voiceRecognitionBinder ?: return
+        
+        try {
+            val connected = withTimeoutOrNull(CONNECTION_TIMEOUT_MS) {
+                // Attempt connection in background
+                withContext(Dispatchers.IO) {
+                    binder.connect(context)
                 }
             }
-
-            // Collector 2: Process command events (guarantees every command is received)
-            launch {
-                speechEngineManager.commandEvents.collect { event ->
-                    Log.i(TAG, "Command event received - command='${event.command}', confidence=${event.confidence}, timestamp=${event.timestamp}")
-
-                    // Validate command before processing
-                    if (event.confidence > 0.5f && event.command.isNotBlank()) {
-                        Log.i(TAG, "Processing command: '${event.command}' (confidence=${event.confidence})")
-                        onCommandReceived(event.command, event.confidence)
-                    } else {
-                        Log.d(TAG, "Command rejected: confidence too low (${event.confidence}) or empty command")
-                    }
-                }
+            
+            if (connected == true) {
+                ConditionalLogger.i(TAG) { "Connected to VoiceRecognitionService" }
+                
+                // Wait a bit for service to be fully ready
+                delay(500)
+                
+                // Log available engines
+                val engines = binder.getAvailableEngines()
+                ConditionalLogger.d(TAG) { "Available engines: ${engines.joinToString(", ")}" }
+                
+            } else {
+                ConditionalLogger.w(TAG) { "Failed to connect to VoiceRecognitionService within timeout" }
             }
-        }
-
-        Log.i(TAG, "Voice recognition initialized successfully")
-    }
-
-    /**
-     * Start listening for voice commands
-     */
-    fun startListening() {
-        try {
-            Log.d(TAG, "Starting voice recognition...")
-            speechEngineManager.startListening()
-            Log.i(TAG, "Voice recognition started successfully")
+            
         } catch (e: Exception) {
-            Log.e(TAG, "Error starting voice recognition", e)
+            ConditionalLogger.e(TAG, e) { "Error connecting to service" }
         }
     }
-
+    
     /**
-     * Stop listening for voice commands
+     * Start voice recognition with default settings
      */
-    fun stopListening() {
-        try {
-            Log.d(TAG, "Stopping voice recognition...")
-            speechEngineManager.stopListening()
-            Log.i(TAG, "Voice recognition stopped successfully")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error stopping voice recognition", e)
-        }
+    fun startListening(): Boolean {
+        return startListening(DEFAULT_ENGINE, DEFAULT_LANGUAGE)
     }
-
+    
     /**
-     * Update speech engine configuration
+     * Start voice recognition with specific engine and language
      */
-    fun updateConfiguration(config: SpeechConfiguration) {
-        try {
-            Log.d(TAG, "Updating speech configuration: language=${config.language}, mode=${config.mode}")
-            speechEngineManager.updateConfiguration(config)
-            Log.i(TAG, "Speech configuration updated successfully")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating speech configuration", e)
+    fun startListening(engine: String, language: String): Boolean {
+        val binder = voiceRecognitionBinder
+        if (binder == null) {
+            ConditionalLogger.w(TAG) { "Voice recognition not initialized" }
+            return false
         }
-    }
-
-    /**
-     * Start voice recognition with specified language and recognizer type
-     */
-    fun startVoiceRecognition(language: String, recognizerType: String): Boolean {
+        
+        if (!binder.isConnected()) {
+            ConditionalLogger.w(TAG) { "Service not connected" }
+            return false
+        }
+        
+        ConditionalLogger.d(TAG) { "Starting voice recognition: engine=$engine, language=$language" }
+        
         return try {
-            Log.i(TAG, "startVoiceRecognition(language=$language, type=$recognizerType)")
-
-            val mode = when (recognizerType.lowercase()) {
-                "continuous" -> SpeechMode.DYNAMIC_COMMAND
-                "command" -> SpeechMode.DYNAMIC_COMMAND
-                "system" -> SpeechMode.DYNAMIC_COMMAND
-                "static" -> SpeechMode.STATIC_COMMAND
-                else -> {
-                    Log.w(TAG, "Unknown recognizer type: $recognizerType, using DYNAMIC_COMMAND")
-                    SpeechMode.DYNAMIC_COMMAND
-                }
-            }
-
-            // Update speech configuration with new language
-            updateConfiguration(
-                SpeechConfiguration(
-                    language = language,
-                    mode = mode,
-                    enableVAD = true,
-                    confidenceThreshold = 4000F,
-                    maxRecordingDuration = 30000,
-                    timeoutDuration = 5000,
-                    enableProfanityFilter = false
-                )
-            )
-
-            // Start listening
-            startListening()
-            true
+            binder.startListening(engine, language)
         } catch (e: Exception) {
-            Log.e(TAG, "Error starting voice recognition", e)
+            ConditionalLogger.e(TAG, e) { "Error starting voice recognition" }
             false
         }
     }
-
+    
     /**
-     * Stop currently active voice recognition
+     * Stop voice recognition
      */
-    fun stopVoiceRecognition(): Boolean {
+    fun stopListening(): Boolean {
+        val binder = voiceRecognitionBinder ?: return false
+        
+        ConditionalLogger.d(TAG) { "Stopping voice recognition" }
+        
         return try {
-            Log.i(TAG, "stopVoiceRecognition()")
-            stopListening()
-            true
+            binder.stopListening()
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping voice recognition", e)
+            ConditionalLogger.e(TAG, e) { "Error stopping voice recognition" }
             false
         }
     }
-
+    
     /**
-     * Cleanup resources
+     * Check if voice recognition is active
      */
-    fun cleanup() {
-        try {
-            Log.d(TAG, "Cleaning up VoiceRecognitionManager...")
-            stopListening()
-            scope.cancel()
-            isInitialized = false
-            Log.i(TAG, "VoiceRecognitionManager cleaned up successfully")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error cleaning up VoiceRecognitionManager", e)
+    fun isListening(): Boolean {
+        return voiceRecognitionBinder?.isRecognizing() ?: false
+    }
+    
+    /**
+     * Check if service is connected
+     */
+    fun isServiceConnected(): Boolean {
+        return voiceRecognitionBinder?.isConnected() ?: false
+    }
+    
+    /**
+     * Get current recognition state
+     */
+    fun getCurrentState(): String {
+        val binder = voiceRecognitionBinder ?: return "Not initialized"
+        
+        return when (binder.getCurrentState()) {
+            0 -> "IDLE"
+            1 -> "LISTENING"
+            2 -> "PROCESSING"
+            3 -> "ERROR"
+            else -> "UNKNOWN"
         }
+    }
+    
+    /**
+     * Get available recognition engines
+     */
+    fun getAvailableEngines(): List<String> {
+        return voiceRecognitionBinder?.getAvailableEngines() ?: emptyList()
+    }
+    
+    /**
+     * Get service status information
+     */
+    fun getServiceStatus(): String {
+        return voiceRecognitionBinder?.getServiceStatus() ?: "Service not available"
+    }
+    
+    /**
+     * Get debug information
+     */
+    fun getDebugInfo(): String {
+        return buildString {
+            appendLine("VoiceRecognitionManager Debug Info")
+            appendLine("Initialized: $isInitialized")
+            
+            val binder = voiceRecognitionBinder
+            if (binder != null) {
+                appendLine("Binder Status:")
+                append(binder.getDebugInfo().prependIndent("  "))
+            } else {
+                appendLine("Binder: Not created")
+            }
+        }
+    }
+    
+    /**
+     * Dispose and clean up resources
+     */
+    fun dispose() {
+        ConditionalLogger.d(TAG) { "Disposing VoiceRecognitionManager" }
+        
+        try {
+            voiceRecognitionBinder?.dispose()
+        } catch (e: Exception) {
+            ConditionalLogger.e(TAG, e) { "Error disposing binder" }
+        }
+        
+        voiceRecognitionBinder = null
+        isInitialized = false
+        
+        managerScope.cancel()
+        
+        ConditionalLogger.d(TAG) { "VoiceRecognitionManager disposed" }
     }
 }

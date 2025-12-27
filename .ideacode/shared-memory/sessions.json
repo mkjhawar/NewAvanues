@@ -1,0 +1,129 @@
+{
+  "version": "1.0.0",
+  "sessions": [
+    {
+      "id": "sess_ed8f516f915e",
+      "terminal_id": "not a tty",
+      "started": "2025-12-23T19:18:30-08:00",
+      "last_active": "2025-12-23T19:18:30-08:00",
+      "status": "active",
+      "working_on": {
+        "module": "NewAvanues",
+        "path": "/Volumes/M-Drive/Coding/NewAvanues",
+        "task": "",
+        "files_modified": []
+      },
+      "context_level": 0,
+      "branch": "refactor/avamagic-magicui-structure-251223"
+    },
+    {
+      "id": "sess_48b5423d271c",
+      "terminal_id": "not a tty",
+      "started": "2025-12-23T19:38:44-08:00",
+      "last_active": "2025-12-23T19:38:44-08:00",
+      "status": "active",
+      "working_on": {
+        "module": "NewAvanues",
+        "path": "/Volumes/M-Drive/Coding/NewAvanues",
+        "task": "",
+        "files_modified": []
+      },
+      "context_level": 0,
+      "branch": "refactor/avamagic-magicui-structure-251223"
+    },
+    {
+      "id": "sess_d2e79b0c2469",
+      "terminal_id": "not a tty",
+      "started": "2025-12-23T20:19:50-08:00",
+      "last_active": "2025-12-23T20:19:50-08:00",
+      "status": "active",
+      "working_on": {
+        "module": "NewAvanues",
+        "path": "/Volumes/M-Drive/Coding/NewAvanues",
+        "task": "",
+        "files_modified": []
+      },
+      "context_level": 0,
+      "branch": "refactor/avamagic-magicui-structure-251223"
+    },
+    {
+      "id": "sess_d2c47936832d",
+      "terminal_id": "not a tty",
+      "started": "2025-12-23T21:25:50-08:00",
+      "last_active": "2025-12-23T21:25:50-08:00",
+      "status": "active",
+      "working_on": {
+        "module": "NewAvanues",
+        "path": "/Volumes/M-Drive/Coding/NewAvanues",
+        "task": "",
+        "files_modified": []
+      },
+      "context_level": 0,
+      "branch": "refactor/avamagic-magicui-structure-251223"
+    },
+    {
+      "id": "sess_b41bc3f0b3f4",
+      "terminal_id": "not a tty",
+      "started": "2025-12-23T23:03:40-08:00",
+      "last_active": "2025-12-23T23:03:40-08:00",
+      "status": "active",
+      "working_on": {
+        "module": "NewAvanues",
+        "path": "/Volumes/M-Drive/Coding/NewAvanues",
+        "task": "",
+        "files_modified": []
+      },
+      "context_level": 0,
+      "branch": "refactor/avamagic-magicui-structure-251223"
+    },
+    {
+      "id": "sess_70f75695d7f0",
+      "terminal_id": "not a tty",
+      "started": "2025-12-23T23:23:50-08:00",
+      "last_active": "2025-12-23T23:23:50-08:00",
+      "status": "active",
+      "working_on": {
+        "module": "NewAvanues",
+        "path": "/Volumes/M-Drive/Coding/NewAvanues",
+        "task": "",
+        "files_modified": []
+      },
+      "context_level": 0,
+      "branch": "refactor/avamagic-magicui-structure-251223"
+    },
+    {
+      "id": "sess_9a54b525fc14",
+      "terminal_id": "not a tty",
+      "started": "2025-12-24T00:28:37-08:00",
+      "last_active": "2025-12-24T00:28:37-08:00",
+      "status": "active",
+      "working_on": {
+        "module": "NewAvanues",
+        "path": "/Volumes/M-Drive/Coding/NewAvanues",
+        "task": "",
+        "files_modified": []
+      },
+      "context_level": 0,
+      "branch": "refactor/avamagic-magicui-structure-251223"
+    },
+    {
+      "id": "sess_777f79862428",
+      "terminal_id": "not a tty",
+      "started": "2025-12-24T01:04:03-08:00",
+      "last_active": "2025-12-24T01:04:03-08:00",
+      "status": "active",
+      "working_on": {
+        "module": "NewAvanues",
+        "path": "/Volumes/M-Drive/Coding/NewAvanues",
+        "task": "",
+        "files_modified": []
+      },
+      "context_level": 0,
+      "branch": "refactor/avamagic-magicui-structure-251223"
+    }
+  ],
+  "metadata": {
+    "total_active": 8,
+    "last_updated": 1766567043.69688
+  }
+}

@@ -9,10 +9,16 @@
 package com.augmentalis.voiceoscore.accessibility.handlers
 
 import android.accessibilityservice.AccessibilityService
+import android.graphics.Point
 import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import com.augmentalis.voiceoscore.accessibility.VoiceOSService
+import com.augmentalis.voiceoscore.accessibility.overlays.MenuItem
+import com.augmentalis.voiceoscore.accessibility.overlays.OverlayManager
+import com.augmentalis.voiceoscore.utils.ConditionalLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,9 +27,11 @@ import kotlinx.coroutines.cancel
 /**
  * Handler for selection mode and cursor-based interactions
  * Provides context-aware selection and menu operations
+ *
+ * Now integrated with OverlayManager for context menu visualization.
  */
 class SelectHandler(
-    private val service: IVoiceOSContext
+    private val service: VoiceOSService
 ) : ActionHandler {
 
     companion object {
@@ -52,6 +60,11 @@ class SelectHandler(
     private var isSelectionMode = false
     private var currentSelection: SelectionContext? = null
     private val selectionScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    // Overlay manager for context menus
+    private val overlayManager by lazy {
+        OverlayManager.getInstance(service)
+    }
 
     /**
      * Context information for current selection
@@ -149,30 +162,18 @@ class SelectHandler(
             // Find current focus or cursor position
             updateSelectionContext()
 
-            // Show selection mode indicator via overlay manager
-            showSelectionModeIndicator()
+            // Show selection mode indicator via command status overlay
+            overlayManager.showCommandStatus(
+                command = "Selection Mode",
+                state = com.augmentalis.voiceoscore.accessibility.overlays.CommandState.LISTENING,
+                message = "Say commands or 'context menu' for options"
+            )
+            ConditionalLogger.i(TAG) { "Selection mode indicator displayed" }
 
             true
         } catch (e: Exception) {
             Log.e(TAG, "Error entering selection mode", e)
             false
-        }
-    }
-
-    /**
-     * Show visual selection mode indicator
-     *
-     * TODO (Future): Integrate with overlay manager when IVoiceOSContext is extended
-     * with getOverlayManager() method. For now, logs selection mode entry.
-     */
-    private fun showSelectionModeIndicator() {
-        try {
-            // TODO: Implement when overlay manager is available
-            // val overlayManager = service.getOverlayManager()
-            // overlayManager?.showSelectionModeIndicator("Selection Mode Active", currentSelection?.bounds)
-            Log.d(TAG, "Selection mode indicator requested (overlay integration pending)")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error showing selection mode indicator", e)
         }
     }
 
@@ -202,12 +203,10 @@ class SelectHandler(
         return try {
             val cursorPosition = getCursorPosition()
             if (cursorPosition != null) {
-                Log.d(TAG, "Showing context menu at cursor position: $cursorPosition")
+                ConditionalLogger.d(TAG) { "Showing context menu at cursor position: $cursorPosition" }
 
-                // TODO: Integrate with cursor manager to show context menu
-                // service.getCursorManager()?.showContextMenuAtPosition(cursorPosition)
-
-                // For now, show basic context menu
+                // Show basic context menu at cursor position
+                // (Future: integrate with dedicated cursor manager if available)
                 showBasicContextMenu(cursorPosition)
                 true
             } else {
@@ -225,7 +224,7 @@ class SelectHandler(
      */
     private fun performSelectAtCurrentPosition(): Boolean {
         return try {
-            val rootNode = service.getRootNodeInActiveWindow()
+            val rootNode = service.rootInActiveWindow
             val focusedNode = findFocusedNode(rootNode)
 
             if (focusedNode != null) {
@@ -302,7 +301,7 @@ class SelectHandler(
      */
     private fun selectAll(): Boolean {
         return try {
-            val rootNode = service.getRootNodeInActiveWindow()
+            val rootNode = service.rootInActiveWindow
             val editableNode = findEditableNode(rootNode)
 
             if (editableNode != null) {
@@ -344,7 +343,7 @@ class SelectHandler(
         }
 
         return try {
-            val rootNode = service.getRootNodeInActiveWindow()
+            val rootNode = service.rootInActiveWindow
             val editableNode = findEditableNode(rootNode)
 
             if (editableNode != null) {
@@ -429,7 +428,7 @@ class SelectHandler(
             
             Log.d(TAG, "Performing $actionName action")
 
-            val targetNode = currentSelection?.node ?: findEditableNode(service.getRootNodeInActiveWindow())
+            val targetNode = currentSelection?.node ?: findEditableNode(service.rootInActiveWindow)
             
             if (targetNode != null) {
                 val result = targetNode.performAction(action)
@@ -458,8 +457,10 @@ class SelectHandler(
             isSelectionMode = false
             currentSelection = null
 
-            // Hide selection mode indicators via overlay manager
-            hideSelectionModeIndicator()
+            // Hide selection mode indicator
+            overlayManager.hideCommandStatus()
+            overlayManager.hideContextMenu()  // Also hide any open context menus
+            ConditionalLogger.i(TAG) { "Selection mode indicators hidden" }
 
             true
         } catch (e: Exception) {
@@ -469,27 +470,11 @@ class SelectHandler(
     }
 
     /**
-     * Hide selection mode indicator
-     *
-     * TODO (Future): Integrate with overlay manager when available
-     */
-    private fun hideSelectionModeIndicator() {
-        try {
-            // TODO: Implement when overlay manager is available
-            // val overlayManager = service.getOverlayManager()
-            // overlayManager?.hideSelectionModeIndicator()
-            Log.d(TAG, "Selection mode indicator hide requested (overlay integration pending)")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error hiding selection mode indicator", e)
-        }
-    }
-
-    /**
      * Update selection context with current state
      */
     private fun updateSelectionContext() {
         try {
-            val rootNode = service.getRootNodeInActiveWindow()
+            val rootNode = service.rootInActiveWindow
             val focusedNode = findFocusedNode(rootNode)
             
             if (focusedNode != null) {
@@ -509,80 +494,262 @@ class SelectHandler(
     // Helper methods
 
     /**
-     * Check cursor visibility using IVoiceOSContext.isCursorVisible()
+     * Check if cursor is visible (graceful fallback if cursor manager not available)
      */
     private fun isCursorVisible(): Boolean {
-        return try {
-            service.isCursorVisible()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error checking cursor visibility", e)
-            false
-        }
+        // Future integration point for cursor manager
+        // For now, check if we have a focused node as fallback
+        val rootNode = service.rootInActiveWindow
+        val focusedNode = findFocusedNode(rootNode)
+        return focusedNode != null
     }
 
     /**
-     * Get cursor position using IVoiceOSContext.getCursorPosition()
+     * Get cursor position (graceful fallback to focused node position)
      */
     private fun getCursorPosition(): Rect? {
-        return try {
-            val offset = service.getCursorPosition()
-            // Convert CursorOffset to Rect (convert Float to Int)
-            val x = offset.x.toInt()
-            val y = offset.y.toInt()
-            Rect(x - 10, y - 10, x + 10, y + 10)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting cursor position", e)
-            null
+        // Future integration point for cursor manager
+        // For now, use focused node bounds as fallback
+        val rootNode = service.rootInActiveWindow
+        val focusedNode = findFocusedNode(rootNode)
+
+        return focusedNode?.let {
+            Rect().apply { it.getBoundsInScreen(this) }
         }
     }
 
     /**
-     * Show basic context menu
-     *
-     * TODO (Future): Integrate with overlay manager when IVoiceOSContext is extended
+     * Show basic context menu at position using OverlayManager
      */
     private fun showBasicContextMenu(position: Rect): Boolean {
-        return try {
-            // TODO: Implement when overlay manager is available
-            // val overlayManager = service.getOverlayManager()
-            // overlayManager?.showContextMenu(position, listOf("Click", "Long Press", ...))
-            Log.d(TAG, "Context menu requested at position: $position (overlay integration pending)")
-            true  // Return true to indicate successful request
+        ConditionalLogger.d(TAG) { "Showing basic context menu at position: $position" }
+
+        try {
+            val menuItems = listOf(
+                MenuItem(
+                    id = "go_back",
+                    label = "Go Back",
+                    icon = Icons.Default.ArrowBack,
+                    number = 1,
+                    action = {
+                        service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+                        overlayManager.hideContextMenu()
+                    }
+                ),
+                MenuItem(
+                    id = "go_home",
+                    label = "Go Home",
+                    icon = Icons.Default.Home,
+                    number = 2,
+                    action = {
+                        service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
+                        overlayManager.hideContextMenu()
+                    }
+                ),
+                MenuItem(
+                    id = "recent_apps",
+                    label = "Recent Apps",
+                    icon = Icons.Default.List,
+                    number = 3,
+                    action = {
+                        service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS)
+                        overlayManager.hideContextMenu()
+                    }
+                ),
+                MenuItem(
+                    id = "notifications",
+                    label = "Notifications",
+                    icon = Icons.Default.Notifications,
+                    number = 4,
+                    action = {
+                        service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
+                        overlayManager.hideContextMenu()
+                    }
+                )
+            )
+
+            // Convert Rect to Point (center of rect)
+            val centerPoint = Point(
+                position.centerX(),
+                position.centerY()
+            )
+
+            overlayManager.showContextMenuAt(menuItems, centerPoint, "Quick Actions")
+            return true
+
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing basic context menu", e)
-            false
+            ConditionalLogger.e(TAG, e) { "Error showing basic context menu" }
+            return false
         }
     }
 
     /**
-     * Show selection-specific context menu
-     *
-     * TODO (Future): Integrate with overlay manager when available
+     * Show selection-specific context menu using OverlayManager
      */
     private fun showSelectionContextMenu(): Boolean {
-        return try {
-            // TODO: Implement when overlay manager is available
-            Log.d(TAG, "Selection context menu requested (overlay integration pending)")
-            true
+        ConditionalLogger.d(TAG) { "Showing selection context menu" }
+
+        try {
+            val menuItems = mutableListOf<MenuItem>()
+
+            // Clipboard actions (always available in selection mode)
+            menuItems.add(
+                MenuItem(
+                    id = "copy",
+                    label = "Copy",
+                    icon = Icons.Default.ContentCopy,
+                    number = 1,
+                    action = {
+                        performClipboardAction(AccessibilityNodeInfo.ACTION_COPY)
+                        overlayManager.hideContextMenu()
+                    }
+                )
+            )
+
+            menuItems.add(
+                MenuItem(
+                    id = "cut",
+                    label = "Cut",
+                    icon = Icons.Default.ContentCut,
+                    number = 2,
+                    action = {
+                        performClipboardAction(AccessibilityNodeInfo.ACTION_CUT)
+                        overlayManager.hideContextMenu()
+                    }
+                )
+            )
+
+            menuItems.add(
+                MenuItem(
+                    id = "paste",
+                    label = "Paste",
+                    icon = Icons.Default.ContentPaste,
+                    number = 3,
+                    action = {
+                        performClipboardAction(AccessibilityNodeInfo.ACTION_PASTE)
+                        overlayManager.hideContextMenu()
+                    }
+                )
+            )
+
+            // Text selection actions (if text is selected)
+            if (currentSelection?.isTextSelection == true) {
+                menuItems.add(
+                    MenuItem(
+                        id = "select_all",
+                        label = "Select All",
+                        icon = Icons.Default.SelectAll,
+                        number = 4,
+                        action = {
+                            selectAll()
+                            overlayManager.hideContextMenu()
+                        }
+                    )
+                )
+
+                menuItems.add(
+                    MenuItem(
+                        id = "clear_selection",
+                        label = "Clear Selection",
+                        icon = Icons.Default.Clear,
+                        number = 5,
+                        action = {
+                            clearSelection()
+                            overlayManager.hideContextMenu()
+                        }
+                    )
+                )
+            }
+
+            // Exit selection mode
+            menuItems.add(
+                MenuItem(
+                    id = "exit_selection",
+                    label = "Exit Selection Mode",
+                    icon = Icons.Default.Close,
+                    number = menuItems.size + 1,
+                    action = {
+                        exitSelectionMode()
+                    }
+                )
+            )
+
+            overlayManager.showContextMenu(menuItems, "Selection Menu")
+            return true
+
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing selection context menu", e)
-            false
+            ConditionalLogger.e(TAG, e) { "Error showing selection context menu" }
+            return false
         }
     }
 
     /**
-     * Show general context menu
-     *
-     * TODO (Future): Integrate with overlay manager when available
+     * Show general context menu using OverlayManager
      */
     private fun showGeneralContextMenu(): Boolean {
-        return try {
-            // TODO: Implement when overlay manager is available
-            Log.d(TAG, "General context menu requested (overlay integration pending)")
-            true
+        ConditionalLogger.d(TAG) { "Showing general context menu" }
+
+        try {
+            val menuItems = listOf(
+                MenuItem(
+                    id = "enter_selection",
+                    label = "Enter Selection Mode",
+                    icon = Icons.Default.SelectAll,
+                    number = 1,
+                    action = {
+                        enterSelectionMode()
+                        overlayManager.hideContextMenu()
+                    }
+                ),
+                MenuItem(
+                    id = "go_back",
+                    label = "Go Back",
+                    icon = Icons.Default.ArrowBack,
+                    number = 2,
+                    action = {
+                        service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+                        overlayManager.hideContextMenu()
+                    }
+                ),
+                MenuItem(
+                    id = "go_home",
+                    label = "Go Home",
+                    icon = Icons.Default.Home,
+                    number = 3,
+                    action = {
+                        service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
+                        overlayManager.hideContextMenu()
+                    }
+                ),
+                MenuItem(
+                    id = "recent_apps",
+                    label = "Recent Apps",
+                    icon = Icons.Default.List,
+                    number = 4,
+                    action = {
+                        service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS)
+                        overlayManager.hideContextMenu()
+                    }
+                ),
+                MenuItem(
+                    id = "show_numbers",
+                    label = "Show Numbers",
+                    icon = Icons.Default.Numbers,
+                    number = 5,
+                    action = {
+                        // Trigger number overlay via NumberHandler (would need service reference)
+                        overlayManager.hideContextMenu()
+                        ConditionalLogger.i(TAG) { "Show numbers requested from context menu" }
+                    }
+                )
+            )
+
+            overlayManager.showContextMenu(menuItems, "Voice Menu")
+            return true
+
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing general context menu", e)
-            false
+            ConditionalLogger.e(TAG, e) { "Error showing general context menu" }
+            return false
         }
     }
 

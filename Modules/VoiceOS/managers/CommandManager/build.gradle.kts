@@ -1,8 +1,8 @@
 plugins {
     id("com.android.library")
-    alias(libs.plugins.kotlin.android)
+    id("org.jetbrains.kotlin.android")
     id("kotlin-parcelize")
-    alias(libs.plugins.ksp)
+    id("com.google.devtools.ksp") version "1.9.25-1.0.20"
 }
 
 android {
@@ -48,7 +48,7 @@ android {
     }
     
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"  // Compatible with Kotlin 1.9.24
+        kotlinCompilerExtensionVersion = "1.5.15"  // Compatible with Kotlin 1.9.25
     }
 }
 

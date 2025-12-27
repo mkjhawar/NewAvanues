@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Stop Icon - Material Design
+  ic_stop.xml - Stop icon for notifications
+  Path: modules/apps/VoiceOSCore/src/main/res/drawable/ic_stop.xml
 
-  Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+  Material Icons style stop icon for stopping LearnApp exploration.
+  24x24dp vector drawable with tint support.
+
+  Author: VOS4 Development Team
+  Created: 2025-12-06
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
@@ -12,5 +17,5 @@
     android:tint="?attr/colorControlNormal">
     <path
         android:fillColor="@android:color/white"
-        android:pathData="M6,6h12v12h-12z"/>
+        android:pathData="M6,6h12v12H6z" />
 </vector>

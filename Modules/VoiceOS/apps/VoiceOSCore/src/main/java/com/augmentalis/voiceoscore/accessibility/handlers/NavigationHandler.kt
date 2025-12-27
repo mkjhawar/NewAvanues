@@ -10,13 +10,13 @@ package com.augmentalis.voiceoscore.accessibility.handlers
 
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
+import com.augmentalis.voiceoscore.accessibility.VoiceOSService
 
 /**
  * Handler for navigation actions
  */
 class NavigationHandler(
-    private val context: IVoiceOSContext
+    private val service: VoiceOSService
 ) : ActionHandler {
     
     companion object {
@@ -38,7 +38,7 @@ class NavigationHandler(
         params: Map<String, Any>
     ): Boolean {
         val normalizedAction = action.lowercase().trim()
-        val rootNode = context.getRootNodeInActiveWindow()
+        val rootNode = service.rootInActiveWindow
         
         if (rootNode == null) {
             Log.w(TAG, "No active window for navigation")

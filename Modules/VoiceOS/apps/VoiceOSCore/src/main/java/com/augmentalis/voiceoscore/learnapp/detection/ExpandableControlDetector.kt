@@ -1,201 +1,421 @@
-/**
- * ExpandableControlDetector.kt - Detects expandable/collapsible controls
- *
- * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: Manoj Jhawar
- * Created: 2025-12-16
- *
- * Detects expandable controls like dropdowns, accordions, and menus
- */
-
 package com.augmentalis.voiceoscore.learnapp.detection
 
+import android.content.Context
+import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
+import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 
 /**
- * Expandable Control Detector
+ * Detects UI controls that contain hidden child elements requiring expansion.
  *
- * Identifies expandable/collapsible UI controls that need special handling
- * during exploration to discover hidden content.
+ * Many Android UI elements hide content until the user interacts with them:
+ * - **Dropdown menus** (Spinner) - Options appear in overlay after clicking
+ * - **Overflow menus** (⋮ button) - Menu items hidden until tapped
+ * - **Hamburger menus** (☰ icon) - Navigation drawer slides in
+ * - **Accordion lists** - Sections collapsed by default
+ * - **Tab layouts** - Content in inactive tabs not visible
+ *
+ * ## Problem This Solves (Issue #1 - Remaining)
+ *
+ * **Before Phase 2:**
+ * ```
+ * Teams App - Settings Button
+ *   ↓ Click
+ * Settings Menu appears (overlay window)
+ *   - Profile
+ *   - Notifications
+ *   - Privacy          } NEVER DISCOVERED
+ *   - Help
+ *   - Logout
+ *
+ * Result: Marked "complete" with only 1 element when actually has 6
+ * ```
+ *
+ * **After Phase 2:**
+ * ```
+ * ExpandableControlDetector identifies: "Settings button is expandable"
+ * ExplorationEngine:
+ *   1. Clicks button
+ *   2. Waits 500ms for animation
+ *   3. Detects new overlay window
+ *   4. Explores 5 menu items
+ *   5. Registers all elements
+ *
+ * Result: Accurate discovery of all 6 elements
+ * ```
+ *
+ * ## Detection Strategy
+ *
+ * Uses multiple heuristics in priority order:
+ * 1. **Class name patterns** (highest confidence)
+ * 2. **Resource ID patterns** (high confidence)
+ * 3. **Content description patterns** (medium confidence)
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val detector = ExpandableControlDetector()
+ *
+ * for (element in clickableElements) {
+ *     if (detector.isExpandableControl(element.node)) {
+ *         Log.d(TAG, "📋 Expandable: ${element.alias}")
+ *
+ *         // Special handling for expansion
+ *         val expansion = detector.classifyExpansionType(element.node)
+ *         handleExpansion(element, expansion)
+ *     } else {
+ *         // Regular click
+ *         clickElement(element)
+ *     }
+ * }
+ * ```
+ *
+ * ## Thread Safety
+ * This class is stateless and thread-safe. All methods are pure functions.
+ *
+ * @see com.augmentalis.voiceoscore.learnapp.exploration.ExplorationEngine Primary consumer
  */
-object ExpandableControlDetector {
+class ExpandableControlDetector(
+    private val context: Context
+) {
 
-    // Class names that typically indicate expandable controls
-    private val EXPANDABLE_CLASS_PATTERNS = listOf(
-        "Spinner",
-        "DropDown",
-        "ExpansionPanel",
-        "Accordion",
-        "ExpandableListView",
-        "TreeView",
-        "CollapsibleToolbar",
-        "NavigationDrawer"
-    )
-
-    // Resource ID patterns that indicate expandable controls
-    private val EXPANDABLE_RESOURCE_PATTERNS = listOf(
-        "dropdown",
-        "spinner",
-        "expand",
-        "collapse",
-        "menu",
-        "drawer"
-    )
+    private val TAG = "ExpandableControlDetector"
 
     /**
-     * Check if node is an expandable control
-     *
-     * @param node Accessibility node to check
-     * @return true if node appears to be expandable
+     * Developer settings
      */
-    fun isExpandableControl(node: AccessibilityNodeInfo): Boolean {
-        val className = node.className?.toString() ?: ""
-        val resourceId = node.viewIdResourceName ?: ""
+    private val developerSettings by lazy { LearnAppDeveloperSettings(context) }
 
-        // Check class name patterns
-        for (pattern in EXPANDABLE_CLASS_PATTERNS) {
-            if (className.contains(pattern, ignoreCase = true)) {
-                return true
-            }
-        }
+    /**
+     * Types of expandable controls with different expansion behaviors.
+     */
+    enum class ExpansionType {
+        /**
+         * Creates a new overlay window (most common).
+         * Examples: Spinner, Overflow menu, Dialog picker
+         * Detection: New AccessibilityWindowInfo appears
+         */
+        OVERLAY,
 
-        // Check resource ID patterns
-        for (pattern in EXPANDABLE_RESOURCE_PATTERNS) {
-            if (resourceId.contains(pattern, ignoreCase = true)) {
-                return true
-            }
-        }
+        /**
+         * Expands in-place within the same window.
+         * Examples: Accordion list, ExpandableListView
+         * Detection: Element count increases in same window
+         */
+        IN_PLACE,
 
-        // Check if has expand/collapse actions
-        val hasExpandAction = node.actionList.any { action ->
-            action.id == AccessibilityNodeInfo.ACTION_EXPAND ||
-            action.id == AccessibilityNodeInfo.ACTION_COLLAPSE
-        }
+        /**
+         * Opens a new screen/activity.
+         * Examples: Navigation drawer with screen transition
+         * Detection: Package stays same, but screen hash changes significantly
+         */
+        NAVIGATION,
 
-        return hasExpandAction
+        /**
+         * Unknown/ambiguous expansion behavior.
+         * Use conservative approach (check both overlay and in-place)
+         */
+        UNKNOWN
     }
 
     /**
-     * Check if node is currently expanded
+     * Detailed information about an expandable control.
      *
-     * @param node Accessibility node to check
-     * @return true if node is expanded, false if collapsed, null if not expandable
+     * @property isExpandable Whether this control is expandable
+     * @property expansionType Type of expansion behavior
+     * @property confidence Confidence level (0.0 to 1.0)
+     * @property matchedPattern Which detection pattern matched
+     * @property reason Human-readable explanation of why it's expandable
      */
-    fun isExpanded(node: AccessibilityNodeInfo): Boolean? {
-        // Check expand/collapse state if available
-        if (node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_COLLAPSE }) {
-            return true  // Has collapse action = currently expanded
-        }
-        if (node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_EXPAND }) {
-            return false  // Has expand action = currently collapsed
-        }
-        return null  // Not an expandable control
-    }
-
-    /**
-     * Find all expandable controls in tree
-     *
-     * @param rootNode Root of tree to search
-     * @return List of expandable control nodes
-     */
-    fun findExpandableControls(rootNode: AccessibilityNodeInfo?): List<AccessibilityNodeInfo> {
-        if (rootNode == null) return emptyList()
-
-        val expandables = mutableListOf<AccessibilityNodeInfo>()
-        findExpandablesRecursive(rootNode, expandables)
-        return expandables
-    }
-
-    private fun findExpandablesRecursive(
-        node: AccessibilityNodeInfo,
-        results: MutableList<AccessibilityNodeInfo>
+    data class ExpansionInfo(
+        val isExpandable: Boolean,
+        val expansionType: ExpansionType = ExpansionType.UNKNOWN,
+        val confidence: Float = 0.0f,
+        val matchedPattern: String = "",
+        val reason: String = ""
     ) {
-        if (isExpandableControl(node)) {
-            results.add(node)
-        }
-
-        for (i in 0 until node.childCount) {
-            node.getChild(i)?.let { child ->
-                findExpandablesRecursive(child, results)
-            }
+        companion object {
+            fun notExpandable() = ExpansionInfo(
+                isExpandable = false,
+                confidence = 0.0f,
+                reason = "No expandable patterns matched"
+            )
         }
     }
 
-    /** Minimum confidence threshold for expansion detection */
-    const val MIN_CONFIDENCE_THRESHOLD = 0.5f
+    /**
+     * Checks if an element is an expandable control (simple boolean check).
+     *
+     * This is a convenience method for quick checks. Use [getExpansionInfo]
+     * for detailed information about expansion behavior.
+     *
+     * @param node AccessibilityNodeInfo to check
+     * @return true if expandable, false otherwise
+     */
+    fun isExpandableControl(node: AccessibilityNodeInfo?): Boolean {
+        if (node == null) return false
+        return getExpansionInfo(node).isExpandable
+    }
 
     /**
-     * Get detailed expansion info for a node
+     * Gets detailed information about whether and how an element is expandable.
      *
-     * @param node Node to analyze
-     * @return ExpansionInfo with details about the expansion state
+     * This method performs comprehensive pattern matching and returns detailed
+     * information useful for implementing expansion strategies.
+     *
+     * ## Detection Patterns (Priority Order)
+     *
+     * ### 1. Class Name Patterns (Confidence: 0.9+)
+     * - `android.widget.Spinner` → OVERLAY
+     * - `androidx.appcompat.widget.AppCompatSpinner` → OVERLAY
+     * - `android.widget.ExpandableListView` → IN_PLACE
+     * - `androidx.drawerlayout.widget.DrawerLayout` → NAVIGATION
+     *
+     * ### 2. Resource ID Patterns (Confidence: 0.8+)
+     * - Contains "overflow" → OVERLAY
+     * - Contains "menu" → OVERLAY
+     * - Contains "dropdown" → OVERLAY
+     * - Contains "expand" → IN_PLACE
+     * - Contains "drawer" → NAVIGATION
+     *
+     * ### 3. Content Description Patterns (Confidence: 0.7+)
+     * - Contains "menu" → OVERLAY
+     * - Contains "more options" → OVERLAY
+     * - Contains "expand" → IN_PLACE
+     * - Contains "open navigation" → NAVIGATION
+     *
+     * @param node AccessibilityNodeInfo to analyze
+     * @return ExpansionInfo with detailed classification
      */
     fun getExpansionInfo(node: AccessibilityNodeInfo): ExpansionInfo {
-        val isExpandable = isExpandableControl(node)
-        val isExpanded = isExpanded(node)
-        val className = node.className?.toString() ?: ""
-        val resourceId = node.viewIdResourceName ?: ""
+        // Pattern 1: Class name matching (highest confidence)
+        val className = node.className?.toString()?.lowercase() ?: ""
 
-        // Determine expansion type
-        val expansionType = when {
-            className.contains("Spinner", ignoreCase = true) -> ExpansionType.DROPDOWN
-            className.contains("Menu", ignoreCase = true) -> ExpansionType.MENU
-            className.contains("Accordion", ignoreCase = true) -> ExpansionType.ACCORDION
-            className.contains("Drawer", ignoreCase = true) -> ExpansionType.DRAWER
-            resourceId.contains("dropdown", ignoreCase = true) -> ExpansionType.DROPDOWN
-            resourceId.contains("menu", ignoreCase = true) -> ExpansionType.MENU
-            else -> ExpansionType.GENERIC
+        // Spinners (dropdowns) - very high confidence
+        if (className.contains("spinner")) {
+            return ExpansionInfo(
+                isExpandable = true,
+                expansionType = ExpansionType.OVERLAY,
+                confidence = 0.95f,
+                matchedPattern = "CLASS:Spinner",
+                reason = "Android Spinner class detected (dropdown menu)"
+            )
         }
 
-        // Calculate confidence
-        val confidence = when {
-            node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_EXPAND ||
-                                  it.id == AccessibilityNodeInfo.ACTION_COLLAPSE } -> 0.9f
-            EXPANDABLE_CLASS_PATTERNS.any { className.contains(it, ignoreCase = true) } -> 0.8f
-            EXPANDABLE_RESOURCE_PATTERNS.any { resourceId.contains(it, ignoreCase = true) } -> 0.7f
-            else -> 0.3f
+        // ExpandableListView - very high confidence
+        if (className.contains("expandablelistview")) {
+            return ExpansionInfo(
+                isExpandable = true,
+                expansionType = ExpansionType.IN_PLACE,
+                confidence = 0.95f,
+                matchedPattern = "CLASS:ExpandableListView",
+                reason = "ExpandableListView class detected (accordion list)"
+            )
         }
 
-        // Build reason string
-        val reason = buildString {
-            if (isExpandable) append("Expandable control detected. ")
-            if (isExpanded == true) append("Currently expanded. ")
-            if (isExpanded == false) append("Currently collapsed. ")
-            append("Type: $expansionType")
+        // DrawerLayout - high confidence
+        if (className.contains("drawerlayout")) {
+            return ExpansionInfo(
+                isExpandable = true,
+                expansionType = ExpansionType.NAVIGATION,
+                confidence = 0.90f,
+                matchedPattern = "CLASS:DrawerLayout",
+                reason = "DrawerLayout class detected (navigation drawer)"
+            )
         }
 
-        return ExpansionInfo(
-            isExpandable = isExpandable,
-            isExpanded = isExpanded ?: false,
-            expansionType = expansionType,
-            confidence = confidence,
-            reason = reason
+        // Pattern 2: Resource ID matching (high confidence)
+        val resourceId = try {
+            node.viewIdResourceName?.lowercase() ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+
+        if (resourceId.contains("overflow") || resourceId.contains("more_options")) {
+            return ExpansionInfo(
+                isExpandable = true,
+                expansionType = ExpansionType.OVERLAY,
+                confidence = 0.85f,
+                matchedPattern = "RESOURCE_ID:overflow",
+                reason = "Overflow menu resource ID detected"
+            )
+        }
+
+        if (resourceId.contains("menu") && !resourceId.contains("item")) {
+            return ExpansionInfo(
+                isExpandable = true,
+                expansionType = ExpansionType.OVERLAY,
+                confidence = 0.85f,
+                matchedPattern = "RESOURCE_ID:menu",
+                reason = "Menu resource ID detected"
+            )
+        }
+
+        if (resourceId.contains("dropdown") || resourceId.contains("spinner")) {
+            return ExpansionInfo(
+                isExpandable = true,
+                expansionType = ExpansionType.OVERLAY,
+                confidence = 0.85f,
+                matchedPattern = "RESOURCE_ID:dropdown",
+                reason = "Dropdown resource ID detected"
+            )
+        }
+
+        if (resourceId.contains("expand") || resourceId.contains("collapse")) {
+            return ExpansionInfo(
+                isExpandable = true,
+                expansionType = ExpansionType.IN_PLACE,
+                confidence = 0.80f,
+                matchedPattern = "RESOURCE_ID:expand",
+                reason = "Expandable control resource ID detected"
+            )
+        }
+
+        if (resourceId.contains("drawer")) {
+            return ExpansionInfo(
+                isExpandable = true,
+                expansionType = ExpansionType.NAVIGATION,
+                confidence = 0.80f,
+                matchedPattern = "RESOURCE_ID:drawer",
+                reason = "Drawer resource ID detected"
+            )
+        }
+
+        // Pattern 3: Content description matching (medium confidence)
+        val contentDesc = node.contentDescription?.toString()?.lowercase() ?: ""
+
+        if (contentDesc.contains("menu") || contentDesc.contains("more options")) {
+            return ExpansionInfo(
+                isExpandable = true,
+                expansionType = ExpansionType.OVERLAY,
+                confidence = 0.75f,
+                matchedPattern = "CONTENT_DESC:menu",
+                reason = "Menu content description detected"
+            )
+        }
+
+        if (contentDesc.contains("expand") || contentDesc.contains("show more")) {
+            return ExpansionInfo(
+                isExpandable = true,
+                expansionType = ExpansionType.IN_PLACE,
+                confidence = 0.70f,
+                matchedPattern = "CONTENT_DESC:expand",
+                reason = "Expand content description detected"
+            )
+        }
+
+        if (contentDesc.contains("open navigation") || contentDesc.contains("open drawer")) {
+            return ExpansionInfo(
+                isExpandable = true,
+                expansionType = ExpansionType.NAVIGATION,
+                confidence = 0.70f,
+                matchedPattern = "CONTENT_DESC:navigation",
+                reason = "Navigation content description detected"
+            )
+        }
+
+        // Pattern 4: Text content matching (lower confidence, fallback)
+        val text = node.text?.toString()?.lowercase() ?: ""
+
+        if (text == "⋮" || text == "..." || text == "•••") {
+            return ExpansionInfo(
+                isExpandable = true,
+                expansionType = ExpansionType.OVERLAY,
+                confidence = 0.65f,
+                matchedPattern = "TEXT:overflow_icon",
+                reason = "Overflow menu icon detected in text"
+            )
+        }
+
+        if (text == "☰" || text == "≡") {
+            return ExpansionInfo(
+                isExpandable = true,
+                expansionType = ExpansionType.NAVIGATION,
+                confidence = 0.65f,
+                matchedPattern = "TEXT:hamburger_icon",
+                reason = "Hamburger menu icon detected in text"
+            )
+        }
+
+        // No patterns matched
+        return ExpansionInfo.notExpandable()
+    }
+
+    /**
+     * Gets diagnostic information about why an element was classified as expandable (or not).
+     *
+     * Useful for debugging pattern matching and understanding false positives/negatives.
+     *
+     * @param node AccessibilityNodeInfo to diagnose
+     * @return Map containing all available information
+     */
+    fun getDiagnostics(node: AccessibilityNodeInfo): Map<String, Any> {
+        val info = getExpansionInfo(node)
+        return mapOf(
+            "isExpandable" to info.isExpandable,
+            "expansionType" to info.expansionType.name,
+            "confidence" to info.confidence,
+            "matchedPattern" to info.matchedPattern,
+            "reason" to info.reason,
+            "className" to (node.className?.toString() ?: "null"),
+            "resourceId" to (try { node.viewIdResourceName ?: "null" } catch (e: Exception) { "error" }),
+            "contentDescription" to (node.contentDescription?.toString() ?: "null"),
+            "text" to (node.text?.toString() ?: "null")
         )
     }
 
     /**
-     * Expansion Type
+     * Get expansion wait time from settings
      *
-     * Types of expandable controls detected.
+     * This accounts for:
+     * - Overlay window animation (200-500ms typical)
+     * - In-place expansion animation (200-400ms typical)
+     * - Slow devices (RealWear: 500-800ms)
      */
-    enum class ExpansionType {
-        DROPDOWN,
-        MENU,
-        ACCORDION,
-        DRAWER,
-        GENERIC
-    }
+    fun getExpansionWaitMs(): Long = developerSettings.getExpansionWaitDelayMs()
 
     /**
-     * Expansion Info
+     * Get minimum confidence threshold from settings
      *
-     * Detailed information about an expandable control.
+     * Elements with confidence below this threshold are treated as regular clickable elements.
      */
-    data class ExpansionInfo(
-        val isExpandable: Boolean,
-        val isExpanded: Boolean,
-        val expansionType: ExpansionType,
-        val confidence: Float,
-        val reason: String
-    )
+    fun getMinConfidenceThreshold(): Float = developerSettings.getExpansionConfidenceThreshold()
+
+    companion object {
+        /**
+         * Wait time after clicking expandable control before checking for expansion.
+         *
+         * This accounts for:
+         * - Overlay window animation (200-500ms typical)
+         * - In-place expansion animation (200-400ms typical)
+         * - Slow devices (RealWear: 500-800ms)
+         *
+         * ## Tuning Guidance
+         * - Fast devices (Pixel): 300ms may suffice
+         * - Average devices: 500ms (default)
+         * - Slow devices (RealWear): 700ms may be needed
+         * - System animations disabled: 100ms suffices
+         *
+         * ## Future Enhancement
+         * TODO: Make adaptive based on:
+         * - System animation scale settings
+         * - Device performance characteristics
+         * - Historical expansion timing data
+         *
+         * @deprecated Use getExpansionWaitMs() instance method instead
+         */
+        @Deprecated("Use getExpansionWaitMs() instance method", ReplaceWith("getExpansionWaitMs()"))
+        const val EXPANSION_WAIT_MS = 500L
+
+        /**
+         * Minimum confidence threshold for treating element as expandable.
+         *
+         * Elements with confidence below this threshold are treated as regular clickable elements.
+         * Current threshold (0.65) allows text-based icon detection while filtering noise.
+         *
+         * @deprecated Use getMinConfidenceThreshold() instance method instead
+         */
+        @Deprecated("Use getMinConfidenceThreshold() instance method", ReplaceWith("getMinConfidenceThreshold()"))
+        const val MIN_CONFIDENCE_THRESHOLD = 0.65f
+    }
 }

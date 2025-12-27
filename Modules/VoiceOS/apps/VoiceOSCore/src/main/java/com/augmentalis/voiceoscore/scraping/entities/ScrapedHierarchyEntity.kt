@@ -1,38 +1,31 @@
 /**
- * ScrapedHierarchyEntity.kt - UI element hierarchy data for accessibility scraping database
+ * ScrapedHierarchyEntity.kt - Parent-child relationships for accessibility tree
+ *
+ * Migrated from Room to SQLDelight (Phase 2)
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Created: 2025-12-17
+ * Author: VOS4 Scraping Migration Specialist (Agent 2)
+ * Created: 2025-11-27
  */
 package com.augmentalis.voiceoscore.scraping.entities
 
 /**
- * Entity representing parent-child hierarchy relationships between scraped UI elements
+ * Entity representing parent-child relationships in accessibility tree
  *
- * MIGRATION NOTE: This entity has been migrated to use SQLDelight.
- * The schema is defined in: core/database/src/commonMain/sqldelight/com/augmentalis/database/ScrapedHierarchy.sq
- *
- * This entity stores the hierarchical structure of UI elements as discovered through
- * the accessibility tree. It allows reconstruction of the UI tree and understanding
- * of element relationships.
- *
- * Note: Unlike the DTO which uses element hashes for foreign keys (matching the database schema),
- * this entity uses element IDs during construction before database insertion. The hashes are
- * derived from the elements themselves.
+ * This entity captures the hierarchical structure of the UI, allowing the system
+ * to understand element relationships and context. Essential for commands like
+ * "click the button in the dialog" or "scroll the list".
  *
  * @property id Auto-generated primary key
- * @property parentElementId ID of the parent element (converted to hash for database)
- * @property childElementId ID of the child element (converted to hash for database)
- * @property childOrder Order of child among siblings
- * @property depth Depth in hierarchy tree
- * @property createdAt Timestamp when relationship was recorded (milliseconds)
+ * @property parentElementHash Hash of parent ScrapedElementEntity
+ * @property childElementHash Hash of child ScrapedElementEntity
+ * @property depth Depth in the hierarchy
+ * @property createdAt Timestamp when relationship was recorded
  */
 data class ScrapedHierarchyEntity(
-    val id: Long = 0,
-    val parentElementId: Long,
-    val childElementId: Long,
-    val childOrder: Int = 0,
-    val depth: Int = 0,
+    val id: Long? = null,
+    val parentElementHash: String,
+    val childElementHash: String,
+    val depth: Int = 1,
     val createdAt: Long = System.currentTimeMillis()
 )

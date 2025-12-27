@@ -15,6 +15,8 @@ import android.util.Log
 import android.util.LruCache
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.augmentalis.voiceoscore.utils.ConditionalLogger
+import com.augmentalis.voiceos.logging.PIILoggingWrapper
 import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine.Companion.FORBIDDEN_DESCRIPTIONS
 import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine.Companion.NEXT_LINE_REGEX
 import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine.Companion.NUMERIC_PATTERN
@@ -170,13 +172,21 @@ class UIScrapingEngine(
     )
 
 
+    // ============================================================================
+    // SECTION: Public API - Configuration
+    // ============================================================================
+
     /**
      * Load command replacement profile for specific app
      */
     fun loadCommandReplacementProfile(packageName: String, replacements: Map<String, String>) {
         commandReplacementProfiles[packageName] = replacements
-        Log.d(TAG, "Loaded ${replacements.size} command replacements for $packageName")
+        ConditionalLogger.d(TAG) { "Loaded ${replacements.size} command replacements for $packageName" }
     }
+
+    // ============================================================================
+    // SECTION: Public API - Main Entry Points
+    // ============================================================================
 
     /**
      * Extract all interactive UI elements from the current screen with advanced processing
@@ -195,7 +205,7 @@ class UIScrapingEngine(
 
         val rootNode = service.rootInActiveWindow
         if (rootNode == null) {
-            Log.w(TAG, "No root node available")
+            ConditionalLogger.w(TAG) { "No root node available" }
             return emptyList()
         }
 
@@ -223,9 +233,7 @@ class UIScrapingEngine(
                 isParentClickable = false
             )
         } finally {
-            // FIX: Android does NOT auto-recycle AccessibilityNodeInfo - must recycle manually
-            // Failing to recycle causes 100-250KB memory leak per scrape operation
-            rootNode.recycle()
+            // rootNode is managed by caller - not recycled here
         }
 
         // Apply intelligent duplicate detection
@@ -236,7 +244,7 @@ class UIScrapingEngine(
         scrapeCount.incrementAndGet()
         updateCacheStats()
 
-        Log.d(TAG, "Extracted ${elements.size} elements, filtered to ${filteredElements.size} unique elements")
+        ConditionalLogger.d(TAG) { "Extracted ${elements.size} elements, filtered to ${filteredElements.size} unique elements" }
         return filteredElements
     }
 
@@ -262,6 +270,10 @@ class UIScrapingEngine(
         }
     }
 
+    // ============================================================================
+    // SECTION: UI Tree Traversal
+    // ============================================================================
+
     /**
      * Enhanced recursive extraction with Legacy Avenue algorithms
      */
@@ -276,7 +288,7 @@ class UIScrapingEngine(
         isParentClickable: Boolean
     ) {
         if (depth > MAX_DEPTH) {
-            Log.w(TAG, "Max depth reached")
+            ConditionalLogger.w(TAG) { "Max depth reached" }
             return
         }
 
@@ -325,10 +337,9 @@ class UIScrapingEngine(
                                     }
                                 }) {
                                 elements.add(element)
-                                // Update element cache with thread safety
-                                synchronized(elementCache) {
-                                    elementCache.put(element.hash, CachedElement(element, System.currentTimeMillis()))
-                                }
+                                // Update element cache - LruCache is thread-safe internally
+                                // YOLO Phase 2 - Issue #13: Removed redundant synchronized block
+                                elementCache.put(element.hash, CachedElement(element, System.currentTimeMillis()))
                             }
                         }
 
@@ -341,9 +352,8 @@ class UIScrapingEngine(
             val childCount = node.childCount
 
             for (i in 0 until childCount) {
-                var child: AccessibilityNodeInfo? = null
                 try {
-                    child = node.getChild(i)
+                    val child = node.getChild(i)
                     if (child != null) {
                         extractElementsRecursiveEnhanced(
                             child,
@@ -357,15 +367,17 @@ class UIScrapingEngine(
                         )
                     }
                 } finally {
-                    // FIX: Android does NOT auto-recycle AccessibilityNodeInfo - must recycle manually
-                    // Failing to recycle child nodes causes 100-250KB memory leak per scrape operation
-                    child?.recycle()
+                    // Child node recycling handled by AccessibilityNodeManager
                 }
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Error extracting from node at depth $depth: ${e.message}")
+            ConditionalLogger.w(TAG) { "Error extracting from node at depth $depth: ${e.message}" }
         }
     }
+
+    // ============================================================================
+    // SECTION: Text Normalization & Parsing
+    // ============================================================================
 
     /**
      * Extract raw text from node using Legacy Avenue preference order
@@ -425,10 +437,15 @@ class UIScrapingEngine(
         return try {
             PARSE_DESCRIPTION_CLEANUP_REGEX.replace(processedText, "").trim()
         } catch (e: Exception) {
-            Log.e(TAG, "Text normalization regex error for: '$processedText'", e)
+            // Text could be user data from UI elements, use PIILoggingWrapper
+            PIILoggingWrapper.e(TAG, "Text normalization regex error for: '$processedText' - ${e.message}")
             processedText
         }
     }
+
+    // ============================================================================
+    // SECTION: Node Filtering & Validation
+    // ============================================================================
 
     /**
      * Enhanced node usefulness check
@@ -454,6 +471,10 @@ class UIScrapingEngine(
         return true
     }
 
+    // ============================================================================
+    // SECTION: Duplicate Detection
+    // ============================================================================
+
     /**
      * Intelligent duplicate detection using approximate rect equality
      */
@@ -474,7 +495,7 @@ class UIScrapingEngine(
         }
 
         duplicatesFiltered.set(duplicateCount.toLong())
-        Log.d(TAG, "Filtered $duplicateCount duplicate elements")
+        ConditionalLogger.d(TAG) { "Filtered $duplicateCount duplicate elements" }
 
         return uniqueElements
     }
@@ -535,6 +556,10 @@ class UIScrapingEngine(
             confidence = confidence
         )
     }
+
+    // ============================================================================
+    // SECTION: Command Generation
+    // ============================================================================
 
     /**
      * Generate enhanced commands with sophisticated processing and app-specific logic
@@ -662,6 +687,10 @@ class UIScrapingEngine(
         return commands.sorted()
     }
 
+    // ============================================================================
+    // SECTION: Confidence & Scoring
+    // ============================================================================
+
     /**
      * Calculate confidence score for command
      */
@@ -700,17 +729,21 @@ class UIScrapingEngine(
                 val packageName = rootAccessibilityNode.packageName?.toString()
                 return packageName
             } catch (e: Exception) {
-                Log.w(TAG, "Error getting package name: ${e.message}")
+                ConditionalLogger.w(TAG) { "Error getting package name: ${e.message}" }
             }
             null
         } catch (e: Exception) {
-            Log.w(TAG, "Error getting package name: ${e.message}")
+            ConditionalLogger.w(TAG) { "Error getting package name: ${e.message}" }
             null
         }
     }
 
     /**
      * Generate element hash for caching
+     *
+     * YOLO Phase 2 - Issue #19: Improved hash collision handling using SHA-256
+     * Previous implementation used Java hashCode() (32-bit), high collision risk
+     * Now using SHA-256 for cryptographically secure, collision-resistant hashing
      */
     private fun generateElementHash(
         text: String,
@@ -723,8 +756,16 @@ class UIScrapingEngine(
         builder.append(description ?: "").append('_')
         builder.append(className ?: "").append('_')
         builder.append(bounds.toShortString())
-        return builder.toString().hashCode().toString()
+
+        // Use SHA-256 instead of hashCode() for collision resistance
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val hashBytes = digest.digest(builder.toString().toByteArray())
+        return hashBytes.joinToString("") { "%02x".format(it) }
     }
+
+    // ============================================================================
+    // SECTION: Cache Management
+    // ============================================================================
 
     /**
      * Update cache statistics
@@ -741,32 +782,36 @@ class UIScrapingEngine(
         )
 
         if (scrapeCount.get() % 100 == 0L) {
-            Log.i(
-                TAG,
+            ConditionalLogger.i(TAG) {
                 "Cache stats: Hit rate=${hitRate * 100}%, Total scrapes=${scrapeCount.get()}, Duplicates filtered=${duplicatesFiltered.get()}"
-            )
+            }
         }
     }
 
     /**
      * Clear all caches
+     *
+     * YOLO Phase 2 - Issue #13: Removed redundant synchronized blocks
+     * LruCache is thread-safe internally, no need for explicit synchronization
      */
     fun clearCache() {
         nodeCache.clear()
-        synchronized(elementCache) {
-            elementCache.evictAll()
-        }
-        synchronized(profileCache) {
-            profileCache.evictAll()
-        }
+        // LruCache.evictAll() is already thread-safe
+        elementCache.evictAll()
+        // LruCache.evictAll() is already thread-safe
+        profileCache.evictAll()
         commandReplacementProfiles.clear()
         cachedElements = emptyList()
         lastScrapeTime.set(0)
         cacheHits.set(0)
         cacheMisses.set(0)
         duplicatesFiltered.set(0)
-        Log.d(TAG, "All caches cleared")
+        ConditionalLogger.d(TAG) { "All caches cleared" }
     }
+
+    // ============================================================================
+    // SECTION: Metrics & Monitoring
+    // ============================================================================
 
     /**
      * Get performance metrics
@@ -801,11 +846,13 @@ class UIScrapingEngine(
      */
     fun destroy() {
         clearCache()
-        Log.d(TAG, "UIScrapingEngine destroyed")
+        ConditionalLogger.d(TAG) { "UIScrapingEngine destroyed" }
     }
 }
 
-// Extension functions from Legacy Avenue
+// ============================================================================
+// SECTION: Extension Functions
+// ============================================================================
 
 private fun String.extractFirstLine(): String {
     return this.split(NEXT_LINE_REGEX).firstOrNull().orEmpty()

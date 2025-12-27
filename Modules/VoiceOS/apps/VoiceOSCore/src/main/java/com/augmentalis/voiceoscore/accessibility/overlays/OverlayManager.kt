@@ -1,36 +1,30 @@
 /**
- * OverlayManager.kt - Singleton manager for overlay coordination
+ * OverlayManager.kt - Centralized overlay management system
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA (IDEACODE v12.1)
- * Created: 2025-12-22
- *
- * P2-8c: Completes overlay management extraction with singleton pattern.
- * Provides centralized access point for all overlay operations in VoiceOSService.
+ * Author: VOS4 Development Team
+ * Code-Reviewed-By: CCA
+ * Created: 2025-10-09
  */
-
 package com.augmentalis.voiceoscore.accessibility.overlays
 
 import android.content.Context
-import android.graphics.Rect
-import android.util.Log
+import android.graphics.Point
+import android.view.WindowManager
+import com.augmentalis.voiceos.speech.confidence.ConfidenceResult
+import com.augmentalis.voiceoscore.accessibility.overlays.theme.OverlayConfig
+import com.augmentalis.voiceoscore.accessibility.overlays.theme.OverlayTheme
+import com.augmentalis.voiceoscore.utils.ConditionalLogger
 
 /**
- * Overlay Manager (Singleton)
+ * Centralized manager for all accessibility overlays
+ * Provides coordinated control and lifecycle management
  *
- * Centralized manager for all overlay operations:
- * - Numbered element selection overlays
- * - Context menu overlays
- * - Command status overlays
- * - Confidence indicator overlays
- *
- * Provides singleton access to OverlayCoordinator functionality.
- *
- * @see OverlayCoordinator
+ * Now includes theming support via OverlayConfig and OverlayTheme.
  */
-class OverlayManager private constructor(context: Context) {
-
+class OverlayManager(
+    private val context: Context
+) {
     companion object {
         private const val TAG = "OverlayManager"
 
@@ -38,145 +32,339 @@ class OverlayManager private constructor(context: Context) {
         private var instance: OverlayManager? = null
 
         /**
-         * Get singleton instance
-         *
-         * Thread-safe double-checked locking
-         *
-         * @param context Application or service context
-         * @return Singleton OverlayManager instance
+         * Get or create singleton instance
          */
         fun getInstance(context: Context): OverlayManager {
             return instance ?: synchronized(this) {
                 instance ?: OverlayManager(context.applicationContext).also {
                     instance = it
-                    Log.d(TAG, "OverlayManager singleton created")
+                    ConditionalLogger.i(TAG) { "OverlayManager singleton created" }
                 }
             }
         }
     }
 
-    private val coordinator = OverlayCoordinator(context.applicationContext)
-
-    // ============================================================
-    // Numbered Selection Overlay
-    // ============================================================
+    // Theme configuration (singleton, loads user preferences)
+    private val config = OverlayConfig.getInstance(context)
 
     /**
-     * Show numbered overlay for element selection
-     *
-     * @param elements List of selectable items to display with numbers
+     * Get current effective theme (with all accessibility settings applied)
+     * Overlays can use this to customize their appearance
      */
-    fun showNumberedOverlay(elements: List<SelectableItem>) {
-        coordinator.showNumberedOverlay(elements)
+    val theme: OverlayTheme
+        get() = config.getEffectiveTheme()
+
+    private val windowManager: WindowManager =
+        context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+
+    // Lazy initialization of overlays
+    private val confidenceOverlay by lazy {
+        ConfidenceOverlay(context, windowManager)
+    }
+
+    private val numberedSelectionOverlay by lazy {
+        NumberedSelectionOverlay(context, windowManager)
+    }
+
+    private val commandStatusOverlay by lazy {
+        CommandStatusOverlay(context, windowManager)
+    }
+
+    private val contextMenuOverlay by lazy {
+        ContextMenuOverlay(context, windowManager)
+    }
+
+    // Track active overlays for coordination
+    private val activeOverlays = mutableSetOf<String>()
+
+    // ===== THEME MANAGEMENT =====
+
+    /**
+     * Get theme configuration manager
+     */
+    fun getConfig(): OverlayConfig = config
+
+    /**
+     * Change theme by name
+     */
+    fun setTheme(themeName: String) {
+        config.setTheme(themeName)
+        ConditionalLogger.i(TAG) { "Theme changed to: $themeName" }
+        // Note: Existing overlays won't update until re-shown
+        // Future enhancement: Add theme change listener to update live overlays
     }
 
     /**
-     * Hide numbered overlay
+     * Apply accessibility setting: Large Text
      */
-    fun hideNumberedOverlay() {
-        coordinator.hideNumberedOverlay()
-    }
-
-    // ============================================================
-    // Context Menu Overlay
-    // ============================================================
-
-    /**
-     * Show context menu overlay at specified position
-     *
-     * @param x X-coordinate for menu position
-     * @param y Y-coordinate for menu position
-     * @param options List of menu option strings
-     */
-    fun showContextMenu(x: Float, y: Float, options: List<String>) {
-        coordinator.showContextMenu(x, y, options)
+    fun setLargeText(enabled: Boolean) {
+        config.setLargeText(enabled)
+        ConditionalLogger.i(TAG) { "Large text ${if (enabled) "enabled" else "disabled"}" }
     }
 
     /**
-     * Hide context menu overlay
+     * Apply accessibility setting: High Contrast
      */
-    fun hideContextMenu() {
-        coordinator.hideContextMenu()
+    fun setHighContrast(enabled: Boolean) {
+        config.setHighContrast(enabled)
+        ConditionalLogger.i(TAG) { "High contrast ${if (enabled) "enabled" else "disabled"}" }
     }
 
-    // ============================================================
-    // Command Status Overlay
-    // ============================================================
+    /**
+     * Apply accessibility setting: Reduced Motion
+     */
+    fun setReducedMotion(enabled: Boolean) {
+        config.setReducedMotion(enabled)
+        ConditionalLogger.i(TAG) { "Reduced motion ${if (enabled) "enabled" else "disabled"}" }
+    }
+
+    // ===== OVERLAY MANAGEMENT =====
 
     /**
-     * Show command status overlay with message
-     *
-     * @param message Status message to display
-     * @param isSuccess Whether command succeeded (affects styling)
+     * Show confidence indicator overlay
      */
-    fun showCommandStatus(message: String, isSuccess: Boolean = true) {
-        coordinator.showCommandStatus(message, isSuccess)
+    fun showConfidence(result: ConfidenceResult) {
+        confidenceOverlay.show(result)
+        activeOverlays.add("confidence")
+    }
+
+    /**
+     * Update confidence without showing/hiding
+     */
+    fun updateConfidence(result: ConfidenceResult) {
+        if (confidenceOverlay.isVisible()) {
+            confidenceOverlay.updateConfidence(result)
+        } else {
+            showConfidence(result)
+        }
+    }
+
+    /**
+     * Hide confidence overlay
+     */
+    fun hideConfidence() {
+        confidenceOverlay.hide()
+        activeOverlays.remove("confidence")
+    }
+
+    /**
+     * Show numbered selection overlay
+     */
+    fun showNumberedSelection(items: List<SelectableItem>) {
+        // Hide conflicting overlays
+        hideContextMenu()
+
+        numberedSelectionOverlay.showItems(items)
+        activeOverlays.add("numberedSelection")
+    }
+
+    /**
+     * Update numbered selection items
+     */
+    fun updateNumberedSelection(items: List<SelectableItem>) {
+        numberedSelectionOverlay.updateItems(items)
+    }
+
+    /**
+     * Select item by number
+     */
+    fun selectNumberedItem(number: Int): Boolean {
+        return numberedSelectionOverlay.selectItem(number)
+    }
+
+    /**
+     * Hide numbered selection overlay
+     */
+    fun hideNumberedSelection() {
+        numberedSelectionOverlay.hide()
+        activeOverlays.remove("numberedSelection")
+    }
+
+    /**
+     * Show command status overlay
+     */
+    fun showCommandStatus(
+        command: String,
+        state: CommandState,
+        message: String? = null
+    ) {
+        commandStatusOverlay.showStatus(command, state, message)
+        activeOverlays.add("commandStatus")
+    }
+
+    /**
+     * Update command status
+     */
+    fun updateCommandStatus(
+        command: String? = null,
+        state: CommandState? = null,
+        message: String? = null
+    ) {
+        commandStatusOverlay.updateStatus(command, state, message)
     }
 
     /**
      * Hide command status overlay
      */
     fun hideCommandStatus() {
-        coordinator.hideCommandStatus()
-    }
-
-    // ============================================================
-    // Confidence Overlay
-    // ============================================================
-
-    /**
-     * Show confidence indicator overlay
-     *
-     * @param confidence Confidence level (0.0 to 1.0)
-     * @param bounds Screen bounds for overlay placement
-     */
-    fun showConfidenceOverlay(confidence: Float, bounds: Rect) {
-        coordinator.showConfidenceOverlay(confidence, bounds)
+        commandStatusOverlay.hide()
+        activeOverlays.remove("commandStatus")
     }
 
     /**
-     * Hide confidence overlay
+     * Show context menu overlay at center
      */
-    fun hideConfidenceOverlay() {
-        coordinator.hideConfidenceOverlay()
+    fun showContextMenu(
+        items: List<MenuItem>,
+        title: String? = null
+    ) {
+        // Hide conflicting overlays
+        hideNumberedSelection()
+
+        contextMenuOverlay.showMenu(items, title)
+        activeOverlays.add("contextMenu")
     }
 
-    // ============================================================
-    // Overlay State Management
-    // ============================================================
+    /**
+     * Show context menu overlay at position
+     */
+    fun showContextMenuAt(
+        items: List<MenuItem>,
+        position: Point,
+        title: String? = null
+    ) {
+        // Hide conflicting overlays
+        hideNumberedSelection()
+
+        contextMenuOverlay.showMenuAt(items, position, title)
+        activeOverlays.add("contextMenu")
+    }
 
     /**
-     * Update overlay state
-     *
-     * @param state Target overlay state
+     * Select context menu item by ID
      */
-    fun updateOverlayState(state: OverlayCoordinator.OverlayState) {
-        coordinator.updateOverlayState(state)
+    fun selectContextMenuItem(id: String): Boolean {
+        return contextMenuOverlay.selectItemById(id)
+    }
+
+    /**
+     * Select context menu item by number
+     */
+    fun selectContextMenuByNumber(number: Int): Boolean {
+        return contextMenuOverlay.selectItemByNumber(number)
+    }
+
+    /**
+     * Hide context menu overlay
+     */
+    fun hideContextMenu() {
+        contextMenuOverlay.hide()
+        activeOverlays.remove("contextMenu")
     }
 
     /**
      * Hide all overlays
      */
-    fun hideAllOverlays() {
-        coordinator.hideAllOverlays()
+    fun hideAll() {
+        confidenceOverlay.hide()
+        numberedSelectionOverlay.hide()
+        commandStatusOverlay.hide()
+        contextMenuOverlay.hide()
+        activeOverlays.clear()
     }
 
-    // ============================================================
-    // Lifecycle Management
-    // ============================================================
+    /**
+     * Check if any overlay is visible
+     */
+    fun isAnyVisible(): Boolean {
+        return activeOverlays.isNotEmpty()
+    }
 
     /**
-     * Dispose and cleanup all overlay resources
-     *
-     * Call from VoiceOSService.onDestroy()
+     * Check if specific overlay is visible
+     */
+    fun isOverlayVisible(overlayName: String): Boolean {
+        return activeOverlays.contains(overlayName)
+    }
+
+    /**
+     * Get list of active overlays
+     */
+    fun getActiveOverlays(): Set<String> {
+        return activeOverlays.toSet()
+    }
+
+    /**
+     * Dispose all overlays and clean up resources
      */
     fun dispose() {
-        try {
-            Log.d(TAG, "Disposing OverlayManager...")
-            coordinator.cleanup()
-            Log.i(TAG, "OverlayManager disposed successfully")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error disposing OverlayManager", e)
-        }
+        confidenceOverlay.dispose()
+        numberedSelectionOverlay.dispose()
+        commandStatusOverlay.dispose()
+        contextMenuOverlay.dispose()
+        activeOverlays.clear()
+        instance = null
+    }
+
+    /**
+     * Convenience method: Show listening state
+     */
+    fun showListening(partialText: String = "") {
+        showCommandStatus(
+            command = partialText.ifEmpty { "Listening..." },
+            state = CommandState.LISTENING
+        )
+    }
+
+    /**
+     * Convenience method: Show processing state
+     */
+    fun showProcessing(command: String) {
+        showCommandStatus(
+            command = command,
+            state = CommandState.PROCESSING,
+            message = "Recognizing..."
+        )
+    }
+
+    /**
+     * Convenience method: Show executing state
+     */
+    fun showExecuting(command: String) {
+        showCommandStatus(
+            command = command,
+            state = CommandState.EXECUTING,
+            message = "Executing..."
+        )
+    }
+
+    /**
+     * Convenience method: Show success state
+     */
+    fun showSuccess(command: String, message: String? = null) {
+        showCommandStatus(
+            command = command,
+            state = CommandState.SUCCESS,
+            message = message ?: "Command executed successfully"
+        )
+    }
+
+    /**
+     * Convenience method: Show error state
+     */
+    fun showError(command: String, error: String) {
+        showCommandStatus(
+            command = command,
+            state = CommandState.ERROR,
+            message = error
+        )
+    }
+
+    /**
+     * Quick dismiss - hide command status after delay
+     */
+    suspend fun dismissAfterDelay(delayMs: Long = 2000) {
+        kotlinx.coroutines.delay(delayMs)
+        hideCommandStatus()
     }
 }

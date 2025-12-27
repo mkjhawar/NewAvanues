@@ -1,18 +1,16 @@
 /**
  * ElementStateHistoryEntity.kt - Element state change tracking
  *
+ * Migrated from Room to SQLDelight (Phase 2)
+ *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: Manoj Jhawar
- * Created: 2025-10-18
- * Migrated to SQLDelight: 2025-12-17
+ * Author: VOS4 Scraping Migration Specialist (Agent 3B)
+ * Created: 2025-11-27
  */
 package com.augmentalis.voiceoscore.scraping.entities
 
 /**
  * Element State History Entity
- *
- * MIGRATION NOTE: This entity has been migrated to use SQLDelight.
- * The schema is defined in: core/database/src/commonMain/sqldelight/com/augmentalis/database/ElementStateHistory.sq
  *
  * Tracks changes to element states over time including checked status,
  * selection, enabled/disabled, visibility, and focus. Records what
@@ -41,7 +39,7 @@ data class ElementStateHistoryEntity(
     val oldValue: String? = null,
     val newValue: String? = null,
     val changedAt: Long = System.currentTimeMillis(),
-    val triggeredBy: String
+    val triggeredBy: String? = null
 )
 
 /**

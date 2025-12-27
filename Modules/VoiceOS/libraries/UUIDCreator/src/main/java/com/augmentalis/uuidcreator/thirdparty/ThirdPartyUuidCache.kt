@@ -105,7 +105,7 @@ class ThirdPartyUuidCache(
      * LruCache handles eviction automatically when max size is reached.
      *
      * @param fingerprint Accessibility fingerprint
-     * @param vuid Generated UUID to cache
+     * @param uuid Generated UUID to cache
      */
     fun put(fingerprint: AccessibilityFingerprint, uuid: String) {
         val key = fingerprint.generateHash()

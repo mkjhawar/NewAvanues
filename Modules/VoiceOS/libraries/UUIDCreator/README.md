@@ -1,14 +1,14 @@
-# VUIDCreator Library
-**Voice-Optimized Unique Identifier Management System for Spatial UI Control**
+# UUIDManager Library
+**Universal Unique Identifier Management System for Voice & Spatial UI Control**
 
 ## Overview
 
-VUIDCreator is a revolutionary library that assigns and manages Voice-Optimized Unique Identifiers (VUIDs) for all UI elements, enabling precise voice control, spatial navigation, and hierarchical targeting. It's the foundation for advanced voice UI systems and AR/VR interfaces.
+UUIDManager is a revolutionary library that assigns and manages unique identifiers for all UI elements, enabling precise voice control, spatial navigation, and hierarchical targeting. It's the foundation for advanced voice UI systems and AR/VR interfaces.
 
 ## Core Purpose
 
-Every UI element gets a VUID (Voice-Optimized Unique Identifier), enabling:
-- **Direct voice targeting**: "Click button VUID-abc123"
+Every UI element gets a UUID, enabling:
+- **Direct voice targeting**: "Click button UUID-abc123"
 - **Spatial navigation**: "Select the third item"
 - **Hierarchical control**: "Focus parent container"
 - **Context tracking**: Remember and reference elements
@@ -17,37 +17,37 @@ Every UI element gets a VUID (Voice-Optimized Unique Identifier), enabling:
 ## Library Structure
 
 ```
-/libraries/UUIDCreator/
+/libraries/UUIDManager/
 ├── build.gradle.kts          # Library build configuration
 ├── README.md                 # This file
 ├── src/
 │   ├── main/
 │   │   ├── AndroidManifest.xml
-│   │   └── java/com/augmentalis/uuidcreator/
-│   │       ├── VUIDCreator.kt           # Main library class
+│   │   └── java/com/ai/uuidmgr/
+│   │       ├── UUIDManager.kt           # Main library class
 │   │       ├── api/
-│   │       │   └── IVUIDManager.kt      # Public API interface
+│   │       │   └── IUUIDManager.kt      # Public API interface
 │   │       ├── core/
-│   │       │   ├── VUIDGenerator.kt     # VUID generation
-│   │       │   ├── VUIDRegistry.kt      # VUID registration/lookup
-│   │       │   ├── TargetResolver.kt    # Find elements by VUID/name/position
+│   │       │   ├── UUIDGenerator.kt     # UUID generation
+│   │       │   ├── UUIDRegistry.kt      # UUID registration/lookup
+│   │       │   ├── TargetResolver.kt    # Find elements by UUID/name/position
 │   │       │   └── SpatialNavigator.kt  # Spatial navigation logic
 │   │       ├── models/
-│   │       │   ├── VUIDElement.kt       # Element with VUID
-│   │       │   ├── VUIDHierarchy.kt     # Parent/child structure
-│   │       │   ├── VUIDPosition.kt      # Spatial position
-│   │       │   └── VUIDMetadata.kt      # Additional metadata
+│   │       │   ├── UUIDElement.kt       # Element with UUID
+│   │       │   ├── UUIDHierarchy.kt     # Parent/child structure
+│   │       │   ├── UUIDPosition.kt      # Spatial position
+│   │       │   └── UUIDMetadata.kt      # Additional metadata
 │   │       ├── compose/
 │   │       │   └── ComposeExtensions.kt # Jetpack Compose extensions
 │   │       └── view/
 │   │           └── ViewExtensions.kt    # Android View extensions
 │   └── test/
-│       └── java/com/augmentalis/uuidcreator/
-│           ├── VUIDCreatorTests.kt
-│           ├── VUIDRegistryTests.kt
+│       └── java/com/ai/uuidmgr/
+│           ├── UUIDManagerTests.kt
+│           ├── UUIDRegistryTests.kt
 │           └── SpatialNavigationTests.kt
 ├── sample/                    # Sample app
-│   └── VUIDCreatorDemo.kt
+│   └── UUIDManagerDemo.kt
 └── docs/
     ├── API.md                # API documentation
     └── INTEGRATION.md        # Integration guide
@@ -56,16 +56,16 @@ Every UI element gets a VUID (Voice-Optimized Unique Identifier), enabling:
 
 ## Key Features
 
-### 1. VUID Generation & Management
+### 1. UUID Generation & Management
 ```kotlin
-// Auto-generate VUID for any element
-val vuid = VUIDCreator.generate()
+// Auto-generate UUID for any element
+val uuid = UUIDManager.generate()
 
-// Register element with custom VUID
-VUIDCreator.register(
-    vuid = "btn-submit-001",
+// Register element with custom UUID
+UUIDManager.register(
+    uuid = "btn-submit-001",
     element = submitButton,
-    metadata = VUIDMetadata(
+    metadata = UUIDMetadata(
         name = "Submit Button",
         type = "button",
         position = Position(x = 100, y = 200)
@@ -75,27 +75,27 @@ VUIDCreator.register(
 
 ### 2. Voice Command Integration
 ```kotlin
-// Process voice commands using VUID
-VUIDCreator.processVoiceCommand("click button btn-submit-001")
-VUIDCreator.processVoiceCommand("focus element with VUID abc-123")
-VUIDCreator.processVoiceCommand("select third item") // Position-based
+// Process voice commands using UUID
+UUIDManager.processVoiceCommand("click button btn-submit-001")
+UUIDManager.processVoiceCommand("focus element with UUID abc-123")
+UUIDManager.processVoiceCommand("select third item") // Position-based
 ```
 
 ### 3. Spatial Navigation
 ```kotlin
 // Navigate using spatial relationships
-VUIDCreator.navigate("move left")
-VUIDCreator.navigate("select item above")
-VUIDCreator.navigate("go to next element")
+UUIDManager.navigate("move left")
+UUIDManager.navigate("select item above")
+UUIDManager.navigate("go to next element")
 ```
 
 ### 4. Compose Integration
 ```kotlin
 @Composable
-fun VUIDButton(text: String, onClick: () -> Unit) {
+fun UUIDButton(text: String, onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        modifier = Modifier.withVUID(
+        modifier = Modifier.withUUID(
             name = text,
             type = "button"
         )
@@ -108,7 +108,7 @@ fun VUIDButton(text: String, onClick: () -> Unit) {
 ### 5. View Integration
 ```kotlin
 // Extend any Android View
-submitButton.assignVUID(
+submitButton.assignUUID(
     name = "Submit",
     type = "button",
     actions = mapOf(
@@ -133,14 +133,14 @@ submitButton.assignVUID(
 ### As AAR Library
 ```gradle
 dependencies {
-    implementation 'com.augmentalis:vuidcreator:1.0.0'
+    implementation 'com.augmentalis:uuidmanager:1.0.0'
 }
 ```
 
 ### As JAR (Pure Kotlin)
 ```gradle
 dependencies {
-    implementation files('libs/vuidcreator-1.0.0.jar')
+    implementation files('libs/uuidmanager-1.0.0.jar')
 }
 ```
 

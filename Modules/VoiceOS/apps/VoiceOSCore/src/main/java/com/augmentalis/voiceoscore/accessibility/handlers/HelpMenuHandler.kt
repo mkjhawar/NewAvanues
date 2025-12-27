@@ -10,9 +10,13 @@ package com.augmentalis.voiceoscore.accessibility.handlers
 
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import android.widget.Toast
-import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import com.augmentalis.voiceoscore.accessibility.VoiceOSService
+import com.augmentalis.voiceoscore.accessibility.overlays.MenuItem
+import com.augmentalis.voiceoscore.accessibility.overlays.OverlayManager
+import com.augmentalis.voiceoscore.utils.ConditionalLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,14 +27,20 @@ import kotlinx.coroutines.launch
 /**
  * Handler for help system and command discovery
  * Provides user guidance and command reference
+ *
+ * Now integrated with OverlayManager for context menu help system.
  */
 class HelpMenuHandler(
-    private val service: IVoiceOSContext
+    private val service: VoiceOSService
 ) : ActionHandler {
 
     companion object {
         private const val TAG = "HelpMenuHandler"
-        
+
+        // Documentation URLs (primary + fallback)
+        private const val DOCS_URL_ONLINE = "https://augmentalis.gitlab.io/voiceos/developer-manual/"
+        private const val DOCS_URL_GITHUB = "https://github.com/augmentalis/voiceos/tree/main/docs/developer-manual"
+
         // Supported actions
         val SUPPORTED_ACTIONS = listOf(
             "show help",
@@ -80,8 +90,13 @@ class HelpMenuHandler(
     private var currentHelpCategory: String? = null
     private val helpScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
+    // Overlay manager for help menus
+    private val overlayManager by lazy {
+        OverlayManager.getInstance(service)
+    }
+
     override fun initialize() {
-        Log.d(TAG, "Initializing HelpMenuHandler")
+        ConditionalLogger.d(TAG) { "Initializing HelpMenuHandler" }
         // Initialize help system components if needed
     }
 
@@ -98,7 +113,7 @@ class HelpMenuHandler(
         action: String,
         params: Map<String, Any>
     ): Boolean {
-        Log.d(TAG, "Executing help action: $action")
+        ConditionalLogger.d(TAG) { "Executing help action: $action" }
 
         return when {
             // Show help menu
@@ -162,7 +177,7 @@ class HelpMenuHandler(
             }
 
             else -> {
-                Log.w(TAG, "Unknown help action: $action")
+                ConditionalLogger.w(TAG) { "Unknown help action: $action" }
                 false
             }
         }
@@ -174,19 +189,81 @@ class HelpMenuHandler(
     private fun showHelpMenu(): Boolean {
         return try {
             if (isHelpMenuVisible) {
-                Log.d(TAG, "Help menu already visible")
+                ConditionalLogger.d(TAG) { "Help menu already visible" }
                 return true
             }
 
-            Log.i(TAG, "Showing help menu")
+            ConditionalLogger.i(TAG) { "Showing help menu" }
             isHelpMenuVisible = true
 
-            // Show help menu overlay or dialog
-            showHelpToast("VOS4 Help Menu\n\nSay:\n• 'show commands' - List all commands\n• 'tutorial' - Getting started\n• 'navigation help' - Navigation commands\n• 'hide help' - Close this menu")
+            // Show help menu as context menu with actionable items
+            val menuItems = listOf(
+                MenuItem(
+                    id = "show_commands",
+                    label = "Show Commands",
+                    icon = Icons.Default.List,
+                    number = 1,
+                    action = {
+                        showCommandList()
+                        overlayManager.hideContextMenu()
+                    }
+                ),
+                MenuItem(
+                    id = "tutorial",
+                    label = "Tutorial",
+                    icon = Icons.Default.School,
+                    number = 2,
+                    action = {
+                        showTutorial()
+                        overlayManager.hideContextMenu()
+                    }
+                ),
+                MenuItem(
+                    id = "navigation_help",
+                    label = "Navigation Help",
+                    icon = Icons.Default.Navigation,
+                    number = 3,
+                    action = {
+                        showCategoryHelp("navigation")
+                        overlayManager.hideContextMenu()
+                    }
+                ),
+                MenuItem(
+                    id = "system_help",
+                    label = "System Help",
+                    icon = Icons.Default.Settings,
+                    number = 4,
+                    action = {
+                        showCategoryHelp("system")
+                        overlayManager.hideContextMenu()
+                    }
+                ),
+                MenuItem(
+                    id = "documentation",
+                    label = "Open Documentation",
+                    icon = Icons.Default.OpenInBrowser,
+                    number = 5,
+                    action = {
+                        openDocumentation()
+                        overlayManager.hideContextMenu()
+                    }
+                ),
+                MenuItem(
+                    id = "hide_help",
+                    label = "Hide Help",
+                    icon = Icons.Default.Close,
+                    number = 6,
+                    action = {
+                        hideHelpMenu()
+                    }
+                )
+            )
+
+            overlayManager.showContextMenu(menuItems, "VOS4 Help Menu")
 
             // Auto-hide after delay
             helpScope.launch {
-                delay(8000) // 8 seconds
+                delay(30000) // 30 seconds (longer for menu browsing)
                 if (isHelpMenuVisible) {
                     hideHelpMenu()
                 }
@@ -194,7 +271,7 @@ class HelpMenuHandler(
 
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing help menu", e)
+            ConditionalLogger.e(TAG, e) { "Error showing help menu" }
             false
         }
     }
@@ -205,20 +282,21 @@ class HelpMenuHandler(
     private fun hideHelpMenu(): Boolean {
         return try {
             if (!isHelpMenuVisible) {
-                Log.d(TAG, "Help menu already hidden")
+                ConditionalLogger.d(TAG) { "Help menu already hidden" }
                 return true
             }
 
-            Log.i(TAG, "Hiding help menu")
+            ConditionalLogger.i(TAG) { "Hiding help menu" }
             isHelpMenuVisible = false
             currentHelpCategory = null
 
-            // Hide help overlays/dialogs
-            // Implementation would depend on actual overlay system
+            // Hide help context menu
+            overlayManager.hideContextMenu()
+            overlayManager.hideCommandStatus()
 
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Error hiding help menu", e)
+            ConditionalLogger.e(TAG, e) { "Error hiding help menu" }
             false
         }
     }
@@ -228,7 +306,7 @@ class HelpMenuHandler(
      */
     private fun showCommandList(): Boolean {
         return try {
-            Log.i(TAG, "Showing command list")
+            ConditionalLogger.i(TAG) { "Showing command list" }
 
             val commandsText = buildString {
                 appendLine("VOS4 Voice Commands:\n")
@@ -244,7 +322,12 @@ class HelpMenuHandler(
                 appendLine("Say 'hide commands' to close")
             }
 
-            showHelpToast(commandsText)
+            // Show command list via command status overlay
+            overlayManager.showCommandStatus(
+                command = "Voice Commands",
+                state = com.augmentalis.voiceoscore.accessibility.overlays.CommandState.SUCCESS,
+                message = commandsText
+            )
 
             // Auto-hide after longer delay for reading
             helpScope.launch {
@@ -254,7 +337,7 @@ class HelpMenuHandler(
 
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing command list", e)
+            ConditionalLogger.e(TAG, e) { "Error showing command list" }
             false
         }
     }
@@ -264,11 +347,11 @@ class HelpMenuHandler(
      */
     private fun hideCommandList(): Boolean {
         return try {
-            Log.i(TAG, "Hiding command list")
-            // Implementation would hide the command list overlay
+            ConditionalLogger.i(TAG) { "Hiding command list" }
+            overlayManager.hideCommandStatus()
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Error hiding command list", e)
+            ConditionalLogger.e(TAG, e) { "Error hiding command list" }
             false
         }
     }
@@ -280,11 +363,11 @@ class HelpMenuHandler(
         return try {
             val commands = HELP_CATEGORIES[category]
             if (commands == null) {
-                Log.w(TAG, "Unknown help category: $category")
+                ConditionalLogger.w(TAG) { "Unknown help category: $category" }
                 return false
             }
 
-            Log.i(TAG, "Showing help for category: $category")
+            ConditionalLogger.i(TAG) { "Showing help for category: $category" }
             currentHelpCategory = category
 
             val helpText = buildString {
@@ -295,17 +378,23 @@ class HelpMenuHandler(
                 appendLine("\nSay 'help menu' for more categories")
             }
 
-            showHelpToast(helpText)
+            // Show category help via command status overlay
+            overlayManager.showCommandStatus(
+                command = "${category.uppercase()} Commands",
+                state = com.augmentalis.voiceoscore.accessibility.overlays.CommandState.SUCCESS,
+                message = helpText
+            )
 
             // Auto-hide after delay
             helpScope.launch {
                 delay(10000) // 10 seconds
                 currentHelpCategory = null
+                overlayManager.hideCommandStatus()
             }
 
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing category help", e)
+            ConditionalLogger.e(TAG, e) { "Error showing category help" }
             false
         }
     }
@@ -315,7 +404,7 @@ class HelpMenuHandler(
      */
     private fun showTutorial(): Boolean {
         return try {
-            Log.i(TAG, "Showing tutorial")
+            ConditionalLogger.i(TAG) { "Showing tutorial" }
 
             val tutorialText = """
                 VOS4 Tutorial:
@@ -341,63 +430,103 @@ class HelpMenuHandler(
                 Say 'hide help' when done
             """.trimIndent()
 
-            showHelpToast(tutorialText)
+            // Show tutorial via command status overlay
+            overlayManager.showCommandStatus(
+                command = "VOS4 Tutorial",
+                state = com.augmentalis.voiceoscore.accessibility.overlays.CommandState.SUCCESS,
+                message = tutorialText
+            )
+
+            // Auto-hide after delay
+            helpScope.launch {
+                delay(20000) // 20 seconds for tutorial reading
+                overlayManager.hideCommandStatus()
+            }
 
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing tutorial", e)
+            ConditionalLogger.e(TAG, e) { "Error showing tutorial" }
             false
         }
     }
 
     /**
-     * Open external documentation
+     * Open external documentation with smart fallback
+     *
+     * Priority:
+     * 1. GitLab Pages (best UX - rendered markdown)
+     * 2. GitHub repo (fallback - raw markdown)
+     * 3. Built-in help menu (offline fallback)
      */
     private fun openDocumentation(): Boolean {
         return try {
-            Log.i(TAG, "Opening documentation")
+            ConditionalLogger.i(TAG) { "Opening VOS4 Developer Manual" }
 
-            // Open official VoiceOS documentation
-            val docUrl = "https://docs.augmentalis.com/voiceos"
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(docUrl)).apply {
+            // Try primary documentation URL (GitLab Pages)
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(DOCS_URL_ONLINE)).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
 
             service.startActivity(intent)
-            
-            showHelpToast("Opening VOS4 documentation...")
-            
+
+            // Show feedback via command status overlay
+            overlayManager.showCommandStatus(
+                command = "Opening Documentation",
+                state = com.augmentalis.voiceoscore.accessibility.overlays.CommandState.EXECUTING,
+                message = "Opening VOS4 Developer Manual..."
+            )
+
+            // Auto-hide after short delay
+            helpScope.launch {
+                delay(2000)
+                overlayManager.hideCommandStatus()
+            }
+
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Error opening documentation", e)
-            
-            // Fallback to showing built-in help
-            showHelpMenu()
-            true
+            ConditionalLogger.w(TAG) { "Primary docs URL failed (${e.message}), trying GitHub fallback" }
+
+            try {
+                // Fallback to GitHub repository
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(DOCS_URL_GITHUB)).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                service.startActivity(intent)
+
+                overlayManager.showCommandStatus(
+                    command = "Opening Documentation",
+                    state = com.augmentalis.voiceoscore.accessibility.overlays.CommandState.EXECUTING,
+                    message = "Opening documentation (GitHub)..."
+                )
+
+                helpScope.launch {
+                    delay(2000)
+                    overlayManager.hideCommandStatus()
+                }
+
+                true
+            } catch (e2: Exception) {
+                ConditionalLogger.e(TAG, e2) { "All documentation URLs failed, showing built-in help" }
+
+                // Final fallback: built-in help menu
+                showHelpMenu()
+                true
+            }
         }
     }
 
     /**
-     * Show help text using overlay system
-     *
-     * Integrates with VoiceOS overlay manager for consistent UI experience.
-     * Falls back to Toast if overlay system is unavailable.
-     *
-     * TODO (Phase 4 - UX Polish): Integrate with overlay manager when IVoiceOSContext
-     * is extended with getOverlayManager() and getSpeechEngine() methods.
-     * Current implementation uses Toast as primary display method.
+     * Show help text via command status overlay
+     * (Deprecated: Now uses OverlayManager throughout)
      */
+    @Deprecated("Use overlayManager.showCommandStatus() instead")
     private fun showHelpToast(message: String) {
         try {
-            // Current implementation: Use Toast for help messages
-            // Future: Replace with overlayManager.showHelpOverlay(message)
-            Toast.makeText(service.context, message, Toast.LENGTH_LONG).show()
-            Log.i(TAG, "Help content displayed: $message")
-
-            // TODO: Add TTS announcement when getSpeechEngine() is available in IVoiceOSContext
-            // service.getSpeechEngine()?.speak("Help menu displayed", ...)
+            // Fallback to toast only if overlay manager fails
+            Toast.makeText(service, message, Toast.LENGTH_LONG).show()
+            ConditionalLogger.i(TAG) { "Help content displayed via toast (fallback): $message" }
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing help toast", e)
+            ConditionalLogger.e(TAG, e) { "Error showing help toast" }
         }
     }
 
@@ -423,7 +552,7 @@ class HelpMenuHandler(
     }
 
     override fun dispose() {
-        Log.d(TAG, "Disposing HelpMenuHandler")
+        ConditionalLogger.d(TAG) { "Disposing HelpMenuHandler" }
         helpScope.cancel()
         isHelpMenuVisible = false
         currentHelpCategory = null

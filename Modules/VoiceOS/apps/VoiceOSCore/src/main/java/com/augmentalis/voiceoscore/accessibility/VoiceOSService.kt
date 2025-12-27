@@ -15,66 +15,49 @@ import android.accessibilityservice.GestureDescription.Builder
 import android.accessibilityservice.GestureDescription.StrokeDescription
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.ServiceConnection
 import android.os.Build
-import android.os.IBinder
 import android.provider.Settings
 import android.util.ArrayMap
 import android.util.Log
-import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
-import android.view.accessibility.AccessibilityNodeInfo
-// P2-8d: Lifecycle imports no longer needed - delegated to LifecycleCoordinator
-// import androidx.lifecycle.DefaultLifecycleObserver
-// import androidx.lifecycle.LifecycleOwner
-// import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.augmentalis.commandmanager.CommandManager
 // TEMP DISABLED: import com.augmentalis.commandmanager.database.CommandDatabase
 import com.augmentalis.voiceoscore.learnapp.integration.LearnAppIntegration
-import com.augmentalis.voiceoscore.learnapp.integration.CommandDiscoveryIntegration
-import com.augmentalis.voiceoscore.learnapp.ui.RenameHintOverlay
-import com.augmentalis.voiceoscore.learnapp.detection.ScreenActivityDetector
-import com.augmentalis.voiceoscore.learnapp.commands.RenameCommandHandler
-import com.augmentalis.voiceoscore.learnapp.commands.RenameResult
 import com.augmentalis.speechrecognition.SpeechEngine
 import com.augmentalis.speechrecognition.SpeechMode
-import com.augmentalis.uuidcreator.VUIDCreator
+import com.augmentalis.uuidcreator.UUIDCreator
 import com.augmentalis.voiceos.command.Command
 import com.augmentalis.voiceos.command.CommandContext
 import com.augmentalis.voiceos.command.CommandSource
 import com.augmentalis.voiceos.constants.VoiceOSConstants
 import com.augmentalis.voiceos.cursor.VoiceCursorAPI
 import com.augmentalis.voiceos.cursor.core.CursorOffset
-import com.augmentalis.voiceoscore.accessibility.managers.ServiceConfiguration
+import com.augmentalis.voiceoscore.accessibility.config.ServiceConfiguration
 import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine
 import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine.UIElement
 import com.augmentalis.voiceoscore.accessibility.managers.ActionCoordinator
-import com.augmentalis.voiceoscore.accessibility.managers.DatabaseManager
 import com.augmentalis.voiceoscore.accessibility.managers.InstalledAppsManager
-import com.augmentalis.voiceoscore.accessibility.managers.IPCManager
-import com.augmentalis.voiceoscore.accessibility.managers.LifecycleCoordinator
 import com.augmentalis.voiceoscore.accessibility.monitor.ServiceMonitor
-import com.augmentalis.voiceoscore.accessibility.speech.SpeechConfiguration
+import com.augmentalis.voiceoscore.accessibility.speech.SpeechConfigurationData
 import com.augmentalis.voiceoscore.accessibility.speech.SpeechEngineManager
 import com.augmentalis.voiceoscore.accessibility.utils.Const
 import com.augmentalis.voiceoscore.accessibility.utils.Debouncer
 import com.augmentalis.voiceoscore.accessibility.utils.EventPriorityManager
 import com.augmentalis.voiceoscore.accessibility.utils.ResourceMonitor
 import com.augmentalis.voiceoscore.config.DynamicPackageConfig
-// WebScrapingDatabase removed - migrated to SQLDelight (VoiceOSDatabaseManager)
+import com.augmentalis.voiceoscore.learnweb.WebScrapingDatabase
 import com.augmentalis.voiceoscore.scraping.AccessibilityScrapingIntegration
 import com.augmentalis.voiceoscore.scraping.VoiceCommandProcessor
 // FIX (2025-12-01): VoiceOSAppDatabase is typealias for VoiceOSCoreDatabaseAdapter
 import com.augmentalis.voiceoscore.database.VoiceOSAppDatabase
 import com.augmentalis.voiceoscore.database.VoiceOSCoreDatabaseAdapter
 import com.augmentalis.database.dto.GeneratedCommandDTO
-import com.augmentalis.database.DatabaseDriverFactory
-import com.augmentalis.database.VoiceOSDatabaseManager
-import com.augmentalis.voiceoscore.version.AppVersionDetector
 import com.augmentalis.voiceoscore.web.WebCommandCoordinator
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.CoroutineScope
@@ -83,15 +66,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import java.lang.ref.WeakReference
 import java.util.Locale
@@ -100,67 +78,21 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.atomic.AtomicReference
+import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * VoiceOS Service - Orchestration Layer for VoiceOS Accessibility Service
+ * VoiceOS Service - Main accessibility service implementation
+ * High-performance service with efficient data structures, lazy loading, and caching
+ * Now with hybrid ForegroundService approach for optimal battery and memory usage
  *
- * P2-8e: Refactored to pure orchestration layer following Single Responsibility Principle
- *
- * ARCHITECTURE OVERVIEW:
- * This service acts as the central coordinator, delegating specialized concerns to managers:
- *
- * 1. DATABASE LIFECYCLE (DatabaseManager - P2-8a)
- *    - VoiceOSDatabaseManager (SQLDelight repositories)
- *    - VoiceOSAppDatabase (scraping database adapter)
- *    - Initialization state machine with timeout/error handling
- *    - Safe access guards and cleanup
- *
- * 2. INTER-PROCESS COMMUNICATION (IPCManager - P2-8b)
- *    - Voice recognition control (start/stop)
- *    - App learning triggers (learnCurrentApp, scrapeScreen)
- *    - Database queries (getLearnedApps, getCommandsForApp)
- *    - Dynamic command registration
- *    - Accessibility action execution
- *
- * 3. OVERLAY MANAGEMENT (OverlayManager - P2-8c)
- *    - Numbered element selection overlays
- *    - Context menu overlays
- *    - Command status overlays
- *    - Confidence indicator overlays
- *    - Singleton wrapper for OverlayCoordinator
- *
- * 4. LIFECYCLE COORDINATION (LifecycleCoordinator - P2-8d)
- *    - Hybrid foreground service (Android 12+ background mic access)
- *    - App foreground/background state tracking
- *    - ProcessLifecycleOwner observation
- *    - Foreground service start/stop optimization
- *    - Memory leak prevention (bd0178976084c8549ea1a5e0417e0d6ffe34eaa3)
- *
- * REMAINING SERVICE RESPONSIBILITIES:
- * - AccessibilityService lifecycle (onCreate, onServiceConnected, onDestroy)
- * - Accessibility event routing (onAccessibilityEvent)
- * - Integration initialization (LearnApp, scraping, web, voice)
- * - Command processing coordination (registerVoiceCmd, handleVoiceCommand)
- * - Manager orchestration and initialization
- *
- * DEPENDENCY INJECTION:
- * - NOTE: @AndroidEntryPoint does NOT support AccessibilityService
- * - Using manual dependency injection via lazy initialization
- * - All managers initialized on-demand to minimize startup overhead
- * - Dependencies wired through constructor injection to managers
- *
- * PERFORMANCE OPTIMIZATIONS:
- * - Lazy manager initialization (dbManager, ipcManager, lifecycleCoordinator, overlayManager)
- * - Efficient data structures (CopyOnWriteArrayList, ConcurrentHashMap, AtomicBoolean)
- * - Background coroutine scopes (Dispatchers.IO for command processing)
- * - Event debouncing and queuing
- * - Hybrid foreground service (only when needed)
+ * HILT Integration:
+ * - Uses @AndroidEntryPoint for dependency injection
+ * - Injected dependencies: UIScrapingEngine, SpeechEngineManager, InstalledAppsManager
+ * - Lazy dependencies: ActionCoordinator (requires service instance)
  */
-// @dagger.hilt.android.AndroidEntryPoint - DISABLED: Hilt doesn't support AccessibilityService
-class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceInternal {
-    // Note: IVoiceOSServiceInternal extends IVoiceOSContext, so we get both interfaces
+@dagger.hilt.android.AndroidEntryPoint
+class VoiceOSService : AccessibilityService(), DefaultLifecycleObserver, IVoiceOSServiceInternal {
 
     companion object {
         private const val TAG = "VoiceOSService"
@@ -182,11 +114,9 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
         fun getInstance(): VoiceOSService? = instanceRef?.get()
 
         @JvmStatic
-        @JvmName("isServiceCurrentlyRunning")
         fun isServiceRunning(): Boolean = instanceRef?.get() != null
 
         @JvmStatic
-        @JvmName("executeStaticCommand")
         fun executeCommand(commandText: String): Boolean {
             val service = instanceRef?.get() ?: return false
             val command = commandText.lowercase().trim()
@@ -209,51 +139,10 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
         }
     }
 
-    /**
-     * FIX (2025-12-22): C2-P1-6 - Service initialization state machine
-     *
-     * States:
-     * - CREATED: Service created via onCreate(), not yet connected
-     * - INITIALIZING: onServiceConnected() called, components initializing
-     * - READY: All components initialized successfully, service operational
-     * - ERROR: Initialization failed, service in degraded state
-     * - DESTROYED: Service destroyed via onDestroy(), cleanup complete
-     *
-     * Thread-safe transitions enforced via ServiceState sealed class and AtomicReference.
-     * Initialization timeout (30s) and retry logic (max 3 attempts) implemented.
-     */
-    sealed class ServiceState {
-        object CREATED : ServiceState() {
-            override fun toString() = "CREATED"
-        }
-        object INITIALIZING : ServiceState() {
-            override fun toString() = "INITIALIZING"
-        }
-        object READY : ServiceState() {
-            override fun toString() = "READY"
-        }
-        data class ERROR(val error: Throwable, val attempt: Int = 1) : ServiceState() {
-            override fun toString() = "ERROR(attempt=$attempt, error=${error.message})"
-        }
-        object DESTROYED : ServiceState() {
-            override fun toString() = "DESTROYED"
-        }
-    }
-
-    // Service state tracking
-    private val serviceState = AtomicReference<ServiceState>(ServiceState.CREATED)
-    private val initializationMutex = Mutex()
-    private val initializationAttempts = AtomicInteger(0)
-    private val MAX_INITIALIZATION_ATTEMPTS = 3
-    private val INITIALIZATION_TIMEOUT_MS = 30_000L // 30 seconds
-
     // Service state
     @JvmField
     internal var isServiceReady = false  // Phase 3: Exposed for IPC companion service (Java-accessible)
-    // FIX (2025-12-11): Changed from Dispatchers.Main to Dispatchers.Default to prevent ANR
-    // Root cause: Command cache operations (300+ items) blocked main thread for >5 seconds
-    // Solution: Move all non-UI operations off main thread
-    private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val coroutineScopeCommands = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     @Volatile
@@ -261,79 +150,21 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     private var lastCommandLoaded = 0L
     private val isCommandProcessing = AtomicBoolean(false)
 
-    // Database manager (extracted from VoiceOSService - P2-8a)
-    // Centralizes database initialization, state machine, and lifecycle
-    private val dbManager by lazy {
-        DatabaseManager(applicationContext).also {
-            Log.d(TAG, "DatabaseManager initialized (lazy)")
-        }
-    }
-
-    // IPC manager (extracted from VoiceOSService - P2-8b)
-    // Handles all inter-process communication from external apps/services
-    private val ipcManager by lazy {
-        IPCManager(
-            accessibilityService = this,
-            speechEngineManager = speechEngineManager,
-            uiScrapingEngine = uiScrapingEngine,
-            databaseManager = dbManager,
-            isServiceReady = { isServiceReady }
-        ).also {
-            Log.d(TAG, "IPCManager initialized (lazy)")
-        }
-    }
-
-    // Lifecycle coordinator (extracted from VoiceOSService - P2-8d)
-    // Manages hybrid foreground service and app lifecycle observation
-    private val lifecycleCoordinator by lazy {
-        LifecycleCoordinator(this).also {
-            Log.d(TAG, "LifecycleCoordinator initialized (lazy)")
-        }
-    }
-
     // LearnApp integration state
     // FIX (2025-11-30): Use AtomicInteger for thread-safe state tracking
     // State: 0=not started, 1=in progress, 2=complete
-    // FIX (2025-12-22): C2-P1-11 - Add Mutex for race condition protection
     private val learnAppInitState = AtomicInteger(0)
-    private val learnAppInitMutex = Mutex()
     @Volatile
     private var learnAppInitialized = false  // Keep for backward compatibility with debug logs
 
-    // FIX (2025-12-10): Event queue to buffer events during initialization
-    // Prevents event loss in first 500-1000ms after service starts
-    private val pendingEvents = java.util.concurrent.ConcurrentLinkedQueue<android.view.accessibility.AccessibilityEvent>()
-    private val MAX_QUEUED_EVENTS = 50
+    // Hybrid foreground service state
+    private var foregroundServiceActive = false
+    private var appInBackground = false
+    private var voiceSessionActive = false
 
-    // FIX (2025-12-22): L-P0-1 - Event deduplication to prevent double-processing
-    // Tracks event IDs that have been processed to avoid duplicate handling
-    private val processedEventIds = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    // Configuration
+    private lateinit var config: ServiceConfiguration
 
-    // PHASE 3 (2025-12-08): Command Discovery integration
-    // Auto-observes ExplorationEngine.state() and triggers discovery flow on completion
-    private var discoveryIntegration: CommandDiscoveryIntegration? = null
-
-    /**
-     * FIX (2025-12-22): C2-P1-5 - Convert lateinit to safe access pattern with mutable var
-     *
-     * ServiceConfiguration initialized lazily with default values and can be reloaded.
-     * This prevents UninitializedPropertyAccessException crashes during early service lifecycle.
-     * Made var (not val) to allow configuration updates via broadcast receiver.
-     */
-    private var config: ServiceConfiguration = ServiceConfiguration()
-
-    /**
-     * FIX (2025-12-22): C-P1-4 & L-P1-3 - Thread-safe command caches
-     *
-     * CopyOnWriteArrayList is thread-safe for individual operations,
-     * but compound operations (clear+addAll, compare+update) need synchronization.
-     *
-     * Use cacheLock to synchronize all compound operations.
-     * This fixes both:
-     * - C-P1-4: Atomic compound operations (clear+addAll)
-     * - L-P1-3: Safe access from both Main and Dispatchers.Default threads
-     */
-    private val cacheLock = Any()
     private val nodeCache: MutableList<UIElement> = CopyOnWriteArrayList()
     private val commandCache: MutableList<String> = CopyOnWriteArrayList()
     private val staticCommandCache: MutableList<String> = CopyOnWriteArrayList()
@@ -345,8 +176,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     // private val cursorOverlay by lazy { CursorOverlay(this) }
 
     // Overlay manager for voice feedback (numbered selection, context menus, help)
-    // Public to satisfy IVoiceOSServiceInternal.overlayManager interface requirement
-    override val overlayManager by lazy {
+    private val overlayManager by lazy {
         com.augmentalis.voiceoscore.accessibility.overlays.OverlayManager.getInstance(this).also {
             Log.d(TAG, "OverlayManager initialized (lazy)")
         }
@@ -354,42 +184,15 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
     private val prettyGson by lazy { GsonBuilder().setPrettyPrinting().create() }
 
-    // Manual dependency initialization (Hilt does not support AccessibilityService)
-    // Public to satisfy IVoiceOSServiceInternal.speechEngineManager interface requirement
-    override val speechEngineManager by lazy {
-        SpeechEngineManager(applicationContext).also {
-            Log.d(TAG, "SpeechEngineManager initialized (lazy)")
-        }
-    }
+    // Hilt injected dependencies
+    @Inject
+    lateinit var speechEngineManager: SpeechEngineManager
 
-    private val installedAppsManager by lazy {
-        InstalledAppsManager(applicationContext).also {
-            Log.d(TAG, "InstalledAppsManager initialized (lazy)")
-        }
-    }
-
-    // AppVersionDetector requires IAppVersionRepository
-    private val appVersionDetector by lazy {
-        AppVersionDetector(applicationContext, dbManager.sqlDelightManager.appVersions).also {
-            Log.d(TAG, "AppVersionDetector initialized (lazy)")
-        }
-    }
-
-    // AppVersionManager requires detector, version repo, and command repo
-    private val appVersionManager by lazy {
-        com.augmentalis.voiceoscore.version.AppVersionManager(
-            context = applicationContext,
-            detector = appVersionDetector,
-            versionRepo = dbManager.sqlDelightManager.appVersions,
-            commandRepo = dbManager.sqlDelightManager.generatedCommands
-        ).also {
-            Log.d(TAG, "AppVersionManager initialized (lazy)")
-        }
-    }
+    @Inject
+    lateinit var installedAppsManager: InstalledAppsManager
 
     // UIScrapingEngine requires AccessibilityService, so it's lazy-initialized (not injected)
-    // Public to satisfy IVoiceOSServiceInternal.uiScrapingEngine interface requirement
-    override val uiScrapingEngine by lazy {
+    private val uiScrapingEngine by lazy {
         UIScrapingEngine(this).also {
             Log.d(TAG, "UIScrapingEngine initialized (lazy)")
         }
@@ -406,8 +209,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     }
 
     // Optimized managers
-    // Public to satisfy IVoiceOSServiceInternal.actionCoordinator interface requirement
-    override val actionCoordinator by lazy {
+    private val actionCoordinator by lazy {
         ActionCoordinator(this).also {
             Log.d(TAG, "ActionCoordinator initialized (lazy)")
         }
@@ -421,10 +223,9 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     @Volatile
     private var learnAppIntegration: com.augmentalis.voiceoscore.learnapp.integration.LearnAppIntegration? = null
 
-    // JIT Learning Service connection (Phase 3: JIT-LearnApp Separation - 2025-12-18)
-    // Manages binding to JITLearningService foreground service
-    @Volatile
-    private var jitServiceBound = false
+    // Hash-based persistence database (nullable for safe fallback)
+    // FIX (2025-11-26): Database consolidation - Use VoiceOSAppDatabase (SQLDelight via adapter)
+    private var scrapingDatabase: VoiceOSAppDatabase? = null
 
     // Hash-based scraping integration
     private var scrapingIntegration: AccessibilityScrapingIntegration? = null
@@ -439,15 +240,8 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
         }
     }
 
-    // Rename feature components (Phase 2: On-Demand Command Renaming)
-    private var renameHintOverlay: RenameHintOverlay? = null
-    private var screenActivityDetector: ScreenActivityDetector? = null
-    private var renameCommandHandler: RenameCommandHandler? = null
-
     // Event debouncing to prevent excessive scraping in apps with dynamic content
-    private val eventDebouncer by lazy {
-        Debouncer(serviceScope, VoiceOSConstants.Timing.EVENT_DEBOUNCE_MS)
-    }
+    private val eventDebouncer = Debouncer(VoiceOSConstants.Timing.EVENT_DEBOUNCE_MS)
 
     // Phase 1: CommandManager and ServiceMonitor integration
     private var commandManagerInstance: CommandManager? = null
@@ -456,7 +250,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
     // Phase 3D: Resource monitoring
     private val resourceMonitor by lazy {
-        ResourceMonitor(applicationContext, serviceScope).also {
+        ResourceMonitor(applicationContext).also {
             Log.d(TAG, "ResourceMonitor initialized (lazy)")
         }
     }
@@ -474,14 +268,12 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
         // FIX (2025-12-04): Add LeakCanary memory monitoring for VoiceOSService
         // This will detect memory leaks in LearnApp components (ProgressOverlay, etc.)
-        // Using reflection to avoid compile-time dependency on debug-only library
         if (com.augmentalis.voiceoscore.BuildConfig.DEBUG) {
             try {
-                val appWatcherClass = Class.forName("leakcanary.AppWatcher")
-                val objectWatcherField = appWatcherClass.getDeclaredField("objectWatcher")
-                val objectWatcher = objectWatcherField.get(null)
-                val watchMethod = objectWatcher.javaClass.getMethod("watch", Any::class.java, String::class.java)
-                watchMethod.invoke(objectWatcher, this, "VoiceOSService should be destroyed when service stops")
+                leakcanary.AppWatcher.objectWatcher.watch(
+                    this,
+                    "VoiceOSService should be destroyed when service stops"
+                )
                 Log.d(TAG, "✓ LeakCanary monitoring enabled for VoiceOSService")
             } catch (e: Exception) {
                 Log.w(TAG, "LeakCanary not available (this is OK for release builds): ${e.message}")
@@ -497,192 +289,29 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             Log.d(TAG, "✓ SYSTEM_ALERT_WINDOW permission granted")
         }
 
-        // Database initialization moved to onServiceConnected (via DatabaseManager)
-        // Initialize rename feature components (Phase 2: On-Demand Command Renaming)
-        initializeRenameFeature()
-    }
-
-    /**
-     * Initialize rename feature components
-     *
-     * Initializes:
-     * 1. RenameHintOverlay - Shows contextual hints when screen has generated labels
-     * 2. ScreenActivityDetector - Detects screen changes and triggers hints
-     * 3. RenameCommandHandler - Processes "Rename X to Y" voice commands
-     */
-    private fun initializeRenameFeature() {
+        // FIX (2025-11-26): Initialize SQLDelight database (VoiceOSAppDatabase is typealias for adapter)
         try {
-            Log.i(TAG, "=== Initializing Rename Feature ===")
-
-            // Initialize RenameHintOverlay
-            renameHintOverlay = RenameHintOverlay(this, null)
-            Log.d(TAG, "✓ RenameHintOverlay initialized")
-
-            // Initialize ScreenActivityDetector (requires RenameHintOverlay + database)
-            dbManager.scrapingDatabase?.let { database ->
-                renameHintOverlay?.let { overlay ->
-                    screenActivityDetector = ScreenActivityDetector(this, database.databaseManager, overlay)
-                    Log.d(TAG, "✓ ScreenActivityDetector initialized")
-                } ?: Log.w(TAG, "RenameHintOverlay not initialized, skipping ScreenActivityDetector")
-            } ?: Log.w(TAG, "Database not initialized, skipping ScreenActivityDetector")
-
-            // Initialize RenameCommandHandler (requires database + TTS)
-            // Note: TTS is initialized later in speech engine, so we'll initialize handler on-demand
-            // when first rename command is received
-            Log.d(TAG, "RenameCommandHandler will be initialized on-demand when TTS is ready")
-
-            Log.i(TAG, "=== Rename Feature Initialized ===")
+            scrapingDatabase = VoiceOSAppDatabase.getInstance(this)
+            Log.i(TAG, "SQLDelight VoiceOSAppDatabase initialized successfully")
         } catch (e: Exception) {
-            Log.e(TAG, "Error initializing rename feature", e)
-            renameHintOverlay = null
-            screenActivityDetector = null
-            renameCommandHandler = null
-        }
-    }
-
-    /**
-     * Show error notification to user.
-     * Used for critical initialization failures.
-     *
-     * FIX (2025-12-19): Task 1.10 - Database initialization validation
-     */
-    override fun showErrorNotification(error: String) {
-        val message = error
-        try {
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-
-            // Create notification channel for Android O and above
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channel = android.app.NotificationChannel(
-                    "voiceos_errors",
-                    "VoiceOS Errors",
-                    android.app.NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Critical VoiceOS error notifications"
-                }
-                notificationManager.createNotificationChannel(channel)
-            }
-
-            // Build and show notification
-            val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                android.app.Notification.Builder(this, "voiceos_errors")
-            } else {
-                @Suppress("DEPRECATION")
-                android.app.Notification.Builder(this)
-            }
-                .setContentTitle("VoiceOS Error")
-                .setContentText(message)
-                .setSmallIcon(android.R.drawable.ic_dialog_alert)
-                .setAutoCancel(true)
-                .build()
-
-            notificationManager.notify(1001, notification)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to show error notification", e)
+            Log.e(TAG, "Failed to initialize database - will fall back to in-memory cache", e)
+            scrapingDatabase = null
         }
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
-    /**
-     * FIX (2025-12-22): C2 - Service Initialization with State Machine, Timeout, and Retry
-     *
-     * INITIALIZATION SEQUENCE (documented):
-     * 1. State transition: CREATED → INITIALIZING
-     * 2. Configuration loading (with defaults fallback)
-     * 3. Service info configuration
-     * 4. Lifecycle coordinator registration
-     * 5. Database initialization (critical path, with timeout)
-     * 6. Component initialization (with rollback on failure)
-     * 7. CommandManager initialization
-     * 8. Voice command registration
-     * 9. State transition: INITIALIZING → READY (or ERROR on failure)
-     *
-     * THREAD SAFETY:
-     * - Mutex guards initialization sequence (prevents concurrent init attempts)
-     * - AtomicReference for state transitions
-     * - AtomicInteger for retry attempt tracking
-     *
-     * TIMEOUT & RETRY:
-     * - 30 second timeout per initialization attempt
-     * - Maximum 3 retry attempts on failure
-     * - Exponential backoff between retries (1s, 2s, 4s)
-     *
-     * ERROR HANDLING:
-     * - Cleanup on initialization failure (rollback partial state)
-     * - Error notification to user
-     * - Service remains in ERROR state (degraded mode)
-     */
     override fun onServiceConnected() {
         super.onServiceConnected()
         Log.i(TAG, "VoiceOS Service connected")
 
+        // Initialize configuration
+        config = ServiceConfiguration.loadFromPreferences(this)
+
         configureServiceInfo()
 
-        // Launch initialization with state machine
+        // Register for app lifecycle events for hybrid foreground service
+        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
         serviceScope.launch {
-            initializeServiceWithRetry()
-        }
-    }
-
-    /**
-     * Initialize service with retry logic and state machine
-     */
-    private suspend fun initializeServiceWithRetry() {
-        while (initializationAttempts.get() < MAX_INITIALIZATION_ATTEMPTS) {
-            val attempt = initializationAttempts.incrementAndGet()
-            Log.i(TAG, "Service initialization attempt $attempt/$MAX_INITIALIZATION_ATTEMPTS")
-
-            try {
-                initializeServiceWithTimeout()
-                // Success - exit retry loop
-                return
-            } catch (e: Exception) {
-                Log.e(TAG, "Initialization attempt $attempt failed", e)
-                serviceState.set(ServiceState.ERROR(e, attempt))
-
-                if (attempt >= MAX_INITIALIZATION_ATTEMPTS) {
-                    // Max attempts reached - give up
-                    val errorMsg = "VoiceOS initialization failed after $attempt attempts: ${e.message}"
-                    Log.e(TAG, errorMsg)
-                    showErrorNotification(errorMsg)
-                    cleanupOnInitializationFailure()
-                    return
-                }
-
-                // Exponential backoff before retry
-                val backoffMs = (1000L shl (attempt - 1)) // 1s, 2s, 4s
-                Log.i(TAG, "Retrying in ${backoffMs}ms...")
-                delay(backoffMs)
-            }
-        }
-    }
-
-    /**
-     * Initialize service with timeout enforcement
-     */
-    private suspend fun initializeServiceWithTimeout() {
-        initializationMutex.withLock {
-            // Prevent re-initialization if already ready
-            if (serviceState.get() is ServiceState.READY) {
-                Log.w(TAG, "Service already initialized, skipping")
-                return@withLock
-            }
-
-        serviceState.set(ServiceState.INITIALIZING)
-        Log.i(TAG, "=== Service Initialization Start (state: INITIALIZING) ===")
-
-        withTimeout(INITIALIZATION_TIMEOUT_MS) {
-            // Register for app lifecycle events for hybrid foreground service (P2-8d)
-            lifecycleCoordinator.register()
-
-            // P2-8a: Database initialization via DatabaseManager (critical path)
-            try {
-                dbManager.initialize()
-            } catch (e: Exception) {
-                throw IllegalStateException("Database initialization failed", e)
-            }
-
-            // Continue with normal initialization only if database is ready
             staticCommandCache.addAll(actionCoordinator.getAllActions())
             observeInstalledApps()
             delay(VoiceOSConstants.Timing.INIT_DELAY_MS) // Small delay to not block service startup
@@ -697,10 +326,6 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             // register voice command
             registerVoiceCmd()
 
-            // Version-aware command management (2025-12-14)
-            // Initialize version tracking and cleanup scheduling
-            initializeVersionManagement()
-
             val filter = IntentFilter(Const.ACTION_CONFIG_UPDATE)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 Log.i(TAG, "onServiceConnected registerReceiver : CHANGE_LANG ")
@@ -709,45 +334,6 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                 Log.i(TAG, "onServiceConnected registerReceiver : CHANGE_LANG ")
                 registerReceiver(serviceReceiver, filter)
             }
-
-            // Success - transition to READY
-            serviceState.set(ServiceState.READY)
-            Log.i(TAG, "=== Service Initialization Complete (state: READY) ===")
-        }
-    }
-    }
-
-    /**
-     * Cleanup on initialization failure
-     *
-     * Rollback partial initialization state to prevent memory leaks and resource waste.
-     */
-    private suspend fun cleanupOnInitializationFailure() {
-        Log.w(TAG, "Cleaning up after initialization failure...")
-
-        try {
-            // Stop lifecycle coordinator if started
-            lifecycleCoordinator.unregister()
-
-            // Clear command caches
-            synchronized(cacheLock) {
-                nodeCache.clear()
-                commandCache.clear()
-                staticCommandCache.clear()
-                appsCommand.clear()
-                allRegisteredDynamicCommands.clear()
-            }
-
-            // Cleanup command manager
-            commandManagerInstance?.cleanup()
-            commandManagerInstance = null
-
-            // Cleanup service monitor
-            serviceMonitor = null
-
-            Log.i(TAG, "Cleanup complete")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error during cleanup", e)
         }
     }
 
@@ -764,7 +350,11 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             commandManagerInstance?.initialize()
 
             // Initialize ServiceMonitor
-            serviceMonitor = ServiceMonitor(applicationContext, serviceScope)
+            serviceMonitor = ServiceMonitor(this, applicationContext)
+            commandManagerInstance?.let { manager ->
+                serviceMonitor?.bindCommandManager(manager)
+                serviceMonitor?.startHealthCheck()
+            }
 
             Log.i(TAG, "CommandManager and ServiceMonitor initialized successfully")
 
@@ -780,41 +370,6 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             Log.e(TAG, "Failed to initialize CommandManager/ServiceMonitor", e)
             commandManagerInstance = null
             serviceMonitor = null
-        }
-    }
-
-    /**
-     * Initialize version-aware command lifecycle management.
-     *
-     * - Schedules weekly CleanupWorker for automatic deprecated command removal
-     * - Checks all installed apps and updates version tracking database
-     * - Enables version detection for future command generation
-     *
-     * @since 5.1 (Version-Aware Command Lifecycle)
-     */
-    private fun initializeVersionManagement() {
-        try {
-            Log.i(TAG, "Initializing version-aware command management...")
-
-            // Schedule weekly cleanup worker (runs when device is charging + battery not low)
-            com.augmentalis.voiceoscore.cleanup.CleanupWorker.schedulePeriodicCleanup(applicationContext)
-            Log.i(TAG, "Scheduled weekly command cleanup worker")
-
-            // Check all tracked apps and update version tracking database
-            // This runs in background to avoid blocking service startup
-            serviceScope.launch {
-                try {
-                    Log.d(TAG, "Version checking not yet fully implemented")
-                    // TODO: Implement bulk version checking
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to check tracked app versions", e)
-                }
-            }
-
-            Log.i(TAG, "Version management initialized successfully")
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize version management", e)
         }
     }
 
@@ -884,7 +439,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             // SOURCE 2: VoiceOSAppDatabase (generated app commands - unified DB)
             try {
                 Log.d(TAG, "Loading commands from VoiceOSAppDatabase...")
-                dbManager.scrapingDatabase?.let { database ->
+                scrapingDatabase?.let { database ->
                     val appCommands = database.databaseManager.generatedCommands.getAll()
                     Log.i(TAG, "  Found ${appCommands.size} commands in VoiceOSAppDatabase")
 
@@ -913,10 +468,24 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                 // Continue even if this fails
             }
 
-            // SOURCE 3: Web commands (via SQLDelight - not yet migrated)
-            // Web scraping database schemas created but not integrated into VoiceOSDatabaseManager yet
-            // TODO: Integrate GeneratedWebCommand.sq when LearnWeb migration is complete
-            Log.d(TAG, "Web commands: Not yet available (LearnWeb migration pending)")
+            // SOURCE 3: WebScrapingDatabase (web commands)
+            try {
+                Log.d(TAG, "Loading commands from WebScrapingDatabase...")
+                val webDatabase = WebScrapingDatabase.getInstance(applicationContext)
+
+                val webCommands = webDatabase.generatedWebCommandDao().getAllCommands()
+                Log.i(TAG, "  Found ${webCommands.size} commands in WebScrapingDatabase")
+
+                for (cmd in webCommands) {
+                    commandTexts.add(cmd.commandText.lowercase().trim())
+                }
+
+                Log.i(TAG, "  ✓ WebScrapingDatabase: Total ${commandTexts.size} command texts")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "  ✗ Error loading WebScrapingDatabase commands", e)
+                // Continue even if this fails
+            }
 
             // Remove any empty strings or invalid commands
             commandTexts.removeIf { it.isBlank() || it.length < 2 }
@@ -942,12 +511,9 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 //                        val objectCommand = prettyGson.toJson(allCommands)
 //                        Log.d(TAG, "RegisterVoiceCmd allCommands = $objectCommand")
 //                    }
-                    // FIX (2025-12-11): updateCommands is now suspend, launch in coroutine
-                    coroutineScopeCommands.launch {
-                        speechEngineManager.updateCommands(allCommands)
-                    }
+                    speechEngineManager?.updateCommands(allCommands)  // TEMPORARY: Null-safe for standalone
 
-                    Log.i(TAG, "✓ Database commands registered successfully with speech engine (async)")
+                    Log.i(TAG, "✓ Database commands registered successfully with speech engine")
                     Log.i(TAG, "  Total commands in speech vocabulary: ${allCommands.toSet().size}")
 
                 } catch (e: Exception) {
@@ -1010,13 +576,32 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     private fun observeInstalledApps() {
         serviceScope.launch {
             withContext(Dispatchers.Main) {
-                // App list updates handled elsewhere
-                Log.d(TAG, "App list monitoring initialized")
+                installedAppsManager.appList.collectLatest { result ->
+                    if (result.isNotEmpty()) {
+                        appsCommand.apply {
+                            clear()
+                            putAll(result)
+                        }
+                    }
+                }
             }
         }
     }
 
-    // Lifecycle observation delegated to LifecycleCoordinator (P2-8d)
+    // Lifecycle observer methods for hybrid foreground service management
+    override fun onStart(owner: LifecycleOwner) {
+        super<DefaultLifecycleObserver>.onStart(owner)
+        Log.d(TAG, "App moved to foreground")
+        appInBackground = false
+        evaluateForegroundServiceNeed()
+    }
+
+    override fun onStop(owner: LifecycleOwner) {
+        super<DefaultLifecycleObserver>.onStop(owner)
+        Log.d(TAG, "App moved to background")
+        appInBackground = true
+        evaluateForegroundServiceNeed()
+    }
 
     /**
      * Initialize components with staggered loading
@@ -1027,12 +612,9 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             actionCoordinator.initialize()
 
             // Initialize hash-based scraping integration (if database initialized)
-            if (dbManager.scrapingDatabase != null) {
+            if (scrapingDatabase != null) {
                 try {
-                    scrapingIntegration = AccessibilityScrapingIntegration(
-                        context = this@VoiceOSService,
-                        accessibilityService = this@VoiceOSService
-                    )
+                    scrapingIntegration = AccessibilityScrapingIntegration(this@VoiceOSService, this@VoiceOSService)
                     Log.i(TAG, "AccessibilityScrapingIntegration initialized successfully")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to initialize AccessibilityScrapingIntegration", e)
@@ -1043,17 +625,9 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             }
 
             // Initialize hash-based command processor
-            val scrapingDb = dbManager.scrapingDatabase
-            if (scrapingDb != null) {
+            if (scrapingDatabase != null) {
                 try {
-                    val sqlDelightManager = scrapingDb.databaseManager
-                    voiceCommandProcessor = VoiceCommandProcessor(
-                        context = this@VoiceOSService,
-                        accessibilityService = this@VoiceOSService,
-                        scrapedAppQueries = sqlDelightManager.scrapedAppQueries,
-                        scrapedElementQueries = sqlDelightManager.scrapedElementQueries,
-                        generatedCommandQueries = sqlDelightManager.generatedCommandQueries
-                    )
+                    voiceCommandProcessor = VoiceCommandProcessor(this@VoiceOSService, this@VoiceOSService)
                     Log.i(TAG, "VoiceCommandProcessor initialized successfully")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to initialize VoiceCommandProcessor", e)
@@ -1077,10 +651,6 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             isServiceReady = true
             Log.i(TAG, "All components initialized with optimization")
 
-            // FIX (2025-12-22): L-P0-3 - Process events queued during service initialization
-            // Events arriving before isServiceReady=true were queued, now process them
-            processQueuedEvents()
-
             // Log performance metrics
             logPerformanceMetrics()
 
@@ -1094,26 +664,16 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null) return
-
-        // FIX (2025-12-22): L-P0-3 - Queue events during service initialization
-        // Events arriving before isServiceReady=true should be queued, not dropped
-        // This prevents event loss during the ~500-1000ms initialization window
-        if (!isServiceReady) {
-            queueEvent(event)
-            Log.d(TAG, "LEARNAPP_DEBUG: Service not ready, event queued (queue size=${pendingEvents.size})")
-            return
-        }
+        if (!isServiceReady || event == null) return
 
         // Phase 3E: Adaptive event filtering based on memory pressure
         // Drop low-priority events (scrolling, focus) under memory pressure
         // Preserve critical events (clicks, text input) to maintain functionality
-        val isLowResource = config.isLowResourceMode
-        val eventPriority = eventPriorityManager.getPriorityForEvent(event.eventType)
-        val shouldProcess = !isLowResource || eventPriority >= EventPriorityManager.PRIORITY_HIGH
+        val throttleLevel = resourceMonitor.getThrottleRecommendation()
+        val shouldProcess = eventPriorityManager.shouldProcessEvent(event, throttleLevel)
 
         if (!shouldProcess) {
-            Log.v(TAG, "Event filtered due to memory pressure: type=${event.eventType}, priority=$eventPriority")
+            Log.v(TAG, "Event filtered due to memory pressure: type=${event.eventType}, throttle=$throttleLevel")
             return
         }
 
@@ -1124,7 +684,6 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
         // This ensures FLAG_RETRIEVE_INTERACTIVE_WINDOWS has been fully processed by Android
         // FIX (2025-11-30): Use atomic state to prevent race condition where events arrive
         // before initialization completes. State: 0=not started, 1=in progress, 2=complete
-        // FIX (2025-12-10): Queue events during initialization instead of dropping them
         val initState = learnAppInitState.get()
         if (initState == 0) {
             // Try to claim initialization (atomic compare-and-set)
@@ -1138,27 +697,21 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                         Log.i(TAG, "LearnApp initialization complete (event-driven)")
                         learnAppInitState.set(2)  // Mark complete AFTER init done
                         Log.i(TAG, "LEARNAPP_DEBUG: learnAppIntegration is now ${if (learnAppIntegration != null) "SET" else "STILL NULL"}")
-
-                        // FIX (2025-12-10): Process queued events after initialization completes
-                        processQueuedEvents()
                     } catch (e: Exception) {
                         Log.e(TAG, "LEARNAPP_DEBUG: Initialization failed, allowing retry", e)
                         learnAppInitState.set(0)  // Allow retry on next event
                     }
                 }
             }
-            // Queue event during initialization instead of dropping it
-            queueEvent(event)
+            // Don't forward events during initialization - they'd hit null integration
+            Log.d(TAG, "LEARNAPP_DEBUG: Init in progress, skipping event forwarding")
             return
         } else if (initState == 1) {
-            // Initialization in progress - queue this event for later processing
-            queueEvent(event)
+            // Initialization in progress by another call - skip this event
+            Log.d(TAG, "LEARNAPP_DEBUG: Init in progress by other thread, skipping event")
             return
         }
         // initState == 2: Fully initialized, proceed with event forwarding
-
-        // FIX (2025-12-10): Process any queued events first (in case of race)
-        processQueuedEvents()
 
         try {
             // Forward to hash-based scraping integration FIRST (base scraping)
@@ -1176,7 +729,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
             // Forward to LearnApp integration for third-party app learning
             if (learnAppIntegration == null) {
-                Log.d(TAG, "LEARNAPP_DEBUG: learnAppIntegration initializing - queuing event")
+                Log.w(TAG, "LEARNAPP_DEBUG: learnAppIntegration is NULL - cannot forward event!")
             }
             learnAppIntegration?.let { integration ->
                 try {
@@ -1220,7 +773,11 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             // Create debounce key based on package, class, and event type
             val debounceKey = "$packageName-${event.className?.toString() ?: "unknown"}-${event.eventType}"
 
-            // Debouncing handled separately (event debouncer doesn't have shouldProceed)
+            // Apply debouncing to prevent excessive processing
+            if (!eventDebouncer.shouldProceed(debounceKey)) {
+                Log.v(TAG, "Event debounced for: $debounceKey")
+                return
+            }
 
             // Process events based on type with enhanced logic
             when (event.eventType) {
@@ -1232,11 +789,8 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                         nodeCache.addAll(commands)
 
                         val normalizedCommand = commands.map { element -> element.normalizedText }
-                        // FIX (2025-12-22): C-P1-4 - Synchronize compound operation
-                        synchronized(cacheLock) {
-                            commandCache.clear()
-                            commandCache.addAll(normalizedCommand)
-                        }
+                        commandCache.clear()
+                        commandCache.addAll(normalizedCommand)
                         Log.d(TAG, "SPEECH_TEST: TYPE_WINDOW_CONTENT_CHANGED commandsStr = $commandCache")
                         if (config.verboseLogging) {
                             Log.d(TAG, "Scraped commands for $packageName: $commandCache")
@@ -1245,37 +799,16 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                 }
 
                 AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                    // FIX (2025-12-11): Use coroutineScopeCommands (Dispatchers.IO) to prevent ANR
-                    // Previously used serviceScope (Dispatchers.Main) which blocked main thread with 300+ commands
-
-                    // Forward to ScreenActivityDetector for rename hint display
-                    screenActivityDetector?.let { detector ->
-                        coroutineScopeCommands.launch {
-                            try {
-                                Log.v(TAG, "Forwarding WINDOW_STATE_CHANGED to ScreenActivityDetector")
-                                detector.onWindowStateChanged(event.packageName?.toString(), event.className?.toString())
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Error in ScreenActivityDetector", e)
-                            }
-                        }
-                    }
-
                     // Update app context and trigger scraping for new windows
-                    coroutineScopeCommands.launch {
+                    serviceScope.launch {
                         // Also trigger UI scraping for window state changes
                         val commands = uiScrapingEngine.extractUIElementsAsync(event)
-                        val normalizedCommand = commands.map { element -> element.normalizedText }
-
-                        // Update caches on background thread (prevents ANR)
                         nodeCache.clear()
                         nodeCache.addAll(commands)
-                        // FIX (2025-12-22): C-P1-4 - Synchronize compound operation
-                        synchronized(cacheLock) {
-                            commandCache.clear()
-                            commandCache.addAll(normalizedCommand)
-                        }
-
-                        Log.d(TAG, "SPEECH_TEST: TYPE_WINDOW_STATE_CHANGED commandsStr (${normalizedCommand.size} commands) = $commandCache")
+                        val normalizedCommand = commands.map { element -> element.normalizedText }
+                        commandCache.clear()
+                        commandCache.addAll(normalizedCommand)
+                        Log.d(TAG, "SPEECH_TEST: TYPE_WINDOW_STATE_CHANGED commandsStr = $commandCache")
                         if (config.verboseLogging) {
                             Log.d(TAG, "Scraped commands for $packageName: $commandCache")
                         }
@@ -1295,11 +828,8 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                         nodeCache.clear()
                         nodeCache.addAll(commands)
                         val normalizedCommand = commands.map { element -> element.normalizedText }
-                        // FIX (2025-12-22): C-P1-4 - Synchronize compound operation
-                        synchronized(cacheLock) {
-                            commandCache.clear()
-                            commandCache.addAll(normalizedCommand)
-                        }
+                        commandCache.clear()
+                        commandCache.addAll(normalizedCommand)
                         Log.d(TAG, "SPEECH_TEST: TYPE_VIEW_CLICKED commandsStr = $commandCache")
                         if (config.verboseLogging) {
                             Log.d(TAG, "Scraped commands for $packageName: $commandCache")
@@ -1327,30 +857,18 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                 while (isActive) {
                     delay(COMMAND_CHECK_INTERVAL_MS)
                     if (isVoiceInitialized && System.currentTimeMillis() - lastCommandLoaded > COMMAND_LOAD_DEBOUNCE_MS) {
-                        // FIX (2025-12-22): C-P1-4 - Synchronize check-then-act pattern
-                        // FIX (2025-12-22): Prepare data in synchronized block, suspend call outside
-                        val allCommands = synchronized(cacheLock) {
-                            if (commandCache != allRegisteredDynamicCommands) {
-                                Log.d(TAG, "SPEECH_TEST: registerVoiceCmd commandsStr = $commandCache")
-                                commandCache + staticCommandCache + appsCommand.keys
-                            } else {
-                                null  // No update needed
-                            }
-                        }
+                        if (commandCache != allRegisteredDynamicCommands) {
+                            Log.d(TAG, "SPEECH_TEST: registerVoiceCmd commandsStr = $commandCache")
+                            val allCommands = commandCache + staticCommandCache + appsCommand.keys
 
-                        // Suspend call outside synchronized block
-                        if (allCommands != null) {
 //                            if (BuildConfig.DEBUG) {
 //                                val objectCommand = prettyGson.toJson(allCommands)
 //                                Log.d(TAG, "RegisterVoiceCmd allCommands = $objectCommand")
 //                            }
-                            // FIX (2025-12-11): updateCommands is now suspend, call directly in coroutine
-                            speechEngineManager.updateCommands(allCommands)
-                            synchronized(cacheLock) {
-                                allRegisteredDynamicCommands.clear()
-                                allRegisteredDynamicCommands.addAll(commandCache)
-                                lastCommandLoaded = System.currentTimeMillis()
-                            }
+                            speechEngineManager?.updateCommands(allCommands)
+                            allRegisteredDynamicCommands.clear()
+                            allRegisteredDynamicCommands.addAll(commandCache)
+                            lastCommandLoaded = System.currentTimeMillis()
                         }
                     }
                 }
@@ -1419,347 +937,78 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
     /**
      * Initialize VoiceCursor API for cursor functionality
-     * Must run on Main thread for GestureDetector initialization
      */
-    private suspend fun initializeVoiceCursor() {
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-            try {
-                voiceCursorInitialized = VoiceCursorAPI.initialize(this@VoiceOSService, this@VoiceOSService)
-                if (voiceCursorInitialized) {
-                    showCursor()
-                    Log.d(TAG, "VoiceCursor API initialized successfully")
-                } else {
-                    Log.w(TAG, "Failed to initialize VoiceCursor API")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error initializing VoiceCursor API", e)
-                voiceCursorInitialized = false
+    private fun initializeVoiceCursor() {
+        try {
+            voiceCursorInitialized = VoiceCursorAPI.initialize(this, this)
+            if (voiceCursorInitialized) {
+                showCursor()
+                Log.d(TAG, "VoiceCursor API initialized successfully")
+            } else {
+                Log.w(TAG, "Failed to initialize VoiceCursor API")
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error initializing VoiceCursor API", e)
+            voiceCursorInitialized = false
         }
     }
 
     /**
      * Initialize LearnApp integration for third-party app learning
      *
-     * FIX (2025-12-22): C2-P1-11 - Thread-safe initialization with Mutex
-     * Prevents race condition when multiple events trigger initialization concurrently.
-     *
      * This integration enables automatic UI exploration and UUID generation
      * for third-party apps. When a new app is launched, the user will be
      * prompted for consent before exploration begins.
      */
     private fun initializeLearnAppIntegration() {
-        // Check if already initialized or in progress
-        if (!learnAppInitState.compareAndSet(0, 1)) {
-            Log.d(TAG, "LEARNAPP_DEBUG: Initialization already in progress or complete (state=${learnAppInitState.get()}), skipping")
-            return
-        }
-
-        serviceScope.launch {
-            learnAppInitMutex.withLock {
-                try {
-                    Log.i(TAG, "LEARNAPP_DEBUG: ========================================")
-                    Log.i(TAG, "LEARNAPP_DEBUG: initializeLearnAppIntegration() CALLED")
-                    Log.i(TAG, "LEARNAPP_DEBUG: ========================================")
-                    Log.i(TAG, "=== LearnApp Integration Initialization Start ===")
-
-                    // Initialize UUIDCreator first (required dependency)
-                    Log.d(TAG, "LEARNAPP_DEBUG: About to initialize UUIDCreator...")
-                    Log.d(TAG, "Initializing UUIDCreator...")
-                    UUIDCreator.initialize(applicationContext)
-                    Log.d(TAG, "✓ UUIDCreator initialized")
-                    Log.d(TAG, "LEARNAPP_DEBUG: UUIDCreator done")
-
-                    Log.d(TAG, "LEARNAPP_DEBUG: About to call LearnAppIntegration.initialize()...")
-                    Log.d(TAG, "Attempting to initialize LearnAppIntegration...")
-                    Log.d(TAG, "Context: ${applicationContext.javaClass.simpleName}")
-                    Log.d(TAG, "Service: ${this@VoiceOSService.javaClass.simpleName}")
-
-                    // Initialize LearnAppIntegration
-                    learnAppIntegration = LearnAppIntegration.initialize(applicationContext, this@VoiceOSService)
-                    Log.d(TAG, "LEARNAPP_DEBUG: LearnAppIntegration.initialize() returned: ${learnAppIntegration}")
-
-                    Log.i(TAG, "✓ LearnApp integration initialized successfully")
-                    Log.d(TAG, "Integration instance: ${learnAppIntegration?.javaClass?.simpleName}")
-                    Log.d(TAG, "Features enabled:")
-                    Log.d(TAG, "  - App launch detection: ACTIVE")
-                    Log.d(TAG, "  - Consent dialog management: ACTIVE")
-                    Log.d(TAG, "  - Exploration engine: ACTIVE")
-                    Log.d(TAG, "  - Progress overlay: ACTIVE")
-                    Log.i(TAG, "LearnApp will now monitor for new third-party app launches")
-                    Log.i(TAG, "LEARNAPP_DEBUG: Initialization SUCCESS - learnAppIntegration is ${if (learnAppIntegration != null) "NOT NULL" else "NULL"}")
-
-                    // PHASE 3 (2025-12-08): Command Discovery integration
-                    // Auto-observes ExplorationEngine.state() via StateFlow
-                    // Triggers visual overlay, audio summary, and tutorial when exploration completes
-                    Log.d(TAG, "LEARNAPP_DEBUG: Initializing CommandDiscoveryIntegration...")
-                    learnAppIntegration?.let { integration ->
-                        try {
-                            discoveryIntegration = CommandDiscoveryIntegration(
-                                context = this@VoiceOSService,
-                                explorationEngine = integration.getExplorationEngine()
-                            )
-                            Log.i(TAG, "✓ Command Discovery integration initialized successfully")
-                            Log.d(TAG, "  - Visual overlay: ACTIVE (10s auto-hide)")
-                            Log.d(TAG, "  - Audio summary: ACTIVE")
-                            Log.d(TAG, "  - Interactive tutorial: ACTIVE")
-                            Log.d(TAG, "  - Command list UI: ACTIVE")
-                            Log.d(TAG, "  - Contextual hints: ACTIVE")
-                            Log.d(TAG, "Auto-observation enabled - no manual wiring needed")
-                        } catch (e: Exception) {
-                            Log.e(TAG, "✗ Failed to initialize Command Discovery integration", e)
-                            Log.e(TAG, "  Error type: ${e.javaClass.simpleName}")
-                            Log.e(TAG, "  Error message: ${e.message}")
-                            discoveryIntegration = null
-                        }
-                    } ?: Log.w(TAG, "Skipping Command Discovery - LearnAppIntegration not available")
-
-                    // Mark initialization complete
-                    learnAppInitState.set(2)
-                    learnAppInitialized = true
-
-                    // Start JIT Learning Service (Phase 3: JIT-LearnApp Separation - 2025-12-18)
-                    // Must be called AFTER LearnAppIntegration initializes (provides JITLearnerProvider)
-                    startJITService()
-
-                } catch (e: Exception) {
-                    Log.e(TAG, "LEARNAPP_DEBUG: EXCEPTION during initialization!")
-                    Log.e(TAG, "✗ Failed to initialize LearnApp integration", e)
-                    Log.e(TAG, "Error type: ${e.javaClass.simpleName}")
-                    Log.e(TAG, "Error message: ${e.message}")
-                    Log.e(TAG, "Stack trace:")
-                    e.printStackTrace()
-                    Log.w(TAG, "Service will continue without LearnApp integration")
-                    learnAppIntegration = null
-                    learnAppInitState.set(0) // Reset for potential retry
-                } finally {
-                    Log.i(TAG, "=== LearnApp Integration Initialization Complete ===")
-                }
-            }
-        }
-    }
-
-    /**
-     * Service connection for JIT Learning Service binding
-     * Phase 3: JIT-LearnApp Separation (2025-12-18)
-     */
-    private val jitServiceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            Log.i(TAG, "JIT Learning Service connected via AIDL")
-
-            try {
-                // Get service instance and wire up provider
-                val jitService = com.augmentalis.jitlearning.JITLearningService.getInstance()
-                val integration = learnAppIntegration
-                if (jitService != null && integration != null) {
-                    // Set JITLearnerProvider (implemented by LearnAppIntegration)
-                    jitService.setLearnerProvider(integration)
-
-                    // Set AccessibilityService interface for root node access
-                    jitService.setAccessibilityService(object : com.augmentalis.jitlearning.JITLearningService.AccessibilityServiceInterface {
-                        override fun getRootNode(): android.view.accessibility.AccessibilityNodeInfo? {
-                            return this@VoiceOSService.rootInActiveWindow
-                        }
-
-                        override fun performGlobalAction(action: Int): Boolean {
-                            return this@VoiceOSService.performGlobalAction(action)
-                        }
-                    })
-
-                    jitServiceBound = true
-                    Log.i(TAG, "✓ JIT Learning Service provider wired successfully")
-                    Log.d(TAG, "  - JITLearnerProvider: ${integration.javaClass.simpleName}")
-                    Log.d(TAG, "  - AccessibilityService interface: PROVIDED")
-                    Log.d(TAG, "  - Service ready for LearnApp binding")
-                } else {
-                    Log.w(TAG, "Cannot wire JIT service - service or integration is null")
-                    Log.w(TAG, "  JIT service: ${if (jitService != null) "OK" else "NULL"}")
-                    Log.w(TAG, "  Integration: ${if (integration != null) "OK" else "NULL"}")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to wire JIT Learning Service provider", e)
-            }
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            Log.w(TAG, "JIT Learning Service disconnected")
-            jitServiceBound = false
-        }
-    }
-
-    /**
-     * Start JIT Learning Service
-     * Phase 3: JIT-LearnApp Separation (2025-12-18)
-     *
-     * Starts the foreground service and binds to it to wire up the JITLearnerProvider.
-     * Called after LearnAppIntegration initializes.
-     */
-    private fun startJITService() {
+        Log.i(TAG, "LEARNAPP_DEBUG: ========================================")
+        Log.i(TAG, "LEARNAPP_DEBUG: initializeLearnAppIntegration() CALLED")
+        Log.i(TAG, "LEARNAPP_DEBUG: ========================================")
+        Log.i(TAG, "=== LearnApp Integration Initialization Start ===")
         try {
-            Log.i(TAG, "Starting JIT Learning Service...")
+            // Initialize UUIDCreator first (required dependency)
+            Log.d(TAG, "LEARNAPP_DEBUG: About to initialize UUIDCreator...")
+            Log.d(TAG, "Initializing UUIDCreator...")
+            UUIDCreator.initialize(applicationContext)
+            Log.d(TAG, "✓ UUIDCreator initialized")
+            Log.d(TAG, "LEARNAPP_DEBUG: UUIDCreator done")
 
-            val intent = Intent(this, com.augmentalis.jitlearning.JITLearningService::class.java)
+            Log.d(TAG, "LEARNAPP_DEBUG: About to call LearnAppIntegration.initialize()...")
+            Log.d(TAG, "Attempting to initialize LearnAppIntegration...")
+            Log.d(TAG, "Context: ${applicationContext.javaClass.simpleName}")
+            Log.d(TAG, "Service: ${this.javaClass.simpleName}")
 
-            // Start as foreground service (Android O+)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
-            } else {
-                startService(intent)
-            }
+            // Initialize LearnAppIntegration
+            learnAppIntegration = LearnAppIntegration.initialize(applicationContext, this)
+            Log.d(TAG, "LEARNAPP_DEBUG: LearnAppIntegration.initialize() returned: ${learnAppIntegration}")
 
-            // Bind to service to wire up provider
-            val bound = bindService(intent, jitServiceConnection, Context.BIND_AUTO_CREATE)
-
-            if (bound) {
-                Log.i(TAG, "✓ JIT Learning Service started and binding initiated")
-                Log.d(TAG, "  - Service will run as foreground service")
-                Log.d(TAG, "  - LearnApp can now bind via AIDL")
-                Log.d(TAG, "  - Passive learning will begin on next accessibility event")
-            } else {
-                Log.e(TAG, "✗ Failed to bind to JIT Learning Service")
-            }
+            Log.i(TAG, "✓ LearnApp integration initialized successfully")
+            Log.d(TAG, "Integration instance: ${learnAppIntegration?.javaClass?.simpleName}")
+            Log.d(TAG, "Features enabled:")
+            Log.d(TAG, "  - App launch detection: ACTIVE")
+            Log.d(TAG, "  - Consent dialog management: ACTIVE")
+            Log.d(TAG, "  - Exploration engine: ACTIVE")
+            Log.d(TAG, "  - Progress overlay: ACTIVE")
+            Log.i(TAG, "LearnApp will now monitor for new third-party app launches")
+            Log.i(TAG, "LEARNAPP_DEBUG: Initialization SUCCESS - learnAppIntegration is ${if (learnAppIntegration != null) "NOT NULL" else "NULL"}")
 
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start JIT Learning Service", e)
-            Log.e(TAG, "  Error type: ${e.javaClass.simpleName}")
-            Log.e(TAG, "  Error message: ${e.message}")
-            Log.w(TAG, "Service will continue without JIT Learning")
+            Log.e(TAG, "LEARNAPP_DEBUG: EXCEPTION during initialization!")
+            Log.e(TAG, "✗ Failed to initialize LearnApp integration", e)
+            Log.e(TAG, "Error type: ${e.javaClass.simpleName}")
+            Log.e(TAG, "Error message: ${e.message}")
+            Log.e(TAG, "Stack trace:")
+            e.printStackTrace()
+            Log.w(TAG, "Service will continue without LearnApp integration")
+            learnAppIntegration = null
         }
-    }
-
-    /**
-     * Generate unique ID for an accessibility event
-     *
-     * FIX (2025-12-22): L-P0-1 - Event deduplication helper
-     * Creates unique signature from event properties to detect duplicates
-     */
-    private fun getEventId(event: android.view.accessibility.AccessibilityEvent): String {
-        val packageName = event.packageName?.toString() ?: "null"
-        val className = event.className?.toString() ?: "null"
-        val eventType = event.eventType
-        val timestamp = event.eventTime
-        val text = event.text.joinToString("|")
-        return "$packageName:$className:$eventType:$timestamp:$text"
-    }
-
-    /**
-     * Recursively recycle AccessibilityNodeInfo and all descendants
-     *
-     * FIX (2025-12-22): L-P0-2 - Prevent 12.5MB memory leak from node hierarchies
-     * AccessibilityNodeInfo.recycle() only frees the node itself, not children
-     * Each queued event can have 50-100 nodes → 100-250KB leak per event
-     *
-     * @param node Root node to recycle (along with entire tree)
-     */
-    private fun recycleNodeTree(node: android.view.accessibility.AccessibilityNodeInfo?) {
-        if (node == null) return
-
-        try {
-            // Recursively recycle all children first (depth-first)
-            for (i in 0 until node.childCount) {
-                try {
-                    val child = node.getChild(i)
-                    recycleNodeTree(child)
-                } catch (e: Exception) {
-                    // Child may already be recycled or invalid
-                    Log.w(TAG, "Error recycling child node: ${e.message}")
-                }
-            }
-
-            // Finally recycle this node
-            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                @Suppress("DEPRECATION")
-                node.recycle()
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Error in recycleNodeTree: ${e.message}")
-        }
-    }
-
-    /**
-     * Queue an accessibility event for later processing.
-     * Called during LearnApp initialization to prevent event loss.
-     *
-     * FIX (2025-12-10): Implements event queue solution from spec Section 2.1
-     * FIX (2025-12-22): L-P0-1 - Add event deduplication to prevent double-processing
-     */
-    private fun queueEvent(event: android.view.accessibility.AccessibilityEvent) {
-        // FIX: Check if event already processed
-        val eventId = getEventId(event)
-        if (processedEventIds.contains(eventId)) {
-            Log.d(TAG, "LEARNAPP_DEBUG: Event already processed, skipping queue: $eventId")
-            return
-        }
-
-        if (pendingEvents.size < MAX_QUEUED_EVENTS) {
-            // Create a copy of the event to avoid recycling issues
-            val eventCopy = android.view.accessibility.AccessibilityEvent.obtain(event)
-            pendingEvents.offer(eventCopy)
-            Log.d(TAG, "LEARNAPP_DEBUG: Queued event (type=${event.eventType}, queue size=${pendingEvents.size})")
-        } else {
-            Log.w(TAG, "LEARNAPP_DEBUG: Event queue full ($MAX_QUEUED_EVENTS), dropping event")
-        }
-    }
-
-    /**
-     * Process all queued events after initialization completes.
-     * Ensures no events are lost during the initialization window.
-     *
-     * FIX (2025-12-10): Implements event queue solution from spec Section 2.1
-     * FIX (2025-12-22): L-P0-1 - Mark events as processed to prevent double-processing
-     */
-    override fun processQueuedEvents() {
-        val queueSize = pendingEvents.size
-        if (queueSize > 0) {
-            Log.i(TAG, "LEARNAPP_DEBUG: Processing $queueSize queued events")
-            var processedCount = 0
-
-            while (pendingEvents.isNotEmpty()) {
-                val queuedEvent = pendingEvents.poll()
-                if (queuedEvent != null) {
-                    try {
-                        // FIX: Mark event as processed BEFORE forwarding to prevent race
-                        val eventId = getEventId(queuedEvent)
-                        processedEventIds.add(eventId)
-
-                        // Forward to LearnApp integration
-                        learnAppIntegration?.onAccessibilityEvent(queuedEvent)
-                        processedCount++
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error processing queued event", e)
-                    } finally {
-                        // FIX (2025-12-22): L-P0-2 - Recursively recycle entire node hierarchy
-                        // Prevents 100-250KB leak per event from child nodes
-                        val source = queuedEvent.source
-                        recycleNodeTree(source)
-                        // Recycle the event copy to free memory
-                        queuedEvent.recycle()
-                    }
-                }
-            }
-
-            Log.i(TAG, "LEARNAPP_DEBUG: Processed $processedCount queued events")
-
-            // FIX: Clean up old event IDs to prevent unbounded memory growth
-            // Keep only last 100 event IDs (represents ~10-20 seconds of events)
-            if (processedEventIds.size > 100) {
-                val toRemove = processedEventIds.size - 100
-                processedEventIds.iterator().let { iter ->
-                    repeat(toRemove) {
-                        if (iter.hasNext()) {
-                            iter.next()
-                            iter.remove()
-                        }
-                    }
-                }
-            }
-        }
+        Log.i(TAG, "=== LearnApp Integration Initialization Complete ===")
     }
 
     /**
      * Show cursor overlay
      */
-    fun showCursor(): Boolean {
+    override fun showCursor(): Boolean {
         return if (voiceCursorInitialized) {
             VoiceCursorAPI.showCursor()
         } else {
@@ -1789,7 +1038,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     /**
      * Hide cursor overlay
      */
-    fun hideCursor(): Boolean {
+    override fun hideCursor(): Boolean {
         return if (voiceCursorInitialized) {
             VoiceCursorAPI.hideCursor()
         } else {
@@ -1801,7 +1050,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     /**
      * Toggle cursor visibility
      */
-    fun toggleCursor(): Boolean {
+    override fun toggleCursor(): Boolean {
         return if (voiceCursorInitialized) {
             VoiceCursorAPI.toggleCursor()
         } else {
@@ -1813,7 +1062,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     /**
      * Center cursor on screen
      */
-    fun centerCursor(): Boolean {
+    override fun centerCursor(): Boolean {
         return if (voiceCursorInitialized) {
             VoiceCursorAPI.centerCursor()
         } else {
@@ -1825,7 +1074,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     /**
      * Perform click at current cursor position
      */
-    fun clickCursor(): Boolean {
+    override fun clickCursor(): Boolean {
         return if (voiceCursorInitialized) {
             VoiceCursorAPI.click()
         } else {
@@ -1834,13 +1083,83 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
         }
     }
 
-    // Foreground service management delegated to LifecycleCoordinator (P2-8d)
+    /**
+     * Evaluate whether ForegroundService is needed (hybrid approach)
+     * Only starts ForegroundService on Android 12+ when app is in background with active voice
+     */
+    private fun evaluateForegroundServiceNeed() {
+        val needsForeground = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                && appInBackground
+                && voiceSessionActive
+                && !foregroundServiceActive
+
+        val shouldStopForeground = foregroundServiceActive && (!appInBackground || !voiceSessionActive)
+
+        when {
+            needsForeground -> {
+                Log.d(TAG, "Starting ForegroundService (Android 12+ background requirement)")
+                startForegroundServiceHelper()
+            }
+
+            shouldStopForeground -> {
+                Log.d(TAG, "Stopping ForegroundService (no longer needed)")
+                stopForegroundServiceHelper()
+            }
+
+            else -> {
+                Log.v(TAG, "ForegroundService state: needed=$needsForeground, active=$foregroundServiceActive")
+            }
+        }
+    }
+
+    /**
+     * Start the foreground service when needed
+     */
+    private fun startForegroundServiceHelper() {
+        if (foregroundServiceActive) return
+
+        try {
+            val intent = Intent(this, VoiceOnSentry::class.java).apply {
+                action = ACTION_START_MIC
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+
+            foregroundServiceActive = true
+            Log.i(TAG, "ForegroundService started for background mic access")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start ForegroundService", e)
+            foregroundServiceActive = false
+        }
+    }
+
+    /**
+     * Stop the foreground service when no longer needed
+     */
+    private fun stopForegroundServiceHelper() {
+        if (!foregroundServiceActive) return
+
+        try {
+            val intent = Intent(this, VoiceOnSentry::class.java).apply {
+                action = ACTION_STOP_MIC
+            }
+            stopService(intent)
+
+            foregroundServiceActive = false
+            Log.i(TAG, "ForegroundService stopped (no longer needed)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to stop ForegroundService", e)
+        }
+    }
 
     /**
      * Handle voice command with caching
      *
      * Phase 1: Now routes to CommandManager when available
-     * Phase 2: Added rename command detection and routing
      */
     private fun handleVoiceCommand(command: String, confidence: Float) {
         Log.d(TAG, "handleVoiceCommand: command='$command', confidence=$confidence")
@@ -1853,27 +1172,6 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
         val normalizedCommand = command.lowercase().trim()
         val currentPackage = rootInActiveWindow?.packageName?.toString()
-
-        // RENAME TIER: Check if this is a rename command (BEFORE other tiers)
-        if (isRenameCommand(normalizedCommand)) {
-            serviceScope.launch {
-                try {
-                    Log.i(TAG, "Rename command detected: '$normalizedCommand'")
-                    val handled = handleRenameCommand(normalizedCommand, currentPackage)
-
-                    if (handled) {
-                        Log.i(TAG, "✓ Rename command executed successfully")
-                        return@launch // Rename handled, done
-                    } else {
-                        Log.w(TAG, "Rename command failed, not continuing to regular tiers")
-                        // Don't fall through to regular commands - rename failures are explicit
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error processing rename command: ${e.message}", e)
-                }
-            }
-            return // Return here to prevent dual execution
-        }
 
         // WEB TIER: Check if this is a web command (BEFORE other tiers)
         if (currentPackage != null && webCommandCoordinator.isCurrentAppBrowser(currentPackage)) {
@@ -1901,80 +1199,6 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
         // Not a browser, handle as regular command through tier system
         handleRegularCommand(normalizedCommand, confidence)
-    }
-
-    /**
-     * Check if voice input is a rename command
-     *
-     * Detects patterns:
-     * - "rename X to Y"
-     * - "rename X as Y"
-     * - "change X to Y"
-     *
-     * @param voiceInput Normalized voice input (lowercase)
-     * @return true if rename command, false otherwise
-     */
-    private fun isRenameCommand(voiceInput: String): Boolean {
-        val patterns = listOf(
-            Regex("rename .+ to .+"),
-            Regex("rename .+ as .+"),
-            Regex("change .+ to .+")
-        )
-        return patterns.any { it.matches(voiceInput) }
-    }
-
-    /**
-     * Handle rename command
-     *
-     * Initializes RenameCommandHandler on-demand (requires TTS from speech engine).
-     * Processes rename command and returns result.
-     *
-     * @param voiceInput Normalized voice input
-     * @param packageName Current app package (or null if unavailable)
-     * @return true if rename succeeded, false if failed
-     */
-    private suspend fun handleRenameCommand(
-        voiceInput: String,
-        packageName: String?
-    ): Boolean = withContext(Dispatchers.IO) {
-        try {
-            // Validate package name
-            if (packageName == null) {
-                Log.w(TAG, "Cannot process rename: no current package")
-                return@withContext false
-            }
-
-            // Initialize handler on-demand if not already initialized
-            if (renameCommandHandler == null) {
-                Log.d(TAG, "Initializing RenameCommandHandler on-demand...")
-                renameCommandHandler = RenameCommandHandler(context = applicationContext)
-                Log.d(TAG, "✓ RenameCommandHandler initialized")
-            }
-
-            // Process rename command
-            // TODO: Parse voice input to extract old name and new name
-            // Format expected: "rename [old name] to [new name]"
-            val renamePattern = "rename\\s+(.+?)\\s+to\\s+(.+)".toRegex(RegexOption.IGNORE_CASE)
-            val matchResult = renamePattern.find(voiceInput)
-
-            if (matchResult != null) {
-                val (oldName, newName) = matchResult.destructured
-                val result = renameCommandHandler?.handleRename(oldName.trim(), newName.trim())
-                val success = result is RenameResult.Success
-                if (success) {
-                    Log.i(TAG, "Rename successful: $oldName → $newName")
-                } else {
-                    Log.e(TAG, "Rename failed for: $oldName → $newName")
-                }
-                success
-            } else {
-                Log.w(TAG, "Could not parse rename command from: $voiceInput")
-                false
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error in handleRenameCommand", e)
-            false
-        }
     }
 
     /**
@@ -2134,7 +1358,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
      * Phase 1: Enable fallback mode when CommandManager is unavailable
      * Called by ServiceMonitor during graceful degradation
      */
-    fun enableFallbackMode() {
+    override fun enableFallbackMode() {
         fallbackModeEnabled = true
         Log.w(TAG, "Fallback mode enabled - using basic command handling only")
     }
@@ -2167,7 +1391,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
      * 2. Fall back to ActionCoordinator if hash-based fails or not initialized
      * 3. Log execution path for debugging
      */
-    private fun executeCommandInternal(command: String) {
+    private fun executeCommand(command: String) {
         serviceScope.launch {
             var commandExecuted = false
 
@@ -2220,10 +1444,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             metrics["isServiceReady"] = isServiceReady
 
             // Add debouncing metrics
-            val debounceStats = eventDebouncer.getStats()
-            metrics["debounce_eventCount"] = debounceStats.eventsReceived
-            metrics["debounce_triggeredCount"] = debounceStats.eventsExecuted
-            metrics["debounce_droppedCount"] = debounceStats.eventsSuppressed
+            metrics.putAll(eventDebouncer.getMetrics())
 
             // Add event count metrics
             eventCounts.forEach { (eventType, count) ->
@@ -2260,12 +1481,12 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                 while (isActive) {
                     try {
                         // Log current memory stats
-                        val status = resourceMonitor.getStatus()
-                        Log.d(TAG, "Memory: ${status.memoryUsagePercent}% used (${status.memoryUsedMb}/${status.memoryMaxMb}MB)")
+                        resourceMonitor.logMemoryStats(TAG)
 
                         // Warn if memory pressure is high
-                        if (status.level == ResourceMonitor.ResourceLevel.WARNING || status.level == ResourceMonitor.ResourceLevel.CRITICAL) {
-                            Log.w(TAG, "⚠️ High memory pressure detected: ${status.memoryUsagePercent}% heap usage")
+                        if (resourceMonitor.isMemoryPressureHigh()) {
+                            val stats = resourceMonitor.getMemoryStats()
+                            Log.w(TAG, "⚠️ High memory pressure detected: ${stats.usagePercentage * 100}% heap usage")
                             Log.w(TAG, "   Consider reducing scraping depth or skipping operations")
                         }
 
@@ -2294,10 +1515,6 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     override fun onDestroy() {
         Log.i(TAG, "VoiceOS Service destroying - starting cleanup")
 
-        // FIX (2025-12-22): C2 - Transition to DESTROYED state
-        serviceState.set(ServiceState.DESTROYED)
-        Log.d(TAG, "Service state: DESTROYED")
-
         // Cleanup hash-based scraping integration
         scrapingIntegration?.let { integration ->
             try {
@@ -2321,8 +1538,12 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             Log.i(TAG, "✓ VoiceCommandProcessor reference cleared")
         }
 
-        // P2-8a: Database cleanup via DatabaseManager
-        dbManager.cleanup()
+        // Note: Database is singleton and managed by Room lifecycle - no explicit cleanup needed
+        if (scrapingDatabase != null) {
+            Log.d(TAG, "Clearing scraping database reference (Room manages lifecycle)...")
+            scrapingDatabase = null
+            Log.i(TAG, "✓ Scraping database reference cleared")
+        }
 
         // Cleanup LearnApp integration
         // FIX (2025-12-04): Re-enabled cleanup - CRITICAL for fixing ProgressOverlay memory leak
@@ -2341,76 +1562,6 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                 Log.d(TAG, "LearnApp integration reference cleared")
             }
         } ?: Log.d(TAG, "LearnApp integration was not initialized, skipping cleanup")
-
-        // Cleanup JIT Learning Service (Phase 3: JIT-LearnApp Separation - 2025-12-18)
-        if (jitServiceBound) {
-            try {
-                Log.d(TAG, "Unbinding from JIT Learning Service...")
-                unbindService(jitServiceConnection)
-                jitServiceBound = false
-                Log.i(TAG, "✓ JIT Learning Service unbound successfully")
-            } catch (e: Exception) {
-                Log.e(TAG, "✗ Error unbinding from JIT Learning Service", e)
-                Log.e(TAG, "Cleanup error type: ${e.javaClass.simpleName}")
-                Log.e(TAG, "Cleanup error message: ${e.message}")
-            }
-        } else {
-            Log.d(TAG, "JIT Learning Service was not bound, skipping unbind")
-        }
-
-        // Stop JIT Learning Service
-        try {
-            Log.d(TAG, "Stopping JIT Learning Service...")
-            val intent = Intent(this, com.augmentalis.jitlearning.JITLearningService::class.java)
-            stopService(intent)
-            Log.i(TAG, "✓ JIT Learning Service stopped successfully")
-        } catch (e: Exception) {
-            Log.e(TAG, "✗ Error stopping JIT Learning Service", e)
-            Log.e(TAG, "Stop error type: ${e.javaClass.simpleName}")
-            Log.e(TAG, "Stop error message: ${e.message}")
-        }
-
-        // Cleanup Command Discovery integration
-        // PHASE 3 (2025-12-08): Cleanup CommandDiscoveryIntegration
-        discoveryIntegration?.let { integration ->
-            try {
-                Log.d(TAG, "Cleaning up Command Discovery integration...")
-                integration.cleanup()
-                Log.i(TAG, "✓ Command Discovery integration cleaned up successfully")
-            } catch (e: Exception) {
-                Log.e(TAG, "✗ Error cleaning up Command Discovery integration", e)
-                Log.e(TAG, "Cleanup error type: ${e.javaClass.simpleName}")
-                Log.e(TAG, "Cleanup error message: ${e.message}")
-            } finally {
-                discoveryIntegration = null
-                Log.d(TAG, "Command Discovery integration reference cleared")
-            }
-        } ?: Log.d(TAG, "Command Discovery integration was not initialized, skipping cleanup")
-
-        // Cleanup rename feature components
-        try {
-            Log.d(TAG, "Cleaning up rename feature components...")
-
-            // Clear RenameHintOverlay (no explicit cleanup needed, just clear reference)
-            renameHintOverlay = null
-            Log.d(TAG, "✓ RenameHintOverlay reference cleared")
-
-            // Clear ScreenActivityDetector (no explicit cleanup needed)
-            screenActivityDetector = null
-            Log.d(TAG, "✓ ScreenActivityDetector reference cleared")
-
-            // Shutdown TTS in RenameCommandHandler if initialized
-            renameCommandHandler?.let {
-                // Note: TTS cleanup should be handled by the handler itself if needed
-                Log.d(TAG, "Clearing RenameCommandHandler reference")
-            }
-            renameCommandHandler = null
-            Log.d(TAG, "✓ RenameCommandHandler reference cleared")
-
-            Log.i(TAG, "✓ Rename feature components cleaned up")
-        } catch (e: Exception) {
-            Log.e(TAG, "✗ Error cleaning up rename feature", e)
-        }
 
         // Cleanup OverlayManager (lazy delegate handles initialization check)
         try {
@@ -2446,8 +1597,16 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             Log.e(TAG, "✗ Error cleaning up UIScrapingEngine", e)
         }
 
-        // P2-8d: Unregister lifecycle coordinator to prevent memory leak
-        lifecycleCoordinator.unregister()
+        // FIX (2025-12-05): Unregister from ProcessLifecycleOwner to prevent memory leak
+        // Leak signature: bd0178976084c8549ea1a5e0417e0d6ffe34eaa3
+        // Root cause: addObserver(this) in onServiceConnected() without matching removeObserver()
+        try {
+            Log.d(TAG, "Unregistering from ProcessLifecycleOwner...")
+            ProcessLifecycleOwner.get().lifecycle.removeObserver(this)
+            Log.i(TAG, "✓ ProcessLifecycleOwner observer unregistered (memory leak fixed)")
+        } catch (e: Exception) {
+            Log.e(TAG, "✗ Error unregistering lifecycle observer", e)
+        }
 
         // Cancel coroutines with proper join to ensure all jobs complete
         try {
@@ -2484,7 +1643,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             Log.d(TAG, "Clearing caches and debouncer...")
             commandCache.clear()
             nodeCache.clear()
-            eventDebouncer.cancel()
+            eventDebouncer.clearAll()
             Log.i(TAG, "✓ Caches and debouncer cleared successfully")
         } catch (e: Exception) {
             Log.e(TAG, "✗ Error clearing caches", e)
@@ -2493,7 +1652,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
         // Cleanup CommandManager and ServiceMonitor
         try {
             Log.d(TAG, "Cleaning up ServiceMonitor...")
-            serviceMonitor?.stop()
+            serviceMonitor?.cleanup()
             serviceMonitor = null
             Log.i(TAG, "✓ ServiceMonitor cleaned up successfully")
         } catch (e: Exception) {
@@ -2525,47 +1684,6 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
     override fun getAppCommands() = appsCommand
 
-    // ============================================================
-    // IVoiceOSContext interface implementations
-    // ============================================================
-
-    override val context: Context
-        get() = this
-
-    // Note: These properties satisfy IVoiceOSContext interface requirements
-    override val accessibilityService: AccessibilityService
-        get() = this
-
-    override val windowManager: android.view.WindowManager
-        get() = getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
-
-    // Override getPackageManager() to satisfy both AccessibilityService and IVoiceOSContext
-    override fun getPackageManager(): android.content.pm.PackageManager = applicationContext.packageManager
-
-    // Note: getRootNodeInActiveWindow() is provided by IVoiceOSContext interface with default implementation
-    // No need to override getRootInActiveWindow() here - it's already available from AccessibilityService
-
-    override fun showToast(message: String) {
-        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show()
-    }
-
-    override fun vibrate(duration: Long) {
-        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator?.vibrate(
-                android.os.VibrationEffect.createOneShot(
-                    duration,
-                    android.os.VibrationEffect.DEFAULT_AMPLITUDE
-                )
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator?.vibrate(duration)
-        }
-    }
-
-    // ============================================================
-
     private fun getCenterOffset(): CursorOffset {
         val displayMetrics = resources.displayMetrics
         val centerX = displayMetrics.widthPixels / 2
@@ -2579,8 +1697,8 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             if (intent?.action == Const.ACTION_CONFIG_UPDATE) {
                 config = ServiceConfiguration.loadFromPreferences(this@VoiceOSService)
                 Log.i(TAG, "CHANGE_LANG onReceive config = $config")
-                speechEngineManager.updateConfiguration(
-                    SpeechConfiguration(
+                speechEngineManager?.updateConfiguration(
+                    SpeechConfigurationData(
                         language = config.voiceLanguage,
                         mode = SpeechMode.DYNAMIC_COMMAND,
                         enableVAD = true,
@@ -2600,407 +1718,296 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
     /**
      * Start voice recognition with specified configuration
-     * P2-8b: Delegated to IPCManager
+     * Phase 3: Initial implementation - delegates to existing speech engine
      */
-    fun startVoiceRecognition(language: String, recognizerType: String): Boolean =
-        ipcManager.startVoiceRecognition(language, recognizerType)
+    fun startVoiceRecognition(language: String, recognizerType: String): Boolean {
+        return try {
+            Log.i(TAG, "IPC: startVoiceRecognition(language=$language, type=$recognizerType)")
+            if (!isServiceReady) {
+                Log.w(TAG, "Service not ready, cannot start voice recognition")
+                return false
+            }
+
+            val mode = when (recognizerType.lowercase()) {
+                "continuous" -> SpeechMode.DYNAMIC_COMMAND  // Use DYNAMIC_COMMAND for continuous
+                "command" -> SpeechMode.DYNAMIC_COMMAND
+                "system" -> SpeechMode.DYNAMIC_COMMAND
+                "static" -> SpeechMode.STATIC_COMMAND
+                else -> {
+                    Log.w(TAG, "Unknown recognizer type: $recognizerType, using DYNAMIC_COMMAND")
+                    SpeechMode.DYNAMIC_COMMAND
+                }
+            }
+
+            // Update speech configuration with new language
+            speechEngineManager?.updateConfiguration(
+                SpeechConfigurationData(
+                    language = language,
+                    mode = mode,
+                    enableVAD = true,
+                    confidenceThreshold = 4000F,
+                    maxRecordingDuration = 30000,
+                    timeoutDuration = 5000,
+                    enableProfanityFilter = false
+                )
+            )
+
+            // Start listening
+            speechEngineManager?.startListening()
+            Log.i(TAG, "Voice recognition started successfully")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting voice recognition", e)
+            false
+        }
+    }
 
     /**
      * Stop currently active voice recognition
-     * P2-8b: Delegated to IPCManager
+     * Phase 3: Initial implementation
      */
-    fun stopVoiceRecognition(): Boolean =
-        ipcManager.stopVoiceRecognition()
+    fun stopVoiceRecognition(): Boolean {
+        return try {
+            Log.i(TAG, "IPC: stopVoiceRecognition()")
+            if (!isServiceReady) {
+                Log.w(TAG, "Service not ready")
+                return false
+            }
+
+            speechEngineManager?.stopListening()
+            Log.i(TAG, "Voice recognition stopped successfully")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping voice recognition", e)
+            false
+        }
+    }
 
     /**
      * Trigger app learning for currently focused app
-     * P2-8b: Delegated to IPCManager
+     * Phase 3: Initial implementation - uses existing scraping engine
      */
-    fun learnCurrentApp(): String =
-        ipcManager.learnCurrentApp()
+    fun learnCurrentApp(): String {
+        return try {
+            Log.i(TAG, "IPC: learnCurrentApp()")
+            if (!isServiceReady) {
+                Log.w(TAG, "Service not ready")
+                return """{"error": "Service not ready"}"""
+            }
+
+            // Scrape current screen using existing engine
+            val rootNode = rootInActiveWindow
+            if (rootNode == null) {
+                Log.w(TAG, "No active window available for learning")
+                return """{"error": "No active window"}"""
+            }
+
+            val packageName = rootNode.packageName?.toString() ?: "unknown"
+            val elements = uiScrapingEngine.extractUIElements(null)
+            rootNode.recycle()
+
+            // Convert to JSON format
+            val gson = GsonBuilder().setPrettyPrinting().create()
+            val result = mapOf(
+                "success" to true,
+                "packageName" to packageName,
+                "elementCount" to elements.size,
+                "elements" to elements.take(50).map { element: UIElement ->  // Limit to 50 for performance
+                    mapOf(
+                        "text" to element.text,
+                        "contentDescription" to (element.contentDescription ?: ""),
+                        "className" to (element.className ?: ""),
+                        "clickable" to element.isClickable,
+                        "depth" to element.depth
+                    )
+                }
+            )
+
+            gson.toJson(result)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error learning current app", e)
+            """{"error": "${e.message}"}"""
+        }
+    }
 
     /**
      * Execute accessibility action by action type string
-     * P2-8b: Delegated to IPCManager
+     * Maps action type names to GLOBAL_ACTION constants
      */
-    fun executeAccessibilityActionByType(actionType: String): Boolean =
-        ipcManager.executeAccessibilityActionByType(actionType)
+    fun executeAccessibilityActionByType(actionType: String): Boolean {
+        Log.i(TAG, "IPC: executeAccessibilityActionByType(actionType=$actionType)")
+        if (!isServiceReady) {
+            Log.w(TAG, "Service not ready")
+            return false
+        }
+
+        val normalizedAction = actionType.lowercase().trim()
+        return when (normalizedAction) {
+            "back", "go back" -> performGlobalAction(GLOBAL_ACTION_BACK)
+            "home", "go home" -> performGlobalAction(GLOBAL_ACTION_HOME)
+            "recent", "recents", "recent apps" -> performGlobalAction(GLOBAL_ACTION_RECENTS)
+            "notifications", "notification panel" -> performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+            "settings", "quick settings" -> performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+            "power", "power menu" -> performGlobalAction(GLOBAL_ACTION_POWER_DIALOG)
+            "screenshot", "take screenshot" -> performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
+            "split screen", "split" -> performGlobalAction(GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN)
+            "lock", "lock screen" -> performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
+            else -> {
+                Log.w(TAG, "Unknown action type: $actionType")
+                false
+            }
+        }
+    }
 
     /**
      * Scrape current screen and return JSON representation
-     * P2-8b: Delegated to IPCManager
+     * Used by IPC for external apps to get screen state
      */
-    fun scrapeScreen(): String =
-        ipcManager.scrapeScreen()
+    fun scrapeScreen(): String {
+        Log.i(TAG, "IPC: scrapeScreen()")
+        return try {
+            if (!isServiceReady) {
+                Log.w(TAG, "Service not ready")
+                return """{"error": "Service not ready"}"""
+            }
+
+            val rootNode = rootInActiveWindow
+            if (rootNode == null) {
+                Log.w(TAG, "No active window available for scraping")
+                return """{"error": "No active window"}"""
+            }
+
+            val packageName = rootNode.packageName?.toString() ?: "unknown"
+            val elements = uiScrapingEngine.extractUIElements(null)
+            rootNode.recycle()
+
+            // Convert to simplified JSON format
+            val gson = GsonBuilder().create()
+            val result = mapOf(
+                "success" to true,
+                "packageName" to packageName,
+                "elementCount" to elements.size,
+                "elements" to elements.take(100).map { element ->
+                    mapOf(
+                        "text" to element.text,
+                        "normalizedText" to element.normalizedText,
+                        "clickable" to element.isClickable,
+                        "className" to (element.className ?: "")
+                    )
+                }
+            )
+
+            gson.toJson(result)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error scraping screen", e)
+            """{"error": "${e.message}"}"""
+        }
+    }
 
     /**
      * Get list of apps that have learned voice commands
-     * P2-8b: Delegated to IPCManager
+     * Phase 3: Implementation - queries AppScrapingDatabase
      */
-    fun getLearnedApps(): List<String> =
-        ipcManager.getLearnedApps()
-
-    /**
-     * Get voice commands available for specific app
-     * P2-8b: Delegated to IPCManager
-     */
-    fun getCommandsForApp(packageName: String): List<String> =
-        ipcManager.getCommandsForApp(packageName)
-
-    /**
-     * Register dynamic voice command at runtime
-     * P2-8b: Delegated to IPCManager
-     */
-    fun registerDynamicCommand(commandText: String, actionJson: String): Boolean =
-        ipcManager.registerDynamicCommand(commandText, actionJson)
-
-    // ============================================================
-    // IVoiceOSService Interface Implementation
-    // ============================================================
-
-    override fun isServiceReady(): Boolean = isServiceReady
-
-    override fun isServiceRunning(): Boolean = instanceRef?.get() != null
-
-    override fun getStatus(): String {
-        return when {
-            !isServiceReady -> IVoiceOSService.STATE_INITIALIZING
-            isListening() -> IVoiceOSService.STATE_LISTENING
-            isCommandProcessing.get() -> IVoiceOSService.STATE_PROCESSING
-            else -> IVoiceOSService.STATE_READY
-        }
-    }
-
-    override fun observeStatus(): kotlinx.coroutines.flow.StateFlow<String> {
-        return kotlinx.coroutines.flow.MutableStateFlow(getStatus())
-    }
-
-    override fun startListening(): Boolean {
+    fun getLearnedApps(): List<String> {
+        Log.i(TAG, "IPC: getLearnedApps()")
         return try {
-            speechEngineManager.startListening()
-            true
+            val database = scrapingDatabase
+            if (database == null) {
+                Log.w(TAG, "Scraping database not initialized")
+                return emptyList()
+            }
+
+            // Query all apps from database
+            runBlocking(Dispatchers.IO) {
+                val apps = database.getInstalledApps()
+                Log.d(TAG, "Found ${apps.size} learned apps")
+                apps.map { it.packageName } // Return list of app IDs (package names)
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start listening", e)
-            false
-        }
-    }
-
-    override fun stopListening(): Boolean {
-        return try {
-            speechEngineManager.stopListening()
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to stop listening", e)
-            false
-        }
-    }
-
-    override fun isListening(): Boolean {
-        return speechEngineManager.speechState.value.isListening
-    }
-
-    override fun executeCommand(commandText: String): Boolean {
-        return try {
-            handleVoiceCommand(commandText, 1.0f)  // Use max confidence for manual execution
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to execute command: $commandText", e)
-            false
-        }
-    }
-
-    override fun executeCommand(command: Command): Boolean {
-        return try {
-            // Use the command text for execution with max confidence
-            handleVoiceCommand(command.text, 1.0f)
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to execute command: ${command.text}", e)
-            false
-        }
-    }
-
-    override fun isCommandProcessing(): Boolean {
-        return isCommandProcessing.get()
-    }
-
-    override fun getRootNodeInActiveWindow(): android.view.accessibility.AccessibilityNodeInfo? {
-        return rootInActiveWindow
-    }
-
-    override fun getAvailableCommands(): List<String> {
-        return commandCache.toList()
-    }
-
-    override fun getCommandForApp(packageName: String): String? {
-        return appsCommand.entries.firstOrNull { it.value == packageName }?.key
-    }
-
-    override fun updateConfiguration(config: Map<String, Any>) {
-        // Update configuration from map
-        Log.d(TAG, "Configuration updated: $config")
-    }
-
-    override fun getConfiguration(): Map<String, Any> {
-        return mapOf(
-            "enabled" to config.enabled,
-            "verboseLogging" to config.verboseLogging,
-            "autoStart" to config.autoStart,
-            "voiceLanguage" to config.voiceLanguage,
-            "fingerprintGesturesEnabled" to config.fingerprintGesturesEnabled,
-            "isLowResourceMode" to config.isLowResourceMode
-        )
-    }
-
-    override fun speak(text: String, priority: Int) {
-        // TTS not yet implemented - log for now
-        Log.d(TAG, "TTS: $text (priority: $priority)")
-    }
-
-    override fun getStatistics(): Map<String, Any> {
-        return mapOf(
-            "eventCounts" to eventCounts.mapKeys { it.key.toString() }.mapValues { it.value.get() },
-            "commandCacheSize" to commandCache.size,
-            "staticCommandCacheSize" to staticCommandCache.size,
-            "appCommandsSize" to appsCommand.size
-        )
-    }
-
-    override fun resetStatistics() {
-        eventCounts.values.forEach { it.set(0) }
-    }
-
-    override fun getResourceUsage(): Map<String, Any> {
-        val status = resourceMonitor.getStatus()
-        return mapOf(
-            "memoryUsedMb" to status.memoryUsedMb,
-            "memoryMaxMb" to status.memoryMaxMb,
-            "memoryUsagePercent" to status.memoryUsagePercent,
-            "nativeMemoryMb" to status.nativeMemoryMb,
-            "cpuUsagePercent" to status.cpuUsagePercent,
-            "level" to status.level.name,
-            "warnings" to status.warnings
-        )
-    }
-
-    override fun checkHealth(): IVoiceOSService.HealthStatus {
-        val isDatabaseReady = try {
-            dbManager.sqlDelightManager.getDatabase() != null
-        } catch (e: Exception) {
-            false
-        }
-
-        val isHealthy = isServiceReady && isDatabaseReady
-        val status = when {
-            isHealthy -> IVoiceOSService.HealthStatus.Status.HEALTHY
-            isServiceReady -> IVoiceOSService.HealthStatus.Status.DEGRADED
-            else -> IVoiceOSService.HealthStatus.Status.UNHEALTHY
-        }
-
-        return IVoiceOSService.HealthStatus(
-            status = status,
-            message = when (status) {
-                IVoiceOSService.HealthStatus.Status.HEALTHY -> "All systems operational"
-                IVoiceOSService.HealthStatus.Status.DEGRADED -> "Service running with limited functionality"
-                IVoiceOSService.HealthStatus.Status.UNHEALTHY -> "Service not ready"
-            },
-            details = mapOf(
-                "serviceReady" to isServiceReady,
-                "databaseReady" to isDatabaseReady,
-                "voiceInitialized" to isVoiceInitialized
-            )
-        )
-    }
-
-    // ============================================================
-    // IVoiceOSServiceInternal Interface Implementation
-    // ============================================================
-
-    // Service context and resources
-    // Note: getApplicationContext() is inherited from Service
-    // Note: getAccessibilityService() and getWindowManager() are satisfied by IVoiceOSContext property getters below
-
-    override fun getServiceScope(): CoroutineScope = serviceScope
-
-    override fun getCommandScope(): CoroutineScope = coroutineScopeCommands
-
-    // Core service components
-    override fun getCommandManager(): CommandManager {
-        return commandManagerInstance
-            ?: throw IllegalStateException("CommandManager not initialized. Ensure service initialization completed successfully.")
-    }
-
-    override fun getDatabaseManager(): DatabaseManager = dbManager
-
-    override fun getIPCManager(): IPCManager = ipcManager
-
-    // Note: speechEngineManager, overlayManager, uiScrapingEngine, actionCoordinator
-    // are satisfied by public property declarations above
-
-    override val voiceRecognitionManager: com.augmentalis.voiceoscore.accessibility.recognition.VoiceRecognitionManager?
-        get() = null
-
-    // Service state and lifecycle
-    override fun isInitialized(): Boolean = isServiceReady
-
-    override fun setInitialized(initialized: Boolean) {
-        isServiceReady = initialized
-    }
-
-    override fun isVoiceInitialized(): Boolean = isVoiceInitialized
-
-    override fun setVoiceInitialized(initialized: Boolean) {
-        isVoiceInitialized = initialized
-    }
-
-    override fun requestRestart() {
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            // Trigger service restart by stopping and letting system restart
-            stopSelf()
-        }, 500)
-    }
-
-    // Accessibility operations
-    override fun getRootNodeWithRetry(maxRetries: Int, delayMs: Long): AccessibilityNodeInfo? {
-        repeat(maxRetries) { attempt ->
-            rootInActiveWindow?.let { return it }
-            if (attempt < maxRetries - 1) Thread.sleep(delayMs)
-        }
-        return null
-    }
-
-    override fun findNodes(predicate: (UIScrapingEngine.UIElement) -> Boolean): List<UIScrapingEngine.UIElement> {
-        return try {
-            uiScrapingEngine.extractUIElements(null).filter(predicate)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error finding nodes", e)
+            Log.e(TAG, "Error querying learned apps", e)
             emptyList()
         }
     }
 
-    override fun refreshUICache() {
-        // Force re-scraping by clearing cache
-        try {
-            uiScrapingEngine.clearCache()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error refreshing UI cache", e)
-        }
-    }
-
-    // Command cache management
-    override fun getCachedCommands(): List<String> = commandCache.toList()
-
-    override fun getStaticCommands(): List<String> = staticCommandCache.toList()
-
-    override fun getDynamicCommands(): List<String> =
-        commandCache.filter { it !in staticCommandCache }
-
-    override fun addDynamicCommand(command: String) {
-        commandCache.add(command)
-    }
-
-    override fun removeDynamicCommand(command: String) {
-        commandCache.remove(command)
-    }
-
-    override fun clearDynamicCommands() {
-        commandCache.removeAll { it !in staticCommandCache }
-    }
-
-    override fun reloadCommands() {
-        serviceScope.launch {
-            try {
-                commandCache.clear()
-                commandCache.addAll(staticCommandCache)
-                Log.d(TAG, "Reloaded ${commandCache.size} commands")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error reloading commands", e)
-            }
-        }
-    }
-
-    // Event handling
-    override fun queueAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent, priority: Int) {
-        queueEvent(event)
-    }
-
-    // Notifications and feedback
-    override fun updateNotification(title: String, message: String) {
-        // Log notification update (full notification infrastructure not yet implemented)
-        Log.d(TAG, "Notification: $title - $message")
-    }
-
-    override fun sendFeedback(message: String, type: IVoiceOSServiceInternal.FeedbackType) {
-        when (type) {
-            IVoiceOSServiceInternal.FeedbackType.SPEECH -> {
-                // TTS not yet implemented
-                Log.d(TAG, "TTS Feedback: $message")
-            }
-            IVoiceOSServiceInternal.FeedbackType.VIBRATION -> vibrate(100)
-            IVoiceOSServiceInternal.FeedbackType.TOAST -> showToast(message)
-            IVoiceOSServiceInternal.FeedbackType.ALL -> {
-                Log.d(TAG, "TTS Feedback: $message")
-                vibrate(100)
-                showToast(message)
-            }
-        }
-    }
-
-    // Configuration and settings
-    override fun getConfigValue(key: String): Any? {
-        return when (key) {
-            "enabled" -> config.enabled
-            "verboseLogging" -> config.verboseLogging
-            "autoStart" -> config.autoStart
-            "voiceLanguage" -> config.voiceLanguage
-            "fingerprintGesturesEnabled" -> config.fingerprintGesturesEnabled
-            "isLowResourceMode" -> config.isLowResourceMode
-            "shouldProceed" -> config.shouldProceed
-            else -> null
-        }
-    }
-
-    override fun setConfigValue(key: String, value: Any) {
-        // Note: ServiceConfiguration is immutable, so we need to create a new instance
-        config = when (key) {
-            "enabled" -> config.copy(enabled = value as Boolean)
-            "verboseLogging" -> config.copy(verboseLogging = value as Boolean)
-            "autoStart" -> config.copy(autoStart = value as Boolean)
-            "voiceLanguage" -> config.copy(voiceLanguage = value as String)
-            "fingerprintGesturesEnabled" -> config.copy(fingerprintGesturesEnabled = value as Boolean)
-            "isLowResourceMode" -> config.copy(isLowResourceMode = value as Boolean)
-            "shouldProceed" -> config.copy(shouldProceed = value as Boolean)
-            else -> config
-        }
-    }
-
-    override fun applyConfigChanges() {
-        // Reload configuration from preferences and reconfigure components
-        config = ServiceConfiguration.loadFromPreferences(applicationContext)
-        Log.d(TAG, "Configuration reloaded and applied")
-    }
-
-    // Monitoring and diagnostics
-    override fun logMetric(metric: String, value: Any) {
-        // Log metric to logcat
-        Log.d(TAG, "Metric: $metric = $value")
-    }
-
-    override fun getMetrics(): Map<String, Any> {
-        return serviceMonitor?.getMetrics() ?: emptyMap()
-    }
-
-    override fun checkResourceHealth(): Boolean {
+    /**
+     * Get voice commands available for specific app
+     * Phase 3: Implementation - queries GeneratedCommandDao
+     */
+    fun getCommandsForApp(packageName: String): List<String> {
+        Log.i(TAG, "IPC: getCommandsForApp(packageName=$packageName)")
         return try {
-            !(serviceMonitor?.shouldReduceMemory() ?: false)
+            val database = scrapingDatabase
+            if (database == null) {
+                Log.w(TAG, "Scraping database not initialized")
+                return emptyList()
+            }
+
+            // Query commands for app from database
+            // TODO: Implement proper app-command filtering (requires join with elements table)
+            runBlocking(Dispatchers.IO) {
+                val commands = database.databaseManager.generatedCommands.getAll()
+                Log.d(TAG, "Found ${commands.size} total commands (filtering by app not yet implemented)")
+                commands.map { it.commandText } // Return list of command strings
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking resource health", e)
-            true
+            Log.e(TAG, "Error querying commands for app $packageName", e)
+            emptyList()
         }
     }
 
-    override fun requestGC() {
-        System.gc()
-        Log.d(TAG, "Garbage collection requested")
+    /**
+     * Register dynamic voice command at runtime
+     * Phase 3: Implementation - creates and stores command in database
+     */
+    fun registerDynamicCommand(commandText: String, actionJson: String): Boolean {
+        return try {
+            Log.i(TAG, "IPC: registerDynamicCommand(command=$commandText)")
+            if (!isServiceReady) {
+                Log.w(TAG, "Service not ready")
+                return false
+            }
+
+            val database = scrapingDatabase
+            if (database == null) {
+                Log.w(TAG, "Scraping database not initialized")
+                return false
+            }
+
+            // Parse actionJson to extract target element hash and action type
+            val actionData = try {
+                prettyGson.fromJson(actionJson, Map::class.java) as? Map<String, Any> ?: emptyMap()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to parse actionJson", e)
+                return false
+            }
+
+            // Create and insert command DTO
+            runBlocking(Dispatchers.IO) {
+                val timestamp = System.currentTimeMillis()
+                val command = GeneratedCommandDTO(
+                    id = 0L, // Auto-generated by SQLDelight
+                    commandText = commandText.lowercase(),
+                    elementHash = actionData["elementHash"] as? String ?: "",
+                    actionType = actionData["actionType"] as? String ?: "click",
+                    confidence = 1.0,
+                    synonyms = "[]", // Empty JSON array
+                    isUserApproved = 1L,
+                    usageCount = 0L,
+                    lastUsed = null,
+                    createdAt = timestamp
+                )
+
+                database.databaseManager.generatedCommands.insert(command)
+                Log.i(TAG, "Dynamic command registered successfully: $commandText")
+            }
+
+            // Note: Commands will be reloaded on next service restart
+            Log.d(TAG, "Command registered. Restart VoiceOS to reload commands.")
+
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error registering dynamic command", e)
+            false
+        }
     }
 }

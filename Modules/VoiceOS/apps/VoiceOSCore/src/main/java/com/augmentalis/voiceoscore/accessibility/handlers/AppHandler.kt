@@ -11,20 +11,20 @@ package com.augmentalis.voiceoscore.accessibility.handlers
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.util.Log
-import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
+import com.augmentalis.voiceoscore.accessibility.VoiceOSService
 
 /**
  * Handler for application-related actions
  */
 class AppHandler(
-    private val context: IVoiceOSContext
+    private val service: VoiceOSService
 ) : ActionHandler {
 
     companion object {
         private const val TAG = "AppHandler"
     }
 
-    private val packageManager: PackageManager = context.getPackageManager()
+    private val packageManager: PackageManager = service.packageManager
 
     override fun execute(
         category: ActionCategory,
@@ -32,7 +32,7 @@ class AppHandler(
         params: Map<String, Any>
     ): Boolean {
         val normalizedAction = action.lowercase().trim()
-        val appPackage = context.getAppCommands()[normalizedAction]
+        val appPackage = service.getAppCommands()[normalizedAction]
         return when {
             appPackage != null -> {
                 launchApp(appPackage)
@@ -47,11 +47,11 @@ class AppHandler(
 
     override fun canHandle(action: String): Boolean {
         val normalized = action.lowercase().trim()
-        return context.getAppCommands().containsKey(normalized)
+        return service.getAppCommands().containsKey(normalized)
     }
 
     override fun getSupportedActions(): List<String> {
-        return context.getAppCommands().keys.toList()
+        return service.getAppCommands().keys.toList()
     }
 
     private fun launchApp(packageName: String?): Boolean {
@@ -68,7 +68,7 @@ class AppHandler(
 
         return try {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(intent)
+            service.startActivity(intent)
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to launch app: $packageName", e)

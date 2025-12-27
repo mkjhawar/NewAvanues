@@ -18,14 +18,15 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
+import com.augmentalis.voiceoscore.accessibility.VoiceOSService
+import com.augmentalis.voiceoscore.utils.requireNotNull
 
 /**
  * Handler for Bluetooth-related voice commands
  * Provides device connectivity control and settings access
  */
 class BluetoothHandler(
-    private val service: IVoiceOSContext
+    private val service: VoiceOSService
 ) : ActionHandler {
 
     companion object {
@@ -129,7 +130,7 @@ class BluetoothHandler(
             // Check permissions for Android 12+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val hasPermission = ContextCompat.checkSelfPermission(
-                    service.context,
+                    service, 
                     Manifest.permission.BLUETOOTH_CONNECT
                 ) == PackageManager.PERMISSION_GRANTED
 
@@ -140,12 +141,10 @@ class BluetoothHandler(
                 }
             }
 
-            val adapter = bluetoothAdapter ?: run {
-                Log.e(TAG, "Bluetooth adapter became null")
-                openBluetoothSettings()
-                return true
-            }
-
+            val adapter = bluetoothAdapter.requireNotNull(
+                "BluetoothAdapter",
+                "Adapter null after initial check - this should not happen"
+            )
             val currentState = adapter.state == BluetoothAdapter.STATE_ON
 
             if (enable && !currentState) {
@@ -187,13 +186,16 @@ class BluetoothHandler(
      * Toggle Bluetooth state
      */
     private fun toggleBluetooth(): Boolean {
-        val adapter = bluetoothAdapter ?: run {
-            Log.w(TAG, "Bluetooth adapter not available")
+        if (bluetoothAdapter == null) {
             openBluetoothSettings()
             return true
         }
 
         return try {
+            val adapter = bluetoothAdapter.requireNotNull(
+                "BluetoothAdapter",
+                "Adapter null after initial check - this should not happen"
+            )
             val currentState = adapter.state == BluetoothAdapter.STATE_ON
             enableBluetooth(!currentState)
         } catch (e: Exception) {

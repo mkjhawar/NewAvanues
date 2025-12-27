@@ -1,0 +1,385 @@
+/**
+ * NodeRecyclingUtilsTest.kt - Tests for safe AccessibilityNodeInfo resource management
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ * Author: VOS4 Development Team  
+ * Created: 2025-11-13
+ *
+ * Purpose: Verify NodeRecyclingUtils properly prevents memory leaks
+ */
+package com.augmentalis.voiceoscore.utils
+
+import android.view.accessibility.AccessibilityNodeInfo
+import com.augmentalis.voiceoscore.utils.NodeRecyclingUtils.filterChildren
+import com.augmentalis.voiceoscore.utils.NodeRecyclingUtils.findChild
+import com.augmentalis.voiceoscore.utils.NodeRecyclingUtils.forEachChild
+import com.augmentalis.voiceoscore.utils.NodeRecyclingUtils.mapChildren
+import com.augmentalis.voiceoscore.utils.NodeRecyclingUtils.traverseSafely
+import com.augmentalis.voiceoscore.utils.NodeRecyclingUtils.use
+import com.augmentalis.voiceoscore.utils.NodeRecyclingUtils.useChild
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+import org.mockito.kotlin.*
+
+/**
+ * Test suite for NodeRecyclingUtils
+ * 
+ * Verifies:
+ * 1. All child nodes are recycled after processing
+ * 2. Nodes are recycled even when exceptions occur
+ * 3. Safe resource management patterns work correctly
+ * 4. No memory leaks during tree traversal
+ */
+class NodeRecyclingUtilsTest {
+
+    private lateinit var mockParent: AccessibilityNodeInfo
+    private lateinit var mockChild1: AccessibilityNodeInfo
+    private lateinit var mockChild2: AccessibilityNodeInfo
+    private lateinit var mockChild3: AccessibilityNodeInfo
+
+    @Before
+    fun setup() {
+        // Create mock nodes
+        mockParent = mock()
+        mockChild1 = mock()
+        mockChild2 = mock()
+        mockChild3 = mock()
+
+        // Setup parent with 3 children
+        whenever(mockParent.childCount).thenReturn(3)
+        whenever(mockParent.getChild(0)).thenReturn(mockChild1)
+        whenever(mockParent.getChild(1)).thenReturn(mockChild2)
+        whenever(mockParent.getChild(2)).thenReturn(mockChild3)
+    }
+
+    @After
+    fun teardown() {
+        // Ensure no test leaks mocks
+        reset(mockParent, mockChild1, mockChild2, mockChild3)
+    }
+
+    @Test
+    fun `forEachChild recycles all children on success`() {
+        // Act: Process all children
+        val count = mockParent.forEachChild { child ->
+            // Simulate processing
+            child.className
+        }
+
+        // Assert: All children processed
+        assertEquals(3, count)
+
+        // Assert: All children recycled
+        verify(mockChild1).recycle()
+        verify(mockChild2).recycle()
+        verify(mockChild3).recycle()
+    }
+
+    @Test
+    fun `forEachChild recycles children even on exception`() {
+        // Arrange: Setup exception on second child
+        whenever(mockChild2.className).thenThrow(RuntimeException("Test exception"))
+
+        // Act & Assert: Exception propagates
+        assertThrows(RuntimeException::class.java) {
+            mockParent.forEachChild { child ->
+                child.className  // Throws on child2
+            }
+        }
+
+        // Assert: Children before exception were recycled
+        verify(mockChild1).recycle()
+        
+        // Assert: Child that threw exception was recycled
+        verify(mockChild2).recycle()
+
+        // Assert: Children after exception were NOT processed (exception short-circuits)
+        verify(mockChild3, never()).recycle()
+    }
+
+    @Test
+    fun `useChild recycles child on success`() {
+        // Arrange
+        whenever(mockChild1.className).thenReturn("android.widget.Button")
+
+        // Act
+        val result = mockParent.useChild(0) { child ->
+            child.className
+        }
+
+        // Assert: Result returned
+        assertEquals("android.widget.Button", result)
+
+        // Assert: Child recycled
+        verify(mockChild1).recycle()
+    }
+
+    @Test
+    fun `useChild recycles child even on exception`() {
+        // Arrange: Setup exception
+        whenever(mockChild1.className).thenThrow(RuntimeException("Test exception"))
+
+        // Act & Assert: Exception propagates
+        assertThrows(RuntimeException::class.java) {
+            mockParent.useChild(0) { child ->
+                child.className  // Throws exception
+            }
+        }
+
+        // Assert: Child recycled despite exception
+        verify(mockChild1).recycle()
+    }
+
+    @Test
+    fun `useChild returns null for non-existent child`() {
+        // Arrange: No child at index 5
+        whenever(mockParent.getChild(5)).thenReturn(null)
+
+        // Act
+        val result = mockParent.useChild(5) { child ->
+            child.className
+        }
+
+        // Assert: Returns null
+        assertNull(result)
+
+        // Assert: No recycle called (child was null)
+        verify(mockChild1, never()).recycle()
+        verify(mockChild2, never()).recycle()
+        verify(mockChild3, never()).recycle()
+    }
+
+    @Test
+    fun `findChild returns matching child without recycling it`() {
+        // Arrange
+        whenever(mockChild1.isClickable).thenReturn(false)
+        whenever(mockChild2.isClickable).thenReturn(true)  // Match
+        whenever(mockChild3.isClickable).thenReturn(false)
+
+        // Act
+        val found = mockParent.findChild { child ->
+            child.isClickable
+        }
+
+        // Assert: Found the matching child
+        assertSame(mockChild2, found)
+
+        // Assert: Non-matching children recycled
+        verify(mockChild1).recycle()
+
+        // Assert: Matching child NOT recycled (caller must recycle)
+        verify(mockChild2, never()).recycle()
+
+        // Assert: Children after match not checked (short-circuit)
+        verify(mockChild3, never()).recycle()
+    }
+
+    @Test
+    fun `findChild recycles all children when no match found`() {
+        // Arrange: No matches
+        whenever(mockChild1.isClickable).thenReturn(false)
+        whenever(mockChild2.isClickable).thenReturn(false)
+        whenever(mockChild3.isClickable).thenReturn(false)
+
+        // Act
+        val found = mockParent.findChild { child ->
+            child.isClickable
+        }
+
+        // Assert: No match found
+        assertNull(found)
+
+        // Assert: All children checked and recycled
+        verify(mockChild1).recycle()
+        verify(mockChild2).recycle()
+        verify(mockChild3).recycle()
+    }
+
+    @Test
+    fun `findChild recycles non-matching children even on exception`() {
+        // Arrange: Exception on second child
+        whenever(mockChild1.isClickable).thenReturn(false)
+        whenever(mockChild2.isClickable).thenThrow(RuntimeException("Test exception"))
+
+        // Act & Assert: Exception propagates
+        assertThrows(RuntimeException::class.java) {
+            mockParent.findChild { child ->
+                child.isClickable
+            }
+        }
+
+        // Assert: First child recycled
+        verify(mockChild1).recycle()
+
+        // Assert: Second child recycled despite exception
+        verify(mockChild2).recycle()
+    }
+
+    @Test
+    fun `mapChildren transforms and recycles all children`() {
+        // Arrange
+        whenever(mockChild1.className).thenReturn("Button1")
+        whenever(mockChild2.className).thenReturn("Button2")
+        whenever(mockChild3.className).thenReturn("Button3")
+
+        // Act
+        val classNames = mockParent.mapChildren { child ->
+            child.className
+        }
+
+        // Assert: Results collected
+        assertEquals(listOf("Button1", "Button2", "Button3"), classNames)
+
+        // Assert: All children recycled
+        verify(mockChild1).recycle()
+        verify(mockChild2).recycle()
+        verify(mockChild3).recycle()
+    }
+
+    @Test
+    fun `filterChildren returns matching children without recycling them`() {
+        // Arrange
+        whenever(mockChild1.isClickable).thenReturn(true)  // Match
+        whenever(mockChild2.isClickable).thenReturn(false)
+        whenever(mockChild3.isClickable).thenReturn(true)  // Match
+
+        // Act
+        val clickable = mockParent.filterChildren { child ->
+            child.isClickable
+        }
+
+        // Assert: Matching children returned
+        assertEquals(2, clickable.size)
+        assertSame(mockChild1, clickable[0])
+        assertSame(mockChild3, clickable[1])
+
+        // Assert: Non-matching child recycled
+        verify(mockChild2).recycle()
+
+        // Assert: Matching children NOT recycled (caller must recycle)
+        verify(mockChild1, never()).recycle()
+        verify(mockChild3, never()).recycle()
+    }
+
+    @Test
+    fun `filterChildren recycles all children on exception`() {
+        // Arrange: Exception on second child
+        whenever(mockChild1.isClickable).thenReturn(true)
+        whenever(mockChild2.isClickable).thenThrow(RuntimeException("Test exception"))
+
+        // Act & Assert: Exception propagates
+        assertThrows(RuntimeException::class.java) {
+            mockParent.filterChildren { child ->
+                child.isClickable
+            }
+        }
+
+        // Assert: All collected children cleaned up
+        verify(mockChild1).recycle()
+        verify(mockChild2).recycle()
+    }
+
+    @Test
+    fun `use extension recycles node after processing`() {
+        // Arrange
+        val mockNode = mock<AccessibilityNodeInfo>()
+        whenever(mockNode.className).thenReturn("android.widget.TextView")
+
+        // Act
+        val result = mockNode.use { node ->
+            node.className
+        }
+
+        // Assert: Result returned
+        assertEquals("android.widget.TextView", result)
+
+        // Assert: Node recycled
+        verify(mockNode).recycle()
+    }
+
+    @Test
+    fun `use extension recycles node even on exception`() {
+        // Arrange
+        val mockNode = mock<AccessibilityNodeInfo>()
+        whenever(mockNode.className).thenThrow(RuntimeException("Test exception"))
+
+        // Act & Assert: Exception propagates
+        assertThrows(RuntimeException::class.java) {
+            mockNode.use { node ->
+                node.className
+            }
+        }
+
+        // Assert: Node recycled despite exception
+        verify(mockNode).recycle()
+    }
+
+    @Test
+    fun `use extension returns null for null node`() {
+        // Arrange
+        val nullNode: AccessibilityNodeInfo? = null
+
+        // Act
+        val result = nullNode.use { node ->
+            node.className
+        }
+
+        // Assert: Returns null
+        assertNull(result)
+    }
+
+    @Test
+    fun `traverseSafely visits all nodes in depth-first order`() {
+        // Arrange: Create tree structure
+        //     parent
+        //    /  |  \
+        //  c1  c2  c3
+        val visitedNodes = mutableListOf<AccessibilityNodeInfo>()
+        val visitedDepths = mutableListOf<Int>()
+
+        // Setup children to have no grandchildren
+        whenever(mockChild1.childCount).thenReturn(0)
+        whenever(mockChild2.childCount).thenReturn(0)
+        whenever(mockChild3.childCount).thenReturn(0)
+
+        // Act
+        mockParent.traverseSafely { node, depth ->
+            visitedNodes.add(node)
+            visitedDepths.add(depth)
+        }
+
+        // Assert: All nodes visited
+        assertEquals(4, visitedNodes.size)
+        assertSame(mockParent, visitedNodes[0])
+        assertSame(mockChild1, visitedNodes[1])
+        assertSame(mockChild2, visitedNodes[2])
+        assertSame(mockChild3, visitedNodes[3])
+
+        // Assert: Correct depths
+        assertEquals(listOf(0, 1, 1, 1), visitedDepths)
+
+        // Assert: All children recycled
+        verify(mockChild1).recycle()
+        verify(mockChild2).recycle()
+        verify(mockChild3).recycle()
+    }
+
+    @Test
+    fun `traverseSafely stops at max depth`() {
+        // Arrange: Create infinitely deep tree (parent -> child1 -> child1 -> ...)
+        whenever(mockChild1.childCount).thenReturn(1)
+        whenever(mockChild1.getChild(0)).thenReturn(mockChild1)  // Circular reference
+
+        val visitedDepths = mutableListOf<Int>()
+
+        // Act: Traverse with max depth of 3
+        mockParent.traverseSafely(maxDepth = 3) { node, depth ->
+            visitedDepths.add(depth)
+        }
+
+        // Assert: Stopped at max depth
+        assertTrue(visitedDepths.max()!! <= 3)
+    }
+}

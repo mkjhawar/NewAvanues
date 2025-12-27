@@ -33,6 +33,9 @@ import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.view.isVisible
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
+import com.augmentalis.voiceos.accessibility.AnchorPoint
+import com.augmentalis.voiceos.accessibility.BadgeStyle
+import com.augmentalis.voiceos.accessibility.ElementVoiceState
 
 /**
  * Manager for number overlay lifecycle
@@ -56,8 +59,8 @@ class NumberOverlayManager(
     private val windowManager: WindowManager =
         context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-    // Renderer view (renamed from NumberOverlayRenderer to NumberBadgeView)
-    private var renderer: NumberBadgeView? = null
+    // Renderer view
+    private var renderer: NumberOverlayRenderer? = null
 
     // Layout parameters for overlay window
     private var layoutParams: WindowManager.LayoutParams? = null
@@ -84,9 +87,16 @@ class NumberOverlayManager(
      * Setup the overlay renderer
      */
     private fun setupRenderer() {
-        renderer = NumberBadgeView(context).apply {
-            setStyle(config.style)
-            setRenderConfig(config.renderConfig)
+        renderer = NumberOverlayRenderer(context).apply {
+            setStyle(config.styleVariant.toStyle())
+            setRenderConfig(RenderConfig(
+                hardwareAcceleration = config.hardwareAcceleration,
+                paintPooling = true,
+                cacheTextBounds = true,
+                partialInvalidation = true,
+                maxOverlaysPerFrame = 100,
+                targetFrameTimeMs = 16
+            ))
         }
 
         layoutParams = createLayoutParams()
@@ -145,7 +155,7 @@ class NumberOverlayManager(
                 Log.d(TAG, "Showing ${overlays.size} overlays")
 
             } catch (e: Exception) {
-                Log.e(TAG, "Error showing overlays", e)
+                Log.e(TAG, "Failed to show ${overlays.size} number overlays - window attachment or renderer update failed", e)
             }
         }
     }
@@ -164,7 +174,7 @@ class NumberOverlayManager(
                     Log.d(TAG, "Overlays hidden")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error hiding overlays", e)
+                Log.e(TAG, "Failed to hide overlays and detach from window - cleanup may be incomplete", e)
             }
         }
     }
@@ -261,17 +271,24 @@ class NumberOverlayManager(
             this@NumberOverlayManager.config = newConfig
 
             // Update renderer style
-            renderer?.setStyle(newConfig.style)
+            renderer?.setStyle(newConfig.styleVariant.toStyle())
 
             // Update render config
-            renderer?.setRenderConfig(newConfig.renderConfig)
+            renderer?.setRenderConfig(RenderConfig(
+                hardwareAcceleration = newConfig.hardwareAcceleration,
+                paintPooling = true,
+                cacheTextBounds = true,
+                partialInvalidation = true,
+                maxOverlaysPerFrame = 100,
+                targetFrameTimeMs = 16
+            ))
 
             // Refresh if showing
             if (isShowing) {
                 renderer?.setOverlays(currentOverlays)
             }
 
-            Log.d(TAG, "Configuration updated: ${newConfig.renderConfig.styleVariant}")
+            Log.d(TAG, "Configuration updated: ${newConfig.styleVariant}")
         }
     }
 
@@ -280,9 +297,9 @@ class NumberOverlayManager(
      */
     fun onWindowFocusChanged(hasFocus: Boolean) {
         scope.launch {
-            if (!hasFocus && config.renderConfig.hideOnWindowFocusLoss) {
+            if (!hasFocus && config.hideOnWindowFocusLoss) {
                 hide()
-            } else if (hasFocus && config.renderConfig.enabled && currentOverlays.isNotEmpty()) {
+            } else if (hasFocus && config.enabled && currentOverlays.isNotEmpty()) {
                 show(currentOverlays)
             }
 
@@ -345,7 +362,7 @@ class NumberOverlayManager(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error attaching overlay to window", e)
+            Log.e(TAG, "Failed to attach overlay view to WindowManager - check SYSTEM_ALERT_WINDOW permission or window state", e)
             throw e
         }
     }
@@ -363,7 +380,7 @@ class NumberOverlayManager(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error detaching overlay from window", e)
+            Log.e(TAG, "Failed to remove overlay view from WindowManager - view may still be attached", e)
         }
     }
 
@@ -386,7 +403,7 @@ class NumberOverlayManager(
                 Log.d(TAG, "NumberOverlayManager released")
 
             } catch (e: Exception) {
-                Log.e(TAG, "Error releasing manager", e)
+                Log.e(TAG, "Failed to release NumberOverlayManager resources - renderer, scope, or window cleanup incomplete", e)
             }
         }
     }

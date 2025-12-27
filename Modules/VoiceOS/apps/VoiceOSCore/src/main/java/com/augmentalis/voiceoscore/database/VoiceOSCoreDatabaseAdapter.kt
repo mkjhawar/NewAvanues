@@ -3,10 +3,7 @@ package com.augmentalis.voiceoscore.database
 import android.content.Context
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabaseManager
-import com.augmentalis.database.repositories.IScreenContextRepository
-import com.augmentalis.database.repositories.IScrapedElementRepository
-import com.augmentalis.database.repositories.IUserPreferenceRepository
-import com.augmentalis.voiceoscore.learnapp.models.AppEntity
+import com.augmentalis.voiceoscore.database.entities.AppEntity
 
 /**
  * Simplified database adapter - direct SQLDelight access with helper methods
@@ -53,19 +50,6 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      */
     val databaseManager: VoiceOSDatabaseManager =
         VoiceOSDatabaseManager.getInstance(DatabaseDriverFactory(context))
-
-    // =========================================================================
-    // Direct Repository Access (for improved ergonomics)
-    // =========================================================================
-
-    val screenContexts: IScreenContextRepository
-        get() = databaseManager.screenContexts
-
-    val scrapedElements: IScrapedElementRepository
-        get() = databaseManager.scrapedElements
-
-    val userPreferences: IUserPreferenceRepository
-        get() = databaseManager.userPreferences
 
     // =========================================================================
     // Helper Methods (for backward compatibility and convenience)
@@ -168,20 +152,13 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      * Increment scrape count for an app by package name
      */
     suspend fun incrementScrapeCount(packageName: String) {
-        try {
-            val app = databaseManager.scrapedApps.getByPackage(packageName)
-            if (app != null) {
-                val updated = app.copy(
-                    scrapeCount = app.scrapeCount + 1,
-                    lastScrapedAt = System.currentTimeMillis()
-                )
-                databaseManager.scrapedApps.insert(updated)
-            } else {
-                android.util.Log.w("VoiceOSCoreDatabaseAdapter", "Cannot increment scrape count - app not found: $packageName")
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("VoiceOSCoreDatabaseAdapter", "Failed to increment scrape count for $packageName", e)
-            throw e
+        val app = databaseManager.scrapedApps.getByPackage(packageName)
+        if (app != null) {
+            val updated = app.copy(
+                scrapeCount = app.scrapeCount + 1,
+                lastScrapedAt = System.currentTimeMillis()
+            )
+            databaseManager.scrapedApps.insert(updated)
         }
     }
 
@@ -189,20 +166,10 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      * Update element count for an app by package name
      */
     suspend fun updateElementCount(packageName: String, count: Int) {
-        require(count >= 0) { "Element count must be non-negative: $count" }
-        try {
-            val app = databaseManager.scrapedApps.getByPackage(packageName)
-            if (app != null) {
-                val updated = app.copy(elementCount = count.toLong())
-                databaseManager.scrapedApps.insert(updated)
-            } else {
-                android.util.Log.w("VoiceOSCoreDatabaseAdapter", "Cannot update element count - app not found: $packageName")
-            }
-        } catch (e: IllegalArgumentException) {
-            throw e
-        } catch (e: Exception) {
-            android.util.Log.e("VoiceOSCoreDatabaseAdapter", "Failed to update element count for $packageName", e)
-            throw e
+        val app = databaseManager.scrapedApps.getByPackage(packageName)
+        if (app != null) {
+            val updated = app.copy(elementCount = count.toLong())
+            databaseManager.scrapedApps.insert(updated)
         }
     }
 
@@ -210,20 +177,10 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      * Update command count for an app by package name
      */
     suspend fun updateCommandCount(packageName: String, count: Int) {
-        require(count >= 0) { "Command count must be non-negative: $count" }
-        try {
-            val app = databaseManager.scrapedApps.getByPackage(packageName)
-            if (app != null) {
-                val updated = app.copy(commandCount = count.toLong())
-                databaseManager.scrapedApps.insert(updated)
-            } else {
-                android.util.Log.w("VoiceOSCoreDatabaseAdapter", "Cannot update command count - app not found: $packageName")
-            }
-        } catch (e: IllegalArgumentException) {
-            throw e
-        } catch (e: Exception) {
-            android.util.Log.e("VoiceOSCoreDatabaseAdapter", "Failed to update command count for $packageName", e)
-            throw e
+        val app = databaseManager.scrapedApps.getByPackage(packageName)
+        if (app != null) {
+            val updated = app.copy(commandCount = count.toLong())
+            databaseManager.scrapedApps.insert(updated)
         }
     }
 
@@ -231,42 +188,26 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      * Increment visit count for a screen context by hash
      */
     suspend fun incrementVisitCount(hash: String, time: Long) {
-        require(time > 0) { "Time must be positive: $time" }
-        try {
-            val context = databaseManager.screenContexts.getByHash(hash)
-            if (context != null) {
-                val updated = context.copy(
-                    visitCount = context.visitCount + 1,
-                    lastScraped = time
-                )
-                databaseManager.screenContexts.insert(updated)
-            } else {
-                android.util.Log.w("VoiceOSCoreDatabaseAdapter", "Cannot increment visit count - screen context not found: ${hash.take(8)}")
-            }
-        } catch (e: IllegalArgumentException) {
-            throw e
-        } catch (e: Exception) {
-            android.util.Log.e("VoiceOSCoreDatabaseAdapter", "Failed to increment visit count for screen ${hash.take(8)}", e)
-            throw e
+        val context = databaseManager.screenContexts.getByHash(hash)
+        if (context != null) {
+            val updated = context.copy(
+                visitCount = context.visitCount + 1,
+                lastScraped = time
+            )
+            databaseManager.screenContexts.insert(updated)
         }
     }
 
     /**
      * Update formGroupId for multiple elements by their hashes
-     * Note: This is a batch operation wrapped in transaction for atomicity
+     * Note: This is a batch operation that may be slow for large hash lists
      */
     suspend fun updateFormGroupIdBatch(hashes: List<String>, groupId: String?) {
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            databaseManager.transaction {
-                kotlinx.coroutines.runBlocking {
-                    hashes.forEach { hash ->
-                        val element = databaseManager.scrapedElements.getByHash(hash)
-                        if (element != null) {
-                            val updated = element.copy(formGroupId = groupId)
-                            databaseManager.scrapedElements.insert(updated)
-                        }
-                    }
-                }
+        hashes.forEach { hash ->
+            val element = databaseManager.scrapedElements.getByHash(hash)
+            if (element != null) {
+                val updated = element.copy(formGroupId = groupId)
+                databaseManager.scrapedElements.insert(updated)
             }
         }
     }
@@ -310,130 +251,53 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
     }
 
     /**
-     * Delete all app-specific data for a package
-     *
-     * This includes:
-     * - Scraped elements
-     * - Generated commands
-     * - Screen contexts
-     * - Screen transitions
-     *
-     * @param packageName Package name of the app to clean up
-     */
-    suspend fun deleteAppSpecificElements(packageName: String) {
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                databaseManager.transaction {
-                    kotlinx.coroutines.runBlocking {
-                        // Delete scraped elements for this app
-                        databaseManager.scrapedElements.deleteByApp(packageName)
-
-                        // Delete generated commands for this app
-                        databaseManager.generatedCommands.deleteCommandsByPackage(packageName)
-
-                        // Delete screen contexts for this app
-                        databaseManager.screenContexts.deleteByApp(packageName)
-
-                        android.util.Log.i("VoiceOSCoreDatabaseAdapter", "Deleted all data for package: $packageName")
-                    }
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("VoiceOSCoreDatabaseAdapter", "Failed to delete app-specific elements for $packageName", e)
-                throw e
-            }
-        }
-    }
-
-    /**
-     * Filter elements by app package name
-     *
-     * @param packageName Package name to filter by
-     * @return List of elements for the specified package
-     */
-    suspend fun filterByApp(packageName: String): List<com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity> {
-        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                val dtos = databaseManager.scrapedElements.getByApp(packageName)
-                dtos.map { it.toScrapedElementEntity() }
-            } catch (e: Exception) {
-                android.util.Log.e("VoiceOSCoreDatabaseAdapter", "Failed to filter elements by app: $packageName", e)
-                emptyList()
-            }
-        }
-    }
-
-    /**
      * Extension: Insert batch of hierarchy records
-     * Note: The old Room entity uses ID-based relationships, but SQLDelight uses hash-based.
-     * This is a compatibility shim - caller should migrate to hash-based entities.
      */
     suspend fun insertHierarchyBatch(hierarchies: List<com.augmentalis.voiceoscore.scraping.entities.ScrapedHierarchyEntity>): List<Long> {
-        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val ids = mutableListOf<Long>()
-            databaseManager.transaction {
-                kotlinx.coroutines.runBlocking {
-                    hierarchies.forEach { hierarchy ->
-                        // WARNING: This won't work correctly - Room entity uses IDs, SQLDelight uses hashes
-                        // Caller needs to provide hash-based hierarchy data instead
-                        // Using placeholder values to compile, but this needs proper migration
-                        databaseManager.scrapedHierarchies.insert(
-                            parentElementHash = hierarchy.parentElementId.toString(), // TODO: Map ID to hash
-                            childElementHash = hierarchy.childElementId.toString(),   // TODO: Map ID to hash
-                            depth = hierarchy.depth.toLong(),
-                            createdAt = System.currentTimeMillis() // Entity doesn't have createdAt field
-                        )
-                        ids.add(hierarchy.id)
-                    }
-                }
-            }
-            ids
+        val ids = mutableListOf<Long>()
+        hierarchies.forEach { hierarchy ->
+            databaseManager.scrapedHierarchies.insert(
+                parentElementHash = hierarchy.parentElementHash,
+                childElementHash = hierarchy.childElementHash,
+                depth = hierarchy.depth.toLong(),
+                createdAt = hierarchy.createdAt
+            )
+            ids.add(hierarchy.id ?: System.currentTimeMillis())
         }
+        return ids
     }
 
     /**
      * Extension: Insert batch of generated commands
      */
     suspend fun insertCommandBatch(commands: List<com.augmentalis.voiceoscore.scraping.entities.GeneratedCommandEntity>): List<Long> {
-        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val ids = mutableListOf<Long>()
-            databaseManager.transaction {
-                kotlinx.coroutines.runBlocking {
-                    commands.forEach { command ->
-                        val dto = command.toGeneratedCommandDTO()
-                        databaseManager.generatedCommands.insert(dto)
-                        ids.add(command.id ?: System.currentTimeMillis())
-                    }
-                }
-            }
-            ids
+        val ids = mutableListOf<Long>()
+        commands.forEach { command ->
+            val dto = command.toGeneratedCommandDTO()
+            databaseManager.generatedCommands.insert(dto)
+            ids.add(command.id ?: System.currentTimeMillis())
         }
+        return ids
     }
 
     /**
      * Extension: Insert batch of element relationships
      */
     suspend fun insertRelationshipBatch(relationships: List<com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity>): List<Long> {
-        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val ids = mutableListOf<Long>()
-            databaseManager.transaction {
-                kotlinx.coroutines.runBlocking {
-                    relationships.forEach { relationship ->
-                        val currentTime = System.currentTimeMillis()
-                        databaseManager.elementRelationships.insert(
-                            sourceElementHash = relationship.sourceElementHash,
-                            targetElementHash = relationship.targetElementHash,
-                            relationshipType = relationship.relationshipType,
-                            relationshipData = relationship.relationshipData,
-                            confidence = relationship.confidence.toDouble(),
-                            createdAt = relationship.createdAt,
-                            updatedAt = currentTime // Entity doesn't have updatedAt field, use current time
-                        )
-                        ids.add(relationship.id)
-                    }
-                }
-            }
-            ids
+        val ids = mutableListOf<Long>()
+        relationships.forEach { relationship ->
+            databaseManager.elementRelationships.insert(
+                sourceElementHash = relationship.sourceElementHash,
+                targetElementHash = relationship.targetElementHash,
+                relationshipType = relationship.relationshipType,
+                relationshipData = relationship.relationshipData,
+                confidence = relationship.confidence.toDouble(),
+                createdAt = relationship.createdAt,
+                updatedAt = relationship.updatedAt
+            )
+            ids.add(relationship.id ?: System.currentTimeMillis())
         }
+        return ids
     }
 
     /**
@@ -455,23 +319,16 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
 
     /**
      * Extension: Insert batch of scraped elements and return assigned IDs
-     * Wrapped in transaction for atomicity and performance
      */
     suspend fun insertElementBatch(elements: List<com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity>): List<Long> {
-        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val ids = mutableListOf<Long>()
-            databaseManager.transaction {
-                kotlinx.coroutines.runBlocking {
-                    elements.forEach { element ->
-                        val dto = element.toScrapedElementDTO()
-                        databaseManager.scrapedElements.insert(dto)
-                        // Use element hash as ID for now
-                        ids.add(element.id ?: element.elementHash.hashCode().toLong())
-                    }
-                }
-            }
-            ids
+        val ids = mutableListOf<Long>()
+        elements.forEach { element ->
+            val dto = element.toScrapedElementDTO()
+            databaseManager.scrapedElements.insert(dto)
+            // Use element hash as ID for now
+            ids.add(element.id ?: element.elementHash.hashCode().toLong())
         }
+        return ids
     }
 
     /**
@@ -498,7 +355,7 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
             navigationLevel = context.navigationLevel.toLong(),
             primaryAction = context.primaryAction,
             elementCount = context.elementCount.toLong(),
-            hasBackButton = context.hasBackButton,
+            hasBackButton = if (context.hasBackButton) 1L else 0L,
             firstScraped = context.firstScraped,
             lastScraped = context.lastScraped,
             visitCount = context.visitCount.toLong()
@@ -516,7 +373,7 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
             toScreenHash = transition.toScreenHash,
             triggerElementHash = transition.triggerElementHash,
             triggerAction = transition.triggerAction,
-            transitionCount = transition.transitionCount,
+            transitionCount = transition.transitionCount.toLong(),
             avgDurationMs = transition.avgDurationMs,
             lastTransitionAt = transition.lastTransitionAt
         )
@@ -614,7 +471,7 @@ private fun AppEntity.toScrapedAppDTO(): com.augmentalis.database.dto.ScrapedApp
         appId = this.packageName,
         packageName = this.packageName,
         versionCode = this.versionCode,
-        versionName = this.versionName ?: "",
+        versionName = this.versionName,
         appHash = this.packageName.hashCode().toString(),
         isFullyLearned = if (this.isFullyLearned == true) 1L else 0L,
         learnCompletedAt = if (this.isFullyLearned == true) timestamp else null,
@@ -633,16 +490,14 @@ private fun AppEntity.toScrapedAppDTO(): com.augmentalis.database.dto.ScrapedApp
 
 /**
  * Convert ScrapedHierarchyEntity to DTO
- * Note: This conversion is problematic - Room entity uses IDs, SQLDelight uses hashes.
- * This is a stub that won't work correctly without proper ID-to-hash mapping.
  */
 private fun com.augmentalis.voiceoscore.scraping.entities.ScrapedHierarchyEntity.toScrapedHierarchyDTO(): com.augmentalis.database.dto.ScrapedHierarchyDTO {
     return com.augmentalis.database.dto.ScrapedHierarchyDTO(
-        id = this.id,
-        parentElementHash = this.parentElementId.toString(), // WARNING: ID to hash conversion needed
-        childElementHash = this.childElementId.toString(),   // WARNING: ID to hash conversion needed
+        id = this.id ?: 0L,
+        parentElementHash = this.parentElementHash,
+        childElementHash = this.childElementHash,
         depth = this.depth.toLong(),
-        createdAt = System.currentTimeMillis() // Entity doesn't have createdAt field
+        createdAt = System.currentTimeMillis()
     )
 }
 
@@ -655,17 +510,12 @@ private fun com.augmentalis.voiceoscore.scraping.entities.GeneratedCommandEntity
         elementHash = this.elementHash,
         commandText = this.commandText,
         actionType = this.actionType,
-        confidence = this.confidence,
+        confidence = this.confidence.toDouble(),
         synonyms = this.synonyms,
-        isUserApproved = this.isUserApproved,
-        usageCount = this.usageCount,
+        isUserApproved = if (this.isUserApproved) 1L else 0L,
+        usageCount = this.usageCount.toLong(),
         lastUsed = this.lastUsed,
-        createdAt = this.createdAt,
-        appId = this.appId,
-        appVersion = this.appVersion,
-        versionCode = this.versionCode,
-        lastVerified = this.lastVerified,
-        isDeprecated = this.isDeprecated
+        createdAt = this.generatedAt
     )
 }
 
@@ -678,17 +528,12 @@ private fun com.augmentalis.database.dto.GeneratedCommandDTO.toGeneratedCommandE
         elementHash = this.elementHash,
         commandText = this.commandText,
         actionType = this.actionType,
-        confidence = this.confidence,
-        synonyms = this.synonyms,
-        isUserApproved = this.isUserApproved,
-        usageCount = this.usageCount,
+        confidence = this.confidence.toFloat(),
+        synonyms = this.synonyms ?: "",
+        isUserApproved = this.isUserApproved == 1L,
+        usageCount = this.usageCount.toInt(),
         lastUsed = this.lastUsed,
-        createdAt = this.createdAt,
-        appId = this.appId,
-        appVersion = this.appVersion,
-        versionCode = this.versionCode,
-        lastVerified = this.lastVerified,
-        isDeprecated = this.isDeprecated
+        generatedAt = this.createdAt
     )
 }
 
@@ -697,14 +542,14 @@ private fun com.augmentalis.database.dto.GeneratedCommandDTO.toGeneratedCommandE
  */
 private fun com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity.toElementRelationshipDTO(): com.augmentalis.database.dto.ElementRelationshipDTO {
     return com.augmentalis.database.dto.ElementRelationshipDTO(
-        id = this.id,
+        id = this.id ?: 0L,
         sourceElementHash = this.sourceElementHash,
         targetElementHash = this.targetElementHash,
         relationshipType = this.relationshipType,
         relationshipData = this.relationshipData,
         confidence = this.confidence.toDouble(),
         createdAt = this.createdAt,
-        updatedAt = this.createdAt // Entity doesn't have updatedAt field, use createdAt
+        updatedAt = this.updatedAt
     )
 }
 
@@ -722,20 +567,20 @@ private fun com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity.t
         text = this.text,
         contentDescription = this.contentDescription,
         bounds = this.bounds,
-        isClickable = if (this.isClickable != 0L) 1L else 0L,
-        isLongClickable = if (this.isLongClickable != 0L) 1L else 0L,
-        isEditable = if (this.isEditable != 0L) 1L else 0L,
-        isScrollable = if (this.isScrollable != 0L) 1L else 0L,
-        isCheckable = if (this.isCheckable != 0L) 1L else 0L,
-        isFocusable = if (this.isFocusable != 0L) 1L else 0L,
-        isEnabled = if (this.isEnabled != 0L) 1L else 0L,
+        isClickable = if (this.isClickable) 1L else 0L,
+        isLongClickable = if (this.isLongClickable) 1L else 0L,
+        isEditable = if (this.isEditable) 1L else 0L,
+        isScrollable = if (this.isScrollable) 1L else 0L,
+        isCheckable = if (this.isCheckable) 1L else 0L,
+        isFocusable = if (this.isFocusable) 1L else 0L,
+        isEnabled = if (this.isEnabled) 1L else 0L,
         depth = this.depth.toLong(),
         indexInParent = this.indexInParent.toLong(),
         scrapedAt = this.scrapedAt,
         semanticRole = this.semanticRole,
         inputType = this.inputType,
         visualWeight = this.visualWeight,
-        isRequired = this.isRequired,
+        isRequired = if (this.isRequired) 1L else null,
         formGroupId = this.formGroupId,
         placeholderText = this.placeholderText,
         validationPattern = this.validationPattern,
@@ -758,20 +603,20 @@ fun com.augmentalis.database.dto.ScrapedElementDTO.toScrapedElementEntity(): com
         text = this.text,
         contentDescription = this.contentDescription,
         bounds = this.bounds,
-        isClickable = this.isClickable,
-        isLongClickable = this.isLongClickable,
-        isEditable = this.isEditable,
-        isScrollable = this.isScrollable,
-        isCheckable = this.isCheckable,
-        isFocusable = this.isFocusable,
-        isEnabled = this.isEnabled,
-        depth = this.depth,
-        indexInParent = this.indexInParent,
+        isClickable = this.isClickable == 1L,
+        isLongClickable = this.isLongClickable == 1L,
+        isEditable = this.isEditable == 1L,
+        isScrollable = this.isScrollable == 1L,
+        isCheckable = this.isCheckable == 1L,
+        isFocusable = this.isFocusable == 1L,
+        isEnabled = this.isEnabled == 1L,
+        depth = this.depth.toInt(),
+        indexInParent = this.indexInParent.toInt(),
         scrapedAt = this.scrapedAt,
         semanticRole = this.semanticRole,
         inputType = this.inputType,
         visualWeight = this.visualWeight,
-        isRequired = this.isRequired ?: 0L,
+        isRequired = this.isRequired == 1L,
         formGroupId = this.formGroupId,
         placeholderText = this.placeholderText,
         validationPattern = this.validationPattern,

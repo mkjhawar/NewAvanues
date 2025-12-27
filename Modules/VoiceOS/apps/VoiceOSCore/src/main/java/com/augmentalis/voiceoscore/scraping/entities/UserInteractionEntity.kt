@@ -1,18 +1,16 @@
 /**
  * UserInteractionEntity.kt - User interaction tracking
  *
+ * Migrated from Room to SQLDelight (Phase 2)
+ *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: Manoj Jhawar
- * Created: 2025-10-18
- * Migrated to SQLDelight: 2025-12-17
+ * Author: VOS4 Scraping Migration Specialist (Agent 3B)
+ * Created: 2025-11-27
  */
 package com.augmentalis.voiceoscore.scraping.entities
 
 /**
  * User Interaction Entity
- *
- * MIGRATION NOTE: This entity has been migrated to use SQLDelight.
- * The schema is defined in: core/database/src/commonMain/sqldelight/com/augmentalis/database/UserInteraction.sq
  *
  * Records user interactions with UI elements including clicks, long presses,
  * swipes, and focus events. Tracks visibility duration to measure user

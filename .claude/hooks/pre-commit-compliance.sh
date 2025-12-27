@@ -43,10 +43,10 @@ for file in $staged_files; do
             if [[ ! "$basename" =~ ^LD-[A-Z][a-zA-Z]+-[A-Z][a-zA-Z]+-[A-Z][a-zA-Z]+-V[0-9]+\.md$ ]]; then
                 VIOLATIONS+=("❌ ZERO TOLERANCE: Invalid living doc name: $file (must be LD-App-Module-Desc-V#.md)")
             fi
-        # Regular docs: App-Module-Desc-YDDMMHH-V#.md
+        # Regular docs: App-Module-Desc-YYMMDD-V#.md
         elif [[ ! "$basename" =~ ^\.\./ ]] && [[ ! "$basename" =~ ^(README|CHANGELOG|LICENSE|CONTRIBUTING) ]]; then
-            if [[ ! "$basename" =~ ^[A-Z][a-zA-Z]+-[A-Z][a-zA-Z]+-.+-[0-9]{7}-V[0-9]+\.md$ ]]; then
-                VIOLATIONS+=("❌ ZERO TOLERANCE: Invalid doc name: $file (must be App-Module-Desc-YDDMMHH-V#.md, Y=single digit)")
+            if [[ ! "$basename" =~ ^[A-Z][a-zA-Z]+-[A-Z][a-zA-Z]+-.+-[0-9]{6}-V[0-9]+\.md$ ]]; then
+                VIOLATIONS+=("❌ ZERO TOLERANCE: Invalid doc name: $file (must be App-Module-Desc-YYMMDD-V#.md, YY=year, MM=month, DD=day)")
             fi
         fi
     fi

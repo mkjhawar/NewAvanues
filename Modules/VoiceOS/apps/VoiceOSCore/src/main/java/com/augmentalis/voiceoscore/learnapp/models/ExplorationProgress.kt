@@ -1,13 +1,14 @@
 /**
  * ExplorationProgress.kt - Real-time exploration progress tracking
+ * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/models/ExplorationProgress.kt
  *
- * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
  * Created: 2025-10-08
  *
  * Data class for tracking real-time exploration progress
  */
+
 package com.augmentalis.voiceoscore.learnapp.models
 
 /**
@@ -15,6 +16,36 @@ package com.augmentalis.voiceoscore.learnapp.models
  *
  * Tracks real-time progress during app exploration.
  * Used for UI updates and progress monitoring.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val progress = ExplorationProgress(
+ *     appName = "Instagram",
+ *     screensExplored = 15,
+ *     estimatedTotalScreens = 30,
+ *     elementsDiscovered = 234,
+ *     currentDepth = 5,
+ *     currentScreen = "Profile → Settings",
+ *     elapsedTimeMs = 150000L  // 2.5 minutes
+ * )
+ *
+ * // Calculate percentage
+ * val percentage = progress.calculatePercentage()  // 0.5f (50%)
+ *
+ * // Format duration
+ * val duration = progress.formatDuration()  // "02:30"
+ * ```
+ *
+ * @property appName Human-readable app name
+ * @property screensExplored Number of screens explored so far
+ * @property estimatedTotalScreens Estimated total screens (rough heuristic)
+ * @property elementsDiscovered Number of UI elements discovered
+ * @property currentDepth Current DFS depth (how deep in navigation tree)
+ * @property currentScreen Description of current screen (e.g., "Home → Profile")
+ * @property elapsedTimeMs Time elapsed since exploration started (milliseconds)
+ *
+ * @since 1.0.0
  */
 data class ExplorationProgress(
     val appName: String,

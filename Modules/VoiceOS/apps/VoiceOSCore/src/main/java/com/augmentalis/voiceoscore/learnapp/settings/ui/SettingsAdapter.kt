@@ -1,187 +1,249 @@
 /**
- * SettingsAdapter.kt - RecyclerView adapter for settings UI
+ * SettingsAdapter.kt - RecyclerView adapter for settings list
  *
- * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Created: 2025-12-22
+ * Author: Manoj Jhawar
+ * Code-Reviewed-By: CCA
+ * Created: 2025-12-05
  *
- * Adapter for displaying setting items with different types (toggle, number, action, etc.)
+ * Displays settings items with appropriate input controls based on type.
  */
 
 package com.augmentalis.voiceoscore.learnapp.settings.ui
 
-import android.text.InputType
-import android.view.Gravity
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.EditText
-import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.augmentalis.voiceoscore.R
 
 /**
- * Adapter for settings RecyclerView.
+ * Adapter for displaying and editing developer settings
  *
- * Supports different setting types:
- * - TOGGLE: On/off switch
- * - NUMBER_INT: Integer number input
- * - NUMBER_LONG: Long number input
- * - NUMBER_FLOAT: Float number input
- * - ACTION: Button that triggers an action
- *
- * @param onSettingChanged Callback invoked when a setting value changes
+ * @param onSettingChanged Callback when a setting value changes
  */
 class SettingsAdapter(
-    private val onSettingChanged: (key: String, newValue: Any) -> Unit
-) : ListAdapter<SettingItem, SettingsAdapter.SettingViewHolder>(SettingItemDiffCallback()) {
+    private val onSettingChanged: (key: String, value: Any) -> Unit
+) : ListAdapter<SettingItem, RecyclerView.ViewHolder>(SettingDiffCallback()) {
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SettingViewHolder {
-        return SettingViewHolder.create(parent, onSettingChanged)
+    companion object {
+        private const val VIEW_TYPE_NUMBER = 0
+        private const val VIEW_TYPE_TOGGLE = 1
+        private const val VIEW_TYPE_SLIDER = 2
     }
 
-    override fun onBindViewHolder(holder: SettingViewHolder, position: Int) {
-        holder.bind(getItem(position))
+    override fun getItemViewType(position: Int): Int {
+        return when (getItem(position).type) {
+            SettingType.NUMBER_INT, SettingType.NUMBER_LONG -> VIEW_TYPE_NUMBER
+            SettingType.TOGGLE -> VIEW_TYPE_TOGGLE
+            SettingType.SLIDER -> VIEW_TYPE_SLIDER
+        }
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        val inflater = LayoutInflater.from(parent.context)
+        return when (viewType) {
+            VIEW_TYPE_NUMBER -> {
+                val view = inflater.inflate(R.layout.item_setting_number, parent, false)
+                NumberViewHolder(view, onSettingChanged)
+            }
+            VIEW_TYPE_TOGGLE -> {
+                val view = inflater.inflate(R.layout.item_setting_toggle, parent, false)
+                ToggleViewHolder(view, onSettingChanged)
+            }
+            VIEW_TYPE_SLIDER -> {
+                val view = inflater.inflate(R.layout.item_setting_slider, parent, false)
+                SliderViewHolder(view, onSettingChanged)
+            }
+            else -> throw IllegalArgumentException("Unknown view type: $viewType")
+        }
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        val item = getItem(position)
+        when (holder) {
+            is NumberViewHolder -> holder.bind(item)
+            is ToggleViewHolder -> holder.bind(item)
+            is SliderViewHolder -> holder.bind(item)
+        }
     }
 
     /**
-     * ViewHolder for setting items.
-     * Creates appropriate UI based on setting type.
+     * ViewHolder for number input settings
      */
-    class SettingViewHolder private constructor(
-        private val container: LinearLayout,
-        private val onSettingChanged: (key: String, newValue: Any) -> Unit
-    ) : RecyclerView.ViewHolder(container) {
+    class NumberViewHolder(
+        view: View,
+        private val onSettingChanged: (String, Any) -> Unit
+    ) : RecyclerView.ViewHolder(view) {
+
+        private val labelText: TextView = view.findViewById(R.id.setting_label)
+        private val descriptionText: TextView = view.findViewById(R.id.setting_description)
+        private val valueInput: EditText = view.findViewById(R.id.setting_value_input)
+        private val unitText: TextView = view.findViewById(R.id.setting_unit)
+
+        private var currentKey: String = ""
+        private var currentType: SettingType = SettingType.NUMBER_INT
+        private var textWatcher: TextWatcher? = null
 
         fun bind(item: SettingItem) {
-            container.removeAllViews()
-            container.orientation = LinearLayout.VERTICAL
-            container.setPadding(48, 32, 48, 32)
+            currentKey = item.key
+            currentType = item.type
 
-            // Add label
-            val labelView = TextView(container.context).apply {
-                text = item.label
-                textSize = 16f
-                setTextColor(0xFF000000.toInt())
-            }
-            container.addView(labelView)
+            labelText.text = item.label
+            descriptionText.text = item.description
 
-            // Add description
-            val descriptionView = TextView(container.context).apply {
-                text = item.description
-                textSize = 12f
-                setTextColor(0xFF666666.toInt())
-                setPadding(0, 8, 0, 16)
-            }
-            container.addView(descriptionView)
+            // Remove old watcher before setting text
+            textWatcher?.let { valueInput.removeTextChangedListener(it) }
 
-            // Add control based on type
+            // Set appropriate value and unit
             when (item.type) {
-                SettingType.TOGGLE -> {
-                    val switch = Switch(container.context).apply {
-                        isChecked = item.value as? Boolean ?: false
-                        setOnCheckedChangeListener { _, isChecked ->
-                            onSettingChanged(item.key, isChecked)
-                        }
-                    }
-                    container.addView(switch)
+                SettingType.NUMBER_INT -> {
+                    valueInput.setText(item.getIntValue().toString())
+                    unitText.visibility = View.GONE
                 }
-
-                SettingType.NUMBER_INT, SettingType.NUMBER_LONG, SettingType.NUMBER_FLOAT -> {
-                    val editText = EditText(container.context).apply {
-                        setText(item.value.toString())
-                        inputType = when (item.type) {
-                            SettingType.NUMBER_INT, SettingType.NUMBER_LONG -> InputType.TYPE_CLASS_NUMBER
-                            SettingType.NUMBER_FLOAT -> InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-                            else -> InputType.TYPE_CLASS_TEXT
-                        }
-
-                        // Update on focus lost
-                        setOnFocusChangeListener { _, hasFocus ->
-                            if (!hasFocus) {
-                                val newValue = when (item.type) {
-                                    SettingType.NUMBER_INT -> text.toString().toIntOrNull() ?: item.value
-                                    SettingType.NUMBER_LONG -> text.toString().toLongOrNull() ?: item.value
-                                    SettingType.NUMBER_FLOAT -> text.toString().toFloatOrNull() ?: item.value
-                                    else -> text.toString()
-                                }
-                                onSettingChanged(item.key, newValue)
-                            }
-                        }
-                    }
-                    container.addView(editText, LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ))
+                SettingType.NUMBER_LONG -> {
+                    valueInput.setText(item.getLongValue().toString())
+                    unitText.visibility = View.VISIBLE
+                    unitText.text = "ms"
                 }
+                else -> {}
+            }
 
-                SettingType.ACTION -> {
-                    val button = Button(container.context).apply {
-                        text = item.value.toString()
-                        setOnClickListener {
-                            onSettingChanged(item.key, Unit)
+            // Add new watcher
+            textWatcher = object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun afterTextChanged(s: Editable?) {
+                    val text = s?.toString() ?: return
+                    if (text.isEmpty()) return
+
+                    try {
+                        val value: Any = when (currentType) {
+                            SettingType.NUMBER_INT -> text.toInt()
+                            SettingType.NUMBER_LONG -> text.toLong()
+                            else -> return
                         }
+                        onSettingChanged(currentKey, value)
+                    } catch (e: NumberFormatException) {
+                        // Invalid input, ignore
                     }
-                    container.addView(button, LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        gravity = Gravity.START
-                    })
-                }
-
-                SettingType.TEXT -> {
-                    val editText = EditText(container.context).apply {
-                        setText(item.value.toString())
-                        inputType = InputType.TYPE_CLASS_TEXT
-
-                        setOnFocusChangeListener { _, hasFocus ->
-                            if (!hasFocus) {
-                                onSettingChanged(item.key, text.toString())
-                            }
-                        }
-                    }
-                    container.addView(editText)
-                }
-
-                SettingType.SELECT, SettingType.SLIDER -> {
-                    // TODO: Implement SELECT and SLIDER types when needed
-                    val placeholderText = TextView(container.context).apply {
-                        text = "Not implemented: ${item.type}"
-                        textSize = 14f
-                        setTextColor(0xFFFF0000.toInt())
-                    }
-                    container.addView(placeholderText)
                 }
             }
+            valueInput.addTextChangedListener(textWatcher)
         }
+    }
 
-        companion object {
-            fun create(parent: ViewGroup, onSettingChanged: (String, Any) -> Unit): SettingViewHolder {
-                val container = LinearLayout(parent.context).apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-                }
-                return SettingViewHolder(container, onSettingChanged)
+    /**
+     * ViewHolder for toggle (boolean) settings
+     */
+    class ToggleViewHolder(
+        view: View,
+        private val onSettingChanged: (String, Any) -> Unit
+    ) : RecyclerView.ViewHolder(view) {
+
+        private val labelText: TextView = view.findViewById(R.id.setting_label)
+        private val descriptionText: TextView = view.findViewById(R.id.setting_description)
+        private val toggleSwitch: Switch = view.findViewById(R.id.setting_toggle)
+
+        private var currentKey: String = ""
+
+        fun bind(item: SettingItem) {
+            currentKey = item.key
+
+            labelText.text = item.label
+            descriptionText.text = item.description
+
+            // Remove listener before setting checked state
+            toggleSwitch.setOnCheckedChangeListener(null)
+            toggleSwitch.isChecked = item.getBooleanValue()
+
+            // Add listener
+            toggleSwitch.setOnCheckedChangeListener { _, isChecked ->
+                onSettingChanged(currentKey, isChecked)
             }
         }
     }
 
     /**
-     * DiffUtil callback for efficient list updates.
+     * ViewHolder for slider (percentage/threshold) settings
      */
-    class SettingItemDiffCallback : DiffUtil.ItemCallback<SettingItem>() {
-        override fun areItemsTheSame(oldItem: SettingItem, newItem: SettingItem): Boolean {
-            return oldItem.key == newItem.key
+    class SliderViewHolder(
+        view: View,
+        private val onSettingChanged: (String, Any) -> Unit
+    ) : RecyclerView.ViewHolder(view) {
+
+        private val labelText: TextView = view.findViewById(R.id.setting_label)
+        private val descriptionText: TextView = view.findViewById(R.id.setting_description)
+        private val valueText: TextView = view.findViewById(R.id.setting_value_text)
+        private val slider: SeekBar = view.findViewById(R.id.setting_slider)
+
+        private var currentKey: String = ""
+        private var isPercentage: Boolean = false
+
+        fun bind(item: SettingItem) {
+            currentKey = item.key
+            isPercentage = item.key.contains("_percent")
+
+            labelText.text = item.label
+            descriptionText.text = item.description
+
+            // Remove listener before setting progress
+            slider.setOnSeekBarChangeListener(null)
+
+            val floatValue = item.getFloatValue()
+            val progress = if (isPercentage) {
+                floatValue.toInt() // Already 0-100
+            } else {
+                (floatValue * 100).toInt() // Convert 0.0-1.0 to 0-100
+            }
+            slider.progress = progress.coerceIn(0, 100)
+            updateValueText(progress)
+
+            // Add listener
+            slider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    if (fromUser) {
+                        updateValueText(progress)
+                        val value = if (isPercentage) {
+                            progress.toFloat()
+                        } else {
+                            progress / 100f
+                        }
+                        onSettingChanged(currentKey, value)
+                    }
+                }
+
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            })
         }
 
-        override fun areContentsTheSame(oldItem: SettingItem, newItem: SettingItem): Boolean {
-            return oldItem == newItem
+        private fun updateValueText(progress: Int) {
+            valueText.text = if (isPercentage) {
+                "$progress%"
+            } else {
+                "${progress / 100f}"
+            }
         }
+    }
+}
+
+/**
+ * DiffUtil callback for efficient list updates
+ */
+class SettingDiffCallback : DiffUtil.ItemCallback<SettingItem>() {
+    override fun areItemsTheSame(oldItem: SettingItem, newItem: SettingItem): Boolean {
+        return oldItem.key == newItem.key
+    }
+
+    override fun areContentsTheSame(oldItem: SettingItem, newItem: SettingItem): Boolean {
+        return oldItem == newItem
     }
 }

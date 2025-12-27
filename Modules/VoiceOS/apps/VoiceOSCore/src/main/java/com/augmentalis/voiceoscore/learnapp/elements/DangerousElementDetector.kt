@@ -136,6 +136,47 @@ class DangerousElementDetector {
          * Dangerous text patterns (regex + reason)
          */
         private val DANGEROUS_TEXT_PATTERNS = listOf(
+            // CRITICAL: System power actions (2025-12-05)
+            Regex("power\\s*off", RegexOption.IGNORE_CASE) to "Power off (CRITICAL)",
+            Regex("shut\\s*down", RegexOption.IGNORE_CASE) to "Shutdown (CRITICAL)",
+            Regex("restart", RegexOption.IGNORE_CASE) to "Restart (CRITICAL)",
+            Regex("reboot", RegexOption.IGNORE_CASE) to "Reboot (CRITICAL)",
+            Regex("sleep", RegexOption.IGNORE_CASE) to "Sleep (CRITICAL)",
+            Regex("hibernate", RegexOption.IGNORE_CASE) to "Hibernate (CRITICAL)",
+            Regex("turn\\s*off", RegexOption.IGNORE_CASE) to "Turn off (CRITICAL)",
+            Regex("power\\s*down", RegexOption.IGNORE_CASE) to "Power down (CRITICAL)",
+
+            // CRITICAL: App termination (2025-12-05)
+            Regex("^exit$", RegexOption.IGNORE_CASE) to "Exit (CRITICAL)",
+            Regex("^quit$", RegexOption.IGNORE_CASE) to "Quit (CRITICAL)",
+            Regex("force\\s*stop", RegexOption.IGNORE_CASE) to "Force stop (CRITICAL)",
+            Regex("force\\s*close", RegexOption.IGNORE_CASE) to "Force close (CRITICAL)",
+
+            // CRITICAL: Communication actions (2025-12-05)
+            Regex("audio\\s*call", RegexOption.IGNORE_CASE) to "Audio call (CRITICAL)",
+            Regex("video\\s*call", RegexOption.IGNORE_CASE) to "Video call (CRITICAL)",
+            Regex("make\\s*call", RegexOption.IGNORE_CASE) to "Make call (CRITICAL)",
+            Regex("start\\s*call", RegexOption.IGNORE_CASE) to "Start call (CRITICAL)",
+            Regex("dial", RegexOption.IGNORE_CASE) to "Dial (CRITICAL)",
+            Regex("call\\s*now", RegexOption.IGNORE_CASE) to "Call now (CRITICAL)",
+
+            // CRITICAL: Audio/microphone settings (2025-12-05)
+            Regex("^microphone$", RegexOption.IGNORE_CASE) to "Microphone (CRITICAL)",
+            Regex("wired\\s*microphone", RegexOption.IGNORE_CASE) to "Wired Microphone (CRITICAL)",
+            Regex("^dictation$", RegexOption.IGNORE_CASE) to "Dictation (CRITICAL)",
+            Regex("voice\\s*recording", RegexOption.IGNORE_CASE) to "Voice recording (CRITICAL)",
+            Regex("record\\s*audio", RegexOption.IGNORE_CASE) to "Record audio (CRITICAL)",
+
+            // CRITICAL: Admin/role actions (2025-12-05)
+            Regex("demote", RegexOption.IGNORE_CASE) to "Demote (CRITICAL)",
+            Regex("promote", RegexOption.IGNORE_CASE) to "Promote (CRITICAL)",
+            Regex("remove.*member", RegexOption.IGNORE_CASE) to "Remove member (CRITICAL)",
+            Regex("add.*owner", RegexOption.IGNORE_CASE) to "Add owner (CRITICAL)",
+            Regex("remove.*owner", RegexOption.IGNORE_CASE) to "Remove owner (CRITICAL)",
+            Regex("change.*role", RegexOption.IGNORE_CASE) to "Change role (CRITICAL)",
+            Regex("make.*admin", RegexOption.IGNORE_CASE) to "Make admin (CRITICAL)",
+            Regex("remove.*admin", RegexOption.IGNORE_CASE) to "Remove admin (CRITICAL)",
+
             // Account deletion
             Regex("delete.*account", RegexOption.IGNORE_CASE) to "Delete account",
             Regex("remove.*account", RegexOption.IGNORE_CASE) to "Remove account",
@@ -182,20 +223,53 @@ class DangerousElementDetector {
             // Financial
             Regex("transfer", RegexOption.IGNORE_CASE) to "Transfer",
             Regex("withdraw", RegexOption.IGNORE_CASE) to "Withdraw",
-            Regex("donate", RegexOption.IGNORE_CASE) to "Donate",
-
-            // FIX (2025-12-07): Download - generate UUID but skip click
-            Regex("download", RegexOption.IGNORE_CASE) to "Download"
+            Regex("donate", RegexOption.IGNORE_CASE) to "Donate"
         )
 
         /**
          * Dangerous resource ID keywords (keyword + reason)
          */
         private val DANGEROUS_RESOURCE_IDS = listOf(
+            // CRITICAL: System/app termination (2025-12-05)
+            "poweroff" to "Power off (CRITICAL)",
+            "shutdown" to "Shutdown (CRITICAL)",
+            "restart" to "Restart (CRITICAL)",
+            "reboot" to "Reboot (CRITICAL)",
+            "sleep" to "Sleep (CRITICAL)",
+            "power_down" to "Power down (CRITICAL)",
+            "powerdown" to "Power down (CRITICAL)",
+            "exit" to "Exit (CRITICAL)",
+            "quit" to "Quit (CRITICAL)",
+            "force_stop" to "Force stop (CRITICAL)",
+            "force_close" to "Force close (CRITICAL)",
+            // Communication actions (2025-12-05)
+            "audio_call" to "Audio call (CRITICAL)",
+            "video_call" to "Video call (CRITICAL)",
+            "audiocall" to "Audio call (CRITICAL)",
+            "videocall" to "Video call (CRITICAL)",
+            "make_call" to "Make call (CRITICAL)",
+            "start_call" to "Start call (CRITICAL)",
+            "dial" to "Dial (CRITICAL)",
+            // Audio/microphone settings (2025-12-05)
+            "microphone" to "Microphone (CRITICAL)",
+            "dictation" to "Dictation (CRITICAL)",
+            "wired_microphone" to "Wired Microphone (CRITICAL)",
+            "record_audio" to "Record audio (CRITICAL)",
+            // Admin actions (2025-12-05)
+            "demote" to "Demote (CRITICAL)",
+            "promote" to "Promote (CRITICAL)",
+            "change_role" to "Change role (CRITICAL)",
+            "remove_member" to "Remove member (CRITICAL)",
+            "add_owner" to "Add owner (CRITICAL)",
+            "remove_owner" to "Remove owner (CRITICAL)",
+            "make_admin" to "Make admin (CRITICAL)",
+            // Standard dangerous actions
             "delete" to "Delete action",
             "remove" to "Remove action",
             "logout" to "Logout action",
             "signout" to "Sign out action",
+            "sign_out" to "Sign out action",
+            "log_out" to "Log out action",
             "purchase" to "Purchase action",
             "buy" to "Buy action",
             "checkout" to "Checkout action",
@@ -207,9 +281,7 @@ class DangerousElementDetector {
             "reset" to "Reset action",
             "clear" to "Clear action",
             "erase" to "Erase action",
-            "uninstall" to "Uninstall action",
-            // FIX (2025-12-07): Download - generate UUID but skip click
-            "download" to "Download action"
+            "uninstall" to "Uninstall action"
         )
     }
 }

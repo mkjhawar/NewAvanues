@@ -49,7 +49,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"  // Compatible with Kotlin 1.9.24
+        kotlinCompilerExtensionVersion = "1.5.15"  // Compatible with Kotlin 1.9.25
     }
 
     publishing {
@@ -113,7 +113,7 @@ publishing {
     publications {
         create<MavenPublication>("release") {
             groupId = "com.augmentalis"
-            artifactId = "vuidcreator"
+            artifactId = "uuidcreator"
             version = "1.0.0"
 
             afterEvaluate {

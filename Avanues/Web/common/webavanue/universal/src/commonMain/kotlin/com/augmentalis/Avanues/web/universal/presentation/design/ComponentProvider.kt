@@ -1,0 +1,194 @@
+package com.augmentalis.Avanues.web.universal.presentation.design
+
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
+
+/**
+ * ComponentProvider Interface
+ *
+ * Abstraction layer for UI component implementations.
+ * Enables seamless transition between UI frameworks (Material3 → MagicUI).
+ *
+ * Architecture:
+ * ┌─────────────────────────────────────────┐
+ * │     Application Code (BrowserScreen)    │
+ * │     Uses: componentProvider.Button()    │
+ * └────────────────┬────────────────────────┘
+ *                  │
+ *                  ▼
+ * ┌─────────────────────────────────────────┐
+ * │       ComponentProvider Interface       │
+ * │   (Defines what components exist)       │
+ * └────────┬────────────────────────────────┘
+ *          │
+ *          ├──────────────┬─────────────────┐
+ *          ▼              ▼                 ▼
+ * ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+ * │    Ocean     │ │   MagicUI    │ │   Future     │
+ * │  (Material3) │ │   Provider   │ │   Provider   │
+ * └──────────────┘ └──────────────┘ └──────────────┘
+ *
+ * Migration Strategy:
+ * 1. Today: Use OceanComponentProvider (Material3)
+ * 2. Tomorrow: Implement MagicUIComponentProvider
+ * 3. Switch: Change one line (which provider to use)
+ * 4. App code: UNCHANGED (uses interface, not implementation)
+ *
+ * Feature Flag Example:
+ * ```kotlin
+ * val provider = if (useMagicUI) {
+ *     MagicUIComponentProvider
+ * } else {
+ *     OceanComponentProvider
+ * }
+ * ```
+ */
+interface ComponentProvider {
+
+    /**
+     * Icon component
+     *
+     * @param imageVector Icon image
+     * @param contentDescription Accessibility description
+     * @param variant Icon color variant (Primary, Secondary, Disabled, etc.)
+     * @param modifier Modifier for customization
+     */
+    @Composable
+    fun Icon(
+        imageVector: ImageVector,
+        contentDescription: String?,
+        variant: IconVariant = IconVariant.Primary,
+        modifier: Modifier = Modifier
+    )
+
+    /**
+     * IconButton component
+     *
+     * @param onClick Click handler
+     * @param enabled Enable/disable button
+     * @param modifier Modifier for customization
+     * @param content Icon content
+     */
+    @Composable
+    fun IconButton(
+        onClick: () -> Unit,
+        enabled: Boolean = true,
+        modifier: Modifier = Modifier,
+        content: @Composable () -> Unit
+    )
+
+    /**
+     * Button component
+     *
+     * @param onClick Click handler
+     * @param enabled Enable/disable button
+     * @param variant Button style variant
+     * @param modifier Modifier for customization
+     * @param content Button content
+     */
+    @Composable
+    fun Button(
+        onClick: () -> Unit,
+        enabled: Boolean = true,
+        variant: ButtonVariant = ButtonVariant.Primary,
+        modifier: Modifier = Modifier,
+        content: @Composable RowScope.() -> Unit
+    )
+
+    /**
+     * Surface component
+     *
+     * @param modifier Modifier for customization
+     * @param variant Surface style variant
+     * @param shape Surface shape
+     * @param onClick Optional click handler
+     * @param content Surface content
+     */
+    @Composable
+    fun Surface(
+        modifier: Modifier = Modifier,
+        variant: SurfaceVariant = SurfaceVariant.Default,
+        shape: Shape? = null,
+        onClick: (() -> Unit)? = null,
+        content: @Composable () -> Unit
+    )
+
+    /**
+     * TextField component
+     *
+     * @param value Current text value
+     * @param onValueChange Text change callback
+     * @param modifier Modifier for customization
+     * @param placeholder Placeholder text
+     * @param leadingIcon Optional leading icon
+     * @param trailingIcon Optional trailing icon
+     * @param enabled Enable/disable field
+     */
+    @Composable
+    fun TextField(
+        value: String,
+        onValueChange: (String) -> Unit,
+        modifier: Modifier = Modifier,
+        placeholder: String? = null,
+        leadingIcon: (@Composable () -> Unit)? = null,
+        trailingIcon: (@Composable () -> Unit)? = null,
+        enabled: Boolean = true
+    )
+
+    /**
+     * FloatingActionButton component
+     *
+     * @param onClick Click handler
+     * @param modifier Modifier for customization
+     * @param containerColor Button background color
+     * @param contentColor Button content color
+     * @param content Button content (icon)
+     */
+    @Composable
+    fun FloatingActionButton(
+        onClick: () -> Unit,
+        modifier: Modifier = Modifier,
+        containerColor: Color? = null,
+        contentColor: Color? = null,
+        content: @Composable () -> Unit
+    )
+}
+
+/**
+ * Icon color variants
+ * Maps to OceanDesignTokens.Icon.*
+ */
+enum class IconVariant {
+    Primary,    // Always visible blue
+    Secondary,  // Less emphasis gray
+    Disabled,   // Inactive gray
+    Success,    // Positive green
+    Warning,    // Caution amber
+    Error,      // Error red
+    OnPrimary   // White (on blue backgrounds)
+}
+
+/**
+ * Button style variants
+ */
+enum class ButtonVariant {
+    Primary,    // Filled blue button
+    Secondary,  // Outlined button
+    Tertiary,   // Text button
+    Ghost       // Transparent button
+}
+
+/**
+ * Surface style variants
+ * Maps to OceanDesignTokens.Surface.*
+ */
+enum class SurfaceVariant {
+    Default,    // Standard surface
+    Elevated,   // Elevated surface (cards, dialogs)
+    Input,      // Input surface (text fields)
+    Glass       // Glassmorphic surface
+}

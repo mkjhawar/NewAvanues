@@ -268,7 +268,7 @@ class InteractionRecorder {
             elementSnapshot = element?.let { createElementSnapshot(it) },
             packageName = currentPackageName ?: "",
             eventType = event.eventType,
-            eventText = event.text?.joinToString(" ") ?: ""
+            eventText = event.text.joinToString(" ")
         )
 
         addInteraction(interaction)
@@ -340,6 +340,7 @@ class InteractionRecorder {
 
             if (interactionsArray != null) {
                 for (i in 0 until interactionsArray.length()) {
+                    @Suppress("UNUSED_VARIABLE")
                     val interactionJson = interactionsArray.getJSONObject(i)
                     // Note: Deserialization would need to be implemented based on type
                     // Skipping for now as it requires type discrimination

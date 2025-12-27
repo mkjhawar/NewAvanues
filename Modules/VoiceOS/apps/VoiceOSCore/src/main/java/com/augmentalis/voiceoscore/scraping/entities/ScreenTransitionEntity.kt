@@ -1,19 +1,16 @@
 /**
  * ScreenTransitionEntity.kt - Screen navigation transitions for flow analysis
  *
+ * Migrated from Room to SQLDelight (Phase 2)
+ *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Code-Reviewed-By: CCA
- * Created: 2025-10-18
- * Migrated to SQLDelight: 2025-12-17
+ * Author: VOS4 Scraping Migration Specialist (Agent 3B)
+ * Created: 2025-11-27
  */
 package com.augmentalis.voiceoscore.scraping.entities
 
 /**
  * Entity representing screen-to-screen transitions
- *
- * MIGRATION NOTE: This entity has been migrated to use SQLDelight.
- * The schema is defined in: core/database/src/commonMain/sqldelight/com/augmentalis/database/ScreenTransition.sq
  *
  * Tracks navigation patterns and user flows between screens.
  * Enables understanding of:
@@ -25,7 +22,7 @@ package com.augmentalis.voiceoscore.scraping.entities
  * @property id Auto-generated primary key
  * @property fromScreenHash Hash of source screen
  * @property toScreenHash Hash of destination screen
- * @property triggerElementHash Hash of element that triggered transition
+ * @property triggerElementHash Hash of element that triggered transition (nullable)
  * @property triggerAction Action that triggered transition
  * @property transitionCount Number of times this transition occurred
  * @property avgDurationMs Average duration of transition in milliseconds
@@ -35,9 +32,9 @@ data class ScreenTransitionEntity(
     val id: Long = 0,
     val fromScreenHash: String,
     val toScreenHash: String,
-    val triggerElementHash: String?,
-    val triggerAction: String,
-    val transitionCount: Long = 1,
+    val triggerElementHash: String? = null,
+    val triggerAction: String = "unknown",
+    val transitionCount: Int = 1,
     val avgDurationMs: Long = 0,
     val lastTransitionAt: Long = System.currentTimeMillis()
 )

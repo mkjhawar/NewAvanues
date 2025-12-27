@@ -73,7 +73,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"  // Compatible with Kotlin 1.9.24
+        kotlinCompilerExtensionVersion = "1.5.15"  // Compatible with Kotlin 1.9.25
     }
 
     // Native build configuration removed - Whisper deferred to backlog
@@ -185,7 +185,7 @@ dependencies {
     // implementation(project(":Vosk"))
     
     // VoiceDataManager - Centralized entity and repository management
-    implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))
+    // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight
     
     // DeviceManager - For AccessibilityManager and device capabilities
     implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))

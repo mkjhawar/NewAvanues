@@ -1,5 +1,6 @@
 /**
  * ScreenStateManager.kt - Manages screen states and visited tracking
+ * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/fingerprinting/ScreenStateManager.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
@@ -10,8 +11,12 @@
 
 package com.augmentalis.voiceoscore.learnapp.fingerprinting
 
+import android.accessibilityservice.AccessibilityService
+import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
 import com.augmentalis.voiceoscore.learnapp.models.ScreenState
+import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -25,7 +30,7 @@ import kotlinx.coroutines.sync.withLock
  * ## Usage Example
  *
  * ```kotlin
- * val manager = ScreenStateManager()
+ * val manager = ScreenStateManager(accessibilityService)
  *
  * // Get current screen state
  * val rootNode = getRootInActiveWindow()
@@ -46,19 +51,30 @@ import kotlinx.coroutines.sync.withLock
  * ## Features
  *
  * - SHA-256 fingerprinting for screen identification
+ * - Popup/dialog detection with stable hashing
  * - Visited state tracking
  * - Screen transition detection
  * - State history management
  * - Thread-safe operations
  *
+ * @property accessibilityService Accessibility service (optional for popup detection)
  * @since 1.0.0
  */
-class ScreenStateManager {
+class ScreenStateManager(
+    private val accessibilityService: AccessibilityService? = null
+) {
 
     /**
      * Screen fingerprinter
      */
     private val fingerprinter = ScreenFingerprinter()
+
+    /**
+     * Developer settings for verbose logging
+     */
+    private val developerSettings by lazy {
+        accessibilityService?.let { LearnAppDeveloperSettings(it) }
+    }
 
     /**
      * Set of visited screen hashes
@@ -90,6 +106,10 @@ class ScreenStateManager {
      *
      * Calculates fingerprint and creates ScreenState object.
      *
+     * FIX (2025-11-24): Added popup/dialog detection with stable hashing
+     * Issue: Popups with time-dependent content (e.g., time picker) don't have stable hashes
+     * Solution: Detect popup windows and generate hash based on structure, not content
+     *
      * @param rootNode Root accessibility node
      * @param packageName Package name of app
      * @param depth DFS depth (optional)
@@ -104,14 +124,47 @@ class ScreenStateManager {
             return@withLock createEmptyScreenState(packageName)
         }
 
-        // Calculate fingerprint
-        val hash = fingerprinter.calculateFingerprint(rootNode)
+        // FIX (2025-11-24): Detect if current window is a popup/dialog
+        val windowInfo = detectPopupWindow(rootNode, packageName)
 
-        // Check if state already exists
+        // Calculate fingerprint (popup-aware)
+        val hash = if (windowInfo.isPopup) {
+            // For popups, generate stable hash based on structure, not content
+            fingerprinter.calculatePopupFingerprint(rootNode, windowInfo.popupType)
+        } else {
+            // For regular screens, use normal fingerprinting
+            fingerprinter.calculateFingerprint(rootNode)
+        }
+
+        // Check if state already exists (exact match)
         val existingState = screenStates[hash]
         if (existingState != null) {
             currentScreenHash = hash
             return@withLock existingState
+        }
+
+        // NEW: Check if similar screen already exists (prevent duplicates)
+        val existingSimilarScreen = findRecentSimilarScreen(hash, packageName)
+        if (existingSimilarScreen != null) {
+            if (developerSettings?.isVerboseLoggingEnabled() == true) {
+                android.util.Log.d("ScreenStateManager",
+                    "Screen $hash is similar to existing ${existingSimilarScreen.hash}. " +
+                    "Reusing existing screen state to avoid duplication. " +
+                    "Similarity: first 16 chars match")
+            }
+
+            // Return existing screen with updated timestamp
+            currentScreenHash = existingSimilarScreen.hash
+            return@withLock existingSimilarScreen.copy(
+                timestamp = System.currentTimeMillis(),
+                depth = depth  // Update depth if different
+            )
+        }
+
+        // If not similar, create new screen state as before
+        if (developerSettings?.isVerboseLoggingEnabled() == true) {
+            android.util.Log.d("ScreenStateManager",
+                "Creating new screen state: $hash (no similar screen found)")
         }
 
         // Count elements
@@ -234,7 +287,7 @@ class ScreenStateManager {
                 return currentHash
             }
 
-            delay(100)  // Poll every 100ms
+            delay(developerSettings?.getScreenTransitionPollIntervalMs() ?: 100L)
         }
 
         return null  // Timeout
@@ -284,41 +337,160 @@ class ScreenStateManager {
     }
 
     /**
-     * Check if two screens are similar
+     * Calculates similarity between two screen hashes using fuzzy matching.
+     * Useful for screens with dynamic elements (timestamps, counters).
      *
-     * Compares screen hashes with a similarity threshold to detect screens
-     * with similar structure but dynamic content.
+     * @param hash1 First hash
+     * @param hash2 Second hash
+     * @return Similarity score (0.0 to 1.0)
+     */
+    fun calculateHashSimilarity(hash1: String, hash2: String): Double {
+        if (hash1 == hash2) return 1.0
+        if (hash1.isEmpty() || hash2.isEmpty()) return 0.0
+
+        // Use Levenshtein distance for fuzzy matching
+        val distance = levenshteinDistance(hash1, hash2)
+        val maxLength = maxOf(hash1.length, hash2.length)
+
+        return 1.0 - (distance.toDouble() / maxLength)
+    }
+
+    /**
+     * Waits for screen to return to expected hash.
+     *
+     * @param expectedHash Expected screen hash
+     * @param timeoutMs Timeout in milliseconds
+     * @param similarityThreshold Minimum similarity threshold (default 0.85)
+     * @return true if screen returned to expected hash
+     */
+    suspend fun waitForScreenReturn(
+        expectedHash: String,
+        timeoutMs: Long = 3000L,
+        similarityThreshold: Double = 0.85
+    ): Boolean {
+        val startTime = System.currentTimeMillis()
+
+        while (System.currentTimeMillis() - startTime < timeoutMs) {
+            val currentHash = getCurrentScreenHash()
+
+            if (currentHash == expectedHash) return true
+
+            // Fuzzy match
+            currentHash?.let { hash ->
+                val similarity = calculateHashSimilarity(hash, expectedHash)
+                if (similarity >= similarityThreshold) return true
+            }
+
+            delay(developerSettings?.getScreenTransitionPollIntervalMs() ?: 100L)
+        }
+
+        return false
+    }
+
+    /**
+     * Check if two screens are structurally similar
+     *
+     * Compares element counts and types to determine if screens are the same
+     * despite minor content changes (timestamps, notifications, live updates).
      *
      * @param hash1 First screen hash
      * @param hash2 Second screen hash
-     * @param similarityThreshold Similarity threshold (0.0-1.0)
-     * @return true if screens are similar
+     * @param similarityThreshold Minimum similarity (0.0-1.0), default 0.85
+     * @return true if screens are structurally similar (>=85% match)
      */
     fun areScreensSimilar(
         hash1: String,
         hash2: String,
-        similarityThreshold: Double = 0.8
+        similarityThreshold: Double = 0.85
     ): Boolean {
-        // Exact match
+        // Exact match (fast path)
         if (hash1 == hash2) return true
 
-        // Get screen states
-        val state1 = screenStates[hash1]
-        val state2 = screenStates[hash2]
+        // For now, implement basic similarity check
+        // TODO: In future, compare actual screen structure from database
 
-        // If both states exist, compare by package and activity
-        if (state1 != null && state2 != null) {
-            return state1.packageName == state2.packageName &&
-                   state1.activityName == state2.activityName
+        // If hashes differ significantly, likely different screens
+        // This is a simplified version - in production you'd compare actual screen states
+        val hash1Prefix = hash1.take(16)
+        val hash2Prefix = hash2.take(16)
+
+        // If first 16 chars match, likely same screen with minor changes
+        return hash1Prefix == hash2Prefix
+    }
+
+    /**
+     * Find recent similar screen to avoid duplicate records
+     *
+     * Checks recent screen states for the same package to see if any
+     * are similar enough to be considered the same screen.
+     *
+     * This prevents duplicate records when screens have minor changes due to:
+     * - Timestamps updating
+     * - Animation states
+     * - Notification badges
+     * - Status bar changes
+     *
+     * @param newHash Hash of the screen being captured
+     * @param packageName Package name to limit search
+     * @return Existing similar screen or null if none found
+     */
+    private fun findRecentSimilarScreen(
+        newHash: String,
+        packageName: String
+    ): ScreenState? {
+        // Get recent screens from screenStates map filtered by package
+        val recentScreens = screenStates.values
+            .filter { it.packageName == packageName }
+            .sortedByDescending { it.timestamp }
+            .take(10)  // Only check last 10 screens for this package
+
+        // Check each recent screen for similarity
+        for (recentScreen in recentScreens) {
+            val isSimilar = areScreensSimilar(
+                hash1 = newHash,
+                hash2 = recentScreen.hash,
+                similarityThreshold = (developerSettings?.getScreenHashSimilarityThreshold()?.toDouble() ?: 0.90)
+            )
+
+            if (isSimilar) {
+                if (developerSettings?.isVerboseLoggingEnabled() == true) {
+                    android.util.Log.d("ScreenStateManager",
+                        "Found similar recent screen: ${recentScreen.hash} " +
+                        "(checking ${recentScreens.size} recent screens for $packageName)")
+                }
+                return recentScreen
+            }
         }
 
-        // Fallback: compare hash similarity (simple string comparison)
-        // This is a basic implementation - could be enhanced with proper hash similarity
-        val commonPrefix = hash1.commonPrefixWith(hash2).length
-        val maxLength = maxOf(hash1.length, hash2.length)
-        val similarity = commonPrefix.toDouble() / maxLength.toDouble()
+        return null
+    }
 
-        return similarity >= similarityThreshold
+    /**
+     * Calculates Levenshtein distance between two strings.
+     *
+     * @param s1 First string
+     * @param s2 Second string
+     * @return Levenshtein distance
+     */
+    private fun levenshteinDistance(s1: String, s2: String): Int {
+        val costs = IntArray(s2.length + 1) { it }
+
+        for (i in 1..s1.length) {
+            costs[0] = i
+            var prev = i - 1
+
+            for (j in 1..s2.length) {
+                val newValue = if (s1[i - 1] == s2[j - 1]) {
+                    prev
+                } else {
+                    1 + minOf(prev, costs[j], costs[j - 1])
+                }
+                prev = costs[j]
+                costs[j] = newValue
+            }
+        }
+
+        return costs[s2.length]
     }
 
     /**
@@ -371,6 +543,114 @@ class ScreenStateManager {
             depth = 0
         )
     }
+
+    /**
+     * Detect if current window is a popup/dialog
+     *
+     * FIX (2025-11-24): Detect popup windows for stable hashing
+     * Popups/dialogs have time-dependent content that causes unstable hashes.
+     * This method detects popups by checking:
+     * - Window type (TYPE_APPLICATION_OVERLAY, high layer)
+     * - Small bounds (typical dialog size)
+     * - Common dialog class names
+     *
+     * @param rootNode Root node of current window
+     * @param packageName Package name
+     * @return WindowInfo containing popup detection result
+     */
+    private fun detectPopupWindow(rootNode: AccessibilityNodeInfo, packageName: String): PopupWindowInfo {
+        // If no accessibility service, can't detect windows - assume not popup
+        if (accessibilityService == null) {
+            return PopupWindowInfo(isPopup = false, popupType = "")
+        }
+
+        try {
+            // Get all windows
+            val windows = accessibilityService.windows ?: return PopupWindowInfo(isPopup = false, popupType = "")
+
+            // Find window that matches this root node's package
+            for (window in windows) {
+                try {
+                    val windowRoot = window.root ?: continue
+                    val windowPackage = windowRoot.packageName?.toString() ?: continue
+
+                    // Check if this is our window (package match)
+                    if (windowPackage != packageName) continue
+
+                    // Check window characteristics for popup detection
+                    val windowType = window.type
+                    val layer = window.layer
+                    val bounds = android.graphics.Rect()
+                    window.getBoundsInScreen(bounds)
+                    val width = bounds.width()
+                    val height = bounds.height()
+
+                    // Detect popup based on multiple heuristics
+                    var isPopup = false
+                    var popupType = ""
+
+                    // Heuristic 1: TYPE_APPLICATION_OVERLAY (API 26+)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
+                        windowType == 0x00000004 /* TYPE_APPLICATION_OVERLAY */) {
+                        isPopup = true
+                        popupType = "overlay"
+                    }
+
+                    // Heuristic 2: High layer number (overlays are on top)
+                    if (!isPopup && layer > 5) {
+                        isPopup = true
+                        popupType = "high_layer_overlay"
+                    }
+
+                    // Heuristic 3: Small bounds (dialogs are typically smaller)
+                    if (!isPopup && (width < 800 || height < 600)) {
+                        isPopup = true
+                        popupType = "small_dialog"
+                    }
+
+                    // Heuristic 4: Check root node class name for dialog patterns
+                    val className = rootNode.className?.toString() ?: ""
+                    if (!isPopup && (className.contains("Dialog", ignoreCase = true) ||
+                                     className.contains("Picker", ignoreCase = true) ||
+                                     className.contains("Popup", ignoreCase = true) ||
+                                     className.contains("Alert", ignoreCase = true))) {
+                        isPopup = true
+                        popupType = "dialog_class_${className.substringAfterLast('.')}"
+                    }
+
+                    if (isPopup) {
+                        if (developerSettings?.isVerboseLoggingEnabled() == true) {
+                            android.util.Log.d("ScreenStateManager",
+                                "🔔 Popup detected: type=$popupType, windowType=$windowType, " +
+                                "layer=$layer, bounds=${width}x${height}, class=$className")
+                        }
+                        return PopupWindowInfo(isPopup = true, popupType = popupType)
+                    }
+
+                } catch (e: Exception) {
+                    android.util.Log.e("ScreenStateManager", "Error checking window for popup", e)
+                    // Continue to next window
+                }
+            }
+
+        } catch (e: Exception) {
+            android.util.Log.e("ScreenStateManager", "Error in detectPopupWindow", e)
+        }
+
+        // Not a popup
+        return PopupWindowInfo(isPopup = false, popupType = "")
+    }
+
+    /**
+     * Popup window detection result
+     *
+     * @property isPopup True if this is a popup/dialog window
+     * @property popupType Type of popup (for stable hash generation)
+     */
+    private data class PopupWindowInfo(
+        val isPopup: Boolean,
+        val popupType: String
+    )
 }
 
 /**

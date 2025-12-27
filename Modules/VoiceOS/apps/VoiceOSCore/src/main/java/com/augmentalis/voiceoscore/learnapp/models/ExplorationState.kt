@@ -1,10 +1,10 @@
 /**
  * ExplorationState.kt - Sealed class representing exploration states
+ * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/models/ExplorationState.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
  * Created: 2025-10-08
- * Updated: 2025-12-22
  *
  * Sealed class hierarchy for exploration state machine
  */
@@ -30,6 +30,25 @@ package com.augmentalis.voiceoscore.learnapp.models
  *                                 Running
  *                                     ↓
  *                                  Failed
+ * ```
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val state: ExplorationState = ExplorationState.Running(
+ *     progress = ExplorationProgress(
+ *         screensExplored = 10,
+ *         elementsDiscovered = 234,
+ *         currentDepth = 5
+ *     )
+ * )
+ *
+ * when (state) {
+ *     is ExplorationState.Idle -> println("Ready to start")
+ *     is ExplorationState.Running -> println("Exploring... ${state.progress.screensExplored} screens")
+ *     is ExplorationState.Completed -> println("Done! ${state.stats.totalScreens} screens")
+ *     is ExplorationState.Failed -> println("Error: ${state.error.message}")
+ * }
  * ```
  *
  * @since 1.0.0
@@ -60,13 +79,6 @@ sealed class ExplorationState {
     data class ConsentCancelled(
         val packageName: String
     ) : ExplorationState()
-
-    /**
-     * Preparing to start exploration
-     *
-     * @param packageName The app being prepared for exploration
-     */
-    data class Preparing(val packageName: String) : ExplorationState()
 
     /**
      * Running - exploration in progress
@@ -102,11 +114,14 @@ sealed class ExplorationState {
     ) : ExplorationState()
 
     /**
-     * Exploration paused (generic)
+     * Paused - exploration paused (Phase 2: unified pause state)
      *
-     * @param packageName The app being explored
-     * @param progress Progress before pause
-     * @param reason Reason for pause
+     * Replaces PausedForLogin and PausedByUser with a single unified state
+     * that includes the pause reason for UI display.
+     *
+     * @property packageName Package being explored
+     * @property progress Progress before pause
+     * @property reason Reason for pause (e.g., "User paused", "Permission required", "Login screen detected")
      */
     data class Paused(
         val packageName: String,

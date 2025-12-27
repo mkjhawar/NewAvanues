@@ -82,61 +82,6 @@ data class NavigationGraph(
     }
 
     /**
-     * Get all screen hashes
-     *
-     * @return List of all screen hashes in the graph
-     */
-    fun getScreens(): List<String> {
-        return nodes.keys.toList()
-    }
-
-    /**
-     * Get elements for a screen (as GraphElement objects)
-     *
-     * @param screenHash Screen hash
-     * @return List of graph elements
-     */
-    fun getElementsForScreen(screenHash: String): List<GraphElement> {
-        val node = nodes[screenHash] ?: return emptyList()
-        return node.elements.map { uuid ->
-            GraphElement(
-                uuid = uuid,
-                alias = null,  // Would need to look up from database
-                type = "unknown",
-                text = null,
-                contentDescription = null,
-                isClickable = true
-            )
-        }
-    }
-
-    /**
-     * Get transitions from a screen
-     *
-     * @param screenHash Screen hash
-     * @return List of graph transitions
-     */
-    fun getTransitionsFrom(screenHash: String): List<GraphTransition> {
-        return getOutgoingEdges(screenHash).map { edge ->
-            GraphTransition(
-                fromScreen = edge.fromScreenHash,
-                toScreen = edge.toScreenHash,
-                elementUuid = edge.clickedElementUuid
-            )
-        }
-    }
-
-    /**
-     * Get activity name for screen
-     *
-     * @param screenHash Screen hash
-     * @return Activity name or null if not available
-     */
-    fun getActivityName(screenHash: String): String? {
-        return nodes[screenHash]?.activityName
-    }
-
-    /**
      * Find path between two screens (BFS)
      *
      * @param startHash Start screen hash
@@ -178,7 +123,9 @@ data class NavigationGraph(
      * @return Graph stats
      */
     fun getStats(): GraphStats {
+        // Count total elements across all screen nodes
         val totalElements = nodes.values.sumOf { it.elements.size }
+
         return GraphStats(
             totalScreens = nodes.size,
             totalElements = totalElements,
@@ -256,25 +203,6 @@ data class ScreenNode(
 }
 
 /**
- * Navigation Edge
- *
- * Represents a directed edge in the navigation graph.
- *
- * @property fromScreenHash Source screen hash
- * @property clickedElementUuid UUID of element that was clicked
- * @property toScreenHash Destination screen hash
- * @property timestamp When transition was recorded
- */
-data class NavigationEdge(
-    val fromScreenHash: String,
-    val clickedElementUuid: String,
-    val toScreenHash: String,
-    val timestamp: Long = System.currentTimeMillis()
-) {
-    override fun toString(): String = "$fromScreenHash --[$clickedElementUuid]--> $toScreenHash"
-}
-
-/**
  * Graph Statistics
  *
  * @property totalScreens Total nodes in graph
@@ -301,39 +229,3 @@ data class GraphStats(
         """.trimIndent()
     }
 }
-
-/**
- * Graph Element (simplified element info for graph)
- *
- * Lightweight element representation for AI context serialization.
- *
- * @property uuid Element UUID
- * @property alias User-assigned alias
- * @property type Element type (button, textfield, etc.)
- * @property text Visible text
- * @property contentDescription Content description for accessibility
- * @property isClickable Whether element is clickable
- */
-data class GraphElement(
-    val uuid: String?,
-    val alias: String?,
-    val type: String,
-    val text: String?,
-    val contentDescription: String?,
-    val isClickable: Boolean
-)
-
-/**
- * Graph Transition (simplified transition info for graph)
- *
- * Represents a navigation transition between screens.
- *
- * @property fromScreen Source screen hash
- * @property toScreen Destination screen hash
- * @property elementUuid UUID of element that triggered transition
- */
-data class GraphTransition(
-    val fromScreen: String,
-    val toScreen: String,
-    val elementUuid: String
-)

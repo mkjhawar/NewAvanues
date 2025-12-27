@@ -12,7 +12,7 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
-import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
+import com.augmentalis.voiceoscore.accessibility.VoiceOSService
 import android.accessibilityservice.AccessibilityService as AndroidAccessibilityService
 
 /**
@@ -20,7 +20,7 @@ import android.accessibilityservice.AccessibilityService as AndroidAccessibility
  * Direct implementation with ActionHandler interface
  */
 class SystemHandler(
-    private val context: IVoiceOSContext
+    private val service: VoiceOSService
 ) : ActionHandler {
 
     companion object {
@@ -54,44 +54,44 @@ class SystemHandler(
         return when {
             // Navigation actions
             normalizedAction == "back" || normalizedAction == "go back" -> {
-                context.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_BACK)
+                service.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_BACK)
             }
 
             normalizedAction == "home" || normalizedAction == "go home" -> {
-                context.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_HOME)
+                service.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_HOME)
             }
 
             normalizedAction in listOf("recent", "recent apps", "recents") -> {
-                context.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_RECENTS)
+                service.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_RECENTS)
             }
 
             // System panels
             normalizedAction == "notifications" || normalizedAction == "notification panel" -> {
-                context.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
+                service.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
             }
 
             normalizedAction == "settings" || normalizedAction == "quick settings" -> {
-                context.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS)
+                service.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS)
             }
 
             normalizedAction == "power" || normalizedAction == "power menu" -> {
-                context.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_POWER_DIALOG)
+                service.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_POWER_DIALOG)
             }
 
             // Screenshot (Android P+)
             normalizedAction == "screenshot" || normalizedAction == "take screenshot" -> {
-                context.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT)
+                service.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT)
             }
 
             // Split screen (Android N+)
             normalizedAction == "split screen" || normalizedAction == "split" -> {
-                context.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN)
+                service.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN)
             }
 
             // Voice assistant (Android P+)
             normalizedAction == "assistant" || normalizedAction == "voice assistant" -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    context.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_SHORTCUT)
+                    service.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_SHORTCUT)
                 } else {
                     false
                 }
@@ -99,16 +99,16 @@ class SystemHandler(
 
             // Lock screen (Android P+)
             normalizedAction == "lock" || normalizedAction == "lock screen" -> {
-                context.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
+                service.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
             }
 
             // All apps (Android S+)
             normalizedAction == "all apps" || normalizedAction == "app drawer" -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    context.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_ALL_APPS)
+                    service.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_ALL_APPS)
                 } else {
                     // Fallback to home long press simulation
-                    context.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_HOME)
+                    service.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_HOME)
                     true
                 }
             }
@@ -119,7 +119,7 @@ class SystemHandler(
             }
 
             else -> {
-                Log.w(TAG, "Unknown system action: $normalizedAction")
+                Log.w(TAG, "Unknown system action: '$normalizedAction'. Supported actions: back, home, notifications, settings, screenshot, split screen, lock. Impact: Command not recognized and not executed")
                 false
             }
         }
@@ -194,10 +194,10 @@ class SystemHandler(
 
         return try {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(intent)
+            service.startActivity(intent)
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to open settings", e)
+            Log.e(TAG, "Failed to open settings: Unable to launch settings intent '$action'. Cause: ${e.javaClass.simpleName} - ${e.message}. Impact: Settings screen not accessible to user", e)
             false
         }
     }

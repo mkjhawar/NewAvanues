@@ -1,10 +1,6 @@
 /**
  * MetadataQuality.kt - Quality assessment for element metadata
  *
- * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: Manoj Jhawar
- * Created: 2025-12-17
- *
  * Evaluates the quality of UI element metadata to determine if it's sufficient
  * for reliable voice command generation. Uses a weighted scoring system based on
  * presence of text, contentDescription, viewId, and actionable properties.
@@ -23,7 +19,9 @@
  */
 package com.augmentalis.voiceoscore.learnapp.validation
 
+import android.content.Context
 import android.view.accessibility.AccessibilityNodeInfo
+import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 
 /**
  * Quality levels for element metadata
@@ -76,13 +74,12 @@ data class MetadataQualityScore(
  * Evaluates accessibility metadata and provides actionable suggestions
  * for improving element discoverability and voice command generation.
  */
-object MetadataQuality {
+class MetadataQuality(context: Context) {
 
-    // Scoring weights for different metadata aspects
-    private const val WEIGHT_TEXT = 0.3f
-    private const val WEIGHT_CONTENT_DESC = 0.25f
-    private const val WEIGHT_VIEW_ID = 0.3f
-    private const val WEIGHT_ACTIONABLE = 0.15f
+    // Developer settings (lazy initialized)
+    private val developerSettings: LearnAppDeveloperSettings by lazy {
+        LearnAppDeveloperSettings(context)
+    }
 
     /**
      * Assess the metadata quality of an accessibility node
@@ -94,35 +91,41 @@ object MetadataQuality {
         var score = 0f
         val suggestions = mutableListOf<String>()
 
-        // Evaluate text label (30% weight)
+        // Get scoring weights from settings
+        val weightText = developerSettings.getQualityWeightText()
+        val weightContentDesc = developerSettings.getQualityWeightContentDesc()
+        val weightViewId = developerSettings.getQualityWeightResourceId()
+        val weightActionable = developerSettings.getQualityWeightActionable()
+
+        // Evaluate text label
         val hasText = !node.text.isNullOrBlank()
         if (hasText) {
-            score += WEIGHT_TEXT
+            score += weightText
         } else {
             suggestions.add("Add text label to element")
         }
 
-        // Evaluate content description (25% weight)
+        // Evaluate content description
         val hasContentDesc = !node.contentDescription.isNullOrBlank()
         if (hasContentDesc) {
-            score += WEIGHT_CONTENT_DESC
+            score += weightContentDesc
         } else {
             suggestions.add("Add android:contentDescription for accessibility")
         }
 
-        // Evaluate resource ID (30% weight)
+        // Evaluate resource ID
         val hasViewId = !node.viewIdResourceName.isNullOrBlank()
         if (hasViewId) {
-            score += WEIGHT_VIEW_ID
+            score += weightViewId
         } else {
             suggestions.add("Add android:id with meaningful name")
         }
 
-        // Evaluate actionability (15% weight)
+        // Evaluate actionability
         val isActionable = node.isClickable || node.isLongClickable ||
                           node.isEditable || node.isCheckable
         if (isActionable) {
-            score += WEIGHT_ACTIONABLE
+            score += weightActionable
         }
 
         // Determine quality level based on score

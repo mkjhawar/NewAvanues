@@ -11,14 +11,14 @@ package com.augmentalis.voiceoscore.accessibility.handlers
 import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
+import com.augmentalis.voiceoscore.accessibility.VoiceOSService
 import android.accessibilityservice.AccessibilityService as AndroidAccessibilityService
 
 /**
  * Handler for UI element interactions
  */
 class UIHandler(
-    private val context: IVoiceOSContext
+    private val service: VoiceOSService
 ) : ActionHandler {
     
     companion object {
@@ -192,26 +192,26 @@ class UIHandler(
     
     private fun performDismiss(): Boolean {
         // Try to find and click dismiss/close button
-        context.getRootNodeInActiveWindow() ?: return false
-
+        service.rootInActiveWindow ?: return false
+        
         // Look for common dismiss elements
-        val dismissNode = findNodeByText("dismiss")
+        val dismissNode = findNodeByText("dismiss") 
             ?: findNodeByText("close")
             ?: findNodeByText("cancel")
             ?: findNodeByText("ok")
             ?: findNodeByDescription("dismiss")
             ?: findNodeByDescription("close")
-
+        
         if (dismissNode != null) {
             return dismissNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         }
-
+        
         // Fallback to back action
-        return context.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_BACK)
+        return service.performGlobalAction(AndroidAccessibilityService.GLOBAL_ACTION_BACK)
     }
     
     private fun findNodeByText(text: String): AccessibilityNodeInfo? {
-        val rootNode = context.getRootNodeInActiveWindow() ?: return null
+        val rootNode = service.rootInActiveWindow ?: return null
         return findNodeByTextRecursive(rootNode, text.lowercase())
     }
     
@@ -238,7 +238,7 @@ class UIHandler(
     }
     
     private fun findNodeByDescription(description: String): AccessibilityNodeInfo? {
-        val rootNode = context.getRootNodeInActiveWindow() ?: return null
+        val rootNode = service.rootInActiveWindow ?: return null
         return findNodeByDescriptionRecursive(rootNode, description.lowercase())
     }
     

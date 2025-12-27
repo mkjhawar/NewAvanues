@@ -18,29 +18,31 @@
 
 ## NewAvanues Monorepo Structure
 
+**Naming Convention:** No redundant folder names (e.g., `Common/Libraries` → `Common/`, `Modules/libraries` → `Modules/`)
+
 ```
 NewAvanues/
-├── android/apps/VoiceOS/       # VoiceOS Android app + Gradle root ✅
-│   ├── app/                    # Main app module
-│   ├── tests/                  # Test modules
-│   └── vivoka/                 # Vivoka SDK AAR files
-├── Modules/VoiceOS/            # VoiceOS product-specific modules ✅
-│   ├── apps/                   # VoiceOSCore, VoiceCursor, VoiceUI, etc.
-│   ├── libraries/              # SpeechRecognition, PluginSystem, UniversalIPC, etc.
-│   ├── managers/               # CommandManager, VoiceDataManager, etc.
-│   └── core/                   # KMP core utilities (result, hash, database, etc.)
-├── Common/                     # Cross-product shared code
-│   └── ThirdParty/             # Shared third-party code (Vosk) ✅
 ├── Avanues/                    # Brand folder for all Avanues products
-│   ├── Web/                    # WebAvanue (from MainAvanues repo) 🔄
-│   └── AVA/                    # AVA Assistant (from AVA repo) 🔄
+│   ├── Web/                   # WebAvanue (from MainAvanues repo)
+│   ├── AVA/                   # AVA Assistant (from AVA repo)
+│   └── [Other]/               # From Avanues repo
+├── android/apps/VoiceOS/      # VoiceOS Android app ✅
+├── Modules/VoiceOS/           # VoiceOS feature modules ✅
+│   ├── apps/                  # Not "applications/"
+│   ├── managers/              # Not "management/"
+│   └── [features]/            # Feature-specific modules
+├── Common/                    # NOT "Common/Libraries/"
+│   ├── VoiceOS/              # VoiceOS shared libraries (FIX NEEDED)
+│   ├── UI/                   # UI components
+│   ├── Database/             # Database utilities
+│   └── ThirdParty/           # Third-party code
 └── Docs/
-    ├── VoiceOS/                # VoiceOS documentation ✅
-    └── Migration/              # Migration tracking ✅
+    ├── VoiceOS/               # VoiceOS documentation ✅
+    └── Migration/             # Migration tracking
 ```
 
-**Note:** `Common/` is for cross-PRODUCT shared code (used by VoiceOS, WebAvanue, AVA).
-Product-specific code goes in `Modules/{Product}/`.
+**CURRENT ISSUE:** VoiceOS is at `Common/Libraries/VoiceOS/core/` but should be `Common/VoiceOS/`
+**FIX REQUIRED:** Phase 3 - Restructure to remove redundant folder levels
 
 ---
 
@@ -48,13 +50,11 @@ Product-specific code goes in `Modules/{Product}/`.
 
 ### VoiceOS - Complete ✅
 - **Repo:** VoiceOS
-- **Destination:** `android/apps/VoiceOS/`, `Modules/VoiceOS/`
+- **Destination:** `android/apps/VoiceOS/`, `Modules/VoiceOS/`, `Common/Libraries/VoiceOS/`
 - Phase 1: Git subtree import (502 files)
 - Phase 2: Gradle restructure (1815+ files, 33 modules)
-- Phase 3: Structure fixes (UniversalIPC KMP, Vivoka SDK, leakcanary reflection)
-- Branch: `Development`
-- Docs: See `VoiceOS-Migration-Issues-Fixes.md`
-- **Build Status:** ✅ assembleDebug + assembleRelease SUCCESS
+- Branch: `voiceos-dev`
+- Docs: 5 files in VoiceOS/
 - **Special:** Do NOT migrate /voiceos files from other repos (would duplicate)
 
 ### MainAvanues (WebAvanue) - Next (Changed Order)
@@ -69,16 +69,14 @@ Product-specific code goes in `Modules/{Product}/`.
 
 ### AVA - After WebAvanue
 - **Repo name:** AVA
-- **Project name:** AVA AI
-- **Destination:** `android/apps/ava/`, `Modules/AVA/`
-- Phase 1: Copy files to monorepo structure
-- Phase 2: Update Gradle paths from `:common:*` to new structure
-- Phase 3: Build verification
-- Branch: `AVA-Development`
-- Docs: See `AVA/MIGRATION-COMPLETE.md`
-- **Build Status:** ✅ assembleDebug SUCCESS
-- **Special:** voiceos files in AVA are AVA-specific client code (VoiceOSQueryProvider, etc.)
->>>>>>> AVA-Development
+- **Project name:** AVA
+- **Destination:** `Avanues/AVA/`
+- **EXCLUDE:** /external-models initially (18GB, 10+ files >100MB)
+- **MOVE:** external-models AFTER migration (not copy)
+- **Git ignore:** Files >100MB before moving external-models
+- **Note:** User will manually migrate external-models later
+- **Branding:** Under `Avanues/` folder for brand consistency
+- **Special:** Do NOT migrate /voiceos files from this repo
 
 ### Avanues - Final
 - **Repo name:** Avanues
@@ -115,7 +113,13 @@ Each repo folder contains:
 7. **Consolidate Files:** Move to proper folder structure per registry
 8. **Update Registries:** FILE-REGISTRY.md and FOLDER-REGISTRY.md after each migration
 9. **No Duplication:** Do NOT migrate /voiceos folders from AVA/Avanues/MainAvanues repos
+10. **No Redundant Names:** NEVER use redundant folder names:
+    - ❌ `Common/Libraries/` → ✅ `Common/`
+    - ❌ `Modules/libraries/` → ✅ `Modules/`
+    - ❌ `Common/VoiceOS/core/` → ✅ `Common/VoiceOS/`
+    - ❌ `apps/applications/` → ✅ `apps/`
+    - **Rule:** If parent folder name implies content type, child folders should NOT repeat it
 
 ---
 
-Updated: 2025-12-07 | IDEACODE v10.3.1
+Updated: 2025-12-06 | IDEACODE v10.3

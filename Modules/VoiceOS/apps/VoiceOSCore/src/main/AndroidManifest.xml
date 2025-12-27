@@ -24,16 +24,8 @@
     <!-- Android 14+ foreground service type -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
-    <!-- Audio capture permission (required with FOREGROUND_SERVICE_MICROPHONE on API 34+) -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-
     <!-- LearnApp: System alert window for visual debugging overlays -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-
-    <!-- JIT Learning: Control permission (signature-level) -->
-    <!-- Required to bind to JITLearningService and control passive learning -->
-    <!-- Granted automatically because VoiceOSCore and JITLearning share same signature -->
-    <uses-permission android:name="com.augmentalis.voiceos.permission.JIT_CONTROL" />
 
     <!-- Storage permissions for speech recognition models -->
     <!-- Allows models to be deployed via ADB to shared folder (.voiceos) -->
@@ -75,9 +67,8 @@
 
         <!-- LearnApp Developer Settings Activity -->
         <!-- Provides comprehensive developer settings for LearnApp configuration -->
-        <!-- Updated 2025-12-22: Moved to settings package with subscription control -->
         <activity
-            android:name="com.augmentalis.voiceoscore.settings.DeveloperSettingsActivity"
+            android:name="com.augmentalis.voiceoscore.learnapp.settings.ui.DeveloperSettingsActivity"
             android:exported="false"
             android:label="Developer Settings" />
 
@@ -109,21 +100,6 @@
             </intent-filter>
         </service>
 
-        <!-- Phase 3: JIT Learning Service (JIT-LearnApp Separation) -->
-        <!-- Provides AIDL-based passive learning and exploration coordination -->
-        <!-- Runs in VoiceOSCore process, bindable from LearnApp standalone app -->
-        <!-- Security: signature-level permission prevents unauthorized access -->
-        <service
-            android:name="com.augmentalis.jitlearning.JITLearningService"
-            android:enabled="true"
-            android:exported="true"
-            android:permission="com.augmentalis.voiceos.permission.JIT_CONTROL"
-            android:foregroundServiceType="dataSync">
-            <intent-filter>
-                <action android:name="com.augmentalis.jitlearning.ELEMENT_CAPTURE_SERVICE" />
-            </intent-filter>
-        </service>
-
         <!-- LearnApp: Visual debugging overlay service -->
         <service
             android:name="com.augmentalis.voiceoscore.learnapp.debugging.AccessibilityOverlayService"
@@ -139,21 +115,6 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="com.augmentalis.voiceos.LEARNAPP_START" />
-            </intent-filter>
-        </receiver>
-
-        <!-- Package update receiver for version-aware command management -->
-        <!-- Listens for app install/update/remove events to trigger command lifecycle management -->
-        <!-- Automatically receives broadcasts from Android system when any app changes -->
-        <receiver
-            android:name="com.augmentalis.voiceoscore.receivers.PackageUpdateReceiver"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.PACKAGE_ADDED"/>
-                <action android:name="android.intent.action.PACKAGE_REPLACED"/>
-                <action android:name="android.intent.action.PACKAGE_REMOVED"/>
-                <data android:scheme="package"/>
             </intent-filter>
         </receiver>
     </application>

@@ -2,9 +2,9 @@
 // Purpose: Unified DeviceMGR module build configuration
 
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.serialization)
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
+    kotlin("plugin.serialization") version "1.9.25"
 }
 
 android {
@@ -13,7 +13,7 @@ android {
     // compileSdkPreview = "VanillaIceCream"  // Android 15 - will enable when available
 
     defaultConfig {
-        minSdk = 29  // Android 9 (Pie) - Minimum supported (aligned with project-wide standard)
+        minSdk = 28  // Android 9 (Pie) - Minimum supported (aligned with project-wide standard)
         // Note: targetSdk is deprecated for libraries, using testOptions.targetSdk instead
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -58,7 +58,7 @@ android {
     }
     
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"  // Compatible with Kotlin 1.9.24
+        kotlinCompilerExtensionVersion = "1.5.15"  // Compatible with Kotlin 1.9.25
     }
 }
 

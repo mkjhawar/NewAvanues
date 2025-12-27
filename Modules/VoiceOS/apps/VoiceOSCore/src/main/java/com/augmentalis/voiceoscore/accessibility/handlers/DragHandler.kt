@@ -12,7 +12,7 @@ import android.accessibilityservice.AccessibilityService.GestureResultCallback
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.util.Log
-import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
+import com.augmentalis.voiceoscore.accessibility.VoiceOSService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -33,7 +33,7 @@ import kotlin.math.abs
  * Migrated from Legacy Avenue with 100% functional equivalence
  */
 class DragHandler(
-    private val service: IVoiceOSContext
+    private val service: VoiceOSService
 ) : ActionHandler {
     
     companion object {
@@ -370,7 +370,7 @@ class DragHandler(
         
         val gesture = gestureList[0]
         try {
-            val success = service.accessibilityService.dispatchGesture(gesture, gestureResultCallback, null)
+            val success = service.dispatchGesture(gesture, gestureResultCallback, null)
             if (!success) {
                 gestureList.clear()
                 Log.w(TAG, "Failed to dispatch drag gesture, clearing queue")

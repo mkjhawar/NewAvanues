@@ -741,7 +741,7 @@ class VivokaEngine(
         isFinal: Boolean
     ) {
         coroutineScope.launch {
-            //Log.d(TAG, "SPEECH_TEST: onResult result = $result")
+            Log.d(TAG, "SPEECH_TEST: onResult result = $result")
             processRecognitionResult(result, resultType)
         }
 

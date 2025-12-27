@@ -1,370 +1,335 @@
+/**
+ * ElementCommandManager.kt - Business logic for user-assigned element commands
+ *
+ * Part of Metadata Quality Overlay & Manual Command Assignment feature (VOS-META-001)
+ * Created: 2025-12-03
+ *
+ * Manages user-assigned voice commands for UI elements that lack proper accessibility metadata.
+ * Provides CRUD operations, validation, and integration with CommandProcessor.
+ */
 package com.augmentalis.voiceoscore.commands
 
+import android.util.Log
+import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.ElementCommandDTO
 import com.augmentalis.database.dto.QualityMetricDTO
-import com.augmentalis.database.repositories.IElementCommandRepository
-import com.augmentalis.database.repositories.IQualityMetricRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
-import java.util.concurrent.ConcurrentHashMap
+import com.augmentalis.database.dto.QualityStatsDTO
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Business logic layer for managing element commands.
+ * Element Command Manager
  *
- * Responsibilities:
- * - Cache frequently accessed commands in memory
- * - Validate command phrases (3-50 chars, alphanumeric + spaces)
- * - Manage synonyms for elements
- * - Calculate quality scores (0-100%)
- * - Batch operations for performance
+ * Manages user-assigned voice commands for specific UI elements.
+ * Handles validation, synonym management, and integration with voice recognition.
+ *
+ * ## Usage:
+ * ```kotlin
+ * val manager = ElementCommandManager(databaseManager)
+ *
+ * // Add command
+ * val id = manager.addCommand(
+ *     elementUuid = "abc-123",
+ *     commandPhrase = "submit button",
+ *     appId = "com.example.app"
+ * )
+ *
+ * // Find element by voice command
+ * val uuid = manager.findElementByCommand("submit button", "com.example.app")
+ *
+ * // Get quality stats
+ * val stats = manager.getQualityStats("com.example.app")
+ * ```
  */
 class ElementCommandManager(
-    private val repository: IElementCommandRepository,
-    private val qualityRepository: IQualityMetricRepository
+    private val databaseManager: VoiceOSDatabaseManager
 ) {
-    // Command cache: elementUuid -> List<ElementCommandDTO>
-    private val commandCache = ConcurrentHashMap<String, List<ElementCommandDTO>>()
-
-    // Quality metrics cache: elementUuid -> QualityMetricDTO
-    private val qualityCache = ConcurrentHashMap<String, QualityMetricDTO>()
-
-    private val cacheMutex = Mutex()
-
     companion object {
-        private const val MIN_PHRASE_LENGTH = 3
-        private const val MAX_PHRASE_LENGTH = 50
-        private val PHRASE_REGEX = Regex("[a-zA-Z0-9 ]+")
+        private const val TAG = "ElementCommandManager"
+        private const val MIN_COMMAND_LENGTH = 3
+        private const val MAX_COMMAND_LENGTH = 50
 
-        // Quality score weights
-        private const val WEIGHT_TEXT = 30
-        private const val WEIGHT_CONTENT_DESC = 35
-        private const val WEIGHT_RESOURCE_ID = 35
-
-        // Quality score thresholds
-        private const val EXCELLENT_THRESHOLD = 80
-        private const val GOOD_THRESHOLD = 60
-        private const val ACCEPTABLE_THRESHOLD = 40
+        // Profanity filter (basic list)
+        private val PROFANITY_LIST = setOf<String>(
+            // Add profanity words here if needed
+        )
     }
 
+    // Cached commands for fast lookup (appId -> commands)
+    private val _commandCache = MutableStateFlow<Map<String, List<ElementCommandDTO>>>(emptyMap())
+    val commandCache: StateFlow<Map<String, List<ElementCommandDTO>>> = _commandCache.asStateFlow()
+
+    // Quality metrics cache (appId -> stats)
+    private val _qualityStatsCache = MutableStateFlow<Map<String, QualityStatsDTO>>(emptyMap())
+    val qualityStatsCache: StateFlow<Map<String, QualityStatsDTO>> = _qualityStatsCache.asStateFlow()
+
     /**
-     * Assign a new voice command to an element.
+     * Add custom command for element
      *
-     * @param elementUuid Unique identifier for the element
-     * @param phrase Voice command phrase (3-50 chars, alphanumeric + spaces)
-     * @param appId Application package name
-     * @return Result containing command ID on success, or error on failure
+     * @param elementUuid Element UUID from ThirdPartyUuidGenerator
+     * @param commandPhrase User-spoken command (e.g., "submit button")
+     * @param appId Package name
+     * @param isSynonym true if adding synonym to existing command (auto-detected if false)
+     * @return Command ID or -1 on error
      */
-    suspend fun assignCommand(
+    suspend fun addCommand(
         elementUuid: String,
-        phrase: String,
-        appId: String
-    ): Result<Long> = withContext(Dispatchers.IO) {
-        try {
-            // Validate phrase
-            val validationResult = validatePhrase(phrase)
-            if (!validationResult.isSuccess) {
-                return@withContext validationResult
-            }
-
-            // Check for duplicate phrase in this app
-            val existingCommand = repository.getByPhrase(phrase, appId)
-            if (existingCommand != null && existingCommand.elementUuid != elementUuid) {
-                return@withContext Result.failure(
-                    IllegalArgumentException("Command '$phrase' is already assigned to another element")
-                )
-            }
-
-            // Create command DTO
-            val command = ElementCommandDTO(
-                elementUuid = elementUuid,
-                commandPhrase = phrase.trim(),
-                confidence = 1.0,
-                createdAt = System.currentTimeMillis(),
-                createdBy = "user",
-                isSynonym = false,
-                appId = appId
-            )
-
-            // Insert into database
-            val commandId = repository.insert(command)
-
-            // Update cache
-            invalidateCommandCache(elementUuid)
-
-            // Update quality metric (increment command count)
-            updateQualityMetricCommandCount(elementUuid, appId)
-
-            Result.success(commandId)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Add a synonym for an existing element command.
-     *
-     * @param elementUuid Element identifier
-     * @param synonym Alternative phrase for the same element
-     * @param appId Application package name
-     * @return Result containing synonym command ID on success
-     */
-    suspend fun addSynonym(
-        elementUuid: String,
-        synonym: String,
-        appId: String
-    ): Result<Long> = withContext(Dispatchers.IO) {
-        try {
-            // Validate phrase
-            val validationResult = validatePhrase(synonym)
-            if (!validationResult.isSuccess) {
-                return@withContext validationResult
-            }
-
-            // Check if element has at least one primary command
-            val existingCommands = repository.getByUuid(elementUuid)
-            if (existingCommands.isEmpty()) {
-                return@withContext Result.failure(
-                    IllegalStateException("Cannot add synonym: Element has no primary command")
-                )
-            }
-
-            // Check for duplicate phrase
-            val existingCommand = repository.getByPhrase(synonym, appId)
-            if (existingCommand != null) {
-                return@withContext Result.failure(
-                    IllegalArgumentException("Synonym '$synonym' is already in use")
-                )
-            }
-
-            // Create synonym command
-            val synonymCommand = ElementCommandDTO(
-                elementUuid = elementUuid,
-                commandPhrase = synonym.trim(),
-                confidence = 1.0,
-                createdAt = System.currentTimeMillis(),
-                createdBy = "user",
-                isSynonym = true,
-                appId = appId
-            )
-
-            // Insert into database
-            val commandId = repository.insert(synonymCommand)
-
-            // Update cache
-            invalidateCommandCache(elementUuid)
-
-            // Update quality metric (increment command count)
-            updateQualityMetricCommandCount(elementUuid, appId)
-
-            Result.success(commandId)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Get all commands (including synonyms) for an element.
-     * Uses cache for performance.
-     *
-     * @param elementUuid Element identifier
-     * @return List of commands (primary + synonyms)
-     */
-    suspend fun getCommands(elementUuid: String): List<ElementCommandDTO> = withContext(Dispatchers.IO) {
-        // Check cache first
-        commandCache[elementUuid]?.let { return@withContext it }
-
-        // Fetch from database
-        val commands = repository.getByUuid(elementUuid)
-
-        // Update cache
-        cacheMutex.withLock {
-            commandCache[elementUuid] = commands
-        }
-
-        commands
-    }
-
-    /**
-     * Delete a command by ID.
-     *
-     * @param commandId Database ID of the command to delete
-     */
-    suspend fun deleteCommand(commandId: Long) = withContext(Dispatchers.IO) {
-        // Get command details before deletion (for cache invalidation)
-        val allCommands = repository.getAll()
-        val commandToDelete = allCommands.find { it.id == commandId }
-
-        // Delete from database
-        repository.delete(commandId)
-
-        // Invalidate cache
-        commandToDelete?.let {
-            invalidateCommandCache(it.elementUuid)
-            updateQualityMetricCommandCount(it.elementUuid, it.appId)
-        }
-    }
-
-    /**
-     * Calculate quality score for an element based on its metadata.
-     *
-     * Score breakdown:
-     * - Has text: 30 points
-     * - Has contentDescription: 35 points
-     * - Has resourceId: 35 points
-     *
-     * @return Quality score (0-100)
-     */
-    fun calculateQualityScore(
-        hasText: Boolean,
-        hasContentDesc: Boolean,
-        hasResourceId: Boolean
-    ): Int {
-        var score = 0
-        if (hasText) score += WEIGHT_TEXT
-        if (hasContentDesc) score += WEIGHT_CONTENT_DESC
-        if (hasResourceId) score += WEIGHT_RESOURCE_ID
-        return score
-    }
-
-    /**
-     * Get quality level label based on score.
-     */
-    fun getQualityLevel(score: Int): String = when {
-        score >= EXCELLENT_THRESHOLD -> "EXCELLENT"
-        score >= GOOD_THRESHOLD -> "GOOD"
-        score >= ACCEPTABLE_THRESHOLD -> "ACCEPTABLE"
-        else -> "POOR"
-    }
-
-    /**
-     * Get elements with poor quality that need manual commands.
-     *
-     * @param appId Application package name
-     * @param maxScore Maximum quality score to filter (default 39 = POOR)
-     * @return List of quality metrics for elements needing commands
-     */
-    suspend fun getElementsNeedingCommands(
+        commandPhrase: String,
         appId: String,
-        maxScore: Int = ACCEPTABLE_THRESHOLD - 1
-    ): List<QualityMetricDTO> = withContext(Dispatchers.IO) {
-        qualityRepository.getByApp(appId)
-            .filter { it.qualityScore <= maxScore }
-            .sortedBy { it.qualityScore } // Worst quality first
+        isSynonym: Boolean = false
+    ): Long {
+        // Validate command phrase
+        val sanitized = sanitizeCommandPhrase(commandPhrase)
+        if (!isValidCommandPhrase(sanitized)) {
+            Log.w(TAG, "Invalid command phrase: $commandPhrase (sanitized: $sanitized)")
+            return -1L
+        }
+
+        // Check for duplicates
+        val existing = databaseManager.elementCommands.getByPhrase(sanitized, appId)
+        if (existing != null) {
+            Log.w(TAG, "Command phrase already exists: $sanitized for app $appId")
+            return -1L
+        }
+
+        // Determine if this is a synonym
+        val hasPrimary = databaseManager.elementCommands.hasPrimaryCommand(elementUuid)
+        val actualIsSynonym = isSynonym || hasPrimary
+
+        // Create command
+        val command = ElementCommandDTO(
+            elementUuid = elementUuid,
+            commandPhrase = sanitized,
+            confidence = 1.0,
+            createdAt = System.currentTimeMillis(),
+            createdBy = "user",
+            isSynonym = actualIsSynonym,
+            appId = appId
+        )
+
+        val id = databaseManager.elementCommands.insert(command)
+
+        if (id > 0) {
+            Log.i(TAG, "Added element command: '$sanitized' for $elementUuid (synonym=$actualIsSynonym, appId=$appId)")
+
+            // Update command count in quality metrics
+            updateCommandCount(elementUuid, appId)
+
+            // Refresh cache
+            refreshCache(appId)
+        } else {
+            Log.e(TAG, "Failed to insert command: $sanitized")
+        }
+
+        return id
     }
 
     /**
-     * Get elements with no manual commands assigned.
+     * Get all commands for element
+     */
+    suspend fun getCommandsForElement(elementUuid: String): List<ElementCommandDTO> {
+        return databaseManager.elementCommands.getAllForElement(elementUuid)
+    }
+
+    /**
+     * Get all commands for app
+     */
+    suspend fun getCommandsForApp(appId: String): List<ElementCommandDTO> {
+        return databaseManager.elementCommands.getByApp(appId)
+    }
+
+    /**
+     * Find element UUID by command phrase
      *
-     * @param appId Application package name
-     * @return List of quality metrics for elements without manual commands
+     * @param phrase User-spoken command
+     * @param appId Package name
+     * @return Element UUID or null if not found
      */
-    suspend fun getElementsWithoutCommands(appId: String): List<QualityMetricDTO> =
-        withContext(Dispatchers.IO) {
-            qualityRepository.getByApp(appId)
-                .filter { it.manualCommandCount == 0 }
-                .sortedBy { it.qualityScore }
-        }
+    suspend fun findElementByCommand(phrase: String, appId: String): String? {
+        val sanitized = sanitizeCommandPhrase(phrase)
+        val command = databaseManager.elementCommands.getByPhrase(sanitized, appId)
+        return command?.elementUuid
+    }
 
     /**
-     * Batch update quality metrics for multiple elements.
-     * Used after app exploration.
-     *
-     * @param metrics List of quality metrics to insert/update
+     * Delete command
      */
-    suspend fun batchUpdateQualityMetrics(metrics: List<QualityMetricDTO>) =
-        withContext(Dispatchers.IO) {
-            metrics.forEach { metric ->
-                qualityRepository.insertOrUpdate(metric)
-
-                // Update cache
-                cacheMutex.withLock {
-                    qualityCache[metric.elementUuid] = metric
-                }
-            }
-        }
+    suspend fun deleteCommand(commandId: Long, appId: String) {
+        databaseManager.elementCommands.delete(commandId)
+        refreshCache(appId)
+        Log.i(TAG, "Deleted element command: $commandId")
+    }
 
     /**
-     * Get cached quality metric or fetch from database.
-     *
-     * @param elementUuid Element identifier
-     * @return Quality metric or null if not found
+     * Delete all synonyms for element (keeps primary command)
      */
-    suspend fun getQualityMetric(elementUuid: String): QualityMetricDTO? =
-        withContext(Dispatchers.IO) {
-            // Check cache first
-            qualityCache[elementUuid]?.let { return@withContext it }
-
-            // Fetch from database
-            val metric = qualityRepository.getByUuid(elementUuid)
-
-            // Update cache
-            metric?.let {
-                cacheMutex.withLock {
-                    qualityCache[elementUuid] = it
-                }
-            }
-
-            metric
-        }
+    suspend fun deleteSynonyms(elementUuid: String, appId: String) {
+        databaseManager.elementCommands.deleteSynonyms(elementUuid)
+        updateCommandCount(elementUuid, appId)
+        refreshCache(appId)
+        Log.i(TAG, "Deleted synonyms for: $elementUuid")
+    }
 
     /**
-     * Clear all caches. Used for testing or memory management.
+     * Update command phrase
      */
-    suspend fun clearCaches() {
-        cacheMutex.withLock {
-            commandCache.clear()
-            qualityCache.clear()
+    suspend fun updateCommand(commandId: Long, newPhrase: String, appId: String): Boolean {
+        val sanitized = sanitizeCommandPhrase(newPhrase)
+        if (!isValidCommandPhrase(sanitized)) {
+            Log.w(TAG, "Invalid command phrase for update: $newPhrase")
+            return false
+        }
+
+        // Check if new phrase already exists
+        val existing = databaseManager.elementCommands.getByPhrase(sanitized, appId)
+        if (existing != null && existing.id != commandId) {
+            Log.w(TAG, "Command phrase already exists: $sanitized")
+            return false
+        }
+
+        databaseManager.elementCommands.updateCommand(commandId, sanitized, 1.0)
+        refreshCache(appId)
+        Log.i(TAG, "Updated command $commandId to: $sanitized")
+        return true
+    }
+
+    /**
+     * Get quality metrics for app
+     */
+    suspend fun getQualityMetrics(appId: String): List<QualityMetricDTO> {
+        return databaseManager.qualityMetrics.getByApp(appId)
+    }
+
+    /**
+     * Get quality stats for app
+     */
+    suspend fun getQualityStats(appId: String): QualityStatsDTO? {
+        return databaseManager.qualityMetrics.getQualityStats(appId)
+    }
+
+    /**
+     * Get elements with poor quality (score < 40)
+     */
+    suspend fun getPoorQualityElements(appId: String): List<QualityMetricDTO> {
+        return databaseManager.qualityMetrics.getPoorQualityElements(appId)
+    }
+
+    /**
+     * Get elements needing commands (poor quality, no commands)
+     */
+    suspend fun getElementsNeedingCommands(appId: String): List<QualityMetricDTO> {
+        return databaseManager.qualityMetrics.getElementsNeedingCommands(appId)
+    }
+
+    /**
+     * Store quality metric for element
+     */
+    suspend fun storeQualityMetric(metric: QualityMetricDTO) {
+        databaseManager.qualityMetrics.insertOrUpdate(metric)
+        Log.d(TAG, "Stored quality metric for ${metric.elementUuid}: score=${metric.qualityScore}")
+    }
+
+    /**
+     * Validate command phrase
+     */
+    private fun isValidCommandPhrase(phrase: String): Boolean {
+        return phrase.length in MIN_COMMAND_LENGTH..MAX_COMMAND_LENGTH &&
+               phrase.matches(Regex("[a-zA-Z0-9 ]+")) &&
+               !isProfanity(phrase)
+    }
+
+    /**
+     * Sanitize command phrase (lowercase, trim, collapse spaces)
+     */
+    private fun sanitizeCommandPhrase(phrase: String): String {
+        return phrase.trim()
+            .lowercase()
+            .replace(Regex("\\s+"), " ")
+    }
+
+    /**
+     * Check for profanity
+     */
+    private fun isProfanity(phrase: String): Boolean {
+        val words = phrase.split(" ")
+        return words.any { it in PROFANITY_LIST }
+    }
+
+    /**
+     * Update command count in quality metrics
+     */
+    private suspend fun updateCommandCount(elementUuid: String, appId: String) {
+        val commands = getCommandsForElement(elementUuid)
+        val manualCount = commands.size
+
+        // Update quality metric
+        databaseManager.qualityMetrics.updateCommandCounts(
+            elementUuid = elementUuid,
+            commandCount = manualCount, // For now, only manual commands
+            manualCount = manualCount
+        )
+
+        Log.d(TAG, "Updated command count for $elementUuid: $manualCount commands")
+    }
+
+    /**
+     * Refresh command cache for app
+     */
+    private suspend fun refreshCache(appId: String) {
+        val commands = getCommandsForApp(appId)
+        val currentCache = _commandCache.value.toMutableMap()
+        currentCache[appId] = commands
+        _commandCache.value = currentCache
+        Log.d(TAG, "Refreshed command cache for $appId: ${commands.size} commands")
+
+        // Also refresh quality stats
+        refreshQualityStats(appId)
+    }
+
+    /**
+     * Refresh quality stats cache
+     */
+    private suspend fun refreshQualityStats(appId: String) {
+        val stats = getQualityStats(appId)
+        if (stats != null) {
+            val currentCache = _qualityStatsCache.value.toMutableMap()
+            currentCache[appId] = stats
+            _qualityStatsCache.value = currentCache
+            Log.d(TAG, "Refreshed quality stats for $appId: ${stats.totalElements} elements")
         }
     }
 
-    // Private helper methods
-
-    private fun validatePhrase(phrase: String): Result<Long> {
-        val trimmed = phrase.trim()
-
-        return when {
-            trimmed.isEmpty() -> Result.failure(
-                IllegalArgumentException("Command phrase cannot be empty")
-            )
-            trimmed.length < MIN_PHRASE_LENGTH -> Result.failure(
-                IllegalArgumentException("Command phrase must be at least $MIN_PHRASE_LENGTH characters")
-            )
-            trimmed.length > MAX_PHRASE_LENGTH -> Result.failure(
-                IllegalArgumentException("Command phrase must be at most $MAX_PHRASE_LENGTH characters")
-            )
-            !trimmed.matches(PHRASE_REGEX) -> Result.failure(
-                IllegalArgumentException("Command phrase can only contain letters, numbers, and spaces")
-            )
-            else -> Result.success(0L) // Dummy value, actual ID assigned later
-        }
+    /**
+     * Preload cache for app (call when app becomes active)
+     */
+    suspend fun preloadCache(appId: String) {
+        refreshCache(appId)
+        Log.i(TAG, "Preloaded cache for: $appId")
     }
 
-    private suspend fun invalidateCommandCache(elementUuid: String) {
-        cacheMutex.withLock {
-            commandCache.remove(elementUuid)
-        }
+    /**
+     * Clear cache for app
+     */
+    fun clearCache(appId: String) {
+        val currentCache = _commandCache.value.toMutableMap()
+        currentCache.remove(appId)
+        _commandCache.value = currentCache
+
+        val currentStatsCache = _qualityStatsCache.value.toMutableMap()
+        currentStatsCache.remove(appId)
+        _qualityStatsCache.value = currentStatsCache
+
+        Log.d(TAG, "Cleared cache for: $appId")
     }
 
-    private suspend fun updateQualityMetricCommandCount(elementUuid: String, appId: String) {
-        val commands = repository.getByUuid(elementUuid)
-        val manualCommandCount = commands.count { it.createdBy == "user" }
-
-        // Get existing metric or create new one
-        val existingMetric = qualityRepository.getByUuid(elementUuid)
-
-        if (existingMetric != null) {
-            val updatedMetric = existingMetric.copy(
-                manualCommandCount = manualCommandCount,
-                commandCount = commands.size
-            )
-            qualityRepository.insertOrUpdate(updatedMetric)
-
-            // Update cache
-            cacheMutex.withLock {
-                qualityCache[elementUuid] = updatedMetric
-            }
-        }
+    /**
+     * Delete all commands and metrics for app
+     */
+    suspend fun deleteApp(appId: String) {
+        databaseManager.elementCommands.deleteByApp(appId)
+        databaseManager.qualityMetrics.deleteByApp(appId)
+        clearCache(appId)
+        Log.i(TAG, "Deleted all data for app: $appId")
     }
 }

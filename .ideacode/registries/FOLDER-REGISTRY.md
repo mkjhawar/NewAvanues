@@ -67,45 +67,6 @@ Tracks all folders with structure and purpose.
 
 ---
 
-## KMP Module Structure (NewAvanues-AVA)
-
-KMP modules use standard Kotlin Multiplatform source set structure:
-
-| Source Set | Purpose | Platform |
-|------------|---------|----------|
-| `commonMain/` | Shared cross-platform code | All |
-| `androidMain/` | Android-specific implementations | Android |
-| `iosMain/` | iOS-specific implementations | iOS |
-| `desktopMain/` | Desktop (JVM) implementations | macOS/Win/Linux |
-| `main/` | Legacy Android code (migrating) | Android |
-| `test/` | Unit tests | All |
-| `androidTest/` | Android instrumented tests | Android |
-
-### KMP Modules
-
-| Module | Path | Status | Description |
-|--------|------|--------|-------------|
-| Platform | `Modules/Shared/Platform/` | Active | Platform abstractions (Logger, Settings, FileSystem, DeviceInfo) |
-| NLU | `Modules/Shared/NLU/` | Active | Natural Language Understanding |
-| LLM | `Modules/Shared/LLM/` | Active | LLM shared components |
-| Chat | `Modules/AVA/Chat/` | Active | Chat feature with KMP source sets |
-| LLM (AVA) | `Modules/AVA/LLM/` | Active | AVA-specific LLM components |
-| WakeWord | `Modules/AVA/WakeWord/` | Active | Wake word detection |
-| Teach | `Modules/AVA/Teach/` | Active | Teach-AVA functionality |
-| memory | `Modules/AVA/memory/` | Active | Memory/context management |
-| core | `Modules/AVA/core/` | Active | Core utilities (Data, Domain, Theme, Utils) |
-
-### Common Libraries
-
-| Library | Path | Status | Description |
-|---------|------|--------|-------------|
-| Cockpit | `Common/Cockpit/` | Active | Spatial workspace library |
-| Database | `Common/Database/` | Planned | SQLDelight unified database |
-| UI | `Common/UI/` | Planned | MagicUI cross-platform components |
-| Utils | `Common/Utils/` | Planned | Shared utilities |
-
----
-
 ## Folder Purposes
 
 | Folder | Purpose | Contains |
@@ -196,4 +157,4 @@ KMP modules use standard Kotlin Multiplatform source set structure:
 | Uppercase V | Version indicator in filenames is uppercase V |
 
 ---
-*Updated: 2025-12-17 | IDEACODE v12.1 | KMP Structure Added*
+*Updated: 2025-12-03 | IDEACODE v10.2*

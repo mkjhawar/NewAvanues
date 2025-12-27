@@ -1,41 +1,49 @@
 /**
- * ConsentDialog.kt - Compose UI for consent dialog
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/ui/ConsentDialog.kt
+ * ConsentDialog.kt - WindowManager-based consent overlay for app learning
+ * Path: modules/apps/LearnApp/src/main/java/com/augmentalis/learnapp/ui/ConsentDialog.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
- * Created: 2025-10-08
+ * Created: 2025-10-24
+ * Updated: 2025-10-28 (v1.0.5 - Refactored to use WidgetOverlayHelper for thread safety)
  *
- * Jetpack Compose UI for app learning consent dialog
+ * WindowManager-based overlay for app learning consent.
+ * Uses WindowManager.addView() directly to bypass Dialog's Activity requirement.
+ * This is the only reliable way to show overlays from AccessibilityService context.
  */
 
 package com.augmentalis.voiceoscore.learnapp.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import android.accessibilityservice.AccessibilityService
+import android.content.Context
+import android.graphics.PixelFormat
+import android.util.Log
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
+import android.view.WindowManager
+import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+import android.widget.Button
+import android.widget.CheckBox
+import android.widget.TextView
+import com.augmentalis.voiceoscore.R
+import com.augmentalis.voiceoscore.learnapp.ui.widgets.WidgetOverlayHelper
+
 
 /**
- * Consent Dialog Composable
+ * Consent Dialog (WindowManager Version)
  *
- * Jetpack Compose UI for asking user permission to learn app.
+ * Direct WindowManager overlay for asking user permission to learn app.
+ * Uses WindowManager.addView() instead of Dialog to work reliably in
+ * AccessibilityService context without requiring Activity.
  *
  * ## UI Layout
  *
  * ```
  * ┌────────────────────────────────────────┐
  * │                                        │
- * │   Do you want VoiceOS to Learn         │
- * │   Instagram?                           │
+ * │   Learn Instagram?                     │
+ * │   ───────────────────────────────      │
  * │                                        │
  * │   VoiceOS will explore Instagram       │
  * │   to enable voice commands.            │
@@ -46,168 +54,228 @@ import androidx.compose.ui.window.DialogProperties
  * │   • Skip dangerous actions             │
  * │   • Take ~2-5 minutes                  │
  * │                                        │
- * │   ┌────────┐            ┌────────┐    │
- * │   │  Yes   │            │   No   │    │
- * │   └────────┘            └────────┘    │
+ * │              ┌────┐      ┌────┐        │
+ * │              │ No │      │ Yes│        │
+ * │              └────┘      └────┘        │
  * │                                        │
- * │   [ ] Don't ask again for this app    │
+ * │   ☐ Don't ask again for this app      │
  * │                                        │
  * └────────────────────────────────────────┘
  * ```
  *
- * @param appName Human-readable app name
- * @param onApprove Callback when user approves (with dontAskAgain flag)
- * @param onDecline Callback when user declines (with dontAskAgain flag)
+ * ## Thread Safety
+ *
+ * All UI operations use WidgetOverlayHelper.ensureMainThread() for optimal performance.
+ * If already on main thread, executes immediately (no Handler delay).
+ * If on background thread, posts to main thread. Safe to call from any thread.
+ *
+ * ## AccessibilityService Compatibility
+ *
+ * Uses WindowManager directly with TYPE_ACCESSIBILITY_OVERLAY to bypass
+ * Dialog's Activity requirement. This is the only reliable way to show
+ * overlays from AccessibilityService context.
+ *
+ * ## Fix History
+ *
+ * - v1.0.5 (2025-10-28): Fixed BadTokenException race condition - Refactored to use WidgetOverlayHelper
+ *   - Replaced Handler.post() with WidgetOverlayHelper.ensureMainThread()
+ *   - Eliminates race condition: immediate execution on main thread (no Handler delay)
+ *   - Pattern consistency with ProgressOverlay
+ *   - Performance improvement: no unnecessary message queue overhead
+ * - v1.0.4 (2025-10-28): Fixed window flags - Added FLAG_NOT_FOCUSABLE, removed FLAG_WATCH_OUTSIDE_TOUCH
+ * - v1.0.3 (2025-10-28): Fixed BadTokenException - Always use TYPE_ACCESSIBILITY_OVERLAY (not TYPE_APPLICATION_OVERLAY)
+ * - v1.0.2 (2025-10-25): Switched to WindowManager.addView() - Dialog doesn't work with Application context
+ * - v1.0.1 (2025-10-24): Attempted custom Dialog class (still crashed)
+ * - v1.0.0 (2025-10-24): Initial widget-based implementation
+ *
+ * @param context Application or Service context
  *
  * @since 1.0.0
  */
-@Composable
-fun ConsentDialog(
-    appName: String,
-    onApprove: (dontAskAgain: Boolean) -> Unit,
-    onDecline: (dontAskAgain: Boolean) -> Unit
-) {
-    var dontAskAgain by remember { mutableStateOf(false) }
+class ConsentDialog(private val context: AccessibilityService) {
 
-    Dialog(
-        onDismissRequest = { onDecline(dontAskAgain) },
-        properties = DialogProperties(
-            dismissOnBackPress = true,
-            dismissOnClickOutside = false
-        )
+    /**
+     * WindowManager for adding overlay views
+     */
+    private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+
+    /**
+     * Helper for thread-safe WindowManager operations
+     * Uses ensureMainThread() pattern for optimal performance
+     */
+    private val helper = WidgetOverlayHelper( windowManager)
+
+    /**
+     * Currently displayed view (if any)
+     */
+    private var currentView: View? = null
+
+    /**
+     * Show consent dialog
+     *
+     * Displays overlay asking user permission to learn app using WindowManager.
+     * This approach works reliably in AccessibilityService context.
+     *
+     * Thread Safety: Uses WidgetOverlayHelper.ensureMainThread() for optimal performance.
+     * If already on main thread (typical for AccessibilityService callbacks), executes
+     * immediately without Handler delay. This prevents race conditions with context lifecycle.
+     *
+     * @param appName Human-readable app name
+     * @param onApprove Callback when user approves (with dontAskAgain flag)
+     * @param onDecline Callback when user declines (with dontAskAgain flag)
+     * @param onSkip Callback when user skips (activates JIT learning mode)
+     */
+    fun show(
+        appName: String,
+        onApprove: (dontAskAgain: Boolean) -> Unit,
+        onDecline: (dontAskAgain: Boolean) -> Unit,
+        onSkip: () -> Unit
     ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Title
-                Text(
-                    text = "Learn $appName?",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Description
-                Text(
-                    text = "VoiceOS will explore $appName to enable voice commands.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Details
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "This will:",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        BulletPoint("Click buttons and menus")
-                        BulletPoint("Navigate between screens")
-                        BulletPoint("Skip dangerous actions")
-                        BulletPoint("Take ~2-5 minutes")
-                    }
+        Log.d(TAG, "show() called for appName: $appName")
+        helper.ensureMainThread {
+            Log.d(TAG, "ensureMainThread lambda executing for $appName")
+            // Remove any existing view first
+            currentView?.let { view ->
+                try {
+                    Log.d(TAG, "Removing existing view")
+                    windowManager.removeView(view)
+                } catch (e: Exception) {
+                    // View already removed, ignore
+                    Log.d(TAG, "Exception removing existing view (expected if none): ${e.message}")
                 }
+            }
 
-                Spacer(modifier = Modifier.height(24.dp))
+            // Inflate custom view
+            Log.d(TAG, "Inflating consent dialog layout")
+            val customView = LayoutInflater.from(context)
+                .inflate(R.layout.learnapp_layout_consent_dialog, null)
+            Log.d(TAG, "Layout inflated successfully")
 
-                // Buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Decline button
-                    OutlinedButton(
-                        onClick = { onDecline(dontAskAgain) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("No")
-                    }
+            // Configure title
+            customView.findViewById<TextView>(R.id.title_text).text = "Learn $appName?"
 
-                    // Approve button
-                    Button(
-                        onClick = { onApprove(dontAskAgain) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Yes")
-                    }
-                }
+            // Configure description
+            customView.findViewById<TextView>(R.id.description_text).text =
+                "VoiceOS will explore $appName to enable voice commands."
 
-                Spacer(modifier = Modifier.height(16.dp))
+            // Get checkbox reference
+            val dontAskCheckbox = customView.findViewById<CheckBox>(R.id.checkbox_dont_ask)
 
-                // Don't ask again checkbox
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = dontAskAgain,
-                        onCheckedChange = { dontAskAgain = it }
-                    )
+            // Wire up Deny button with touch logging
+            val btnDeny = customView.findViewById<Button>(R.id.btn_deny)
+            btnDeny.setOnTouchListener { v, event ->
+                Log.d(TAG, "btn_deny TOUCH: action=${event.action}, x=${event.x}, y=${event.y}")
+                false  // Don't consume - let onClick handle it
+            }
+            btnDeny.setOnClickListener {
+                Log.d(TAG, "✓ btn_deny CLICKED - dismissing and calling onDecline")
+                val dontAskAgain = dontAskCheckbox.isChecked
+                dismiss()
+                onDecline(dontAskAgain)
+            }
 
-                    Text(
-                        text = "Don't ask again for this app",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            // Wire up Allow button with touch logging
+            val btnAllow = customView.findViewById<Button>(R.id.btn_allow)
+            btnAllow.setOnTouchListener { v, event ->
+                Log.d(TAG, "btn_allow TOUCH: action=${event.action}, x=${event.x}, y=${event.y}")
+                false  // Don't consume - let onClick handle it
+            }
+            btnAllow.setOnClickListener {
+                Log.d(TAG, "✓ btn_allow CLICKED - dismissing and calling onApprove")
+                val dontAskAgain = dontAskCheckbox.isChecked
+                dismiss()
+                onApprove(dontAskAgain)
+            }
+
+            // Wire up Skip button with touch logging
+            val btnSkip = customView.findViewById<Button>(R.id.btn_skip)
+            btnSkip?.setOnTouchListener { v, event ->
+                Log.d(TAG, "btn_skip TOUCH: action=${event.action}, x=${event.x}, y=${event.y}")
+                false  // Don't consume - let onClick handle it
+            }
+            btnSkip?.setOnClickListener {
+                Log.d(TAG, "✓ btn_skip CLICKED - dismissing and calling onSkip")
+                dismiss()
+                onSkip()
+            }
+
+            // Wrap dialog in full-screen container with semi-transparent background
+            val container = android.widget.FrameLayout(context).apply {
+                setBackgroundColor(android.graphics.Color.parseColor("#80000000")) // Semi-transparent black
+                // Don't set clickable - let touch events pass through to children naturally
+            }
+
+            // Add dialog view to container, centered
+            val dialogLayoutParams = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER
+            )
+            container.addView(customView, dialogLayoutParams)
+
+            // Create window layout parameters for interactive overlay
+            // FIX (2025-11-30): Use TYPE_ACCESSIBILITY_OVERLAY to be in same layer as other VoiceOS overlays
+            // Without FLAG_NOT_FOCUSABLE or FLAG_NOT_TOUCHABLE to receive touches
+            Log.d(TAG, "Creating WindowManager.LayoutParams")
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                FLAG_LAYOUT_IN_SCREEN,  // Only FLAG_LAYOUT_IN_SCREEN - no NOT_FOCUSABLE or NOT_TOUCHABLE
+                PixelFormat.TRANSLUCENT
+            )
+
+            // Center the dialog
+            params.gravity = Gravity.CENTER
+            Log.d(TAG, "LayoutParams configured: type=${params.type}, flags=${params.flags}, gravity=${params.gravity}")
+
+            // Note: For TYPE_ACCESSIBILITY_OVERLAY, Android automatically uses the
+            // AccessibilityService's token - no need to set params.token
+
+            // Add container to window manager
+            try {
+                Log.d(TAG, "About to call windowManager.addView()")
+                windowManager.addView(container, params)
+                Log.i(TAG, "✓ WindowManager.addView() succeeded - dialog should be visible")
+                currentView = container
+            } catch (e: Exception) {
+                Log.e(TAG, "✗ FAILED to add view to WindowManager", e)
+                Log.e(TAG, "Exception type: ${e.javaClass.name}")
+                Log.e(TAG, "Exception message: ${e.message}")
+                e.printStackTrace()
             }
         }
     }
-}
 
-/**
- * Bullet Point Composable
- *
- * Displays a bullet point with text.
- *
- * @param text Text to display
- */
-@Composable
-private fun BulletPoint(text: String) {
-    Row(
-        modifier = Modifier.padding(vertical = 4.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Text(
-            text = "• ",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+    /**
+     * Dismiss dialog
+     *
+     * Removes overlay from window manager if currently displayed.
+     * Uses ensureMainThread() for thread-safe removal.
+     */
+    fun dismiss() {
+        helper.ensureMainThread {
+            currentView?.let { view ->
+                try {
+                    windowManager.removeView(view)
+                } catch (e: Exception) {
+                    // View already removed or not attached, ignore
+                }
+                currentView = null
+            }
+        }
+    }
 
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+    /**
+     * Check if dialog is currently showing
+     *
+     * @return true if overlay is visible
+     */
+    fun isShowing(): Boolean {
+        return currentView != null && currentView?.parent != null
+    }
+
+    companion object {
+        private const val TAG = "ConsentDialog"
     }
 }

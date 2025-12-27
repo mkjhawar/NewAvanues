@@ -1,10 +1,6 @@
 /**
  * MetadataValidator.kt - Validates element metadata
  *
- * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: Manoj Jhawar
- * Created: 2025-12-17
- *
  * Provides validation services for UI element metadata, checking if elements
  * have sufficient information for voice command generation. Wraps MetadataQuality
  * with convenient validation methods and report generation.
@@ -19,20 +15,35 @@
  */
 package com.augmentalis.voiceoscore.learnapp.validation
 
+import android.content.Context
 import android.view.accessibility.AccessibilityNodeInfo
 import android.util.Log
+import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 
 /**
  * Validator for UI element metadata quality
  *
  * Provides convenient methods for validating element metadata and
  * generating human-readable quality reports.
+ *
+ * @property context Android context for settings access
+ *
+ * Author: Manoj Jhawar
+ * Code-Reviewed-By: CCA
  */
-class MetadataValidator {
+class MetadataValidator(private val context: Context) {
 
     companion object {
         private const val TAG = "MetadataValidator"
     }
+
+    // Lazy-initialized developer settings for verbose logging
+    private val developerSettings: LearnAppDeveloperSettings by lazy {
+        LearnAppDeveloperSettings(context)
+    }
+
+    // Lazy-initialized quality assessor
+    private val metadataQuality by lazy { MetadataQuality(context) }
 
     /**
      * Validate an element's metadata quality
@@ -41,7 +52,7 @@ class MetadataValidator {
      * @return A detailed quality score with suggestions
      */
     fun validateElement(node: AccessibilityNodeInfo): MetadataQualityScore {
-        return MetadataQuality.assess(node)
+        return metadataQuality.assess(node)
     }
 
     /**
@@ -103,7 +114,11 @@ class MetadataValidator {
             Log.ERROR -> Log.e(TAG, report)
             Log.WARN -> Log.w(TAG, report)
             Log.INFO -> Log.i(TAG, report)
-            Log.DEBUG -> Log.d(TAG, report)
+            Log.DEBUG -> {
+                if (developerSettings.isVerboseLoggingEnabled()) {
+                    Log.d(TAG, report)
+                }
+            }
             else -> Log.v(TAG, report)
         }
     }

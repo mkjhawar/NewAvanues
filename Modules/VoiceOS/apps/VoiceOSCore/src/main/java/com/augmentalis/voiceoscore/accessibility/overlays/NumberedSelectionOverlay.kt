@@ -11,13 +11,8 @@ package com.augmentalis.voiceoscore.accessibility.overlays
 import android.content.Context
 import android.graphics.PixelFormat
 import android.graphics.Rect
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.speech.tts.TextToSpeech
 import android.view.Gravity
 import android.view.WindowManager
-import java.util.Locale
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -35,8 +30,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,9 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import com.augmentalis.voiceoscore.accessibility.ui.overlays.ComposeViewLifecycleOwner
 import androidx.compose.ui.window.Dialog
 import com.augmentalis.voiceos.accessibility.AnchorPoint
 import com.augmentalis.voiceos.accessibility.BadgeStyle
@@ -72,12 +62,10 @@ class NumberedSelectionOverlay(
     private val windowManager: WindowManager
 ) {
     private var overlayView: ComposeView? = null
-    private var lifecycleOwner: ComposeViewLifecycleOwner? = null
     private var isShowing = false
-    private var tts: TextToSpeech? = null
 
     // Mutable state for items
-    private val itemsState = mutableStateOf<List<SelectableItem>>(emptyList())
+    private var itemsState = mutableStateOf<List<SelectableItem>>(emptyList())
 
     /**
      * Show overlay with numbered items
@@ -90,24 +78,16 @@ class NumberedSelectionOverlay(
         itemsState.value = items
 
         if (!isShowing) {
-            initTts()
             windowManager.addView(overlayView, createLayoutParams())
             isShowing = true
         }
-
-        announceForAccessibility("${items.size} items available. Say a number to select.")
     }
 
     /**
      * Update items without recreating overlay
      */
     fun updateItems(items: List<SelectableItem>) {
-        val previousCount = itemsState.value.size
         itemsState.value = items
-
-        if (items.size != previousCount) {
-            announceForAccessibility("${items.size} items available")
-        }
     }
 
     /**
@@ -119,7 +99,6 @@ class NumberedSelectionOverlay(
                 try {
                     windowManager.removeView(it)
                     isShowing = false
-                    shutdownTts()
                 } catch (e: IllegalArgumentException) {
                     // View not attached, ignore
                 }
@@ -133,13 +112,6 @@ class NumberedSelectionOverlay(
     fun selectItem(number: Int): Boolean {
         val item = itemsState.value.find { it.number == number }
         return if (item != null) {
-            // Haptic feedback on selection
-            provideHapticFeedback()
-
-            // TTS confirmation
-            announceForAccessibility("Selected ${item.label.ifEmpty { "item $number" }}")
-
-            // Execute action
             item.action()
             true
         } else {
@@ -157,9 +129,6 @@ class NumberedSelectionOverlay(
      */
     fun dispose() {
         hide()
-        shutdownTts()
-        lifecycleOwner?.onDestroy()
-        lifecycleOwner = null
         overlayView = null
     }
 
@@ -167,14 +136,7 @@ class NumberedSelectionOverlay(
      * Create the compose view for the overlay
      */
     private fun createOverlayView(): ComposeView {
-        val owner = ComposeViewLifecycleOwner().also {
-            lifecycleOwner = it
-            it.onCreate()
-        }
-
         return ComposeView(context).apply {
-            setViewTreeLifecycleOwner(owner)
-            setViewTreeSavedStateRegistryOwner(owner)
             setContent {
                 val items by remember { itemsState }
 
@@ -197,54 +159,6 @@ class NumberedSelectionOverlay(
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.FILL
-        }
-    }
-
-    /**
-     * Initialize Text-to-Speech
-     */
-    private fun initTts() {
-        if (tts == null) {
-            tts = TextToSpeech(context) { status ->
-                if (status == TextToSpeech.SUCCESS) {
-                    tts?.language = Locale.getDefault()
-                }
-            }
-        }
-    }
-
-    /**
-     * Announce message for accessibility
-     */
-    private fun announceForAccessibility(message: String) {
-        tts?.speak(message, TextToSpeech.QUEUE_ADD, null, "accessibility_announcement")
-    }
-
-    /**
-     * Shutdown Text-to-Speech
-     */
-    private fun shutdownTts() {
-        tts?.stop()
-        tts?.shutdown()
-        tts = null
-    }
-
-    /**
-     * Provide haptic feedback on selection
-     */
-    private fun provideHapticFeedback() {
-        try {
-            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-            vibrator?.let {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    it.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
-                } else {
-                    @Suppress("DEPRECATION")
-                    it.vibrate(50)
-                }
-            }
-        } catch (e: Exception) {
-            // Haptic feedback is optional, silently fail
         }
     }
 }
@@ -294,11 +208,10 @@ private fun NumberBadge(
     }
 
     // Get color based on state (Material 3 colors)
-    // WCAG AA Compliance: All colors meet 4.5:1 contrast ratio on white background
     val badgeColor = when (state) {
-        ElementVoiceState.ENABLED_WITH_NAME -> Color(0xFF4CAF50)  // Green - 4.5:1 contrast
-        ElementVoiceState.ENABLED_NO_NAME -> Color(0xFFF57C00)    // Darker Orange - 4.5:1 contrast (WCAG AA compliant)
-        ElementVoiceState.DISABLED -> Color(0xFF9E9E9E)           // Grey - 4.5:1 contrast
+        ElementVoiceState.ENABLED_WITH_NAME -> Color(0xFF4CAF50)  // Green
+        ElementVoiceState.ENABLED_NO_NAME -> Color(0xFFFF9800)    // Orange
+        ElementVoiceState.DISABLED -> Color(0xFF9E9E9E)           // Grey
     }
 
     // Position badge at top-right of bounds (4px offset)

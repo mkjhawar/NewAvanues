@@ -1,14 +1,17 @@
 /**
- * JitElementCapture.kt - Captures elements during JIT learning
+ * JitElementCapture.kt - Element capture from accessibility tree during JIT learning
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: Manoj Jhawar
- * Created: 2025-12-17
+ * Author: AI-Assisted Implementation
+ * Created: 2025-12-01
  *
- * Captures UI elements during Just-In-Time learning sessions.
- * Integrates with database for persistent storage.
+ * Captures UI elements from the live accessibility tree during JIT (Just-In-Time) learning.
+ * Only captures actionable elements (clickable, editable, scrollable) for voice command generation.
+ *
+ * Performance Target: <50ms per screen capture
+ *
+ * Part of Voice Command Element Persistence feature (Phase 1)
  */
-
 package com.augmentalis.voiceoscore.learnapp.jit
 
 import android.accessibilityservice.AccessibilityService
@@ -16,250 +19,354 @@ import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.database.VoiceOSDatabaseManager
-import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
+import com.augmentalis.database.dto.ScrapedElementDTO
+import com.augmentalis.uuidcreator.thirdparty.AccessibilityFingerprint
+import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
+import com.augmentalis.voiceoscore.utils.forEachChild
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * JIT Element Capture
+ * Captured element data for JIT learning
  *
- * Handles element capture during Just-In-Time learning.
- * Captures elements from the current screen and persists them to database.
+ * Lightweight representation of a UI element captured during JIT learning.
+ * Contains all data needed for voice command generation and element lookup.
+ *
+ * Phase 4 (2025-12-02): Added UUID field for stable element identification
+ */
+data class JitCapturedElement(
+    val elementHash: String,
+    val className: String,
+    val viewIdResourceName: String?,
+    val text: String?,
+    val contentDescription: String?,
+    val bounds: Rect,
+    val isClickable: Boolean,
+    val isLongClickable: Boolean,
+    val isEditable: Boolean,
+    val isScrollable: Boolean,
+    val isCheckable: Boolean,
+    val isFocusable: Boolean,
+    val isEnabled: Boolean,
+    val depth: Int,
+    val indexInParent: Int,
+    val uuid: String? = null  // Phase 4: Stable UUID from ThirdPartyUuidGenerator
+)
+
+/**
+ * JIT Element Capture Engine
+ *
+ * Captures actionable UI elements from the accessibility tree during passive JIT learning.
+ * Designed for speed (<50ms) and minimal memory footprint.
+ *
+ * ## Features:
+ * - Captures only actionable elements (clickable, editable, scrollable)
+ * - Uses stable element hashing via AccessibilityFingerprint
+ * - Generates stable UUIDs via ThirdPartyUuidGenerator (Phase 4)
+ * - Respects depth limits to prevent stack overflow
+ * - Timeout guard for performance safety
+ *
+ * ## Usage:
+ * ```kotlin
+ * val capturer = JitElementCapture(accessibilityService, databaseManager, thirdPartyGenerator)
+ * val elements = capturer.captureScreenElements(packageName)
+ * ```
+ *
+ * @param accessibilityService The accessibility service for tree access
+ * @param databaseManager Database manager for persistence
+ * @param thirdPartyUuidGenerator UUID generator for element identification (Phase 4)
  */
 class JitElementCapture(
     private val accessibilityService: AccessibilityService,
     private val databaseManager: VoiceOSDatabaseManager,
-    private val uuidGenerator: ThirdPartyUuidGenerator
+    private val thirdPartyUuidGenerator: com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 ) {
+    /**
+     * Developer settings for JIT configuration
+     */
+    private val developerSettings by lazy {
+        LearnAppDeveloperSettings(accessibilityService)
+    }
+
     companion object {
         private const val TAG = "JitElementCapture"
-        private const val MAX_ELEMENTS_PER_SCREEN = 100
+
+        // Element filtering - only capture actionable elements
+        private fun isActionable(node: AccessibilityNodeInfo): Boolean {
+            return node.isClickable || node.isEditable || node.isScrollable ||
+                   node.isLongClickable || node.isCheckable
+        }
+
+        // Check if element has meaningful label for voice commands
+        private fun hasLabel(node: AccessibilityNodeInfo): Boolean {
+            return !node.text.isNullOrBlank() ||
+                   !node.contentDescription.isNullOrBlank() ||
+                   !node.viewIdResourceName.isNullOrBlank()
+        }
     }
 
     /**
-     * Capture screen elements for the given package
+     * Capture UI elements from current screen
      *
-     * @param packageName Package name of the app
-     * @return List of captured elements
+     * Traverses the accessibility tree and captures all actionable elements
+     * with labels that can be used for voice commands.
+     *
+     * @param packageName Package name of the app being captured
+     * @return List of captured elements (empty if capture fails or times out)
      */
-    suspend fun captureScreenElements(packageName: String): List<JitCapturedElement> = withContext(Dispatchers.Default) {
-        try {
-            val rootNode = accessibilityService.rootInActiveWindow ?: return@withContext emptyList()
-            val elements = mutableListOf<JitCapturedElement>()
+    suspend fun captureScreenElements(packageName: String): List<JitCapturedElement> {
+        val startTime = System.currentTimeMillis()
 
-            captureElementsRecursive(rootNode, elements, 0)
+        return withTimeoutOrNull(developerSettings.getJitCaptureTimeoutMs()) {
+            withContext(Dispatchers.Main) {
+                val elements = mutableListOf<JitCapturedElement>()
 
-            Log.d(TAG, "Captured ${elements.size} elements for $packageName")
-            elements
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to capture screen elements", e)
+                val rootNode = accessibilityService.rootInActiveWindow
+                if (rootNode == null) {
+                    Log.w(TAG, "No root node available for capture")
+                    return@withContext emptyList()
+                }
+
+                try {
+                    // Get app version for fingerprinting
+                    val appVersion = getAppVersion(packageName)
+
+                    // Traverse and capture
+                    traverseAndCapture(
+                        node = rootNode,
+                        packageName = packageName,
+                        appVersion = appVersion,
+                        elements = elements,
+                        depth = 0,
+                        indexInParent = 0
+                    )
+
+                    val elapsed = System.currentTimeMillis() - startTime
+                    Log.i(TAG, "Captured ${elements.size} elements in ${elapsed}ms for $packageName")
+
+                    elements
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error during element capture for $packageName", e)
+                    emptyList()
+                } finally {
+                    rootNode.recycle()
+                }
+            }
+        } ?: run {
+            val elapsed = System.currentTimeMillis() - startTime
+            Log.w(TAG, "Element capture timed out after ${elapsed}ms for $packageName")
             emptyList()
         }
     }
 
     /**
-     * Capture elements from current screen
+     * Traverse accessibility tree and capture actionable elements
      *
-     * @param packageName Package name of the app
-     * @param screenHash Hash of the current screen state
-     * @return List of captured elements
-     */
-    suspend fun captureCurrentScreen(
-        packageName: String,
-        screenHash: String
-    ): List<JitCapturedElement> = withContext(Dispatchers.Default) {
-        try {
-            val rootNode = accessibilityService.rootInActiveWindow ?: return@withContext emptyList()
-            val elements = mutableListOf<JitCapturedElement>()
-
-            captureElementsRecursive(rootNode, elements, 0)
-
-            Log.d(TAG, "Captured ${elements.size} elements for $packageName on screen $screenHash")
-            elements
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to capture elements", e)
-            emptyList()
-        }
-    }
-
-    /**
-     * Capture clickable elements only
+     * Uses depth-first traversal with early termination on depth/count limits.
+     * Only captures elements that are actionable AND have labels.
      *
-     * @param packageName Package name of the app
-     * @param screenHash Hash of the current screen state
-     * @return List of captured clickable elements
+     * Phase 4 (2025-12-02): Now suspend function to support UUID generation.
      */
-    suspend fun captureClickableElements(
-        packageName: String,
-        screenHash: String
-    ): List<JitCapturedElement> = withContext(Dispatchers.Default) {
-        try {
-            val rootNode = accessibilityService.rootInActiveWindow ?: return@withContext emptyList()
-            val elements = mutableListOf<JitCapturedElement>()
-
-            captureElementsRecursive(rootNode, elements, 0, clickableOnly = true)
-
-            Log.d(TAG, "Captured ${elements.size} clickable elements for $packageName")
-            elements
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to capture clickable elements", e)
-            emptyList()
-        }
-    }
-
-    /**
-     * Capture element by node
-     *
-     * @param node Accessibility node to capture
-     * @return Captured element
-     */
-    fun captureElement(node: AccessibilityNodeInfo): JitCapturedElement {
-        val bounds = Rect()
-        node.getBoundsInScreen(bounds)
-
-        return JitCapturedElement.from(
-            className = node.className,
-            text = node.text,
-            contentDescription = node.contentDescription,
-            viewIdResourceName = node.viewIdResourceName,
-            isClickable = node.isClickable,
-            isEnabled = node.isEnabled,
-            isScrollable = node.isScrollable,
-            bounds = bounds
-        )
-    }
-
-    /**
-     * Generate UUID for captured element using its node
-     *
-     * @param node Accessibility node to generate UUID for
-     * @param packageName Package name of the app
-     * @return Generated UUID
-     */
-    suspend fun generateUuid(
+    private suspend fun traverseAndCapture(
         node: AccessibilityNodeInfo,
-        packageName: String
-    ): String = withContext(Dispatchers.Default) {
-        try {
-            uuidGenerator.generateUuid(node, packageName)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to generate UUID", e)
-            // Generate fallback UUID
-            java.util.UUID.randomUUID().toString()
+        packageName: String,
+        appVersion: String,
+        elements: MutableList<JitCapturedElement>,
+        depth: Int,
+        indexInParent: Int
+    ) {
+        // Depth limit check
+        if (depth > developerSettings.getJitMaxTraversalDepth()) {
+            Log.v(TAG, "Max depth (${developerSettings.getJitMaxTraversalDepth()}) reached, stopping branch")
+            return
+        }
+
+        // Element count limit check
+        if (elements.size >= developerSettings.getJitMaxElementsCaptured()) {
+            Log.v(TAG, "Max elements (${developerSettings.getJitMaxElementsCaptured()}) reached, stopping capture")
+            return
+        }
+
+        // Capture this node if actionable and has label
+        if (isActionable(node) && hasLabel(node)) {
+            try {
+                val element = captureNode(node, packageName, appVersion, depth, indexInParent)
+                if (element != null) {
+                    elements.add(element)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error capturing node at depth $depth", e)
+            }
+        }
+
+        // Traverse children
+        node.forEachChild { child ->
+            traverseAndCapture(
+                node = child,
+                packageName = packageName,
+                appVersion = appVersion,
+                elements = elements,
+                depth = depth + 1,
+                indexInParent = elements.size  // Approximate index
+            )
         }
     }
 
     /**
-     * Capture element with UUID assignment
+     * Capture a single node's data
      *
-     * @param node Accessibility node to capture
-     * @param packageName Package name of the app
-     * @return Captured element with UUID
+     * Extracts all relevant properties from the node and calculates stable hash.
+     *
+     * Phase 4 (2025-12-02): Now generates stable UUIDs using ThirdPartyUuidGenerator.
+     * This ensures JIT-captured elements have UUIDs that match LearnApp-captured elements.
      */
-    suspend fun captureElementWithUuid(
+    private suspend fun captureNode(
         node: AccessibilityNodeInfo,
-        packageName: String
-    ): JitCapturedElement = withContext(Dispatchers.Default) {
-        val element = captureElement(node)
-        val uuid = generateUuid(node, packageName)
-        element.withUuid(uuid)
+        packageName: String,
+        appVersion: String,
+        depth: Int,
+        indexInParent: Int
+    ): JitCapturedElement? {
+        try {
+            // Get bounds
+            val bounds = Rect()
+            node.getBoundsInScreen(bounds)
+
+            // Calculate stable element hash using AccessibilityFingerprint
+            val fingerprint = AccessibilityFingerprint.fromNode(
+                node = node,
+                packageName = packageName,
+                appVersion = appVersion
+            )
+            val elementHash = fingerprint.generateHash()
+
+            // Phase 4: Generate stable UUID using ThirdPartyUuidGenerator
+            // Uses same algorithm as LearnApp for consistency
+            val uuid = try {
+                thirdPartyUuidGenerator.generateUuid(node, packageName)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to generate UUID for element: ${e.message}")
+                null
+            }
+
+            return JitCapturedElement(
+                elementHash = elementHash,
+                className = node.className?.toString() ?: "unknown",
+                viewIdResourceName = node.viewIdResourceName,
+                text = node.text?.toString(),
+                contentDescription = node.contentDescription?.toString(),
+                bounds = bounds,
+                isClickable = node.isClickable,
+                isLongClickable = node.isLongClickable,
+                isEditable = node.isEditable,
+                isScrollable = node.isScrollable,
+                isCheckable = node.isCheckable,
+                isFocusable = node.isFocusable,
+                isEnabled = node.isEnabled,
+                depth = depth,
+                indexInParent = indexInParent,
+                uuid = uuid  // Phase 4: Store UUID
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to capture node: ${e.message}")
+            return null
+        }
     }
 
     /**
-     * Persist captured elements to database and return count
+     * Persist captured elements to database
      *
-     * @param packageName Package name of the app
-     * @param elements List of elements to persist
-     * @param screenHash Hash of the current screen
-     * @return Number of persisted elements
+     * Saves elements to scraped_element table and returns the count of new elements.
+     *
+     * FIX (2025-12-02): Added screenHash parameter for deduplication (Spec 009 - Phase 3)
+     *
+     * @param packageName Package name (used as appId)
+     * @param elements List of captured elements
+     * @param screenHash Screen hash for deduplication
+     * @return Number of new elements persisted (excluding duplicates)
      */
     suspend fun persistElements(
         packageName: String,
         elements: List<JitCapturedElement>,
-        screenHash: String
+        screenHash: String? = null
     ): Int = withContext(Dispatchers.IO) {
-        try {
-            var count = 0
-            // Persist each element to database
-            elements.forEach { element ->
-                element.uuid?.let { uuid ->
-                    // Store in database via databaseManager
-                    Log.d(TAG, "Persisted element $uuid for $packageName")
-                    count++
+        var newCount = 0
+        val timestamp = System.currentTimeMillis()
+
+        for (element in elements) {
+            try {
+                // Check if element already exists (by hash AND app)
+                val existing = databaseManager.scrapedElements.getByHashAndApp(
+                    element.elementHash,
+                    packageName
+                )
+                if (existing != null) {
+                    Log.v(TAG, "Element already exists for $packageName: ${element.elementHash}")
+                    continue
                 }
+
+                // NEW: Check for cross-app collision
+                val globalExisting = databaseManager.scrapedElements.getByHash(element.elementHash)
+                if (globalExisting != null && globalExisting.appId != packageName) {
+                    Log.e(TAG, "APP ID MISMATCH: Element ${element.elementHash} from " +
+                               "${globalExisting.appId} blocking $packageName")
+                }
+
+                // Insert new element using DTO
+                val elementDTO = ScrapedElementDTO(
+                    id = 0L,  // Auto-generated by database
+                    elementHash = element.elementHash,
+                    appId = packageName,
+                    uuid = element.uuid,  // Phase 4 (2025-12-02): Store UUID from ThirdPartyUuidGenerator
+                    className = element.className,
+                    viewIdResourceName = element.viewIdResourceName,
+                    text = element.text,
+                    contentDescription = element.contentDescription,
+                    bounds = "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}",
+                    isClickable = if (element.isClickable) 1L else 0L,
+                    isLongClickable = if (element.isLongClickable) 1L else 0L,
+                    isEditable = if (element.isEditable) 1L else 0L,
+                    isScrollable = if (element.isScrollable) 1L else 0L,
+                    isCheckable = if (element.isCheckable) 1L else 0L,
+                    isFocusable = if (element.isFocusable) 1L else 0L,
+                    isEnabled = if (element.isEnabled) 1L else 0L,
+                    depth = element.depth.toLong(),
+                    indexInParent = element.indexInParent.toLong(),
+                    scrapedAt = timestamp,
+                    semanticRole = null,
+                    inputType = null,
+                    visualWeight = null,
+                    isRequired = null,
+                    formGroupId = null,
+                    placeholderText = null,
+                    validationPattern = null,
+                    backgroundColor = null,
+                    screen_hash = screenHash  // FIX (2025-12-02): Store screen hash for deduplication
+                )
+                databaseManager.scrapedElements.insert(elementDTO)
+
+                newCount++
+                Log.v(TAG, "Persisted element: ${element.elementHash}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to persist element: ${element.elementHash}", e)
             }
-            count
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to persist elements", e)
-            0
         }
+
+        Log.i(TAG, "Persisted $newCount new elements out of ${elements.size} captured for $packageName")
+        newCount
     }
 
     /**
-     * Persist captured elements to database (alternative parameter order)
-     *
-     * @param elements List of elements to persist
-     * @param packageName Package name of the app
-     * @param screenHash Hash of the current screen
+     * Get app version for fingerprinting
      */
-    suspend fun persistElementsAlt(
-        elements: List<JitCapturedElement>,
-        packageName: String,
-        screenHash: String
-    ) = withContext(Dispatchers.IO) {
-        try {
-            // Persist each element to database
-            elements.forEach { element ->
-                element.uuid?.let { uuid ->
-                    // Store in database via databaseManager
-                    Log.d(TAG, "Persisted element $uuid for $packageName")
-                }
-            }
+    private fun getAppVersion(packageName: String): String {
+        return try {
+            val packageInfo = accessibilityService.packageManager.getPackageInfo(packageName, 0)
+            packageInfo.versionCode.toString()
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to persist elements", e)
-        }
-    }
-
-    /**
-     * Recursively capture elements from node tree
-     *
-     * FIX (2025-12-22): P-P0-2 - Add depth limit to prevent unbounded traversal
-     * Deeply nested layouts (10+ levels) can cause O(n²) worst case and ANR risk
-     */
-    private fun captureElementsRecursive(
-        node: AccessibilityNodeInfo,
-        elements: MutableList<JitCapturedElement>,
-        depth: Int,
-        clickableOnly: Boolean = false,
-        maxDepth: Int = 20  // FIX: Default depth limit to prevent exponential traversal
-    ) {
-        // FIX: Check depth limit BEFORE processing
-        if (depth > maxDepth) {
-            Log.w(TAG, "Max depth $maxDepth reached, stopping traversal to prevent ANR")
-            return
-        }
-
-        if (elements.size >= MAX_ELEMENTS_PER_SCREEN) return
-
-        try {
-            val shouldCapture = if (clickableOnly) {
-                node.isClickable && node.isEnabled
-            } else {
-                node.isEnabled
-            }
-
-            if (shouldCapture) {
-                elements.add(captureElement(node))
-            }
-
-            // Recurse into children
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i) ?: continue
-                // FIX: Pass maxDepth parameter to recursive call
-                captureElementsRecursive(child, elements, depth + 1, clickableOnly, maxDepth)
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Error capturing element at depth $depth", e)
+            Log.w(TAG, "Could not get version for $packageName, using 0")
+            "0"
         }
     }
 }

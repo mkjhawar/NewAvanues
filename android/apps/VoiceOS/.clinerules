@@ -1,0 +1,38 @@
+# VOS4 Agent Context & Instructions
+
+## 🚨 MANDATORY: Read Instructions Based on Your Task
+
+### Core Standards (Read First):
+→ `/Agent-Instructions/MASTER-STANDARDS.md` - Critical rules ALL agents must follow
+
+### Task-Specific Instructions:
+
+#### For Coding:
+→ `/Agent-Instructions/CODING-GUIDE.md` - Code patterns and examples
+→ `/Agent-Instructions/SESSION-LEARNINGS.md` - Recent fixes and gotchas
+
+#### For Documentation:
+→ `/Agent-Instructions/DOCUMENTATION-GUIDE.md` - How to write/update docs
+
+#### For Understanding Context:
+→ `/Agent-Instructions/SESSION-LEARNINGS.md` - What's been done recently
+→ `/docs/Status/Current/` - Current project state
+→ `/docs/TODO/VOS4-TODO-Master.md` - Active tasks
+
+## 📋 Living Document Reminder
+
+**BEFORE Code Changes:** Check `/docs/modules/[module]/[Module]-Changelog.md`
+**AFTER Code Changes:** Update changelog with: Date - What - Why
+**BEFORE Commits:** Verify all documentation updated
+
+## 🔧 Quick Reference
+
+**Location:** `/Volumes/M Drive/Coding/Warp/VOS4`
+**Branch:** VOS4 (STAY ON THIS BRANCH)
+**Key Principle:** Direct implementation, zero interfaces
+**Namespace:** `com.ai.*` (ai = Augmentalis Inc)
+**Database:** ObjectBox ONLY
+
+---
+**Last Updated:** 2025-01-23
+**Note:** This file is a pointer. All detailed instructions are in `/Agent-Instructions/`

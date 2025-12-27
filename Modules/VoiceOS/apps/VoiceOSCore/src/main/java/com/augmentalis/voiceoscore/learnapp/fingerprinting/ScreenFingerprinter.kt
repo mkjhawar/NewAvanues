@@ -186,6 +186,115 @@ class ScreenFingerprinter {
         return fullHash.take(16)
     }
 
+    /**
+     * Calculate popup/dialog fingerprint (stable across content changes)
+     *
+     * FIX (2025-11-24): Generate stable hashes for popup windows
+     * Issue: Popups with time-dependent content (e.g., time pickers) get different hashes
+     * Solution: Hash based on STRUCTURE (buttons, layout) not CONTENT (time value)
+     *
+     * This method generates hashes based on:
+     * - Dialog type (picker, alert, etc.)
+     * - Button labels (OK, Cancel, etc.)
+     * - Layout structure (view hierarchy)
+     * - NOT time-dependent content
+     *
+     * @param rootNode Root node of popup
+     * @param popupType Type of popup detected
+     * @return SHA-256 hash based on structure
+     */
+    fun calculatePopupFingerprint(rootNode: AccessibilityNodeInfo?, popupType: String): String {
+        if (rootNode == null) {
+            return EMPTY_HASH
+        }
+
+        val signatureBuilder = StringBuilder()
+
+        // Start with popup type for differentiation
+        signatureBuilder.append("POPUP:$popupType\n")
+
+        // Traverse tree and extract STRUCTURAL elements only
+        traverseNodeTree(rootNode) { node ->
+            val className = node.className?.toString() ?: ""
+            val resourceId = node.viewIdResourceName ?: ""
+            val text = node.text?.toString() ?: ""
+            val contentDesc = node.contentDescription?.toString() ?: ""
+
+            // For popups, include STRUCTURAL elements only:
+            // 1. All view IDs (structural)
+            // 2. All class names (structural)
+            // 3. Button/action labels (OK, Cancel, Set, etc.) - NOT time values
+            // 4. Content descriptions for accessibility
+
+            // Always include class and resource ID (structural)
+            signatureBuilder.append(className)
+            signatureBuilder.append("|")
+            signatureBuilder.append(resourceId)
+            signatureBuilder.append("|")
+
+            // For text: Include if it's a button/action label, exclude if it's dynamic content
+            val isActionLabel = isActionLabel(text, className)
+            val includedText = if (isActionLabel) text else ""
+
+            signatureBuilder.append(includedText)
+            signatureBuilder.append("|")
+            signatureBuilder.append(contentDesc)
+            signatureBuilder.append("\n")
+        }
+
+        val signature = signatureBuilder.toString()
+        android.util.Log.d("ScreenFingerprinter",
+            "Generated popup fingerprint for type=$popupType (signature length=${signature.length})")
+
+        return calculateSHA256(signature)
+    }
+
+    /**
+     * Check if text is an action label (button text) vs dynamic content
+     *
+     * Action labels are stable (OK, Cancel, Set, etc.)
+     * Dynamic content changes (time values, dates, etc.)
+     *
+     * @param text Text to check
+     * @param className Class name of the node
+     * @return true if this is an action label
+     */
+    private fun isActionLabel(text: String, className: String): Boolean {
+        if (text.isBlank()) return false
+
+        // If it's a button, text is likely an action label
+        if (className.contains("Button", ignoreCase = true)) {
+            return true
+        }
+
+        // Check for common action labels
+        val actionLabels = listOf(
+            "ok", "cancel", "set", "done", "yes", "no", "close", "dismiss",
+            "save", "delete", "confirm", "apply", "reset", "clear", "submit",
+            "next", "back", "skip", "retry", "continue"
+        )
+
+        val lowerText = text.lowercase()
+        if (actionLabels.any { lowerText == it }) {
+            return true
+        }
+
+        // Exclude if it matches dynamic patterns (time, date, numbers)
+        for (pattern in DYNAMIC_PATTERNS) {
+            if (pattern.containsMatchIn(text)) {
+                return false
+            }
+        }
+
+        // For short text (1-15 chars), likely a label if not dynamic
+        if (text.length in 1..15) {
+            return true
+        }
+
+        // Long text is likely dynamic content
+        return false
+    }
+
     companion object {
         /**
          * Empty hash (for null roots)

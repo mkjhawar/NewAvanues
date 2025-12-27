@@ -287,16 +287,16 @@ class CommandGenerator {
         val currentRegistry = _commandRegistry.value.toMutableMap()
         val currentConflicts = _commandConflicts.value.toMutableMap()
 
-        // Check for conflicts
-        if (currentRegistry.containsKey(phrase)) {
-            val existingUuid = currentRegistry[phrase]!!
-
+        // Check for conflicts using safe access pattern
+        val existingUuid = currentRegistry[phrase]
+        if (existingUuid != null) {
             // Move to conflicts
-            if (currentConflicts.containsKey(phrase)) {
-                val existingConflicts = currentConflicts[phrase]!!.toMutableList()
-                if (!existingConflicts.contains(elementUuid)) {
-                    existingConflicts.add(elementUuid)
-                    currentConflicts[phrase] = existingConflicts
+            val existingConflicts = currentConflicts[phrase]
+            if (existingConflicts != null) {
+                val updatedConflicts = existingConflicts.toMutableList()
+                if (!updatedConflicts.contains(elementUuid)) {
+                    updatedConflicts.add(elementUuid)
+                    currentConflicts[phrase] = updatedConflicts
                 }
             } else {
                 currentConflicts[phrase] = listOf(existingUuid, elementUuid)

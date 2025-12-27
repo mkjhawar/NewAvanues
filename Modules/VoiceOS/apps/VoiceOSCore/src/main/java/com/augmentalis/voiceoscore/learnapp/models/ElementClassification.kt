@@ -1,5 +1,6 @@
 /**
  * ElementClassification.kt - Element classification sealed class
+ * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/models/ElementClassification.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
