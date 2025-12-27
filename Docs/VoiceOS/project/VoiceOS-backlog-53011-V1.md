@@ -1,7 +1,7 @@
 # VoiceOS Feature Backlog
 
-**Last Updated:** 2025-11-30
-**Version:** 1.0
+**Last Updated:** 2025-12-27
+**Version:** 1.1
 
 ---
 
@@ -383,6 +383,106 @@
 
 ## Backlog Items (Not Prioritized)
 
+### Cross-Platform Scraping Enhancements 🎯
+**Priority:** High (Flutter), Medium (Unity/Unreal)
+**Analysis:** `Docs/VoiceOS/Analysis/VoiceOS-CrossPlatform-Scraping-Analysis-52712-V1.md`
+**Added:** 2025-12-27
+
+**Problem:** Current implementation scores 8.4/10 overall. Gaps exist for newer framework versions that provide better accessibility APIs.
+
+#### 17. Flutter 3.19+ Identifier Support
+**Priority:** 🔴 High
+**Estimated Time:** 1-2 weeks
+**Impact:** Stable VUIDs for Flutter apps
+
+**Background:** Flutter 3.19 (Feb 2024) introduced `SemanticsProperties.identifier` which maps to `resource-id` on Android. This provides stable element identification vs content-based hashing.
+
+**Tasks:**
+- [ ] Add `accessibilityIdentifier` extraction in UIScrapingEngine
+- [ ] Update VUIDGenerator to prefer identifier for Flutter apps
+- [ ] Add Flutter version detection heuristics (check for flutter_ prefixed IDs)
+- [ ] Test with Flutter 3.19+ apps (e.g., Google Pay, Alibaba apps)
+- [ ] Update CrossPlatformDetector to detect Flutter version
+
+**Success Criteria:**
+- [ ] Flutter apps with identifier have stable VUIDs across sessions
+- [ ] Backward compatible with older Flutter apps
+- [ ] No performance regression
+
+---
+
+#### 18. Unity 6.3+ Native Screen Reader Integration
+**Priority:** 🟡 Medium
+**Estimated Time:** 2-3 weeks
+**Impact:** Better accessibility for Unity games
+
+**Background:** Unity 6.3 (Sept 2025) adds native screen reader support for Windows/macOS. Unity 2023.2+ supports mobile (TalkBack/VoiceOver). When available, this provides semantic labels instead of requiring spatial grid fallback.
+
+**Tasks:**
+- [ ] Research Unity native accessibility API exposure on Android
+- [ ] Add Unity version detection based on accessibility markers
+- [ ] Implement native SR integration when available
+- [ ] Maintain spatial fallback for older Unity versions
+- [ ] Test with Unity 6.3+ games
+
+**Success Criteria:**
+- [ ] Unity 6.3+ apps use semantic labels when available
+- [ ] Older Unity apps continue using spatial grid
+- [ ] No regression in game engine detection
+
+---
+
+#### 19. Virtual View Hierarchy Support
+**Priority:** 🟢 Low
+**Estimated Time:** 1 week
+**Impact:** Custom view accessibility
+
+**Background:** Apps can report virtual accessibility nodes via `AccessibilityNodeProvider`. This is used by custom drawing views (maps, charts, canvas-based UIs).
+
+**Tasks:**
+- [ ] Add AccessibilityNodeProvider detection in SafeNodeTraverser
+- [ ] Handle virtual view hierarchies in traversal
+- [ ] Test with apps using custom AccessibilityNodeProvider (Google Maps, charting apps)
+
+**Success Criteria:**
+- [ ] Virtual nodes are properly traversed
+- [ ] No stack overflow on complex virtual hierarchies
+
+---
+
+#### 20. Unreal Engine HierarchyPath Extraction
+**Priority:** 🟢 Low
+**Estimated Time:** 1 week
+**Impact:** Better Unreal widget targeting
+
+**Background:** GameDriver Slate Explorer (July 2024) provides HierarchyPath for widget identification. This could improve targeting accuracy for Unreal games with accessibility enabled.
+
+**Tasks:**
+- [ ] Research Unreal accessibility API exposure on Android
+- [ ] Extract HierarchyPaths when available
+- [ ] Maintain 4x4 spatial grid fallback
+- [ ] Test with Unreal games with accessibility enabled
+
+**Success Criteria:**
+- [ ] Unreal widgets with accessibility have stable paths
+- [ ] Fallback works for games without accessibility
+
+---
+
+### Architecture Score Improvements
+
+**Current Scores → Target 10/10:**
+
+| Component | Current | Gap | Fix |
+|-----------|---------|-----|-----|
+| AccessibilityService | 9/10 | Virtual views | Task #19 |
+| Cross-Platform Detection | 8/10 | Version detection | Tasks #17, #18 |
+| Element Caching | 9/10 | Cache invalidation | Add version-aware cache keys |
+| Fallback Matching | 8/10 | ML-based matching | Future: Add ML UI detection |
+| Database Schema | 9/10 | Framework metadata | Add framework version column |
+
+---
+
 ### Canvas/SurfaceView Accessibility Support 🎯
 **Priority:** Medium (after LearnApp stabilization)
 **Estimated Time:** 9 weeks (6 phases)
@@ -475,4 +575,4 @@
 
 **Maintained by:** VoiceOS Team
 **Review Frequency:** Weekly
-**Last Review:** 2025-11-30
+**Last Review:** 2025-12-27
