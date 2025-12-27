@@ -22,14 +22,7 @@ import android.widget.Button
 import android.widget.TextView
 import com.augmentalis.voiceoscore.R
 
-/**
- * User action in response to login prompt
- */
-sealed class LoginPromptAction {
-    object Skip : LoginPromptAction()
-    object Continue : LoginPromptAction()
-    object Dismiss : LoginPromptAction()
-}
+// LoginPromptAction is defined in LoginPromptAction.kt
 
 /**
  * Configuration for login prompt overlay

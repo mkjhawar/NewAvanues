@@ -10,19 +10,7 @@
 
 package com.augmentalis.voiceoscore.learnapp.settings.ui
 
-/**
- * Types of setting input controls
- */
-enum class SettingType {
-    /** Integer number input */
-    NUMBER_INT,
-    /** Long number input (for milliseconds) */
-    NUMBER_LONG,
-    /** Boolean toggle switch */
-    TOGGLE,
-    /** Slider for percentages/thresholds (0.0-1.0) */
-    SLIDER
-}
+// Note: SettingType is defined in SettingType.kt
 
 /**
  * Represents a single setting for UI display
@@ -92,8 +80,12 @@ data class SettingItem(
     fun getDisplayValue(): String = when (type) {
         SettingType.NUMBER_INT -> getIntValue().toString()
         SettingType.NUMBER_LONG -> formatMilliseconds(getLongValue())
+        SettingType.NUMBER_FLOAT -> getFloatValue().toString()
         SettingType.TOGGLE -> if (getBooleanValue()) "On" else "Off"
         SettingType.SLIDER -> formatPercentage(getFloatValue())
+        SettingType.TEXT -> value.toString()
+        SettingType.SELECT -> value.toString()
+        SettingType.ACTION -> value.toString()
     }
 
     private fun formatMilliseconds(ms: Long): String {

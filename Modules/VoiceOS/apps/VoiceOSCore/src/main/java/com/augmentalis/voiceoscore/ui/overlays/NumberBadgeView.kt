@@ -28,6 +28,8 @@ import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
 import androidx.core.content.res.ResourcesCompat
+import com.augmentalis.voiceos.accessibility.AnchorPoint
+import com.augmentalis.voiceos.accessibility.ElementVoiceState
 import kotlin.math.max
 
 /**
@@ -371,52 +373,4 @@ class NumberBadgeView @JvmOverloads constructor(
     }
 }
 
-/**
- * Data class representing a single overlay to render
- */
-data class OverlayData(
-    /**
-     * Element bounds in screen coordinates
-     */
-    val elementBounds: Rect,
-
-    /**
-     * Number to display (1-999)
-     */
-    val number: Int,
-
-    /**
-     * Voice state for color coding
-     */
-    val state: ElementVoiceState,
-
-    /**
-     * Optional unique identifier for tracking
-     */
-    val id: String? = null
-)
-
-/**
- * Performance metrics for monitoring
- */
-data class PerformanceMetrics(
-    val overlayCount: Int,
-    val lastRenderTimeMs: Long,
-    val frameCount: Int,
-    val estimatedFps: Long,
-    val cacheSize: Int
-) {
-    /**
-     * Check if performance is within acceptable range
-     */
-    fun isPerformanceAcceptable(targetFrameTimeMs: Long = 16): Boolean {
-        return lastRenderTimeMs <= targetFrameTimeMs
-    }
-
-    /**
-     * Get performance status string
-     */
-    fun getStatusString(): String {
-        return "Overlays: $overlayCount, FPS: ~$estimatedFps, Render: ${lastRenderTimeMs}ms, Cache: $cacheSize"
-    }
-}
+// Note: OverlayData and PerformanceMetrics are defined in NumberOverlayRenderer.kt

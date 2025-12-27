@@ -101,7 +101,7 @@ class VOS4LearnAppIntegration private constructor(
     /**
      * VUIDCreator components
      */
-    private val uuidCreator: UUIDCreator
+    private val vuidCreator: VUIDCreator
     private val thirdPartyGenerator: ThirdPartyUuidGenerator
     private val aliasManager: UuidAliasManager
 
@@ -116,10 +116,10 @@ class VOS4LearnAppIntegration private constructor(
         databaseManager = com.augmentalis.database.VoiceOSDatabaseManager.getInstance(
             com.augmentalis.database.DatabaseDriverFactory(context)
         )
-        repository = LearnAppRepository(databaseAdapter.learnAppDao())
+        repository = LearnAppRepository(databaseManager, context)
 
-        // Initialize UUIDCreator components
-        uuidCreator = UUIDCreator.getInstance()
+        // Initialize VUIDCreator components
+        vuidCreator = VUIDCreator.getInstance()
         thirdPartyGenerator = ThirdPartyUuidGenerator(context)
         aliasManager = UuidAliasManager(databaseManager.uuids)
 
@@ -127,13 +127,13 @@ class VOS4LearnAppIntegration private constructor(
         learnedAppTracker = LearnedAppTracker(context)
         appLaunchDetector = AppLaunchDetector(context, learnedAppTracker)
         consentDialogManager = ConsentDialogManager(accessibilityService, learnedAppTracker)
-        progressOverlayManager = ProgressOverlayManager(context)
+        progressOverlayManager = ProgressOverlayManager(accessibilityService)
 
         // Initialize exploration engine
         explorationEngine = ExplorationEngine(
             context = context,
             accessibilityService = accessibilityService,
-            uuidCreator = uuidCreator,
+            uuidCreator = vuidCreator,
             thirdPartyGenerator = thirdPartyGenerator,
             aliasManager = aliasManager,
             repository = repository,
@@ -252,14 +252,12 @@ class VOS4LearnAppIntegration private constructor(
 
             is ExplorationState.Running -> {
                 // Show/update progress overlay
+                val progressPercent = (state.progress.calculatePercentage() * 100).toInt()
+                val message = "Learning ${state.progress.appName}... $progressPercent%"
                 if (!progressOverlayManager.isOverlayShowing()) {
-                    progressOverlayManager.showProgressOverlay(
-                        progress = state.progress,
-                        onPause = { pauseExploration() },
-                        onStop = { stopExploration() }
-                    )
+                    progressOverlayManager.showProgressOverlay(message)
                 } else {
-                    progressOverlayManager.updateProgress(state.progress)
+                    progressOverlayManager.updateProgress(progressPercent, message)
                 }
             }
 

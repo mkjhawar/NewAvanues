@@ -39,27 +39,4 @@ data class ElementRelationshipEntity(
     val updatedAt: Long = System.currentTimeMillis()
 )
 
-/**
- * Common relationship types
- */
-object RelationshipType {
-    // Form relationships
-    const val FORM_GROUP_MEMBER = "form_group_member"
-    const val BUTTON_SUBMITS_FORM = "button_submits_form"
-    const val LABEL_FOR = "label_for"
-    const val ERROR_FOR = "error_for"
-
-    // Navigation relationships
-    const val NAVIGATES_TO = "navigates_to"
-    const val BACK_TO = "back_to"
-
-    // Content relationships
-    const val DESCRIBES = "describes"
-    const val CONTAINS = "contains"
-    const val EXPANDS_TO = "expands_to"
-
-    // Action relationships
-    const val TRIGGERS = "triggers"
-    const val TOGGLES = "toggles"
-    const val FILTERS = "filters"
-}
+// Note: RelationshipType constants are defined in RelationshipType.kt

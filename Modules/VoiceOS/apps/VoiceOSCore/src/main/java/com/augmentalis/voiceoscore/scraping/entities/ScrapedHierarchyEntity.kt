@@ -30,8 +30,10 @@ package com.augmentalis.voiceoscore.scraping.entities
  */
 data class ScrapedHierarchyEntity(
     val id: Long = 0,
-    val parentElementId: Long,
-    val childElementId: Long,
+    val parentElementId: Long = 0,
+    val childElementId: Long = 0,
+    val parentElementHash: String = "",
+    val childElementHash: String = "",
     val childOrder: Int = 0,
     val depth: Int = 0,
     val createdAt: Long = System.currentTimeMillis()

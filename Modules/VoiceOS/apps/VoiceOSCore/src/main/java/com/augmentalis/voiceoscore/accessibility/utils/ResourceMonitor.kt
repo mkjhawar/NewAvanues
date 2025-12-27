@@ -71,6 +71,17 @@ class ResourceMonitor(
     }
 
     /**
+     * Throttle level for adaptive resource management
+     * Used to dynamically adjust processing intensity
+     */
+    enum class ThrottleLevel {
+        NONE,       // No throttling needed - full processing
+        LOW,        // Light throttling - reduce non-essential work
+        MEDIUM,     // Moderate throttling - significant reduction
+        HIGH        // Heavy throttling - minimum processing only
+    }
+
+    /**
      * Resource status snapshot
      */
     data class ResourceStatus(
@@ -390,6 +401,33 @@ class ResourceMonitor(
         } catch (e: Exception) {
             Log.w(TAG, "Failed to get memory pressure", e)
             "UNKNOWN"
+        }
+    }
+
+    /**
+     * Get recommended throttle level based on current resource status
+     *
+     * Maps resource levels to throttle recommendations:
+     * - CRITICAL: HIGH throttle (minimum processing)
+     * - WARNING: MEDIUM throttle (significant reduction)
+     * - NORMAL with high memory: LOW throttle (light reduction)
+     * - NORMAL: NONE (full processing)
+     *
+     * @return Recommended ThrottleLevel for current conditions
+     */
+    fun getThrottleRecommendation(): ThrottleLevel {
+        val status = getStatus()
+        return when (status.level) {
+            ResourceLevel.CRITICAL -> ThrottleLevel.HIGH
+            ResourceLevel.WARNING -> ThrottleLevel.MEDIUM
+            ResourceLevel.NORMAL -> {
+                // Check if we're approaching limits
+                if (status.memoryUsagePercent >= 70 || status.cpuUsagePercent >= 70) {
+                    ThrottleLevel.LOW
+                } else {
+                    ThrottleLevel.NONE
+                }
+            }
         }
     }
 }

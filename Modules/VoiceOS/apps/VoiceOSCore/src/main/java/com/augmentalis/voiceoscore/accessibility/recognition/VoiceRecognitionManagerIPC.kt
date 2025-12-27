@@ -164,10 +164,10 @@ class VoiceRecognitionManagerIPC(
         val binder = voiceRecognitionBinder ?: return "Not initialized"
 
         return when (binder.getCurrentState()) {
-            "idle" -> "IDLE"
-            "listening" -> "LISTENING"
-            "processing" -> "PROCESSING"
-            "error" -> "ERROR"
+            0 -> "IDLE"           // STATE_IDLE
+            1 -> "LISTENING"      // STATE_LISTENING
+            2 -> "PROCESSING"     // STATE_PROCESSING
+            3 -> "ERROR"          // STATE_ERROR
             else -> "UNKNOWN"
         }
     }

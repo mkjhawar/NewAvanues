@@ -151,4 +151,81 @@ class WidgetOverlayHelper(
             mainHandler.post(block)
         }
     }
+
+    companion object {
+        private val mainHandler = Handler(Looper.getMainLooper())
+
+        /**
+         * Create centered dialog overlay parameters
+         *
+         * Creates WindowManager.LayoutParams configured for a centered dialog overlay.
+         *
+         * @return Configured layout parameters for centered dialog
+         */
+        fun createCenteredDialogParams(): WindowManager.LayoutParams {
+            return WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = android.view.Gravity.CENTER
+            }
+        }
+
+        /**
+         * Add overlay view
+         *
+         * Static helper to add view to WindowManager. Executes on main thread.
+         *
+         * @param context Android context
+         * @param view View to display as overlay
+         * @param params WindowManager layout parameters
+         */
+        fun addOverlay(context: android.content.Context, view: View, params: WindowManager.LayoutParams) {
+            val windowManager = context.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager
+            ensureMainThreadStatic {
+                if (view.parent == null) {
+                    try {
+                        windowManager.addView(view, params)
+                    } catch (e: Exception) {
+                        android.util.Log.e("WidgetOverlayHelper", "Failed to add overlay view", e)
+                    }
+                }
+            }
+        }
+
+        /**
+         * Remove overlay view
+         *
+         * Static helper to remove view from WindowManager. Executes on main thread.
+         *
+         * @param context Android context
+         * @param view View to remove from overlay
+         */
+        fun removeOverlay(context: android.content.Context, view: View) {
+            val windowManager = context.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager
+            ensureMainThreadStatic {
+                if (view.parent != null) {
+                    try {
+                        windowManager.removeView(view)
+                    } catch (e: Exception) {
+                        android.util.Log.e("WidgetOverlayHelper", "Failed to remove overlay view", e)
+                    }
+                }
+            }
+        }
+
+        /**
+         * Ensure main thread (static version)
+         */
+        private fun ensureMainThreadStatic(block: () -> Unit) {
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                block()
+            } else {
+                mainHandler.post(block)
+            }
+        }
+    }
 }

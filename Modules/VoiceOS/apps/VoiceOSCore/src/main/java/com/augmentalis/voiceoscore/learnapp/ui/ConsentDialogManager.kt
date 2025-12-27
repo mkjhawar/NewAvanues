@@ -240,8 +240,7 @@ class ConsentDialogManager(
         // Emit approved response (exploration will start with clear window)
         _consentResponses.emit(
             ConsentResponse.Approved(
-                packageName = packageName,
-                dontAskAgain = dontAskAgain
+                packageName = packageName
             )
         )
     }
@@ -269,8 +268,7 @@ class ConsentDialogManager(
         // Emit declined response
         _consentResponses.emit(
             ConsentResponse.Declined(
-                packageName = packageName,
-                reason = "User declined"
+                packageName = packageName
             )
         )
     }
@@ -429,43 +427,4 @@ class ConsentDialogManager(
     }
 }
 
-/**
- * Consent Response
- *
- * Sealed class representing user's response to consent dialog.
- *
- * @since 1.0.0
- */
-sealed class ConsentResponse {
-
-    /**
-     * User approved learning
-     *
-     * @property packageName Package name
-     * @property dontAskAgain If true, user checked "Don't ask again"
-     */
-    data class Approved(
-        val packageName: String,
-        val dontAskAgain: Boolean
-    ) : ConsentResponse()
-
-    /**
-     * User declined learning
-     *
-     * @property packageName Package name
-     * @property reason Reason for declination
-     */
-    data class Declined(
-        val packageName: String,
-        val reason: String
-    ) : ConsentResponse()
-
-    /**
-     * User skipped full learning (activates just-in-time mode)
-     *
-     * @property packageName Package name
-     */
-    data class Skipped(
-        val packageName: String
-    ) : ConsentResponse()
-}
+// Note: ConsentResponse is defined in ConsentResponse.kt

@@ -630,7 +630,7 @@ class CommandAssignmentViewModel(
         viewModelScope.launch {
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true)
-                val commands = elementCommandManager.getCommandsForElement(elementUuid)
+                val commands = elementCommandManager.getCommands(elementUuid)
                 _uiState.value = _uiState.value.copy(
                     existingCommands = commands,
                     isLoading = false
@@ -680,11 +680,12 @@ class CommandAssignmentViewModel(
         viewModelScope.launch {
             try {
                 val commandPhrase = currentState.text
-                val id = elementCommandManager.addCommand(
+                val result = elementCommandManager.assignCommand(
                     elementUuid = elementUuid,
-                    commandPhrase = commandPhrase,
+                    phrase = commandPhrase,
                     appId = appId
                 )
+                val id = result.getOrDefault(-1L)
 
                 if (id > 0) {
                     onSuccess(commandPhrase)
@@ -707,7 +708,7 @@ class CommandAssignmentViewModel(
     fun deleteCommand(commandId: Long) {
         viewModelScope.launch {
             try {
-                elementCommandManager.deleteCommand(commandId, appId)
+                elementCommandManager.deleteCommand(commandId)
                 loadExistingCommands() // Reload list
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -736,7 +737,10 @@ class CommandAssignmentViewModelFactory(
         val databaseManager = VoiceOSDatabaseManager.getInstance(
             com.augmentalis.database.DatabaseDriverFactory(context)
         )
-        val elementCommandManager = ElementCommandManager(databaseManager)
+        val elementCommandManager = ElementCommandManager(
+            databaseManager.elementCommands,
+            databaseManager.qualityMetrics
+        )
 
         @Suppress("UNCHECKED_CAST")
         return CommandAssignmentViewModel(

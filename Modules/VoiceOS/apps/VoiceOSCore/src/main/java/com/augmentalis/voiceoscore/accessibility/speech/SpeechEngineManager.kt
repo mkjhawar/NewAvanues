@@ -199,7 +199,7 @@ class SpeechEngineManager(
                     timestamp = System.currentTimeMillis()
                 )
             )
-            ConditionalLogger.d(TAG, "SPEECH_TEST: Command event emitted - command='$currentText', confidence=$confidence")
+            ConditionalLogger.d(TAG) { "SPEECH_TEST: Command event emitted - command='$currentText', confidence=$confidence" }
         }
     }
 
@@ -752,6 +752,14 @@ class SpeechEngineManager(
             "engine_history" to engineInitializationHistory.mapKeys { it.key.name },
             "current_engine" to (currentEngine?.javaClass?.simpleName ?: "none")
         )
+    }
+
+    /**
+     * Cleanup resources
+     * Alias for onDestroy() - used by ServiceDependencies
+     */
+    fun cleanup() {
+        onDestroy()
     }
 
     companion object {

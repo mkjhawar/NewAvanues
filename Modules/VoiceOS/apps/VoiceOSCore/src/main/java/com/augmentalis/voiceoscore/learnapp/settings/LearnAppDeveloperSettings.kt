@@ -295,6 +295,10 @@ class LearnAppDeveloperSettings(context: Context) {
         /** Enable screenshot capture on each screen. Default: false */
         const val KEY_SCREENSHOT_ON_SCREEN = "screenshot_on_screen"
         const val DEFAULT_SCREENSHOT_ON_SCREEN = false
+
+        /** Enable developer mode (debug overlays, verbose logging, developer tools). Default: false */
+        const val KEY_DEVELOPER_MODE_ENABLED = "developer_mode_enabled"
+        const val DEFAULT_DEVELOPER_MODE_ENABLED = false
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -755,6 +759,13 @@ class LearnAppDeveloperSettings(context: Context) {
 
     fun setScreenshotOnScreen(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_SCREENSHOT_ON_SCREEN, enabled).apply()
+    }
+
+    fun isDeveloperModeEnabled(): Boolean =
+        prefs.getBoolean(KEY_DEVELOPER_MODE_ENABLED, DEFAULT_DEVELOPER_MODE_ENABLED)
+
+    fun setDeveloperModeEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DEVELOPER_MODE_ENABLED, enabled).apply()
     }
 
     // ========== UTILITY METHODS ==========

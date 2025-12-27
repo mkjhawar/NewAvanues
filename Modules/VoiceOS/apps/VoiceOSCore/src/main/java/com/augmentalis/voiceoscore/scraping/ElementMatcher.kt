@@ -144,8 +144,9 @@ class ElementMatcher {
         val candidates = mutableListOf<MatchResult>()
 
         // Strategy 2: Resource ID + bounds match
-        if (element.viewId != null) {
-            findByResourceIdAndBounds(rootNode, element.viewId, element.boundsString)?.let {
+        val resourceId = element.viewIdResourceName
+        if (resourceId != null) {
+            findByResourceIdAndBounds(rootNode, resourceId, element.bounds)?.let {
                 candidates.add(MatchResult(it, RESOURCE_ID_MATCH, "resource_id_bounds"))
             }
         }
@@ -156,7 +157,7 @@ class ElementMatcher {
         }
 
         // Strategy 4: Spatial position match
-        findBySpatialPosition(rootNode, element.boundsString)?.let {
+        findBySpatialPosition(rootNode, element.bounds)?.let {
             candidates.add(MatchResult(it, SPATIAL_MATCH, "spatial_position"))
         }
 
@@ -250,11 +251,13 @@ class ElementMatcher {
             val nodeClassName = node.className?.toString()
             if (nodeClassName != element.className) return@findNodeRecursive false
 
-            // Match clickable state
-            if (node.isClickable != element.isClickable) return@findNodeRecursive false
+            // Match clickable state (element.isClickable is Long: 1=true, 0=false)
+            val elementIsClickable = element.isClickable == 1L
+            if (node.isClickable != elementIsClickable) return@findNodeRecursive false
 
-            // Match enabled state
-            if (node.isEnabled != element.isEnabled) return@findNodeRecursive false
+            // Match enabled state (element.isEnabled is Long: 1=true, 0=false)
+            val elementIsEnabled = element.isEnabled == 1L
+            if (node.isEnabled != elementIsEnabled) return@findNodeRecursive false
 
             // Additional semantic checks
             val nodeText = node.text?.toString()

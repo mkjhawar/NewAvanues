@@ -172,6 +172,11 @@ class JustInTimeLearner(
     private var accessibilityService: AccessibilityService? = null
     private var screenStateManager: ScreenStateManager? = null
 
+    // FIX (2025-12-27): ExpandableControlDetector instance for deep scan functionality
+    private val expandableControlDetector: ExpandableControlDetector by lazy {
+        ExpandableControlDetector(context)
+    }
+
     /**
      * Initialize element capture with accessibility service
      * Must be called when service is available
@@ -979,7 +984,7 @@ class JustInTimeLearner(
                     if (deepScanConsentManager?.needsConsent(packageName) == true) {
                         val rootNode = accessibilityService?.rootInActiveWindow
                         if (rootNode != null) {
-                            val expandables = ExpandableControlDetector.findExpandableControls(rootNode)
+                            val expandables = findExpandableControls(rootNode)
                             deepScanConsentManager.showConsentDialog(
                                 packageName,
                                 getAppName(packageName),
@@ -1043,6 +1048,44 @@ class JustInTimeLearner(
     }
 
     /**
+     * Find all expandable controls in the accessibility node tree.
+     *
+     * Recursively walks the node tree and returns nodes that the detector
+     * identifies as expandable controls (menus, drawers, dropdowns, etc.)
+     *
+     * FIX (2025-12-27): Helper function to replace non-existent findExpandableControls method
+     *
+     * @param rootNode Root node to start traversal from
+     * @return List of expandable AccessibilityNodeInfo nodes
+     */
+    private fun findExpandableControls(rootNode: AccessibilityNodeInfo): List<AccessibilityNodeInfo> {
+        val expandables = mutableListOf<AccessibilityNodeInfo>()
+        findExpandableControlsRecursive(rootNode, expandables)
+        return expandables
+    }
+
+    /**
+     * Recursive helper for finding expandable controls.
+     */
+    private fun findExpandableControlsRecursive(
+        node: AccessibilityNodeInfo,
+        expandables: MutableList<AccessibilityNodeInfo>
+    ) {
+        // Check if this node is expandable
+        if (expandableControlDetector.isExpandableControl(node)) {
+            expandables.add(node)
+        }
+
+        // Recursively check children
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child != null) {
+                findExpandableControlsRecursive(child, expandables)
+            }
+        }
+    }
+
+    /**
      * Handle deep scan consent granted by user.
      *
      * Called when user approves deep scan via consent dialog.
@@ -1099,8 +1142,7 @@ class JustInTimeLearner(
             Log.i(TAG, "Starting deep scan for $packageName")
 
             // 1. Find all expandable controls (menus, drawers, dropdowns)
-            val expandableDetector = com.augmentalis.voiceoscore.learnapp.detection.ExpandableControlDetector
-            val expandables = expandableDetector.findExpandableControls(rootNode)
+            val expandables = findExpandableControls(rootNode)
 
             if (expandables.isEmpty()) {
                 Log.i(TAG, "No expandable controls found")
@@ -1122,11 +1164,14 @@ class JustInTimeLearner(
             // 2. Process each expandable
             for (expandable in expandables) {
                 try {
-                    val info = expandableDetector.getExpansionInfo(expandable)
+                    val info = expandableControlDetector.getExpansionInfo(expandable)
 
-                    // Skip if already expanded or low confidence
-                    if (info.isExpanded || info.confidence < 0.5f) {
-                        Log.d(TAG, "Skipping expandable (expanded=${info.isExpanded}, confidence=${info.confidence})")
+                    // Skip if already expanded (check node state) or low confidence
+                    // FIX (2025-12-27): ExpansionInfo doesn't have isExpanded, check node's expanded state instead
+                    val isNodeExpanded = expandable.isAccessibilityFocused ||
+                        expandable.className?.toString()?.lowercase()?.contains("expanded") == true
+                    if (isNodeExpanded || info.confidence < 0.5f) {
+                        Log.d(TAG, "Skipping expandable (expanded=$isNodeExpanded, confidence=${info.confidence})")
                         continue
                     }
 
@@ -1214,14 +1259,16 @@ class JustInTimeLearner(
     suspend fun hasHiddenMenuItems(): Boolean {
         val rootNode = accessibilityService?.rootInActiveWindow ?: return false
 
-        val expandableDetector = com.augmentalis.voiceoscore.learnapp.detection.ExpandableControlDetector
-        val expandables = expandableDetector.findExpandableControls(rootNode)
+        val expandables = findExpandableControls(rootNode)
 
         // Filter for collapsed, high-confidence expandables
         val collapsedExpandables = expandables.count { expandable ->
             try {
-                val info = expandableDetector.getExpansionInfo(expandable)
-                !info.isExpanded && info.confidence >= 0.5f
+                val info = expandableControlDetector.getExpansionInfo(expandable)
+                // FIX (2025-12-27): ExpansionInfo doesn't have isExpanded, check node's expanded state instead
+                val isNodeExpanded = expandable.isAccessibilityFocused ||
+                    expandable.className?.toString()?.lowercase()?.contains("expanded") == true
+                !isNodeExpanded && info.confidence >= 0.5f
             } catch (e: Exception) {
                 false
             } finally {

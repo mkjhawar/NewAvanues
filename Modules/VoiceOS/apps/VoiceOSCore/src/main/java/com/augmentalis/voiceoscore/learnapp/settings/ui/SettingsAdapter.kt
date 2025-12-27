@@ -41,9 +41,10 @@ class SettingsAdapter(
 
     override fun getItemViewType(position: Int): Int {
         return when (getItem(position).type) {
-            SettingType.NUMBER_INT, SettingType.NUMBER_LONG -> VIEW_TYPE_NUMBER
+            SettingType.NUMBER_INT, SettingType.NUMBER_LONG, SettingType.NUMBER_FLOAT -> VIEW_TYPE_NUMBER
             SettingType.TOGGLE -> VIEW_TYPE_TOGGLE
             SettingType.SLIDER -> VIEW_TYPE_SLIDER
+            SettingType.TEXT, SettingType.SELECT, SettingType.ACTION -> VIEW_TYPE_NUMBER // Fallback to number view
         }
     }
 

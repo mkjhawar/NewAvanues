@@ -9,7 +9,6 @@
 package com.augmentalis.voiceoscore.accessibility.cursor
 
 import android.util.Log
-import com.augmentalis.voiceoscore.accessibility.utils.Debouncer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -181,8 +180,8 @@ class VoiceCursorEventHandler(
     // Event queue
     private val eventQueue = ConcurrentLinkedQueue<CursorEvent>()
 
-    // Event debouncer
-    private val debouncer = Debouncer(config.debounceMs)
+    // Event debounce timestamps (key -> last processed time)
+    private val debounceTimestamps = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
     // Event result flow (for reactive updates)
     private val _eventResultFlow = MutableSharedFlow<EventResult>(replay = 0)
@@ -349,12 +348,15 @@ class VoiceCursorEventHandler(
             while (eventQueue.isNotEmpty()) {
                 val event = eventQueue.poll() ?: break
 
-                // Apply debouncing
+                // Apply debouncing - check if enough time has passed since last event of same type
                 val debounceKey = event::class.simpleName ?: "unknown"
-                if (!debouncer.shouldProceed(debounceKey)) {
+                val now = System.currentTimeMillis()
+                val lastTime = debounceTimestamps[debounceKey] ?: 0L
+                if (now - lastTime < config.debounceMs) {
                     Log.v(TAG, "Event debounced: $debounceKey")
                     continue
                 }
+                debounceTimestamps[debounceKey] = now
 
                 // Process event
                 processEvent(event)
@@ -446,7 +448,7 @@ class VoiceCursorEventHandler(
         processingJob = null
         clearQueue()
         clearCallbacks()
-        debouncer.clearAll()
+        debounceTimestamps.clear()
         Log.d(TAG, "VoiceCursorEventHandler disposed")
     }
 }

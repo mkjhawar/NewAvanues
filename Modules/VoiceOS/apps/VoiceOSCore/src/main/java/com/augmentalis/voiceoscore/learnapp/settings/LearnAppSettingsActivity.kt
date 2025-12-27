@@ -76,15 +76,12 @@ class LearnAppSettingsActivity : AppCompatActivity() {
      * Load and apply current learning mode
      */
     private fun loadCurrentMode() {
-        val currentMode = preferences.getLearningMode()
+        val isAutoDetect = preferences.isAutoDetectEnabled()
 
-        when (currentMode) {
-            LearnAppPreferences.MODE_AUTO_DETECT -> {
-                radioAutoDetect.isChecked = true
-            }
-            LearnAppPreferences.MODE_MANUAL -> {
-                radioManual.isChecked = true
-            }
+        if (isAutoDetect) {
+            radioAutoDetect.isChecked = true
+        } else {
+            radioManual.isChecked = true
         }
     }
 
@@ -95,11 +92,11 @@ class LearnAppSettingsActivity : AppCompatActivity() {
         radioGroup.setOnCheckedChangeListener { _, checkedId ->
             when (checkedId) {
                 R.id.radio_auto_detect -> {
-                    saveLearningMode(LearnAppPreferences.MODE_AUTO_DETECT)
+                    saveLearningMode(true)
                     showModeSavedToast("Auto-Detect mode enabled")
                 }
                 R.id.radio_manual -> {
-                    saveLearningMode(LearnAppPreferences.MODE_MANUAL)
+                    saveLearningMode(false)
                     showModeSavedToast("Manual mode enabled")
                 }
             }
@@ -109,8 +106,8 @@ class LearnAppSettingsActivity : AppCompatActivity() {
     /**
      * Save learning mode to preferences
      */
-    private fun saveLearningMode(mode: String) {
-        preferences.setLearningMode(mode)
+    private fun saveLearningMode(autoDetect: Boolean) {
+        preferences.setAutoDetectEnabled(autoDetect)
     }
 
     /**

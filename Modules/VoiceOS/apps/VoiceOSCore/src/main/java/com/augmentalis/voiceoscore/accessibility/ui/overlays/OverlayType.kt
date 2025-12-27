@@ -4,32 +4,13 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2025-12-22
+ * Updated: 2025-12-27 - OverlayType is defined in BaseOverlay.kt
  *
- * Defines types of overlays
+ * NOTE: OverlayType enum is defined in BaseOverlay.kt (lines 225-229)
+ * to keep it co-located with BaseOverlay class that uses it.
+ *
+ * Values: FULLSCREEN, FLOATING, POSITIONED
  */
 package com.augmentalis.voiceoscore.accessibility.ui.overlays
 
-/**
- * Types of overlays that can be displayed
- */
-enum class OverlayType {
-    /**
-     * Fullscreen overlay covering the entire screen
-     */
-    FULLSCREEN,
-
-    /**
-     * Dialog-style overlay (centered, partial screen)
-     */
-    DIALOG,
-
-    /**
-     * Small badge overlay (corner placement)
-     */
-    BADGE,
-
-    /**
-     * Toast-style temporary overlay
-     */
-    TOAST
-}
+// OverlayType is defined in BaseOverlay.kt

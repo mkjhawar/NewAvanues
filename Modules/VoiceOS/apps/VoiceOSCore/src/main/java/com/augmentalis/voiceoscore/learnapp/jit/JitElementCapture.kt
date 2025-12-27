@@ -27,32 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-/**
- * Captured element data for JIT learning
- *
- * Lightweight representation of a UI element captured during JIT learning.
- * Contains all data needed for voice command generation and element lookup.
- *
- * Phase 4 (2025-12-02): Added UUID field for stable element identification
- */
-data class JitCapturedElement(
-    val elementHash: String,
-    val className: String,
-    val viewIdResourceName: String?,
-    val text: String?,
-    val contentDescription: String?,
-    val bounds: Rect,
-    val isClickable: Boolean,
-    val isLongClickable: Boolean,
-    val isEditable: Boolean,
-    val isScrollable: Boolean,
-    val isCheckable: Boolean,
-    val isFocusable: Boolean,
-    val isEnabled: Boolean,
-    val depth: Int,
-    val indexInParent: Int,
-    val uuid: String? = null  // Phase 4: Stable UUID from ThirdPartyUuidGenerator
-)
+// JitCapturedElement is defined in JitCapturedElement.kt
 
 /**
  * JIT Element Capture Engine

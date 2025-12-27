@@ -81,6 +81,15 @@ sealed class ExplorationState {
     ) : ExplorationState()
 
     /**
+     * Preparing - exploration is being set up
+     *
+     * @property packageName Package being prepared for exploration
+     */
+    data class Preparing(
+        val packageName: String
+    ) : ExplorationState()
+
+    /**
      * Running - exploration in progress
      *
      * @property packageName Package being explored

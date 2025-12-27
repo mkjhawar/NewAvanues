@@ -373,14 +373,12 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
             databaseManager.transaction {
                 kotlinx.coroutines.runBlocking {
                     hierarchies.forEach { hierarchy ->
-                        // WARNING: This won't work correctly - Room entity uses IDs, SQLDelight uses hashes
-                        // Caller needs to provide hash-based hierarchy data instead
-                        // Using placeholder values to compile, but this needs proper migration
+                        // Use hash-based fields (parentElementHash, childElementHash) for SQLDelight
                         databaseManager.scrapedHierarchies.insert(
-                            parentElementHash = hierarchy.parentElementId.toString(), // TODO: Map ID to hash
-                            childElementHash = hierarchy.childElementId.toString(),   // TODO: Map ID to hash
+                            parentElementHash = hierarchy.parentElementHash,
+                            childElementHash = hierarchy.childElementHash,
                             depth = hierarchy.depth.toLong(),
-                            createdAt = System.currentTimeMillis() // Entity doesn't have createdAt field
+                            createdAt = hierarchy.createdAt
                         )
                         ids.add(hierarchy.id)
                     }
@@ -428,7 +426,7 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
                             createdAt = relationship.createdAt,
                             updatedAt = currentTime // Entity doesn't have updatedAt field, use current time
                         )
-                        ids.add(relationship.id)
+                        ids.add(relationship.id ?: 0L)
                     }
                 }
             }
@@ -498,7 +496,7 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
             navigationLevel = context.navigationLevel.toLong(),
             primaryAction = context.primaryAction,
             elementCount = context.elementCount.toLong(),
-            hasBackButton = context.hasBackButton,
+            hasBackButton = if (context.hasBackButton) 1L else 0L,
             firstScraped = context.firstScraped,
             lastScraped = context.lastScraped,
             visitCount = context.visitCount.toLong()
@@ -516,7 +514,7 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
             toScreenHash = transition.toScreenHash,
             triggerElementHash = transition.triggerElementHash,
             triggerAction = transition.triggerAction,
-            transitionCount = transition.transitionCount,
+            transitionCount = transition.transitionCount.toLong(),
             avgDurationMs = transition.avgDurationMs,
             lastTransitionAt = transition.lastTransitionAt
         )
@@ -672,7 +670,7 @@ private fun com.augmentalis.voiceoscore.scraping.entities.GeneratedCommandEntity
 /**
  * Convert GeneratedCommandDTO to Entity
  */
-private fun com.augmentalis.database.dto.GeneratedCommandDTO.toGeneratedCommandEntity(): com.augmentalis.voiceoscore.scraping.entities.GeneratedCommandEntity {
+fun com.augmentalis.database.dto.GeneratedCommandDTO.toGeneratedCommandEntity(): com.augmentalis.voiceoscore.scraping.entities.GeneratedCommandEntity {
     return com.augmentalis.voiceoscore.scraping.entities.GeneratedCommandEntity(
         id = this.id,
         elementHash = this.elementHash,
@@ -697,7 +695,7 @@ private fun com.augmentalis.database.dto.GeneratedCommandDTO.toGeneratedCommandE
  */
 private fun com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity.toElementRelationshipDTO(): com.augmentalis.database.dto.ElementRelationshipDTO {
     return com.augmentalis.database.dto.ElementRelationshipDTO(
-        id = this.id,
+        id = this.id ?: 0L,
         sourceElementHash = this.sourceElementHash,
         targetElementHash = this.targetElementHash,
         relationshipType = this.relationshipType,

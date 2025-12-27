@@ -27,7 +27,7 @@ import android.content.Context
 import android.os.Environment
 import android.util.Log
 import com.augmentalis.voiceoscore.database.VoiceOSAppDatabase
-import com.augmentalis.voiceoscore.database.entities.AppEntity
+import com.augmentalis.voiceoscore.learnapp.models.AppEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File

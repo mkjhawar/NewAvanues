@@ -50,6 +50,8 @@ import com.augmentalis.voiceos.constants.VoiceOSConstants
 import com.augmentalis.voiceos.cursor.VoiceCursorAPI
 import com.augmentalis.voiceos.cursor.core.CursorOffset
 import com.augmentalis.voiceoscore.accessibility.managers.ServiceConfiguration
+import com.augmentalis.voiceoscore.accessibility.managers.IServiceDependencies
+import com.augmentalis.voiceoscore.accessibility.managers.ServiceDependenciesFactory
 import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine
 import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine.UIElement
 import com.augmentalis.voiceoscore.accessibility.managers.ActionCoordinator
@@ -62,6 +64,7 @@ import com.augmentalis.voiceoscore.accessibility.speech.SpeechConfiguration
 import com.augmentalis.voiceoscore.accessibility.speech.SpeechEngineManager
 import com.augmentalis.voiceoscore.accessibility.utils.Const
 import com.augmentalis.voiceoscore.accessibility.utils.Debouncer
+import com.augmentalis.voiceoscore.accessibility.utils.EventPriority
 import com.augmentalis.voiceoscore.accessibility.utils.EventPriorityManager
 import com.augmentalis.voiceoscore.accessibility.utils.ResourceMonitor
 import com.augmentalis.voiceoscore.config.DynamicPackageConfig
@@ -97,6 +100,8 @@ import java.lang.ref.WeakReference
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.withLock
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -174,6 +179,9 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
         // Valid packages now determined at runtime based on device manufacturer
         const val COMMAND_CHECK_INTERVAL_MS = VoiceOSConstants.Timing.THROTTLE_DELAY_MS
         const val COMMAND_LOAD_DEBOUNCE_MS = VoiceOSConstants.Timing.THROTTLE_DELAY_MS
+
+        // P2-PERF-2: Event deduplication TTL (5 seconds)
+        private const val EVENT_ID_TTL_MS = 5000L
 
         @Volatile
         private var instanceRef: WeakReference<VoiceOSService>? = null
@@ -261,35 +269,32 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     private var lastCommandLoaded = 0L
     private val isCommandProcessing = AtomicBoolean(false)
 
-    // Database manager (extracted from VoiceOSService - P2-8a)
-    // Centralizes database initialization, state machine, and lifecycle
-    private val dbManager by lazy {
-        DatabaseManager(applicationContext).also {
-            Log.d(TAG, "DatabaseManager initialized (lazy)")
+    /**
+     * Service Dependencies (P2-ARCH-1)
+     *
+     * Centralizes dependency creation for testability. Uses factory pattern
+     * to allow injection of mock dependencies during testing.
+     *
+     * @see IServiceDependencies
+     * @see ServiceDependenciesFactory
+     */
+    private val dependencies: IServiceDependencies by lazy {
+        ServiceDependenciesFactory.create(this) { isServiceReady }.also {
+            Log.d(TAG, "ServiceDependencies initialized (lazy)")
         }
     }
 
-    // IPC manager (extracted from VoiceOSService - P2-8b)
-    // Handles all inter-process communication from external apps/services
-    private val ipcManager by lazy {
-        IPCManager(
-            accessibilityService = this,
-            speechEngineManager = speechEngineManager,
-            uiScrapingEngine = uiScrapingEngine,
-            databaseManager = dbManager,
-            isServiceReady = { isServiceReady }
-        ).also {
-            Log.d(TAG, "IPCManager initialized (lazy)")
-        }
-    }
+    // Database manager - delegated to dependencies (P2-8a)
+    private val dbManager: DatabaseManager
+        get() = dependencies.dbManager
 
-    // Lifecycle coordinator (extracted from VoiceOSService - P2-8d)
-    // Manages hybrid foreground service and app lifecycle observation
-    private val lifecycleCoordinator by lazy {
-        LifecycleCoordinator(this).also {
-            Log.d(TAG, "LifecycleCoordinator initialized (lazy)")
-        }
-    }
+    // IPC manager - delegated to dependencies (P2-8b)
+    private val ipcManager: IPCManager
+        get() = dependencies.ipcManager
+
+    // Lifecycle coordinator - delegated to dependencies (P2-8d)
+    private val lifecycleCoordinator: LifecycleCoordinator
+        get() = dependencies.lifecycleCoordinator
 
     // LearnApp integration state
     // FIX (2025-11-30): Use AtomicInteger for thread-safe state tracking
@@ -305,9 +310,14 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     private val pendingEvents = java.util.concurrent.ConcurrentLinkedQueue<android.view.accessibility.AccessibilityEvent>()
     private val MAX_QUEUED_EVENTS = 50
 
-    // FIX (2025-12-22): L-P0-1 - Event deduplication to prevent double-processing
-    // Tracks event IDs that have been processed to avoid duplicate handling
-    private val processedEventIds = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    /**
+     * FIX (2025-12-22): L-P0-1 - Event deduplication to prevent double-processing
+     * FIX (2025-12-27): P2-PERF-2 - TTL-based eviction for bounded memory usage
+     *
+     * Maps eventId → timestamp for TTL-based expiration.
+     * Events older than EVENT_ID_TTL_MS are automatically expired on access.
+     */
+    private val processedEventIds = ConcurrentHashMap<String, Long>()
 
     // PHASE 3 (2025-12-08): Command Discovery integration
     // Auto-observes ExplorationEngine.state() and triggers discovery flow on completion
@@ -324,16 +334,21 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
     /**
      * FIX (2025-12-22): C-P1-4 & L-P1-3 - Thread-safe command caches
+     * FIX (2025-12-27): P2-PERF-1 - ReadWriteLock for concurrent read access
      *
      * CopyOnWriteArrayList is thread-safe for individual operations,
      * but compound operations (clear+addAll, compare+update) need synchronization.
      *
-     * Use cacheLock to synchronize all compound operations.
-     * This fixes both:
+     * ReentrantReadWriteLock allows:
+     * - Multiple concurrent readers (read lock)
+     * - Exclusive writer access (write lock)
+     *
+     * This fixes:
      * - C-P1-4: Atomic compound operations (clear+addAll)
      * - L-P1-3: Safe access from both Main and Dispatchers.Default threads
+     * - P2-PERF-1: Improved concurrent read performance
      */
-    private val cacheLock = Any()
+    private val cacheLock = ReentrantReadWriteLock()
     private val nodeCache: MutableList<UIElement> = CopyOnWriteArrayList()
     private val commandCache: MutableList<String> = CopyOnWriteArrayList()
     private val staticCommandCache: MutableList<String> = CopyOnWriteArrayList()
@@ -344,56 +359,34 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     // private val floatingMenu by lazy { FloatingMenu(this) }
     // private val cursorOverlay by lazy { CursorOverlay(this) }
 
-    // Overlay manager for voice feedback (numbered selection, context menus, help)
+    // Overlay manager - delegated to dependencies (P2-8c)
     // Public to satisfy IVoiceOSServiceInternal.overlayManager interface requirement
-    override val overlayManager by lazy {
-        com.augmentalis.voiceoscore.accessibility.overlays.OverlayManager.getInstance(this).also {
-            Log.d(TAG, "OverlayManager initialized (lazy)")
-        }
-    }
+    override val overlayManager: com.augmentalis.voiceoscore.accessibility.overlays.OverlayManager
+        get() = dependencies.overlayManager
 
     private val prettyGson by lazy { GsonBuilder().setPrettyPrinting().create() }
 
-    // Manual dependency initialization (Hilt does not support AccessibilityService)
+    // Speech engine manager - delegated to dependencies
     // Public to satisfy IVoiceOSServiceInternal.speechEngineManager interface requirement
-    override val speechEngineManager by lazy {
-        SpeechEngineManager(applicationContext).also {
-            Log.d(TAG, "SpeechEngineManager initialized (lazy)")
-        }
-    }
+    override val speechEngineManager: SpeechEngineManager
+        get() = dependencies.speechEngineManager
 
-    private val installedAppsManager by lazy {
-        InstalledAppsManager(applicationContext).also {
-            Log.d(TAG, "InstalledAppsManager initialized (lazy)")
-        }
-    }
+    // Installed apps manager - delegated to dependencies
+    private val installedAppsManager: InstalledAppsManager
+        get() = dependencies.installedAppsManager
 
-    // AppVersionDetector requires IAppVersionRepository
-    private val appVersionDetector by lazy {
-        AppVersionDetector(applicationContext, dbManager.sqlDelightManager.appVersions).also {
-            Log.d(TAG, "AppVersionDetector initialized (lazy)")
-        }
-    }
+    // App version detector - delegated to dependencies
+    private val appVersionDetector: AppVersionDetector
+        get() = dependencies.appVersionDetector
 
-    // AppVersionManager requires detector, version repo, and command repo
-    private val appVersionManager by lazy {
-        com.augmentalis.voiceoscore.version.AppVersionManager(
-            context = applicationContext,
-            detector = appVersionDetector,
-            versionRepo = dbManager.sqlDelightManager.appVersions,
-            commandRepo = dbManager.sqlDelightManager.generatedCommands
-        ).also {
-            Log.d(TAG, "AppVersionManager initialized (lazy)")
-        }
-    }
+    // App version manager - delegated to dependencies
+    private val appVersionManager: com.augmentalis.voiceoscore.version.AppVersionManager
+        get() = dependencies.appVersionManager
 
-    // UIScrapingEngine requires AccessibilityService, so it's lazy-initialized (not injected)
+    // UI scraping engine - delegated to dependencies
     // Public to satisfy IVoiceOSServiceInternal.uiScrapingEngine interface requirement
-    override val uiScrapingEngine by lazy {
-        UIScrapingEngine(this).also {
-            Log.d(TAG, "UIScrapingEngine initialized (lazy)")
-        }
-    }
+    override val uiScrapingEngine: UIScrapingEngine
+        get() = dependencies.uiScrapingEngine
 
     // Event type tracking for performance monitoring
     private val eventCounts = ArrayMap<Int, AtomicLong>().apply {
@@ -730,7 +723,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             lifecycleCoordinator.unregister()
 
             // Clear command caches
-            synchronized(cacheLock) {
+            cacheLock.writeLock().withLock {
                 nodeCache.clear()
                 commandCache.clear()
                 staticCommandCache.clear()
@@ -764,7 +757,8 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             commandManagerInstance?.initialize()
 
             // Initialize ServiceMonitor
-            serviceMonitor = ServiceMonitor(applicationContext, serviceScope)
+            // FIX (2025-12-27): Correct constructor parameter order - service first, then context
+            serviceMonitor = ServiceMonitor(this, applicationContext)
 
             Log.i(TAG, "CommandManager and ServiceMonitor initialized successfully")
 
@@ -1046,13 +1040,11 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             val scrapingDb = dbManager.scrapingDatabase
             if (scrapingDb != null) {
                 try {
-                    val sqlDelightManager = scrapingDb.databaseManager
+                    // FIX (2025-12-27): VoiceCommandProcessor only takes context and accessibilityService
+                    // Database access is handled internally via VoiceOSCoreDatabaseAdapter
                     voiceCommandProcessor = VoiceCommandProcessor(
                         context = this@VoiceOSService,
-                        accessibilityService = this@VoiceOSService,
-                        scrapedAppQueries = sqlDelightManager.scrapedAppQueries,
-                        scrapedElementQueries = sqlDelightManager.scrapedElementQueries,
-                        generatedCommandQueries = sqlDelightManager.generatedCommandQueries
+                        accessibilityService = this@VoiceOSService
                     )
                     Log.i(TAG, "VoiceCommandProcessor initialized successfully")
                 } catch (e: Exception) {
@@ -1109,8 +1101,10 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
         // Drop low-priority events (scrolling, focus) under memory pressure
         // Preserve critical events (clicks, text input) to maintain functionality
         val isLowResource = config.isLowResourceMode
-        val eventPriority = eventPriorityManager.getPriorityForEvent(event.eventType)
-        val shouldProcess = !isLowResource || eventPriority >= EventPriorityManager.PRIORITY_HIGH
+        // FIX (2025-12-27): Correct method name is getEventPriority, takes event not eventType
+        val eventPriority = eventPriorityManager.getEventPriority(event)
+        // FIX (2025-12-27): Use EventPriority enum instead of non-existent PRIORITY_HIGH constant
+        val shouldProcess = !isLowResource || eventPriority >= EventPriority.HIGH
 
         if (!shouldProcess) {
             Log.v(TAG, "Event filtered due to memory pressure: type=${event.eventType}, priority=$eventPriority")
@@ -1233,7 +1227,8 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
                         val normalizedCommand = commands.map { element -> element.normalizedText }
                         // FIX (2025-12-22): C-P1-4 - Synchronize compound operation
-                        synchronized(cacheLock) {
+                        // FIX (2025-12-27): P2-PERF-1 - Use write lock for cache updates
+                        cacheLock.writeLock().withLock {
                             commandCache.clear()
                             commandCache.addAll(normalizedCommand)
                         }
@@ -1270,7 +1265,8 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                         nodeCache.clear()
                         nodeCache.addAll(commands)
                         // FIX (2025-12-22): C-P1-4 - Synchronize compound operation
-                        synchronized(cacheLock) {
+                        // FIX (2025-12-27): P2-PERF-1 - Use write lock for cache updates
+                        cacheLock.writeLock().withLock {
                             commandCache.clear()
                             commandCache.addAll(normalizedCommand)
                         }
@@ -1296,7 +1292,8 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                         nodeCache.addAll(commands)
                         val normalizedCommand = commands.map { element -> element.normalizedText }
                         // FIX (2025-12-22): C-P1-4 - Synchronize compound operation
-                        synchronized(cacheLock) {
+                        // FIX (2025-12-27): P2-PERF-1 - Use write lock for cache updates
+                        cacheLock.writeLock().withLock {
                             commandCache.clear()
                             commandCache.addAll(normalizedCommand)
                         }
@@ -1329,7 +1326,8 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                     if (isVoiceInitialized && System.currentTimeMillis() - lastCommandLoaded > COMMAND_LOAD_DEBOUNCE_MS) {
                         // FIX (2025-12-22): C-P1-4 - Synchronize check-then-act pattern
                         // FIX (2025-12-22): Prepare data in synchronized block, suspend call outside
-                        val allCommands = synchronized(cacheLock) {
+                        // FIX (2025-12-27): P2-PERF-1 - Use read lock for cache reads
+                        val allCommands = cacheLock.readLock().withLock {
                             if (commandCache != allRegisteredDynamicCommands) {
                                 Log.d(TAG, "SPEECH_TEST: registerVoiceCmd commandsStr = $commandCache")
                                 commandCache + staticCommandCache + appsCommand.keys
@@ -1338,7 +1336,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                             }
                         }
 
-                        // Suspend call outside synchronized block
+                        // Suspend call outside lock
                         if (allCommands != null) {
 //                            if (BuildConfig.DEBUG) {
 //                                val objectCommand = prettyGson.toJson(allCommands)
@@ -1346,7 +1344,8 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 //                            }
                             // FIX (2025-12-11): updateCommands is now suspend, call directly in coroutine
                             speechEngineManager.updateCommands(allCommands)
-                            synchronized(cacheLock) {
+                            // FIX (2025-12-27): P2-PERF-1 - Use write lock for cache updates
+                            cacheLock.writeLock().withLock {
                                 allRegisteredDynamicCommands.clear()
                                 allRegisteredDynamicCommands.addAll(commandCache)
                                 lastCommandLoaded = System.currentTimeMillis()
@@ -1684,9 +1683,9 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
      * FIX (2025-12-22): L-P0-1 - Add event deduplication to prevent double-processing
      */
     private fun queueEvent(event: android.view.accessibility.AccessibilityEvent) {
-        // FIX: Check if event already processed
+        // FIX: Check if event already processed (with TTL)
         val eventId = getEventId(event)
-        if (processedEventIds.contains(eventId)) {
+        if (isEventProcessed(eventId)) {
             Log.d(TAG, "LEARNAPP_DEBUG: Event already processed, skipping queue: $eventId")
             return
         }
@@ -1699,6 +1698,41 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
         } else {
             Log.w(TAG, "LEARNAPP_DEBUG: Event queue full ($MAX_QUEUED_EVENTS), dropping event")
         }
+    }
+
+    /**
+     * Check if an event has been processed recently (within TTL window).
+     * Also performs cleanup of expired entries.
+     *
+     * FIX (2025-12-27): P2-PERF-2 - TTL-based deduplication
+     *
+     * @param eventId The event ID to check
+     * @return true if event was processed within TTL window
+     */
+    private fun isEventProcessed(eventId: String): Boolean {
+        val now = System.currentTimeMillis()
+
+        // Check if event exists and is not expired
+        val timestamp = processedEventIds[eventId]
+        if (timestamp != null && now - timestamp < EVENT_ID_TTL_MS) {
+            return true
+        }
+
+        // Cleanup expired entries (runs on every check, but is fast due to ConcurrentHashMap)
+        processedEventIds.entries.removeIf { now - it.value > EVENT_ID_TTL_MS }
+
+        return false
+    }
+
+    /**
+     * Mark an event as processed with current timestamp.
+     *
+     * FIX (2025-12-27): P2-PERF-2 - TTL-based deduplication
+     *
+     * @param eventId The event ID to mark as processed
+     */
+    private fun markEventProcessed(eventId: String) {
+        processedEventIds[eventId] = System.currentTimeMillis()
     }
 
     /**
@@ -1719,8 +1753,9 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
                 if (queuedEvent != null) {
                     try {
                         // FIX: Mark event as processed BEFORE forwarding to prevent race
+                        // FIX (2025-12-27): P2-PERF-2 - Use TTL-based marking
                         val eventId = getEventId(queuedEvent)
-                        processedEventIds.add(eventId)
+                        markEventProcessed(eventId)
 
                         // Forward to LearnApp integration
                         learnAppIntegration?.onAccessibilityEvent(queuedEvent)
@@ -1739,20 +1774,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
             }
 
             Log.i(TAG, "LEARNAPP_DEBUG: Processed $processedCount queued events")
-
-            // FIX: Clean up old event IDs to prevent unbounded memory growth
-            // Keep only last 100 event IDs (represents ~10-20 seconds of events)
-            if (processedEventIds.size > 100) {
-                val toRemove = processedEventIds.size - 100
-                processedEventIds.iterator().let { iter ->
-                    repeat(toRemove) {
-                        if (iter.hasNext()) {
-                            iter.next()
-                            iter.remove()
-                        }
-                    }
-                }
-            }
+            // TTL-based cleanup happens automatically in isEventProcessed()
         }
     }
 
@@ -2493,7 +2515,8 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
         // Cleanup CommandManager and ServiceMonitor
         try {
             Log.d(TAG, "Cleaning up ServiceMonitor...")
-            serviceMonitor?.stop()
+            // FIX (2025-12-27): Correct method name is cleanup(), not stop()
+            serviceMonitor?.cleanup()
             serviceMonitor = null
             Log.i(TAG, "✓ ServiceMonitor cleaned up successfully")
         } catch (e: Exception) {
@@ -2987,12 +3010,26 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
     }
 
     override fun getMetrics(): Map<String, Any> {
-        return serviceMonitor?.getMetrics() ?: emptyMap()
+        // FIX (2025-12-27): Use resourceMonitor instead of serviceMonitor
+        // ServiceMonitor monitors CommandManager state, not resource metrics
+        val status = resourceMonitor.getStatus()
+        return mapOf(
+            "memoryUsedMb" to status.memoryUsedMb,
+            "memoryMaxMb" to status.memoryMaxMb,
+            "memoryUsagePercent" to status.memoryUsagePercent,
+            "nativeMemoryMb" to status.nativeMemoryMb,
+            "cpuUsagePercent" to status.cpuUsagePercent,
+            "resourceLevel" to status.level.name,
+            "warnings" to status.warnings
+        )
     }
 
     override fun checkResourceHealth(): Boolean {
         return try {
-            !(serviceMonitor?.shouldReduceMemory() ?: false)
+            // FIX (2025-12-27): Use resourceMonitor.getStatus() instead of non-existent shouldReduceMemory
+            // Return true if resources are healthy (not in critical/warning state)
+            val status = resourceMonitor.getStatus()
+            status.level == ResourceMonitor.ResourceLevel.NORMAL
         } catch (e: Exception) {
             Log.e(TAG, "Error checking resource health", e)
             true

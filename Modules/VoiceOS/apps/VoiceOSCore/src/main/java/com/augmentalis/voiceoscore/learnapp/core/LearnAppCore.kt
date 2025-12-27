@@ -420,9 +420,9 @@ class LearnAppCore(
         val contextLabel = generateContextLabel(element)
         if (contextLabel != null) return contextLabel
 
-        // Strategy 3: Type + index fallback
+        // Strategy 3: Type fallback (no index available in ElementInfo)
         val elementType = element.className.substringAfterLast(".").lowercase()
-        return "$elementType ${element.index + 1}"
+        return elementType
     }
 
     /**
@@ -448,8 +448,9 @@ class LearnAppCore(
      */
     private fun generateUnityLabel(element: ElementInfo): String {
         val bounds = element.bounds
-        val screenWidth = element.screenWidth.takeIf { it > 0 } ?: 1080
-        val screenHeight = element.screenHeight.takeIf { it > 0 } ?: 1920
+        // Use default screen dimensions (ElementInfo doesn't have screen size)
+        val screenWidth = 1080
+        val screenHeight = 1920
 
         // Divide screen into 3x3 grid
         val col = when {
@@ -528,8 +529,9 @@ class LearnAppCore(
      */
     private fun generateUnrealLabel(element: ElementInfo): String {
         val bounds = element.bounds
-        val screenWidth = element.screenWidth.takeIf { it > 0 } ?: 1080
-        val screenHeight = element.screenHeight.takeIf { it > 0 } ?: 1920
+        // Use default screen dimensions (ElementInfo doesn't have screen size)
+        val screenWidth = 1080
+        val screenHeight = 1920
 
         // Divide screen into 4x4 grid (finer than Unity's 3x3)
         val col = when {
@@ -603,44 +605,18 @@ class LearnAppCore(
     /**
      * Generate position-based label
      *
-     * Examples:
-     * - LinearLayout with 5 children → "Tab 1", "Tab 2", ..., "Tab 5"
-     * - CardView in RecyclerView → "Card 1", "Card 2", ...
+     * Note: ElementInfo doesn't have parent/children hierarchy or index,
+     * so position-based labeling is not available. Returns null to fall through
+     * to context-aware or type-based fallbacks.
      *
      * @param element Element to generate label for
-     * @return Position-based label or null if not applicable
+     * @return null (position-based labeling not available without hierarchy info)
      */
+    @Suppress("UNUSED_PARAMETER")
     private fun generatePositionLabel(element: ElementInfo): String? {
-        val parent = element.parent ?: return null
-        val siblings = parent.children ?: return null
-
-        // Get element position among siblings
-        val position = element.index
-        if (position < 0) return null
-
-        // Determine label prefix based on element type and parent
-        val prefix = when {
-            // Tab-like layouts
-            element.className.contains("LinearLayout", ignoreCase = true) &&
-                    parent.className.contains("TabLayout", ignoreCase = true) -> "Tab"
-
-            // Card-like layouts
-            element.className.contains("CardView", ignoreCase = true) -> "Card"
-
-            // Button-like elements
-            element.className.contains("Button", ignoreCase = true) -> "Button"
-
-            // List items
-            parent.className.contains("RecyclerView", ignoreCase = true) ||
-                    parent.className.contains("ListView", ignoreCase = true) -> "Item"
-
-            // Generic clickable
-            element.isClickable -> "Option"
-
-            else -> return null
-        }
-
-        return "$prefix ${position + 1}"
+        // ElementInfo doesn't have parent/children hierarchy or index
+        // Position-based labeling requires tree traversal which is not available
+        return null
     }
 
     /**
@@ -651,16 +627,19 @@ class LearnAppCore(
      * - "Left tab", "Right tab"
      * - "Center button"
      *
+     * Note: Uses default screen dimensions since ElementInfo doesn't have screen size.
+     *
      * @param element Element to generate label for
      * @return Context-aware label or null if not applicable
      */
     private fun generateContextLabel(element: ElementInfo): String? {
         val bounds = element.bounds
-        val screenHeight = element.screenHeight
-        val screenWidth = element.screenWidth
+        // Use default screen dimensions (ElementInfo doesn't have screen size)
+        val screenHeight = 1920
+        val screenWidth = 1080
 
-        // Can't generate context label without screen dimensions
-        if (screenHeight <= 0 || screenWidth <= 0) return null
+        // Skip if bounds are invalid
+        if (bounds.isEmpty) return null
 
         // Determine vertical position
         val verticalPos = when {

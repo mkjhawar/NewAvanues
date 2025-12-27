@@ -97,7 +97,7 @@ class DeveloperSettingsActivity : AppCompatActivity() {
                 label = "Screen Change Delay (ms)",
                 description = "Delay waiting for screen changes",
                 type = SettingType.NUMBER_LONG,
-                value = developerSettings.getScreenChangeDelayMs()
+                value = developerSettings.getScreenProcessingDelayMs()
             ),
 
             // Exploration section
@@ -113,7 +113,7 @@ class DeveloperSettingsActivity : AppCompatActivity() {
                 label = "Max Elements Per Screen",
                 description = "Maximum elements to process per screen",
                 type = SettingType.NUMBER_INT,
-                value = developerSettings.getBatchSize()
+                value = developerSettings.getMaxElementsPerScrollable()
             ),
             SettingItem(
                 key = "max_depth",
@@ -161,12 +161,12 @@ class DeveloperSettingsActivity : AppCompatActivity() {
 
     private fun handleSettingChange(key: String, newValue: Any) {
         when (key) {
-            "verbose_logging" -> developerSettings.setVerboseLoggingEnabled(newValue as Boolean)
+            "verbose_logging" -> developerSettings.setVerboseLogging(newValue as Boolean)
             "click_delay" -> developerSettings.setClickDelayMs((newValue as Number).toLong())
             "scroll_delay" -> developerSettings.setScrollDelayMs((newValue as Number).toLong())
-            "screen_change_delay" -> developerSettings.setScreenChangeDelayMs((newValue as Number).toLong())
+            "screen_change_delay" -> developerSettings.setScreenProcessingDelayMs((newValue as Number).toLong())
             "max_screens" -> developerSettings.setMaxExplorationDepth((newValue as Number).toInt())
-            "max_elements" -> developerSettings.setBatchSize((newValue as Number).toInt())
+            "max_elements" -> developerSettings.setMaxElementsPerScrollable((newValue as Number).toInt())
             "max_depth" -> developerSettings.setMaxExplorationDepth((newValue as Number).toInt())
             "debug_mode" -> preferences.isDebugModeEnabled = newValue as Boolean
             "show_exploration_overlay" -> preferences.showExplorationOverlay = newValue as Boolean

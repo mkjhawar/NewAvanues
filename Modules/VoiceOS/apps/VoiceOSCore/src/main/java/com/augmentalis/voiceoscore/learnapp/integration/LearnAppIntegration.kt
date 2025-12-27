@@ -19,7 +19,6 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 import com.augmentalis.voiceoscore.accessibility.IVoiceOSServiceInternal
-import com.augmentalis.voiceoscore.learnapp.database.LearnAppDatabaseAdapter
 import com.augmentalis.voiceoscore.learnapp.database.repository.AppMetadataProvider
 import com.augmentalis.voiceoscore.learnapp.database.repository.LearnAppRepository
 import com.augmentalis.voiceoscore.learnapp.database.repository.RepositoryResult
@@ -196,16 +195,10 @@ class LearnAppIntegration private constructor(
             com.augmentalis.database.DatabaseDriverFactory(context)
         )
 
-        // Initialize ScrapedAppMetadataSource implementation for app name resolution
-        val scrapedAppMetadataSource = com.augmentalis.voiceoscore.learnapp.database.repository.ScrapedAppMetadataSourceImpl(
-            context = context,
-            databaseManager = databaseManager
-        )
-
-        // Initialize repository with DAO adapter (wraps SQLDelight) and scraped app metadata source
-        val databaseAdapter = LearnAppDatabaseAdapter.getInstance(context)
-        repository = LearnAppRepository(databaseAdapter.learnAppDao(), context)
-        metadataProvider = AppMetadataProvider(context, scrapedAppMetadataSource)
+        // Initialize repository with database manager (SQLDelight)
+        // Note: ScrapedAppMetadataSource implementation is optional and can be added later
+        repository = LearnAppRepository(databaseManager, context)
+        metadataProvider = AppMetadataProvider(context)
 
         // Initialize UUIDCreator components
         uuidCreator = UUIDCreator.getInstance()
@@ -734,20 +727,20 @@ class LearnAppIntegration private constructor(
                     }
 
                     // FIX (2025-12-06): Enhanced completion notification with completeness
-                    // UPDATE (2025-12-08): Show blocked vs non-blocked stats
-                    // Format: "XX% of non-blocked items (YY/ZZ clicked), WW blocked"
+                    // FIX (2025-12-27): Use available ExplorationStats fields (clickedElements/nonBlockedElements/blockedElements don't exist)
                     val completeness = state.stats.completeness
-                    val clicked = state.stats.clickedElements
-                    val nonBlocked = state.stats.nonBlockedElements
-                    val blocked = state.stats.blockedElements
+                    val totalElements = state.stats.totalElements
+                    val totalScreens = state.stats.totalScreens
+                    val dangerousSkipped = state.stats.dangerousElementsSkipped
 
                     val message = if (completeness >= 95) {
                         "Learning complete! (${completeness.toInt()}%)\n" +
-                        "${state.stats.totalScreens} screens, $clicked/$nonBlocked items clicked" +
-                        if (blocked > 0) ", $blocked blocked" else ""
+                        "$totalScreens screens, $totalElements elements discovered" +
+                        if (dangerousSkipped > 0) ", $dangerousSkipped dangerous skipped" else ""
                     } else {
-                        "${completeness.toInt()}% of non-blocked items ($clicked/$nonBlocked clicked)\n" +
-                        if (blocked > 0) "$blocked items blocked (call/send/etc)" else "Some screens may have been blocked"
+                        "${completeness.toInt()}% complete\n" +
+                        "$totalScreens screens, $totalElements elements" +
+                        if (dangerousSkipped > 0) ", $dangerousSkipped dangerous elements skipped" else ""
                     }
 
                     // Show success notification
@@ -1118,6 +1111,11 @@ class LearnAppIntegration private constructor(
                 is LoginPromptAction.Stop -> {
                     // Stop exploration completely
                     stopExploration()
+                }
+
+                else -> {
+                    // Handle any future LoginPromptAction types
+                    Log.w(TAG, "Unhandled LoginPromptAction: $action")
                 }
             }
         }
@@ -1767,7 +1765,7 @@ class LearnAppIntegration private constructor(
      * @param packageName Package name to check
      * @return true if quantized context is available
      */
-    fun hasQuantizedContext(packageName: String): Boolean {
+    suspend fun hasQuantizedContext(packageName: String): Boolean {
         return avuQuantizerIntegration.hasQuantizedContext(packageName)
     }
 

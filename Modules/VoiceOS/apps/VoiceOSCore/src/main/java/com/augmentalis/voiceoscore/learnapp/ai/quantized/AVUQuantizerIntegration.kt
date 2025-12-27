@@ -298,7 +298,7 @@ class AVUQuantizerIntegration(
                 // Convert each screen to QuantizedScreen with elements
                 screens.map { screen ->
                     val elements = getElementsForScreen(screen.screenHash)
-                        .filter { it.isClickable || it.isEditable || it.isCheckable }
+                        .filter { it.isClickable != 0L || it.isEditable != 0L || it.isCheckable != 0L }
                         .map { convertToQuantizedElement(it) }
 
                     QuantizedScreen(
@@ -340,24 +340,25 @@ class AVUQuantizerIntegration(
                         text = row.text,
                         contentDescription = row.contentDescription,
                         bounds = row.bounds,
-                        isClickable = row.isClickable != 0L,
-                        isLongClickable = row.isLongClickable != 0L,
-                        isEditable = row.isEditable != 0L,
-                        isScrollable = row.isScrollable != 0L,
-                        isCheckable = row.isCheckable != 0L,
-                        isFocusable = row.isFocusable != 0L,
-                        isEnabled = row.isEnabled != 0L,
-                        depth = row.depth.toInt(),
-                        indexInParent = row.indexInParent.toInt(),
+                        isClickable = row.isClickable,
+                        isLongClickable = row.isLongClickable,
+                        isEditable = row.isEditable,
+                        isScrollable = row.isScrollable,
+                        isCheckable = row.isCheckable,
+                        isFocusable = row.isFocusable,
+                        isEnabled = row.isEnabled,
+                        depth = row.depth,
+                        indexInParent = row.indexInParent,
                         scrapedAt = row.scrapedAt,
                         semanticRole = row.semanticRole,
                         inputType = row.inputType,
                         visualWeight = row.visualWeight,
-                        isRequired = (row.isRequired ?: 0L) != 0L,
+                        isRequired = row.isRequired ?: 0L,
                         formGroupId = row.formGroupId,
                         placeholderText = row.placeholderText,
                         validationPattern = row.validationPattern,
-                        backgroundColor = row.backgroundColor
+                        backgroundColor = row.backgroundColor,
+                        screen_hash = row.screen_hash
                     )
                 }
             } catch (e: Exception) {
@@ -454,8 +455,8 @@ class AVUQuantizerIntegration(
                     QuantizedNavigation(
                         fromScreenHash = transition.fromScreenHash,
                         toScreenHash = transition.toScreenHash,
-                        triggerElementVuid = transition.triggerElementHash ?: "",
-                        triggerLabel = triggerLabel
+                        triggerLabel = triggerLabel,
+                        triggerVuid = transition.triggerElementHash ?: ""
                     )
                 }
         } catch (e: Exception) {
@@ -495,7 +496,8 @@ class AVUQuantizerIntegration(
                         QuantizedCommand(
                             phrase = cmd.commandText,
                             actionType = parseActionType(cmd.actionType),
-                            targetElementVuid = cmd.elementHash
+                            targetVuid = cmd.elementHash,
+                            confidence = cmd.confidence.toFloat()
                         )
                     }
             } catch (e: Exception) {
@@ -507,11 +509,11 @@ class AVUQuantizerIntegration(
     /**
      * Parse action type string to enum
      */
-    private fun parseActionType(actionType: String): QuantizedActionType {
+    private fun parseActionType(actionType: String): CommandActionType {
         return try {
-            QuantizedActionType.valueOf(actionType.uppercase())
+            CommandActionType.valueOf(actionType.uppercase())
         } catch (e: Exception) {
-            QuantizedActionType.CLICK // Default fallback
+            CommandActionType.CLICK // Default fallback
         }
     }
 

@@ -187,11 +187,11 @@ class ServiceLifecycleManager(
         if (!isServiceReady || event == null) return
 
         // Adaptive event filtering based on memory pressure
-        val isLowResource = config.isLowResourceMode
-        val eventPriority = eventPriorityManager.getPriorityForEvent(event.eventType)
-        val shouldProcess = !isLowResource || eventPriority >= EventPriorityManager.PRIORITY_HIGH
+        val throttleLevel = resourceMonitor.getThrottleRecommendation()
+        val shouldProcess = eventPriorityManager.shouldProcessEvent(event, throttleLevel)
 
         if (!shouldProcess) {
+            val eventPriority = eventPriorityManager.getEventPriority(event)
             Log.v(TAG, "Event filtered due to memory pressure: type=${event.eventType}, priority=$eventPriority")
             return
         }

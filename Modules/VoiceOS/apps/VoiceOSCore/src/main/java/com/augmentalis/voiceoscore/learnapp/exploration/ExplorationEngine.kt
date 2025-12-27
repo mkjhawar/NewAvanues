@@ -39,8 +39,8 @@ import com.augmentalis.voiceoscore.learnapp.tracking.ElementClickTracker
 import com.augmentalis.voiceoscore.learnapp.detection.LauncherDetector
 import com.augmentalis.voiceoscore.learnapp.ui.ChecklistManager
 import com.augmentalis.voiceoscore.learnapp.window.WindowManager
-import com.augmentalis.voiceoscore.learnapp.window.WindowInfo
-import com.augmentalis.voiceoscore.learnapp.window.WindowType
+import com.augmentalis.voiceoscore.learnapp.scrolling.ScrollDetector
+import com.augmentalis.voiceoscore.learnapp.scrolling.ScrollExecutor
 import com.augmentalis.uuidcreator.UUIDCreator
 import com.augmentalis.uuidcreator.alias.UuidAliasManager
 import com.augmentalis.uuidcreator.models.UUIDElement
@@ -197,17 +197,27 @@ class ExplorationEngine(
     /**
      * Element classifier
      */
-    private val elementClassifier = ElementClassifier()
+    private val elementClassifier = ElementClassifier(context)
+
+    /**
+     * Scroll detector - detects scrollable containers
+     */
+    private val scrollDetector = ScrollDetector()
+
+    /**
+     * Scroll executor - executes scroll actions
+     */
+    private val scrollExecutor = ScrollExecutor(context)
 
     /**
      * Screen explorer
      */
-    private val screenExplorer = ScreenExplorer(elementClassifier)
+    private val screenExplorer = ScreenExplorer(context, screenStateManager, elementClassifier, scrollDetector, scrollExecutor)
 
     /**
-     * Launcher detector - device-agnostic launcher detection (singleton, uses object methods)
+     * Launcher detector - device-agnostic launcher detection
      */
-    private val launcherDetector = LauncherDetector
+    private val launcherDetector = LauncherDetector(context)
 
     /**
      * Window manager - multi-window detection system
@@ -239,12 +249,12 @@ class ExplorationEngine(
     /**
      * Expandable control detector - identifies dropdowns, menus, etc.
      */
+    private val expandableDetector = ExpandableControlDetector(context)
 
     /**
      * Checklist manager - real-time element exploration tracking
      */
     private val checklistManager = ChecklistManager(context)
-    private val expandableDetector = ExpandableControlDetector
 
     /**
      * PHASE 3 (2025-12-08): VUID Metrics tracking for observability
@@ -464,7 +474,7 @@ class ExplorationEngine(
                 // PHASE 3 (2025-12-08): Reset metrics and show debug overlay
                 metricsCollector.reset()
                 debugOverlay.setMetricsCollector(metricsCollector)
-                if (developerSettings.isDebugOverlayEnabled()) {
+                if (developerSettings.isDeveloperModeEnabled()) {
                     debugOverlay.show(packageName)
                 }
 
@@ -1935,7 +1945,7 @@ class ExplorationEngine(
         }
 
         // Check depth limit
-        if (depth > strategy.maxDepth) {
+        if (depth > strategy.getMaxDepth()) {
             return
         }
 
@@ -2717,7 +2727,7 @@ class ExplorationEngine(
 
                 // Create UUIDElement
                 val uuidElement = UUIDElement(
-                    uuid = uuid,
+                    vuid = uuid,
                     name = element.getDisplayName(),
                     type = element.extractElementType(),
                     metadata = UUIDMetadata(
@@ -3005,7 +3015,7 @@ class ExplorationEngine(
      */
     @Suppress("UNNECESSARY_SAFE_CALL")  // Element properties can be null at runtime despite type inference
     private suspend fun exploreWindow(
-        window: WindowInfo,
+        window: WindowManager.WindowInfo,
         packageName: String,
         depth: Int
     ) {
@@ -3587,11 +3597,9 @@ class ExplorationEngine(
             dangerousElementsSkipped = dangerousElementsSkipped,
             loginScreensDetected = loginScreensDetected,
             scrollableContainersFound = scrollableContainersFound,
-            completeness = cumulativeCompleteness,  // FIX (2025-12-08): Use cumulative tracking for accurate completeness
-            // UPDATE (2025-12-08): Blocked vs non-blocked tracking for stats display
-            clickedElements = statsClickedCount,
-            nonBlockedElements = statsNonBlockedCount,
-            blockedElements = statsBlockedCount
+            completeness = cumulativeCompleteness  // FIX (2025-12-08): Use cumulative tracking for accurate completeness
+            // UPDATE (2025-12-08): Blocked vs non-blocked tracking stored separately:
+            // statsClickedCount, statsNonBlockedCount, statsBlockedCount available in local scope
         )
     }
 
@@ -3714,7 +3722,7 @@ class ExplorationEngine(
             // Persist pause state to database
             currentSessionId?.let { sessionId ->
                 try {
-                    repository.savePauseState(currentState.packageName, _pauseState.value.name)
+                    repository.savePauseState(currentState.packageName, _pauseState.value)
                     android.util.Log.i("ExplorationEngine", "✅ Pause state persisted to database")
                 } catch (e: Exception) {
                     android.util.Log.e("ExplorationEngine", "Failed to persist pause state", e)
@@ -3747,7 +3755,7 @@ class ExplorationEngine(
 
             // Persist resume state to database
             try {
-                repository.savePauseState(currentState.packageName, ExplorationPauseState.RUNNING.name)
+                repository.savePauseState(currentState.packageName, ExplorationPauseState.RUNNING)
                 android.util.Log.i("ExplorationEngine", "✅ Resume state persisted to database")
             } catch (e: Exception) {
                 android.util.Log.e("ExplorationEngine", "Failed to persist resume state", e)

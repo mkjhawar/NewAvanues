@@ -24,9 +24,11 @@ import com.augmentalis.voiceos.logging.PIILoggingWrapper
 import com.augmentalis.voiceoscore.database.VoiceOSCoreDatabaseAdapter
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 import com.augmentalis.voiceoscore.database.toScrapedElementEntity
+import com.augmentalis.voiceoscore.database.toGeneratedCommandEntity
+import com.augmentalis.voiceoscore.scraping.entities.toDTO
 import com.augmentalis.voiceoscore.utils.ScrapingAnalytics
 import com.augmentalis.voiceoscore.utils.AnalyticsSummary
-import com.augmentalis.voiceoscore.database.entities.AppEntity
+import com.augmentalis.voiceoscore.learnapp.models.AppEntity
 import com.augmentalis.voiceoscore.scraping.detection.LauncherDetector
 import com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity
 import com.augmentalis.voiceoscore.scraping.entities.ScrapedHierarchyEntity
@@ -120,7 +122,11 @@ class AccessibilityScrapingIntegration(
 
     private val database: VoiceOSCoreDatabaseAdapter = VoiceOSCoreDatabaseAdapter.getInstance(context)
     private val packageManager: PackageManager = context.packageManager
-    private val commandGenerator: CommandGenerator = CommandGenerator(context)
+    private val commandGenerator: CommandGenerator = CommandGenerator(
+        context,
+        database.databaseManager.elementStateHistoryQueries,
+        database.databaseManager.userInteractionQueries
+    )
     private val voiceCommandProcessor: VoiceCommandProcessor = VoiceCommandProcessor(context, accessibilityService)
 
     // Phase 1: Device-agnostic launcher detection (replaces hardcoded EXCLUDED_PACKAGES)
@@ -144,8 +150,11 @@ class AccessibilityScrapingIntegration(
     private val semanticInferenceHelper: SemanticInferenceHelper = SemanticInferenceHelper()
     private val screenContextHelper: ScreenContextInferenceHelper = ScreenContextInferenceHelper()
 
+    // Coroutine scope for async operations (must be defined before resourceMonitor)
+    private val integrationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     // Phase 3D: Resource monitoring for intelligent throttling
-    private val resourceMonitor: ResourceMonitor = ResourceMonitor(context)
+    private val resourceMonitor: ResourceMonitor = ResourceMonitor(context, integrationScope)
 
     // Developer settings for verbose logging
     private val developerSettings by lazy { LearnAppDeveloperSettings(context) }
@@ -156,8 +165,6 @@ class AccessibilityScrapingIntegration(
 
     // Phase 3: Scraping analytics for observability
     private val scrapingAnalytics = ScrapingAnalytics()
-
-    private val integrationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // Track last scraped app to avoid duplicate scraping
     private var lastScrapedAppHash: String? = null
@@ -458,7 +465,7 @@ class AccessibilityScrapingIntegration(
             metrics.timeMs = System.currentTimeMillis() - scrapeStartTime
 
             // Calculate max tree depth for analytics
-            val maxTreeDepth = elements.maxOfOrNull { it.depth } ?: 0
+            val maxTreeDepth = (elements.maxOfOrNull { it.depth } ?: 0L).toInt()
 
             // Determine if cache hit (app already scraped recently)
             val cacheHit = !isNewApp && (appHash == lastScrapedAppHash)
@@ -531,7 +538,7 @@ class AccessibilityScrapingIntegration(
             val registeredCount = elements.count { element ->
                 element.uuid != null && try {
                     val uuidElement = UUIDElement(
-                        uuid = element.uuid,
+                        vuid = element.uuid,
                         name = element.text ?: element.contentDescription ?: "Unknown",
                         type = element.className?.substringAfterLast('.') ?: "unknown",
                         description = element.contentDescription,
@@ -547,9 +554,9 @@ class AccessibilityScrapingIntegration(
                             ),
                             accessibility = UUIDAccessibility(
                                 contentDescription = element.contentDescription,
-                                isClickable = element.isClickable,
-                                isFocusable = element.isFocusable,
-                                isScrollable = element.isScrollable
+                                isClickable = element.isClickable == 1L,
+                                isFocusable = element.isFocusable == 1L,
+                                isScrollable = element.isScrollable == 1L
                             )
                         )
                     )
@@ -608,7 +615,9 @@ class AccessibilityScrapingIntegration(
                 element.copy(id = assignedIds[index])
             }
 
-            val commands = commandGenerator.generateCommandsForElements(elementsWithIds)
+            // Convert entities to DTOs for command generation
+            val elementDtos = elementsWithIds.map { it.toDTO() }
+            val commands = commandGenerator.generateCommandsForElements(elementDtos)
 
             // Validation: Ensure all commands have valid element hashes
             require(commands.all { it.elementHash.isNotBlank() }) {
@@ -619,8 +628,9 @@ class AccessibilityScrapingIntegration(
                 Log.d(TAG, "Generated ${commands.size} commands with valid element hashes")
             }
 
-            // Insert commands
-            database.insertCommandBatch(commands)
+            // Insert commands (convert DTOs to entities)
+            val commandEntities = commands.map { it.toGeneratedCommandEntity() }
+            database.insertCommandBatch(commandEntities)
 
             // ===== PHASE 5: Create/Update Screen Context (Phase 2) =====
             // Create content-based screen hash for stable identification
@@ -699,7 +709,7 @@ class AccessibilityScrapingIntegration(
                 if (formContext != null) {
                     // Find all form-related elements (editable fields and form inputs)
                     val formElements = elements.filter { element ->
-                        element.isEditable ||
+                        element.isEditable == 1L ||
                         element.semanticRole?.startsWith("input_") == true ||
                         element.className.contains("EditText", ignoreCase = true)
                     }
@@ -709,7 +719,7 @@ class AccessibilityScrapingIntegration(
                         val groupId = screenContextHelper.generateFormGroupId(
                             packageName = packageName,
                             screenHash = screenHash,
-                            elementDepth = formElements.firstOrNull()?.depth ?: 0,
+                            elementDepth = (formElements.firstOrNull()?.depth ?: 0L).toInt(),
                             formContext = formContext
                         )
 
@@ -727,7 +737,7 @@ class AccessibilityScrapingIntegration(
                 // Find submit buttons
                 val submitButtons = elements.filter { element ->
                     element.semanticRole in listOf("submit_form", "submit_login", "submit_signup", "submit_payment") ||
-                    (element.isClickable && element.className.contains("Button", ignoreCase = true) &&
+                    (element.isClickable == 1L && element.className.contains("Button", ignoreCase = true) &&
                      element.text?.lowercase()?.let { text ->
                          text.contains("submit") || text.contains("login") || text.contains("sign in") ||
                          text.contains("continue") || text.contains("next") || text.contains("done") ||
@@ -736,7 +746,7 @@ class AccessibilityScrapingIntegration(
                 }
 
                 // Find form input fields
-                val formInputs = elements.filter { it.isEditable || it.semanticRole?.startsWith("input_") == true }
+                val formInputs = elements.filter { it.isEditable == 1L || it.semanticRole?.startsWith("input_") == true }
 
                 if (submitButtons.isNotEmpty() && formInputs.isNotEmpty()) {
                     val relationships = mutableListOf<com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity>()
@@ -781,7 +791,7 @@ class AccessibilityScrapingIntegration(
                 }
 
                 // Find input fields
-                val inputs = elements.filter { it.isEditable || it.semanticRole?.startsWith("input_") == true }
+                val inputs = elements.filter { it.isEditable == 1L || it.semanticRole?.startsWith("input_") == true }
 
                 if (labels.isNotEmpty() && inputs.isNotEmpty()) {
                     val labelRelationships = mutableListOf<com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity>()
@@ -1113,20 +1123,20 @@ class AccessibilityScrapingIntegration(
                 text = text,
                 contentDescription = contentDesc,
                 bounds = boundsToJson(bounds),
-                isClickable = node.isClickable,
-                isLongClickable = node.isLongClickable,
-                isEditable = node.isEditable,
-                isScrollable = node.isScrollable,
-                isCheckable = node.isCheckable,
-                isFocusable = node.isFocusable,
-                isEnabled = node.isEnabled,
-                depth = depth,
-                indexInParent = indexInParent,
+                isClickable = if (node.isClickable) 1L else 0L,
+                isLongClickable = if (node.isLongClickable) 1L else 0L,
+                isEditable = if (node.isEditable) 1L else 0L,
+                isScrollable = if (node.isScrollable) 1L else 0L,
+                isCheckable = if (node.isCheckable) 1L else 0L,
+                isFocusable = if (node.isFocusable) 1L else 0L,
+                isEnabled = if (node.isEnabled) 1L else 0L,
+                depth = depth.toLong(),
+                indexInParent = indexInParent.toLong(),
                 // AI Context (Phase 1)
                 semanticRole = semanticRole,
                 inputType = inputType,
                 visualWeight = visualWeight,
-                isRequired = isRequired,
+                isRequired = if (isRequired) 1L else 0L,
                 // AI Context (Phase 2)
                 formGroupId = null,  // Set later at screen level
                 placeholderText = placeholderText,
@@ -1627,9 +1637,11 @@ class AccessibilityScrapingIntegration(
                     }
                     // Get all elements with real database IDs
                     val allElementDtos = database.databaseManager.scrapedElements.getByApp(appId)
-                    val allElements = allElementDtos.map { it.toScrapedElementEntity() }
-                    val commands = commandGenerator.generateCommandsForElements(allElements)
-                    database.insertCommandBatch(commands)
+                    // commandGenerator expects DTOs directly
+                    val commands = commandGenerator.generateCommandsForElements(allElementDtos)
+                    // Convert DTOs to entities for insertCommandBatch
+                    val commandEntities = commands.map { it.toGeneratedCommandEntity() }
+                    database.insertCommandBatch(commandEntities)
                     database.updateCommandCount(packageName, commands.size)
                     if (developerSettings.isVerboseLoggingEnabled()) {
                         Log.d(TAG, "Generated ${commands.size} total commands")
@@ -1682,7 +1694,7 @@ class AccessibilityScrapingIntegration(
 
             // Create UUIDElement with metadata
             val uuidElement = UUIDElement(
-                uuid = uuid,
+                vuid = uuid,
                 name = element.text ?: element.contentDescription ?: "Unknown",
                 type = element.className?.substringAfterLast('.') ?: "unknown",
                 description = element.contentDescription,
@@ -1698,9 +1710,9 @@ class AccessibilityScrapingIntegration(
                     ),
                     accessibility = UUIDAccessibility(
                         contentDescription = element.contentDescription,
-                        isClickable = element.isClickable,
-                        isFocusable = element.isFocusable,
-                        isScrollable = element.isScrollable
+                        isClickable = element.isClickable == 1L,
+                        isFocusable = element.isFocusable == 1L,
+                        isScrollable = element.isScrollable == 1L
                     )
                 )
             )

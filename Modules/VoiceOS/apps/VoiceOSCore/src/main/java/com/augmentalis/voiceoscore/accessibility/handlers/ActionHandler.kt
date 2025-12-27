@@ -65,18 +65,4 @@ interface ActionHandler {
     }
 }
 
-/**
- * Action categories for organization and metrics
- * Direct enum - no abstraction
- */
-enum class ActionCategory {
-    SYSTEM,      // System-level actions (back, home, settings)
-    APP,         // Application launch and control
-    DEVICE,      // Device control (volume, brightness, etc)
-    INPUT,       // Text input and keyboard control
-    NAVIGATION,  // UI navigation and scrolling
-    UI,          // UI element interaction
-    GESTURE,     // Gesture-based interactions (pinch, drag, swipe)
-    GAZE,        // Gaze tracking and eye-based interactions
-    CUSTOM       // Custom/plugin actions
-}
+// Note: ActionCategory is defined in ActionCategory.kt

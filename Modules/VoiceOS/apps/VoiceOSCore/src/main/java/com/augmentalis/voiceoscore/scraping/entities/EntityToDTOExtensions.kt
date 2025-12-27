@@ -15,17 +15,17 @@ import com.augmentalis.database.dto.*
 fun ScrapedAppEntity.toDTO() = ScrapedAppDTO(
     appId = this.appId,
     packageName = this.packageName,
-    versionCode = this.versionCode,
+    versionCode = this.versionCode.toLong(),
     versionName = this.versionName,
     appHash = this.appHash,
-    isFullyLearned = this.isFullyLearned,
+    isFullyLearned = if (this.isFullyLearned) 1L else 0L,
     learnCompletedAt = this.learnCompletedAt,
     scrapingMode = this.scrapingMode,
-    scrapeCount = this.scrapeCount,
-    elementCount = this.elementCount,
-    commandCount = this.commandCount,
-    firstScrapedAt = this.firstScrapedAt,
-    lastScrapedAt = this.lastScrapedAt
+    scrapeCount = this.scrapeCount.toLong(),
+    elementCount = this.elementCount.toLong(),
+    commandCount = this.commandCount.toLong(),
+    firstScrapedAt = this.firstScraped,
+    lastScrapedAt = this.lastScraped
 )
 
 /**
@@ -79,7 +79,7 @@ fun ScrapedHierarchyEntity.toDTO(parentHash: String, childHash: String) = Scrape
  * Convert ElementRelationshipEntity to ElementRelationshipDTO
  */
 fun ElementRelationshipEntity.toDTO() = ElementRelationshipDTO(
-    id = this.id,
+    id = this.id ?: 0L,
     sourceElementHash = this.sourceElementHash,
     targetElementHash = this.targetElementHash,
     relationshipType = this.relationshipType,

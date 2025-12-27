@@ -250,7 +250,9 @@ class DeveloperSettingsViewModel(context: Context) : ViewModel() {
             SettingType.SLIDER -> 0f
             SettingType.NUMBER_LONG -> 50L
             SettingType.NUMBER_INT -> 1
+            SettingType.NUMBER_FLOAT -> 0f
             SettingType.TOGGLE -> 0
+            SettingType.TEXT, SettingType.SELECT, SettingType.ACTION -> 0
         }
     }
 
@@ -259,7 +261,9 @@ class DeveloperSettingsViewModel(context: Context) : ViewModel() {
             SettingType.SLIDER -> 1f
             SettingType.NUMBER_LONG -> 3_600_000L
             SettingType.NUMBER_INT -> 500
+            SettingType.NUMBER_FLOAT -> 100f
             SettingType.TOGGLE -> 1
+            SettingType.TEXT, SettingType.SELECT, SettingType.ACTION -> 0
         }
     }
 }

@@ -271,4 +271,16 @@ object Const {
      * Service state: Stopped
      */
     const val STATE_STOPPED = "stopped"
+
+    /**
+     * Extension function to broadcast configuration updates
+     *
+     * @param language Optional language code for the update
+     */
+    fun android.content.Context.broadcastConfigUpdated(language: String? = null) {
+        val intent = android.content.Intent(ACTION_CONFIG_UPDATE).apply {
+            language?.let { putExtra("language", it) }
+        }
+        sendBroadcast(intent)
+    }
 }

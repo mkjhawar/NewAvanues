@@ -128,9 +128,9 @@ class ScreenContextInferenceHelper {
      * Returns: "submit", "search", "browse", "purchase", "view", or null
      */
     fun inferPrimaryAction(elements: List<ScrapedElementEntity>): String? {
-        // Find buttons and their text
+        // Find buttons and their text (isClickable is Long: 1=true, 0=false)
         val buttonTexts = elements
-            .filter { it.className.contains("Button", ignoreCase = true) && it.isClickable }
+            .filter { it.className.contains("Button", ignoreCase = true) && it.isClickable == 1L }
             .mapNotNull { it.text?.lowercase() }
             .joinToString(" ")
 
@@ -139,7 +139,7 @@ class ScreenContextInferenceHelper {
             containsAny(buttonTexts, SEARCH_ACTION_KEYWORDS) -> "search"
             containsAny(buttonTexts, PURCHASE_ACTION_KEYWORDS) -> "purchase"
             containsAny(buttonTexts, BROWSE_ACTION_KEYWORDS) -> "browse"
-            elements.any { it.isScrollable } -> "browse"
+            elements.any { it.isScrollable == 1L } -> "browse"
             else -> "view"
         }
     }
@@ -264,20 +264,22 @@ class ScreenContextInferenceHelper {
 
     /**
      * Helper: Check if screen has multiple input fields (indicates form)
+     * Note: isEditable is Long (1=true, 0=false)
      */
     private fun hasMultipleInputFields(elements: List<ScrapedElementEntity>): Boolean {
         val inputCount = elements.count {
-            it.isEditable || it.className.contains("EditText", ignoreCase = true)
+            it.isEditable == 1L || it.className.contains("EditText", ignoreCase = true)
         }
         return inputCount >= 2
     }
 
     /**
      * Helper: Check if screen has any input fields
+     * Note: isEditable is Long (1=true, 0=false)
      */
     private fun hasInputFields(elements: List<ScrapedElementEntity>): Boolean {
         return elements.any {
-            it.isEditable || it.className.contains("EditText", ignoreCase = true)
+            it.isEditable == 1L || it.className.contains("EditText", ignoreCase = true)
         }
     }
 
