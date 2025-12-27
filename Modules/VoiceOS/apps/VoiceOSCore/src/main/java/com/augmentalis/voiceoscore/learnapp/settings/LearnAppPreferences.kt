@@ -1,13 +1,11 @@
 /**
- * LearnAppPreferences.kt - SharedPreferences wrapper for LearnApp settings
+ * LearnAppPreferences.kt - Preferences manager for LearnApp
  *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
- * Created: 2025-11-28
+ * Created: 2025-12-17
  *
- * Manages user preferences for LearnApp behavior:
- * - Learning mode (AUTO_DETECT vs MANUAL)
- * - Future settings can be added here
+ * Manages user preferences and settings for LearnApp functionality.
  */
 
 package com.augmentalis.voiceoscore.learnapp.settings
@@ -16,97 +14,145 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
- * LearnApp Preferences Manager
+ * LearnApp Preferences
  *
- * Wrapper around SharedPreferences for LearnApp settings.
- *
- * ## Learning Modes
- *
- * - **AUTO_DETECT** (default): Shows consent dialog automatically for new apps
- * - **MANUAL**: User must manually trigger learning from settings
- *
- * ## Usage
- *
- * ```kotlin
- * val prefs = LearnAppPreferences(context)
- *
- * // Get current mode
- * val mode = prefs.getLearningMode()
- *
- * // Set mode
- * prefs.setLearningMode(LearnAppPreferences.MODE_MANUAL)
- *
- * // Check if auto-detect enabled
- * if (prefs.isAutoDetectEnabled()) {
- *     // Show consent dialog
- * }
- * ```
- *
- * @param context Application or Activity context
- *
- * @since Phase 4
+ * Manages preferences for LearnApp exploration and learning features.
  */
 class LearnAppPreferences(context: Context) {
 
-    companion object {
-        private const val PREFS_NAME = "learnapp_prefs"
+    private val prefs: SharedPreferences = context.getSharedPreferences(
+        PREFS_NAME,
+        Context.MODE_PRIVATE
+    )
 
-        const val KEY_LEARNING_MODE = "learning_mode"
+    // ========== Exploration Settings ==========
 
-        const val MODE_AUTO_DETECT = "AUTO_DETECT"
-        const val MODE_MANUAL = "MANUAL"
+    var isExplorationEnabled: Boolean
+        get() = prefs.getBoolean(KEY_EXPLORATION_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_EXPLORATION_ENABLED, value).apply()
 
-        /**
-         * Default learning mode
-         */
-        const val DEFAULT_MODE = MODE_AUTO_DETECT
-    }
+    var isJitLearningEnabled: Boolean
+        get() = prefs.getBoolean(KEY_JIT_LEARNING_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_JIT_LEARNING_ENABLED, value).apply()
 
-    private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    var explorationDepthLimit: Int
+        get() = prefs.getInt(KEY_EXPLORATION_DEPTH_LIMIT, DEFAULT_DEPTH_LIMIT)
+        set(value) = prefs.edit().putInt(KEY_EXPLORATION_DEPTH_LIMIT, value).apply()
 
-    /**
-     * Get current learning mode
-     *
-     * @return MODE_AUTO_DETECT or MODE_MANUAL
-     */
-    fun getLearningMode(): String {
-        return prefs.getString(KEY_LEARNING_MODE, DEFAULT_MODE) ?: DEFAULT_MODE
-    }
+    var maxElementsPerScreen: Int
+        get() = prefs.getInt(KEY_MAX_ELEMENTS_PER_SCREEN, DEFAULT_MAX_ELEMENTS)
+        set(value) = prefs.edit().putInt(KEY_MAX_ELEMENTS_PER_SCREEN, value).apply()
 
-    /**
-     * Set learning mode
-     *
-     * @param mode MODE_AUTO_DETECT or MODE_MANUAL
-     */
-    fun setLearningMode(mode: String) {
-        require(mode == MODE_AUTO_DETECT || mode == MODE_MANUAL) {
-            "Invalid learning mode: $mode. Must be MODE_AUTO_DETECT or MODE_MANUAL"
-        }
-        prefs.edit().putString(KEY_LEARNING_MODE, mode).apply()
-    }
+    // ========== Timing Settings ==========
 
-    /**
-     * Check if auto-detect mode is enabled
-     *
-     * @return true if AUTO_DETECT mode
-     */
-    fun isAutoDetectEnabled(): Boolean {
-        return getLearningMode() == MODE_AUTO_DETECT
-    }
+    var screenProcessingDelayMs: Long
+        get() = prefs.getLong(KEY_SCREEN_PROCESSING_DELAY, DEFAULT_SCREEN_DELAY)
+        set(value) = prefs.edit().putLong(KEY_SCREEN_PROCESSING_DELAY, value).apply()
+
+    var scrollDelayMs: Long
+        get() = prefs.getLong(KEY_SCROLL_DELAY, DEFAULT_SCROLL_DELAY)
+        set(value) = prefs.edit().putLong(KEY_SCROLL_DELAY, value).apply()
+
+    var clickDelayMs: Long
+        get() = prefs.getLong(KEY_CLICK_DELAY, DEFAULT_CLICK_DELAY)
+        set(value) = prefs.edit().putLong(KEY_CLICK_DELAY, value).apply()
+
+    // ========== Auto-Detect Settings ==========
 
     /**
-     * Check if manual mode is enabled
-     *
-     * @return true if MANUAL mode
+     * Check if auto-detect mode is enabled.
+     * When enabled, LearnApp automatically detects app launches and shows consent dialogs.
      */
-    fun isManualMode(): Boolean {
-        return getLearningMode() == MODE_MANUAL
-    }
+    fun isAutoDetectEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_DETECT_ENABLED, true)
 
     /**
-     * Reset to default settings
+     * Enable or disable auto-detect mode.
      */
-    fun reset() {
+    fun setAutoDetectEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_DETECT_ENABLED, enabled).apply()
+    }
+
+    // ========== Consent Settings ==========
+
+    var hasShownGlobalConsent: Boolean
+        get() = prefs.getBoolean(KEY_GLOBAL_CONSENT_SHOWN, false)
+        set(value) = prefs.edit().putBoolean(KEY_GLOBAL_CONSENT_SHOWN, value).apply()
+
+    var lastConsentTimestamp: Long
+        get() = prefs.getLong(KEY_LAST_CONSENT_TIMESTAMP, 0L)
+        set(value) = prefs.edit().putLong(KEY_LAST_CONSENT_TIMESTAMP, value).apply()
+
+    // ========== Debug Settings ==========
+
+    var isDebugModeEnabled: Boolean
+        get() = prefs.getBoolean(KEY_DEBUG_MODE_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_DEBUG_MODE_ENABLED, value).apply()
+
+    var showExplorationOverlay: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_EXPLORATION_OVERLAY, true)
+        set(value) = prefs.edit().putBoolean(KEY_SHOW_EXPLORATION_OVERLAY, value).apply()
+
+    // ========== Package-specific methods ==========
+
+    fun isPackageExcluded(packageName: String): Boolean {
+        val excluded = prefs.getStringSet(KEY_EXCLUDED_PACKAGES, emptySet()) ?: emptySet()
+        return packageName in excluded
+    }
+
+    fun excludePackage(packageName: String) {
+        val excluded = (prefs.getStringSet(KEY_EXCLUDED_PACKAGES, emptySet()) ?: emptySet()).toMutableSet()
+        excluded.add(packageName)
+        prefs.edit().putStringSet(KEY_EXCLUDED_PACKAGES, excluded).apply()
+    }
+
+    fun includePackage(packageName: String) {
+        val excluded = (prefs.getStringSet(KEY_EXCLUDED_PACKAGES, emptySet()) ?: emptySet()).toMutableSet()
+        excluded.remove(packageName)
+        prefs.edit().putStringSet(KEY_EXCLUDED_PACKAGES, excluded).apply()
+    }
+
+    fun getExcludedPackages(): Set<String> {
+        return prefs.getStringSet(KEY_EXCLUDED_PACKAGES, emptySet()) ?: emptySet()
+    }
+
+    // ========== Consent tracking ==========
+
+    fun hasConsentForPackage(packageName: String): Boolean {
+        return prefs.getBoolean("$KEY_PACKAGE_CONSENT_PREFIX$packageName", false)
+    }
+
+    fun setConsentForPackage(packageName: String, hasConsent: Boolean) {
+        prefs.edit().putBoolean("$KEY_PACKAGE_CONSENT_PREFIX$packageName", hasConsent).apply()
+    }
+
+    fun clearAllPreferences() {
         prefs.edit().clear().apply()
+    }
+
+    companion object {
+        private const val PREFS_NAME = "learnapp_preferences"
+
+        // Keys
+        private const val KEY_EXPLORATION_ENABLED = "exploration_enabled"
+        private const val KEY_JIT_LEARNING_ENABLED = "jit_learning_enabled"
+        private const val KEY_EXPLORATION_DEPTH_LIMIT = "exploration_depth_limit"
+        private const val KEY_MAX_ELEMENTS_PER_SCREEN = "max_elements_per_screen"
+        private const val KEY_SCREEN_PROCESSING_DELAY = "screen_processing_delay"
+        private const val KEY_SCROLL_DELAY = "scroll_delay"
+        private const val KEY_CLICK_DELAY = "click_delay"
+        private const val KEY_GLOBAL_CONSENT_SHOWN = "global_consent_shown"
+        private const val KEY_LAST_CONSENT_TIMESTAMP = "last_consent_timestamp"
+        private const val KEY_DEBUG_MODE_ENABLED = "debug_mode_enabled"
+        private const val KEY_SHOW_EXPLORATION_OVERLAY = "show_exploration_overlay"
+        private const val KEY_EXCLUDED_PACKAGES = "excluded_packages"
+        private const val KEY_PACKAGE_CONSENT_PREFIX = "consent_"
+        private const val KEY_AUTO_DETECT_ENABLED = "auto_detect_enabled"
+
+        // Defaults
+        private const val DEFAULT_DEPTH_LIMIT = 10
+        private const val DEFAULT_MAX_ELEMENTS = 500
+        private const val DEFAULT_SCREEN_DELAY = 500L
+        private const val DEFAULT_SCROLL_DELAY = 300L
+        private const val DEFAULT_CLICK_DELAY = 200L
     }
 }
