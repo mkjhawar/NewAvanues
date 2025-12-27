@@ -11,7 +11,7 @@ plugins {
     kotlin("multiplatform")
     id("com.android.library")
     id("app.cash.sqldelight") version "2.0.1"
-    kotlin("plugin.serialization") version "1.9.25"
+    kotlin("plugin.serialization")
 }
 
 kotlin {
@@ -22,18 +22,22 @@ kotlin {
             }
         }
     }
-
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach {
-        it.binaries.framework {
-            baseName = "database"
-            isStatic = true
+    // iOS targets - only compiled when explicitly requested
+    // To build iOS: ./gradlew :Modules:VoiceOS:core:accessibility-types:linkDebugFrameworkIosArm64
+    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+    ) {
+        listOf(
+            iosX64(),
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach {
+            it.binaries.framework {
+                baseName = "database"
+                isStatic = true
+            }
         }
     }
-
     // JVM for desktop/testing - RE-ENABLED for Phase 3 (test suite)
     jvm()
 
@@ -59,20 +63,24 @@ kotlin {
                 implementation("app.cash.sqldelight:android-driver:2.0.1")
             }
         }
-
-        val iosX64Main by getting
-        val iosArm64Main by getting
-        val iosSimulatorArm64Main by getting
-        val iosMain by creating {
-            dependsOn(commonMain)
-            iosX64Main.dependsOn(this)
-            iosArm64Main.dependsOn(this)
-            iosSimulatorArm64Main.dependsOn(this)
-            dependencies {
-                implementation("app.cash.sqldelight:native-driver:2.0.1")
+        // iOS targets - only compiled when explicitly requested
+        // To build iOS: ./gradlew :Modules:VoiceOS:core:accessibility-types:linkDebugFrameworkIosArm64
+        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+        ) {
+            val iosX64Main by getting
+            val iosArm64Main by getting
+            val iosSimulatorArm64Main by getting
+            val iosMain by creating {
+                dependsOn(commonMain)
+                iosX64Main.dependsOn(this)
+                iosArm64Main.dependsOn(this)
+                iosSimulatorArm64Main.dependsOn(this)
+                dependencies {
+                    implementation("app.cash.sqldelight:native-driver:2.0.1")
+                }
             }
         }
-
         // RE-ENABLED for Phase 3 - test suite execution
         val jvmMain by getting {
             dependencies {

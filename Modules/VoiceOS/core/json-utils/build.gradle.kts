@@ -23,18 +23,22 @@ kotlin {
             }
         }
     }
-
-    // iOS targets
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach {
-        it.binaries.framework {
-            baseName = "json-utils"
+    // iOS targets - only compiled when explicitly requested
+    // To build iOS: ./gradlew :Modules:VoiceOS:core:accessibility-types:linkDebugFrameworkIosArm64
+    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+    ) {
+        // iOS targets
+        listOf(
+            iosX64(),
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach {
+            it.binaries.framework {
+                baseName = "json-utils"
+            }
         }
     }
-
     // JVM target
     jvm {
         compilations.all {
@@ -59,23 +63,27 @@ kotlin {
         val androidMain by getting {
             dependsOn(commonMain)
         }
+        // iOS targets - only compiled when explicitly requested
+        // To build iOS: ./gradlew :Modules:VoiceOS:core:accessibility-types:linkDebugFrameworkIosArm64
+        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+        ) {
+            val iosMain by creating {
+                dependsOn(commonMain)
+            }
 
-        val iosMain by creating {
-            dependsOn(commonMain)
+            val iosX64Main by getting {
+                dependsOn(iosMain)
+            }
+
+            val iosArm64Main by getting {
+                dependsOn(iosMain)
+            }
+
+            val iosSimulatorArm64Main by getting {
+                dependsOn(iosMain)
+            }
         }
-
-        val iosX64Main by getting {
-            dependsOn(iosMain)
-        }
-
-        val iosArm64Main by getting {
-            dependsOn(iosMain)
-        }
-
-        val iosSimulatorArm64Main by getting {
-            dependsOn(iosMain)
-        }
-
         val jvmMain by getting {
             dependsOn(commonMain)
         }

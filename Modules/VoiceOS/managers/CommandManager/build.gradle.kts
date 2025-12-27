@@ -2,7 +2,7 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("kotlin-parcelize")
-    id("com.google.devtools.ksp") version "1.9.25-1.0.20"
+    id("com.google.devtools.ksp")
 }
 
 android {
