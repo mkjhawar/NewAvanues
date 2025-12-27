@@ -1,5 +1,6 @@
 package com.augmentalis.uuidcreator.core
 
+import com.augmentalis.uuidcreator.flutter.FlutterIdentifier
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
 
@@ -9,8 +10,17 @@ import java.util.concurrent.atomic.AtomicLong
  * Provides various VUID (VoiceUniqueID) generation strategies.
  * Uses standard UUID v4 format internally with Voice-specific terminology.
  *
+ * ## VUID Priority Order
+ *
+ * When generating VUIDs for UI elements, prefer in this order:
+ * 1. Flutter 3.19+ identifier (stable across sessions)
+ * 2. Android resource-id (viewIdResourceName)
+ * 3. Content-based hash (text, contentDescription)
+ * 4. Spatial coordinates (for game engines)
+ *
  * Migration: UUID → VUID (VoiceUniqueID)
  * Created: 2025-12-23
+ * Updated: 2025-12-27 - Added Flutter 3.19+ identifier support
  */
 object VUIDGenerator {
 
@@ -73,4 +83,64 @@ object VUIDGenerator {
      */
     @Deprecated("UUID and VUID use the same format")
     fun fromUUID(uuid: String): String = uuid
+
+    // ========================================================================
+    // Flutter 3.19+ Identifier Support
+    // ========================================================================
+
+    /**
+     * Generate stable VUID from Flutter 3.19+ identifier
+     *
+     * Flutter 3.19 introduced SemanticsProperties.identifier which maps to
+     * Android's resource-id. This provides stable identification across sessions.
+     *
+     * @param flutterIdentifier The Flutter identifier extracted from node
+     * @return Stable VUID based on the identifier
+     */
+    fun generateFromFlutterIdentifier(flutterIdentifier: FlutterIdentifier): String {
+        return if (flutterIdentifier.isStable) {
+            // Use stable hash for Flutter 3.19+ identifiers
+            "flutter-${flutterIdentifier.toStableHash()}"
+        } else {
+            // Fall back to content-based generation for legacy Flutter
+            generateFromContent(flutterIdentifier.identifierValue)
+        }
+    }
+
+    /**
+     * Generate stable VUID from raw Flutter resource ID
+     *
+     * Convenience method when you have the raw resource ID string.
+     *
+     * @param resourceId The viewIdResourceName from AccessibilityNodeInfo
+     * @return Stable VUID if Flutter identifier detected, null otherwise
+     */
+    fun generateFromFlutterResourceId(resourceId: String): String? {
+        // Quick check for Flutter patterns
+        if (!resourceId.contains("flutter", ignoreCase = true)) {
+            return null
+        }
+
+        // Check if this is a stable Flutter 3.19+ identifier
+        val isStable = resourceId.contains("flutter_semantics_") ||
+                resourceId.contains("flutter_id_")
+
+        // Extract identifier value (remove package prefix if present)
+        val identifierValue = if (resourceId.contains(":id/")) {
+            resourceId.substringAfter(":id/")
+        } else {
+            resourceId
+        }
+
+        return if (isStable) {
+            // Generate stable hash for Flutter 3.19+
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            val hashBytes = digest.digest(identifierValue.toByteArray())
+            val hash = hashBytes.take(16).joinToString("") { "%02x".format(it) }
+            "flutter-$hash"
+        } else {
+            // Use content-based generation for legacy Flutter
+            generateFromContent(identifierValue)
+        }
+    }
 }

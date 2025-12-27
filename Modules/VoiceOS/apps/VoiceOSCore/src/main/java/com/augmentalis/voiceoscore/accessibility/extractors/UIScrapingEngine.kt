@@ -15,6 +15,8 @@ import android.util.Log
 import android.util.LruCache
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.augmentalis.uuidcreator.flutter.FlutterIdentifier
+import com.augmentalis.uuidcreator.flutter.FlutterIdentifierExtractor
 import com.augmentalis.voiceoscore.utils.ConditionalLogger
 import com.augmentalis.voiceos.logging.PIILoggingWrapper
 import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine.Companion.FORBIDDEN_DESCRIPTIONS
@@ -168,7 +170,9 @@ class UIScrapingEngine(
         val normalizedText: String = "", // Enhanced: Normalized text for command matching
         val isInheritedClickable: Boolean = false, // Enhanced: Inherited clickability
         val targetNodeRef: WeakReference<AccessibilityNodeInfo>? = null, // Enhanced: Target node for action
-        val confidence: Float = 0.5f // Enhanced: Confidence score
+        val confidence: Float = 0.5f, // Enhanced: Confidence score
+        val flutterIdentifier: FlutterIdentifier? = null, // Flutter 3.19+ stable identifier
+        val resourceId: String? = null // Android resource ID (viewIdResourceName)
     )
 
 
@@ -519,6 +523,9 @@ class UIScrapingEngine(
 
     /**
      * Create enhanced UI element with additional metadata
+     *
+     * Flutter 3.19+ Enhancement: Extracts stable identifiers from Flutter apps
+     * for improved VUID stability across sessions.
      */
     private fun createEnhancedUIElement(
         node: AccessibilityNodeInfo,
@@ -535,8 +542,20 @@ class UIScrapingEngine(
         val text = node.text?.toString() ?: ""
         val description = node.contentDescription?.toString()
         val className = node.className?.toString()
+        val resourceId = node.viewIdResourceName
 
-        val hash = generateElementHash(text, description, className, bounds)
+        // Extract Flutter 3.19+ identifier if available
+        val flutterIdentifier = FlutterIdentifierExtractor.extract(node)
+
+        // Generate hash - prefer Flutter identifier for stability
+        val hash = if (flutterIdentifier?.isStable == true) {
+            // Use Flutter 3.19+ stable identifier for hash
+            "flutter-${flutterIdentifier.toStableHash()}"
+        } else {
+            // Fall back to content-based hash
+            generateElementHash(text, description, className, bounds)
+        }
+
         val confidence = calculateConfidence(node, text, normalizedText)
 
         return UIElement(
@@ -553,7 +572,9 @@ class UIScrapingEngine(
             normalizedText = normalizedText,
             isInheritedClickable = isInheritedClickable,
             targetNodeRef = WeakReference(targetNode),
-            confidence = confidence
+            confidence = confidence,
+            flutterIdentifier = flutterIdentifier,
+            resourceId = resourceId
         )
     }
 

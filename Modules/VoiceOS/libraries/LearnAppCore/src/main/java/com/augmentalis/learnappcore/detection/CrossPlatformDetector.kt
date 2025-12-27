@@ -540,6 +540,94 @@ object CrossPlatformDetector {
         }
     }
 
+    // ========================================================================
+    // Flutter Version Detection (3.19+ Identifier Support)
+    // ========================================================================
+
+    /**
+     * Detect Flutter version based on accessibility node characteristics
+     *
+     * Flutter 3.19+ (Feb 2024) introduced SemanticsProperties.identifier which
+     * maps to Android's viewIdResourceName. Apps using this feature will have
+     * resource IDs with patterns like "flutter_semantics_<id>".
+     *
+     * @param rootNode Root accessibility node to analyze
+     * @param packageName App package name
+     * @return Detected Flutter version
+     */
+    fun detectFlutterVersion(rootNode: AccessibilityNodeInfo?, packageName: String): FlutterVersion {
+        if (rootNode == null) return FlutterVersion.NOT_FLUTTER
+
+        // First check if this is even a Flutter app
+        if (!hasFlutterSignatures(rootNode, packageName)) {
+            return FlutterVersion.NOT_FLUTTER
+        }
+
+        // Check for Flutter 3.19+ identifier patterns
+        val hasStableIdentifiers = checkForFlutter319Identifiers(rootNode, depth = 0, maxDepth = 5)
+
+        return if (hasStableIdentifiers) {
+            Log.i(TAG, "Detected FLUTTER 3.19+ for $packageName (has stable identifiers)")
+            FlutterVersion.FLUTTER_319_PLUS
+        } else {
+            Log.i(TAG, "Detected FLUTTER LEGACY for $packageName (no stable identifiers)")
+            FlutterVersion.FLUTTER_LEGACY
+        }
+    }
+
+    /**
+     * Check if node tree contains Flutter 3.19+ stable identifiers
+     *
+     * Looks for patterns indicating use of SemanticsProperties.identifier:
+     * - "flutter_semantics_<id>" - auto-generated semantics IDs
+     * - "flutter_id_<name>" - developer-defined IDs
+     *
+     * @param node Current node to check
+     * @param depth Current recursion depth
+     * @param maxDepth Maximum depth to search
+     * @return true if stable identifiers found
+     */
+    private fun checkForFlutter319Identifiers(
+        node: AccessibilityNodeInfo,
+        depth: Int,
+        maxDepth: Int
+    ): Boolean {
+        if (depth >= maxDepth) return false
+
+        try {
+            // Check current node's resource ID for Flutter 3.19+ patterns
+            val resourceId = node.viewIdResourceName
+            if (resourceId != null) {
+                if (resourceId.contains("flutter_semantics_") ||
+                    resourceId.contains("flutter_id_") ||
+                    resourceId.contains(":id/flutter_semantics_")) {
+                    return true
+                }
+            }
+
+            // Check children
+            val childCount = node.childCount
+            for (i in 0 until childCount) {
+                val child = node.getChild(i) ?: continue
+                try {
+                    if (checkForFlutter319Identifiers(child, depth + 1, maxDepth)) {
+                        return true
+                    }
+                } finally {
+                    // Recycle child node on older API levels
+                    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        @Suppress("DEPRECATION")
+                        child.recycle()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error checking for Flutter 3.19 identifiers", e)
+        }
+
+        return false
+    }
+
     /**
      * Recursively check children for framework signatures
      *
@@ -587,6 +675,23 @@ object CrossPlatformDetector {
 
         return false
     }
+}
+
+/**
+ * Flutter version detection result
+ *
+ * Flutter 3.19+ (Feb 2024) introduced SemanticsProperties.identifier
+ * which provides stable element identification via resource-id.
+ */
+enum class FlutterVersion {
+    /** Not a Flutter app */
+    NOT_FLUTTER,
+
+    /** Flutter < 3.19 (no stable identifier support) */
+    FLUTTER_LEGACY,
+
+    /** Flutter 3.19+ (has stable identifier support) */
+    FLUTTER_319_PLUS
 }
 
 /**
@@ -728,5 +833,17 @@ enum class AppFramework {
     fun needsCoordinateTapping(): Boolean {
         return this == UNITY || this == UNREAL || this == GODOT ||
                 this == COCOS2D || this == DEFOLD
+    }
+
+    /**
+     * Check if framework may support stable identifiers (Flutter 3.19+)
+     *
+     * Only Flutter apps can have stable identifiers from SemanticsProperties.identifier.
+     * Use CrossPlatformDetector.detectFlutterVersion() for actual version detection.
+     *
+     * @return true if framework is Flutter (may support stable IDs)
+     */
+    fun mayHaveStableIdentifiers(): Boolean {
+        return this == FLUTTER
     }
 }
