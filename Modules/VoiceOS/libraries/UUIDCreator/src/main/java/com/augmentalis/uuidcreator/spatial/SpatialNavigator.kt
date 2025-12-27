@@ -1,6 +1,6 @@
 package com.augmentalis.uuidcreator.spatial
 
-import com.augmentalis.uuidcreator.core.UUIDRegistry
+import com.augmentalis.uuidcreator.core.VUIDRegistry
 import com.augmentalis.uuidcreator.models.*
 import kotlin.math.*
 
@@ -8,7 +8,7 @@ import kotlin.math.*
  * Spatial navigation system for UUID elements
  * Handles directional navigation and position-based targeting
  */
-class SpatialNavigator(private val registry: UUIDRegistry) {
+class SpatialNavigator(private val registry: VUIDRegistry) {
     
     /**
      * Navigation directions
@@ -23,7 +23,7 @@ class SpatialNavigator(private val registry: UUIDRegistry) {
      * Navigation result
      */
     data class NavigationResult(
-        val target: UUIDElement?,
+        val target: VUIDElement?,
         val distance: Float = Float.MAX_VALUE,
         val direction: Direction,
         val confidence: Float = 0f
@@ -33,7 +33,7 @@ class SpatialNavigator(private val registry: UUIDRegistry) {
      * Navigate from one element to another in specified direction
      */
     fun navigate(fromUUID: String, direction: Direction): NavigationResult {
-        val sourceElement = registry.findByUUID(fromUUID) 
+        val sourceElement = registry.findByVUID(fromUUID) 
             ?: return NavigationResult(null, Float.MAX_VALUE, direction, 0f)
         
         val sourcePos = sourceElement.position 
@@ -76,7 +76,7 @@ class SpatialNavigator(private val registry: UUIDRegistry) {
      * Find nearest element in any direction
      */
     fun findNearest(fromUUID: String, maxDistance: Float = Float.MAX_VALUE): NavigationResult? {
-        val sourceElement = registry.findByUUID(fromUUID) ?: return null
+        val sourceElement = registry.findByVUID(fromUUID) ?: return null
         val sourcePos = sourceElement.position ?: return null
 
         val nearest = registry.getEnabledElements()

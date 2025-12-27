@@ -6,7 +6,7 @@ import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.uuidcreator.api.IVUIDManager
 import com.augmentalis.uuidcreator.core.*
-import com.augmentalis.uuidcreator.database.repository.SQLDelightUUIDRepositoryAdapter
+import com.augmentalis.uuidcreator.database.repository.SQLDelightVUIDRepositoryAdapter
 import com.augmentalis.uuidcreator.models.*
 import com.augmentalis.uuidcreator.targeting.TargetResolver
 import com.augmentalis.uuidcreator.spatial.SpatialNavigator
@@ -83,7 +83,7 @@ open class VUIDCreator(
 
     // Database and repository (SQLDelight-based)
     private val databaseManager = VoiceOSDatabaseManager.getInstance(DatabaseDriverFactory(context))
-    private val repository = SQLDelightUUIDRepositoryAdapter(databaseManager.uuids)
+    private val repository = SQLDelightVUIDRepositoryAdapter(databaseManager.uuids)
 
     // Registry with hybrid storage
     private val registry = VUIDRegistry(repository)
@@ -226,35 +226,35 @@ open class VUIDCreator(
     /**
      * Process voice command
      */
-    override suspend fun processVoiceCommand(command: String): UUIDCommandResult {
+    override suspend fun processVoiceCommand(command: String): VUIDCommandResult {
         val startTime = System.currentTimeMillis()
-        
+
         try {
             val parsedCommand = parseVoiceCommand(command)
             val targetResult = targetResolver.resolve(parsedCommand.targetRequest)
-            
+
             if (targetResult.elements.isEmpty()) {
-                return UUIDCommandResult(
+                return VUIDCommandResult(
                     success = false,
                     message = "No matching elements found",
                     executionTime = System.currentTimeMillis() - startTime
                 )
             }
-            
+
             // Execute on first matching element (highest priority)
             val target = targetResult.elements.first()
-            val success = executeAction(target.uuid, parsedCommand.action, parsedCommand.parameters)
-            
-            return UUIDCommandResult(
+            val success = executeAction(target.vuid, parsedCommand.action, parsedCommand.parameters)
+
+            return VUIDCommandResult(
                 success = success,
-                targetUUID = target.uuid,
+                targetVUID = target.vuid,
                 action = parsedCommand.action,
                 message = if (success) "Command executed successfully" else "Command execution failed",
                 executionTime = System.currentTimeMillis() - startTime
             )
-            
+
         } catch (e: Exception) {
-            return UUIDCommandResult(
+            return VUIDCommandResult(
                 success = false,
                 error = e.message,
                 executionTime = System.currentTimeMillis() - startTime
@@ -285,30 +285,61 @@ open class VUIDCreator(
     fun createElement(
         name: String? = null,
         type: String = "unknown",
-        position: UUIDPosition? = null,
+        position: VUIDPosition? = null,
         actions: Map<String, (Map<String, Any>) -> Unit> = emptyMap()
     ): VUIDElement {
         return VUIDElement(
-            uuid = generateVUID(),
+            vuid = generateVUID(),
             name = name,
             type = type,
             position = position,
             actions = actions
         )
     }
-    
+
     /**
      * Register element with automatic VUID generation
      */
     fun registerWithAutoVUID(
         name: String? = null,
         type: String = "unknown",
-        position: UUIDPosition? = null,
+        position: VUIDPosition? = null,
         actions: Map<String, (Map<String, Any>) -> Unit> = emptyMap()
     ): String {
         val element = createElement(name, type, position, actions)
         return registerElement(element)
     }
+
+    // ===== BACKWARD COMPATIBILITY METHODS =====
+
+    /**
+     * Generate UUID (deprecated, use generateVUID)
+     * @deprecated Use generateVUID instead
+     */
+    @Suppress("DEPRECATION")
+    @Deprecated("Use generateVUID instead", ReplaceWith("generateVUID()"))
+    fun generateUUID(): String = generateVUID()
+
+    /**
+     * Register with auto UUID (deprecated, use registerWithAutoVUID)
+     * @deprecated Use registerWithAutoVUID instead
+     */
+    @Suppress("DEPRECATION")
+    @Deprecated("Use registerWithAutoVUID instead", ReplaceWith("registerWithAutoVUID(name, type, position, actions)"))
+    fun registerWithAutoUUID(
+        name: String? = null,
+        type: String = "unknown",
+        position: VUIDPosition? = null,
+        actions: Map<String, (Map<String, Any>) -> Unit> = emptyMap()
+    ): String = registerWithAutoVUID(name, type, position, actions)
+
+    /**
+     * Find by UUID (deprecated, use findByVUID)
+     * @deprecated Use findByVUID instead
+     */
+    @Suppress("DEPRECATION")
+    @Deprecated("Use findByVUID instead", ReplaceWith("findByVUID(uuid)"))
+    fun findByUUID(uuid: String): VUIDElement? = findByVUID(uuid)
     
     /**
      * Get registry statistics

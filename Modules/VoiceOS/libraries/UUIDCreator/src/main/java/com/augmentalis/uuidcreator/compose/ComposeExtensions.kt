@@ -15,10 +15,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.debugInspectorInfo
-import com.augmentalis.uuidcreator.UUIDCreator
-import com.augmentalis.uuidcreator.models.UUIDElement
-import com.augmentalis.uuidcreator.models.UUIDPosition
-import com.augmentalis.uuidcreator.models.UUIDMetadata
+import com.augmentalis.uuidcreator.VUIDCreator
+import com.augmentalis.uuidcreator.models.VUIDElement
+import com.augmentalis.uuidcreator.models.VUIDPosition
+import com.augmentalis.uuidcreator.models.VUIDMetadata
 import java.util.UUID
 
 /**
@@ -36,16 +36,16 @@ import java.util.UUID
  * @param metadata Additional metadata
  */
 fun Modifier.withUUID(
-    manager: UUIDCreator = UUIDCreator.getInstance(),
+    manager: VUIDCreator = VUIDCreator.getInstance(),
     uuid: String? = null,
     name: String? = null,
     type: String = "composable",
     description: String? = null,
     parent: String? = null,
-    position: UUIDPosition? = null,
+    position: VUIDPosition? = null,
     actions: Map<String, (Map<String, Any>) -> Unit> = emptyMap(),
     priority: Int = 0,
-    metadata: UUIDMetadata? = null
+    metadata: VUIDMetadata? = null
 ): Modifier = composed(
     inspectorInfo = debugInspectorInfo {
         this.name = "withUUID"
@@ -57,8 +57,8 @@ fun Modifier.withUUID(
     val elementUuid = remember { uuid ?: UUID.randomUUID().toString() }
     
     DisposableEffect(elementUuid) {
-        val element = UUIDElement(
-            uuid = elementUuid,
+        val element = VUIDElement(
+            vuid = elementUuid,
             name = name,
             type = type,
             description = description,
@@ -144,7 +144,7 @@ fun Modifier.uuidNavigable(
 ): Modifier = withUUID(
     name = name,
     type = type,
-    position = UUIDPosition(
+    position = VUIDPosition(
         row = row,
         column = column,
         index = index
@@ -191,36 +191,46 @@ fun rememberUUID(
  * Composable function to register elements in the composition tree
  */
 @Composable
-fun UUIDScope(
-    manager: UUIDCreator = UUIDCreator.getInstance(),
+fun VUIDScope(
+    manager: VUIDCreator = VUIDCreator.getInstance(),
     name: String? = null,
     type: String = "scope",
     content: @Composable () -> Unit
 ) {
-    val scopeUuid = remember { UUID.randomUUID().toString() }
-    
-    DisposableEffect(scopeUuid) {
-        val element = UUIDElement(
-            uuid = scopeUuid,
+    val scopeVuid = remember { UUID.randomUUID().toString() }
+
+    DisposableEffect(scopeVuid) {
+        val element = VUIDElement(
+            vuid = scopeVuid,
             name = name,
             type = type
         )
         manager.registerElement(element)
-        
+
         onDispose {
-            manager.unregisterElement(scopeUuid)
+            manager.unregisterElement(scopeVuid)
         }
     }
-    
+
     content()
 }
+
+@Suppress("DEPRECATION")
+@Deprecated("Use VUIDScope instead", ReplaceWith("VUIDScope(manager, name, type, content)"))
+@Composable
+fun UUIDScope(
+    manager: VUIDCreator = VUIDCreator.getInstance(),
+    name: String? = null,
+    type: String = "scope",
+    content: @Composable () -> Unit
+) = VUIDScope(manager, name, type, content)
 
 /**
  * Voice command integration for Compose elements
  */
 @Composable
 fun VoiceCommandHandler(
-    @Suppress("UNUSED_PARAMETER") manager: UUIDCreator = UUIDCreator.getInstance(),
+    @Suppress("UNUSED_PARAMETER") manager: VUIDCreator = VUIDCreator.getInstance(),
     @Suppress("UNUSED_PARAMETER") onCommandReceived: suspend (String) -> Unit = { command ->
         manager.processVoiceCommand(command)
     }

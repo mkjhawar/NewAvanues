@@ -42,7 +42,14 @@ data class VUIDElement(
     val metadata: VUIDMetadata? = null,
     val timestamp: Long = System.currentTimeMillis()
 ) {
-    
+    /**
+     * Backward-compatible uuid property
+     * @deprecated Use vuid instead
+     */
+    @Suppress("DEPRECATION")
+    @Deprecated("Use vuid instead", ReplaceWith("vuid"))
+    val uuid: String get() = vuid
+
     /**
      * Check if this element has a specific action
      */

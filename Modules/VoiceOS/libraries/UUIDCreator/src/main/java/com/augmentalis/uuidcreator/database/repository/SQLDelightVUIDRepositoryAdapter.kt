@@ -12,11 +12,11 @@
 
 package com.augmentalis.uuidcreator.database.repository
 
-import com.augmentalis.database.dto.VUIDElementDTO
-import com.augmentalis.database.dto.VUIDHierarchyDTO
-import com.augmentalis.database.dto.VUIDAnalyticsDTO
-import com.augmentalis.database.dto.VUIDAliasDTO
-import com.augmentalis.database.repositories.IVUIDRepository
+import com.augmentalis.database.dto.UUIDElementDTO
+import com.augmentalis.database.dto.UUIDHierarchyDTO
+import com.augmentalis.database.dto.UUIDAnalyticsDTO
+import com.augmentalis.database.dto.UUIDAliasDTO
+import com.augmentalis.database.repositories.IUUIDRepository
 import com.augmentalis.uuidcreator.models.VUIDElement
 import com.augmentalis.uuidcreator.models.VUIDMetadata
 import com.augmentalis.uuidcreator.models.VUIDPosition
@@ -36,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * Thread-safe: All operations use ConcurrentHashMap and suspend functions
  */
-class SQLDelightUUIDRepositoryAdapter(
+class SQLDelightVUIDRepositoryAdapter(
     private val repository: IUUIDRepository,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
@@ -48,7 +48,7 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * In-memory cache for fast O(1) lookups
      */
-    private val elementsCache = ConcurrentHashMap<String, UUIDElement>()
+    private val elementsCache = ConcurrentHashMap<String, VUIDElement>()
 
     /**
      * Index by name for fast lookup by name
@@ -102,15 +102,15 @@ class SQLDelightUUIDRepositoryAdapter(
                 val element = dto.toModel(
                     children = childrenMap[dto.uuid] ?: mutableListOf()
                 )
-                elementsCache[element.uuid] = element
+                elementsCache[element.vuid] = element
 
                 // Build indexes
                 element.name?.let { name ->
-                    nameIndex.getOrPut(name.lowercase()) { mutableSetOf() }.add(element.uuid)
+                    nameIndex.getOrPut(name.lowercase()) { mutableSetOf() }.add(element.vuid)
                 }
-                typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.uuid)
+                typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.vuid)
                 element.parent?.let { parent ->
-                    hierarchyIndex.getOrPut(parent) { mutableSetOf() }.add(element.uuid)
+                    hierarchyIndex.getOrPut(parent) { mutableSetOf() }.add(element.vuid)
                 }
             }
 
@@ -133,19 +133,19 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * Insert a new UUID element
      */
-    suspend fun insert(element: UUIDElement) = withContext(dispatcher) {
+    suspend fun insert(element: VUIDElement) = withContext(dispatcher) {
         // Save to SQLDelight database
         repository.insertElement(element.toDTO())
 
         // Save hierarchy relationships
         element.children.forEachIndexed { index, childUuid ->
             repository.insertHierarchy(
-                VUIDHierarchyDTO(
+                UUIDHierarchyDTO(
                     id = 0,
-                    parentUuid = element.uuid,
+                    parentUuid = element.vuid,
                     childUuid = childUuid,
                     depth = 0,
-                    path = "/${element.uuid}/$childUuid",
+                    path = "/${element.vuid}/$childUuid",
                     orderIndex = index
                 )
             )
@@ -154,8 +154,8 @@ class SQLDelightUUIDRepositoryAdapter(
         // Create analytics record
         val now = System.currentTimeMillis()
         repository.insertAnalytics(
-            VUIDAnalyticsDTO(
-                uuid = element.uuid,
+            UUIDAnalyticsDTO(
+                uuid = element.vuid,
                 accessCount = 0,
                 firstAccessed = now,
                 lastAccessed = now,
@@ -167,15 +167,15 @@ class SQLDelightUUIDRepositoryAdapter(
         )
 
         // Update in-memory cache
-        elementsCache[element.uuid] = element
+        elementsCache[element.vuid] = element
 
         // Update indexes
         element.name?.let { name ->
-            nameIndex.getOrPut(name.lowercase()) { mutableSetOf() }.add(element.uuid)
+            nameIndex.getOrPut(name.lowercase()) { mutableSetOf() }.add(element.vuid)
         }
-        typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.uuid)
+        typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.vuid)
         element.parent?.let { parent ->
-            hierarchyIndex.getOrPut(parent) { mutableSetOf() }.add(element.uuid)
+            hierarchyIndex.getOrPut(parent) { mutableSetOf() }.add(element.vuid)
         }
 
         // Auto-create primary alias from element name
@@ -184,15 +184,15 @@ class SQLDelightUUIDRepositoryAdapter(
             if (alias.isNotEmpty() && !repository.aliasExists(alias)) {
                 try {
                     repository.insertAlias(
-                        VUIDAliasDTO(
+                        UUIDAliasDTO(
                             id = 0,
                             alias = alias,
-                            uuid = element.uuid,
+                            uuid = element.vuid,
                             isPrimary = true,
                             createdAt = System.currentTimeMillis()
                         )
                     )
-                    aliasIndex[alias] = element.uuid
+                    aliasIndex[alias] = element.vuid
                 } catch (e: Exception) {
                     // Alias conflict - skip
                 }
@@ -203,7 +203,7 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * Insert multiple elements in batch
      */
-    suspend fun insertAll(elements: List<UUIDElement>) = withContext(dispatcher) {
+    suspend fun insertAll(elements: List<VUIDElement>) = withContext(dispatcher) {
         elements.forEach { element ->
             insert(element)
         }
@@ -214,21 +214,21 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * Get element by UUID (O(1) from cache)
      */
-    fun getByUuid(uuid: String): UUIDElement? {
+    fun getByVuid(uuid: String): VUIDElement? {
         return elementsCache[uuid]
     }
 
     /**
      * Get all elements (from cache)
      */
-    fun getAll(): List<UUIDElement> {
+    fun getAll(): List<VUIDElement> {
         return elementsCache.values.toList()
     }
 
     /**
      * Get elements by name (O(1) from index)
      */
-    fun getByName(name: String): List<UUIDElement> {
+    fun getByName(name: String): List<VUIDElement> {
         val uuids = nameIndex[name.lowercase()] ?: return emptyList()
         return uuids.mapNotNull { elementsCache[it] }
     }
@@ -236,7 +236,7 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * Get elements by type (O(1) from index)
      */
-    fun getByType(type: String): List<UUIDElement> {
+    fun getByType(type: String): List<VUIDElement> {
         val uuids = typeIndex[type.lowercase()] ?: return emptyList()
         return uuids.mapNotNull { elementsCache[it] }
     }
@@ -244,7 +244,7 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * Get direct children of parent (O(1) from index)
      */
-    fun getChildren(parentUuid: String): List<UUIDElement> {
+    fun getChildren(parentUuid: String): List<VUIDElement> {
         val uuids = hierarchyIndex[parentUuid] ?: return emptyList()
         return uuids.mapNotNull { elementsCache[it] }
     }
@@ -266,7 +266,7 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * Get UUID by alias (O(1) from index)
      */
-    fun getByAlias(alias: String): UUIDElement? {
+    fun getByAlias(alias: String): VUIDElement? {
         val uuid = aliasIndex[alias] ?: return null
         return elementsCache[uuid]
     }
@@ -281,7 +281,7 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * Get all aliases for UUID
      */
-    suspend fun getAliasesByUuid(uuid: String): List<VUIDAliasDTO> = withContext(dispatcher) {
+    suspend fun getAliasesByUuid(uuid: String): List<UUIDAliasDTO> = withContext(dispatcher) {
         repository.getAliasesForUuid(uuid)
     }
 
@@ -290,8 +290,8 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * Update an existing element
      */
-    suspend fun update(element: UUIDElement) = withContext(dispatcher) {
-        val existing = elementsCache[element.uuid] ?: return@withContext
+    suspend fun update(element: VUIDElement) = withContext(dispatcher) {
+        val existing = elementsCache[element.vuid] ?: return@withContext
 
         // Update SQLDelight database
         repository.updateElement(element.toDTO())
@@ -299,46 +299,46 @@ class SQLDelightUUIDRepositoryAdapter(
         // Update hierarchy if children changed
         if (existing.children != element.children) {
             // Delete old hierarchy relationships
-            repository.deleteHierarchyByParent(element.uuid)
+            repository.deleteHierarchyByParent(element.vuid)
 
             // Insert new relationships
             element.children.forEachIndexed { index, childUuid ->
                 repository.insertHierarchy(
-                    VUIDHierarchyDTO(
+                    UUIDHierarchyDTO(
                         id = 0,
-                        parentUuid = element.uuid,
+                        parentUuid = element.vuid,
                         childUuid = childUuid,
                         depth = 0,
-                        path = "/${element.uuid}/$childUuid",
+                        path = "/${element.vuid}/$childUuid",
                         orderIndex = index
                     )
                 )
             }
 
             // Update hierarchy index
-            hierarchyIndex.remove(element.uuid)
+            hierarchyIndex.remove(element.vuid)
             if (element.children.isNotEmpty()) {
-                hierarchyIndex[element.uuid] = element.children.toMutableSet()
+                hierarchyIndex[element.vuid] = element.children.toMutableSet()
             }
         }
 
         // Update in-memory cache
-        elementsCache[element.uuid] = element
+        elementsCache[element.vuid] = element
 
         // Update name index if changed
         if (existing.name != element.name) {
             existing.name?.let { oldName ->
-                nameIndex[oldName.lowercase()]?.remove(element.uuid)
+                nameIndex[oldName.lowercase()]?.remove(element.vuid)
             }
             element.name?.let { newName ->
-                nameIndex.getOrPut(newName.lowercase()) { mutableSetOf() }.add(element.uuid)
+                nameIndex.getOrPut(newName.lowercase()) { mutableSetOf() }.add(element.vuid)
             }
         }
 
         // Update type index if changed
         if (existing.type != element.type) {
-            typeIndex[existing.type.lowercase()]?.remove(element.uuid)
-            typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.uuid)
+            typeIndex[existing.type.lowercase()]?.remove(element.vuid)
+            typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.vuid)
         }
     }
 
@@ -347,7 +347,7 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * Delete element by UUID
      */
-    suspend fun deleteByUuid(uuid: String): Boolean = withContext(dispatcher) {
+    suspend fun deleteByVuid(uuid: String): Boolean = withContext(dispatcher) {
         val element = elementsCache.remove(uuid) ?: return@withContext false
 
         // Delete from SQLDelight database (CASCADE handles hierarchy, analytics, aliases)
@@ -420,7 +420,7 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * Get most used elements
      */
-    suspend fun getMostUsed(limit: Int = 10): List<UUIDElement> = withContext(dispatcher) {
+    suspend fun getMostUsed(limit: Int = 10): List<VUIDElement> = withContext(dispatcher) {
         val analytics = repository.getMostAccessed(limit)
         analytics.mapNotNull { elementsCache[it.uuid] }
     }
@@ -428,7 +428,7 @@ class SQLDelightUUIDRepositoryAdapter(
     /**
      * Get recently accessed elements
      */
-    suspend fun getRecentlyUsed(limit: Int = 10): List<UUIDElement> = withContext(dispatcher) {
+    suspend fun getRecentlyUsed(limit: Int = 10): List<VUIDElement> = withContext(dispatcher) {
         val analytics = repository.getRecentlyAccessed(limit)
         analytics.mapNotNull { elementsCache[it.uuid] }
     }
@@ -455,7 +455,7 @@ class SQLDelightUUIDRepositoryAdapter(
 
         try {
             repository.insertAlias(
-                VUIDAliasDTO(
+                UUIDAliasDTO(
                     id = 0,
                     alias = sanitized,
                     uuid = uuid,
@@ -495,11 +495,11 @@ class SQLDelightUUIDRepositoryAdapter(
     // ==================== Conversion Methods ====================
 
     /**
-     * Convert UUIDElement model to DTO
+     * Convert VUIDElement model to DTO
      */
-    private fun UUIDElement.toDTO(): VUIDElementDTO {
-        return VUIDElementDTO(
-            uuid = this.uuid,
+    private fun VUIDElement.toDTO(): UUIDElementDTO {
+        return UUIDElementDTO(
+            uuid = this.vuid,
             name = this.name,
             type = this.type,
             description = this.description,
@@ -513,24 +513,24 @@ class SQLDelightUUIDRepositoryAdapter(
     }
 
     /**
-     * Convert DTO to UUIDElement model
+     * Convert DTO to VUIDElement model
      */
-    private fun VUIDElementDTO.toModel(
+    private fun UUIDElementDTO.toModel(
         children: MutableList<String> = mutableListOf(),
         actions: Map<String, (Map<String, Any>) -> Unit> = emptyMap()
-    ): UUIDElement {
-        return UUIDElement(
-            uuid = this.uuid,
+    ): VUIDElement {
+        return VUIDElement(
+            vuid = this.uuid,
             name = this.name,
             type = this.type,
             description = this.description,
             parent = this.parentUuid,
             children = children,
-            position = this.positionJson?.let { gson.fromJson(it, UUIDPosition::class.java) },
+            position = this.positionJson?.let { gson.fromJson(it, VUIDPosition::class.java) },
             actions = actions,
             isEnabled = this.isEnabled,
             priority = this.priority,
-            metadata = this.metadataJson?.let { gson.fromJson(it, UUIDMetadata::class.java) },
+            metadata = this.metadataJson?.let { gson.fromJson(it, VUIDMetadata::class.java) },
             timestamp = this.timestamp
         )
     }

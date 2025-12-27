@@ -13,6 +13,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import com.augmentalis.uuidcreator.models.UUIDViewModel
+import com.augmentalis.uuidcreator.models.UUIDUiState
+import com.augmentalis.uuidcreator.models.UUIDElementInfo
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*

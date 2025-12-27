@@ -14,7 +14,7 @@ package com.augmentalis.uuidcreator.thirdparty
 import android.content.Context
 import android.content.pm.PackageManager
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.uuidcreator.core.UUIDGenerator
+import com.augmentalis.uuidcreator.core.VUIDGenerator
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 

@@ -11,7 +11,7 @@
 
 package com.augmentalis.uuidcreator.formats
 
-import com.augmentalis.uuidcreator.core.UUIDGenerator
+import com.augmentalis.uuidcreator.core.VUIDGenerator
 import java.util.UUID
 
 /**
@@ -96,7 +96,7 @@ object CustomUuidGenerator {
      */
     fun generate(prefix: String): String {
         validatePrefix(prefix)
-        val baseUuid = UUIDGenerator.generate()
+        val baseUuid = VUIDGenerator.generate()
         return "$prefix-$baseUuid"
     }
 
@@ -112,7 +112,7 @@ object CustomUuidGenerator {
     fun generate(namespace: String, prefix: String): String {
         validateNamespace(namespace)
         validatePrefix(prefix)
-        val baseUuid = UUIDGenerator.generate()
+        val baseUuid = VUIDGenerator.generate()
         return "$namespace.$prefix-$baseUuid"
     }
 

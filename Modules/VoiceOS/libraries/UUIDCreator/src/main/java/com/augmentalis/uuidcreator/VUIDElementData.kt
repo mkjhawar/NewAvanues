@@ -22,7 +22,7 @@ import com.augmentalis.uuidcreator.models.VUIDPosition
  * Use fromUUIDElement() to create from existing UUIDElement.
  */
 @Parcelize
-data class UUIDElementData(
+data class VUIDElementData(
     /**
      * Unique identifier for this element
      */
@@ -78,12 +78,12 @@ data class UUIDElementData(
      *
      * @return UUIDElement representation
      */
-    fun toUUIDElement(): UUIDElement {
-        return UUIDElement(
-            uuid = uuid,
+    fun toVUIDElement(): VUIDElement {
+        return VUIDElement(
+            vuid = uuid,
             name = name,
             type = type,
-            position = UUIDPosition(
+            position = VUIDPosition(
                 x = x,
                 y = y,
                 width = width,
@@ -93,6 +93,10 @@ data class UUIDElementData(
             actions = emptyMap()  // Actions cannot be passed via IPC
         )
     }
+
+    @Suppress("DEPRECATION")
+    @Deprecated("Use toVUIDElement instead", ReplaceWith("toVUIDElement()"))
+    fun toUUIDElement(): VUIDElement = toVUIDElement()
 
     companion object {
         /**
@@ -104,9 +108,9 @@ data class UUIDElementData(
          * @param element Source UUIDElement
          * @return Parcelable UUIDElementData
          */
-        fun fromUUIDElement(element: UUIDElement): UUIDElementData {
-            return UUIDElementData(
-                uuid = element.uuid,
+        fun fromVUIDElement(element: VUIDElement): VUIDElementData {
+            return VUIDElementData(
+                uuid = element.vuid,
                 name = element.name,
                 type = element.type,
                 x = element.position?.x ?: 0f,
@@ -117,16 +121,20 @@ data class UUIDElementData(
             )
         }
 
+        @Suppress("DEPRECATION")
+        @Deprecated("Use fromVUIDElement instead", ReplaceWith("fromVUIDElement(element)"))
+        fun fromUUIDElement(element: VUIDElement): VUIDElementData = fromVUIDElement(element)
+
         /**
          * Create minimal element data
          *
-         * @param vuid Element UUID
+         * @param uuid Element UUID
          * @param name Element name
          * @param type Element type
-         * @return UUIDElementData with minimal information
+         * @return VUIDElementData with minimal information
          */
-        fun minimal(uuid: String, name: String? = null, type: String = "unknown"): UUIDElementData {
-            return UUIDElementData(
+        fun minimal(uuid: String, name: String? = null, type: String = "unknown"): VUIDElementData {
+            return VUIDElementData(
                 uuid = uuid,
                 name = name,
                 type = type

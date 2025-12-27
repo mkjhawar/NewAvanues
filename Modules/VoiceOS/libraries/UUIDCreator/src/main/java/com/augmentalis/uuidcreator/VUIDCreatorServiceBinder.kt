@@ -9,6 +9,8 @@ package com.augmentalis.uuidcreator
 
 import android.util.Log
 import com.google.gson.Gson
+import com.augmentalis.uuidcreator.models.UUIDCommandResultData
+import com.augmentalis.uuidcreator.models.UUIDElementData
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -46,9 +48,9 @@ import kotlinx.coroutines.runBlocking
  * }
  * ```
  */
-class UUIDCreatorServiceBinder(
-    private val uuidCreator: UUIDCreator
-) : IUUIDCreatorService.Stub() {
+class VUIDCreatorServiceBinder(
+    private val uuidCreator: VUIDCreator
+) : IVUIDCreatorService.Stub() {
 
     companion object {
         private const val TAG = "UUIDCreatorServiceBinder"

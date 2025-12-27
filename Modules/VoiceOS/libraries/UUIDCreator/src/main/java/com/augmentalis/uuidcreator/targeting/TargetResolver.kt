@@ -1,13 +1,13 @@
 package com.augmentalis.uuidcreator.targeting
 
-import com.augmentalis.uuidcreator.core.UUIDRegistry
+import com.augmentalis.uuidcreator.core.VUIDRegistry
 import com.augmentalis.uuidcreator.models.*
 
 /**
  * Resolves UI element targeting using various strategies
  * Extracted from UIKitVoiceCommandSystem for framework-agnostic use
  */
-class TargetResolver(private val registry: UUIDRegistry) {
+class TargetResolver(private val registry: VUIDRegistry) {
     
     /**
      * Target types for different resolution strategies
@@ -39,7 +39,7 @@ class TargetResolver(private val registry: UUIDRegistry) {
      * Target resolution result
      */
     data class TargetResult(
-        val elements: List<UUIDElement>,
+        val elements: List<VUIDElement>,
         val confidence: Float = 1.0f,
         val strategy: String = "",
         val fallbackUsed: Boolean = false
@@ -66,7 +66,7 @@ class TargetResolver(private val registry: UUIDRegistry) {
      */
     private fun resolveByUUID(request: TargetRequest): TargetResult {
         val uuid = request.value ?: return TargetResult(emptyList(), 0f, "uuid-missing")
-        val element = registry.findByUUID(uuid)
+        val element = registry.findByVUID(uuid)
         
         return if (element != null && element.isEnabled) {
             TargetResult(listOf(element), 1.0f, "uuid-direct")
@@ -142,7 +142,7 @@ class TargetResolver(private val registry: UUIDRegistry) {
     private fun resolveByHierarchy(request: TargetRequest): TargetResult {
         val fromUUID = request.fromUUID ?: return TargetResult(emptyList(), 0f, "hierarchy-no-source")
         // Validate source element exists (element itself not used, just UUID)
-        registry.findByUUID(fromUUID) ?: return TargetResult(emptyList(), 0f, "hierarchy-source-not-found")
+        registry.findByVUID(fromUUID) ?: return TargetResult(emptyList(), 0f, "hierarchy-source-not-found")
         
         return when (request.value) {
             "parent", "up" -> {
@@ -263,7 +263,7 @@ class TargetResolver(private val registry: UUIDRegistry) {
      */
     private fun resolveByProximity(request: TargetRequest): TargetResult {
         val fromUUID = request.fromUUID ?: return TargetResult(emptyList(), 0f, "proximity-no-source")
-        val sourceElement = registry.findByUUID(fromUUID) ?: return TargetResult(emptyList(), 0f, "proximity-source-not-found")
+        val sourceElement = registry.findByVUID(fromUUID) ?: return TargetResult(emptyList(), 0f, "proximity-source-not-found")
         val sourcePos = sourceElement.position ?: return TargetResult(emptyList(), 0f, "proximity-no-source-position")
         
         // Find nearest elements

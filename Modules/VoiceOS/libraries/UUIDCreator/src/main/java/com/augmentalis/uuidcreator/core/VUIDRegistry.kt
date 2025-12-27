@@ -12,7 +12,7 @@
 
 package com.augmentalis.uuidcreator.core
 
-import com.augmentalis.uuidcreator.database.repository.SQLDelightUUIDRepositoryAdapter
+import com.augmentalis.uuidcreator.database.repository.SQLDelightVUIDRepositoryAdapter
 import com.augmentalis.uuidcreator.models.VUIDElement
 import kotlinx.coroutines.flow.*
 
@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.*
  * @property repository Hybrid storage repository (SQLDelight database + in-memory cache)
  */
 class VUIDRegistry(
-    private val repository: SQLDelightUUIDRepositoryAdapter
+    private val repository: SQLDelightVUIDRepositoryAdapter
 ) {
     
     private val _registrations = MutableSharedFlow<RegistrationEvent>()
@@ -51,11 +51,11 @@ class VUIDRegistry(
 
         // Update parent's children list in cache
         element.parent?.let { parentVuid ->
-            repository.getByUuid(parentVuid)?.addChild(element.uuid)
+            repository.getByVuid(parentVuid)?.addChild(element.vuid)
         }
 
         _registrations.emit(RegistrationEvent.ElementRegistered(element))
-        return element.uuid
+        return element.vuid
     }
     
     /**
@@ -65,15 +65,15 @@ class VUIDRegistry(
      * Recursively unregisters children.
      */
     suspend fun unregister(vuid: String): Boolean {
-        val element = repository.getByUuid(vuid) ?: return false
+        val element = repository.getByVuid(vuid) ?: return false
 
         // Unregister children recursively
-        element.children.toList().forEach { childVuid ->
+        element.children.toList().forEach { childVuid: String ->
             unregister(childVuid)
         }
 
         // Delete from repository (handles database + cache + indexes)
-        val deleted = repository.deleteByUuid(vuid)
+        val deleted = repository.deleteByVuid(vuid)
 
         if (deleted) {
             _registrations.emit(RegistrationEvent.ElementUnregistered(vuid))
@@ -88,7 +88,7 @@ class VUIDRegistry(
      * Updates SQLDelight database and in-memory cache.
      */
     suspend fun update(element: VUIDElement): Boolean {
-        if (!repository.exists(element.uuid)) return false
+        if (!repository.exists(element.vuid)) return false
 
         // Delegate to repository (handles database + cache + indexes)
         repository.update(element)
@@ -100,7 +100,7 @@ class VUIDRegistry(
     /**
      * Find element by VUID
      */
-    fun findByVUID(vuid: String): VUIDElement? = repository.getByUuid(vuid)
+    fun findByVUID(vuid: String): VUIDElement? = repository.getByVuid(vuid)
 
     /**
      * Find elements by name (partial match)
@@ -133,8 +133,8 @@ class VUIDRegistry(
      * Find parent of element
      */
     fun findParent(vuid: String): VUIDElement? {
-        val element = repository.getByUuid(vuid) ?: return null
-        return element.parent?.let { repository.getByUuid(it) }
+        val element = repository.getByVuid(vuid) ?: return null
+        return element.parent?.let { repository.getByVuid(it) }
     }
     
     /**
@@ -188,7 +188,7 @@ class VUIDRegistry(
      * Clears both SQLDelight database and in-memory cache.
      */
     suspend fun clear() {
-        val clearedVuids = repository.getAll().map { it.uuid }
+        val clearedVuids = repository.getAll().map { it.vuid }
         repository.deleteAll()
 
         clearedVuids.forEach { vuid ->

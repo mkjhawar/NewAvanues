@@ -93,3 +93,111 @@ typealias UUIDAccessibility = VUIDAccessibility
     level = DeprecationLevel.WARNING
 )
 typealias UUIDBounds = VUIDBounds
+
+// ===== Core Class Aliases =====
+
+/**
+ * Deprecated: Use VUIDGenerator instead
+ */
+@Deprecated(
+    message = "Use VUIDGenerator instead of UUIDGenerator. UUID has been replaced with VUID (VoiceUniqueID).",
+    replaceWith = ReplaceWith("VUIDGenerator", "com.augmentalis.uuidcreator.core.VUIDGenerator"),
+    level = DeprecationLevel.WARNING
+)
+typealias UUIDGenerator = com.augmentalis.uuidcreator.core.VUIDGenerator
+
+/**
+ * Deprecated: Use VUIDRegistry instead
+ */
+@Deprecated(
+    message = "Use VUIDRegistry instead of UUIDRegistry. UUID has been replaced with VUID (VoiceUniqueID).",
+    replaceWith = ReplaceWith("VUIDRegistry", "com.augmentalis.uuidcreator.core.VUIDRegistry"),
+    level = DeprecationLevel.WARNING
+)
+typealias UUIDRegistry = com.augmentalis.uuidcreator.core.VUIDRegistry
+
+/**
+ * Deprecated: Use VUIDCreator instead
+ */
+@Deprecated(
+    message = "Use VUIDCreator instead of UUIDCreator. UUID has been replaced with VUID (VoiceUniqueID).",
+    replaceWith = ReplaceWith("VUIDCreator", "com.augmentalis.uuidcreator.VUIDCreator"),
+    level = DeprecationLevel.WARNING
+)
+typealias UUIDCreator = com.augmentalis.uuidcreator.VUIDCreator
+
+// ===== Database Class Aliases =====
+
+/**
+ * Deprecated: Use SQLDelightVUIDRepositoryAdapter instead
+ */
+@Deprecated(
+    message = "Use SQLDelightVUIDRepositoryAdapter instead. UUID has been replaced with VUID (VoiceUniqueID).",
+    replaceWith = ReplaceWith("SQLDelightVUIDRepositoryAdapter", "com.augmentalis.uuidcreator.database.repository.SQLDelightVUIDRepositoryAdapter"),
+    level = DeprecationLevel.WARNING
+)
+typealias SQLDelightUUIDRepositoryAdapter = com.augmentalis.uuidcreator.database.repository.SQLDelightVUIDRepositoryAdapter
+
+// ===== IPC/Parcelable Class Aliases =====
+
+/**
+ * Deprecated: Use VUIDElementData instead
+ */
+@Deprecated(
+    message = "Use VUIDElementData instead of UUIDElementData. UUID has been replaced with VUID (VoiceUniqueID).",
+    replaceWith = ReplaceWith("VUIDElementData", "com.augmentalis.uuidcreator.VUIDElementData"),
+    level = DeprecationLevel.WARNING
+)
+typealias UUIDElementData = com.augmentalis.uuidcreator.VUIDElementData
+
+/**
+ * Deprecated: Use VUIDCommandResultData instead
+ */
+@Deprecated(
+    message = "Use VUIDCommandResultData instead of UUIDCommandResultData. UUID has been replaced with VUID (VoiceUniqueID).",
+    replaceWith = ReplaceWith("VUIDCommandResultData", "com.augmentalis.uuidcreator.VUIDCommandResultData"),
+    level = DeprecationLevel.WARNING
+)
+typealias UUIDCommandResultData = com.augmentalis.uuidcreator.VUIDCommandResultData
+
+/**
+ * Deprecated: Use VUIDCreatorServiceBinder instead
+ */
+@Deprecated(
+    message = "Use VUIDCreatorServiceBinder instead of UUIDCreatorServiceBinder. UUID has been replaced with VUID (VoiceUniqueID).",
+    replaceWith = ReplaceWith("VUIDCreatorServiceBinder", "com.augmentalis.uuidcreator.VUIDCreatorServiceBinder"),
+    level = DeprecationLevel.WARNING
+)
+typealias UUIDCreatorServiceBinder = com.augmentalis.uuidcreator.VUIDCreatorServiceBinder
+
+// ===== ViewModel Class Aliases =====
+
+/**
+ * Deprecated: Use VUIDViewModel instead
+ */
+@Deprecated(
+    message = "Use VUIDViewModel instead of UUIDViewModel. UUID has been replaced with VUID (VoiceUniqueID).",
+    replaceWith = ReplaceWith("VUIDViewModel", "com.augmentalis.uuidcreator.ui.VUIDViewModel"),
+    level = DeprecationLevel.WARNING
+)
+typealias UUIDViewModel = com.augmentalis.uuidcreator.ui.VUIDViewModel
+
+/**
+ * Deprecated: Use VUIDUiState instead
+ */
+@Deprecated(
+    message = "Use VUIDUiState instead of UUIDUiState. UUID has been replaced with VUID (VoiceUniqueID).",
+    replaceWith = ReplaceWith("VUIDUiState", "com.augmentalis.uuidcreator.ui.VUIDUiState"),
+    level = DeprecationLevel.WARNING
+)
+typealias UUIDUiState = com.augmentalis.uuidcreator.ui.VUIDUiState
+
+/**
+ * Deprecated: Use VUIDElementInfo instead
+ */
+@Deprecated(
+    message = "Use VUIDElementInfo instead of UUIDElementInfo. UUID has been replaced with VUID (VoiceUniqueID).",
+    replaceWith = ReplaceWith("VUIDElementInfo", "com.augmentalis.uuidcreator.ui.VUIDElementInfo"),
+    level = DeprecationLevel.WARNING
+)
+typealias UUIDElementInfo = com.augmentalis.uuidcreator.ui.VUIDElementInfo

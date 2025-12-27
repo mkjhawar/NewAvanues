@@ -1,8 +1,8 @@
 /**
- * VUIDViewModel.kt - ViewModel for UUID Manager UI
- * 
- * Manages UUID registry state, element navigation, and command processing
- * 
+ * VUIDViewModel.kt - ViewModel for VUID Manager UI
+ *
+ * Manages VUID registry state, element navigation, and command processing
+ *
  * Author: VOS4 Development Team
  * Created: 2025-01-02
  */
@@ -21,11 +21,11 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * UI state for UUID Manager
+ * UI state for VUID Manager
  */
-data class UUIDUiState(
-    val registeredElements: List<UUIDElementInfo> = emptyList(),
-    val selectedElement: UUIDElementInfo? = null,
+data class VUIDUiState(
+    val registeredElements: List<VUIDElementInfo> = emptyList(),
+    val selectedElement: VUIDElementInfo? = null,
     val commandHistory: List<CommandHistoryItem> = emptyList(),
     val registryStats: RegistryStatistics = RegistryStatistics(),
     val navigationPath: List<String> = emptyList(),
@@ -33,29 +33,43 @@ data class UUIDUiState(
     val currentCommand: String = "",
     val commandResult: CommandResultInfo? = null,
     val searchQuery: String = "",
-    val searchResults: List<UUIDElementInfo> = emptyList(),
+    val searchResults: List<VUIDElementInfo> = emptyList(),
     val filterType: String = "all",
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
 
 /**
- * Extended UUID element information for UI
+ * Extended VUID element information for UI
  */
-data class UUIDElementInfo(
-    val uuid: String,
+data class VUIDElementInfo(
+    val vuid: String,
     val name: String?,
     val type: String,
-    val position: UUIDPosition?,
+    val position: VUIDPosition?,
     val isEnabled: Boolean,
     val isVisible: Boolean,
-    val parentUUID: String?,
+    val parentVUID: String?,
     val childrenCount: Int,
     val actionCount: Int,
     val registrationTime: Long,
     val lastAccessTime: Long?,
     val accessCount: Int
-)
+) {
+    /**
+     * Backward-compatible alias for vuid
+     */
+    @Suppress("DEPRECATION")
+    @Deprecated("Use vuid instead", ReplaceWith("vuid"))
+    val uuid: String get() = vuid
+
+    /**
+     * Backward-compatible alias for parentVUID
+     */
+    @Suppress("DEPRECATION")
+    @Deprecated("Use parentVUID instead", ReplaceWith("parentVUID"))
+    val parentUUID: String? get() = parentVUID
+}
 
 /**
  * Command history item
@@ -63,7 +77,7 @@ data class UUIDElementInfo(
 data class CommandHistoryItem(
     val id: String,
     val command: String,
-    val targetUUID: String?,
+    val targetVUID: String?,
     val targetName: String?,
     val action: String,
     val success: Boolean,
@@ -91,24 +105,28 @@ data class RegistryStatistics(
 data class CommandResultInfo(
     val success: Boolean,
     val message: String,
-    val targetUUID: String?,
+    val targetVUID: String?,
     val action: String?,
     val executionTime: Long
-)
+) {
+    @Suppress("DEPRECATION")
+    @Deprecated("Use targetVUID instead", ReplaceWith("targetVUID"))
+    val targetUUID: String? get() = targetVUID
+}
 
 /**
- * ViewModel for UUID Manager UI
+ * ViewModel for VUID Manager UI
  */
-class UUIDViewModel(
-    private val uuidManager: UUIDCreator = UUIDCreator.getInstance()
+class VUIDViewModel(
+    private val vuidManager: VUIDCreator = VUIDCreator.getInstance()
 ) : ViewModel() {
     private val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     
-    private val _uiState = MutableLiveData(UUIDUiState())
-    val uiState: LiveData<UUIDUiState> = _uiState
-    
+    private val _uiState = MutableLiveData(VUIDUiState())
+    val uiState: LiveData<VUIDUiState> = _uiState
+
     // Mock data for demonstration
-    private val mockElements = mutableListOf<UUIDElementInfo>()
+    private val mockElements = mutableListOf<VUIDElementInfo>()
     private val mockHistory = mutableListOf<CommandHistoryItem>()
     
     init {
@@ -124,11 +142,11 @@ class UUIDViewModel(
                           "Menu", "Header", "Footer", "Sidebar", "Content", "Card")
         
         repeat(20) { index ->
-            val element = UUIDElementInfo(
-                uuid = uuidManager.generateUUID(),
+            val element = VUIDElementInfo(
+                vuid = vuidManager.generateVUID(),
                 name = names.random(),
                 type = types.random(),
-                position = UUIDPosition(
+                position = VUIDPosition(
                     x = (index % 4) * 100f,
                     y = (index / 4) * 100f,
                     z = 0f,
@@ -137,7 +155,7 @@ class UUIDViewModel(
                 ),
                 isEnabled = index % 3 != 0,
                 isVisible = true,
-                parentUUID = if (index > 5) mockElements.randomOrNull()?.uuid else null,
+                parentVUID = if (index > 5) mockElements.randomOrNull()?.vuid else null,
                 childrenCount = (0..3).random(),
                 actionCount = (1..5).random(),
                 registrationTime = System.currentTimeMillis() - (index * 3600000),
@@ -150,7 +168,7 @@ class UUIDViewModel(
     
     private fun observeCommandEvents() {
         viewModelScope.launch {
-            uuidManager.commandEvents.collect { _ ->
+            vuidManager.commandEvents.collect { _ ->
                 // Update command history when new commands are processed
                 refreshCommandHistory()
             }
@@ -162,18 +180,18 @@ class UUIDViewModel(
             _uiState.value = _uiState.value?.copy(isLoading = true)
             delay(500) // Simulate loading
             
-            // Get real elements from UUIDManager
-            val realElements = uuidManager.getAllElements()
+            // Get real elements from VUIDManager
+            val realElements = vuidManager.getAllElements()
             val elements = if (realElements.isNotEmpty()) {
                 realElements.map { element ->
-                    UUIDElementInfo(
-                        uuid = element.uuid,
+                    VUIDElementInfo(
+                        vuid = element.vuid,
                         name = element.name,
                         type = element.type,
                         position = element.position,
                         isEnabled = element.isEnabled,
                         isVisible = true, // Default to visible
-                        parentUUID = element.parent,
+                        parentVUID = element.parent,
                         childrenCount = 0,
                         actionCount = element.actions.size,
                         registrationTime = System.currentTimeMillis(),
@@ -195,7 +213,7 @@ class UUIDViewModel(
         }
     }
     
-    fun selectElement(element: UUIDElementInfo) {
+    fun selectElement(element: VUIDElementInfo) {
         _uiState.value = _uiState.value?.copy(
             selectedElement = element,
             navigationPath = buildNavigationPath(element)
@@ -209,31 +227,35 @@ class UUIDViewModel(
         )
     }
     
-    fun generateNewUUID(): String {
-        return uuidManager.generateUUID()
+    fun generateNewVUID(): String {
+        return vuidManager.generateVUID()
     }
-    
+
+    @Suppress("DEPRECATION")
+    @Deprecated("Use generateNewVUID instead", ReplaceWith("generateNewVUID()"))
+    fun generateNewUUID(): String = generateNewVUID()
+
     fun registerNewElement(name: String, type: String) {
         viewModelScope.launch {
-            val uuid = uuidManager.registerWithAutoUUID(
+            val vuid = vuidManager.registerWithAutoVUID(
                 name = name,
                 type = type,
-                position = UUIDPosition(0f, 0f, 0f, 100f, 50f),
+                position = VUIDPosition(0f, 0f, 0f, 100f, 50f),
                 actions = mapOf(
                     "click" to { _ -> println("Clicked: $name") },
                     "focus" to { _ -> println("Focused: $name") }
                 )
             )
-            
+
             // Add to mock elements for display
-            val newElement = UUIDElementInfo(
-                uuid = uuid,
+            val newElement = VUIDElementInfo(
+                vuid = vuid,
                 name = name,
                 type = type,
-                position = UUIDPosition(0f, 0f, 0f, 100f, 50f),
+                position = VUIDPosition(0f, 0f, 0f, 100f, 50f),
                 isEnabled = true,
                 isVisible = true,
-                parentUUID = null,
+                parentVUID = null,
                 childrenCount = 0,
                 actionCount = 2,
                 registrationTime = System.currentTimeMillis(),
@@ -241,15 +263,15 @@ class UUIDViewModel(
                 accessCount = 0
             )
             mockElements.add(newElement)
-            
+
             refreshRegistry()
         }
     }
-    
-    fun unregisterElement(uuid: String) {
+
+    fun unregisterElement(vuid: String) {
         viewModelScope.launch {
-            uuidManager.unregisterElement(uuid)
-            mockElements.removeAll { it.uuid == uuid }
+            vuidManager.unregisterElement(vuid)
+            mockElements.removeAll { it.vuid == vuid }
             refreshRegistry()
         }
     }
@@ -261,14 +283,14 @@ class UUIDViewModel(
                 currentCommand = command
             )
             
-            val result = uuidManager.processVoiceCommand(command)
+            val result = vuidManager.processVoiceCommand(command)
             
             // Add to history
             val historyItem = CommandHistoryItem(
                 id = UUID.randomUUID().toString(),
                 command = command,
-                targetUUID = result.targetUUID,
-                targetName = mockElements.find { it.uuid == result.targetUUID }?.name,
+                targetVUID = result.targetVUID,
+                targetName = mockElements.find { it.vuid == result.targetVUID }?.name,
                 action = result.action ?: "unknown",
                 success = result.success,
                 timestamp = System.currentTimeMillis(),
@@ -279,14 +301,14 @@ class UUIDViewModel(
             if (mockHistory.size > 50) {
                 mockHistory.removeLast()
             }
-            
+
             _uiState.value = _uiState.value?.copy(
                 voiceCommandActive = false,
                 currentCommand = "",
                 commandResult = CommandResultInfo(
                     success = result.success,
                     message = result.message ?: result.error ?: "Command processed",
-                    targetUUID = result.targetUUID,
+                    targetVUID = result.targetVUID,
                     action = result.action,
                     executionTime = result.executionTime
                 ),
@@ -305,7 +327,7 @@ class UUIDViewModel(
         
         val results = mockElements.filter { element ->
             element.name?.contains(query, ignoreCase = true) == true ||
-            element.uuid.contains(query, ignoreCase = true) ||
+            element.vuid.contains(query, ignoreCase = true) ||
             element.type.contains(query, ignoreCase = true)
         }
         
@@ -326,11 +348,11 @@ class UUIDViewModel(
     
     fun navigateToElement(direction: String) {
         val currentElement = _uiState.value?.selectedElement ?: return
-        
+
         viewModelScope.launch {
-            val targetElement = uuidManager.navigate(currentElement.uuid, direction)
+            val targetElement = vuidManager.navigate(currentElement.vuid, direction)
             targetElement?.let { target ->
-                val elementInfo = mockElements.find { it.uuid == target.uuid }
+                val elementInfo = mockElements.find { it.vuid == target.vuid }
                 elementInfo?.let { selectElement(it) }
             }
         }
@@ -338,7 +360,7 @@ class UUIDViewModel(
     
     fun clearRegistry() {
         viewModelScope.launch {
-            uuidManager.clearAll()
+            vuidManager.clearAll()
             mockElements.clear()
             mockHistory.clear()
             refreshRegistry()
@@ -370,9 +392,9 @@ class UUIDViewModel(
     fun exportRegistry(): String {
         val elements = _uiState.value?.registeredElements ?: emptyList()
         val stats = _uiState.value?.registryStats ?: RegistryStatistics()
-        
+
         return buildString {
-            appendLine("UUID Registry Export")
+            appendLine("VUID Registry Export")
             appendLine("=" * 50)
             appendLine("Generated: ${Date()}")
             appendLine()
@@ -380,12 +402,12 @@ class UUIDViewModel(
             appendLine("  Total Elements: ${stats.totalElements}")
             appendLine("  Active Elements: ${stats.activeElements}")
             appendLine("  Total Commands: ${stats.totalCommands}")
-            appendLine("  Success Rate: ${if (stats.totalCommands > 0) 
+            appendLine("  Success Rate: ${if (stats.totalCommands > 0)
                 (stats.successfulCommands * 100 / stats.totalCommands) else 0}%")
             appendLine()
             appendLine("Elements:")
             elements.forEach { element ->
-                appendLine("  - UUID: ${element.uuid}")
+                appendLine("  - VUID: ${element.vuid}")
                 appendLine("    Name: ${element.name ?: "unnamed"}")
                 appendLine("    Type: ${element.type}")
                 appendLine("    Enabled: ${element.isEnabled}")
@@ -395,7 +417,7 @@ class UUIDViewModel(
         }
     }
     
-    private fun calculateStatistics(elements: List<UUIDElementInfo>): RegistryStatistics {
+    private fun calculateStatistics(elements: List<VUIDElementInfo>): RegistryStatistics {
         val typeGroups = elements.groupBy { it.type }
         val activeCount = elements.count { it.isEnabled }
         val successCount = mockHistory.count { it.success }
@@ -414,17 +436,17 @@ class UUIDViewModel(
         )
     }
     
-    private fun buildNavigationPath(element: UUIDElementInfo): List<String> {
+    private fun buildNavigationPath(element: VUIDElementInfo): List<String> {
         val path = mutableListOf<String>()
-        var current: UUIDElementInfo? = element
-        
+        var current: VUIDElementInfo? = element
+
         while (current != null) {
-            path.add(0, current.name ?: current.uuid.take(8))
-            current = current.parentUUID?.let { parentId ->
-                mockElements.find { it.uuid == parentId }
+            path.add(0, current.name ?: current.vuid.take(8))
+            current = current.parentVUID?.let { parentId ->
+                mockElements.find { it.vuid == parentId }
             }
         }
-        
+
         return path
     }
     

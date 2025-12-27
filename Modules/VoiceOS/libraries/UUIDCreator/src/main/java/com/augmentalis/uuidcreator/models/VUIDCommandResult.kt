@@ -11,4 +11,11 @@ data class VUIDCommandResult(
     val data: Any? = null,
     val executionTime: Long = 0L,
     val error: String? = null
-)
+) {
+    /**
+     * Backward-compatible property for targetVUID
+     */
+    @Suppress("DEPRECATION")
+    @Deprecated("Use targetVUID instead", ReplaceWith("targetVUID"))
+    val targetUUID: String? get() = targetVUID
+}

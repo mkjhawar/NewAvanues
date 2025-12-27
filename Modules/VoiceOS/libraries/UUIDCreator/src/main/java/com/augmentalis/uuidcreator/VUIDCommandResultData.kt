@@ -1,5 +1,5 @@
 /**
- * VUIDCommandResultData.kt - UUID command execution result for IPC
+ * VUIDCommandResultData.kt - VUID command execution result for IPC
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: AI Code Quality Expert
@@ -14,11 +14,11 @@ import com.augmentalis.uuidcreator.models.VUIDCommandResult
 /**
  * VUID command execution result for IPC
  *
- * Parcelable version of UUIDCommandResult.
+ * Parcelable version of VUIDCommandResult.
  * Communicates voice command execution results across process boundaries.
  */
 @Parcelize
-data class UUIDCommandResultData(
+data class VUIDCommandResultData(
     /**
      * Whether the command executed successfully
      */
@@ -51,14 +51,14 @@ data class UUIDCommandResultData(
 ) : Parcelable {
 
     /**
-     * Convert to UUIDCommandResult
+     * Convert to VUIDCommandResult
      *
-     * @return UUIDCommandResult representation
+     * @return VUIDCommandResult representation
      */
-    fun toUUIDCommandResult(): UUIDCommandResult {
-        return UUIDCommandResult(
+    fun toVUIDCommandResult(): VUIDCommandResult {
+        return VUIDCommandResult(
             success = success,
-            targetUUID = targetUUID,
+            targetVUID = targetUUID,
             action = action,
             message = message,
             error = error,
@@ -66,23 +66,31 @@ data class UUIDCommandResultData(
         )
     }
 
+    @Suppress("DEPRECATION")
+    @Deprecated("Use toVUIDCommandResult instead", ReplaceWith("toVUIDCommandResult()"))
+    fun toUUIDCommandResult(): VUIDCommandResult = toVUIDCommandResult()
+
     companion object {
         /**
-         * Create from UUIDCommandResult
+         * Create from VUIDCommandResult
          *
-         * @param result Source UUIDCommandResult
-         * @return Parcelable UUIDCommandResultData
+         * @param result Source VUIDCommandResult
+         * @return Parcelable VUIDCommandResultData
          */
-        fun fromUUIDCommandResult(result: UUIDCommandResult): UUIDCommandResultData {
-            return UUIDCommandResultData(
+        fun fromVUIDCommandResult(result: VUIDCommandResult): VUIDCommandResultData {
+            return VUIDCommandResultData(
                 success = result.success,
-                targetUUID = result.targetUUID,
+                targetUUID = result.targetVUID,
                 action = result.action,
                 message = result.message,
                 error = result.error,
                 executionTime = result.executionTime
             )
         }
+
+        @Suppress("DEPRECATION")
+        @Deprecated("Use fromVUIDCommandResult instead", ReplaceWith("fromVUIDCommandResult(result)"))
+        fun fromUUIDCommandResult(result: VUIDCommandResult): VUIDCommandResultData = fromVUIDCommandResult(result)
 
         /**
          * Create success result
@@ -98,8 +106,8 @@ data class UUIDCommandResultData(
             action: String? = null,
             message: String = "Command executed successfully",
             executionTime: Long = 0L
-        ): UUIDCommandResultData {
-            return UUIDCommandResultData(
+        ): VUIDCommandResultData {
+            return VUIDCommandResultData(
                 success = true,
                 targetUUID = targetUUID,
                 action = action,
@@ -120,8 +128,8 @@ data class UUIDCommandResultData(
             error: String,
             action: String? = null,
             executionTime: Long = 0L
-        ): UUIDCommandResultData {
-            return UUIDCommandResultData(
+        ): VUIDCommandResultData {
+            return VUIDCommandResultData(
                 success = false,
                 action = action,
                 error = error,
@@ -135,7 +143,7 @@ data class UUIDCommandResultData(
          * @param searchCriteria What was being searched for
          * @return Failure result with appropriate error message
          */
-        fun elementNotFound(searchCriteria: String): UUIDCommandResultData {
+        fun elementNotFound(searchCriteria: String): VUIDCommandResultData {
             return failure("Element not found: $searchCriteria")
         }
 
@@ -146,8 +154,8 @@ data class UUIDCommandResultData(
          * @param targetUUID Target element UUID
          * @return Failure result with appropriate error message
          */
-        fun actionNotSupported(action: String, targetUUID: String? = null): UUIDCommandResultData {
-            return UUIDCommandResultData(
+        fun actionNotSupported(action: String, targetUUID: String? = null): VUIDCommandResultData {
+            return VUIDCommandResultData(
                 success = false,
                 targetUUID = targetUUID,
                 action = action,
