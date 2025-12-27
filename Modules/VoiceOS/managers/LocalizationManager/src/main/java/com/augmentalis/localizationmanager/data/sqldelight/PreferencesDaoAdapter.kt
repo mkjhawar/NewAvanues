@@ -13,8 +13,8 @@ package com.augmentalis.localizationmanager.data.sqldelight
 import android.content.Context
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabase
-import com.augmentalis.database.UserPreferenceQueries
-import com.augmentalis.database.User_preference
+import com.augmentalis.database.settings.UserPreferenceQueries
+import com.augmentalis.database.settings.User_preference
 import com.augmentalis.localizationmanager.data.UserPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
