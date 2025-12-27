@@ -17,9 +17,15 @@ import app.cash.sqldelight.driver.native.NativeSqliteDriver
 actual class DatabaseDriverFactory {
 
     actual fun createDriver(): SqlDriver {
-        return NativeSqliteDriver(
+        val driver = NativeSqliteDriver(
             schema = VoiceOSDatabase.Schema,
             name = "voiceos.db"
         )
+
+        // CRITICAL: Enable foreign key constraints
+        // FIX (2025-12-19): Added to enforce referential integrity
+        driver.execute(null, "PRAGMA foreign_keys = ON", 0)
+
+        return driver
     }
 }

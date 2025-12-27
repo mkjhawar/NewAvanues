@@ -35,6 +35,12 @@ actual class DatabaseDriverFactory(private val context: Context) {
             callback = object : AndroidSqliteDriver.Callback(VoiceOSDatabase.Schema) {
                 override fun onOpen(db: SupportSQLiteDatabase) {
                     super.onOpen(db)
+
+                    // CRITICAL: Enable foreign key constraints
+                    // Without this, all 20 FK constraints are ignored, leading to data corruption
+                    // FIX (2025-12-19): Added to enforce referential integrity
+                    db.query("PRAGMA foreign_keys = ON").close()
+
                     // Set busy timeout to 30 seconds (30000ms)
                     // This allows concurrent operations to wait instead of failing immediately
                     // Note: Use query() not execSQL() - execSQL() throws in onOpen callback

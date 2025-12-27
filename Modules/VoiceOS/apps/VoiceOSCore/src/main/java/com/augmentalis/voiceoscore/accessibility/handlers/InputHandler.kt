@@ -11,13 +11,14 @@ package com.augmentalis.voiceoscore.accessibility.handlers
 import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.accessibility.VoiceOSService
+import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
+import com.augmentalis.voiceoscore.security.InputValidator
 
 /**
  * Handler for text input and keyboard actions
  */
 class InputHandler(
-    private val service: VoiceOSService
+    private val context: IVoiceOSContext
 ) : ActionHandler {
     
     companion object {
@@ -118,7 +119,15 @@ class InputHandler(
     
     private fun enterText(text: String): Boolean {
         val focusedNode = findFocusedNode() ?: return false
-        
+
+        // Validate input for security (XSS, SQL injection, length limits)
+        try {
+            InputValidator.validateTextInput(text)
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Input validation failed: ${e.message}")
+            return false
+        }
+
         return if (focusedNode.isEditable) {
             val arguments = Bundle().apply {
                 putCharSequence(
@@ -220,7 +229,7 @@ class InputHandler(
     
     private fun performSearch(query: String): Boolean {
         // Attempt to find search field and enter text
-        val rootNode = service.rootInActiveWindow ?: return false
+        val rootNode = context.getRootNodeInActiveWindow() ?: return false
         val searchNode = findSearchField(rootNode) ?: return false
         
         val arguments = Bundle().apply {
@@ -235,7 +244,7 @@ class InputHandler(
     }
     
     private fun findFocusedNode(): AccessibilityNodeInfo? {
-        val rootNode = service.rootInActiveWindow ?: return null
+        val rootNode = context.getRootNodeInActiveWindow() ?: return null
         return rootNode.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) 
             ?: rootNode.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
     }

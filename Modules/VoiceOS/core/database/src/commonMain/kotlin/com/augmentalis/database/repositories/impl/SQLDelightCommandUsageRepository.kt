@@ -10,6 +10,8 @@ import com.augmentalis.database.repositories.CommandStats
 import com.augmentalis.database.repositories.ICommandUsageRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
+import kotlin.time.Duration.Companion.hours
 
 /**
  * SQLDelight implementation of ICommandUsageRepository.
@@ -21,29 +23,35 @@ class SQLDelightCommandUsageRepository(
     private val queries = database.commandUsageQueries
 
     override suspend fun insert(usage: CommandUsageDTO): Long = withContext(Dispatchers.Default) {
-        queries.insertUsage(
-            command_id = usage.commandId,
-            context_key = usage.contextKey,
-            success = usage.success,
-            timestamp = usage.timestamp
-        )
-        queries.transactionWithResult {
+        database.transactionWithResult {
+            queries.insertUsage(
+                command_id = usage.commandId,
+                context_key = usage.contextKey,
+                success = usage.success,
+                timestamp = usage.timestamp
+            )
             queries.lastInsertRowId().executeAsOne()
         }
     }
 
     override suspend fun getAll(): List<CommandUsageDTO> = withContext(Dispatchers.Default) {
-        queries.getAllUsage().executeAsList().map { it.toDTO() }
+        queries.getAllUsage().executeAsList().map { usage: com.augmentalis.database.command.Command_usage ->
+            usage.toDTO()
+        }
     }
 
     override suspend fun getForCommand(commandId: String): List<CommandUsageDTO> =
         withContext(Dispatchers.Default) {
-            queries.getUsageForCommand(commandId).executeAsList().map { it.toDTO() }
+            queries.getUsageForCommand(commandId).executeAsList().map { usage: com.augmentalis.database.command.Command_usage ->
+                usage.toDTO()
+            }
         }
 
     override suspend fun getForContext(contextKey: String): List<CommandUsageDTO> =
         withContext(Dispatchers.Default) {
-            queries.getUsageForContext(contextKey).executeAsList().map { it.toDTO() }
+            queries.getUsageForContext(contextKey).executeAsList().map { usage: com.augmentalis.database.command.Command_usage ->
+                usage.toDTO()
+            }
         }
 
     override suspend fun getForCommandInContext(
@@ -125,10 +133,11 @@ class SQLDelightCommandUsageRepository(
 
     override suspend fun applyTimeDecay(currentTime: Long, decayFactor: Float) =
         withContext(Dispatchers.Default) {
-            // Time decay implementation:
-            // For each record, reduce its weight based on age
-            // This is a placeholder - actual implementation would update records
-            // For now, we'll skip this as it requires schema changes
-            // TODO: Implement proper time decay with weighted counts
+            // CommandUsage table tracks individual events, not aggregated scores
+            // Time decay is applied by deleting old records rather than reducing scores
+            // Delete records older than the cutoff time
+            database.transactionWithResult {
+                queries.deleteOldRecords(currentTime)
+            }
         }
 }
