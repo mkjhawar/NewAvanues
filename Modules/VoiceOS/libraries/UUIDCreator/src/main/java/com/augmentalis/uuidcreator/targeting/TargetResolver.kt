@@ -177,11 +177,11 @@ class TargetResolver(private val registry: VUIDRegistry) {
             // Check if element or its parent matches context
             element.name?.contains(context, ignoreCase = true) == true ||
             element.metadata?.label?.contains(context, ignoreCase = true) == true ||
-            registry.findParent(element.uuid)?.name?.contains(context, ignoreCase = true) == true
+            registry.findParent(element.vuid)?.name?.contains(context, ignoreCase = true) == true
         }
         
         return if (contextElements.isNotEmpty()) {
-            val confidence = if (fromUUID != null && contextElements.any { it.uuid == fromUUID }) 0.9f else 0.7f
+            val confidence = if (fromUUID != null && contextElements.any { it.vuid == fromUUID }) 0.9f else 0.7f
             TargetResult(contextElements, confidence, "context-match")
         } else {
             TargetResult(emptyList(), 0f, "context-no-match")
@@ -268,7 +268,7 @@ class TargetResolver(private val registry: VUIDRegistry) {
         
         // Find nearest elements
         val nearbyElements = registry.getEnabledElements()
-            .filter { it.uuid != fromUUID && it.position != null }
+            .filter { it.vuid != fromUUID && it.position != null }
             .sortedBy { element ->
                 val pos = element.position ?: return@sortedBy Float.MAX_VALUE
                 val dx = pos.x - sourcePos.x

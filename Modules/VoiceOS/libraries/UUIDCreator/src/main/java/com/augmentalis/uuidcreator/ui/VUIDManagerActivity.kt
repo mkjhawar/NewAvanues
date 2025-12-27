@@ -13,9 +13,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import com.augmentalis.uuidcreator.models.UUIDViewModel
-import com.augmentalis.uuidcreator.models.UUIDUiState
-import com.augmentalis.uuidcreator.models.UUIDElementInfo
+import com.augmentalis.uuidcreator.ui.VUIDViewModel
+import com.augmentalis.uuidcreator.ui.VUIDUiState
+import com.augmentalis.uuidcreator.ui.VUIDElementInfo
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -52,7 +52,7 @@ import java.util.*
 
 class UUIDManagerActivity : ComponentActivity() {
     
-    private val viewModel: UUIDViewModel by viewModels()
+    private val viewModel: VUIDViewModel by viewModels()
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,8 +81,8 @@ fun UUIDManagerTheme(content: @Composable () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UUIDManagerScreen(viewModel: UUIDViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
-    val uiState by viewModel.uiState.observeAsState(UUIDUiState())
+fun UUIDManagerScreen(viewModel: VUIDViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
+    val uiState by viewModel.uiState.observeAsState(VUIDUiState())
     var showRegisterDialog by remember { mutableStateOf(false) }
     var showCommandDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
@@ -169,7 +169,7 @@ fun UUIDManagerScreen(viewModel: UUIDViewModel = androidx.lifecycle.viewmodel.co
             // Quick Actions Card
             item {
                 QuickActionsCard(
-                    onGenerateUUID = { viewModel.generateNewUUID() },
+                    onGenerateUUID = { viewModel.generateNewVUID() },
                     onClearRegistry = { viewModel.clearRegistry() },
                     onExport = { showExportDialog = true },
                     onTestNavigation = { viewModel.testSpatialNavigation() }
@@ -224,13 +224,13 @@ fun UUIDManagerScreen(viewModel: UUIDViewModel = androidx.lifecycle.viewmodel.co
             
             items(
                 items = displayElements,
-                key = { it.uuid }
+                key = { it.vuid }
             ) { element ->
                 ElementCard(
                     element = element,
-                    isSelected = element.uuid == uiState.selectedElement?.uuid,
+                    isSelected = element.vuid == uiState.selectedElement?.vuid,
                     onClick = { viewModel.selectElement(element) },
-                    onUnregister = { viewModel.unregisterElement(element.uuid) }
+                    onUnregister = { viewModel.unregisterElement(element.vuid) }
                 )
             }
             
@@ -479,7 +479,7 @@ fun ActionButton(
 
 @Composable
 fun SelectedElementCard(
-    element: UUIDElementInfo,
+    element: VUIDElementInfo,
     navigationPath: List<String>,
     onNavigate: (String) -> Unit,
     onClearSelection: () -> Unit
@@ -514,7 +514,7 @@ fun SelectedElementCard(
             Spacer(modifier = Modifier.height(12.dp))
             
             // Element Details
-            DetailRow("UUID", element.uuid.take(16) + "...")
+            DetailRow("UUID", element.vuid.take(16) + "...")
             DetailRow("Name", element.name ?: "unnamed")
             DetailRow("Type", element.type)
             DetailRow("Status", if (element.isEnabled) "Enabled" else "Disabled")
@@ -727,7 +727,7 @@ fun SearchBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ElementCard(
-    element: UUIDElementInfo,
+    element: VUIDElementInfo,
     isSelected: Boolean,
     onClick: () -> Unit,
     onUnregister: () -> Unit
@@ -800,7 +800,7 @@ fun ElementCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        element.uuid.take(8),
+                        element.vuid.take(8),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

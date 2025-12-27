@@ -101,7 +101,7 @@ class SpatialNavigator(private val registry: VUIDRegistry) {
     /**
      * Navigate left
      */
-    private fun navigateLeft(sourcePos: UUIDPosition): NavigationResult {
+    private fun navigateLeft(sourcePos: VUIDPosition): NavigationResult {
         val candidates = registry.getEnabledElements()
             .filter { element -> element.position?.let { it.x < sourcePos.x } == true }
 
@@ -119,7 +119,7 @@ class SpatialNavigator(private val registry: VUIDRegistry) {
     /**
      * Navigate right
      */
-    private fun navigateRight(sourcePos: UUIDPosition): NavigationResult {
+    private fun navigateRight(sourcePos: VUIDPosition): NavigationResult {
         val candidates = registry.getEnabledElements()
             .filter { element -> element.position?.let { it.x > sourcePos.x } == true }
 
@@ -137,7 +137,7 @@ class SpatialNavigator(private val registry: VUIDRegistry) {
     /**
      * Navigate up
      */
-    private fun navigateUp(sourcePos: UUIDPosition): NavigationResult {
+    private fun navigateUp(sourcePos: VUIDPosition): NavigationResult {
         val candidates = registry.getEnabledElements()
             .filter { element -> element.position?.let { it.y < sourcePos.y } == true }
 
@@ -155,7 +155,7 @@ class SpatialNavigator(private val registry: VUIDRegistry) {
     /**
      * Navigate down
      */
-    private fun navigateDown(sourcePos: UUIDPosition): NavigationResult {
+    private fun navigateDown(sourcePos: VUIDPosition): NavigationResult {
         val candidates = registry.getEnabledElements()
             .filter { element -> element.position?.let { it.y > sourcePos.y } == true }
 
@@ -173,7 +173,7 @@ class SpatialNavigator(private val registry: VUIDRegistry) {
     /**
      * Navigate forward (Z-axis)
      */
-    private fun navigateForward(sourcePos: UUIDPosition): NavigationResult {
+    private fun navigateForward(sourcePos: VUIDPosition): NavigationResult {
         val candidates = registry.getEnabledElements()
             .filter { element -> element.position?.let { it.z > sourcePos.z } == true }
 
@@ -189,7 +189,7 @@ class SpatialNavigator(private val registry: VUIDRegistry) {
     /**
      * Navigate backward (Z-axis)
      */
-    private fun navigateBackward(sourcePos: UUIDPosition): NavigationResult {
+    private fun navigateBackward(sourcePos: VUIDPosition): NavigationResult {
         val candidates = registry.getEnabledElements()
             .filter { element -> element.position?.let { it.z < sourcePos.z } == true }
 
@@ -205,7 +205,7 @@ class SpatialNavigator(private val registry: VUIDRegistry) {
     /**
      * Navigate to next element (by index)
      */
-    private fun navigateNext(sourceElement: UUIDElement): NavigationResult {
+    private fun navigateNext(sourceElement: VUIDElement): NavigationResult {
         val currentIndex = sourceElement.position?.index ?: 0
         val candidates = registry.getEnabledElements()
             .filter { element -> element.position?.let { it.index > currentIndex } == true }
@@ -219,7 +219,7 @@ class SpatialNavigator(private val registry: VUIDRegistry) {
     /**
      * Navigate to previous element (by index)
      */
-    private fun navigatePrevious(sourceElement: UUIDElement): NavigationResult {
+    private fun navigatePrevious(sourceElement: VUIDElement): NavigationResult {
         val currentIndex = sourceElement.position?.index ?: 0
         val candidates = registry.getEnabledElements()
             .filter { element -> element.position?.let { it.index < currentIndex } == true }
@@ -256,9 +256,9 @@ class SpatialNavigator(private val registry: VUIDRegistry) {
      * Find best candidate using scoring function
      */
     private fun findBestCandidate(
-        candidates: List<UUIDElement>,
-        scoreFunction: (UUIDPosition) -> Float
-    ): UUIDElement? {
+        candidates: List<VUIDElement>,
+        scoreFunction: (VUIDPosition) -> Float
+    ): VUIDElement? {
         return candidates.minByOrNull { element ->
             element.position?.let { scoreFunction(it) } ?: Float.MAX_VALUE
         }
@@ -267,7 +267,7 @@ class SpatialNavigator(private val registry: VUIDRegistry) {
     /**
      * Calculate distance between two positions
      */
-    private fun calculateDistance(pos1: UUIDPosition, pos2: UUIDPosition): Float {
+    private fun calculateDistance(pos1: VUIDPosition, pos2: VUIDPosition): Float {
         val dx = pos1.x - pos2.x
         val dy = pos1.y - pos2.y
         val dz = pos1.z - pos2.z
@@ -277,7 +277,7 @@ class SpatialNavigator(private val registry: VUIDRegistry) {
     /**
      * Calculate primary direction between two positions
      */
-    private fun calculateDirection(from: UUIDPosition, to: UUIDPosition): Direction {
+    private fun calculateDirection(from: VUIDPosition, to: VUIDPosition): Direction {
         val dx = to.x - from.x
         val dy = to.y - from.y
         val dz = to.z - from.z
