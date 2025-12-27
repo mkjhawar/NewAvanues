@@ -36,6 +36,16 @@ NewAvanues - Platform-centric KMP monorepo (AVA, VoiceOS, WebAvanue, Cockpit, NL
 
 ---
 
+## BUILD REQUIREMENTS
+
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| JDK | 17 | Required (JDK 24 incompatible with Gradle) |
+| Gradle | 8.x | Via wrapper |
+| Android SDK | 34 | Target API |
+
+---
+
 ## PROJECT-SPECIFIC TECH
 
 | Component | Technology |
@@ -188,4 +198,4 @@ All rules from `/Volumes/M-Drive/Coding/.claude/CLAUDE.md` apply.
 
 ---
 
-**Updated:** 2025-12-26 | **Version:** 12.3.0
+**Updated:** 2025-12-27 | **Version:** 12.4.0
