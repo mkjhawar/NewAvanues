@@ -66,6 +66,17 @@ class VoiceCommandProcessor(
         // Command matching thresholds
         private const val EXACT_MATCH_THRESHOLD = 1.0f
         private const val FUZZY_MATCH_THRESHOLD = 0.7f
+
+        // FIX P2 (2025-12-27): Configurable timeout for command processing
+        // Default 10 seconds to handle large databases and complex queries
+        private const val DEFAULT_COMMAND_TIMEOUT_MS = 10_000L
+
+        /**
+         * Configurable timeout for command processing.
+         * Can be adjusted based on device performance or database size.
+         */
+        @Volatile
+        var commandTimeoutMs: Long = DEFAULT_COMMAND_TIMEOUT_MS
     }
 
     // FIX (2025-12-01): Replaced non-existent VoiceOSAppDatabase with VoiceOSCoreDatabaseAdapter
@@ -94,12 +105,24 @@ class VoiceCommandProcessor(
     /**
      * Process a voice command
      *
+     * FIX P1 (2025-12-27): Added database readiness check before processing
+     * FIX P2 (2025-12-27): Using configurable timeout instead of hardcoded value
+     * FIX P3 (2025-12-27): Improved error messaging to distinguish database vs command failures
+     *
      * @param voiceInput Raw voice input from speech recognition
      * @return CommandResult indicating success/failure and details
      */
-    suspend fun processCommand(voiceInput: String): CommandResult = withTimeout(5000L) {
+    suspend fun processCommand(voiceInput: String): CommandResult = withTimeout(commandTimeoutMs) {
         withContext(Dispatchers.IO) {
         try {
+            // FIX P1 (2025-12-27): Verify database is ready before processing
+            if (!databaseManager.isReady()) {
+                Log.e(TAG, "Database not initialized - cannot process voice command")
+                return@withContext CommandResult.databaseError(
+                    "Database not ready. Please wait for initialization to complete."
+                )
+            }
+
             // PII Redaction: Sanitize user voice input before logging
             PIILoggingWrapper.d(TAG, "Processing voice command: '$voiceInput'")
 
@@ -234,10 +257,32 @@ class VoiceCommandProcessor(
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error during voice command processing pipeline: ${e::class.simpleName}. " +
+            // FIX P3 (2025-12-27): Distinguish database errors from command failures
+            val errorType = when {
+                e.message?.contains("database", ignoreCase = true) == true ||
+                e.message?.contains("sql", ignoreCase = true) == true ||
+                e is IllegalStateException && e.message?.contains("not initialized") == true -> "DATABASE_ERROR"
+                e is kotlinx.coroutines.TimeoutCancellationException -> "TIMEOUT_ERROR"
+                e.message?.contains("accessibility", ignoreCase = true) == true -> "ACCESSIBILITY_ERROR"
+                else -> "COMMAND_ERROR"
+            }
+
+            Log.e(TAG, "[$errorType] Voice command processing failed: ${e::class.simpleName}. " +
                 "Possible causes: database access failure, accessibility service disruption, timeout, or state inconsistency. " +
                 "Impact: Command execution aborted; user will need to retry. Details: ${e.message}", e)
-            CommandResult.failure("Error: ${e.message}")
+
+            when (errorType) {
+                "DATABASE_ERROR" -> CommandResult.databaseError(
+                    "Database error: ${e.message ?: "Unknown database error"}"
+                )
+                "TIMEOUT_ERROR" -> CommandResult.timeoutError(
+                    "Command timed out after ${commandTimeoutMs}ms. Try again or simplify the command."
+                )
+                "ACCESSIBILITY_ERROR" -> CommandResult.accessibilityError(
+                    "Accessibility service error: ${e.message ?: "Service unavailable"}"
+                )
+                else -> CommandResult.failure("Command failed: ${e.message}")
+            }
         }
         }
     }
@@ -911,20 +956,36 @@ class VoiceCommandProcessor(
 
 /**
  * Command execution result
+ *
+ * FIX P3 (2025-12-27): Added error type classification for better error handling
  */
 data class CommandResult(
     val success: Boolean,
     val message: String,
     val actionType: String? = null,
     val elementHash: String? = null,
-    val suggestions: String? = null  // NEW: Element suggestions for failed commands
+    val suggestions: String? = null,  // Element suggestions for failed commands
+    val errorType: ErrorType? = null  // FIX P3: Error classification
 ) {
+    /**
+     * Error type classification for distinguishing failure causes
+     */
+    enum class ErrorType {
+        NONE,              // No error (success)
+        COMMAND_NOT_FOUND, // Command not recognized
+        ELEMENT_NOT_FOUND, // UI element not found
+        DATABASE_ERROR,    // Database initialization or query failure
+        TIMEOUT_ERROR,     // Command processing timeout
+        ACCESSIBILITY_ERROR, // Accessibility service error
+        GENERAL_ERROR      // Other errors
+    }
+
     companion object {
         fun success(message: String, actionType: String? = null, elementHash: String? = null) =
-            CommandResult(true, message, actionType, elementHash, null)
+            CommandResult(true, message, actionType, elementHash, null, ErrorType.NONE)
 
         fun failure(message: String, suggestions: String? = null) =
-            CommandResult(false, message, null, null, suggestions)
+            CommandResult(false, message, null, null, suggestions, ErrorType.GENERAL_ERROR)
 
         fun elementNotFound(commandText: String, elementHash: String) =
             CommandResult(
@@ -932,7 +993,49 @@ data class CommandResult(
                 message = "Element not found for command '$commandText'. UI may have changed.",
                 actionType = null,
                 elementHash = elementHash,
-                suggestions = null
+                suggestions = null,
+                errorType = ErrorType.ELEMENT_NOT_FOUND
+            )
+
+        // FIX P3 (2025-12-27): New factory methods for specific error types
+
+        /**
+         * Create result for database errors (initialization failure, query error)
+         */
+        fun databaseError(message: String) =
+            CommandResult(
+                success = false,
+                message = message,
+                actionType = null,
+                elementHash = null,
+                suggestions = "Try waiting for database initialization or restart the app.",
+                errorType = ErrorType.DATABASE_ERROR
+            )
+
+        /**
+         * Create result for timeout errors
+         */
+        fun timeoutError(message: String) =
+            CommandResult(
+                success = false,
+                message = message,
+                actionType = null,
+                elementHash = null,
+                suggestions = "Try a simpler command or check if the app is responding.",
+                errorType = ErrorType.TIMEOUT_ERROR
+            )
+
+        /**
+         * Create result for accessibility service errors
+         */
+        fun accessibilityError(message: String) =
+            CommandResult(
+                success = false,
+                message = message,
+                actionType = null,
+                elementHash = null,
+                suggestions = "Check if VoiceOS accessibility service is enabled in settings.",
+                errorType = ErrorType.ACCESSIBILITY_ERROR
             )
     }
 }
