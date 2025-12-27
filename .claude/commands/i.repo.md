@@ -14,6 +14,7 @@ description: Repository management (new, init, migrate, add, validate, cleanup) 
 | `.init` | Initialize existing directory with IDEACODE structure |
 | `.new` | Create fresh monorepo with full structure |
 | `.migrate` | Flexible migration (import/export/upgrade) |
+| `.sync` | Sync/merge changes between branches or worktrees |
 | `.add` | Add module/app to existing monorepo |
 | `.validate` | Health check on structure |
 | `.fix` | Fix misplaced files and structure violations |
@@ -315,6 +316,175 @@ For each file operation:
 
 ---
 
+## .sync - Sync/Merge Branches
+
+### Usage
+`/i.repo .sync <source-branch> [<target-branch>] [.modifiers]`
+
+### Purpose
+Sync changes between branches or worktrees in a monorepo. Perfect for:
+- Merging feature branches into development
+- Syncing worktree changes to main branch
+- Keeping multiple development branches in sync
+
+### Parameters
+| Parameter | Description | Required | Default |
+|-----------|-------------|----------|---------|
+| `source-branch` | Branch to merge FROM | Yes | - |
+| `target-branch` | Branch to merge TO | No | Current branch |
+
+### Questions Asked
+| # | Question | Options | When |
+|---|----------|---------|------|
+| 1 | Target branch? | List of branches | If not specified |
+| 2 | Merge strategy? | merge, rebase, squash | Always |
+| 3 | Preview diff first? | Y/n | Always |
+| 4 | Proceed with sync? | Y/n | After preview |
+
+### Process
+
+**Phase 1: Validation**
+```
+Checking branches...
+✅ Source: Cockpit-Development (45 commits ahead)
+✅ Target: NewAvanues-Development (12 commits ahead)
+⚠️  Potential conflicts: 3 files
+
+Conflicts:
+- src/common/Config.kt (both modified)
+- build.gradle.kts (both modified)
+- README.md (both modified)
+```
+
+**Phase 2: Preview**
+```
+Changes to sync from Cockpit-Development → NewAvanues-Development:
+
+Files Changed: 23
+  • Added: 8 files
+  • Modified: 12 files
+  • Deleted: 3 files
+
+Key changes:
+  + src/cockpit/SpatialUI.kt (new)
+  + src/cockpit/GazeController.kt (new)
+  ~ src/common/Config.kt (modified)
+  ~ build.gradle.kts (modified)
+  - src/old/Legacy.kt (deleted)
+```
+
+**Phase 3: Execution**
+| Strategy | Action |
+|----------|--------|
+| `merge` | `git merge <source> --no-ff` (preserves history) |
+| `rebase` | `git rebase <source>` (linear history) |
+| `squash` | `git merge <source> --squash` (single commit) |
+
+**Phase 4: Conflict Resolution** (if needed)
+```
+Conflicts detected in 3 files:
+
+1. src/common/Config.kt
+   <<<<<<< HEAD (NewAvanues-Development)
+   val API_URL = "https://api-dev.example.com"
+   =======
+   val API_URL = "https://api-cockpit.example.com"
+   >>>>>>> Cockpit-Development
+
+   Options:
+   a) Keep current (NewAvanues-Development)
+   b) Use incoming (Cockpit-Development)
+   c) Edit manually
+   d) Skip file
+
+   Choose (a/b/c/d): _
+```
+
+**Phase 5: Completion**
+```
+✅ Sync completed successfully!
+
+Summary:
+  • 20 files merged cleanly
+  • 3 conflicts resolved
+  • Merge commit: abc123f
+
+Next steps:
+  1. Run tests to verify
+  2. Review changes: git log --oneline -10
+  3. Push: git push origin NewAvanues-Development
+```
+
+### Modifiers
+| Modifier | Effect |
+|----------|--------|
+| `.merge` | Use merge strategy (default) |
+| `.rebase` | Use rebase strategy |
+| `.squash` | Squash all commits into one |
+| `.nopreview` | Skip diff preview |
+| `.yolo` | Auto-resolve conflicts (use incoming) |
+| `.dryrun` | Show what would happen |
+
+### Safety Features
+- ✅ Validates both branches exist
+- ✅ Checks for uncommitted changes (blocks if dirty)
+- ✅ Shows preview before merging
+- ✅ Detects conflicts early
+- ✅ Interactive conflict resolution
+- ✅ Can abort at any step
+
+### Examples
+| Command | Result |
+|---------|--------|
+| `/i.repo .sync Cockpit-Development` | Merge into current branch |
+| `/i.repo .sync Cockpit-Development NewAvanues-Development` | Merge Cockpit → NewAvanues |
+| `/i.repo .sync feature/auth main .squash` | Squash merge to main |
+| `/i.repo .sync hotfix/bug production .merge` | Merge hotfix to production |
+| `/i.repo .sync dev staging .dryrun` | Preview sync (no changes) |
+
+### Worktree Support
+For git worktrees (like NewAvanues-Cockpit):
+```bash
+# Sync Cockpit worktree changes to main development
+/i.repo .sync Cockpit-Development NewAvanues-Development
+
+# Or from within Cockpit worktree
+cd /Volumes/M-Drive/Coding/NewAvanues-Cockpit
+/i.repo .sync . NewAvanues-Development
+```
+
+### Common Workflows
+
+**Feature → Development:**
+```bash
+# After completing feature in Cockpit
+/i.repo .sync Cockpit-Development NewAvanues-Development .squash
+```
+
+**Development → Production:**
+```bash
+# Release to production
+/i.repo .sync NewAvanues-Development main .merge
+```
+
+**Hotfix → All Branches:**
+```bash
+# Apply hotfix everywhere
+/i.repo .sync hotfix/critical-bug NewAvanues-Development
+/i.repo .sync hotfix/critical-bug Cockpit-Development
+/i.repo .sync hotfix/critical-bug main
+```
+
+### Error Handling
+| Error | Cause | Solution |
+|-------|-------|----------|
+| "Branch not found" | Invalid branch name | Check: `git branch -a` |
+| "Working tree dirty" | Uncommitted changes | Commit or stash first |
+| "Merge conflicts" | Overlapping changes | Resolve interactively |
+| "Already up to date" | No new commits | Nothing to sync |
+
+---
+
 ## .add - Add Module
 
 ### Usage
@@ -520,6 +690,7 @@ Total: 8 modules (3 apps, 5 libs)
 | `.init` | Initialize existing directory |
 | `.new` | Create fresh monorepo |
 | `.migrate` | Start migration flow |
+| `.sync` | Sync/merge branches |
 | `.add` | Add module |
 | `.validate` | Health check |
 | `.fix` | Fix structure issues |
