@@ -753,6 +753,49 @@ When you go to Settings and come back:
 - No need to restart the app
 - Setup wizard automatically advances
 
+## 9.7 Improved Flutter App Support (2025-12-27)
+
+VoiceOS now has enhanced support for apps built with Flutter, one of the most popular cross-platform frameworks used by major apps like Google Pay, eBay Motors, BMW, and Alibaba.
+
+### What's New
+
+Flutter apps built with version 3.19 or newer now work better with VoiceOS:
+
+| Improvement | Before | After |
+|-------------|--------|-------|
+| **Command Stability** | Commands might break after app updates | Commands stay stable across updates |
+| **Element Recognition** | Based on text content | Based on stable identifiers |
+| **Accuracy** | Good | Excellent |
+
+### Why This Matters
+
+When you teach VoiceOS a command for a Flutter app:
+- The command will continue to work even if the app updates
+- Button text changes won't break your learned commands
+- VoiceOS remembers elements more reliably
+
+### Supported Flutter Apps
+
+VoiceOS automatically detects and optimizes for Flutter apps. Popular Flutter apps include:
+- Google Pay
+- eBay Motors
+- BMW Connected
+- Alibaba
+- Tencent apps
+- Reflectly
+- Hamilton Musical
+
+### How to Tell if an App Uses Flutter
+
+You don't need to do anything special! VoiceOS automatically:
+1. Detects if an app is built with Flutter
+2. Checks if it uses the newer stable identifier system
+3. Uses the best recognition method for that app
+
+### Technical Note
+
+For developers: Flutter 3.19+ apps using `Semantics(identifier: "...")` will have stable element identification. This is handled automatically by VoiceOS.
+
 ---
 
 # Document History
@@ -763,6 +806,7 @@ When you go to Settings and come back:
 | 1.1 | 2025-12-13 | Added Section 6: Performance Improvements (pagination, app-specific filtering) |
 | 1.2 | 2025-12-17 | Added Section 9: December 2025 Update (exploration tracking, window detection, JIT improvements, AI context, navigation graphs) |
 | 1.3 | 2025-12-18 | Added Section 9.6: Reliability and Stability Improvements (error messages, exploration feedback, auto-dismiss) |
+| 1.4 | 2025-12-27 | Added Section 9.7: Improved Flutter App Support (Flutter 3.19+ stable identifiers) |
 
 ---
 

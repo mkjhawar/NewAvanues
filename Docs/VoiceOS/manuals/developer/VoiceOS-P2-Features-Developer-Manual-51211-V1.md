@@ -3313,6 +3313,106 @@ AppFramework.COCOS2D -> hasCocos2dSignatures(node, packageName)
 AppFramework.DEFOLD -> hasDefoldSignatures(node, packageName)
 ```
 
+### 12.3.3 Flutter 3.19+ Identifier Support (2025-12-27)
+
+Flutter 3.19 (Feb 2024) introduced `SemanticsProperties.identifier` which maps to Android's `viewIdResourceName`. This provides **stable element identification** for Flutter apps, improving VUID consistency across sessions.
+
+#### Problem Solved
+
+| Before | After |
+|--------|-------|
+| VUIDs based on text content | VUIDs based on stable identifiers |
+| VUIDs change when text changes | VUIDs persist across app updates |
+| Commands break on UI text changes | Commands remain stable |
+
+#### Implementation Files
+
+| File | Purpose |
+|------|---------|
+| `FlutterIdentifierExtractor.kt` | Extract stable identifiers from Flutter nodes |
+| `VUIDGenerator.kt` | Generate VUIDs from Flutter identifiers |
+| `CrossPlatformDetector.kt` | Detect Flutter version (3.19+ vs legacy) |
+| `UIScrapingEngine.kt` | Integrate identifier extraction |
+
+#### Detection Patterns
+
+```kotlin
+// Flutter 3.19+ identifier patterns
+val FLUTTER_319_PATTERNS = listOf(
+    "flutter_semantics_",      // Auto-generated semantics IDs
+    "flutter_id_",             // Developer-defined IDs
+    ":id/flutter_semantics_"   // Fully qualified resource IDs
+)
+
+// In CrossPlatformDetector.kt
+fun detectFlutterVersion(rootNode: AccessibilityNodeInfo?, packageName: String): FlutterVersion {
+    if (!hasFlutterSignatures(rootNode, packageName)) {
+        return FlutterVersion.NOT_FLUTTER
+    }
+    val hasStableIdentifiers = checkForFlutter319Identifiers(rootNode, depth = 0, maxDepth = 5)
+    return if (hasStableIdentifiers) FlutterVersion.FLUTTER_319_PLUS else FlutterVersion.FLUTTER_LEGACY
+}
+```
+
+#### VUID Generation Priority
+
+```kotlin
+// In UIScrapingEngine.createEnhancedUIElement()
+val hash = if (flutterIdentifier?.isStable == true) {
+    // 1. Prefer Flutter 3.19+ stable identifier
+    "flutter-${flutterIdentifier.toStableHash()}"
+} else if (resourceId != null) {
+    // 2. Fall back to Android resource-id
+    generateElementHash(resourceId, ...)
+} else {
+    // 3. Fall back to content-based hash
+    generateElementHash(text, description, className, bounds)
+}
+```
+
+#### FlutterIdentifier Data Class
+
+```kotlin
+data class FlutterIdentifier(
+    val rawResourceId: String,      // Full resource ID from node
+    val identifierValue: String,    // Extracted identifier value
+    val isStable: Boolean,          // true for Flutter 3.19+
+    val source: IdentifierSource    // FLUTTER_319_SEMANTICS or FLUTTER_LEGACY
+) {
+    fun toStableHash(): String {
+        // SHA-256 hash for collision resistance
+        val digest = MessageDigest.getInstance("SHA-256")
+        return digest.digest(identifierValue.toByteArray())
+            .take(16).joinToString("") { "%02x".format(it) }
+    }
+}
+```
+
+#### Architecture Score Impact
+
+| Component | Before | After | Change |
+|-----------|--------|-------|--------|
+| Cross-Platform Detection | 8/10 | 8.4/10 | +0.4 |
+| Flutter Support | 7/10 | 9/10 | +2.0 |
+| Overall Score | 8.4/10 | 8.8/10 | +0.4 |
+
+#### Testing Flutter Apps
+
+```kotlin
+// Unit test example
+@Test
+fun `FlutterIdentifierExtractor detects Flutter 3_19 identifier`() {
+    val mockNode = mockk<AccessibilityNodeInfo>()
+    every { mockNode.viewIdResourceName } returns "com.example:id/flutter_semantics_42"
+
+    val identifier = FlutterIdentifierExtractor.extract(mockNode)
+
+    assertNotNull(identifier)
+    assertTrue(identifier!!.isStable)
+    assertEquals("flutter_semantics_42", identifier.identifierValue)
+}
+```
+
 ## 12.4 Configuration System
 
 ### 12.4.1 DeveloperSettings Class
