@@ -63,22 +63,32 @@ enum class SpeechEngine {
      * - GPU acceleration support
      * - ~39MB to 1550MB depending on model size
      */
-    WHISPER;
-    
+    WHISPER,
+
+    /**
+     * Azure - Microsoft Azure Cognitive Services Speech Recognition
+     * - Online only (cloud-based)
+     * - Enterprise-grade accuracy
+     * - Advanced features: speaker recognition, translation, custom models
+     * - Requires Azure subscription key and region
+     * - ~10MB memory usage
+     */
+    AZURE;
+
     /**
      * Check if engine is offline capable
      */
     fun isOfflineCapable(): Boolean {
         return this in listOf(VOSK, VIVOKA, WHISPER)
     }
-    
+
     /**
      * Check if engine requires API key
      */
     fun requiresApiKey(): Boolean {
-        return this == GOOGLE_CLOUD
+        return this in listOf(GOOGLE_CLOUD, AZURE)
     }
-    
+
     /**
      * Get human-readable name
      */
@@ -89,6 +99,7 @@ enum class SpeechEngine {
             ANDROID_STT -> "Android STT"
             GOOGLE_CLOUD -> "Google Cloud Speech"
             WHISPER -> "OpenAI Whisper"
+            AZURE -> "Azure Cognitive Services"
         }
     }
 }
@@ -316,6 +327,7 @@ data class SpeechConfig(
             SpeechEngine.ANDROID_STT -> 20
             SpeechEngine.GOOGLE_CLOUD -> 15
             SpeechEngine.WHISPER -> 230  // Base model default, can vary from 150MB to 2500MB
+            SpeechEngine.AZURE -> 10
         }
     }
     
