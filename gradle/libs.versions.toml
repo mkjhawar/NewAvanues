@@ -1,6 +1,6 @@
 [versions]
 # Kotlin
-kotlin = "1.9.24"
+kotlin = "1.9.25"
 kotlinx-coroutines = "1.8.1"  # Updated from 1.7.3 for VoiceOS compatibility
 kotlinx-serialization = "1.6.0"
 kotlinx-datetime = "0.5.0"
@@ -10,7 +10,7 @@ onnxruntime = "1.17.0"  # ONNX Runtime for NLU inference
 compose = "1.7.0"
 compose-ui = "1.5.4"
 compose-bom = "2024.06.00"  # Unified BOM version
-compose-compiler = "1.5.14"  # Compatible with Kotlin 1.9.24
+compose-compiler = "1.5.15"  # Compatible with Kotlin 1.9.25
 
 # Android
 android-gradle = "8.2.0"
@@ -42,7 +42,7 @@ sqlcipher = "4.5.4"
 koin = "3.5.3"
 koin-compose = "1.1.2"
 hilt = "2.51.1"  # Updated from 2.48 for VoiceOSCore compatibility
-ksp = "1.9.24-1.0.20"
+ksp = "1.9.25-1.0.20"
 
 # Navigation
 voyager = "1.0.0"

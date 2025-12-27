@@ -12,7 +12,7 @@
 
 package com.augmentalis.database.dto
 
-import com.augmentalis.database.Scraped_element
+import com.augmentalis.database.element.Scraped_element
 
 /**
  * DTO for scraped UI elements

@@ -1,12 +1,22 @@
 #!/bin/bash
 
-# IDEACODE Startup Banner
+# IDEACODE Startup Banner with Shared Memory Integration
 # Displays when Claude Code starts a new session
-# Shows IDEACODE branding alongside Claude Code
+# Registers session and loads module context
+
+# Colors
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BOLD='\033[1m'
+NC='\033[0m'
 
 # Read JSON input from stdin to get current directory
 input=$(cat)
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // "~"')
+
+# Export CWD for shared memory manager
+export CWD="$cwd"
 
 # Get IDEACODE version from config (check JSON first, then YAML)
 ideacode_version="?"
@@ -21,6 +31,14 @@ fi
 # Fallback to IDEACODE framework version-info.json
 if [[ "$ideacode_version" == "?" ]] && [[ -f "/Volumes/M-Drive/Coding/ideacode/version-info.json" ]]; then
     ideacode_version=$(jq -r '.framework_version // "?"' /Volumes/M-Drive/Coding/ideacode/version-info.json 2>/dev/null)
+fi
+
+# Get repo info
+repo_name="unknown"
+branch="unknown"
+if git -C "$cwd" rev-parse --git-dir > /dev/null 2>&1; then
+    repo_name=$(basename "$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)")
+    branch=$(git -C "$cwd" branch --show-current 2>/dev/null || echo "detached")
 fi
 
 cat << EOF
@@ -41,3 +59,35 @@ cat << EOF
 ╚══════════════════════════════════════════════════════════════════════════╝
 
 EOF
+
+# Register session and load context if shared memory manager exists
+SHARED_MEMORY_MANAGER="$cwd/.claude/hooks/shared-memory-manager.sh"
+if [[ ! -f "$SHARED_MEMORY_MANAGER" ]]; then
+    # Try IDEACODE framework path
+    SHARED_MEMORY_MANAGER="/Volumes/M-Drive/Coding/ideacode/.claude/hooks/shared-memory-manager.sh"
+fi
+
+if [[ -x "$SHARED_MEMORY_MANAGER" ]]; then
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BOLD}Working in:${NC} $repo_name"
+    echo -e "${BOLD}Branch:${NC} $branch"
+    echo ""
+
+    # Register this session
+    "$SHARED_MEMORY_MANAGER" register 2>/dev/null || true
+
+    # Check for other active sessions in same repo
+    active_sessions=$(jq -r '.sessions | length' "$cwd/.ideacode/shared-memory/sessions.json" 2>/dev/null || echo "0")
+    if [[ "$active_sessions" -gt 1 ]]; then
+        echo ""
+        echo -e "${YELLOW}NOTE: ${active_sessions} active sessions in this repo${NC}"
+        echo -e "${YELLOW}Use '/i.memory status' to see what others are working on${NC}"
+    fi
+
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+else
+    # Fallback: just show repo info
+    echo -e "${BOLD}Working in:${NC} $repo_name"
+    echo -e "${BOLD}Branch:${NC} $branch"
+    echo ""
+fi

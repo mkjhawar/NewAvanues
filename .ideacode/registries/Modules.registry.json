@@ -148,8 +148,8 @@
       "profile": "feature-module",
       "platforms": ["android", "ios", "macos", "windows", "linux"],
       "path": "Modules/WebAvanue",
-      "status": "planned",
-      "description": "WebAvanue browser feature module"
+      "status": "active",
+      "description": "WebAvanue voice-controlled browser feature module"
     },
     {
       "id": "AvaConnect",
@@ -160,6 +160,16 @@
       "path": "Modules/AvaConnect",
       "status": "planned",
       "description": "AvaConnect connectivity feature module"
+    },
+    {
+      "id": "Cockpit",
+      "name": "Cockpit",
+      "type": "package",
+      "profile": "kmp-library",
+      "platforms": ["android", "ios", "macos", "windows", "linux", "web"],
+      "path": "Common/Cockpit",
+      "status": "active",
+      "description": "Spatial workspace library for managing floating windows in AR/2D environments"
     }
   ]
 }

@@ -127,6 +127,9 @@ SELECT COUNT(*) FROM scraped_element WHERE appId = ? AND screen_hash = ?;
 getByScreenHash:
 SELECT * FROM scraped_element WHERE appId = ? AND screen_hash = ? ORDER BY depth, indexInParent;
 
+getByScreenHashOnly:
+SELECT * FROM scraped_element WHERE screen_hash = ? ORDER BY depth, indexInParent;
+
 upsertElement:
 INSERT OR REPLACE INTO scraped_element(
     elementHash, appId, uuid, className, viewIdResourceName, text, contentDescription,

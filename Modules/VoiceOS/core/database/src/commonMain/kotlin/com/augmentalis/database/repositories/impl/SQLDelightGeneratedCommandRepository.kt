@@ -35,9 +35,14 @@ class SQLDelightGeneratedCommandRepository(
             isUserApproved = command.isUserApproved,
             usageCount = command.usageCount,
             lastUsed = command.lastUsed,
-            createdAt = command.createdAt
+            createdAt = command.createdAt,
+            appId = command.appId,
+            appVersion = command.appVersion,
+            versionCode = command.versionCode,
+            lastVerified = command.lastVerified,
+            isDeprecated = command.isDeprecated
         )
-        queries.count().executeAsOne() // Return last inserted ID (approximation)
+        queries.lastInsertRowId().executeAsOne()
     }
 
     override suspend fun getById(id: Long): GeneratedCommandDTO? = withContext(Dispatchers.Default) {

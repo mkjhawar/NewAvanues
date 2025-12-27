@@ -12,7 +12,7 @@
 
 package com.augmentalis.database.dto
 
-import com.augmentalis.database.Screen_transition
+import com.augmentalis.database.navigation.Screen_transition
 
 /**
  * DTO for screen transitions

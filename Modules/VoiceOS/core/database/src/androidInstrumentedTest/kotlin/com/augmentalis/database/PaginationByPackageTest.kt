@@ -308,7 +308,11 @@ class PaginationByPackageTest {
                     usageCount = 0,
                     lastUsed = null,
                     createdAt = System.currentTimeMillis(),
-                    appId = packageName
+                    appId = packageName,
+                    appVersion = "",
+                    versionCode = 0,
+                    lastVerified = System.currentTimeMillis(),
+                    isDeprecated = 0
                 )
             )
         }

@@ -247,7 +247,11 @@ class PaginationTest {
             usageCount = 0,
             lastUsed = null,
             createdAt = System.currentTimeMillis(),
-            appId = ""  // Default for tests
+            appId = "",  // Default for tests
+            appVersion = "",
+            versionCode = 0,
+            lastVerified = System.currentTimeMillis(),
+            isDeprecated = 0
         )
     }
 }

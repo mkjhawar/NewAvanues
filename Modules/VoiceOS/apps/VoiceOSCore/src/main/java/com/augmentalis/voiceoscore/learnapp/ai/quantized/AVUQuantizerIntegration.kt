@@ -19,8 +19,18 @@ package com.augmentalis.voiceoscore.learnapp.ai.quantized
 import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
+import com.augmentalis.database.VoiceOSDatabaseManager
+import com.augmentalis.database.dto.GeneratedCommandDTO
+import com.augmentalis.database.dto.ScreenContextDTO
+import com.augmentalis.database.repositories.IGeneratedCommandRepository
+import com.augmentalis.database.repositories.IScreenContextRepository
 import com.augmentalis.voiceoscore.learnapp.ai.LLMPromptFormat
+import com.augmentalis.voiceoscore.learnapp.database.repository.LearnAppRepository
+import com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -34,13 +44,28 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * Implements ExplorationDebugCallback to receive exploration events and chain them
  * to other callbacks while processing for quantization.
+ *
+ * @param context Android context
+ * @param screenContextRepository Repository for screen context queries
+ * @param generatedCommandRepository Repository for generated command queries
+ * @param learnAppRepository Repository for learned app queries
+ * @param databaseManager Database manager for direct queries when needed
  */
-class AVUQuantizerIntegration(private val context: Context) : com.augmentalis.voiceoscore.learnapp.exploration.ExplorationDebugCallback {
+class AVUQuantizerIntegration(
+    private val context: Context,
+    private val screenContextRepository: IScreenContextRepository? = null,
+    private val generatedCommandRepository: IGeneratedCommandRepository? = null,
+    private val learnAppRepository: LearnAppRepository? = null,
+    private val databaseManager: VoiceOSDatabaseManager? = null
+) : com.augmentalis.voiceoscore.learnapp.exploration.ExplorationDebugCallback {
 
     companion object {
         private const val TAG = "AVUQuantizerIntegration"
         private const val CACHE_EXPIRY_MS = 5 * 60 * 1000L // 5 minutes
     }
+
+    // Coroutine scope for background operations
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // Cache for quantized contexts
     private val contextCache = ConcurrentHashMap<String, CachedContext>()
@@ -82,14 +107,14 @@ class AVUQuantizerIntegration(private val context: Context) : com.augmentalis.vo
      * @param packageName Package name to check
      * @return true if context is available (either cached or can be generated)
      */
-    fun hasQuantizedContext(packageName: String): Boolean {
+    suspend fun hasQuantizedContext(packageName: String): Boolean = withContext(Dispatchers.IO) {
         // Check cache
         if (contextCache.containsKey(packageName)) {
-            return true
+            return@withContext true
         }
 
         // Check if app has been learned (has exploration data)
-        return hasLearnedData(packageName)
+        hasLearnedData(packageName)
     }
 
     /**
@@ -210,55 +235,233 @@ class AVUQuantizerIntegration(private val context: Context) : com.augmentalis.vo
         )
     }
 
-    private fun generateQuantizedContext(packageName: String): QuantizedContext? {
-        try {
-            // Get app info
-            val appInfo = try {
-                packageManager.getApplicationInfo(packageName, 0)
-            } catch (e: PackageManager.NameNotFoundException) {
-                Log.w(TAG, "App not found: $packageName")
-                return null
+    private suspend fun generateQuantizedContext(packageName: String): QuantizedContext? =
+        withContext(Dispatchers.IO) {
+            try {
+                // Get app info
+                val appInfo = try {
+                    packageManager.getApplicationInfo(packageName, 0)
+                } catch (e: PackageManager.NameNotFoundException) {
+                    Log.w(TAG, "App not found: $packageName")
+                    return@withContext null
+                }
+
+                val appName = packageManager.getApplicationLabel(appInfo).toString()
+                val packageInfo = packageManager.getPackageInfo(packageName, 0)
+
+                // Build quantized context from learned data
+                val screens = buildQuantizedScreens(packageName)
+                val navigation = buildQuantizedNavigation(packageName, screens)
+                val vocabulary = buildVocabulary(screens)
+                val commands = buildKnownCommands(packageName)
+
+                QuantizedContext(
+                    packageName = packageName,
+                    appName = appName,
+                    versionCode = packageInfo.longVersionCode,
+                    versionName = packageInfo.versionName ?: "unknown",
+                    generatedAt = System.currentTimeMillis(),
+                    screens = screens,
+                    navigation = navigation,
+                    vocabulary = vocabulary,
+                    knownCommands = commands
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to generate quantized context for $packageName", e)
+                null
             }
+        }
 
-            val appName = packageManager.getApplicationLabel(appInfo).toString()
-            val packageInfo = packageManager.getPackageInfo(packageName, 0)
+    /**
+     * Build quantized screens from database
+     *
+     * Queries screen contexts and their elements for the given package.
+     */
+    private suspend fun buildQuantizedScreens(packageName: String): List<QuantizedScreen> =
+        withContext(Dispatchers.IO) {
+            try {
+                val repository = screenContextRepository
+                if (repository == null) {
+                    Log.w(TAG, "No screen context repository available")
+                    return@withContext emptyList()
+                }
 
-            // Build quantized context from learned data
-            // In a real implementation, this would query the database for learned screens/elements
-            val screens = buildQuantizedScreens(packageName)
-            val navigation = buildQuantizedNavigation(packageName, screens)
-            val vocabulary = buildVocabulary(screens)
-            val commands = buildKnownCommands(packageName)
+                // Get all screens for this package
+                val screens = repository.getByApp(packageName)
+                if (screens.isEmpty()) {
+                    Log.d(TAG, "No screens found for $packageName")
+                    return@withContext emptyList()
+                }
 
-            return QuantizedContext(
-                packageName = packageName,
-                appName = appName,
-                versionCode = packageInfo.longVersionCode,
-                versionName = packageInfo.versionName ?: "unknown",
-                generatedAt = System.currentTimeMillis(),
-                screens = screens,
-                navigation = navigation,
-                vocabulary = vocabulary,
-                knownCommands = commands
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to generate quantized context for $packageName", e)
-            return null
+                Log.d(TAG, "Found ${screens.size} screens for $packageName")
+
+                // Convert each screen to QuantizedScreen with elements
+                screens.map { screen ->
+                    val elements = getElementsForScreen(screen.screenHash)
+                        .filter { it.isClickable || it.isEditable || it.isCheckable }
+                        .map { convertToQuantizedElement(it) }
+
+                    QuantizedScreen(
+                        screenHash = screen.screenHash,
+                        screenTitle = screen.windowTitle ?: screen.activityName ?: "Unknown",
+                        activityName = screen.activityName,
+                        elements = elements
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to build quantized screens for $packageName", e)
+                emptyList()
+            }
+        }
+
+    /**
+     * Get elements for a specific screen
+     *
+     * Uses getByScreenHashOnly query which requires only the screen hash.
+     */
+    private suspend fun getElementsForScreen(screenHash: String): List<ScrapedElementEntity> =
+        withContext(Dispatchers.IO) {
+            try {
+                val db = databaseManager
+                if (db == null) {
+                    Log.w(TAG, "No database manager available")
+                    return@withContext emptyList()
+                }
+
+                // Get elements by screen hash using the new query
+                db.scrapedElementQueries.getByScreenHashOnly(screenHash).executeAsList().map { row ->
+                    ScrapedElementEntity(
+                        id = row.id,
+                        elementHash = row.elementHash,
+                        appId = row.appId,
+                        uuid = row.uuid,
+                        className = row.className,
+                        viewIdResourceName = row.viewIdResourceName,
+                        text = row.text,
+                        contentDescription = row.contentDescription,
+                        bounds = row.bounds,
+                        isClickable = row.isClickable != 0L,
+                        isLongClickable = row.isLongClickable != 0L,
+                        isEditable = row.isEditable != 0L,
+                        isScrollable = row.isScrollable != 0L,
+                        isCheckable = row.isCheckable != 0L,
+                        isFocusable = row.isFocusable != 0L,
+                        isEnabled = row.isEnabled != 0L,
+                        depth = row.depth.toInt(),
+                        indexInParent = row.indexInParent.toInt(),
+                        scrapedAt = row.scrapedAt,
+                        semanticRole = row.semanticRole,
+                        inputType = row.inputType,
+                        visualWeight = row.visualWeight,
+                        isRequired = (row.isRequired ?: 0L) != 0L,
+                        formGroupId = row.formGroupId,
+                        placeholderText = row.placeholderText,
+                        validationPattern = row.validationPattern,
+                        backgroundColor = row.backgroundColor
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to get elements for screen $screenHash", e)
+                emptyList()
+            }
+        }
+
+    /**
+     * Convert ScrapedElementEntity to QuantizedElement
+     */
+    private fun convertToQuantizedElement(entity: ScrapedElementEntity): QuantizedElement {
+        return QuantizedElement(
+            vuid = entity.uuid ?: entity.elementHash,
+            type = classifyElementType(entity.className),
+            label = entity.text
+                ?: entity.contentDescription
+                ?: entity.viewIdResourceName?.substringAfterLast("/")
+                ?: "unlabeled",
+            aliases = buildAliases(entity)
+        )
+    }
+
+    /**
+     * Build aliases list from element properties
+     */
+    private fun buildAliases(entity: ScrapedElementEntity): List<String> {
+        return listOfNotNull(
+            entity.text,
+            entity.contentDescription,
+            entity.viewIdResourceName?.substringAfterLast("/")
+        ).distinct().filter { it.isNotBlank() }.take(3)
+    }
+
+    /**
+     * Classify element type from Android className
+     */
+    private fun classifyElementType(className: String?): ElementType {
+        if (className == null) return ElementType.OTHER
+
+        return when {
+            className.contains("Button", ignoreCase = true) -> ElementType.BUTTON
+            className.contains("ImageButton", ignoreCase = true) -> ElementType.BUTTON
+            className.contains("EditText", ignoreCase = true) -> ElementType.TEXT_FIELD
+            className.contains("TextInput", ignoreCase = true) -> ElementType.TEXT_FIELD
+            className.contains("AutoComplete", ignoreCase = true) -> ElementType.TEXT_FIELD
+            className.contains("CheckBox", ignoreCase = true) -> ElementType.CHECKBOX
+            className.contains("Switch", ignoreCase = true) -> ElementType.SWITCH
+            className.contains("Toggle", ignoreCase = true) -> ElementType.SWITCH
+            className.contains("Spinner", ignoreCase = true) -> ElementType.DROPDOWN
+            className.contains("DropDown", ignoreCase = true) -> ElementType.DROPDOWN
+            className.contains("Tab", ignoreCase = true) -> ElementType.TAB
+            else -> ElementType.OTHER
         }
     }
 
-    private fun buildQuantizedScreens(packageName: String): List<QuantizedScreen> {
-        // In production, this queries the SQLDelight database for learned screens
-        // For now, return empty list - will be populated when exploration data is available
-        return emptyList()
-    }
-
-    private fun buildQuantizedNavigation(
+    /**
+     * Build quantized navigation from screen transitions
+     *
+     * Note: ScreenTransition table doesn't have package filtering, so we
+     * filter by screen hashes that belong to this package's screens.
+     */
+    private suspend fun buildQuantizedNavigation(
         packageName: String,
         screens: List<QuantizedScreen>
-    ): List<QuantizedNavigation> {
-        // In production, this queries navigation edges from database
-        return emptyList()
+    ): List<QuantizedNavigation> = withContext(Dispatchers.IO) {
+        try {
+            val db = databaseManager
+            if (db == null) {
+                Log.w(TAG, "No database manager available for navigation")
+                return@withContext emptyList()
+            }
+
+            val screenHashes = screens.map { it.screenHash }.toSet()
+            if (screenHashes.isEmpty()) {
+                return@withContext emptyList()
+            }
+
+            // Get all transitions and filter to those between our package's screens
+            db.screenTransitionQueries.getAll().executeAsList()
+                .filter { it.fromScreenHash in screenHashes && it.toScreenHash in screenHashes }
+                .map { transition ->
+                    // Get trigger element label from ScrapedElement if we have the hash
+                    val triggerLabel = transition.triggerElementHash?.let { hash ->
+                        try {
+                            db.scrapedElementQueries.getByHash(hash).executeAsOneOrNull()?.let {
+                                it.text ?: it.contentDescription ?: "action"
+                            }
+                        } catch (e: Exception) {
+                            null
+                        }
+                    } ?: transition.triggerAction
+
+                    QuantizedNavigation(
+                        fromScreenHash = transition.fromScreenHash,
+                        toScreenHash = transition.toScreenHash,
+                        triggerElementVuid = transition.triggerElementHash ?: "",
+                        triggerLabel = triggerLabel
+                    )
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to build navigation for $packageName", e)
+            emptyList()
+        }
     }
 
     private fun buildVocabulary(screens: List<QuantizedScreen>): Set<String> {
@@ -267,24 +470,96 @@ class AVUQuantizerIntegration(private val context: Context) : com.augmentalis.vo
             screen.elements.flatMap { element ->
                 listOf(element.label) + element.aliases
             }
-        }.toSet()
+        }.filter { it.isNotBlank() }.toSet()
     }
 
-    private fun buildKnownCommands(packageName: String): List<QuantizedCommand> {
-        // In production, this queries discovered commands from database
-        return emptyList()
+    /**
+     * Build known commands from generated commands
+     */
+    private suspend fun buildKnownCommands(packageName: String): List<QuantizedCommand> =
+        withContext(Dispatchers.IO) {
+            try {
+                val repository = generatedCommandRepository
+                if (repository == null) {
+                    Log.w(TAG, "No generated command repository available")
+                    return@withContext emptyList()
+                }
+
+                // Get all commands and filter by package (through element hash lookup)
+                // Since commands are linked to elements, we get all high-confidence commands
+                repository.getHighConfidence(0.5)
+                    .filter { it.isUserApproved == 1L || it.confidence >= 0.7 }
+                    .sortedByDescending { it.usageCount }
+                    .take(100) // Limit to top 100 commands
+                    .map { cmd ->
+                        QuantizedCommand(
+                            phrase = cmd.commandText,
+                            actionType = parseActionType(cmd.actionType),
+                            targetElementVuid = cmd.elementHash
+                        )
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to build commands for $packageName", e)
+                emptyList()
+            }
+        }
+
+    /**
+     * Parse action type string to enum
+     */
+    private fun parseActionType(actionType: String): QuantizedActionType {
+        return try {
+            QuantizedActionType.valueOf(actionType.uppercase())
+        } catch (e: Exception) {
+            QuantizedActionType.CLICK // Default fallback
+        }
     }
 
-    private fun hasLearnedData(packageName: String): Boolean {
-        // Check if database has exploration data for this package
-        // Placeholder - in production, query database
-        return false
+    /**
+     * Check if learned data exists for package
+     */
+    private suspend fun hasLearnedData(packageName: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val repository = learnAppRepository
+            if (repository == null) {
+                Log.w(TAG, "No learn app repository available")
+                return@withContext false
+            }
+
+            repository.isAppLearned(packageName)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to check learned data for $packageName", e)
+            false
+        }
     }
 
-    private fun getLearnedPackages(): List<String> {
-        // Query database for all learned packages
-        // Placeholder - in production, query database
-        return emptyList()
+    /**
+     * Get all learned packages
+     */
+    private suspend fun getLearnedPackages(): List<String> = withContext(Dispatchers.IO) {
+        try {
+            val repository = learnAppRepository
+            if (repository == null) {
+                Log.w(TAG, "No learn app repository available")
+                return@withContext emptyList()
+            }
+
+            repository.getAllLearnedApps().map { it.packageName }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get learned packages", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Called when exploration completes for a package
+     * Invalidates cache to ensure fresh data on next query
+     */
+    fun onExplorationCompleted(packageName: String) {
+        scope.launch {
+            invalidateCache(packageName)
+            Log.d(TAG, "Cache invalidated for $packageName after exploration")
+        }
     }
 
     // ============================================

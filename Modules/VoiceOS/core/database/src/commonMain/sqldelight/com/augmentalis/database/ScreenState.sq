@@ -54,6 +54,10 @@ ORDER BY discovered_at ASC;
 deleteScreenStatesForPackage:
 DELETE FROM screen_states WHERE package_name = ?;
 
+-- FIX D-P1-2: Delete individual screen state by screen_hash and package_name
+deleteScreenState:
+DELETE FROM screen_states WHERE screen_hash = ? AND package_name = ?;
+
 -- Count screens for package
 getTotalScreensForPackage:
 SELECT COUNT(*) FROM screen_states WHERE package_name = ?;

@@ -80,7 +80,7 @@ dependencies {
     
     // Testing
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.25")
+    testImplementation(libs.kotlin.test.junit)
     testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
     testImplementation("org.mockito:mockito-core:4.11.0")

@@ -29,7 +29,13 @@ data class GeneratedCommandDTO(
     val isUserApproved: Long = 0,  // SQLite Boolean (0/1)
     val usageCount: Long = 0,
     val lastUsed: Long? = null,
-    val createdAt: Long
+    val createdAt: Long,
+    // Schema v3: Version tracking
+    val appId: String = "",
+    val appVersion: String = "",
+    val versionCode: Long = 0,
+    val lastVerified: Long? = null,
+    val isDeprecated: Long = 0
 )
 
 /**
@@ -47,6 +53,11 @@ fun Commands_generated.toGeneratedCommandDTO(): GeneratedCommandDTO {
         isUserApproved = isUserApproved,
         usageCount = usageCount,
         lastUsed = lastUsed,
-        createdAt = createdAt
+        createdAt = createdAt,
+        appId = appId,
+        appVersion = appVersion,
+        versionCode = versionCode,
+        lastVerified = lastVerified,
+        isDeprecated = isDeprecated
     )
 }

@@ -37,6 +37,12 @@ SELECT * FROM screen_context WHERE id = ?;
 getByHash:
 SELECT * FROM screen_context WHERE screenHash = ?;
 
+getByScreenHash:
+SELECT * FROM screen_context WHERE screenHash = ?;
+
+getScreenByHash:
+SELECT * FROM screen_context WHERE screenHash = ?;
+
 getByApp:
 SELECT * FROM screen_context WHERE appId = ? ORDER BY lastScraped DESC;
 
@@ -53,6 +59,9 @@ getAll:
 SELECT * FROM screen_context ORDER BY lastScraped DESC;
 
 updateVisit:
+UPDATE screen_context SET visitCount = visitCount + 1, lastScraped = ? WHERE screenHash = ?;
+
+incrementVisitCount:
 UPDATE screen_context SET visitCount = visitCount + 1, lastScraped = ? WHERE screenHash = ?;
 
 deleteById:

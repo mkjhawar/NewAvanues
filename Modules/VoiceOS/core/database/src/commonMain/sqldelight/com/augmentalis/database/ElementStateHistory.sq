@@ -53,3 +53,10 @@ DELETE FROM element_state_history;
 
 count:
 SELECT COUNT(*) FROM element_state_history;
+
+-- Get current (most recent) state for an element
+getCurrentState:
+SELECT * FROM element_state_history
+WHERE elementHash = ? AND stateType = ?
+ORDER BY changedAt DESC
+LIMIT 1;

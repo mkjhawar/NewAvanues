@@ -1,6 +1,6 @@
 # NewAvanues - Project Instructions
 
-NewAvanues - Platform-centric KMP monorepo.
+NewAvanues - Platform-centric KMP monorepo (AVA, VoiceOS, WebAvanue, Cockpit, NLU)
 
 ---
 
@@ -17,7 +17,7 @@ NewAvanues - Platform-centric KMP monorepo.
 
 ---
 
-## Monorepo Structure
+## PROJECT STRUCTURE
 
 | Path | Purpose | Case |
 |------|---------|------|
@@ -26,8 +26,50 @@ NewAvanues - Platform-centric KMP monorepo.
 | `desktop/` | Desktop apps | lowercase (Gradle) |
 | `Common/` | KMP shared libraries | PascalCase |
 | `Modules/` | Feature modules | PascalCase |
+| `Modules/AVA/` | AI assistant platform | PascalCase |
+| `Modules/VoiceOS/` | Voice-first accessibility | PascalCase |
+| `Modules/WebAvanue/` | Web platform (Tauri + React) | PascalCase |
+| `Modules/Cockpit/` | Management dashboard | PascalCase |
+| `Modules/NLU/` | Natural language understanding | PascalCase |
 | `Shared/` | Assets, configs | PascalCase |
 | `Docs/` | Documentation | PascalCase |
+
+---
+
+## PROJECT-SPECIFIC TECH
+
+| Component | Technology |
+|-----------|------------|
+| Build | Gradle composite builds + version catalogs |
+| Shared logic | KMP (Kotlin Multiplatform) |
+| Database | SQLDelight (NOT Room) |
+| DI | Koin |
+| Web | Tauri + React + TypeScript |
+| Language Server | Kotlin LSP (for DSL/tooling) |
+| Web Components | React + TypeScript (embeddable UI) |
+| IDE Plugins | VS Code (TypeScript) + IntelliJ (Kotlin + JCEF) |
+
+---
+
+## LSP ARCHITECTURE (AVAMagic Tooling)
+
+**Layer 1: Core Language Server (Kotlin)**
+- DSL parsing, validation, code generation
+- Implements: Language Server Protocol (LSP)
+- Size: ~25MB (shared across all tools)
+- Reuses: ThemeCompiler.kt, VUIDCreator, existing MagicUI logic
+
+**Layer 2: Web UI Components (React + TypeScript)**
+- Theme color picker, property inspector, live preview
+- Monaco Editor integration (VS Code's editor)
+- Size: ~5MB (cached, embeddable everywhere)
+
+**Layer 3: Platform Integrations**
+- VS Code Extension: TypeScript + LSP client (~2MB)
+- IntelliJ Plugin: Kotlin + JCEF browser (~3MB)
+- Standalone Apps: Compose Desktop + CEF OR Tauri v2
+
+**Total Ecosystem:** ~45MB (90% code reuse across all tools)
 
 ---
 
@@ -54,6 +96,31 @@ NewAvanues - Platform-centric KMP monorepo.
 
 ---
 
+## DEVELOPMENT BRANCHES
+
+| Branch | Purpose |
+|--------|---------|
+| Avanues-Main | Main integration |
+| AVA-Development | AVA features |
+| VoiceOS-Development | VoiceOS features |
+| WebAvanue-Development | WebAvanue features |
+| Cockpit-Development | Cockpit features |
+| NLU-Development | NLU features |
+
+---
+
+## WORKTREES
+
+| Worktree | Path | Branch |
+|----------|------|--------|
+| NewAvanues-AVA | /Volumes/M-Drive/Coding/NewAvanues-AVA | AVA-Development |
+| NewAvanues-VoiceOS | /Volumes/M-Drive/Coding/NewAvanues-VoiceOS | VoiceOS-Development |
+| NewAvanues-WebAvanue | /Volumes/M-Drive/Coding/NewAvanues-WebAvanue | WebAvanue-Development |
+| NewAvanues-Cockpit | /Volumes/M-Drive/Coding/NewAvanues-Cockpit | Cockpit-Development |
+| NewAvanues-NLU | /Volumes/M-Drive/Coding/NewAvanues-NLU | NLU-Development |
+
+---
+
 ## Documentation Structure
 
 | Path | Purpose |
@@ -62,6 +129,8 @@ NewAvanues - Platform-centric KMP monorepo.
 | `Docs/{App}/MasterSpecs/` | Universal specs |
 | `Docs/{App}/Platform/{Platform}/` | Platform-specific |
 | `Docs/Common/{Domain}/` | Shared lib docs |
+| `Docs/{Module}/LivingDocs/LD-*.md` | Living Docs |
+| `.ideacode/registries/` | Registries |
 
 ---
 
@@ -106,6 +175,10 @@ Y = last digit of year (5 for 2025), DD = day, MM = month, HH = hour
 | Clean Architecture | SOLID principles, no legacy code |
 | Cross-Platform | Design for all platforms from start |
 | No Delete | Never delete without approval + pros/cons |
+| Database | SQLDelight ONLY (never Room) |
+| Module work | Check module-level .claude/CLAUDE.md first |
+| Cross-module | Check CROSS-MODULE-DEPENDENCIES.md |
+| Worktrees | NEVER switch worktrees without approval |
 
 ---
 
@@ -115,4 +188,4 @@ All rules from `/Volumes/M-Drive/Coding/.claude/CLAUDE.md` apply.
 
 ---
 
-**Updated:** 2025-12-06 | **Version:** 10.3
+**Updated:** 2025-12-26 | **Version:** 12.3.0

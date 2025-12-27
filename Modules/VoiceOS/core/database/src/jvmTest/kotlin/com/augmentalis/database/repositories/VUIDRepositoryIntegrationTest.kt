@@ -7,10 +7,10 @@
 
 package com.augmentalis.database.repositories
 
-import com.augmentalis.database.dto.VUIDElementDTO
-import com.augmentalis.database.dto.VUIDHierarchyDTO
-import com.augmentalis.database.dto.VUIDAnalyticsDTO
-import com.augmentalis.database.dto.VUIDAliasDTO
+import com.augmentalis.database.dto.UUIDElementDTO
+import com.augmentalis.database.dto.UUIDHierarchyDTO
+import com.augmentalis.database.dto.UUIDAnalyticsDTO
+import com.augmentalis.database.dto.UUIDAliasDTO
 import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 
@@ -21,7 +21,7 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     @Test
     fun testElementInsertAndGet() = runTest {
         val repo = databaseManager.uuids
-        val element = VUIDElementDTO("elem-001", "Submit Button", "BUTTON", "Primary action", null, true, 5, now(), null, null)
+        val element = UUIDElementDTO("elem-001", "Submit Button", "BUTTON", "Primary action", null, true, 5, now(), null, null)
 
         repo.insertElement(element)
 
@@ -35,7 +35,7 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     @Test
     fun testElementUpdate() = runTest {
         val repo = databaseManager.uuids
-        val element = VUIDElementDTO("elem-001", "Original", "BUTTON", null, null, true, 0, now(), null, null)
+        val element = UUIDElementDTO("elem-001", "Original", "BUTTON", null, null, true, 0, now(), null, null)
 
         repo.insertElement(element)
         repo.updateElement(element.copy(name = "Updated", priority = 10, isEnabled = false))
@@ -50,7 +50,7 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testElementDelete() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
         assertEquals(1, repo.countElements())
 
         repo.deleteElement("elem-001")
@@ -61,9 +61,9 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testGetElementsByType() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("e1", "Button1", "BUTTON", null, null, true, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("e2", "Button2", "BUTTON", null, null, true, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("e3", "Text1", "TEXT", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("e1", "Button1", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("e2", "Button2", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("e3", "Text1", "TEXT", null, null, true, 0, now(), null, null))
 
         val buttons = repo.getElementsByType("BUTTON")
         assertEquals(2, buttons.size)
@@ -74,10 +74,10 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testGetChildrenOfParent() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("parent", "Parent", "CONTAINER", null, null, true, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("child1", "Child1", "BUTTON", null, "parent", true, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("child2", "Child2", "BUTTON", null, "parent", true, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("orphan", "Orphan", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("parent", "Parent", "CONTAINER", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("child1", "Child1", "BUTTON", null, "parent", true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("child2", "Child2", "BUTTON", null, "parent", true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("orphan", "Orphan", "BUTTON", null, null, true, 0, now(), null, null))
 
         val children = repo.getChildrenOfParent("parent")
         assertEquals(2, children.size)
@@ -88,9 +88,9 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testGetEnabledElements() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("e1", "Enabled1", "BUTTON", null, null, true, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("e2", "Disabled", "BUTTON", null, null, false, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("e3", "Enabled2", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("e1", "Enabled1", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("e2", "Disabled", "BUTTON", null, null, false, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("e3", "Enabled2", "BUTTON", null, null, true, 0, now(), null, null))
 
         val enabled = repo.getEnabledElements()
         assertEquals(2, enabled.size)
@@ -101,9 +101,9 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testSearchByName() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("e1", "Submit Button", "BUTTON", null, null, true, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("e2", "Cancel Button", "BUTTON", null, null, true, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("e3", "Text Field", "TEXT", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("e1", "Submit Button", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("e2", "Cancel Button", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("e3", "Text Field", "TEXT", null, null, true, 0, now(), null, null))
 
         val buttons = repo.searchByName("%Button%")
         assertEquals(2, buttons.size)
@@ -115,10 +115,10 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testHierarchyInsertAndGet() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("parent", "Parent", "CONTAINER", null, null, true, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("child", "Child", "BUTTON", null, "parent", true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("parent", "Parent", "CONTAINER", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("child", "Child", "BUTTON", null, "parent", true, 0, now(), null, null))
 
-        val hierarchy = VUIDHierarchyDTO(0, "parent", "child", 1, "/parent/child", 0)
+        val hierarchy = UUIDHierarchyDTO(0, "parent", "child", 1, "/parent/child", 0)
         repo.insertHierarchy(hierarchy)
 
         val retrieved = repo.getHierarchyByParent("parent")
@@ -131,12 +131,12 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testDeleteHierarchyByParent() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("parent", "P", "CONTAINER", null, null, true, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("child1", "C1", "BUTTON", null, "parent", true, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("child2", "C2", "BUTTON", null, "parent", true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("parent", "P", "CONTAINER", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("child1", "C1", "BUTTON", null, "parent", true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("child2", "C2", "BUTTON", null, "parent", true, 0, now(), null, null))
 
-        repo.insertHierarchy(VUIDHierarchyDTO(0, "parent", "child1", 1, "/parent/child1", 0))
-        repo.insertHierarchy(VUIDHierarchyDTO(0, "parent", "child2", 1, "/parent/child2", 1))
+        repo.insertHierarchy(UUIDHierarchyDTO(0, "parent", "child1", 1, "/parent/child1", 0))
+        repo.insertHierarchy(UUIDHierarchyDTO(0, "parent", "child2", 1, "/parent/child2", 1))
 
         assertEquals(2, repo.getHierarchyByParent("parent").size)
 
@@ -151,9 +151,9 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testAnalyticsInsertAndGet() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
 
-        val analytics = VUIDAnalyticsDTO("elem-001", 5, past(10000), now(), 150, 4, 1, "ACTIVE")
+        val analytics = UUIDAnalyticsDTO("elem-001", 5, past(10000), now(), 150, 4, 1, "ACTIVE")
         repo.insertAnalytics(analytics)
 
         val retrieved = repo.getAnalyticsByUuid("elem-001")
@@ -167,8 +167,8 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testIncrementAccessCount() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
-        repo.insertAnalytics(VUIDAnalyticsDTO("elem-001", 5, now(), now(), 100, 0, 0, "ACTIVE"))
+        repo.insertElement(UUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertAnalytics(UUIDAnalyticsDTO("elem-001", 5, now(), now(), 100, 0, 0, "ACTIVE"))
 
         repo.incrementAccessCount("elem-001", now())
 
@@ -180,8 +180,8 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testRecordExecution() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
-        repo.insertAnalytics(VUIDAnalyticsDTO("elem-001", 0, now(), now(), 0, 3, 1, "ACTIVE"))
+        repo.insertElement(UUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertAnalytics(UUIDAnalyticsDTO("elem-001", 0, now(), now(), 0, 3, 1, "ACTIVE"))
 
         repo.recordExecution("elem-001", 250, true, now())
 
@@ -194,13 +194,13 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testGetMostAccessed() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("e1", "Low", "BUTTON", null, null, true, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("e2", "High", "BUTTON", null, null, true, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("e3", "Mid", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("e1", "Low", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("e2", "High", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("e3", "Mid", "BUTTON", null, null, true, 0, now(), null, null))
 
-        repo.insertAnalytics(VUIDAnalyticsDTO("e1", 5, now(), now(), 100, 0, 0, "ACTIVE"))
-        repo.insertAnalytics(VUIDAnalyticsDTO("e2", 50, now(), now(), 100, 0, 0, "ACTIVE"))
-        repo.insertAnalytics(VUIDAnalyticsDTO("e3", 20, now(), now(), 100, 0, 0, "ACTIVE"))
+        repo.insertAnalytics(UUIDAnalyticsDTO("e1", 5, now(), now(), 100, 0, 0, "ACTIVE"))
+        repo.insertAnalytics(UUIDAnalyticsDTO("e2", 50, now(), now(), 100, 0, 0, "ACTIVE"))
+        repo.insertAnalytics(UUIDAnalyticsDTO("e3", 20, now(), now(), 100, 0, 0, "ACTIVE"))
 
         val mostAccessed = repo.getMostAccessed(2)
         assertEquals(2, mostAccessed.size)
@@ -213,9 +213,9 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testAliasInsertAndGet() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
 
-        val alias = VUIDAliasDTO(0, "submit-btn", "elem-001", true, now())
+        val alias = UUIDAliasDTO(0, "submit-btn", "elem-001", true, now())
         repo.insertAlias(alias)
 
         assertTrue(repo.aliasExists("submit-btn"))
@@ -229,11 +229,11 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testGetAliasesForUuid() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
 
-        repo.insertAlias(VUIDAliasDTO(0, "alias1", "elem-001", true, now()))
-        repo.insertAlias(VUIDAliasDTO(0, "alias2", "elem-001", false, now()))
-        repo.insertAlias(VUIDAliasDTO(0, "alias3", "elem-001", false, now()))
+        repo.insertAlias(UUIDAliasDTO(0, "alias1", "elem-001", true, now()))
+        repo.insertAlias(UUIDAliasDTO(0, "alias2", "elem-001", false, now()))
+        repo.insertAlias(UUIDAliasDTO(0, "alias3", "elem-001", false, now()))
 
         val aliases = repo.getAliasesForUuid("elem-001")
         assertEquals(3, aliases.size)
@@ -243,8 +243,8 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testDeleteAliases() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
-        repo.insertAlias(VUIDAliasDTO(0, "to-delete", "elem-001", false, now()))
+        repo.insertElement(UUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertAlias(UUIDAliasDTO(0, "to-delete", "elem-001", false, now()))
 
         assertTrue(repo.aliasExists("to-delete"))
 
@@ -259,12 +259,12 @@ class VUIDRepositoryIntegrationTest : BaseRepositoryTest() {
     fun testDeleteAllElements() = runTest {
         val repo = databaseManager.uuids
 
-        repo.insertElement(VUIDElementDTO("e1", "E1", "BUTTON", null, null, true, 0, now(), null, null))
-        repo.insertElement(VUIDElementDTO("e2", "E2", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("e1", "E1", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(UUIDElementDTO("e2", "E2", "BUTTON", null, null, true, 0, now(), null, null))
 
-        repo.insertHierarchy(VUIDHierarchyDTO(0, "e1", "e2", 1, "/e1/e2", 0))
-        repo.insertAnalytics(VUIDAnalyticsDTO("e1", 0, now(), now(), 0, 0, 0, "ACTIVE"))
-        repo.insertAlias(VUIDAliasDTO(0, "alias1", "e1", false, now()))
+        repo.insertHierarchy(UUIDHierarchyDTO(0, "e1", "e2", 1, "/e1/e2", 0))
+        repo.insertAnalytics(UUIDAnalyticsDTO("e1", 0, now(), now(), 0, 0, 0, "ACTIVE"))
+        repo.insertAlias(UUIDAliasDTO(0, "alias1", "e1", false, now()))
 
         assertEquals(2, repo.countElements())
 

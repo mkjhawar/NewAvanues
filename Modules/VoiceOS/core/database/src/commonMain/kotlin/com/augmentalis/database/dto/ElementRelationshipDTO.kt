@@ -11,7 +11,7 @@
 
 package com.augmentalis.database.dto
 
-import com.augmentalis.database.Element_relationship
+import com.augmentalis.database.element.Element_relationship
 
 /**
  * DTO for element relationships (label-for, triggers, navigates-to, etc.)
