@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 /**
  * LearnAppCore.kt - Shared business logic for LearnApp modes
  *
@@ -9,6 +10,14 @@
  * Related: JIT-LearnApp Merge (ADR-001, ADR-002, ADR-003)
  *
  * @since 1.1.0 (JIT-LearnApp Merge)
+ *
+ * @deprecated Use com.augmentalis.learnappcore.core.LearnAppCore from libraries/LearnAppCore instead.
+ * This duplicate will be removed in a future version. The library version has:
+ * - SOLID-compliant interfaces (IElementProcessorInterface, IBatchManagerInterface)
+ * - Thread-safe data structures (ArrayBlockingQueue, LRU cache)
+ * - Cross-platform detection using CrossPlatformDetector
+ * - Database retry logic for resilience
+ * See: VOSFIX-004 in VoiceOS-Backlog-CodeAnalysis-251227-V1.md
  */
 
 package com.augmentalis.voiceoscore.learnapp.core
@@ -62,6 +71,13 @@ import kotlinx.coroutines.withContext
  * @param uuidGenerator Third-party UUID generator for element identification
  * @param versionDetector App version detector for version-aware command creation
  */
+@Deprecated(
+    message = "Use com.augmentalis.learnappcore.core.LearnAppCore instead",
+    replaceWith = ReplaceWith(
+        "LearnAppCore",
+        "com.augmentalis.learnappcore.core.LearnAppCore"
+    )
+)
 class LearnAppCore(
     private val context: Context,
     private val database: VoiceOSDatabaseManager,

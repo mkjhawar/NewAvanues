@@ -1,18 +1,22 @@
 /**
  * ThemeUtils.kt
  * Path: /apps/VoiceCursor/src/main/java/com/augmentalis/voiceos/cursor/ui/ThemeUtils.kt
- * 
+ *
  * Created: 2025-01-26 03:30 PST
  * Last Modified: 2025-01-23
  * Author: Manoj Jhawar
  * Version: 2.0.0
- * 
+ *
  * Purpose: ARVision theme utilities with glass morphism effects for VoiceCursor
  * Module: VoiceCursor System
- * 
+ *
  * Changelog:
  * - v1.0.0 (2025-01-26 03:30 PST): Initial theme stubs for compilation validation
  * - v2.0.0 (2025-01-23): Full implementation with glass morphism effects
+ *
+ * @deprecated Scheduled for consolidation into libraries/VoiceUIElements
+ * See: VOSFIX-006 in VoiceOS-Backlog-CodeAnalysis-251227-V1.md
+ * ARVisionColors and DepthLevel enum should be merged with VoiceOSCore version.
  */
 
 package com.augmentalis.voiceos.cursor.ui

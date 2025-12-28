@@ -43,7 +43,7 @@ public class VoiceOSServiceBinder extends IVoiceOSService.Stub {
     public boolean isServiceReady() {
         Log.d(TAG, "IPC: isServiceReady() called");
         try {
-            return VoiceOSService.isServiceRunning() && service.isServiceReady;
+            return VoiceOSService.isServiceCurrentlyRunning() && service.isServiceReady;
         } catch (Exception e) {
             Log.e(TAG, "Error checking service ready state", e);
             return false;
@@ -54,7 +54,7 @@ public class VoiceOSServiceBinder extends IVoiceOSService.Stub {
     public boolean executeCommand(String commandText) {
         Log.d(TAG, "IPC: executeCommand(" + commandText + ")");
         try {
-            return VoiceOSService.executeCommand(commandText);
+            return VoiceOSService.executeStaticCommand(commandText);
         } catch (Exception e) {
             Log.e(TAG, "Error executing command via IPC", e);
             return false;

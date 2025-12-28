@@ -440,13 +440,9 @@ class NumberOverlayManagerTest : BaseVoiceOSTest() {
         testScheduler.advanceUntilIdle()
 
         val newConfig = NumberOverlayConfig(
-            style = NumberOverlayStyle(
-                badgeSize = 56, // Larger for accessibility
-                fontSize = 20f   // Larger text
-            ),
-            renderConfig = NumberOverlayRenderConfig(
-                enabled = true
-            )
+            enabled = true,
+            styleVariant = StyleVariant.LARGE,  // Use large variant for accessibility
+            scaleFactor = 1.5f  // Larger scale for accessibility
         )
 
         // Act
@@ -455,8 +451,8 @@ class NumberOverlayManagerTest : BaseVoiceOSTest() {
 
         // Assert
         val currentConfig = manager.getConfig()
-        assertThat(currentConfig.style.badgeSize).isEqualTo(56)
-        assertThat(currentConfig.style.fontSize).isEqualTo(20f)
+        assertThat(currentConfig.styleVariant).isEqualTo(StyleVariant.LARGE)
+        assertThat(currentConfig.scaleFactor).isEqualTo(1.5f)
     }
 
     // ====================

@@ -83,6 +83,7 @@ dependencies {
     // VOS4 Dependencies
     implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))
     implementation(project(":Modules:VoiceOS:libraries:UUIDCreator"))
+    implementation(project(":Modules:VoiceOS:libraries:DeviceManager")) // GPU capabilities
 
     // Performance Monitoring
     implementation("androidx.metrics:metrics-performance:1.0.0-alpha04")

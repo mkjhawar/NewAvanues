@@ -12,7 +12,7 @@
 package com.augmentalis.voiceoscore.stress
 
 import com.augmentalis.voiceoscore.BaseVoiceOSTest
-import com.augmentalis.voiceoscore.accessibility.IVoiceOSContext
+import com.augmentalis.voiceoscore.accessibility.VoiceOSService
 import com.augmentalis.voiceoscore.accessibility.managers.ActionCoordinator
 import com.augmentalis.voiceoscore.performance.MemoryManager
 import com.augmentalis.voiceoscore.performance.PerformanceMonitor
@@ -40,7 +40,7 @@ import kotlin.random.Random
  */
 class ConcurrencyStressTest : BaseVoiceOSTest() {
 
-    private lateinit var mockContext: IVoiceOSContext
+    private lateinit var mockService: VoiceOSService
     private lateinit var coordinator: ActionCoordinator
     private lateinit var memoryManager: MemoryManager
     private lateinit var performanceMonitor: PerformanceMonitor
@@ -48,8 +48,8 @@ class ConcurrencyStressTest : BaseVoiceOSTest() {
     @Before
     override fun setUp() {
         super.setUp()
-        mockContext = mockk(relaxed = true)
-        coordinator = ActionCoordinator(mockContext)
+        mockService = mockk(relaxed = true)
+        coordinator = ActionCoordinator(mockService)
         memoryManager = MemoryManager()
         performanceMonitor = PerformanceMonitor()
     }
@@ -71,10 +71,10 @@ class ConcurrencyStressTest : BaseVoiceOSTest() {
             testScope.backgroundScope.launch {
                 repeat(100) { opId ->
                     try {
-                        coordinator.executeActionAsync("thread_${threadId}_op_$opId") {
-                            delay(Random.nextLong(1, 10))
-                            successCount.incrementAndGet()
+                        coordinator.executeActionAsync("thread_${threadId}_op_$opId") { success ->
+                            if (success) successCount.incrementAndGet()
                         }
+                        Thread.sleep(Random.nextLong(1, 10))
                     } catch (e: Exception) {
                         failureCount.incrementAndGet()
                     } finally {
@@ -158,7 +158,7 @@ class ConcurrencyStressTest : BaseVoiceOSTest() {
 
         // Cache should remain within size limits despite high load
         val cacheSizeMB = memoryManager.getCacheSizeMB()
-        assertThat(cacheSizeMB).isAtMost(60) // 50MB + margin
+        assertThat(cacheSizeMB).isAtMost(60L) // 50MB + margin
 
         println("✓ 8,000 cache operations completed, final cache size: ${cacheSizeMB}MB")
     }
@@ -178,10 +178,10 @@ class ConcurrencyStressTest : BaseVoiceOSTest() {
             while (System.currentTimeMillis() - startTime < testDurationMs) {
                 launch {
                     try {
-                        coordinator.executeActionAsync("sustained_op") {
-                            delay(Random.nextLong(5, 15))
+                        coordinator.executeActionAsync("sustained_op") { success ->
+                            if (success) opsCompleted.incrementAndGet()
                         }
-                        opsCompleted.incrementAndGet()
+                        Thread.sleep(Random.nextLong(5, 15))
                     } catch (e: Exception) {
                         // Continue on errors
                     }
@@ -195,7 +195,7 @@ class ConcurrencyStressTest : BaseVoiceOSTest() {
         val actualDuration = System.currentTimeMillis() - startTime
         val throughput = opsCompleted.get().toDouble() / (actualDuration / 1000.0)
 
-        assertThat(opsCompleted.get()).isGreaterThan(100) // At least some ops completed
+        assertThat(opsCompleted.get()).isGreaterThan(100L) // At least some ops completed
         println("✓ Sustained load: ${opsCompleted.get()} ops in ${actualDuration}ms (${throughput} ops/sec)")
     }
 
@@ -322,7 +322,7 @@ class ConcurrencyStressTest : BaseVoiceOSTest() {
         val finalCacheSize = memoryManager.getCacheSizeMB()
 
         // Cache should have evicted items to stay within limit
-        assertThat(finalCacheSize).isLessThan(60) // 50MB + margin
+        assertThat(finalCacheSize).isLessThan(60L) // 50MB + margin
         assertThat(finalCacheSize).isGreaterThan(startingCacheSize) // But did cache something
 
         println("✓ Cache eviction under pressure: ${finalCacheSize}MB (limit: 50MB)")
@@ -374,10 +374,10 @@ class ConcurrencyStressTest : BaseVoiceOSTest() {
         repeat(1000) { i ->
             testScope.backgroundScope.launch {
                 try {
-                    coordinator.executeActionAsync("cleanup_test_$i") {
-                        delay(Random.nextLong(1, 20))
+                    coordinator.executeActionAsync("cleanup_test_$i") { success ->
+                        if (success) opsCount.incrementAndGet()
                     }
-                    opsCount.incrementAndGet()
+                    Thread.sleep(Random.nextLong(1, 20))
                 } catch (e: Exception) {
                     // Safe
                 }

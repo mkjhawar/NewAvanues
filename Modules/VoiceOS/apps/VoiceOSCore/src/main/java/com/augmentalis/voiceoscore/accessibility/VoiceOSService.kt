@@ -164,7 +164,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * - Hybrid foreground service (only when needed)
  */
 // @dagger.hilt.android.AndroidEntryPoint - DISABLED: Hilt doesn't support AccessibilityService
-class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceInternal {
+class VoiceOSService : AccessibilityService(), IVoiceOSServiceLocal, IVoiceOSServiceInternal {
     // Note: IVoiceOSServiceInternal extends IVoiceOSContext, so we get both interfaces
 
     companion object {
@@ -2678,7 +2678,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
         ipcManager.registerDynamicCommand(commandText, actionJson)
 
     // ============================================================
-    // IVoiceOSService Interface Implementation
+    // IVoiceOSServiceLocal Interface Implementation
     // ============================================================
 
     override fun isServiceReady(): Boolean = isServiceReady
@@ -2687,10 +2687,10 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
     override fun getStatus(): String {
         return when {
-            !isServiceReady -> IVoiceOSService.STATE_INITIALIZING
-            isListening() -> IVoiceOSService.STATE_LISTENING
-            isCommandProcessing.get() -> IVoiceOSService.STATE_PROCESSING
-            else -> IVoiceOSService.STATE_READY
+            !isServiceReady -> IVoiceOSServiceLocal.STATE_INITIALIZING
+            isListening() -> IVoiceOSServiceLocal.STATE_LISTENING
+            isCommandProcessing.get() -> IVoiceOSServiceLocal.STATE_PROCESSING
+            else -> IVoiceOSServiceLocal.STATE_READY
         }
     }
 
@@ -2806,7 +2806,7 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
         )
     }
 
-    override fun checkHealth(): IVoiceOSService.HealthStatus {
+    override fun checkHealth(): IVoiceOSServiceLocal.HealthStatus {
         val isDatabaseReady = try {
             dbManager.sqlDelightManager.getDatabase() != null
         } catch (e: Exception) {
@@ -2815,17 +2815,17 @@ class VoiceOSService : AccessibilityService(), IVoiceOSService, IVoiceOSServiceI
 
         val isHealthy = isServiceReady && isDatabaseReady
         val status = when {
-            isHealthy -> IVoiceOSService.HealthStatus.Status.HEALTHY
-            isServiceReady -> IVoiceOSService.HealthStatus.Status.DEGRADED
-            else -> IVoiceOSService.HealthStatus.Status.UNHEALTHY
+            isHealthy -> IVoiceOSServiceLocal.HealthStatus.Status.HEALTHY
+            isServiceReady -> IVoiceOSServiceLocal.HealthStatus.Status.DEGRADED
+            else -> IVoiceOSServiceLocal.HealthStatus.Status.UNHEALTHY
         }
 
-        return IVoiceOSService.HealthStatus(
+        return IVoiceOSServiceLocal.HealthStatus(
             status = status,
             message = when (status) {
-                IVoiceOSService.HealthStatus.Status.HEALTHY -> "All systems operational"
-                IVoiceOSService.HealthStatus.Status.DEGRADED -> "Service running with limited functionality"
-                IVoiceOSService.HealthStatus.Status.UNHEALTHY -> "Service not ready"
+                IVoiceOSServiceLocal.HealthStatus.Status.HEALTHY -> "All systems operational"
+                IVoiceOSServiceLocal.HealthStatus.Status.DEGRADED -> "Service running with limited functionality"
+                IVoiceOSServiceLocal.HealthStatus.Status.UNHEALTHY -> "Service not ready"
             },
             details = mapOf(
                 "serviceReady" to isServiceReady,

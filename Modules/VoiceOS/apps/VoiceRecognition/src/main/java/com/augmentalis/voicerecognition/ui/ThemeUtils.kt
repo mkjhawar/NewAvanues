@@ -1,16 +1,17 @@
 /**
  * ThemeUtils.kt - Temporary theme utility stubs for VoiceUIElements
  * Path: /apps/VoiceRecognition/src/main/java/com/augmentalis/voicerecognition/ui/ThemeUtils.kt
- * 
+ *
  * Created: 2025-01-28
  * Author: VOS4 Development Team
  * Version: 1.0.0
- * 
+ *
  * Purpose: Temporary theme utility stubs matching VoiceCursor for consistency
  * Module: VoiceRecognition
- * 
- * NOTE: These should eventually be replaced with actual VoiceUIElements library imports
- * when the shared UI library is created
+ *
+ * @deprecated STUB FILE - Scheduled for consolidation into libraries/VoiceUIElements
+ * See: VOSFIX-006 in VoiceOS-Backlog-CodeAnalysis-251227-V1.md
+ * This file should be replaced with imports from com.augmentalis.voiceuielements.theme
  */
 
 package com.augmentalis.voicerecognition.ui

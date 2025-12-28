@@ -5,6 +5,11 @@
  * Author: VOS4 Development Team
  * Code-Reviewed-By: CCA
  * Created: 2025-01-28
+ *
+ * @deprecated Scheduled for consolidation into libraries/VoiceUIElements
+ * See: VOSFIX-006 in VoiceOS-Backlog-CodeAnalysis-251227-V1.md
+ * This is the most complete version and should be the base for consolidation.
+ * GlassMorphismDefaults and utility modifiers should be preserved.
  */
 package com.augmentalis.voiceoscore.accessibility.ui.utils
 

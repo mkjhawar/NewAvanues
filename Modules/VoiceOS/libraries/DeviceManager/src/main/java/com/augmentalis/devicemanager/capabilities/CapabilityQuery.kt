@@ -333,6 +333,11 @@ class CapabilityQuery(private val context: Context) {
             "foldable" -> snapshot.hardwareFeatures.isFoldable
             "smart_glass", "smartglass" -> snapshot.behavioralFeatures.isSmartGlass
 
+            // GPU Acceleration (not in snapshot, from GPUCapabilities)
+            "gpu", "gpu_acceleration", "rendereffect" -> GPUCapabilities.isGpuAccelerationAvailable
+            "blur" -> GPUCapabilities.isBlurSupported
+            "color_filter" -> GPUCapabilities.isColorFilterSupported
+
             else -> {
                 Log.w(TAG, "Unknown feature: $featureName")
                 false
@@ -388,6 +393,9 @@ class CapabilityQuery(private val context: Context) {
         if (snapshot.displayFeatures.isHdr) features.add("HDR Display")
         if (snapshot.displayFeatures.isWideColorGamut) features.add("Wide Color Gamut")
         if (snapshot.displayFeatures.hasXrSupport) features.add("XR Support")
+
+        // GPU Acceleration
+        if (GPUCapabilities.isGpuAccelerationAvailable) features.add("GPU Acceleration (RenderEffect)")
 
         return features.sorted()
     }

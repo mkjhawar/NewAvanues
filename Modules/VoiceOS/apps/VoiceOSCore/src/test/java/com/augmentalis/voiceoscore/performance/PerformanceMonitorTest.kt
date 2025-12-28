@@ -61,11 +61,11 @@ class PerformanceMonitorTest : BaseVoiceOSTest() {
 
         assertThat(stats).isNotNull()
         assertThat(stats!!.sampleCount).isEqualTo(1000)
-        assertThat(stats.p50).isLessThan(50) // Median < 50ms
-        assertThat(stats.p95).isLessThan(100) // 95th percentile < 100ms
-        assertThat(stats.p99).isLessThan(150) // 99th percentile < 150ms
-        assertThat(stats.minLatencyMs).isAtLeast(0)
-        assertThat(stats.maxLatencyMs).isGreaterThan(0)
+        assertThat(stats.p50).isLessThan(50L) // Median < 50ms
+        assertThat(stats.p95).isLessThan(100L) // 95th percentile < 100ms
+        assertThat(stats.p99).isLessThan(150L) // 99th percentile < 150ms
+        assertThat(stats.minLatencyMs).isAtLeast(0L)
+        assertThat(stats.maxLatencyMs).isGreaterThan(0L)
     }
 
     @Test
@@ -83,9 +83,9 @@ class PerformanceMonitorTest : BaseVoiceOSTest() {
         val stats = monitor.getStatistics("mixed_operation")
 
         assertThat(stats).isNotNull()
-        assertThat(stats!!.p95).isLessThan(100) // Most operations fast
-        assertThat(stats.p99).isGreaterThan(100) // Outliers captured in p99
-        assertThat(stats.maxLatencyMs).isGreaterThan(200) // Max catches outliers
+        assertThat(stats!!.p95).isLessThan(100L) // Most operations fast
+        assertThat(stats.p99).isGreaterThan(100L) // Outliers captured in p99
+        assertThat(stats.maxLatencyMs).isGreaterThan(200L) // Max catches outliers
     }
 
     @Test

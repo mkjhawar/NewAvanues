@@ -673,31 +673,53 @@ class MacroActions(
     )
 
     /**
-     * TODO: Browse macro marketplace
+     * Browse macro marketplace
      * Enhancement 5 - Deferred to V2
+     * @return Empty list until marketplace is implemented
+     * @deprecated Marketplace not implemented. Planned for V2.
      */
+    @Deprecated(
+        message = "Macro marketplace not yet implemented - planned for V2",
+        level = DeprecationLevel.WARNING
+    )
     suspend fun browseMacroMarketplace(
         @Suppress("UNUSED_PARAMETER") category: MacroCategory? = null,
         @Suppress("UNUSED_PARAMETER") searchQuery: String? = null
     ): List<MarketplaceMacro> {
-        TODO("Implement macro marketplace - see Q9 Enhancement 5 - Add to master TODO/backlog")
+        Log.w(TAG, "Macro marketplace not yet implemented (V2 feature)")
+        return emptyList()
     }
 
     /**
-     * TODO: Download macro from marketplace
+     * Download macro from marketplace
      * Enhancement 5 - Deferred to V2
+     * @return Stub macro until marketplace is implemented
+     * @deprecated Marketplace not implemented. Planned for V2.
      */
-    suspend fun downloadMacro(@Suppress("UNUSED_PARAMETER") macroId: String): Macro {
-        TODO("Implement macro download - see Q9 Enhancement 5 - Add to master TODO/backlog")
+    @Deprecated(
+        message = "Macro marketplace not yet implemented - planned for V2",
+        level = DeprecationLevel.WARNING
+    )
+    suspend fun downloadMacro(@Suppress("UNUSED_PARAMETER") macroId: String): Macro? {
+        Log.w(TAG, "Macro download not yet implemented (V2 feature)")
+        // Return null instead of throwing - caller should handle null case
+        return null
     }
 
     /**
-     * TODO: Upload custom macro to marketplace
+     * Upload custom macro to marketplace
      * Enhancement 5 - Deferred to V2
-     * Requires user-created macro support (Q9 future enhancement)
+     * @return null until marketplace is implemented (caller should check for null)
+     * @deprecated Marketplace not implemented. Planned for V2.
      */
-    suspend fun uploadMacro(@Suppress("UNUSED_PARAMETER") macro: Macro): String {
-        TODO("Implement macro upload - see Q9 Enhancement 5 - Add to master TODO/backlog")
+    @Deprecated(
+        message = "Macro marketplace not yet implemented - planned for V2",
+        level = DeprecationLevel.WARNING
+    )
+    suspend fun uploadMacro(@Suppress("UNUSED_PARAMETER") macro: Macro): String? {
+        Log.w(TAG, "Macro upload not yet implemented (V2 feature)")
+        // Return null instead of throwing - caller should handle null case
+        return null
     }
 }
 

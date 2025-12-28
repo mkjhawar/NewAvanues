@@ -165,10 +165,10 @@ class UIStateManagerTest : BaseVoiceOSTest() {
         val emissions1 = mutableListOf<UIState>()
         val emissions2 = mutableListOf<UIState>()
 
-        val job1 = kotlinx.coroutines.launch {
+        val job1 = backgroundScope.launch {
             manager.stateFlow.collect { emissions1.add(it) }
         }
-        val job2 = kotlinx.coroutines.launch {
+        val job2 = backgroundScope.launch {
             manager.stateFlow.collect { emissions2.add(it) }
         }
         testScheduler.advanceTimeBy(10)

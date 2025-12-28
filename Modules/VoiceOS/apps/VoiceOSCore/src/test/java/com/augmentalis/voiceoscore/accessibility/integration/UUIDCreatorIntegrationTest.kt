@@ -11,8 +11,7 @@ package com.augmentalis.voiceoscore.accessibility.integration
 import android.content.Context
 import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
-// DISABLED: Room import - UUIDCreatorDatabase migrated to SQLDelight
-// import androidx.room.Room
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.augmentalis.uuidcreator.UUIDCreator
 import com.augmentalis.uuidcreator.database.UUIDCreatorDatabase
@@ -30,13 +29,8 @@ import kotlin.test.*
 /**
  * Comprehensive test suite for UUIDCreator integration with VoiceAccessibility
  *
- * DISABLED: Needs migration to SQLDelight-based testing.
- * Previously used Room in-memory database which is no longer applicable.
- *
- * TODO: Update to use SQLDelight in-memory database when available
- * TODO: See libraries/core/database tests for SQLDelight testing patterns
+ * Uses Robolectric for Android framework components and Room in-memory database for testing
  */
-@org.junit.Ignore("Disabled pending SQLDelight migration - UUIDCreatorDatabase is no longer Room-based")
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28, 29, 30, 31, 32, 33, 34])
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -61,28 +55,25 @@ class UUIDCreatorIntegrationTest {
         // Get Robolectric application context
         context = ApplicationProvider.getApplicationContext()
 
-        // DISABLED: Room database no longer used after SQLDelight migration
-        // TODO: Update to use SQLDelight in-memory database
-        /*
+        // Create in-memory database for testing
         database = Room.inMemoryDatabaseBuilder(
             context,
             UUIDCreatorDatabase::class.java
         )
         .allowMainThreadQueries()  // OK for tests
         .build()
-        */
 
         // Reset singleton before each test
-        // resetUUIDCreatorSingleton() // Disabled
+        resetUUIDCreatorSingleton()
     }
 
     @After
     fun tearDown() {
-        // DISABLED: Room database no longer used after SQLDelight migration
-        // database.close()
+        // Close database
+        database.close()
 
         // Reset singleton after each test
-        // resetUUIDCreatorSingleton() // Disabled
+        resetUUIDCreatorSingleton()
 
         Dispatchers.resetMain()
     }

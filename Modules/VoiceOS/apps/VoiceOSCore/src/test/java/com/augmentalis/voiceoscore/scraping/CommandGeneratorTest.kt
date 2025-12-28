@@ -20,8 +20,8 @@ package com.augmentalis.voiceoscore.scraping
 import android.content.Context
 import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.database.dto.ScrapedElementDTO
-import com.augmentalis.database.repositories.IElementStateHistoryRepository
-import com.augmentalis.database.repositories.IUserInteractionRepository
+import com.augmentalis.database.ElementStateHistoryQueries
+import com.augmentalis.database.UserInteractionQueries
 import io.mockk.*
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
@@ -49,20 +49,20 @@ import org.junit.Test
 class CommandGeneratorTest {
 
     private lateinit var context: Context
-    private lateinit var elementStateHistoryRepository: IElementStateHistoryRepository
-    private lateinit var userInteractionRepository: IUserInteractionRepository
+    private lateinit var elementStateHistoryQueries: ElementStateHistoryQueries
+    private lateinit var userInteractionQueries: UserInteractionQueries
     private lateinit var generator: CommandGenerator
 
     @Before
     fun setup() {
         context = mockk(relaxed = true)
-        elementStateHistoryRepository = mockk(relaxed = true)
-        userInteractionRepository = mockk(relaxed = true)
+        elementStateHistoryQueries = mockk(relaxed = true)
+        userInteractionQueries = mockk(relaxed = true)
 
         generator = CommandGenerator(
             context,
-            elementStateHistoryRepository,
-            userInteractionRepository
+            elementStateHistoryQueries,
+            userInteractionQueries
         )
     }
 

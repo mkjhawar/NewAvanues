@@ -27,7 +27,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.zIndex
-import com.augmentalis.voiceui.core.MagicUUIDIntegration
+import com.augmentalis.voiceui.core.MagicVUIDIntegration
 import com.augmentalis.voiceui.theme.MagicThemeData
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
@@ -54,7 +54,7 @@ object MagicWindowManager {
     private var nextZIndex = 1000
     
     fun createWindow(
-        id: String = MagicUUIDIntegration.generateComponentUUID("window"),
+        id: String = MagicVUIDIntegration.generateComponentUUID("window"),
         title: String = "Magic Window",
         initialPosition: Offset = Offset(100f, 100f),
         initialSize: DpSize = DpSize(400.dp, 300.dp),
@@ -566,7 +566,7 @@ fun registerWindowVoiceCommands() {
     
     // Register with voice command system
     commands.forEach { (command, _) ->
-        MagicUUIDIntegration.generateVoiceCommandUUID(
+        MagicVUIDIntegration.generateVoiceCommandUUID(
             command = command,
             targetUUID = "window_system",
             action = command

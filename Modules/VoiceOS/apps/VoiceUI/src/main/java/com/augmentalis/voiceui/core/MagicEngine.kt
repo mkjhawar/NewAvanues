@@ -1,11 +1,16 @@
 package com.augmentalis.voiceui.core
 
+import android.os.Build
+import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import android.content.Context
-// RenderScript is deprecated, using alternative GPU approaches
+// GPU acceleration via RenderEffect (API 31+) with CPU fallback
+// GPU capability detection from DeviceManager (shared library)
+import com.augmentalis.devicemanager.capabilities.GPUCapabilities
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import java.util.concurrent.ConcurrentHashMap
@@ -24,42 +29,77 @@ import kotlin.reflect.KProperty
 @Stable
 object MagicEngine {
     
-    // GPU-accelerated state cache (RenderScript deprecated, using alternatives)
+    private const val TAG = "MagicEngine"
+
+    // GPU-accelerated state cache using RenderEffect (API 31+) or CPU fallback
     internal val gpuStateCache = ConcurrentHashMap<String, Any>()
-    // private var renderScript: RenderScript? = null // Deprecated
     private val stateScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    
+
+    // State managers for GPU/CPU paths
+    private var gpuStateManager: GPUStateManager? = null
+    private var cpuStateManager: CPUStateManager? = null
+
     // Intelligent context awareness
     private val contextStack = mutableListOf<ScreenContext>()
     private val componentRegistry = ComponentRegistry()
     private val validationEngine = ValidationEngine()
     private val localizationCache = ConcurrentHashMap<String, String>()
-    
-    // Performance metrics
-    internal var gpuAvailable = false
+
+    // Performance metrics - now using GPUCapabilities for detection
+    internal val gpuAvailable: Boolean
+        get() = GPUCapabilities.isGpuAccelerationAvailable
     internal var lastStateUpdate = 0L
     internal val performanceMonitor = PerformanceMonitor()
+
+    // Acceleration mode for current session
+    val accelerationMode: GPUCapabilities.AccelerationMode
+        get() = GPUCapabilities.accelerationMode
     
     /**
      * Initialize the Magic Engine with GPU support if available
+     *
+     * GPU acceleration uses RenderEffect (API 31+) with CPU fallback for older devices.
+     * Detection is automatic via GPUCapabilities.
      */
     @Suppress("UNUSED_PARAMETER")
     fun initialize(context: Context) {
         try {
-            // Initialize GPU acceleration (RenderScript deprecated)
-            // renderScript = RenderScript.create(context)
-            gpuAvailable = false // Disabled until we implement Vulkan/RenderEffect
-            
+            // Initialize appropriate state manager based on GPU availability
+            initializeStateManagers()
+
+            // Log acceleration mode
+            Log.i(TAG, "MagicEngine initialized: ${GPUCapabilities.gpuInfo}")
+
             // Pre-warm common components
             preWarmComponents()
-            
+
             // Start predictive loading
             startPredictiveEngine()
-            
+
         } catch (e: Exception) {
-            // Fallback to CPU-only mode
-            gpuAvailable = false
+            Log.e(TAG, "MagicEngine initialization failed, using CPU fallback", e)
+            // Ensure CPU fallback is available
+            if (cpuStateManager == null) {
+                cpuStateManager = CPUStateManager()
+            }
         }
+    }
+
+    /**
+     * Initialize state managers based on device capabilities
+     */
+    private fun initializeStateManagers() {
+        if (GPUCapabilities.isGpuAccelerationAvailable) {
+            // API 31+: Use GPU-accelerated state management
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                gpuStateManager = GPUStateManager()
+                Log.d(TAG, "GPU state manager initialized (RenderEffect)")
+            }
+        }
+
+        // Always initialize CPU fallback for hybrid approach or older devices
+        cpuStateManager = CPUStateManager()
+        Log.d(TAG, "CPU state manager initialized (fallback)")
     }
     
     /**
@@ -139,18 +179,28 @@ object MagicEngine {
     
     /**
      * GPU-accelerated state update
+     * Uses RenderEffect on API 31+ or CPU fallback on older devices
      */
     internal fun updateGPUCache(key: String, value: Any) {
         stateScope.launch {
             withContext(Dispatchers.Default) {
+                // Always update the basic cache
                 gpuStateCache[key] = value
-                
-                // GPU acceleration placeholder (RenderScript deprecated)
-                if (gpuAvailable) {
-                    // TODO: Implement with Vulkan or RenderEffect API
-                    // performGPUStateDiff(key, value)
+
+                // Use appropriate state manager based on device capability
+                val changed = if (gpuAvailable && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    // GPU path: RenderEffect-based state management
+                    gpuStateManager?.cacheState(key, value) ?: false
+                } else {
+                    // CPU path: Optimized hash-based caching
+                    cpuStateManager?.cacheStateSync(key, value) ?: false
                 }
-                
+
+                // Perform state diff if value changed
+                if (changed) {
+                    performGPUStateDiff(key, value)
+                }
+
                 // Update performance metrics
                 val updateTime = System.currentTimeMillis() - lastStateUpdate
                 performanceMonitor.recordStateUpdate(updateTime)
@@ -272,12 +322,48 @@ object MagicEngine {
     
     /**
      * Perform GPU-accelerated state diffing
+     *
+     * On API 31+: Uses GPUStateManager with RenderEffect support
+     * On API 29-30: Uses CPUStateManager with optimized hash diffing
      */
-    @Suppress("UNUSED_PARAMETER")
     private fun performGPUStateDiff(key: String, newValue: Any) {
-        // Use RenderScript for parallel processing
-        // This is where we'd implement GPU-accelerated diffing
-        // For now, this is a placeholder for GPU optimization
+        stateScope.launch {
+            if (gpuAvailable && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // GPU path: RenderEffect-based diffing
+                val result = gpuStateManager?.diffState(key, newValue)
+                if (result?.changed == true) {
+                    Log.v(TAG, "State diff: $key changed (new=${result.isNew}, mode=GPU)")
+                }
+            } else {
+                // CPU path: Hash-based diffing
+                val result = cpuStateManager?.diffStateSync(key, newValue)
+                if (result?.changed == true) {
+                    Log.v(TAG, "State diff: $key changed (new=${result.isNew}, mode=CPU)")
+                }
+            }
+        }
+    }
+
+    /**
+     * Get state manager statistics for debugging/monitoring
+     */
+    fun getStateManagerStats(): Map<String, Any> {
+        return buildMap {
+            put("accelerationMode", accelerationMode.name)
+            put("gpuAvailable", gpuAvailable)
+            put("cacheSize", gpuStateCache.size)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                gpuStateManager?.getCacheStats()?.let { stats ->
+                    put("gpuCacheSize", stats.size)
+                }
+            }
+
+            cpuStateManager?.getCacheStats()?.let { stats ->
+                put("cpuCacheSize", stats.size)
+                put("cpuHitRate", stats.hitRate)
+            }
+        }
     }
     
     /**
@@ -307,8 +393,15 @@ object MagicEngine {
      * Clean up resources
      */
     fun dispose() {
-        // RenderScript cleanup removed (deprecated)
+        // Clear state managers
+        gpuStateManager?.clearCache()
+        cpuStateManager?.clearCache()
+        gpuStateCache.clear()
+
+        // Cancel coroutine scope
         stateScope.cancel()
+
+        Log.d(TAG, "MagicEngine disposed")
     }
 }
 
