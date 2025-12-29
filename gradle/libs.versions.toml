@@ -64,6 +64,13 @@ leakcanary = "2.12"
 # Documentation
 dokka = "1.9.10"
 
+# gRPC/Wire
+wire = "5.1.0"
+grpc-kotlin = "1.4.1"
+grpc = "1.62.2"
+grpc-netty = "1.62.2"
+protobuf = "3.25.2"
+
 [libraries]
 # Kotlin
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
@@ -153,6 +160,18 @@ okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 junit = { module = "junit:junit", version.ref = "junit" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 
+# gRPC/Wire
+wire-runtime = { module = "com.squareup.wire:wire-runtime", version.ref = "wire" }
+wire-grpc-client = { module = "com.squareup.wire:wire-grpc-client", version.ref = "wire" }
+grpc-okhttp = { module = "io.grpc:grpc-okhttp", version.ref = "grpc" }
+grpc-netty-shaded = { module = "io.grpc:grpc-netty-shaded", version.ref = "grpc-netty" }
+grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
+grpc-protobuf-lite = { module = "io.grpc:grpc-protobuf-lite", version.ref = "grpc" }
+grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
+grpc-kotlin-stub = { module = "io.grpc:grpc-kotlin-stub", version.ref = "grpc-kotlin" }
+protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin", version.ref = "protobuf" }
+protobuf-kotlin-lite = { module = "com.google.protobuf:protobuf-kotlin-lite", version.ref = "protobuf" }
+
 [bundles]
 compose = [
     "compose-ui-ui",
@@ -202,3 +221,4 @@ sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+wire = { id = "com.squareup.wire", version.ref = "wire" }

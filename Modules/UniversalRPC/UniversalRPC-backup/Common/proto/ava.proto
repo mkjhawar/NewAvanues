@@ -1,0 +1,141 @@
+// ava.proto - AVA AI assistant service definitions
+//
+// Copyright (C) Manoj Jhawar, Intelligent Devices LLC
+// Created: 2025-12-28
+//
+// Replaces: AVA AIDL interfaces
+
+syntax = "proto3";
+
+package com.augmentalis.universalrpc.ava;
+
+option java_package = "com.augmentalis.universalrpc.ava";
+option java_multiple_files = true;
+
+// Chat message
+message ChatMessage {
+    string message_id = 1;
+    string role = 2;              // "user", "assistant", "system"
+    string content = 3;
+    int64 timestamp = 4;
+    map<string, string> metadata = 5;
+}
+
+// Chat request
+message ChatRequest {
+    string request_id = 1;
+    string message = 2;
+    repeated ChatMessage history = 3;
+    ChatConfig config = 4;
+}
+
+// Chat configuration
+message ChatConfig {
+    string model = 1;             // LLM model to use
+    float temperature = 2;
+    int32 max_tokens = 3;
+    bool stream = 4;
+    repeated string tools = 5;    // Available tools/functions
+}
+
+// Chat response
+message ChatResponse {
+    string request_id = 1;
+    ChatMessage message = 2;
+    bool is_complete = 3;
+    Usage usage = 4;
+}
+
+message Usage {
+    int32 prompt_tokens = 1;
+    int32 completion_tokens = 2;
+    int32 total_tokens = 3;
+}
+
+// LLM provider info
+message ProviderInfo {
+    string name = 1;
+    string model = 2;
+    bool available = 3;
+    map<string, string> capabilities = 4;
+}
+
+// Action execution request
+message ActionRequest {
+    string request_id = 1;
+    string action_type = 2;       // "app_action", "web_action", "system_action"
+    string action_name = 3;
+    map<string, string> params = 4;
+}
+
+// Action response
+message ActionResponse {
+    string request_id = 1;
+    bool success = 2;
+    string message = 3;
+    string result_json = 4;
+}
+
+// Context data for RAG
+message ContextData {
+    string source = 1;
+    string content = 2;
+    float relevance = 3;
+    map<string, string> metadata = 4;
+}
+
+// RAG query request
+message RAGQueryRequest {
+    string request_id = 1;
+    string query = 2;
+    int32 max_results = 3;
+    repeated string sources = 4;  // Filter by sources
+}
+
+// RAG query response
+message RAGQueryResponse {
+    string request_id = 1;
+    repeated ContextData results = 2;
+}
+
+// Service definition
+service AvaService {
+    // Chat with AI
+    rpc Chat(ChatRequest) returns (ChatResponse);
+
+    // Stream chat response
+    rpc ChatStream(ChatRequest) returns (stream ChatResponse);
+
+    // Execute action
+    rpc ExecuteAction(ActionRequest) returns (ActionResponse);
+
+    // RAG query
+    rpc QueryContext(RAGQueryRequest) returns (RAGQueryResponse);
+
+    // Get available providers
+    rpc GetProviders(GetProvidersRequest) returns (ProvidersResponse);
+
+    // Set active provider
+    rpc SetProvider(SetProviderRequest) returns (ProviderResponse);
+}
+
+message GetProvidersRequest {
+    string request_id = 1;
+}
+
+message ProvidersResponse {
+    repeated ProviderInfo providers = 1;
+    string active_provider = 2;
+}
+
+message SetProviderRequest {
+    string request_id = 1;
+    string provider_name = 2;
+    string model = 3;
+}
+
+message ProviderResponse {
+    string request_id = 1;
+    bool success = 2;
+    ProviderInfo provider = 3;
+}
