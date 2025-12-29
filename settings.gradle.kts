@@ -99,5 +99,40 @@ include(":Modules:UniversalRPC")         // Root module with KMP + Wire
 // AVAMagic Modules
 include(":Modules:AVAMagic:MagicTools:LanguageServer")  // MagicUI Language Server (LSP)
 
+// MagicUI Core
+include(":Modules:AVAMagic:MagicUI:Core")
+include(":Modules:AVAMagic:MagicUI:CoreTypes")
+include(":Modules:AVAMagic:MagicUI:Foundation")
+include(":Modules:AVAMagic:MagicUI:Theme")
+include(":Modules:AVAMagic:MagicUI:ThemeBridge")
+include(":Modules:AVAMagic:MagicUI:DesignSystem")
+include(":Modules:AVAMagic:MagicUI:StateManagement")
+include(":Modules:AVAMagic:MagicUI:UIConvertor")
+
+// MagicUI Components - Input
+include(":Modules:AVAMagic:MagicUI:Components:Input")
+include(":Modules:AVAMagic:MagicUI:Components:Feedback")
+include(":Modules:AVAMagic:MagicUI:Components:Display")
+include(":Modules:AVAMagic:MagicUI:Components:Layout")
+include(":Modules:AVAMagic:MagicUI:Components:Navigation")
+include(":Modules:AVAMagic:MagicUI:Components:Floating")
+
+// MagicUI Components - Infrastructure
+include(":Modules:AVAMagic:MagicUI:Components:Core")
+include(":Modules:AVAMagic:MagicUI:Components:Foundation")
+include(":Modules:AVAMagic:MagicUI:Components:Adapters")
+include(":Modules:AVAMagic:MagicUI:Components:StateManagement")
+include(":Modules:AVAMagic:MagicUI:Components:TemplateLibrary")
+include(":Modules:AVAMagic:MagicUI:Components:ThemeBuilder")
+include(":Modules:AVAMagic:MagicUI:Components:VoiceCommandRouter")
+include(":Modules:AVAMagic:MagicUI:Components:IPCConnector")
+include(":Modules:AVAMagic:MagicUI:Components:ARGScanner")
+include(":Modules:AVAMagic:MagicUI:Components:AssetManager")
+
+// MagicUI Renderers
+include(":Modules:AVAMagic:MagicUI:Components:Renderers:Android")
+include(":Modules:AVAMagic:MagicUI:Components:Renderers:iOS")
+include(":Modules:AVAMagic:MagicUI:Renderers:iOSRenderer")
+
 // Android App
 include(":android:apps:webavanue")

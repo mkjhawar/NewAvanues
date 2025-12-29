@@ -50,11 +50,11 @@ sealed class Modifier {
     data class Padding(val spacing: Spacing) : Modifier()
     data class Background(val color: Color) : Modifier()
     data class BackgroundGradient(val gradient: Gradient) : Modifier()
-    data class Border(val border: com.augmentalis.avanues.avamagic.components.core.Border) : Modifier()
-    data class CornerRadius(val radius: com.augmentalis.avanues.avamagic.components.core.CornerRadius) : Modifier()
-    data class Shadow(val shadow: com.augmentalis.avanues.avamagic.components.core.Shadow) : Modifier()
+    data class Border(val border: com.augmentalis.magicui.components.core.Border) : Modifier()
+    data class CornerRadius(val radius: com.augmentalis.magicui.components.core.CornerRadius) : Modifier()
+    data class Shadow(val shadow: com.augmentalis.magicui.components.core.Shadow) : Modifier()
     data class Opacity(val value: Float) : Modifier()
-    data class Size(val width: com.augmentalis.avanues.avamagic.components.core.Size?, val height: com.augmentalis.avanues.avamagic.components.core.Size?) : Modifier()
+    data class Size(val width: com.augmentalis.magicui.components.core.Size?, val height: com.augmentalis.magicui.components.core.Size?) : Modifier()
     data class Clickable(val onClick: () -> Unit) : Modifier()
     data class Hoverable(val onHover: (Boolean) -> Unit) : Modifier()
     data class Focusable(val onFocus: (Boolean) -> Unit) : Modifier()
@@ -69,7 +69,7 @@ sealed class Modifier {
     object FillMaxSize : Modifier()
 
     sealed class ClipShape {
-        data class Rectangle(val radius: com.augmentalis.avanues.avamagic.components.core.CornerRadius = com.augmentalis.avanues.avamagic.components.core.CornerRadius.Zero) : ClipShape()
+        data class Rectangle(val radius: com.augmentalis.magicui.components.core.CornerRadius = com.augmentalis.magicui.components.core.CornerRadius.Zero) : ClipShape()
         object Circle : ClipShape()
         data class RoundedRectangle(val radius: Float) : ClipShape()
     }

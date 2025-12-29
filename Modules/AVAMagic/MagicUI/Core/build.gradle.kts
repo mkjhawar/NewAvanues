@@ -33,7 +33,7 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
                 // Components Core module - provides type definitions and component base
-                implementation(project(":modules:AVAMagic:Components:Core"))
+                implementation(project(":Modules:AVAMagic:MagicUI:Components:Core"))
             }
         }
 

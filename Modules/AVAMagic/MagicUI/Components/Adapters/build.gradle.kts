@@ -40,15 +40,15 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // Core components (data models)
-                implementation(project(":modules:AVAMagic:UI:Core"))
+                implementation(project(":Modules:AVAMagic:MagicUI:Core"))
 
                 // Foundation components (Compose implementations)
-                implementation(project(":modules:AVAMagic:UI:Foundation"))
+                implementation(project(":Modules:AVAMagic:MagicUI:Foundation"))
 
                 // Design system
-                implementation(project(":modules:AVAMagic:UI:DesignSystem"))
-                implementation(project(":modules:AVAMagic:UI:CoreTypes"))
-                implementation(project(":modules:AVAMagic:UI:StateManagement"))
+                implementation(project(":Modules:AVAMagic:MagicUI:DesignSystem"))
+                implementation(project(":Modules:AVAMagic:MagicUI:CoreTypes"))
+                implementation(project(":Modules:AVAMagic:MagicUI:StateManagement"))
 
                 implementation(compose.runtime)
                 implementation(compose.foundation)

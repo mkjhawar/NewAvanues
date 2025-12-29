@@ -26,9 +26,15 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                // Template library dependencies
-                implementation(project(":Universal:Libraries:AvaElements:Core"))
-                implementation(project(":Universal:Libraries:AvaElements:Phase3Components"))
+                // MagicUI Core
+                implementation(project(":Modules:AVAMagic:MagicUI:Components:Core"))
+                // MagicUI Component Categories
+                implementation(project(":Modules:AVAMagic:MagicUI:Components:Input"))
+                implementation(project(":Modules:AVAMagic:MagicUI:Components:Feedback"))
+                implementation(project(":Modules:AVAMagic:MagicUI:Components:Display"))
+                implementation(project(":Modules:AVAMagic:MagicUI:Components:Layout"))
+                implementation(project(":Modules:AVAMagic:MagicUI:Components:Navigation"))
+                implementation(project(":Modules:AVAMagic:MagicUI:Components:Floating"))
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
             }

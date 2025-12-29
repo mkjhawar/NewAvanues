@@ -28,8 +28,8 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                // MagicElements Core dependency (use Universal library which supports JVM)
-                implementation(project(":Universal:Libraries:AvaElements:Core"))
+                // MagicElements Core dependency
+                implementation(project(":Modules:AVAMagic:MagicUI:Components:Core"))
 
                 // Kotlin standard library
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")

@@ -31,10 +31,10 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // IDEAMagic dependencies
-                implementation(project(":modules:AVAMagic:UI:Core"))
-                implementation(project(":modules:AVAMagic:Code:Forms"))
-                implementation(project(":modules:AVAMagic:Code:Workflows"))
-                implementation(project(":modules:AVAMagic:Data"))
+                implementation(project(":Modules:AVAMagic:MagicUI:Core"))
+                implementation(project(":Modules:AVAMagic:MagicCode:Forms"))
+                implementation(project(":Modules:AVAMagic:MagicCode:Workflows"))
+                implementation(project(":Modules:AVAMagic:Data"))
 
                 // Kotlin standard library
                 implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.20")

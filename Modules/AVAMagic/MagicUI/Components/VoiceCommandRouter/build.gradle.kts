@@ -30,10 +30,10 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 
                 // ARG Scanner for registry and models
-                implementation(project(":modules:AVAMagic:Components:ARGScanner"))
+                implementation(project(":Modules:AVAMagic:MagicUI:Components:ARGScanner"))
 
                 // Components Core for base types
-                implementation(project(":modules:AVAMagic:Components:Core"))
+                implementation(project(":Modules:AVAMagic:MagicUI:Components:Core"))
             }
         }
 

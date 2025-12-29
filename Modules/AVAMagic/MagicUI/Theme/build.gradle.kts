@@ -35,7 +35,7 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
                 // MagicElements Components Core - for Theme data classes
-                implementation(project(":modules:AVAMagic:Components:Core"))
+                implementation(project(":Modules:AVAMagic:MagicUI:Components:Core"))
             }
         }
 

@@ -31,9 +31,9 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(project(":modules:AVAMagic:UI:DesignSystem"))
-                implementation(project(":modules:AVAMagic:UI:CoreTypes"))
-                implementation(project(":modules:AVAMagic:UI:StateManagement"))
+                implementation(project(":Modules:AVAMagic:MagicUI:DesignSystem"))
+                implementation(project(":Modules:AVAMagic:MagicUI:CoreTypes"))
+                implementation(project(":Modules:AVAMagic:MagicUI:StateManagement"))
 
                 implementation(compose.runtime)
                 implementation(compose.foundation)

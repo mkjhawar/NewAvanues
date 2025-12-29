@@ -27,7 +27,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // Asset management dependencies
-                implementation(project(":modules:AVAMagic:UI:Core"))
+                implementation(project(":Modules:AVAMagic:MagicUI:Core"))
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
             }

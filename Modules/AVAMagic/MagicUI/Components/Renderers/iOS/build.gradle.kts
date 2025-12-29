@@ -25,7 +25,7 @@ kotlin {
         val iosMain by creating {
             dependencies {
                 // MagicElements Core
-                implementation(project(":modules:AVAMagic:UI:Core"))
+                implementation(project(":Modules:AVAMagic:MagicUI:Core"))
             }
         }
 

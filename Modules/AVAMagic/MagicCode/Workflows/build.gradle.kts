@@ -27,7 +27,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // Dependency on Forms module
-                implementation(project(":modules:AVAMagic:Code:Forms"))
+                implementation(project(":Modules:AVAMagic:MagicCode:Forms"))
             }
         }
 
