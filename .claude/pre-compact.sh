@@ -44,5 +44,8 @@ save_file="$save_dir/pre-compact-$trigger_type-$timestamp.md"
 # Keep only last 5 pre-compact saves (cleanup)
 cd "$save_dir" 2>/dev/null && ls -t pre-compact-*.md 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null
 
+# Store latest handover path for statusline display
+echo "$save_file" > "$cwd/.claude/.last-handover"
+
 # Output confirmation (shown in hook output)
 echo "Context saved: $save_file"

@@ -679,7 +679,7 @@ class CommandGeneratorTest {
         )
 
         coEvery {
-            elementStateHistoryRepository.getCurrentState(any(), StateType.CHECKED)
+            elementStateHistoryQueries.getCurrentState(any(), StateType.CHECKED)
         } returns null
 
         val commands = generator.generateStateAwareCommands(element)
@@ -701,7 +701,7 @@ class CommandGeneratorTest {
         )
 
         coEvery {
-            elementStateHistoryRepository.getCurrentState(any(), StateType.CHECKED)
+            elementStateHistoryQueries.getCurrentState(any(), StateType.CHECKED)
         } returns mockk {
             every { newValue } returns "true"
         }
@@ -724,7 +724,7 @@ class CommandGeneratorTest {
         )
 
         coEvery {
-            elementStateHistoryRepository.getCurrentState(any(), StateType.EXPANDED)
+            elementStateHistoryQueries.getCurrentState(any(), StateType.EXPANDED)
         } returns mockk {
             every { newValue } returns "false"
         }
@@ -747,7 +747,7 @@ class CommandGeneratorTest {
         )
 
         coEvery {
-            elementStateHistoryRepository.getCurrentState(any(), StateType.EXPANDED)
+            elementStateHistoryQueries.getCurrentState(any(), StateType.EXPANDED)
         } returns mockk {
             every { newValue } returns "true"
         }
@@ -770,7 +770,7 @@ class CommandGeneratorTest {
         )
 
         coEvery {
-            elementStateHistoryRepository.getCurrentState(any(), StateType.SELECTED)
+            elementStateHistoryQueries.getCurrentState(any(), StateType.SELECTED)
         } returns mockk {
             every { newValue } returns "false"
         }
@@ -793,7 +793,7 @@ class CommandGeneratorTest {
         )
 
         coEvery {
-            elementStateHistoryRepository.getCurrentState(any(), StateType.SELECTED)
+            elementStateHistoryQueries.getCurrentState(any(), StateType.SELECTED)
         } returns mockk {
             every { newValue } returns "true"
         }
@@ -818,11 +818,11 @@ class CommandGeneratorTest {
         )
 
         coEvery {
-            userInteractionRepository.getInteractionCount(any())
+            userInteractionQueries.getInteractionCount(any())
         } returns 150  // Very frequently used
 
         coEvery {
-            userInteractionRepository.getSuccessFailureRatio(any())
+            userInteractionQueries.getSuccessFailureRatio(any())
         } returns mockk {
             every { successful } returns 140
             every { failed } returns 10
@@ -848,11 +848,11 @@ class CommandGeneratorTest {
         )
 
         coEvery {
-            userInteractionRepository.getInteractionCount(any())
+            userInteractionQueries.getInteractionCount(any())
         } returns 10
 
         coEvery {
-            userInteractionRepository.getSuccessFailureRatio(any())
+            userInteractionQueries.getSuccessFailureRatio(any())
         } returns mockk {
             every { successful } returns 3
             every { failed } returns 7  // 30% success rate
@@ -876,11 +876,11 @@ class CommandGeneratorTest {
         )
 
         coEvery {
-            userInteractionRepository.getInteractionCount(any())
+            userInteractionQueries.getInteractionCount(any())
         } returns 0
 
         coEvery {
-            userInteractionRepository.getSuccessFailureRatio(any())
+            userInteractionQueries.getSuccessFailureRatio(any())
         } returns null
 
         val commands = generator.generateInteractionWeightedCommands(element)
@@ -899,11 +899,11 @@ class CommandGeneratorTest {
         )
 
         coEvery {
-            userInteractionRepository.getInteractionCount(any())
+            userInteractionQueries.getInteractionCount(any())
         } returns 1000  // Extremely high
 
         coEvery {
-            userInteractionRepository.getSuccessFailureRatio(any())
+            userInteractionQueries.getSuccessFailureRatio(any())
         } returns mockk {
             every { successful } returns 1000
             every { failed } returns 0  // 100% success

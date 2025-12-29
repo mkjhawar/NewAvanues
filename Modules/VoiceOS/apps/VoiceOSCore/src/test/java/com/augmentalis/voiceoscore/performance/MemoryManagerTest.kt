@@ -13,6 +13,7 @@ package com.augmentalis.voiceoscore.performance
 import com.augmentalis.voiceoscore.BaseVoiceOSTest
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -86,7 +87,7 @@ class MemoryManagerTest : BaseVoiceOSTest() {
 
         // Read metrics concurrently
         repeat(10) {
-            testScope.backgroundScope.launch {
+            backgroundScope.launch {
                 val metric = memoryManager.getMemoryMetrics()
                 synchronized(metrics) {
                     metrics.add(metric)
