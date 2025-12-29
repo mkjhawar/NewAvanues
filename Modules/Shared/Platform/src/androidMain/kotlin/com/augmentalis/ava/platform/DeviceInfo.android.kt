@@ -1,15 +1,25 @@
 package com.augmentalis.ava.platform
 
+import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorManager
+import android.net.wifi.WifiManager
 import android.os.BatteryManager
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings as AndroidSettings
+import android.util.DisplayMetrics
+import android.view.WindowManager
+import java.net.NetworkInterface
+import java.security.MessageDigest
 import java.util.Locale
+import java.util.UUID
 
 /**
  * Android implementation of DeviceInfo.
@@ -134,6 +144,266 @@ actual class DeviceInfo actual constructor() {
             DeviceFeatures.FEATURE_BIOMETRICS -> pm.hasSystemFeature(PackageManager.FEATURE_FINGERPRINT)
             DeviceFeatures.FEATURE_TELEPHONY -> pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
             else -> false
+        }
+    }
+
+    // ==================== FINGERPRINTING ====================
+
+    private val fingerprintVersion = 1
+    private var cachedFingerprint: DeviceFingerprint? = null
+
+    private val prefs: SharedPreferences by lazy {
+        context.getSharedPreferences("laas_fingerprint", Context.MODE_PRIVATE)
+    }
+
+    private val windowManager: WindowManager by lazy {
+        context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    }
+
+    private val sensorManager: SensorManager? by lazy {
+        context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+    }
+
+    actual fun getFingerprint(): DeviceFingerprint {
+        cachedFingerprint?.let { return it }
+
+        val components = mutableListOf<String>()
+
+        // 1. Android ID (primary - most stable)
+        val androidId = getAndroidId()
+        val androidIdPresent = androidId.isNotEmpty()
+        if (androidIdPresent) {
+            components.add("aid:${sha256(androidId)}")
+        }
+
+        // 2. Build fingerprint (very stable)
+        val buildInfo = collectBuildInfo()
+        val buildPresent = buildInfo.isNotEmpty()
+        components.add("build:${sha256(buildInfo)}")
+
+        // 3. MAC address (Android <29/Q only - blocked after)
+        var macPresent = false
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            getMacAddress()?.let { mac ->
+                components.add("mac:${sha256(mac)}")
+                macPresent = true
+            }
+        }
+
+        // 4. Hardware characteristics
+        val hardware = collectHardwareInfo()
+        components.add("hw:${sha256(hardware)}")
+
+        // 5. Display characteristics
+        val display = collectDisplayInfo()
+        components.add("disp:${sha256(display)}")
+
+        // 6. Sensor configuration (entropy)
+        val sensors = collectSensorInfo()
+        if (sensors.isNotEmpty()) {
+            components.add("sens:${sha256(sensors)}")
+        }
+
+        // 7. Installation ID (consistency fallback)
+        val installId = getOrCreateInstallId()
+        components.add("inst:${sha256(installId)}")
+
+        // Combine all components
+        val combined = "v$fingerprintVersion:" + components.joinToString("|")
+        val fingerprint = sha256(combined)
+
+        val result = DeviceFingerprint(
+            fingerprint = fingerprint,
+            fingerprintShort = fingerprint.take(16).uppercase(),
+            version = fingerprintVersion,
+            platform = PlatformType.ANDROID,
+            deviceType = getDeviceType(),
+            isStable = androidIdPresent && buildPresent,
+            generatedAt = System.currentTimeMillis()
+        )
+
+        cachedFingerprint = result
+        return result
+    }
+
+    actual fun getFingerprintString(): String = getFingerprint().fingerprint
+
+    actual fun getFingerprintShort(): String = getFingerprint().fingerprintShort
+
+    actual fun getFingerprintDebugInfo(): FingerprintDebugInfo {
+        return FingerprintDebugInfo(
+            primaryIdPresent = getAndroidId().isNotEmpty(),
+            buildInfoPresent = Build.FINGERPRINT.isNotEmpty(),
+            macAddressPresent = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && getMacAddress() != null,
+            hardwareInfoPresent = true,
+            displayInfoPresent = true,
+            installIdPresent = getOrCreateInstallId().isNotEmpty()
+        )
+    }
+
+    actual fun getDeviceType(): DeviceType {
+        val pm = context.packageManager
+        return when {
+            pm.hasSystemFeature(PackageManager.FEATURE_WATCH) -> DeviceType.WATCH
+            pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK) -> DeviceType.TV
+            pm.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE) -> DeviceType.AUTOMOTIVE
+            pm.hasSystemFeature("android.hardware.type.xr") ||
+            pm.hasSystemFeature("android.software.xr") -> DeviceType.XR
+            isTablet() -> DeviceType.TABLET
+            else -> DeviceType.PHONE
+        }
+    }
+
+    // ==================== FINGERPRINT HELPERS ====================
+
+    @SuppressLint("HardwareIds")
+    private fun getAndroidId(): String {
+        return try {
+            AndroidSettings.Secure.getString(
+                context.contentResolver,
+                AndroidSettings.Secure.ANDROID_ID
+            ) ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    private fun collectBuildInfo(): String {
+        return buildString {
+            append(Build.FINGERPRINT)
+            append(Build.BOARD)
+            append(Build.BOOTLOADER)
+            append(Build.BRAND)
+            append(Build.DEVICE)
+            append(Build.DISPLAY)
+            append(Build.HARDWARE)
+            append(Build.HOST)
+            append(Build.ID)
+            append(Build.MANUFACTURER)
+            append(Build.MODEL)
+            append(Build.PRODUCT)
+            append(Build.TAGS)
+            append(Build.TYPE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                append(Build.SOC_MANUFACTURER)
+                append(Build.SOC_MODEL)
+            }
+        }
+    }
+
+    @SuppressLint("HardwareIds", "MissingPermission")
+    private fun getMacAddress(): String? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) return null
+
+        return try {
+            // Try WifiManager
+            val wifiManager = context.applicationContext
+                .getSystemService(Context.WIFI_SERVICE) as? WifiManager
+            @Suppress("DEPRECATION")
+            val mac = wifiManager?.connectionInfo?.macAddress
+
+            if (mac != null && mac != "02:00:00:00:00:00") {
+                return mac
+            }
+
+            // Fallback: NetworkInterface
+            NetworkInterface.getNetworkInterfaces()?.toList()?.forEach { ni ->
+                val hwAddr = ni.hardwareAddress
+                if (hwAddr != null && hwAddr.isNotEmpty()) {
+                    val macStr = hwAddr.joinToString(":") { "%02X".format(it) }
+                    if (macStr != "00:00:00:00:00:00" && macStr != "02:00:00:00:00:00") {
+                        return macStr
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun collectHardwareInfo(): String {
+        val pm = context.packageManager
+        return buildString {
+            append(Build.SUPPORTED_ABIS.joinToString(","))
+            append(Runtime.getRuntime().availableProcessors())
+            append(pm.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH))
+            append(pm.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE))
+            append(pm.hasSystemFeature(PackageManager.FEATURE_NFC))
+            append(pm.hasSystemFeature(PackageManager.FEATURE_FINGERPRINT))
+            append(pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY))
+            append(pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY))
+            append(pm.hasSystemFeature(PackageManager.FEATURE_WIFI))
+            append(pm.hasSystemFeature(PackageManager.FEATURE_SENSOR_ACCELEROMETER))
+            append(pm.hasSystemFeature(PackageManager.FEATURE_SENSOR_GYROSCOPE))
+        }
+    }
+
+    private fun collectDisplayInfo(): String {
+        val metrics = getDisplayMetrics()
+        return buildString {
+            append(metrics.widthPixels)
+            append(metrics.heightPixels)
+            append(metrics.densityDpi)
+            append(metrics.density.toInt())
+            append(metrics.xdpi.toInt())
+            append(metrics.ydpi.toInt())
+        }
+    }
+
+    private fun collectSensorInfo(): String {
+        return buildString {
+            sensorManager?.getSensorList(Sensor.TYPE_ALL)?.forEach { sensor ->
+                append(sensor.type)
+                append(sensor.vendor?.hashCode() ?: 0)
+                append(sensor.version)
+            }
+        }
+    }
+
+    private fun getOrCreateInstallId(): String {
+        val key = "install_id"
+        var id = prefs.getString(key, null)
+        if (id == null) {
+            id = UUID.randomUUID().toString()
+            prefs.edit().putString(key, id).apply()
+        }
+        return id
+    }
+
+    private fun getDisplayMetrics(): DisplayMetrics {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val bounds = windowManager.currentWindowMetrics.bounds
+            DisplayMetrics().apply {
+                widthPixels = bounds.width()
+                heightPixels = bounds.height()
+                density = context.resources.displayMetrics.density
+                densityDpi = context.resources.displayMetrics.densityDpi
+                xdpi = context.resources.displayMetrics.xdpi
+                ydpi = context.resources.displayMetrics.ydpi
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            DisplayMetrics().also { windowManager.defaultDisplay.getRealMetrics(it) }
+        }
+    }
+
+    private fun isTablet(): Boolean {
+        val metrics = getDisplayMetrics()
+        val widthInches = metrics.widthPixels / metrics.xdpi
+        val heightInches = metrics.heightPixels / metrics.ydpi
+        val diagonal = kotlin.math.sqrt((widthInches * widthInches + heightInches * heightInches).toDouble())
+        return diagonal >= 7.0
+    }
+
+    private fun sha256(input: String): String {
+        if (input.isEmpty()) return ""
+        return try {
+            val digest = MessageDigest.getInstance("SHA-256")
+            val hash = digest.digest(input.toByteArray(Charsets.UTF_8))
+            hash.joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            ""
         }
     }
 

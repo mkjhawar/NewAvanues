@@ -45,6 +45,8 @@ include(":Modules:AVA:WakeWord")
 
 // Shared Modules (cross-platform KMP libraries)
 include(":Modules:Shared:NLU")
+include(":Modules:Shared:Platform")
+include(":Modules:Shared:LaasSDK")
 
 // VoiceOS Core Modules
 include(":Modules:VoiceOS:core:database")
@@ -97,42 +99,45 @@ include(":Modules:WebAvanue:universal")  // UI layer: ViewModels, screens, platf
 include(":Modules:UniversalRPC")         // Root module with KMP + Wire
 
 // AVAMagic Modules
-include(":Modules:AVAMagic:MagicTools:LanguageServer")  // MagicUI Language Server (LSP)
+include(":Modules:AVAMagic:MagicTools:LanguageServer")  // AVA Language Server (LSP)
 
-// MagicUI Core
-include(":Modules:AVAMagic:MagicUI:Core")
-include(":Modules:AVAMagic:MagicUI:CoreTypes")
-include(":Modules:AVAMagic:MagicUI:Foundation")
-include(":Modules:AVAMagic:MagicUI:Theme")
-include(":Modules:AVAMagic:MagicUI:ThemeBridge")
-include(":Modules:AVAMagic:MagicUI:DesignSystem")
-include(":Modules:AVAMagic:MagicUI:StateManagement")
-include(":Modules:AVAMagic:MagicUI:UIConvertor")
+// AVAMagic Language & Runtime (at AVAMagic level)
+include(":Modules:AVAMagic:AVACode")                    // Kotlin Builder Functions (DSL)
+include(":Modules:AVAMagic:AVURuntime")                 // AVU file parsing/processing
 
-// MagicUI Components - Input
-include(":Modules:AVAMagic:MagicUI:Components:Input")
-include(":Modules:AVAMagic:MagicUI:Components:Feedback")
-include(":Modules:AVAMagic:MagicUI:Components:Display")
-include(":Modules:AVAMagic:MagicUI:Components:Layout")
-include(":Modules:AVAMagic:MagicUI:Components:Navigation")
-include(":Modules:AVAMagic:MagicUI:Components:Floating")
+// AVAUI Core & Base Types
+include(":Modules:AVAMagic:AVAUI:Core")                 // Base types, interfaces
+include(":Modules:AVAMagic:AVAUI:CoreTypes")            // Shared type definitions
+include(":Modules:AVAMagic:AVAUI:Foundation")           // Foundation components
+include(":Modules:AVAMagic:AVAUI:Theme")                // Theme system
+include(":Modules:AVAMagic:AVAUI:ThemeBridge")          // Theme conversion utilities
+include(":Modules:AVAMagic:AVAUI:DesignSystem")         // Design tokens
+include(":Modules:AVAMagic:AVAUI:StateManagement")      // State management
+include(":Modules:AVAMagic:AVAUI:UIConvertor")          // UI conversion utilities
 
-// MagicUI Components - Infrastructure
-include(":Modules:AVAMagic:MagicUI:Components:Core")
-include(":Modules:AVAMagic:MagicUI:Components:Foundation")
-include(":Modules:AVAMagic:MagicUI:Components:Adapters")
-include(":Modules:AVAMagic:MagicUI:Components:StateManagement")
-include(":Modules:AVAMagic:MagicUI:Components:TemplateLibrary")
-include(":Modules:AVAMagic:MagicUI:Components:ThemeBuilder")
-include(":Modules:AVAMagic:MagicUI:Components:VoiceCommandRouter")
-include(":Modules:AVAMagic:MagicUI:Components:IPCConnector")
-include(":Modules:AVAMagic:MagicUI:Components:ARGScanner")
-include(":Modules:AVAMagic:MagicUI:Components:AssetManager")
+// AVAUI Component Modules (DTOs)
+include(":Modules:AVAMagic:AVAUI:Input")                // Input components (Slider, DatePicker, etc.)
+include(":Modules:AVAMagic:AVAUI:Display")              // Display components (Badge, Avatar, etc.)
+include(":Modules:AVAMagic:AVAUI:Feedback")             // Feedback components (Alert, Toast, etc.)
+include(":Modules:AVAMagic:AVAUI:Layout")               // Layout components (Grid, Stack, etc.)
+include(":Modules:AVAMagic:AVAUI:Navigation")           // Navigation components (AppBar, Tabs, etc.)
+include(":Modules:AVAMagic:AVAUI:Floating")             // Floating components (CommandBar)
+include(":Modules:AVAMagic:AVAUI:Data")                 // Data components (Accordion, Carousel, etc.)
 
-// MagicUI Renderers
-include(":Modules:AVAMagic:MagicUI:Components:Renderers:Android")
-include(":Modules:AVAMagic:MagicUI:Components:Renderers:iOS")
-include(":Modules:AVAMagic:MagicUI:Renderers:iOSRenderer")
+// AVAUI Infrastructure
+include(":Modules:AVAMagic:AVAUI:Adapters")             // Platform adapters
+include(":Modules:AVAMagic:AVAUI:TemplateLibrary")      // Component templates
+include(":Modules:AVAMagic:AVAUI:ThemeBuilder")         // Theme builder tools
+include(":Modules:AVAMagic:AVAUI:VoiceCommandRouter")   // Voice command routing
+include(":Modules:AVAMagic:AVAUI:IPCConnector")         // IPC connection layer
+include(":Modules:AVAMagic:AVAUI:ARGScanner")           // ARG scanning utilities
+include(":Modules:AVAMagic:AVAUI:AssetManager")         // Asset management
+
+// AVAUI Platform Renderers
+include(":Modules:AVAMagic:AVAUI:Renderers:Android")    // Android Compose renderer
+include(":Modules:AVAMagic:AVAUI:Renderers:iOS")        // iOS SwiftUI renderer (45 views)
+include(":Modules:AVAMagic:AVAUI:Renderers:Desktop")    // Desktop Compose renderer
+include(":Modules:AVAMagic:AVAUI:Renderers:Web")        // Web React renderer
 
 // Android App
 include(":android:apps:webavanue")

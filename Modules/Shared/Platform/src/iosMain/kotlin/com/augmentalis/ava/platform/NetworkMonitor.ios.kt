@@ -4,7 +4,22 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import platform.Network.*
+import platform.Network.nw_interface_type_cellular
+import platform.Network.nw_interface_type_wifi
+import platform.Network.nw_interface_type_wired
+import platform.Network.nw_path_get_status
+import platform.Network.nw_path_is_expensive
+import platform.Network.nw_path_monitor_cancel
+import platform.Network.nw_path_monitor_create
+import platform.Network.nw_path_monitor_set_queue
+import platform.Network.nw_path_monitor_set_update_handler
+import platform.Network.nw_path_monitor_start
+import platform.Network.nw_path_monitor_t
+import platform.Network.nw_path_status_satisfied
+import platform.Network.nw_path_status_satisfiable
+import platform.Network.nw_path_status_unsatisfied
+import platform.Network.nw_path_t
+import platform.Network.nw_path_uses_interface_type
 import platform.darwin.dispatch_get_main_queue
 
 /**
@@ -20,7 +35,8 @@ actual class NetworkMonitor actual constructor() {
 
     init {
         pathMonitor = nw_path_monitor_create()
-        updateNetworkState()
+        // Start monitoring immediately to get initial state
+        startMonitoring()
     }
 
     actual fun isConnected(): Boolean {
@@ -40,7 +56,9 @@ actual class NetworkMonitor actual constructor() {
 
         pathMonitor?.let { monitor ->
             nw_path_monitor_set_update_handler(monitor) { path ->
-                path?.let { updateNetworkState(it) }
+                if (path != null) {
+                    updateNetworkState(path)
+                }
             }
             nw_path_monitor_set_queue(monitor, dispatch_get_main_queue())
             nw_path_monitor_start(monitor)
@@ -57,39 +75,29 @@ actual class NetworkMonitor actual constructor() {
         }
     }
 
-    private fun updateNetworkState(path: nw_path_t? = null) {
-        val currentPath = path ?: pathMonitor?.let { nw_path_monitor_copy_current_path(it) }
+    private fun updateNetworkState(path: nw_path_t) {
+        val pathStatus = nw_path_get_status(path)
 
-        val state = if (currentPath != null) {
-            val status = when (nw_path_get_status(currentPath)) {
-                nw_path_status_satisfied, nw_path_status_satisfiable -> NetworkStatus.CONNECTED
-                nw_path_status_unsatisfied -> NetworkStatus.DISCONNECTED
-                else -> NetworkStatus.UNKNOWN
-            }
-
-            val type = when {
-                nw_path_uses_interface_type(currentPath, nw_interface_type_wifi) -> NetworkType.WIFI
-                nw_path_uses_interface_type(currentPath, nw_interface_type_cellular) -> NetworkType.CELLULAR
-                nw_path_uses_interface_type(currentPath, nw_interface_type_wired) -> NetworkType.ETHERNET
-                else -> NetworkType.UNKNOWN
-            }
-
-            val isMetered = nw_path_is_expensive(currentPath)
-
-            NetworkState(
-                status = status,
-                type = type,
-                isMetered = isMetered
-            )
-        } else {
-            NetworkState(
-                status = NetworkStatus.UNKNOWN,
-                type = NetworkType.NONE,
-                isMetered = false
-            )
+        val status = when (pathStatus) {
+            nw_path_status_satisfied, nw_path_status_satisfiable -> NetworkStatus.CONNECTED
+            nw_path_status_unsatisfied -> NetworkStatus.DISCONNECTED
+            else -> NetworkStatus.UNKNOWN
         }
 
-        _networkState.value = state
+        val type = when {
+            nw_path_uses_interface_type(path, nw_interface_type_wifi) -> NetworkType.WIFI
+            nw_path_uses_interface_type(path, nw_interface_type_cellular) -> NetworkType.CELLULAR
+            nw_path_uses_interface_type(path, nw_interface_type_wired) -> NetworkType.ETHERNET
+            else -> NetworkType.UNKNOWN
+        }
+
+        val isMetered = nw_path_is_expensive(path)
+
+        _networkState.value = NetworkState(
+            status = status,
+            type = type,
+            isMetered = isMetered
+        )
     }
 }
 

@@ -254,20 +254,18 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
     /**
      * Update formGroupId for multiple elements by their hashes
      * Note: This is a batch operation wrapped in transaction for atomicity
+     *
+     * FIX (2025-12-29): Removed runBlocking to prevent deadlock. Use batch query
+     * directly instead of loop + suspend repository methods.
      */
     suspend fun updateFormGroupIdBatch(hashes: List<String>, groupId: String?) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            databaseManager.transaction {
-                kotlinx.coroutines.runBlocking {
-                    hashes.forEach { hash ->
-                        val element = databaseManager.scrapedElements.getByHash(hash)
-                        if (element != null) {
-                            val updated = element.copy(formGroupId = groupId)
-                            databaseManager.scrapedElements.insert(updated)
-                        }
-                    }
-                }
-            }
+            // Use direct batch query (synchronous) - no transaction wrapper needed
+            // The query itself is atomic for the UPDATE operation
+            databaseManager.scrapedElementQueries.updateFormGroupIdBatch(
+                formGroupId = groupId,
+                elementHashes = hashes
+            )
         }
     }
 
@@ -319,24 +317,20 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      * - Screen transitions
      *
      * @param packageName Package name of the app to clean up
+     *
+     * FIX (2025-12-29): Removed runBlocking to prevent deadlock. Use direct queries
+     * (synchronous) instead of repository methods (suspend) inside transaction.
      */
     suspend fun deleteAppSpecificElements(packageName: String) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 databaseManager.transaction {
-                    kotlinx.coroutines.runBlocking {
-                        // Delete scraped elements for this app
-                        databaseManager.scrapedElements.deleteByApp(packageName)
-
-                        // Delete generated commands for this app
-                        databaseManager.generatedCommands.deleteCommandsByPackage(packageName)
-
-                        // Delete screen contexts for this app
-                        databaseManager.screenContexts.deleteByApp(packageName)
-
-                        android.util.Log.i("VoiceOSCoreDatabaseAdapter", "Deleted all data for package: $packageName")
-                    }
+                    // Use direct queries (synchronous) instead of repository methods (suspend)
+                    databaseManager.scrapedElementQueries.deleteByApp(packageName)
+                    databaseManager.generatedCommandQueries.deleteByPackage(packageName)
+                    databaseManager.screenContextQueries.deleteByApp(packageName)
                 }
+                android.util.Log.i("VoiceOSCoreDatabaseAdapter", "Deleted all data for package: $packageName")
             } catch (e: Exception) {
                 android.util.Log.e("VoiceOSCoreDatabaseAdapter", "Failed to delete app-specific elements for $packageName", e)
                 throw e
@@ -366,22 +360,23 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
      * Extension: Insert batch of hierarchy records
      * Note: The old Room entity uses ID-based relationships, but SQLDelight uses hash-based.
      * This is a compatibility shim - caller should migrate to hash-based entities.
+     *
+     * FIX (2025-12-29): Removed runBlocking to prevent deadlock. Use direct queries
+     * (synchronous) instead of repository methods (suspend) inside transaction.
      */
     suspend fun insertHierarchyBatch(hierarchies: List<com.augmentalis.voiceoscore.scraping.entities.ScrapedHierarchyEntity>): List<Long> {
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val ids = mutableListOf<Long>()
             databaseManager.transaction {
-                kotlinx.coroutines.runBlocking {
-                    hierarchies.forEach { hierarchy ->
-                        // Use hash-based fields (parentElementHash, childElementHash) for SQLDelight
-                        databaseManager.scrapedHierarchies.insert(
-                            parentElementHash = hierarchy.parentElementHash,
-                            childElementHash = hierarchy.childElementHash,
-                            depth = hierarchy.depth.toLong(),
-                            createdAt = hierarchy.createdAt
-                        )
-                        ids.add(hierarchy.id)
-                    }
+                // Use direct queries (synchronous) instead of repository methods (suspend)
+                hierarchies.forEach { hierarchy ->
+                    databaseManager.scrapedHierarchyQueries.insert(
+                        parentElementHash = hierarchy.parentElementHash,
+                        childElementHash = hierarchy.childElementHash,
+                        depth = hierarchy.depth.toLong(),
+                        createdAt = hierarchy.createdAt
+                    )
+                    ids.add(hierarchy.id)
                 }
             }
             ids
@@ -390,17 +385,37 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
 
     /**
      * Extension: Insert batch of generated commands
+     *
+     * FIX (2025-12-29): Removed runBlocking to prevent deadlock. Use direct queries
+     * (synchronous) instead of repository methods (suspend) inside transaction.
      */
     suspend fun insertCommandBatch(commands: List<com.augmentalis.voiceoscore.scraping.entities.GeneratedCommandEntity>): List<Long> {
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val ids = mutableListOf<Long>()
             databaseManager.transaction {
-                kotlinx.coroutines.runBlocking {
-                    commands.forEach { command ->
-                        val dto = command.toGeneratedCommandDTO()
-                        databaseManager.generatedCommands.insert(dto)
-                        ids.add(command.id ?: System.currentTimeMillis())
-                    }
+                // Use direct queries (synchronous) instead of repository methods (suspend)
+                // Insert uses positional parameters matching GeneratedCommand.sq schema:
+                // elementHash, commandText, actionType, confidence, synonyms,
+                // isUserApproved, usageCount, lastUsed, createdAt,
+                // appId, appVersion, versionCode, lastVerified, isDeprecated
+                commands.forEach { command ->
+                    databaseManager.generatedCommandQueries.insert(
+                        command.elementHash,
+                        command.commandText,
+                        command.actionType,
+                        command.confidence,
+                        command.synonyms,
+                        command.isUserApproved,
+                        command.usageCount,
+                        command.lastUsed,
+                        command.createdAt,
+                        command.appId,
+                        command.appVersion,
+                        command.versionCode,
+                        command.lastVerified,
+                        command.isDeprecated
+                    )
+                    ids.add(command.id)
                 }
             }
             ids
@@ -409,25 +424,27 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
 
     /**
      * Extension: Insert batch of element relationships
+     *
+     * FIX (2025-12-29): Removed runBlocking to prevent deadlock. Use direct queries
+     * (synchronous) instead of repository methods (suspend) inside transaction.
      */
     suspend fun insertRelationshipBatch(relationships: List<com.augmentalis.voiceoscore.scraping.entities.ElementRelationshipEntity>): List<Long> {
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val ids = mutableListOf<Long>()
             databaseManager.transaction {
-                kotlinx.coroutines.runBlocking {
-                    relationships.forEach { relationship ->
-                        val currentTime = System.currentTimeMillis()
-                        databaseManager.elementRelationships.insert(
-                            sourceElementHash = relationship.sourceElementHash,
-                            targetElementHash = relationship.targetElementHash,
-                            relationshipType = relationship.relationshipType,
-                            relationshipData = relationship.relationshipData,
-                            confidence = relationship.confidence.toDouble(),
-                            createdAt = relationship.createdAt,
-                            updatedAt = currentTime // Entity doesn't have updatedAt field, use current time
-                        )
-                        ids.add(relationship.id ?: 0L)
-                    }
+                // Use direct queries (synchronous) instead of repository methods (suspend)
+                relationships.forEach { relationship ->
+                    val currentTime = System.currentTimeMillis()
+                    databaseManager.elementRelationshipQueries.insert(
+                        sourceElementHash = relationship.sourceElementHash,
+                        targetElementHash = relationship.targetElementHash,
+                        relationshipType = relationship.relationshipType,
+                        relationshipData = relationship.relationshipData,
+                        confidence = relationship.confidence.toDouble(),
+                        createdAt = relationship.createdAt,
+                        updatedAt = currentTime
+                    )
+                    ids.add(relationship.id ?: 0L)
                 }
             }
             ids
@@ -454,18 +471,47 @@ class VoiceOSCoreDatabaseAdapter private constructor(context: Context) {
     /**
      * Extension: Insert batch of scraped elements and return assigned IDs
      * Wrapped in transaction for atomicity and performance
+     *
+     * FIX (2025-12-29): Removed runBlocking to prevent deadlock. Use direct queries
+     * (synchronous) instead of repository methods (suspend) inside transaction.
      */
     suspend fun insertElementBatch(elements: List<com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity>): List<Long> {
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val ids = mutableListOf<Long>()
             databaseManager.transaction {
-                kotlinx.coroutines.runBlocking {
-                    elements.forEach { element ->
-                        val dto = element.toScrapedElementDTO()
-                        databaseManager.scrapedElements.insert(dto)
-                        // Use element hash as ID for now
-                        ids.add(element.id ?: element.elementHash.hashCode().toLong())
-                    }
+                // Use direct queries (synchronous) instead of repository methods (suspend)
+                elements.forEach { element ->
+                    val dto = element.toScrapedElementDTO()
+                    databaseManager.scrapedElementQueries.insert(
+                        elementHash = dto.elementHash,
+                        appId = dto.appId,
+                        uuid = dto.uuid,
+                        className = dto.className,
+                        viewIdResourceName = dto.viewIdResourceName,
+                        text = dto.text,
+                        contentDescription = dto.contentDescription,
+                        bounds = dto.bounds,
+                        isClickable = dto.isClickable,
+                        isLongClickable = dto.isLongClickable,
+                        isEditable = dto.isEditable,
+                        isScrollable = dto.isScrollable,
+                        isCheckable = dto.isCheckable,
+                        isFocusable = dto.isFocusable,
+                        isEnabled = dto.isEnabled,
+                        depth = dto.depth,
+                        indexInParent = dto.indexInParent,
+                        scrapedAt = dto.scrapedAt,
+                        semanticRole = dto.semanticRole,
+                        inputType = dto.inputType,
+                        visualWeight = dto.visualWeight,
+                        isRequired = dto.isRequired,
+                        formGroupId = dto.formGroupId,
+                        placeholderText = dto.placeholderText,
+                        validationPattern = dto.validationPattern,
+                        backgroundColor = dto.backgroundColor,
+                        screen_hash = dto.screen_hash
+                    )
+                    ids.add(element.id ?: element.elementHash.hashCode().toLong())
                 }
             }
             ids

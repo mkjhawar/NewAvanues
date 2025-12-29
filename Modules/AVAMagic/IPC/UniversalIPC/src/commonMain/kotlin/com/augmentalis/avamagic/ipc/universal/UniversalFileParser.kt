@@ -243,7 +243,9 @@ enum class FileType {
     AVC,    // AvaConnect device communication
     AWB,    // WebAvanue/BrowserAvanue browser commands (Ava Web Browser)
     AMI,    // MagicUI components (Ava MagicUI)
-    AMC;    // MagicCode generators (Ava MagicCode)
+    AMC,    // MagicCode generators (Ava MagicCode)
+    HOV,    // Handover files (AI context continuity)
+    IDC;    // IDEACODE config files
 
     fun toExtension(): String = ".${name.lowercase()}"
 
@@ -254,6 +256,8 @@ enum class FileType {
         AWB -> "browseravanue"
         AMI -> "magicui"
         AMC -> "magiccode"
+        HOV -> "handover"
+        IDC -> "ideacode"
     }
 }
 
@@ -305,5 +309,68 @@ class AmcFileReader {
         val file = UniversalFileParser.parse(content)
         require(file.type == FileType.AMC) { "Not an AMC file: got ${file.type}" }
         return file
+    }
+}
+
+class HovFileReader {
+    fun load(content: String): UniversalFile {
+        val file = UniversalFileParser.parse(content)
+        require(file.type == FileType.HOV) { "Not a HOV file: got ${file.type}" }
+        return file
+    }
+}
+
+class IdcFileReader {
+    fun load(content: String): UniversalFile {
+        val file = UniversalFileParser.parse(content)
+        require(file.type == FileType.IDC) { "Not an IDC file: got ${file.type}" }
+        return file
+    }
+}
+
+/**
+ * Handover Entry Codes (HOV files)
+ *
+ * Used for AI context continuity and session handovers.
+ * Each code represents a specific type of handover information.
+ */
+object HandoverCodes {
+    const val ARC = "ARC"  // Architecture - patterns, structure, design decisions
+    const val STA = "STA"  // State - current status, progress
+    const val WIP = "WIP"  // Work in Progress - active tasks, partially complete
+    const val BLK = "BLK"  // Blocker - issues preventing progress
+    const val DEC = "DEC"  // Decision - key decisions made with rationale
+    const val FIL = "FIL"  // File - file references, paths
+    const val MOD = "MOD"  // Module - module-specific context
+    const val LEA = "LEA"  // Learning - insights, mistakes, corrections
+    const val TSK = "TSK"  // Task - pending tasks, todos
+    const val DEP = "DEP"  // Dependency - module/package dependencies
+    const val CFG = "CFG"  // Config - configuration state
+    const val API = "API"  // API - interface changes, contracts
+    const val BUG = "BUG"  // Bug - known issues, workarounds
+    const val REF = "REF"  // Reference - links, related docs
+    const val CTX = "CTX"  // Context - session context, recent work
+    const val PRI = "PRI"  // Priority - P0/P1/P2 items
+
+    val ALL = listOf(ARC, STA, WIP, BLK, DEC, FIL, MOD, LEA, TSK, DEP, CFG, API, BUG, REF, CTX, PRI)
+
+    fun description(code: String): String = when(code) {
+        ARC -> "Architecture (patterns, structure)"
+        STA -> "State (current status)"
+        WIP -> "Work in Progress"
+        BLK -> "Blocker (preventing progress)"
+        DEC -> "Decision (with rationale)"
+        FIL -> "File reference"
+        MOD -> "Module context"
+        LEA -> "Learning/insight"
+        TSK -> "Task/todo"
+        DEP -> "Dependency"
+        CFG -> "Configuration"
+        API -> "API/interface"
+        BUG -> "Known bug"
+        REF -> "Reference/link"
+        CTX -> "Session context"
+        PRI -> "Priority item"
+        else -> "Unknown"
     }
 }

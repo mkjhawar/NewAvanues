@@ -105,6 +105,41 @@ expect class DeviceInfo() {
      * Check if device supports a specific feature.
      */
     fun hasFeature(feature: String): Boolean
+
+    // ==================== FINGERPRINTING ====================
+
+    /**
+     * Get stable device fingerprint for LaaS license validation.
+     *
+     * Returns a SHA-256 hash of combined device characteristics.
+     * Deterministic - same device always returns same fingerprint.
+     *
+     * Platform-specific signals:
+     * - Android: ANDROID_ID + Build + MAC(<29) + hardware + display
+     * - iOS: IDFV + model + screen
+     * - Desktop: MachineID + MAC + OS + hardware
+     */
+    fun getFingerprint(): DeviceFingerprint
+
+    /**
+     * Get just the fingerprint string (for API calls).
+     */
+    fun getFingerprintString(): String
+
+    /**
+     * Get short fingerprint for display (first 16 chars, uppercase).
+     */
+    fun getFingerprintShort(): String
+
+    /**
+     * Get debug info for troubleshooting fingerprint issues.
+     */
+    fun getFingerprintDebugInfo(): FingerprintDebugInfo
+
+    /**
+     * Get device type classification.
+     */
+    fun getDeviceType(): DeviceType
 }
 
 /**
@@ -126,3 +161,59 @@ object DeviceFeatures {
     const val FEATURE_BIOMETRICS = "biometrics"
     const val FEATURE_TELEPHONY = "telephony"
 }
+
+// ==================== DEVICE FINGERPRINTING ====================
+
+/**
+ * Device fingerprint result for LaaS license validation.
+ *
+ * The fingerprint is a SHA-256 hash of stable device characteristics.
+ * It is deterministic - same device always produces same fingerprint.
+ *
+ * Components vary by platform:
+ * - Android: ANDROID_ID, Build info, MAC (API <29 only), hardware
+ * - iOS: identifierForVendor (IDFV), model, screen
+ * - Desktop: Machine ID, MAC address, hardware info
+ *
+ * Excluded (volatile/privacy):
+ * - Timezone (device is mobile)
+ * - IP address (changes)
+ * - Location (privacy)
+ * - IMEI (restricted)
+ */
+data class DeviceFingerprint(
+    val fingerprint: String,       // SHA-256 hash (64 hex chars)
+    val fingerprintShort: String,  // First 16 chars (for display)
+    val version: Int,              // Algorithm version
+    val platform: PlatformType,
+    val deviceType: DeviceType,
+    val isStable: Boolean,         // All primary signals available
+    val generatedAt: Long
+)
+
+/**
+ * Device type classification.
+ */
+enum class DeviceType {
+    PHONE,
+    TABLET,
+    WATCH,
+    TV,
+    AUTOMOTIVE,
+    XR,
+    DESKTOP,
+    WEB,
+    UNKNOWN
+}
+
+/**
+ * Debug info for troubleshooting fingerprint issues.
+ */
+data class FingerprintDebugInfo(
+    val primaryIdPresent: Boolean,     // ANDROID_ID / IDFV / MachineID
+    val buildInfoPresent: Boolean,     // Build fingerprint / OS info
+    val macAddressPresent: Boolean,    // Only Android <29 and Desktop
+    val hardwareInfoPresent: Boolean,
+    val displayInfoPresent: Boolean,
+    val installIdPresent: Boolean      // Fallback UUID
+)
