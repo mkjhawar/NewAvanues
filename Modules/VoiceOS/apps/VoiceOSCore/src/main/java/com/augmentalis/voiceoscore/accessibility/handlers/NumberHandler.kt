@@ -19,6 +19,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Handler for number overlay display and interaction
@@ -46,8 +47,12 @@ class NumberHandler(
         )
     }
 
+    // THREAD SAFETY FIX: Added @Volatile for cross-thread visibility
+    @Volatile
     private var isNumberOverlayVisible = false
-    private var numberedElements = mutableMapOf<Int, ElementInfo>()
+    // THREAD SAFETY FIX: Replaced mutableMapOf with ConcurrentHashMap for thread-safe access
+    private val numberedElements = ConcurrentHashMap<Int, ElementInfo>()
+    @Volatile
     private var currentNumberCount = 0
     private val numberScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 

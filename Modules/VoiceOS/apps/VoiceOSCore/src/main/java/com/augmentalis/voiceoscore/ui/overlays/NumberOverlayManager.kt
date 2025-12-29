@@ -33,6 +33,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.view.isVisible
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
+import java.util.concurrent.CopyOnWriteArrayList
 import com.augmentalis.voiceos.accessibility.AnchorPoint
 import com.augmentalis.voiceos.accessibility.BadgeStyle
 import com.augmentalis.voiceos.accessibility.ElementVoiceState
@@ -66,8 +67,11 @@ class NumberOverlayManager(
     private var layoutParams: WindowManager.LayoutParams? = null
 
     // Current state
+    // THREAD SAFETY FIX: Added @Volatile for cross-thread visibility
+    @Volatile
     private var isShowing = false
-    private var currentOverlays = mutableListOf<OverlayData>()
+    // THREAD SAFETY FIX: Using CopyOnWriteArrayList for thread-safe access
+    private val currentOverlays = CopyOnWriteArrayList<OverlayData>()
 
     // Coroutine scope for async operations
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)

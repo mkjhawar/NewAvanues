@@ -447,29 +447,34 @@ class LearnAppIntegration private constructor(
                             when (state) {
                                 is ExplorationState.Running -> {
                                     // Check for blocked states every time we're running
-                                    val currentScreen = accessibilityService.rootInActiveWindow
-                                    if (currentScreen != null) {
-                                        val blockedState = detectBlockedState(currentScreen)
+                                    // MEMORY FIX: Use try-finally to ensure recycle even on exception
+                                    val screen = accessibilityService.rootInActiveWindow
+                                    try {
+                                        if (screen != null) {
+                                            val blockedState = detectBlockedState(screen)
 
-                                        if (blockedState != null) {
-                                            val reason = when (blockedState) {
-                                                BlockedState.PERMISSION_REQUIRED ->
-                                                    "Permission required - Paused for manual intervention"
-                                                BlockedState.LOGIN_REQUIRED ->
-                                                    "Login required - Paused for manual login"
-                                            }
+                                            if (blockedState != null) {
+                                                val reason = when (blockedState) {
+                                                    BlockedState.PERMISSION_REQUIRED ->
+                                                        "Permission required - Paused for manual intervention"
+                                                    BlockedState.LOGIN_REQUIRED ->
+                                                        "Login required - Paused for manual login"
+                                                }
 
-                                            Log.i(TAG, "Blocked state detected: $blockedState - Auto-pausing exploration")
-                                            explorationEngine.pauseExploration()
+                                                Log.i(TAG, "Blocked state detected: $blockedState - Auto-pausing exploration")
+                                                explorationEngine.pauseExploration()
 
-                                            withContext(Dispatchers.Main) {
-                                                showToastNotification(
-                                                    "Exploration Paused",
-                                                    "$reason\nTap Resume when ready"
-                                                )
+                                                withContext(Dispatchers.Main) {
+                                                    showToastNotification(
+                                                        "Exploration Paused",
+                                                        "$reason\nTap Resume when ready"
+                                                    )
+                                                }
                                             }
                                         }
-                                        currentScreen.recycle()
+                                    } finally {
+                                        @Suppress("DEPRECATION")
+                                        screen?.recycle()
                                     }
                                 }
                                 else -> {
@@ -498,20 +503,25 @@ class LearnAppIntegration private constructor(
                                 // Poll every 2 seconds while paused
                                 while (explorationEngine.explorationState.value is ExplorationState.PausedByUser) {
                                     delay(2000)
-                                    val currentScreen = accessibilityService.rootInActiveWindow
-                                    if (currentScreen != null) {
-                                        if (detectBlockedState(currentScreen) == null) {
-                                            // Blocked state resolved!
-                                            Log.i(TAG, "Blocked state resolved - Ready to resume")
-                                            withContext(Dispatchers.Main) {
-                                                showToastNotification(
-                                                    "Ready to Resume",
-                                                    "Blocked state resolved. You can now resume exploration."
-                                                )
+                                    // MEMORY FIX: Use try-finally to ensure recycle even on exception
+                                    val screen = accessibilityService.rootInActiveWindow
+                                    try {
+                                        if (screen != null) {
+                                            if (detectBlockedState(screen) == null) {
+                                                // Blocked state resolved!
+                                                Log.i(TAG, "Blocked state resolved - Ready to resume")
+                                                withContext(Dispatchers.Main) {
+                                                    showToastNotification(
+                                                        "Ready to Resume",
+                                                        "Blocked state resolved. You can now resume exploration."
+                                                    )
+                                                }
+                                                break
                                             }
-                                            break
                                         }
-                                        currentScreen.recycle()
+                                    } finally {
+                                        @Suppress("DEPRECATION")
+                                        screen?.recycle()
                                     }
                                 }
                             }
@@ -822,11 +832,17 @@ class LearnAppIntegration private constructor(
      * @return Package name of foreground app, or null if not available
      */
     fun getCurrentForegroundPackage(): String? {
+        // MEMORY FIX: Recycle the node after extracting package name
+        var rootNode: android.view.accessibility.AccessibilityNodeInfo? = null
         return try {
-            accessibilityService.rootInActiveWindow?.packageName?.toString()
+            rootNode = accessibilityService.rootInActiveWindow
+            rootNode?.packageName?.toString()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get foreground package", e)
             null
+        } finally {
+            @Suppress("DEPRECATION")
+            rootNode?.recycle()
         }
     }
 

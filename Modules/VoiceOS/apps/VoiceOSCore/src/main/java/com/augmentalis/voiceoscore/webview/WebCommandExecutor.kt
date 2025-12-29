@@ -38,6 +38,43 @@ class WebCommandExecutor(private val context: Context) {
         const val CMD_SELECT = "SELECT"
         const val CMD_CHECK = "CHECK"
         const val CMD_RADIO = "RADIO"
+
+        /**
+         * XPath special characters that must be escaped to prevent injection
+         */
+        private val XPATH_ESCAPE_CHARS = mapOf(
+            "'" to "\\'",
+            "\"" to "\\\"",
+            "\\" to "\\\\",
+            "\n" to "\\n",
+            "\r" to "\\r",
+            "\t" to "\\t"
+        )
+    }
+
+    /**
+     * Escape XPath string for safe JavaScript injection
+     *
+     * SECURITY: Prevents XSS attacks by escaping special characters
+     * in XPath expressions before JavaScript evaluation.
+     *
+     * @param xpath Raw XPath string
+     * @return Escaped XPath safe for JS template literals
+     */
+    private fun escapeXPath(xpath: String): String {
+        var escaped = xpath
+        XPATH_ESCAPE_CHARS.forEach { (char, replacement) ->
+            escaped = escaped.replace(char, replacement)
+        }
+        // Additional safety: reject XPaths with potential JS injection patterns
+        if (escaped.contains("javascript:", ignoreCase = true) ||
+            escaped.contains("</script>", ignoreCase = true) ||
+            escaped.contains("onerror=", ignoreCase = true) ||
+            escaped.contains("onload=", ignoreCase = true)) {
+            Log.w(TAG, "Potentially malicious XPath rejected: $xpath")
+            return ""
+        }
+        return escaped
     }
 
     private val availableCommands = mutableListOf<String>()
@@ -110,103 +147,129 @@ class WebCommandExecutor(private val context: Context) {
     /**
      * Generate JavaScript to click an element
      *
+     * SECURITY: XPath is escaped to prevent XSS injection
+     *
      * @param xpath The XPath to the element
      * @return JavaScript code as a string
      */
-    private fun generateClickJS(xpath: String): String = """
-        (function() {
-            try {
-                var element = document.evaluate('$xpath', document, null,
-                    XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    private fun generateClickJS(xpath: String): String {
+        val safeXPath = escapeXPath(xpath)
+        if (safeXPath.isEmpty()) return "(function() { return false; })();"
 
-                if (element) {
-                    // Scroll into view first
-                    element.scrollIntoView({behavior: 'smooth', block: 'center'});
+        return """
+            (function() {
+                try {
+                    var element = document.evaluate('$safeXPath', document, null,
+                        XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 
-                    // Wait a bit for scroll, then click
-                    setTimeout(function() {
-                        element.click();
-                        console.log('[VOS] Clicked element: $xpath');
-                    }, 100);
+                    if (element) {
+                        // Scroll into view first
+                        element.scrollIntoView({behavior: 'smooth', block: 'center'});
 
-                    return true;
-                } else {
-                    console.error('[VOS] Element not found: $xpath');
+                        // Wait a bit for scroll, then click
+                        setTimeout(function() {
+                            element.click();
+                            console.log('[VOS] Clicked element');
+                        }, 100);
+
+                        return true;
+                    } else {
+                        console.error('[VOS] Element not found');
+                        return false;
+                    }
+                } catch (e) {
+                    console.error('[VOS] Click error:', e);
                     return false;
                 }
-            } catch (e) {
-                console.error('[VOS] Click error:', e);
-                return false;
-            }
-        })();
-    """.trimIndent()
+            })();
+        """.trimIndent()
+    }
 
     /**
      * Generate JavaScript to focus an element
      *
-     * @param xpath The XPath to the element
-     * @return JavaScript code as a string
-     */
-    private fun generateFocusJS(xpath: String): String = """
-        (function() {
-            try {
-                var element = document.evaluate('$xpath', document, null,
-                    XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-
-                if (element) {
-                    element.focus();
-                    console.log('[VOS] Focused element: $xpath');
-                    return true;
-                } else {
-                    console.error('[VOS] Element not found: $xpath');
-                    return false;
-                }
-            } catch (e) {
-                console.error('[VOS] Focus error:', e);
-                return false;
-            }
-        })();
-    """.trimIndent()
-
-    /**
-     * Generate JavaScript to scroll to an element
+     * SECURITY: XPath is escaped to prevent XSS injection
      *
      * @param xpath The XPath to the element
      * @return JavaScript code as a string
      */
-    private fun generateScrollJS(xpath: String): String = """
-        (function() {
-            try {
-                var element = document.evaluate('$xpath', document, null,
-                    XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    private fun generateFocusJS(xpath: String): String {
+        val safeXPath = escapeXPath(xpath)
+        if (safeXPath.isEmpty()) return "(function() { return false; })();"
 
-                if (element) {
-                    element.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                        inline: 'nearest'
-                    });
-                    console.log('[VOS] Scrolled to element: $xpath');
-                    return true;
-                } else {
-                    console.error('[VOS] Element not found: $xpath');
+        return """
+            (function() {
+                try {
+                    var element = document.evaluate('$safeXPath', document, null,
+                        XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+
+                    if (element) {
+                        element.focus();
+                        console.log('[VOS] Focused element');
+                        return true;
+                    } else {
+                        console.error('[VOS] Element not found');
+                        return false;
+                    }
+                } catch (e) {
+                    console.error('[VOS] Focus error:', e);
                     return false;
                 }
-            } catch (e) {
-                console.error('[VOS] Scroll error:', e);
-                return false;
-            }
-        })();
-    """.trimIndent()
+            })();
+        """.trimIndent()
+    }
+
+    /**
+     * Generate JavaScript to scroll to an element
+     *
+     * SECURITY: XPath is escaped to prevent XSS injection
+     *
+     * @param xpath The XPath to the element
+     * @return JavaScript code as a string
+     */
+    private fun generateScrollJS(xpath: String): String {
+        val safeXPath = escapeXPath(xpath)
+        if (safeXPath.isEmpty()) return "(function() { return false; })();"
+
+        return """
+            (function() {
+                try {
+                    var element = document.evaluate('$safeXPath', document, null,
+                        XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+
+                    if (element) {
+                        element.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                            inline: 'nearest'
+                        });
+                        console.log('[VOS] Scrolled to element');
+                        return true;
+                    } else {
+                        console.error('[VOS] Element not found');
+                        return false;
+                    }
+                } catch (e) {
+                    console.error('[VOS] Scroll error:', e);
+                    return false;
+                }
+            })();
+        """.trimIndent()
+    }
 
     /**
      * Generate JavaScript to fill an input field
+     *
+     * SECURITY: Both XPath and value are escaped to prevent XSS injection
      *
      * @param xpath The XPath to the input element
      * @param value The value to fill
      * @return JavaScript code as a string
      */
     private fun generateFillJS(xpath: String, value: String): String {
+        val safeXPath = escapeXPath(xpath)
+        if (safeXPath.isEmpty()) return "(function() { return false; })();"
+
         // Escape value for JavaScript
         val escapedValue = value
             .replace("\\", "\\\\")
@@ -214,11 +277,13 @@ class WebCommandExecutor(private val context: Context) {
             .replace("\"", "\\\"")
             .replace("\n", "\\n")
             .replace("\r", "\\r")
+            .replace("<", "\\x3c")  // Prevent script tag injection
+            .replace(">", "\\x3e")
 
         return """
             (function() {
                 try {
-                    var element = document.evaluate('$xpath', document, null,
+                    var element = document.evaluate('$safeXPath', document, null,
                         XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 
                     if (element) {
@@ -236,10 +301,10 @@ class WebCommandExecutor(private val context: Context) {
                         var changeEvent = new Event('change', { bubbles: true });
                         element.dispatchEvent(changeEvent);
 
-                        console.log('[VOS] Filled input: $xpath');
+                        console.log('[VOS] Filled input');
                         return true;
                     } else {
-                        console.error('[VOS] Element not found: $xpath');
+                        console.error('[VOS] Element not found');
                         return false;
                     }
                 } catch (e) {
@@ -253,53 +318,67 @@ class WebCommandExecutor(private val context: Context) {
     /**
      * Generate JavaScript to submit a form
      *
+     * SECURITY: XPath is escaped to prevent XSS injection
+     *
      * @param xpath The XPath to the form or submit button
      * @return JavaScript code as a string
      */
-    private fun generateSubmitJS(xpath: String): String = """
-        (function() {
-            try {
-                var element = document.evaluate('$xpath', document, null,
-                    XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    private fun generateSubmitJS(xpath: String): String {
+        val safeXPath = escapeXPath(xpath)
+        if (safeXPath.isEmpty()) return "(function() { return false; })();"
 
-                if (element) {
-                    // If it's a form, submit it
-                    if (element.tagName.toLowerCase() === 'form') {
-                        element.submit();
+        return """
+            (function() {
+                try {
+                    var element = document.evaluate('$safeXPath', document, null,
+                        XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+
+                    if (element) {
+                        // If it's a form, submit it
+                        if (element.tagName.toLowerCase() === 'form') {
+                            element.submit();
+                        } else {
+                            // Otherwise, click it (likely a submit button)
+                            element.click();
+                        }
+                        console.log('[VOS] Submitted form');
+                        return true;
                     } else {
-                        // Otherwise, click it (likely a submit button)
-                        element.click();
+                        console.error('[VOS] Element not found');
+                        return false;
                     }
-                    console.log('[VOS] Submitted form: $xpath');
-                    return true;
-                } else {
-                    console.error('[VOS] Element not found: $xpath');
+                } catch (e) {
+                    console.error('[VOS] Submit error:', e);
                     return false;
                 }
-            } catch (e) {
-                console.error('[VOS] Submit error:', e);
-                return false;
-            }
-        })();
-    """.trimIndent()
+            })();
+        """.trimIndent()
+    }
 
     /**
      * Generate JavaScript to select an option from a dropdown
+     *
+     * SECURITY: Both XPath and value are escaped to prevent XSS injection
      *
      * @param xpath The XPath to the select element
      * @param value The value or text of the option to select
      * @return JavaScript code as a string
      */
     private fun generateSelectJS(xpath: String, value: String): String {
+        val safeXPath = escapeXPath(xpath)
+        if (safeXPath.isEmpty()) return "(function() { return false; })();"
+
         val escapedValue = value
             .replace("\\", "\\\\")
             .replace("'", "\\'")
             .replace("\"", "\\\"")
+            .replace("<", "\\x3c")
+            .replace(">", "\\x3e")
 
         return """
             (function() {
                 try {
-                    var element = document.evaluate('$xpath', document, null,
+                    var element = document.evaluate('$safeXPath', document, null,
                         XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 
                     if (element && element.tagName.toLowerCase() === 'select') {
@@ -324,14 +403,14 @@ class WebCommandExecutor(private val context: Context) {
                             var event = new Event('change', { bubbles: true });
                             element.dispatchEvent(event);
 
-                            console.log('[VOS] Selected option: $escapedValue');
+                            console.log('[VOS] Selected option');
                             return true;
                         } else {
-                            console.error('[VOS] Option not found: $escapedValue');
+                            console.error('[VOS] Option not found');
                             return false;
                         }
                     } else {
-                        console.error('[VOS] Select element not found: $xpath');
+                        console.error('[VOS] Select element not found');
                         return false;
                     }
                 } catch (e) {
@@ -345,11 +424,16 @@ class WebCommandExecutor(private val context: Context) {
     /**
      * Generate JavaScript to check/uncheck a checkbox
      *
+     * SECURITY: XPath is escaped to prevent XSS injection
+     *
      * @param xpath The XPath to the checkbox
      * @param value "true" to check, "false" to uncheck, empty to toggle
      * @return JavaScript code as a string
      */
     private fun generateCheckJS(xpath: String, value: String): String {
+        val safeXPath = escapeXPath(xpath)
+        if (safeXPath.isEmpty()) return "(function() { return false; })();"
+
         val shouldCheck = when (value.lowercase()) {
             "true", "1", "yes", "on" -> "true"
             "false", "0", "no", "off" -> "false"
@@ -359,7 +443,7 @@ class WebCommandExecutor(private val context: Context) {
         return """
             (function() {
                 try {
-                    var element = document.evaluate('$xpath', document, null,
+                    var element = document.evaluate('$safeXPath', document, null,
                         XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 
                     if (element && element.type === 'checkbox') {
@@ -379,7 +463,7 @@ class WebCommandExecutor(private val context: Context) {
                         console.log('[VOS] Checkbox checked: ' + element.checked);
                         return true;
                     } else {
-                        console.error('[VOS] Checkbox not found: $xpath');
+                        console.error('[VOS] Checkbox not found');
                         return false;
                     }
                 } catch (e) {
@@ -393,32 +477,39 @@ class WebCommandExecutor(private val context: Context) {
     /**
      * Generate JavaScript to select a radio button
      *
+     * SECURITY: XPath is escaped to prevent XSS injection
+     *
      * @param xpath The XPath to the radio button
      * @return JavaScript code as a string
      */
-    private fun generateRadioJS(xpath: String): String = """
-        (function() {
-            try {
-                var element = document.evaluate('$xpath', document, null,
-                    XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    private fun generateRadioJS(xpath: String): String {
+        val safeXPath = escapeXPath(xpath)
+        if (safeXPath.isEmpty()) return "(function() { return false; })();"
 
-                if (element && element.type === 'radio') {
-                    element.checked = true;
+        return """
+            (function() {
+                try {
+                    var element = document.evaluate('$safeXPath', document, null,
+                        XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 
-                    // Trigger change event
-                    var event = new Event('change', { bubbles: true });
-                    element.dispatchEvent(event);
+                    if (element && element.type === 'radio') {
+                        element.checked = true;
 
-                    console.log('[VOS] Radio button selected: $xpath');
-                    return true;
-                } else {
-                    console.error('[VOS] Radio button not found: $xpath');
+                        // Trigger change event
+                        var event = new Event('change', { bubbles: true });
+                        element.dispatchEvent(event);
+
+                        console.log('[VOS] Radio button selected');
+                        return true;
+                    } else {
+                        console.error('[VOS] Radio button not found');
+                        return false;
+                    }
+                } catch (e) {
+                    console.error('[VOS] Radio error:', e);
                     return false;
                 }
-            } catch (e) {
-                console.error('[VOS] Radio error:', e);
-                return false;
-            }
-        })();
-    """.trimIndent()
+            })();
+        """.trimIndent()
+    }
 }

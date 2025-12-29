@@ -3257,8 +3257,10 @@ class ExplorationEngine(
             val rootNode = accessibilityService.rootInActiveWindow ?: return null
             val result = findNodeByBounds(rootNode, bounds)
 
-            // Recycle rootNode if no match found
-            if (result == null) {
+            // MEMORY FIX: Recycle rootNode unless it IS the result (caller owns result)
+            // Previously only recycled when result was null, causing leaks when result was a child
+            if (result == null || result !== rootNode) {
+                @Suppress("DEPRECATION")
                 rootNode.recycle()
             }
 

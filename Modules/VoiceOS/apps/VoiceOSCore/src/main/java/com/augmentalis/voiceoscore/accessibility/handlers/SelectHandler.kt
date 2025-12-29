@@ -753,36 +753,66 @@ class SelectHandler(
         }
     }
 
+    /**
+     * Find focused node in the accessibility tree
+     * MEMORY FIX: Properly recycles child nodes that are not the result
+     *
+     * Note: Caller is responsible for recycling the returned node
+     */
     private fun findFocusedNode(rootNode: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
         if (rootNode == null) return null
-        
+
         if (rootNode.isFocused) return rootNode
-        
+
         for (i in 0 until rootNode.childCount) {
-            val child = rootNode.getChild(i)
-            child?.let {
-                val found = findFocusedNode(it)
-                if (found != null) return found
+            val child = rootNode.getChild(i) ?: continue
+            val found = findFocusedNode(child)
+            if (found != null) {
+                // If result is the child itself, don't recycle (caller will handle)
+                // If result is deeper, recycle the intermediate child node
+                if (found !== child) {
+                    @Suppress("DEPRECATION")
+                    child.recycle()
+                }
+                return found
             }
+            // No result in this branch, recycle child
+            @Suppress("DEPRECATION")
+            child.recycle()
         }
-        
+
         return null
     }
 
+    /**
+     * Find editable node in the accessibility tree
+     * MEMORY FIX: Properly recycles child nodes that are not the result
+     *
+     * Note: Caller is responsible for recycling the returned node
+     */
     private fun findEditableNode(rootNode: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
         if (rootNode == null) return null
-        
+
         if (rootNode.isEditable && rootNode.isFocused) return rootNode
         if (rootNode.isEditable) return rootNode
-        
+
         for (i in 0 until rootNode.childCount) {
-            val child = rootNode.getChild(i)
-            child?.let {
-                val found = findEditableNode(it)
-                if (found != null) return found
+            val child = rootNode.getChild(i) ?: continue
+            val found = findEditableNode(child)
+            if (found != null) {
+                // If result is the child itself, don't recycle (caller will handle)
+                // If result is deeper, recycle the intermediate child node
+                if (found !== child) {
+                    @Suppress("DEPRECATION")
+                    child.recycle()
+                }
+                return found
             }
+            // No result in this branch, recycle child
+            @Suppress("DEPRECATION")
+            child.recycle()
         }
-        
+
         return null
     }
 

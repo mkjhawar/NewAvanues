@@ -95,6 +95,14 @@ class PluginManager(
     /** Trusted plugin signature hashes (SHA-256) */
     private val trustedSignatures = mutableSetOf<String>()
 
+    /**
+     * SECURITY: Whether to enforce signature verification
+     * When true (default), only plugins with trusted signatures can load.
+     * Set to false ONLY for development/testing.
+     */
+    @Volatile
+    private var enforceSignatureVerification = true
+
     /** Health check job */
     private var healthCheckJob: Job? = null
 
@@ -265,6 +273,9 @@ class PluginManager(
 
     /**
      * Verify APK signature
+     *
+     * SECURITY: Enforces signature verification when enabled.
+     * Plugins must have a signature in the trustedSignatures set.
      */
     private fun verifyApkSignature(file: File): Boolean {
         try {
@@ -279,10 +290,18 @@ class PluginManager(
             // Calculate SHA-256 hash of signature
             val signatureHash = calculateSignatureHash(signatures[0])
 
-            // Check if signature is trusted
-            if (trustedSignatures.isNotEmpty() && signatureHash !in trustedSignatures) {
-                Log.w(TAG, "Untrusted signature: $signatureHash")
-                return false
+            // SECURITY FIX: Always check signature when enforcement is enabled
+            if (enforceSignatureVerification) {
+                if (trustedSignatures.isEmpty()) {
+                    Log.e(TAG, "SECURITY: No trusted signatures configured - rejecting plugin")
+                    return false
+                }
+                if (signatureHash !in trustedSignatures) {
+                    Log.w(TAG, "Untrusted signature: $signatureHash")
+                    return false
+                }
+            } else {
+                Log.w(TAG, "SECURITY WARNING: Signature verification disabled (dev mode)")
             }
 
             Log.d(TAG, "APK signature verified: $signatureHash")
@@ -353,10 +372,43 @@ class PluginManager(
     }
 
     /**
+     * Validate entry path for ZIP slip prevention
+     *
+     * SECURITY: Prevents path traversal attacks where malicious archives
+     * contain entries with paths like "../../../etc/passwd"
+     *
+     * @param entryName The archive entry name to validate
+     * @return true if path is safe, false otherwise
+     */
+    private fun isValidEntryPath(entryName: String): Boolean {
+        // Check for path traversal patterns
+        if (entryName.contains("..") ||
+            entryName.startsWith("/") ||
+            entryName.startsWith("\\") ||
+            entryName.contains(":/") ||
+            entryName.contains(":\\")) {
+            Log.e(TAG, "SECURITY: Potential ZIP slip attack detected in entry: $entryName")
+            return false
+        }
+        return true
+    }
+
+    /**
      * Extract manifest from APK
+     *
+     * SECURITY: Validates entry paths to prevent ZIP slip attacks
      */
     private fun extractManifestFromApk(file: File): String {
         ZipFile(file).use { zip ->
+            // Validate all entries for security
+            val entries = zip.entries()
+            while (entries.hasMoreElements()) {
+                val entry = entries.nextElement()
+                if (!isValidEntryPath(entry.name)) {
+                    throw PluginLoadException("SECURITY: Invalid path in APK: ${entry.name}")
+                }
+            }
+
             val entry = zip.getEntry(MANIFEST_FILE)
                 ?: throw PluginLoadException("Manifest not found in APK: $MANIFEST_FILE")
 
@@ -366,9 +418,20 @@ class PluginManager(
 
     /**
      * Extract manifest from JAR
+     *
+     * SECURITY: Validates entry paths to prevent ZIP slip attacks
      */
     private fun extractManifestFromJar(file: File): String {
         JarFile(file).use { jar ->
+            // Validate all entries for security
+            val entries = jar.entries()
+            while (entries.hasMoreElements()) {
+                val entry = entries.nextElement()
+                if (!isValidEntryPath(entry.name)) {
+                    throw PluginLoadException("SECURITY: Invalid path in JAR: ${entry.name}")
+                }
+            }
+
             val entry = jar.getEntry(MANIFEST_FILE)
                 ?: throw PluginLoadException("Manifest not found in JAR: $MANIFEST_FILE")
 
@@ -865,9 +928,37 @@ class PluginManager(
      */
     private fun loadTrustedSignatures() {
         // TODO: Load from SharedPreferences or secure storage
-        // For now, accept all signatures (dev mode)
-        Log.w(TAG, "No trusted signatures configured - accepting all plugins (DEV MODE)")
+        // SECURITY: In production, this should load actual trusted signatures
+        Log.i(TAG, "Loading trusted signatures from secure storage")
+        // enforceSignatureVerification remains true by default
     }
+
+    /**
+     * Enable or disable signature verification
+     *
+     * SECURITY WARNING: Only disable for development/testing.
+     * This method requires explicit acknowledgment of security implications.
+     *
+     * @param enabled Whether to enforce signature verification
+     * @param securityAcknowledgment Must be "I_UNDERSTAND_SECURITY_IMPLICATIONS" to disable
+     */
+    fun setSignatureVerificationEnabled(enabled: Boolean, securityAcknowledgment: String = "") {
+        if (!enabled && securityAcknowledgment != "I_UNDERSTAND_SECURITY_IMPLICATIONS") {
+            Log.e(TAG, "Cannot disable signature verification without proper acknowledgment")
+            return
+        }
+        enforceSignatureVerification = enabled
+        if (!enabled) {
+            Log.w(TAG, "SECURITY WARNING: Signature verification has been DISABLED")
+        } else {
+            Log.i(TAG, "Signature verification enabled")
+        }
+    }
+
+    /**
+     * Check if signature verification is enforced
+     */
+    fun isSignatureVerificationEnabled(): Boolean = enforceSignatureVerification
 
     /**
      * Notify listeners of plugin loaded

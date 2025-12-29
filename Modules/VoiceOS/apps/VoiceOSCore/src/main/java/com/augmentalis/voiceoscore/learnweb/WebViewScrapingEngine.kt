@@ -67,6 +67,43 @@ class WebViewScrapingEngine(private val context: Context) {
          * Maximum text length for element extraction
          */
         private const val MAX_TEXT_LENGTH = 100
+
+        /**
+         * XPath special characters that must be escaped to prevent injection
+         */
+        private val XPATH_ESCAPE_CHARS = mapOf(
+            "'" to "\\'",
+            "\"" to "\\\"",
+            "\\" to "\\\\",
+            "\n" to "\\n",
+            "\r" to "\\r",
+            "\t" to "\\t"
+        )
+    }
+
+    /**
+     * Escape XPath string for safe JavaScript injection
+     *
+     * SECURITY: Prevents XSS attacks by escaping special characters
+     * in XPath expressions before JavaScript evaluation.
+     *
+     * @param xpath Raw XPath string
+     * @return Escaped XPath safe for JS template literals
+     */
+    private fun escapeXPath(xpath: String): String {
+        var escaped = xpath
+        XPATH_ESCAPE_CHARS.forEach { (char, replacement) ->
+            escaped = escaped.replace(char, replacement)
+        }
+        // Additional safety: reject XPaths with potential JS injection patterns
+        if (escaped.contains("javascript:", ignoreCase = true) ||
+            escaped.contains("</script>", ignoreCase = true) ||
+            escaped.contains("onerror=", ignoreCase = true) ||
+            escaped.contains("onload=", ignoreCase = true)) {
+            Log.w(TAG, "Potentially malicious XPath rejected: $xpath")
+            return ""
+        }
+        return escaped
     }
 
     /**
@@ -101,16 +138,24 @@ class WebViewScrapingEngine(private val context: Context) {
     /**
      * Click element by XPath
      *
+     * SECURITY: XPath is escaped to prevent XSS injection
+     *
      * @param webView Target WebView
      * @param xpath XPath selector
      * @return true if click succeeded
      */
     suspend fun clickElement(webView: WebView, xpath: String): Boolean {
+        val safeXPath = escapeXPath(xpath)
+        if (safeXPath.isEmpty()) {
+            Log.w(TAG, "Empty or malicious XPath rejected")
+            return false
+        }
+
         return try {
             val script = """
                 (function() {
                     var element = document.evaluate(
-                        '$xpath',
+                        '$safeXPath',
                         document,
                         null,
                         XPathResult.FIRST_ORDERED_NODE_TYPE,
@@ -128,7 +173,7 @@ class WebViewScrapingEngine(private val context: Context) {
             val result = injectJavaScript(webView, script)
             result.trim() == "true"
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to click element: $xpath", e)
+            Log.e(TAG, "Failed to click element", e)
             false
         }
     }
@@ -136,16 +181,24 @@ class WebViewScrapingEngine(private val context: Context) {
     /**
      * Scroll to element by XPath
      *
+     * SECURITY: XPath is escaped to prevent XSS injection
+     *
      * @param webView Target WebView
      * @param xpath XPath selector
      * @return true if scroll succeeded
      */
     suspend fun scrollToElement(webView: WebView, xpath: String): Boolean {
+        val safeXPath = escapeXPath(xpath)
+        if (safeXPath.isEmpty()) {
+            Log.w(TAG, "Empty or malicious XPath rejected")
+            return false
+        }
+
         return try {
             val script = """
                 (function() {
                     var element = document.evaluate(
-                        '$xpath',
+                        '$safeXPath',
                         document,
                         null,
                         XPathResult.FIRST_ORDERED_NODE_TYPE,
@@ -163,7 +216,7 @@ class WebViewScrapingEngine(private val context: Context) {
             val result = injectJavaScript(webView, script)
             result.trim() == "true"
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to scroll to element: $xpath", e)
+            Log.e(TAG, "Failed to scroll to element", e)
             false
         }
     }

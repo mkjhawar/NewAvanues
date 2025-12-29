@@ -48,6 +48,7 @@ import com.augmentalis.voiceos.command.CommandContext
 import com.augmentalis.voiceos.command.CommandSource
 import com.augmentalis.voiceos.constants.VoiceOSConstants
 import com.augmentalis.voiceos.cursor.VoiceCursorAPI
+import com.augmentalis.voiceoscore.utils.withAutoRecycle
 import com.augmentalis.voiceos.cursor.core.CursorOffset
 import com.augmentalis.voiceoscore.accessibility.managers.ServiceConfiguration
 import com.augmentalis.voiceoscore.accessibility.managers.IServiceDependencies
@@ -256,6 +257,8 @@ class VoiceOSService : AccessibilityService(), IVoiceOSServiceLocal, IVoiceOSSer
     private val INITIALIZATION_TIMEOUT_MS = 30_000L // 30 seconds
 
     // Service state
+    // THREAD SAFETY FIX: Added @Volatile for cross-thread visibility
+    @Volatile
     @JvmField
     internal var isServiceReady = false  // Phase 3: Exposed for IPC companion service (Java-accessible)
     // FIX (2025-12-11): Changed from Dispatchers.Main to Dispatchers.Default to prevent ANR
@@ -1190,7 +1193,10 @@ class VoiceOSService : AccessibilityService(), IVoiceOSServiceLocal, IVoiceOSSer
 
             // Get package names for event processing
             var packageName = event.packageName?.toString()
-            val currentPackage = rootInActiveWindow?.packageName?.toString()
+            // MEMORY FIX: Recycle root node after extracting package name
+            val currentPackage = withAutoRecycle(rootInActiveWindow) { root ->
+                root.packageName?.toString()
+            }
 
             // Handle cases where packageName might be null but currentPackage is available
             if (packageName == null && currentPackage != null) {
@@ -1874,7 +1880,10 @@ class VoiceOSService : AccessibilityService(), IVoiceOSServiceLocal, IVoiceOSSer
         }
 
         val normalizedCommand = command.lowercase().trim()
-        val currentPackage = rootInActiveWindow?.packageName?.toString()
+        // MEMORY FIX: Recycle root node after extracting package name
+        val currentPackage = withAutoRecycle(rootInActiveWindow) { root ->
+            root.packageName?.toString()
+        }
 
         // RENAME TIER: Check if this is a rename command (BEFORE other tiers)
         if (isRenameCommand(normalizedCommand)) {
@@ -2061,19 +2070,39 @@ class VoiceOSService : AccessibilityService(), IVoiceOSServiceLocal, IVoiceOSSer
      * Create CommandContext from current accessibility service state
      * Captures current app, activity, and screen context
      *
+     * MEMORY FIX: Properly recycles AccessibilityNodeInfo to prevent leaks
+     *
      * @return CommandContext with current state snapshot
      */
     private fun createCommandContext(): CommandContext {
         val root = rootInActiveWindow
 
+        // MEMORY FIX: Extract values before recycling, recycle focused node
+        val packageName = root?.packageName?.toString()
+        val activityName = root?.className?.toString()
+        val hasRoot = root != null
+        val childCount = root?.childCount ?: 0
+        val isAccessibilityFocused = root?.isAccessibilityFocused ?: false
+
+        // MEMORY FIX: Properly recycle the focused node returned by findFocus
+        val focusedElement = withAutoRecycle(
+            root?.findFocus(android.view.accessibility.AccessibilityNodeInfo.FOCUS_INPUT)
+        ) { focusNode ->
+            focusNode.className?.toString()
+        }
+
+        // MEMORY FIX: Recycle root node after extracting all needed data
+        // Note: rootInActiveWindow returns a copy that we own and must recycle
+        recycleNodeTree(root)
+
         return CommandContext(
-            packageName = root?.packageName?.toString(),
-            activityName = root?.className?.toString(),
-            focusedElement = root?.findFocus(android.view.accessibility.AccessibilityNodeInfo.FOCUS_INPUT)?.className?.toString(),
+            packageName = packageName,
+            activityName = activityName,
+            focusedElement = focusedElement,
             deviceState = mapOf(
-                "hasRoot" to (root != null),
-                "childCount" to (root?.childCount ?: 0),
-                "isAccessibilityFocused" to (root?.isAccessibilityFocused ?: false),
+                "hasRoot" to hasRoot,
+                "childCount" to childCount,
+                "isAccessibilityFocused" to isAccessibilityFocused,
                 // CRITICAL: Add Android context and accessibility service for BaseAction
                 "androidContext" to (this as android.content.Context),
                 "accessibilityService" to (this as android.accessibilityservice.AccessibilityService)

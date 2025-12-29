@@ -93,12 +93,9 @@ include(":Modules:VoiceOS:libraries:VoiceUIElements")
 include(":Modules:WebAvanue:coredata")   // Data layer: repositories, database, models
 include(":Modules:WebAvanue:universal")  // UI layer: ViewModels, screens, platform code
 
-<<<<<<< Updated upstream
-=======
 // UniversalRPC - Cross-platform gRPC module
 include(":Modules:UniversalRPC")         // Root module with KMP + Wire
 
->>>>>>> Stashed changes
 // AVAMagic Modules
 include(":Modules:AVAMagic:MagicTools:LanguageServer")  // MagicUI Language Server (LSP)
 

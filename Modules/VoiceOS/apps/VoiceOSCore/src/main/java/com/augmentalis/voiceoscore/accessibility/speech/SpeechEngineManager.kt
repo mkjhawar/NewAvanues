@@ -135,8 +135,11 @@ class SpeechEngineManager(
     private val initializationAttempts = AtomicLong(0L)
 
     // Engine state tracking for better error recovery
+    // THREAD SAFETY FIX: Added @Volatile for cross-thread visibility
+    @Volatile
     private var lastSuccessfulEngine: SpeechEngine? = null
-    private var engineInitializationHistory = mutableMapOf<SpeechEngine, Long>()
+    // THREAD SAFETY FIX: Using ConcurrentHashMap for thread-safe access
+    private val engineInitializationHistory = java.util.concurrent.ConcurrentHashMap<SpeechEngine, Long>()
 
     private val listenerManager = SpeechListenerManager()
     private var currentConfiguration = SpeechConfiguration()

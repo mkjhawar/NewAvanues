@@ -28,6 +28,7 @@ import com.augmentalis.voiceoscore.learnapp.database.repository.LearnAppReposito
 import com.augmentalis.voiceoscore.learnapp.core.LearnAppCore
 import com.augmentalis.voiceoscore.learnapp.core.ProcessingMode
 import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
+import com.augmentalis.voiceoscore.utils.withAutoRecycle
 // FIX (2025-12-01): Removed unused CommandGenerator import - command generation is inlined
 import com.augmentalis.voiceoscore.learnapp.models.ScreenState
 import com.augmentalis.voiceoscore.learnapp.fingerprinting.ScreenStateManager
@@ -470,6 +471,8 @@ class JustInTimeLearner(
      * Combines structure-based hash (layout) with content-based hash (visible text)
      * Enables detection of scrolled content while maintaining popup detection
      *
+     * MEMORY FIX: Properly recycles rootNode after use
+     *
      * @param packageName Package name of the app
      * @return Hybrid screen hash (structure-content), or fallback hash if unavailable
      */
@@ -478,7 +481,15 @@ class JustInTimeLearner(
         val rootNode = accessibilityService?.rootInActiveWindow
 
         // Use ScreenStateManager for unified hashing if available
-        return if (rootNode != null && screenStateManager != null) {
+        if (rootNode == null || screenStateManager == null) {
+            // Fallback to timestamp-based hash if ScreenStateManager unavailable
+            // This should rarely happen in production
+            Log.w(TAG, "ScreenStateManager unavailable, using fallback hash")
+            return System.currentTimeMillis().toString()
+        }
+
+        // MEMORY FIX: Use try-finally to ensure node is recycled
+        return try {
             val screenState = screenStateManager!!.captureScreenState(rootNode, packageName)
             val structureHash = screenState.hash
 
@@ -515,11 +526,10 @@ class JustInTimeLearner(
             } else {
                 structureHash  // No scrollables, use structure only
             }
-        } else {
-            // Fallback to timestamp-based hash if ScreenStateManager unavailable
-            // This should rarely happen in production
-            Log.w(TAG, "ScreenStateManager unavailable, using fallback hash")
-            System.currentTimeMillis().toString()
+        } finally {
+            // MEMORY FIX: Always recycle root node
+            @Suppress("DEPRECATION")
+            rootNode.recycle()
         }
     }
 
@@ -984,13 +994,24 @@ class JustInTimeLearner(
                     if (deepScanConsentManager?.needsConsent(packageName) == true) {
                         val rootNode = accessibilityService?.rootInActiveWindow
                         if (rootNode != null) {
-                            val expandables = findExpandableControls(rootNode)
-                            deepScanConsentManager.showConsentDialog(
-                                packageName,
-                                getAppName(packageName),
-                                expandables.size
-                            )
-                            Log.i(TAG, "Showing deep scan consent dialog for $packageName (${expandables.size} expandables)")
+                            try {
+                                val expandables = findExpandableControls(rootNode)
+                                deepScanConsentManager.showConsentDialog(
+                                    packageName,
+                                    getAppName(packageName),
+                                    expandables.size
+                                )
+                                Log.i(TAG, "Showing deep scan consent dialog for $packageName (${expandables.size} expandables)")
+                                // MEMORY FIX: Recycle expandable nodes
+                                expandables.forEach { node ->
+                                    @Suppress("DEPRECATION")
+                                    node.recycle()
+                                }
+                            } finally {
+                                // MEMORY FIX: Always recycle root node
+                                @Suppress("DEPRECATION")
+                                rootNode.recycle()
+                            }
                         }
                     }
                 }
@@ -1245,6 +1266,10 @@ class JustInTimeLearner(
                 duration = System.currentTimeMillis() - startTime,
                 error = e.message
             )
+        } finally {
+            // MEMORY FIX: Always recycle root node
+            @Suppress("DEPRECATION")
+            rootNode.recycle()
         }
     }
 
@@ -1259,32 +1284,38 @@ class JustInTimeLearner(
     suspend fun hasHiddenMenuItems(): Boolean {
         val rootNode = accessibilityService?.rootInActiveWindow ?: return false
 
-        val expandables = findExpandableControls(rootNode)
+        return try {
+            val expandables = findExpandableControls(rootNode)
 
-        // Filter for collapsed, high-confidence expandables
-        val collapsedExpandables = expandables.count { expandable ->
-            try {
-                val info = expandableControlDetector.getExpansionInfo(expandable)
-                // FIX (2025-12-27): ExpansionInfo doesn't have isExpanded, check node's expanded state instead
-                val isNodeExpanded = expandable.isAccessibilityFocused ||
-                    expandable.className?.toString()?.lowercase()?.contains("expanded") == true
-                !isNodeExpanded && info.confidence >= 0.5f
-            } catch (e: Exception) {
-                false
-            } finally {
-                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    try {
-                        @Suppress("DEPRECATION")
-                        expandable.recycle()
-                    } catch (e: Exception) {
-                        // Ignore
+            // Filter for collapsed, high-confidence expandables
+            val collapsedExpandables = expandables.count { expandable ->
+                try {
+                    val info = expandableControlDetector.getExpansionInfo(expandable)
+                    // FIX (2025-12-27): ExpansionInfo doesn't have isExpanded, check node's expanded state instead
+                    val isNodeExpanded = expandable.isAccessibilityFocused ||
+                        expandable.className?.toString()?.lowercase()?.contains("expanded") == true
+                    !isNodeExpanded && info.confidence >= 0.5f
+                } catch (e: Exception) {
+                    false
+                } finally {
+                    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        try {
+                            @Suppress("DEPRECATION")
+                            expandable.recycle()
+                        } catch (e: Exception) {
+                            // Ignore
+                        }
                     }
                 }
             }
-        }
 
-        Log.d(TAG, "Found $collapsedExpandables collapsed expandable controls")
-        return collapsedExpandables > 0
+            Log.d(TAG, "Found $collapsedExpandables collapsed expandable controls")
+            collapsedExpandables > 0
+        } finally {
+            // MEMORY FIX: Always recycle root node
+            @Suppress("DEPRECATION")
+            rootNode.recycle()
+        }
     }
 
     /**

@@ -207,24 +207,23 @@ class UIScrapingEngine(
 
         cacheMisses.incrementAndGet()
 
-        val rootNode = service.rootInActiveWindow
-        if (rootNode == null) {
-            ConditionalLogger.w(TAG) { "No root node available" }
-            return emptyList()
-        }
-
-        val elements = mutableListOf<UIElement>()
-        val currentPackage = getCurrentPackageName()
-
-
-
-        var replacements: Map<String, String>? = emptyMap()
-        currentPackage?.let {
-            replacements = commandReplacementProfiles[currentPackage]
-        }
-
-
+        // MEMORY FIX: Get rootNode and ensure it's recycled after use
+        var rootNode: AccessibilityNodeInfo? = null
         try {
+            rootNode = service.rootInActiveWindow
+            if (rootNode == null) {
+                ConditionalLogger.w(TAG) { "No root node available" }
+                return emptyList()
+            }
+
+            val elements = mutableListOf<UIElement>()
+            val currentPackage = getCurrentPackageNameInternal(rootNode)
+
+            var replacements: Map<String, String>? = emptyMap()
+            currentPackage?.let {
+                replacements = commandReplacementProfiles[currentPackage]
+            }
+
             // Enhanced recursive extraction with context
             extractElementsRecursiveEnhanced(
                 rootNode,
@@ -236,20 +235,22 @@ class UIScrapingEngine(
                 currentPackage,
                 isParentClickable = false
             )
+
+            // Apply intelligent duplicate detection
+            val filteredElements = applyIntelligentDuplicateDetection(elements)
+
+            cachedElements = filteredElements
+            lastScrapeTime.set(currentTime)
+            scrapeCount.incrementAndGet()
+            updateCacheStats()
+
+            ConditionalLogger.d(TAG) { "Extracted ${elements.size} elements, filtered to ${filteredElements.size} unique elements" }
+            return filteredElements
         } finally {
-            // rootNode is managed by caller - not recycled here
+            // MEMORY FIX: Always recycle rootNode
+            @Suppress("DEPRECATION")
+            rootNode?.recycle()
         }
-
-        // Apply intelligent duplicate detection
-        val filteredElements = applyIntelligentDuplicateDetection(elements)
-
-        cachedElements = filteredElements
-        lastScrapeTime.set(currentTime)
-        scrapeCount.incrementAndGet()
-        updateCacheStats()
-
-        ConditionalLogger.d(TAG) { "Extracted ${elements.size} elements, filtered to ${filteredElements.size} unique elements" }
-        return filteredElements
     }
 
     /**
@@ -741,21 +742,33 @@ class UIScrapingEngine(
     }
 
     /**
-     * Get current app package name safely
+     * Get current app package name from an already-obtained root node (no new allocation)
+     * MEMORY FIX: Extracted to avoid double rootInActiveWindow allocation and leak
      */
-    private fun getCurrentPackageName(): String? {
+    private fun getCurrentPackageNameInternal(rootNode: AccessibilityNodeInfo?): String? {
         return try {
-            try {
-                val rootAccessibilityNode = service.rootInActiveWindow
-                val packageName = rootAccessibilityNode.packageName?.toString()
-                return packageName
-            } catch (e: Exception) {
-                ConditionalLogger.w(TAG) { "Error getting package name: ${e.message}" }
-            }
-            null
+            rootNode?.packageName?.toString()
         } catch (e: Exception) {
             ConditionalLogger.w(TAG) { "Error getting package name: ${e.message}" }
             null
+        }
+    }
+
+    /**
+     * Get current app package name safely
+     * MEMORY FIX: Recycles rootNode after use
+     */
+    private fun getCurrentPackageName(): String? {
+        var rootNode: AccessibilityNodeInfo? = null
+        return try {
+            rootNode = service.rootInActiveWindow
+            rootNode?.packageName?.toString()
+        } catch (e: Exception) {
+            ConditionalLogger.w(TAG) { "Error getting package name: ${e.message}" }
+            null
+        } finally {
+            @Suppress("DEPRECATION")
+            rootNode?.recycle()
         }
     }
 
