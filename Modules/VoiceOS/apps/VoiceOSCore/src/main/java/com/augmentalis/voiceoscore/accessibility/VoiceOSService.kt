@@ -1454,11 +1454,16 @@ class VoiceOSService : AccessibilityService(), IVoiceOSServiceLocal, IVoiceOSSer
      * prompted for consent before exploration begins.
      */
     private fun initializeLearnAppIntegration() {
-        // Check if already initialized or in progress
-        if (!learnAppInitState.compareAndSet(0, 1)) {
-            Log.d(TAG, "LEARNAPP_DEBUG: Initialization already in progress or complete (state=${learnAppInitState.get()}), skipping")
+        // FIX (2025-12-29): Removed redundant compareAndSet check
+        // The caller (onAccessibilityEvent) already sets state to 1 before calling this function
+        // The double check was causing initialization to never run (state was already 1)
+        val currentState = learnAppInitState.get()
+        if (currentState == 2) {
+            Log.d(TAG, "LEARNAPP_DEBUG: Already initialized (state=2), skipping")
             return
         }
+        // State should be 1 (in progress) when called from onAccessibilityEvent
+        Log.d(TAG, "LEARNAPP_DEBUG: Starting initialization (state=$currentState)")
 
         serviceScope.launch {
             learnAppInitMutex.withLock {

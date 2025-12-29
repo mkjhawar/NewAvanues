@@ -17,6 +17,9 @@
     <!-- Foreground service permission (required for Android 9+) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
+    <!-- FIX (2025-12-29): Android 14+ requires specific permission for dataSync foreground service type -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
     <!-- JIT Control Permission (signature-level protection) -->
     <!-- SECURITY: Only apps signed with same certificate can access JIT service -->
     <!-- This prevents malicious apps from:
