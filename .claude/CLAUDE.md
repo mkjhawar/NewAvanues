@@ -1,226 +1,250 @@
-# IDEACODE v10.3 - Global Instructions
+# NewAvanues - Project Instructions
 
-Scope: ALL projects in /Volumes/M-Drive/Coding/
-
----
-
-## SESSION START
-
-1. Read `{project}/.claude/CLAUDE.md`
-2. Read `{project}/.ideacode/registries/script-registry.md` (if exists)
-3. Read `{module}/.claude/CLAUDE.md` for module work
+NewAvanues - Platform-centric KMP monorepo (AVA, VoiceOS, WebAvanue, Cockpit, NLU)
 
 ---
 
-## DOCUMENT LOADING (TOKEN OPTIMIZATION)
+## MANDATORY: Before Any File Operation
 
-Rule: Summaries FIRST, full docs ONLY when insufficient
+1. **READ REGISTRIES FIRST:**
+   - `.ideacode/Registries/FOLDER-REGISTRY.md` - Folder structure
+   - `.ideacode/Registries/Modules.registry.json` - Module paths
+   - `.ideacode/Registries/Docs.registry.json` - Doc paths
 
-Start: `docs/QUICK-REFERENCE.md` or `docs/ideacode/protocols/INDEX.md`
-Structure: `00-*.md` (summary ~200 tok), `01-*.md` (section ~400 tok), `99-*.md` (full)
-Session: QUICK-REFERENCE + LD-CORE (~800 tok total)
-Workflows: Use `00-Checklist.md` NOT full protocols
-Penalty: Violating wastes 15k-30k tokens/workflow
-
----
-
-## FILE OPERATIONS
-
-1. Check registry: `/Volumes/M-Drive/Coding/ideacode/.ideacode/registries/FOLDER-REGISTRY.md`
-2. **NO REDUNDANT FOLDER NAMES:** Parent name implies content → children MUST NOT repeat
-   - ❌ `Common/Libraries/` → ✅ `Common/`
-   - ❌ `Modules/libraries/` → ✅ `Modules/`
-   - ❌ `Docs/Documentation/` → ✅ `Docs/`
-3. Use MCP: `ideacode_fs` for all file ops (auto-validates)
-4. Run: `ideacode_standards --context "task"`
-
-Paths:
-- Context: `{project}/contextsave/con-{app}-{module}-{desc}-{YYYYMMDD}.md`
-- Living Docs: `{project}/.ideacode/living-docs/LD-App-Module-Desc-V#.md`
-- Commands: `/Volumes/M-Drive/Coding/.claude/commands/` (GLOBAL ONLY)
+2. **Use correct case:**
+   - Gradle paths: `lowercase` (android/, ios/, desktop/)
+   - All other folders: `PascalCase` (Common/, Docs/, Shared/)
 
 ---
 
-## HARD RULES
+## PROJECT STRUCTURE
 
-| Rule | Enforcement |
+| Path | Purpose | Case |
+|------|---------|------|
+| `android/` | Android apps | lowercase (Gradle) |
+| `ios/` | iOS apps | lowercase (Gradle) |
+| `desktop/` | Desktop apps | lowercase (Gradle) |
+| `Common/` | KMP shared libraries | PascalCase |
+| `Modules/` | Feature modules | PascalCase |
+| `Modules/AVA/` | AI assistant platform | PascalCase |
+| `Modules/VoiceOS/` | Voice-first accessibility | PascalCase |
+| `Modules/WebAvanue/` | Web platform (Tauri + React) | PascalCase |
+| `Modules/Cockpit/` | Management dashboard | PascalCase |
+| `Modules/NLU/` | Natural language understanding | PascalCase |
+| `Shared/` | Assets, configs | PascalCase |
+| `Docs/` | Documentation | PascalCase |
+
+---
+
+## BUILD REQUIREMENTS
+
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| JDK | 17 | Required (JDK 24 incompatible with Gradle) |
+| Gradle | 8.x | Via wrapper |
+| Android SDK | 34 | Target API |
+
+---
+
+## PROJECT-SPECIFIC TECH
+
+| Component | Technology |
+|-----------|------------|
+| Build | Gradle composite builds + version catalogs |
+| Shared logic | KMP (Kotlin Multiplatform) |
+| Database | SQLDelight (NOT Room) |
+| DI | Koin |
+| Web | Tauri + React + TypeScript |
+| Language Server | Kotlin LSP (for DSL/tooling) |
+| Web Components | React + TypeScript (embeddable UI) |
+| IDE Plugins | VS Code (TypeScript) + IntelliJ (Kotlin + JCEF) |
+
+---
+
+## LSP ARCHITECTURE (AVAMagic Tooling)
+
+**Layer 1: Core Language Server (Kotlin)**
+- DSL parsing, validation, code generation
+- Implements: Language Server Protocol (LSP)
+- Size: ~25MB (shared across all tools)
+- Reuses: ThemeCompiler.kt, VUIDCreator, existing MagicUI logic
+
+**Layer 2: Web UI Components (React + TypeScript)**
+- Theme color picker, property inspector, live preview
+- Monaco Editor integration (VS Code's editor)
+- Size: ~5MB (cached, embeddable everywhere)
+
+**Layer 3: Platform Integrations**
+- VS Code Extension: TypeScript + LSP client (~2MB)
+- IntelliJ Plugin: Kotlin + JCEF browser (~3MB)
+- Standalone Apps: Compose Desktop + CEF OR Tauri v2
+
+**Total Ecosystem:** ~45MB (90% code reuse across all tools)
+
+---
+
+## Apps
+
+| App | Platforms | Android Path | Docs Path |
+|-----|-----------|--------------|-----------|
+| VoiceOS | android, ios, desktop | `android/voiceos/` | `Docs/VoiceOS/` |
+| AVA | android, ios, macos, win, linux, web | `android/ava/` | `Docs/AVA/` |
+| Avanues | android | `android/avanues/` | `Docs/Avanues/` |
+| AvaConnect | android, web | `android/avaconnect/` | `Docs/AvaConnect/` |
+
+---
+
+## Common Libraries
+
+| Library | Path | Description |
+|---------|------|-------------|
+| Database | `Common/Database/` | SQLDelight |
+| Voice | `Common/Voice/` | Voice recognition |
+| NLU | `Common/NLU/` | NLU engine |
+| UI | `Common/UI/` | MagicUI |
+| Utils | `Common/Utils/` | Utilities |
+
+---
+
+## DEVELOPMENT BRANCHES
+
+| Branch | Purpose |
+|--------|---------|
+| Avanues-Main | Main integration |
+| AVA-Development | AVA features |
+| VoiceOS-Development | VoiceOS features |
+| WebAvanue-Development | WebAvanue features |
+| Cockpit-Development | Cockpit features |
+| NLU-Development | NLU features |
+
+---
+
+## WORKTREES
+
+| Worktree | Path | Branch |
+|----------|------|--------|
+| NewAvanues-AVA | /Volumes/M-Drive/Coding/NewAvanues-AVA | AVA-Development |
+| NewAvanues-VoiceOS | /Volumes/M-Drive/Coding/NewAvanues-VoiceOS | VoiceOS-Development |
+| NewAvanues-WebAvanue | /Volumes/M-Drive/Coding/NewAvanues-WebAvanue | WebAvanue-Development |
+| NewAvanues-Cockpit | /Volumes/M-Drive/Coding/NewAvanues-Cockpit | Cockpit-Development |
+| NewAvanues-NLU | /Volumes/M-Drive/Coding/NewAvanues-NLU | NLU-Development |
+
+---
+
+## Documentation Structure
+
+| Path | Purpose |
+|------|---------|
+| `Docs/Project/` | Living docs (LD-*.md) |
+| `Docs/{App}/MasterSpecs/` | Universal specs |
+| `Docs/{App}/Platform/{Platform}/` | Platform-specific |
+| `Docs/Common/{Domain}/` | Shared lib docs |
+| `Docs/{Module}/LivingDocs/LD-*.md` | Living Docs |
+| `.ideacode/registries/` | Registries |
+
+---
+
+## Naming Conventions
+
+| Type | Pattern | Example |
+|------|---------|---------|
+| Documents | App-Module-Description-YDDMMHH-V#.md | `VoiceOS-NLU-Integration-5031215-V1.md` |
+| Living Docs | LD-App-Module-Description-V#.md | `LD-VoiceOS-Architecture-V1.md` |
+| Specs | App-Spec-Feature-YDDMM-V#.md | `AVA-Spec-VoiceCommands-50312-V1.md` |
+| Plans | App-Plan-Feature-YDDMM-V#.md | `AVA-Plan-Migration-50312-V1.md` |
+
+### Date Formats
+
+| Format | Use | Parts |
+|--------|-----|-------|
+| YDDMMHH | Documents | Y + DD + MM + HH |
+| YDDMM | Specs, Plans | Y + DD + MM |
+
+Y = last digit of year (5 for 2025), DD = day, MM = month, HH = hour
+
+---
+
+## Forbidden Actions
+
+| Action | Why |
+|--------|-----|
+| Create folder not in registry | Causes sprawl |
+| Use lowercase for non-Gradle paths | Inconsistent |
+| Use PascalCase for Gradle paths | Gradle breaks |
+| Put docs in wrong App/Platform folder | Hard to find |
+| Skip MasterSpecs | Missing universal docs |
+| Create file without checking registry | May duplicate |
+
+---
+
+## Key Rules
+
+| Rule | Requirement |
 |------|-------------|
-| File reading | Read in chunks until found (debugging). No limit on chunk count. |
-| Wait for user | STOP after questions, NEVER proceed until answered |
-| Question format | Display ALL questions FIRST, then ask one-at-a-time (single submit) |
-| Always "Other" | EVERY question must include "Other" option for user input |
-| Options analysis | For each option: pros, cons, AI recommendation, optimal alternative, hybrid solutions |
-| No delete | NEVER delete code without approval + pros/cons |
-| Optimal only | Best approach always (hybrid OK), no "good enough" |
-| Token efficiency | Batch ops, targeted reads, minimal output |
-| Compact format | Tables/lists only, NO prose |
-| CLAUDE.md | <150 lines, structured, no emojis |
-| MCP tools | `ideacode_*` ONLY (NOT Write/mv/rm) |
-| Branches | NEVER commit to main (`feature/`, `bugfix/`, `hotfix/`) |
-| No duplication | Library imports, NEVER copy-paste |
-| No AI marks | No "Generated by Claude", no emojis in commits |
-| Test coverage | 90%+ critical paths |
-| SOLID | ALL code |
-| No redundant names | Parent implies type → children NEVER repeat (Common/ NOT Common/Libraries/) |
-
-YOLO Mode:
-- No questions within repo/branch scope (autonomous decisions)
-- Only ask if: outside repo, external access, or affects main branch
-- No shortcuts, re-enable disabled, 100% equivalence
+| Registry First | ALWAYS check registries before creating files |
+| Clean Architecture | SOLID principles, no legacy code |
+| Cross-Platform | Design for all platforms from start |
+| No Delete | Never delete without approval + pros/cons |
+| Database | SQLDelight ONLY (never Room) |
+| Module work | Check module-level .claude/CLAUDE.md first |
+| Cross-module | Check CROSS-MODULE-DEPENDENCIES.md |
+| Worktrees | NEVER switch worktrees without approval |
 
 ---
 
-## QUESTION-ASKING PROTOCOL
+## Git Index Lock Workaround
 
-When asking questions:
+When encountering `fatal: unable to write new index file` (common with large repos, multiple terminals, or slow drives), bypass using temp index + plumbing commands:
 
-1. **Display Phase:** Show ALL questions in message BEFORE asking
-2. **Ask Phase:** Use AskUserQuestion tool with questions (user submits once for all)
-3. **"Other" Required:** EVERY question MUST have "Other" option
-4. **Options Analysis:** For each option provide:
-   - Pros (benefits)
-   - Cons (drawbacks/tradeoffs)
-   - AI recommendation + reason
-   - Optimal alternative (if different from options)
-   - Hybrid solutions (combinations that may be better)
+### Quick Reference
 
-Example:
-```
-I need to decide on the authentication approach. Here are the questions:
+```bash
+# 1. Create temp index from HEAD
+GIT_INDEX_FILE=/tmp/git-index-temp git read-tree HEAD
 
-Question 1: Which auth method?
-Question 2: Where to store tokens?
+# 2. Stage files to temp index
+GIT_INDEX_FILE=/tmp/git-index-temp git add path/to/files
 
-[Then use AskUserQuestion with both questions, each with "Other" option]
+# 3. Write tree (capture SHA)
+TREE=$(GIT_INDEX_FILE=/tmp/git-index-temp git write-tree)
 
-For each option I'll provide:
-- Option A: JWT
-  Pros: Stateless, scalable
-  Cons: Token size, rotation complexity
-- Option B: Session
-  Pros: Simple, revocable
-  Cons: Server state, scaling issues
-- Optimal: Hybrid (JWT + refresh tokens)
-  Why: Combines stateless benefits with revocation
+# 4. Create commit
+COMMIT=$(git commit-tree $TREE -p HEAD -m "message")
+
+# 5. Update branch ref
+git update-ref refs/heads/BRANCH_NAME $COMMIT
+
+# 6. Push
+git push origin BRANCH_NAME
 ```
 
----
+### For Merges (non-fast-forward)
 
-## AUTO-INVOKED
+```bash
+git fetch origin TARGET_BRANCH
+MERGE_TREE=$(git merge-tree origin/TARGET_BRANCH $COMMIT)
+MERGE=$(git commit-tree $MERGE_TREE -p origin/TARGET_BRANCH -p $COMMIT -m "merge msg")
+git update-ref refs/heads/TARGET_BRANCH $MERGE
+git push origin TARGET_BRANCH
+```
 
-Always-On: SOLID enforcement, Reasoning (auto `.cot`/`.tot`/`.rot`), Skills (17), Subagents (13), Web search
+### One-Liner
 
-Skills: develop-feature, fix-bug, create-ui, developing-{android|ios|web|kmp|tauri|kotlin|web}
-Subagents: code-reviewer, security-scanner, architect, test-runner, doc-writer, performance-optimizer, spec-verifier, plan-verifier, impl-verifier, debug-agent, exploration-agent, research-agent, cleanup-agent
-
-Ref: `LD-IDEACODE-AI-Instructions-V1.md`
-
----
-
-## COMMANDS
-
-Core: /idevelop /ifix /ispecify /iplan /iimplement /icreateui /ianalyze /ireview
-Project: /iproject /imonorepo /isystem /iscan /idocument
-Advanced: /iswarm /iagent /irefactor /ithink /iresearch /iwiz
-
-Modifiers: .yolo .swarm .tdd .ood .solid .tcr .cot .tot .profile .code .ui .docs
-
-Full: /ideacode or /imodifiers or `docs/ideacode-v10-manual.md`
+```bash
+GIT_INDEX_FILE=/tmp/idx git read-tree HEAD && \
+GIT_INDEX_FILE=/tmp/idx git add FILE1 FILE2 && \
+TREE=$(GIT_INDEX_FILE=/tmp/idx git write-tree) && \
+COMMIT=$(git commit-tree $TREE -p HEAD -m "msg") && \
+git update-ref refs/heads/BRANCH $COMMIT && \
+git push origin BRANCH
+```
 
 ---
 
-## FILE NAMING
+## Inherited Rules
 
-Docs: `App-Module-Desc-YYMMDD-V#.md` (versioned)
-Living: `LD-App-Module-Desc-V#.md` (no date)
-Specs: `App-Spec-Feature-YYMMDD-V#.md` (versioned)
-Plans: `App-Plan-Feature-YYMMDD-V#.md` (versioned)
-Handovers: `{App}-{Module}-Handover-{YYMMDD}-V#.md` (versioned)
-Pre-compact: `pre-compact-{app}-{YYMMDDHHMM}.md` (timestamped)
-Context: `context-{YYMMDDHHMM}.md` (timestamped)
-
-Code:
-- TypeScript: `{app}-{module}-{desc}.ts`
-- Kotlin/Swift: `{App}{Module}{Desc}.{kt|swift}`
-
-Folders:
-- Gradle: `android/ios/desktop/` (lowercase)
-- Other: `Docs/Common/Shared/` (PascalCase)
-- Config: `.claude/.ideacode/` (kebab)
-
-Date Formats:
-- **YYMMDD** (6 digits): Versioned documents (with V# suffix)
-- **YYMMDDHHMM** (10 digits): Timestamped snapshots
-
-Enforce: App prefix + version `-V#` or timestamp required
-
-Full: FOLDER-REGISTRY.md, FILE-REGISTRY.md
+All rules from `/Volumes/M-Drive/Coding/.claude/CLAUDE.md` apply.
 
 ---
 
-## MCP TOOLS
-
-File: ideacode_fs (create, rename, move, delete, validate, audit, bulk_rename, consolidate)
-Workflow: ideacode_{specify|plan|implement|test|commit|validate}
-Vision: ideacode_vision (analyze_ui, from_mockup, debug_screenshot)
-Context: ideacode_{context|pattern|constitution|guided}
-Analysis: ideacode_{research|think|standards}
-Project: ideacode_{monorepo|skill|hashtag}
-
-Total: 23 tools | Blocked: Write, mv, rm
-
-Ref: `docs/manuals/user/features/IDEACODE-MCPToolsReference-*.md`
-
----
-
-## UI FRAMEWORK
-
-Stack:
-- Android: Compose + Material3
-- iOS: SwiftUI
-- Web: React + Tailwind
-- Override: MagicUI (all platforms)
-
-Input (ALL platforms REQUIRED): Voice, Touch, Gaze, Keyboard, Mouse
-Optional: Eye tracking (iOS/Android), Gestures (glasses)
-Glasses: Standalone/Tethered (Rokid, Xreal, Viture, RayNeo)
-
-Command: /icreateui .app "name"
-Pipeline: Requirements → Research → Design → ASCII → Code → Demo → Verify
-
-Full: `LD-IDEACODE-UI-Guidelines-V3.md`
-Manual: `docs/manuals/developer/ui/IDEACODE-UI-Implementation-Guide-V3-*.md`
-
----
-
-## QUALITY GATES
-
-| Metric | Target |
-|--------|--------|
-| Test coverage | 90%+ |
-| Blockers | 0 |
-| Warnings | 0 |
-| Gaze accuracy | 95%+ <50px |
-
----
-
-## IDC & PROFILES
-
-IDC: Compact config (60-80% smaller than YAML)
-Codes: PRJ: PRF: CFG: THR: SIG: VRF: GAT: AGT: CMD:
-Separators: `:` fields, `+` multi-value, `,` lists
-Files: `.ideacode/config.idc`
-Spec: `docs/specifications/IDC-FORMAT-SPEC-V1.md`
-
-Profiles:
-- default: TDD 50, OOD 40, auto-verify
-- strict: TDD 30, OOD 30, auto-verify, visual
-- prototype: TDD 90, OOD 80, no verify
-- production: TDD 40, OOD 40, auto-verify, visual
-
-Usage: /idevelop .profile strict "feature"
-Verifiers: spec-verifier, plan-verifier, impl-verifier (auto-run after phases)
-
----
-
-Author: Manoj Jhawar | License: Proprietary | Version: 10.3 | Updated: 2025-12-06
+**Updated:** 2025-12-30 | **Version:** 12.4.1
