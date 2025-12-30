@@ -116,11 +116,32 @@ else
     version_display="v${running_version}"
 fi
 
+# API auto-start (persistent - survives Claude Code exit)
+api_status=""
+API_URL="http://localhost:3850"
+API_DIR="/Volumes/M-Drive/Coding/ideacode"
+
+if curl -s --connect-timeout 0.5 "$API_URL/health" > /dev/null 2>&1; then
+    api_status="API"
+else
+    # Start API with nohup so it persists after Claude Code exits
+    if [[ -d "$API_DIR" ]]; then
+        (cd "$API_DIR" && nohup npm run start > /dev/null 2>&1 &)
+        sleep 1
+        if curl -s --connect-timeout 0.5 "$API_URL/health" > /dev/null 2>&1; then
+            api_status="API"
+        fi
+    fi
+fi
+
 # Build statusline
 status_parts=()
 
 # IDEACode version
 status_parts+=("IDEACODE v${ideacode_version}")
+
+# API status (only show if running)
+[[ -n "$api_status" ]] && status_parts+=("$api_status")
 
 # Repository
 status_parts+=("$repo")
