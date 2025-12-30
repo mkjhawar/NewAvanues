@@ -17,7 +17,7 @@ package com.augmentalis.voiceoscore.learnapp.integration
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.view.accessibility.AccessibilityEvent
-import com.augmentalis.voiceoscore.learnapp.database.LearnAppDatabaseAdapter
+// LearnAppDatabaseAdapter removed (2025-12-29) - using VoiceOSDatabaseManager directly
 import com.augmentalis.voiceoscore.learnapp.database.repository.LearnAppRepository
 import com.augmentalis.voiceoscore.learnapp.detection.AppLaunchDetector
 import com.augmentalis.voiceoscore.learnapp.detection.LearnedAppTracker
@@ -93,8 +93,8 @@ class VOS4LearnAppIntegration private constructor(
 
     /**
      * Database and repository
+     * NOTE: LearnAppDatabaseAdapter removed (2025-12-29) - using VoiceOSDatabaseManager directly
      */
-    private val databaseAdapter: LearnAppDatabaseAdapter
     private val databaseManager: com.augmentalis.database.VoiceOSDatabaseManager
     private val repository: LearnAppRepository
 
@@ -111,8 +111,7 @@ class VOS4LearnAppIntegration private constructor(
     private val explorationStrategy: ExplorationStrategy = DFSExplorationStrategy()
 
     init {
-        // Initialize databases
-        databaseAdapter = LearnAppDatabaseAdapter.getInstance(context)
+        // Initialize databases (LearnAppDatabaseAdapter removed 2025-12-29)
         databaseManager = com.augmentalis.database.VoiceOSDatabaseManager.getInstance(
             com.augmentalis.database.DatabaseDriverFactory(context)
         )
