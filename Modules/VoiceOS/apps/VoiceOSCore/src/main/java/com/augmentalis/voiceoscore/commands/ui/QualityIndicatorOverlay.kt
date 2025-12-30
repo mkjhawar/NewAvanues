@@ -182,14 +182,14 @@ class QualityIndicatorOverlay(
                     fontWeight = FontWeight.Bold
                 )
 
-                Divider()
+                HorizontalDivider()
 
                 QualityStatRow("Excellent", excellent, Color(0xFF4CAF50))
                 QualityStatRow("Good", good, Color(0xFFFFC107))
                 QualityStatRow("Acceptable", acceptable, Color(0xFFFF9800))
                 QualityStatRow("Poor", poor, Color(0xFFF44336))
 
-                Divider()
+                HorizontalDivider()
 
                 Text(
                     text = "Total: ${scores.size}",
@@ -265,7 +265,7 @@ class QualityIndicatorOverlay(
                     }
                 }
 
-                Divider()
+                HorizontalDivider()
 
                 LegendItem(
                     color = Color(0xFF4CAF50),

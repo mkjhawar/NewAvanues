@@ -12,6 +12,7 @@ import android.accessibilityservice.AccessibilityService
 import android.graphics.Point
 import android.graphics.Rect
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import com.augmentalis.voiceos.speech.confidence.ConfidenceLevel
 import com.augmentalis.voiceos.speech.confidence.ConfidenceResult
@@ -198,7 +199,7 @@ class OverlayIntegrationExample {
                 MenuItem(
                     id = "go_back",
                     label = "Go Back",
-                    icon = Icons.Default.ArrowBack,
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
                     number = 3,
                     action = { /* Perform back navigation */ }
                 ),

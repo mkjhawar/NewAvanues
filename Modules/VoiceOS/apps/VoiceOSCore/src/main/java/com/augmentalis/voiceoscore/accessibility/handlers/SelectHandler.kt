@@ -14,6 +14,8 @@ import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import com.augmentalis.voiceoscore.accessibility.VoiceOSService
 import com.augmentalis.voiceoscore.accessibility.overlays.MenuItem
@@ -529,7 +531,7 @@ class SelectHandler(
                 MenuItem(
                     id = "go_back",
                     label = "Go Back",
-                    icon = Icons.Default.ArrowBack,
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
                     number = 1,
                     action = {
                         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
@@ -549,7 +551,7 @@ class SelectHandler(
                 MenuItem(
                     id = "recent_apps",
                     label = "Recent Apps",
-                    icon = Icons.Default.List,
+                    icon = Icons.AutoMirrored.Filled.List,
                     number = 3,
                     action = {
                         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS)
@@ -704,7 +706,7 @@ class SelectHandler(
                 MenuItem(
                     id = "go_back",
                     label = "Go Back",
-                    icon = Icons.Default.ArrowBack,
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
                     number = 2,
                     action = {
                         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
@@ -724,7 +726,7 @@ class SelectHandler(
                 MenuItem(
                     id = "recent_apps",
                     label = "Recent Apps",
-                    icon = Icons.Default.List,
+                    icon = Icons.AutoMirrored.Filled.List,
                     number = 4,
                     action = {
                         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS)

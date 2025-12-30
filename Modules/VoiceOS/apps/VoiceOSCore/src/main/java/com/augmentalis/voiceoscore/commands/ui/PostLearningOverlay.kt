@@ -95,7 +95,7 @@ class PostLearningOverlay(
                         onClose = { hide() }
                     )
 
-                    Divider()
+                    HorizontalDivider()
 
                     // Element list
                     ElementList(
@@ -107,7 +107,7 @@ class PostLearningOverlay(
                         modifier = Modifier.weight(1f)
                     )
 
-                    Divider()
+                    HorizontalDivider()
 
                     // Bottom action bar
                     BottomActionBar(

@@ -12,6 +12,7 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import com.augmentalis.voiceoscore.accessibility.VoiceOSService
 import com.augmentalis.voiceoscore.accessibility.overlays.MenuItem
@@ -201,7 +202,7 @@ class HelpMenuHandler(
                 MenuItem(
                     id = "show_commands",
                     label = "Show Commands",
-                    icon = Icons.Default.List,
+                    icon = Icons.AutoMirrored.Filled.List,
                     number = 1,
                     action = {
                         showCommandList()

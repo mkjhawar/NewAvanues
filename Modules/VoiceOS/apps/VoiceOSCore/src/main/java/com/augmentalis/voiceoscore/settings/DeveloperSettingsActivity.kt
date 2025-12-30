@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -152,7 +152,7 @@ fun DeveloperSettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
                     }
@@ -186,12 +186,12 @@ fun DeveloperSettingsScreen(
                 }
             )
 
-            Divider()
+            HorizontalDivider()
 
             // LearnApp Mode Controls Section
             LearnAppModeControlsSection(context = context)
 
-            Divider()
+            HorizontalDivider()
 
             // Subscription Testing Section
             SubscriptionTestingSection(
@@ -214,12 +214,12 @@ fun DeveloperSettingsScreen(
                 }
             )
 
-            Divider()
+            HorizontalDivider()
 
             // Current Mode Section
             CurrentModeSection(currentMode = currentMode)
 
-            Divider()
+            HorizontalDivider()
 
             // Actions Section
             ActionsSection(onForceRescan = onForceRescan)
@@ -570,7 +570,7 @@ fun LearnAppModeControlsSection(context: Context) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             // JIT Learning Toggle
             SwitchPreference(

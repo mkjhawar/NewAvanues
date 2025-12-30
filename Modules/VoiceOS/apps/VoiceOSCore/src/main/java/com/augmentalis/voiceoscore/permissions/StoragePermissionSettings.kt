@@ -83,7 +83,7 @@ fun StoragePermissionSettings(modifier: Modifier = Modifier) {
             )
         }
 
-        Divider(color = Color(0xFF333333))
+        HorizontalDivider(color = Color(0xFF333333))
 
         // Permission Status
         SettingsRow(
@@ -137,7 +137,7 @@ fun StoragePermissionSettings(modifier: Modifier = Modifier) {
             }
         }
 
-        Divider(color = Color(0xFF333333))
+        HorizontalDivider(color = Color(0xFF333333))
 
         // Action Buttons
         Column(

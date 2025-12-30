@@ -25,8 +25,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Accessibility
-import androidx.compose.material.icons.filled.Help
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.Help
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Settings
@@ -187,7 +187,7 @@ fun HomeScreen(
             )
 
             QuickActionButton(
-                icon = Icons.Default.List,
+                icon = Icons.AutoMirrored.Filled.List,
                 label = "Commands",
                 onClick = { showCommandsDialog = true },
                 modifier = Modifier.weight(1f)
@@ -258,7 +258,7 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(
-                imageVector = Icons.Default.Help,
+                imageVector = Icons.AutoMirrored.Filled.Help,
                 contentDescription = "Help and support",
                 modifier = Modifier.size(18.dp)
             )
