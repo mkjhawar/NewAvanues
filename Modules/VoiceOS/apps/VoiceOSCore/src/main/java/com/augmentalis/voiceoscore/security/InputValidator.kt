@@ -37,8 +37,9 @@ object InputValidator {
     // Package name regex: standard Android package format
     private val PACKAGE_NAME_PATTERN = Pattern.compile("^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+$")
 
-    // VUID regex: alphanumeric + hyphens only
-    private val UUID_PATTERN = Pattern.compile("^[a-zA-Z0-9-]+$")
+    // VUID regex: alphanumeric + dots + hyphens (supports package-prefixed VUIDs)
+    // Format: com.package.name.element-hexhash or standard UUID format
+    private val UUID_PATTERN = Pattern.compile("^[a-zA-Z0-9.-]+$")
 
     // Screen hash regex: hexadecimal only
     private val SCREEN_HASH_PATTERN = Pattern.compile("^[a-fA-F0-9]+$")
