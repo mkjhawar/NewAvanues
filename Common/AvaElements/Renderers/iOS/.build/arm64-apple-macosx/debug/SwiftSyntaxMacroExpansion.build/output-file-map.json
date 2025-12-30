@@ -1,0 +1,68 @@
+{
+  "": {
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/master.swiftdeps"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftSyntaxMacroExpansion/BasicMacroExpansionContext.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/BasicMacroExpansionContext.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/BasicMacroExpansionContext.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/BasicMacroExpansionContext~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/BasicMacroExpansionContext.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/BasicMacroExpansionContext.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftSyntaxMacroExpansion/FunctionParameterUtils.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/FunctionParameterUtils.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/FunctionParameterUtils.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/FunctionParameterUtils~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/FunctionParameterUtils.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/FunctionParameterUtils.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftSyntaxMacroExpansion/IndentationUtils.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/IndentationUtils.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/IndentationUtils.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/IndentationUtils~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/IndentationUtils.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/IndentationUtils.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftSyntaxMacroExpansion/MacroArgument.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroArgument.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroArgument.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroArgument~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroArgument.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroArgument.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftSyntaxMacroExpansion/MacroExpansion.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroExpansion.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroExpansion.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroExpansion~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroExpansion.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroExpansion.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftSyntaxMacroExpansion/MacroExpansionDiagnosticMessages.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroExpansionDiagnosticMessages.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroExpansionDiagnosticMessages.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroExpansionDiagnosticMessages~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroExpansionDiagnosticMessages.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroExpansionDiagnosticMessages.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftSyntaxMacroExpansion/MacroReplacement.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroReplacement.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroReplacement.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroReplacement~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroReplacement.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroReplacement.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftSyntaxMacroExpansion/MacroSpec.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroSpec.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroSpec.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroSpec~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroSpec.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroSpec.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftSyntaxMacroExpansion/MacroSystem.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroSystem.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroSystem.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroSystem~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroSystem.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntaxMacroExpansion.build/MacroSystem.dia"
+  }
+}

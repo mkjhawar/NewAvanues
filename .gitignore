@@ -1,0 +1,51 @@
+# IDEACODE Standard .gitignore
+
+# Build outputs
+build/
+*.apk
+*.ipa
+*.app
+dist/
+out/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Gradle
+.gradle/
+local.properties
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Logs
+*.log
+
+# Temporary
+*.tmp
+*.swp
+*.bak
+
+# IDEACODE - Ignore .claude and .ideacode content and CLAUDE.md files
+.claude/*
+.ideacode/*
+**/CLAUDE.md
+!.claude/.gitkeep
+!.ideacode/.gitkeep
+!.claude/README.md
+!.ideacode/README.md
+
+# Platform-specific
+.kotlin/
+.cxx/
+xcuserdata/
+
+# AVA Migration - Exclude large model files (>100MB)
+android/apps/AVA/external-models/**/*.bin
+android/apps/AVA/external-models/**/*.gguf
+android/apps/AVA/external-models/**/*.AON
+android/apps/AVA/external-models/**/*.safetensors

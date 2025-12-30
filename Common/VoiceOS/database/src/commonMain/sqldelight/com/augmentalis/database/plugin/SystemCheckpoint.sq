@@ -1,0 +1,58 @@
+-- SystemCheckpoint.sq
+-- SQLDelight schema for system checkpoints
+-- Migrated from Room: CheckpointEntity
+
+CREATE TABLE system_checkpoints (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at INTEGER NOT NULL,
+    state_json TEXT NOT NULL,
+    plugin_states_json TEXT
+);
+
+CREATE INDEX idx_sc_created_at ON system_checkpoints(created_at);
+CREATE INDEX idx_sc_name ON system_checkpoints(name);
+
+-- Get all checkpoints
+getAllCheckpoints:
+SELECT * FROM system_checkpoints ORDER BY created_at DESC;
+
+-- Get latest checkpoint
+getLatestCheckpoint:
+SELECT * FROM system_checkpoints ORDER BY created_at DESC LIMIT 1;
+
+-- Get checkpoint by ID
+getCheckpointById:
+SELECT * FROM system_checkpoints WHERE id = ?;
+
+-- Get checkpoints by name
+getCheckpointsByName:
+SELECT * FROM system_checkpoints WHERE name = ? ORDER BY created_at DESC;
+
+-- Get recent checkpoints
+getRecentCheckpoints:
+SELECT * FROM system_checkpoints ORDER BY created_at DESC LIMIT ?;
+
+-- Insert checkpoint
+insertCheckpoint:
+INSERT OR REPLACE INTO system_checkpoints (id, name, description, created_at, state_json, plugin_states_json)
+VALUES (?, ?, ?, ?, ?, ?);
+
+-- Update checkpoint
+updateCheckpoint:
+UPDATE system_checkpoints
+SET name = ?, description = ?, state_json = ?, plugin_states_json = ?
+WHERE id = ?;
+
+-- Delete checkpoint
+deleteCheckpoint:
+DELETE FROM system_checkpoints WHERE id = ?;
+
+-- Delete old checkpoints
+deleteOldCheckpoints:
+DELETE FROM system_checkpoints WHERE created_at < ?;
+
+-- Count checkpoints
+countCheckpoints:
+SELECT COUNT(*) FROM system_checkpoints;

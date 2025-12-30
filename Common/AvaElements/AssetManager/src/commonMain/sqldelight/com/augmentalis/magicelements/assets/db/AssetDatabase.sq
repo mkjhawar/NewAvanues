@@ -1,0 +1,177 @@
+-- MagicElements Asset Database Schema
+-- SQLDelight cross-platform SQLite database
+-- Supports: Android, iOS, Desktop, Web
+
+-- Icons table
+CREATE TABLE Icon (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    svg TEXT,
+    png_data TEXT,
+    tags TEXT NOT NULL,
+    library TEXT,
+    category TEXT,
+    aliases TEXT NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+);
+
+-- Images table
+CREATE TABLE ImageAsset (
+    id TEXT PRIMARY KEY NOT NULL,
+    url TEXT NOT NULL,
+    width INTEGER NOT NULL,
+    height INTEGER NOT NULL,
+    format TEXT NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    cached_path TEXT,
+    tags TEXT NOT NULL,
+    alt_text TEXT,
+    created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+);
+
+-- Asset libraries table
+CREATE TABLE AssetLibrary (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    version TEXT NOT NULL,
+    icon_count INTEGER NOT NULL DEFAULT 0,
+    cdn_base_url TEXT,
+    is_bundled INTEGER NOT NULL DEFAULT 0,
+    metadata TEXT,
+    created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+);
+
+-- Indexes for performance
+CREATE INDEX idx_icon_name ON Icon(name);
+CREATE INDEX idx_icon_library ON Icon(library);
+CREATE INDEX idx_icon_category ON Icon(category);
+CREATE INDEX idx_icon_tags ON Icon(tags);
+CREATE INDEX idx_image_tags ON ImageAsset(tags);
+CREATE INDEX idx_library_id ON AssetLibrary(id);
+
+-- Full-text search virtual table for icons (SQLite FTS5)
+CREATE VIRTUAL TABLE IconSearch USING fts5(
+    id UNINDEXED,
+    name,
+    tags,
+    aliases,
+    content=Icon,
+    content_rowid=rowid
+);
+
+-- Triggers to keep FTS index in sync
+CREATE TRIGGER icon_after_insert AFTER INSERT ON Icon BEGIN
+    INSERT INTO IconSearch(rowid, id, name, tags, aliases)
+    VALUES (new.rowid, new.id, new.name, new.tags, new.aliases);
+END;
+
+CREATE TRIGGER icon_after_update AFTER UPDATE ON Icon BEGIN
+    UPDATE IconSearch SET name = new.name, tags = new.tags, aliases = new.aliases
+    WHERE rowid = new.rowid;
+END;
+
+CREATE TRIGGER icon_after_delete AFTER DELETE ON Icon BEGIN
+    DELETE FROM IconSearch WHERE rowid = old.rowid;
+END;
+
+-- ===== QUERIES =====
+
+-- Icon queries
+insertIcon:
+INSERT OR REPLACE INTO Icon (id, name, svg, png_data, tags, library, category, aliases, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%s', 'now'));
+
+getIconById:
+SELECT * FROM Icon WHERE id = ?;
+
+searchIcons:
+SELECT Icon.* FROM Icon
+JOIN IconSearch ON Icon.rowid = IconSearch.rowid
+WHERE IconSearch MATCH ?
+ORDER BY rank
+LIMIT ? OFFSET ?;
+
+searchIconsByLibrary:
+SELECT * FROM Icon
+WHERE library = ? AND (
+    name LIKE '%' || ? || '%' OR
+    tags LIKE '%' || ? || '%' OR
+    aliases LIKE '%' || ? || '%'
+)
+LIMIT ? OFFSET ?;
+
+getIconsByLibrary:
+SELECT * FROM Icon
+WHERE library = ?
+ORDER BY name
+LIMIT ? OFFSET ?;
+
+getAllIcons:
+SELECT * FROM Icon
+ORDER BY name
+LIMIT ? OFFSET ?;
+
+deleteIcon:
+DELETE FROM Icon WHERE id = ?;
+
+deleteIconsByLibrary:
+DELETE FROM Icon WHERE library = ?;
+
+countIcons:
+SELECT COUNT(*) FROM Icon;
+
+countIconsByLibrary:
+SELECT COUNT(*) FROM Icon WHERE library = ?;
+
+-- Image queries
+insertImage:
+INSERT OR REPLACE INTO ImageAsset (id, url, width, height, format, size_bytes, cached_path, tags, alt_text, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s', 'now'));
+
+getImageById:
+SELECT * FROM ImageAsset WHERE id = ?;
+
+searchImages:
+SELECT * FROM ImageAsset
+WHERE tags LIKE '%' || ? || '%' OR alt_text LIKE '%' || ? || '%'
+LIMIT ? OFFSET ?;
+
+getAllImages:
+SELECT * FROM ImageAsset
+ORDER BY created_at DESC
+LIMIT ? OFFSET ?;
+
+deleteImage:
+DELETE FROM ImageAsset WHERE id = ?;
+
+countImages:
+SELECT COUNT(*) FROM ImageAsset;
+
+-- Library queries
+insertLibrary:
+INSERT OR REPLACE INTO AssetLibrary (id, name, version, icon_count, cdn_base_url, is_bundled, metadata, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%s', 'now'));
+
+getLibraryById:
+SELECT * FROM AssetLibrary WHERE id = ?;
+
+getAllLibraries:
+SELECT * FROM AssetLibrary ORDER BY name;
+
+updateLibraryIconCount:
+UPDATE AssetLibrary SET icon_count = ?, updated_at = strftime('%s', 'now')
+WHERE id = ?;
+
+deleteLibrary:
+DELETE FROM AssetLibrary WHERE id = ?;
+
+-- Statistics queries
+getStorageStats:
+SELECT
+    (SELECT COUNT(*) FROM Icon) as total_icons,
+    (SELECT COUNT(*) FROM ImageAsset) as total_images,
+    (SELECT COUNT(*) FROM AssetLibrary) as library_count,
+    (SELECT SUM(size_bytes) FROM ImageAsset) as total_size_bytes;

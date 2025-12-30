@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAvanue Theme Gallery - MainAvanues OS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top navigation bar */
+        .navbar {
+            background: #1a1a1a;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .brand {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            font-size: 28px;
+        }
+
+        .theme-selector {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            flex: 1;
+            justify-content: center;
+            max-width: 900px;
+        }
+
+        .theme-btn {
+            padding: 10px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.7);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .theme-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .theme-btn.active {
+            background: #007aff;
+            border-color: #007aff;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 122, 255, 0.4);
+        }
+
+        .theme-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 6px;
+            text-transform: uppercase;
+        }
+
+        .badge-recommended {
+            background: #34c759;
+            color: white;
+        }
+
+        .badge-interactive {
+            background: #ff9500;
+            color: white;
+        }
+
+        .badge-fast {
+            background: #5ac8fa;
+            color: white;
+        }
+
+        .badge-premium {
+            background: #af52de;
+            color: white;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .control-btn {
+            padding: 8px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.7);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        /* Main content area */
+        .content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar with theme info */
+        .sidebar {
+            width: 300px;
+            background: #1a1a1a;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 24px;
+            overflow-y: auto;
+            transition: transform 0.3s;
+        }
+
+        .sidebar.hidden {
+            transform: translateX(-100%);
+        }
+
+        .theme-info h2 {
+            font-size: 18px;
+            margin-bottom: 12px;
+            color: #fff;
+        }
+
+        .theme-info p {
+            font-size: 13px;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 16px;
+        }
+
+        .spec-list {
+            list-style: none;
+            margin-top: 16px;
+        }
+
+        .spec-list li {
+            padding: 8px 0;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .spec-label {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .spec-value {
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+        }
+
+        /* Iframe container */
+        .demo-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+        }
+
+        .demo-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+        }
+
+        .demo-frame.active {
+            display: block;
+        }
+
+        /* Loading state */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #007aff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Comparison mode */
+        .comparison-mode .demo-frame {
+            width: 50%;
+            display: none;
+        }
+
+        .comparison-mode .demo-frame.compare-1,
+        .comparison-mode .demo-frame.compare-2 {
+            display: inline-block;
+            float: left;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .theme-selector {
+                justify-content: flex-start;
+                overflow-x: auto;
+            }
+
+            .sidebar {
+                width: 250px;
+            }
+
+            .navbar {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="brand">
+            <span class="brand-logo">🎨</span>
+            <span>WebAvanue Theme Gallery</span>
+        </div>
+
+        <div class="theme-selector">
+            <button class="theme-btn active" data-theme="theme-engine">
+                🎨 Theme Engine
+                <span class="theme-badge badge-recommended">⭐ Production</span>
+            </button>
+            <button class="theme-btn" data-theme="interactive-controls">
+                Interactive Controls
+                <span class="theme-badge badge-interactive">✨ New</span>
+            </button>
+            <button class="theme-btn" data-theme="ocean">
+                Ocean Blue
+            </button>
+            <button class="theme-btn" data-theme="slate">
+                Slate Gray
+            </button>
+            <button class="theme-btn" data-theme="teal">
+                Deep Teal
+            </button>
+            <button class="theme-btn" data-theme="navy">
+                Navy Corporate
+            </button>
+            <button class="theme-btn" data-theme="charcoal">
+                Charcoal
+            </button>
+            <button class="theme-btn" data-theme="taupe">
+                Warm Taupe
+            </button>
+            <button class="theme-btn" data-theme="emerald">
+                Emerald
+            </button>
+            <button class="theme-btn" data-theme="purple">
+                Purple Majesty
+            </button>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="toggleSidebar()">ℹ️ Info</button>
+            <button class="control-btn" onclick="openDocs()">📄 Docs</button>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="sidebar" id="sidebar">
+            <div class="theme-info" id="themeInfo">
+                <h2>visionOS Liquid Glass</h2>
+                <p>Apple visionOS-inspired spatial computing aesthetic with interactive customization controls.</p>
+
+                <ul class="spec-list">
+                    <li>
+                        <span class="spec-label">GPU Usage</span>
+                        <span class="spec-value">High</span>
+                    </li>
+                    <li>
+                        <span class="spec-label">Performance</span>
+                        <span class="spec-value">Medium</span>
+                    </li>
+                    <li>
+                        <span class="spec-label">Blur</span>
+                        <span class="spec-value">40-100px</span>
+                    </li>
+                    <li>
+                        <span class="spec-label">Best For</span>
+                        <span class="spec-value">Premium UI</span>
+                    </li>
+                    <li>
+                        <span class="spec-label">Customizable</span>
+                        <span class="spec-value">✅ Yes</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="demo-container">
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div>Loading theme...</div>
+            </div>
+
+            <iframe class="demo-frame active" id="frame-theme-engine" src="theme-engine-demo.html"></iframe>
+            <iframe class="demo-frame" id="frame-interactive-controls" src="interactive-controls.html"></iframe>
+            <iframe class="demo-frame" id="frame-ocean" src="theme-ocean.html"></iframe>
+            <iframe class="demo-frame" id="frame-slate" src="theme-slate.html"></iframe>
+            <iframe class="demo-frame" id="frame-teal" src="theme-teal.html"></iframe>
+            <iframe class="demo-frame" id="frame-navy" src="theme-navy.html"></iframe>
+            <iframe class="demo-frame" id="frame-charcoal" src="theme-charcoal.html"></iframe>
+            <iframe class="demo-frame" id="frame-taupe" src="theme-taupe.html"></iframe>
+            <iframe class="demo-frame" id="frame-emerald" src="theme-emerald.html"></iframe>
+            <iframe class="demo-frame" id="frame-purple" src="theme-purple.html"></iframe>
+        </div>
+    </div>
+
+    <script>
+        const themeData = {
+            'theme-engine': {
+                name: '🎨 Universal Theme Engine',
+                description: 'Production-ready theme engine with universal settings that work across all color themes. Includes voice-first accessibility with voice commands for every UI element. Toggle glass mode, adjust shadows, borders, motion, and more. Settings persist across sessions. Full voice control with Web Speech API integration.',
+                specs: {
+                    'Status': '⭐ Production Ready',
+                    'Themes': '8 color themes',
+                    'Voice Commands': '✅ All elements',
+                    'Settings': 'Universal + persistent',
+                    'Accessibility': 'WCAG 2.1 AAA',
+                    'Performance': 'Excellent (60fps)',
+                    'Best For': 'OS-level deployment'
+                }
+            },
+            'interactive-controls': {
+                name: 'Interactive Element Controls',
+                description: 'Click any UI element to select it and customize its properties individually. Control background color, border radius, opacity, blur, shadows, and border opacity for each element. Export CSS when done.',
+                specs: {
+                    'GPU Usage': 'Low-Medium',
+                    'Performance': 'Excellent',
+                    'Blur': 'Per-element (0-60px)',
+                    'Best For': 'Theme Customization',
+                    'Customizable': '✅ Per-element controls',
+                    'Battery Impact': 'Low',
+                    'Layout': 'Portrait with controls'
+                }
+            },
+            'ocean': {
+                name: 'Ocean Blue (Recommended)',
+                description: 'Production-ready hybrid combining Material 3 XR design system, Solid Sharp colors (#2563eb blue), and visionOS 2.0 depth. Toggle between solid and glass modes. Notch-aware responsive layouts.',
+                specs: {
+                    'GPU Usage': 'Low-Medium (toggle)',
+                    'Performance': 'Excellent (60fps)',
+                    'Blur': 'Optional (0-40px)',
+                    'Best For': 'Production Default',
+                    'Color Scheme': 'Ocean Blue',
+                    'Battery Impact': 'Low',
+                    'UI Fatigue': 'Minimal'
+                }
+            },
+            'slate': {
+                name: 'Slate Professional',
+                description: 'Corporate professional theme with neutral slate gray tones. Muted, low-saturation colors minimize visual fatigue. Perfect for extended work sessions.',
+                specs: {
+                    'GPU Usage': 'Low-Medium (toggle)',
+                    'Performance': 'Excellent (60fps)',
+                    'Blur': 'Optional (0-40px)',
+                    'Best For': 'Corporate Default',
+                    'Color Scheme': 'Neutral Slate',
+                    'Battery Impact': 'Low',
+                    'UI Fatigue': 'Minimal'
+                }
+            },
+            'teal': {
+                name: 'Deep Teal Professional',
+                description: 'Professional calming teal theme designed for reduced eye strain. Deep, muted teal tones provide visual interest without overwhelming.',
+                specs: {
+                    'GPU Usage': 'Low-Medium (toggle)',
+                    'Performance': 'Excellent (60fps)',
+                    'Blur': 'Optional (0-40px)',
+                    'Best For': 'Professional Use',
+                    'Color Scheme': 'Deep Teal',
+                    'Battery Impact': 'Low',
+                    'UI Fatigue': 'Very Low'
+                }
+            },
+            'navy': {
+                name: 'Navy Corporate',
+                description: 'Classic, trustworthy navy blue theme for corporate environments. Traditional and professional with excellent readability.',
+                specs: {
+                    'GPU Usage': 'Low-Medium (toggle)',
+                    'Performance': 'Excellent (60fps)',
+                    'Blur': 'Optional (0-40px)',
+                    'Best For': 'Corporate Use',
+                    'Color Scheme': 'Navy Blue',
+                    'Battery Impact': 'Low',
+                    'UI Fatigue': 'Low'
+                }
+            },
+            'charcoal': {
+                name: 'Charcoal Professional',
+                description: 'Maximum contrast true neutral charcoal theme. Highest readability with zero color bias. Ideal for accessibility and long work sessions.',
+                specs: {
+                    'GPU Usage': 'Low-Medium (toggle)',
+                    'Performance': 'Excellent (60fps)',
+                    'Blur': 'Optional (0-40px)',
+                    'Best For': 'Accessibility Focus',
+                    'Color Scheme': 'True Neutral',
+                    'Battery Impact': 'Low',
+                    'UI Fatigue': 'Minimal'
+                }
+            },
+            'taupe': {
+                name: 'Warm Taupe',
+                description: 'Softer, warmer neutral theme with subtle elegance. Provides variety from cool grays while maintaining professional appearance.',
+                specs: {
+                    'GPU Usage': 'Low-Medium (toggle)',
+                    'Performance': 'Excellent (60fps)',
+                    'Blur': 'Optional (0-40px)',
+                    'Best For': 'Warm Neutral Option',
+                    'Color Scheme': 'Warm Taupe',
+                    'Battery Impact': 'Low',
+                    'UI Fatigue': 'Very Low'
+                }
+            },
+            'emerald': {
+                name: 'Emerald Green',
+                description: 'Natural calming green tones for a fresh aesthetic. Higher saturation than corporate themes for creative environments.',
+                specs: {
+                    'GPU Usage': 'Low-Medium (toggle)',
+                    'Performance': 'Excellent (60fps)',
+                    'Blur': 'Optional (0-40px)',
+                    'Best For': 'Creative Teams',
+                    'Color Scheme': 'Emerald Green',
+                    'Battery Impact': 'Low',
+                    'UI Fatigue': 'Low'
+                }
+            },
+            'purple': {
+                name: 'Purple Majesty',
+                description: 'Elegant regal purple tones. More vibrant option for teams preferring color-forward designs.',
+                specs: {
+                    'GPU Usage': 'Low-Medium (toggle)',
+                    'Performance': 'Excellent (60fps)',
+                    'Blur': 'Optional (0-40px)',
+                    'Best For': 'Creative/Branding',
+                    'Color Scheme': 'Purple',
+                    'Battery Impact': 'Low',
+                    'UI Fatigue': 'Medium'
+                }
+            }
+        };
+
+        let currentTheme = 'theme-engine';
+
+        // Theme switching
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const theme = btn.dataset.theme;
+                switchTheme(theme);
+            });
+        });
+
+        function switchTheme(theme) {
+            // Update active button
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`[data-theme="${theme}"]`).classList.add('active');
+
+            // Update active iframe
+            document.querySelectorAll('.demo-frame').forEach(f => f.classList.remove('active'));
+            document.getElementById(`frame-${theme}`).classList.add('active');
+
+            // Update sidebar info
+            updateThemeInfo(theme);
+
+            currentTheme = theme;
+        }
+
+        function updateThemeInfo(theme) {
+            const data = themeData[theme];
+            const info = document.getElementById('themeInfo');
+
+            let specsHtml = '';
+            for (const [label, value] of Object.entries(data.specs)) {
+                specsHtml += `
+                    <li>
+                        <span class="spec-label">${label}</span>
+                        <span class="spec-value">${value}</span>
+                    </li>
+                `;
+            }
+
+            info.innerHTML = `
+                <h2>${data.name}</h2>
+                <p>${data.description}</p>
+                <ul class="spec-list">
+                    ${specsHtml}
+                </ul>
+            `;
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('hidden');
+        }
+
+        function openDocs() {
+            window.open('THEME-COMPARISON.md', '_blank');
+        }
+
+        // Hide loading indicator after all iframes loaded
+        let loadedFrames = 0;
+        document.querySelectorAll('.demo-frame').forEach(frame => {
+            frame.addEventListener('load', () => {
+                loadedFrames++;
+                if (loadedFrames === 1) {
+                    document.getElementById('loading').style.display = 'none';
+                }
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') {
+                const themes = ['theme-engine', 'interactive-controls', 'ocean', 'slate', 'teal', 'navy', 'charcoal', 'taupe', 'emerald', 'purple'];
+                const currentIndex = themes.indexOf(currentTheme);
+                const nextIndex = (currentIndex + 1) % themes.length;
+                switchTheme(themes[nextIndex]);
+            } else if (e.key === 'ArrowLeft') {
+                const themes = ['theme-engine', 'interactive-controls', 'ocean', 'slate', 'teal', 'navy', 'charcoal', 'taupe', 'emerald', 'purple'];
+                const currentIndex = themes.indexOf(currentTheme);
+                const prevIndex = (currentIndex - 1 + themes.length) % themes.length;
+                switchTheme(themes[prevIndex]);
+            } else if (e.key === 'i' || e.key === 'I') {
+                toggleSidebar();
+            }
+        });
+
+        // Initialize
+        updateThemeInfo(currentTheme);
+    </script>
+</body>
+</html>

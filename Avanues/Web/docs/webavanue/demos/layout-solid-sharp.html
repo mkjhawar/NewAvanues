@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAvanue - Solid Sharp Design</title>
+    <style>
+        :root {
+            --color-primary: #2563eb;
+            --color-surface: #1e293b;
+            --color-surface-elevated: #334155;
+            --color-surface-high: #475569;
+            --color-on-surface: #f1f5f9;
+            --color-accent: #3b82f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .phone {
+            width: 390px;
+            height: 844px;
+            background: #0f172a;
+            border-radius: 50px;
+            padding: 12px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8),
+                        0 0 0 1px rgba(255, 255, 255, 0.1);
+            transition: all 0.6s ease;
+            position: relative;
+        }
+
+        body.landscape .phone {
+            width: 844px;
+            height: 390px;
+        }
+
+        .notch {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 160px;
+            height: 30px;
+            background: #0f172a;
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+            transition: all 0.6s ease;
+        }
+
+        body.landscape .notch {
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 160px;
+            border-radius: 0 20px 20px 0;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            border-radius: 38px;
+            overflow: hidden;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Solid design - no blur */
+        .nav-cluster {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .nav-pod {
+            background: var(--color-surface);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            display: flex;
+            gap: 4px;
+            padding: 6px;
+            border-radius: 12px;
+        }
+
+        .btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            border: none;
+            background: var(--color-surface-elevated);
+            color: var(--color-on-surface);
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:hover {
+            background: var(--color-surface-high);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .address-bar {
+            flex: 1;
+            background: var(--color-surface-elevated);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5),
+                        inset 0 2px 0 rgba(255, 255, 255, 0.08);
+            padding: 8px 16px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 56px;
+        }
+
+        .url-box {
+            flex: 1;
+            height: 40px;
+            background: var(--color-surface);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .url-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .url-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .badge {
+            min-width: 28px;
+            height: 28px;
+            padding: 0 8px;
+            border-radius: 6px;
+            background: var(--color-primary);
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+        }
+
+        .webview {
+            flex: 1;
+            border-radius: 16px;
+            background: var(--color-surface);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Landscape mode */
+        body.landscape .screen {
+            padding: 12px 20px;
+            gap: 8px;
+        }
+
+        body.landscape .address-bar {
+            order: 3;
+        }
+
+        body.landscape .nav-pod:first-child {
+            order: 1;
+        }
+
+        body.landscape .nav-pod:last-child {
+            order: 2;
+        }
+
+        .fixed-btn {
+            position: fixed;
+            bottom: 20px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            background: var(--color-surface-elevated);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .fixed-btn:hover {
+            transform: translateY(-2px);
+            background: var(--color-surface-high);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+        }
+
+        .orient-btn {
+            left: 20px;
+        }
+
+        .orient-label {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone">
+        <div class="orient-label" id="orientLabel">PORTRAIT MODE</div>
+        <div class="notch"></div>
+        <div class="screen">
+            <div class="nav-cluster">
+                <div class="nav-pod">
+                    <button class="btn disabled">◀</button>
+                    <button class="btn disabled">▶</button>
+                    <button class="btn">↻</button>
+                </div>
+                <div class="address-bar">
+                    <div class="url-box">
+                        <span style="opacity: 0.6;">🔒</span>
+                        <input class="url-input" type="text" value="https://example.com" placeholder="Enter URL...">
+                        <button class="icon-btn" style="color: #fbbf24;">★</button>
+                    </div>
+                    <div class="badge">3</div>
+                </div>
+                <div class="nav-pod">
+                    <button class="btn">☰</button>
+                </div>
+            </div>
+            <div class="webview">
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; opacity: 0.3; margin-bottom: 12px;">📱</div>
+                    <div>Solid Sharp Design</div>
+                    <div style="font-size: 13px; margin-top: 8px; opacity: 0.5;">
+                        No blur • Sharp edges • Clear elevation
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="fixed-btn orient-btn" onclick="toggleOrientation()">
+        <span id="orientText">Switch to Landscape</span>
+    </button>
+
+    <script>
+        function toggleOrientation() {
+            const body = document.body;
+            const text = document.getElementById('orientText');
+            const label = document.getElementById('orientLabel');
+
+            if (body.classList.contains('landscape')) {
+                body.classList.remove('landscape');
+                text.textContent = 'Switch to Landscape';
+                label.textContent = 'PORTRAIT MODE';
+            } else {
+                body.classList.add('landscape');
+                text.textContent = 'Switch to Portrait';
+                label.textContent = 'LANDSCAPE MODE';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,273 @@
+# quiz-game.yaml
+# A quiz game plugin demonstrating state transitions and game logic
+# Tier: data (works on Apple - uses only Tier 1 functions)
+#
+# Features:
+# - Multiple choice questions
+# - Score tracking
+# - Progress indicator
+# - Restart functionality
+
+plugin:
+  id: "com.augmentalis.quizgame"
+  name: "Quiz Game"
+  version: "1.0.0"
+  description: "A trivia quiz game"
+  tier: data  # Apple-safe
+
+state:
+  questions:
+    - question: "What is the capital of France?"
+      options: ["London", "Berlin", "Paris", "Madrid"]
+      correctAnswer: 2
+    - question: "Which planet is known as the Red Planet?"
+      options: ["Venus", "Mars", "Jupiter", "Saturn"]
+      correctAnswer: 1
+    - question: "What is 7 × 8?"
+      options: ["54", "56", "58", "64"]
+      correctAnswer: 1
+    - question: "Who painted the Mona Lisa?"
+      options: ["Van Gogh", "Picasso", "Da Vinci", "Monet"]
+      correctAnswer: 2
+  currentIndex: 0        # Current question index
+  score: 0               # Correct answers count
+  answers: []            # User's answers
+  isComplete: false      # Quiz finished flag
+  selectedAnswer: null   # Currently selected answer
+
+reducers:
+  # Select an answer
+  selectAnswer:
+    params: [answerIndex]
+    next_state:
+      selectedAnswer: $answerIndex
+
+  # Submit answer and move to next question
+  nextQuestion:
+    next_state:
+      answers: $array.append($state.answers, $state.selectedAnswer)
+      score: $logic.if(
+        $logic.equals(
+          $state.selectedAnswer,
+          $object.get($array.get($state.questions, $state.currentIndex), "correctAnswer")
+        ),
+        $math.add($state.score, 1),
+        $state.score
+      )
+      currentIndex: $math.add($state.currentIndex, 1)
+      selectedAnswer: null
+      isComplete: $logic.gte(
+        $math.add($state.currentIndex, 1),
+        $array.length($state.questions)
+      )
+
+  # Restart quiz
+  restart:
+    next_state:
+      currentIndex: 0
+      score: 0
+      answers: []
+      isComplete: false
+      selectedAnswer: null
+
+ui:
+  Column:
+    style:
+      padding: 16
+      gap: 16
+    children:
+      # Header
+      - Row:
+          style:
+            justifyContent: "space-between"
+            alignItems: "center"
+          children:
+            - Text:
+                value: "Quiz Game"
+                style:
+                  fontSize: 24
+                  fontWeight: "bold"
+            - Text:
+                value: $string.concat(
+                  "Score: ",
+                  $string.concat("", $state.score)
+                )
+                style:
+                  fontSize: 18
+                  color: "#0066cc"
+
+      # Progress indicator
+      - Container:
+          visible: $logic.not($state.isComplete)
+          children:
+            - Column:
+                style:
+                  gap: 8
+                children:
+                  - Text:
+                      value: $string.concat(
+                        "Question ",
+                        $string.concat(
+                          $string.concat("", $math.add($state.currentIndex, 1)),
+                          $string.concat(" of ", $string.concat("", $array.length($state.questions)))
+                        )
+                      )
+                      style:
+                        fontSize: 14
+                        color: "#666"
+                  - ProgressBar:
+                      value: $math.divide(
+                        $math.add($state.currentIndex, 1),
+                        $array.length($state.questions)
+                      )
+                      style:
+                        height: 8
+
+      - Divider:
+          visible: $logic.not($state.isComplete)
+
+      # Question section
+      - Container:
+          visible: $logic.not($state.isComplete)
+          children:
+            - Column:
+                style:
+                  gap: 16
+                children:
+                  # Question text
+                  - Text:
+                      value: $object.get(
+                        $array.get($state.questions, $state.currentIndex),
+                        "question"
+                      )
+                      style:
+                        fontSize: 20
+                        fontWeight: "medium"
+
+                  # Answer options
+                  - Column:
+                      style:
+                        gap: 8
+                      children:
+                        # Option 0
+                        - Button:
+                            label: $array.get(
+                              $object.get($array.get($state.questions, $state.currentIndex), "options"),
+                              0
+                            )
+                            onTap: "selectAnswer(0)"
+                            variant: $logic.if(
+                              $logic.equals($state.selectedAnswer, 0),
+                              "primary",
+                              "outline"
+                            )
+                            style:
+                              textAlign: "left"
+                        # Option 1
+                        - Button:
+                            label: $array.get(
+                              $object.get($array.get($state.questions, $state.currentIndex), "options"),
+                              1
+                            )
+                            onTap: "selectAnswer(1)"
+                            variant: $logic.if(
+                              $logic.equals($state.selectedAnswer, 1),
+                              "primary",
+                              "outline"
+                            )
+                            style:
+                              textAlign: "left"
+                        # Option 2
+                        - Button:
+                            label: $array.get(
+                              $object.get($array.get($state.questions, $state.currentIndex), "options"),
+                              2
+                            )
+                            onTap: "selectAnswer(2)"
+                            variant: $logic.if(
+                              $logic.equals($state.selectedAnswer, 2),
+                              "primary",
+                              "outline"
+                            )
+                            style:
+                              textAlign: "left"
+                        # Option 3
+                        - Button:
+                            label: $array.get(
+                              $object.get($array.get($state.questions, $state.currentIndex), "options"),
+                              3
+                            )
+                            onTap: "selectAnswer(3)"
+                            variant: $logic.if(
+                              $logic.equals($state.selectedAnswer, 3),
+                              "primary",
+                              "outline"
+                            )
+                            style:
+                              textAlign: "left"
+
+                  # Next button
+                  - Button:
+                      label: $logic.if(
+                        $logic.lt($state.currentIndex, $math.subtract($array.length($state.questions), 1)),
+                        "Next Question",
+                        "Finish Quiz"
+                      )
+                      onTap: "nextQuestion"
+                      variant: "primary"
+                      disabled: $logic.equals($state.selectedAnswer, null)
+                      style:
+                        fontSize: 18
+
+      # Results section
+      - Container:
+          visible: $state.isComplete
+          children:
+            - Column:
+                style:
+                  gap: 24
+                  alignItems: "center"
+                children:
+                  - Text:
+                      value: "Quiz Complete!"
+                      style:
+                        fontSize: 28
+                        fontWeight: "bold"
+                        color: "#0066cc"
+
+                  - Column:
+                      style:
+                        gap: 8
+                        alignItems: "center"
+                      children:
+                        - Text:
+                            value: "Your Score"
+                            style:
+                              fontSize: 18
+                              color: "#666"
+                        - Text:
+                            value: $string.concat(
+                              $string.concat("", $state.score),
+                              $string.concat(" / ", $string.concat("", $array.length($state.questions)))
+                            )
+                            style:
+                              fontSize: 48
+                              fontWeight: "bold"
+                              color: "#00cc66"
+
+                  - Text:
+                      value: $string.concat(
+                        $string.concat("", $math.round($math.multiply($math.divide($state.score, $array.length($state.questions)), 100))),
+                        "% Correct"
+                      )
+                      style:
+                        fontSize: 24
+                        color: "#333"
+
+                  - Button:
+                      label: "Try Again"
+                      onTap: "restart"
+                      variant: "primary"
+                      style:
+                        fontSize: 18
+                        paddingHorizontal: 32

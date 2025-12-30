@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.augmentalis.voiceui">
+
+    <!-- Permissions for VoiceUI -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    
+    <!-- Custom permissions for third-party apps -->
+    <permission-group 
+        android:name="com.augmentalis.voiceui.permission-group.BASIC"
+        android:label="VoiceUI Basic Access" />
+        
+    <permission-group 
+        android:name="com.augmentalis.voiceui.permission-group.ADVANCED"
+        android:label="VoiceUI Advanced Control" />
+        
+    <permission 
+        android:name="com.augmentalis.voiceui.permission.CHANGE_THEME"
+        android:permissionGroup="com.augmentalis.voiceui.permission-group.BASIC"
+        android:protectionLevel="normal"
+        android:label="Change VoiceUI Theme" />
+        
+    <permission 
+        android:name="com.augmentalis.voiceui.permission.CONTROL_WINDOWS"
+        android:permissionGroup="com.augmentalis.voiceui.permission-group.ADVANCED"
+        android:protectionLevel="signature"
+        android:label="Control VoiceUI Windows" />
+        
+    <permission 
+        android:name="com.augmentalis.voiceui.permission.TRIGGER_GESTURES"
+        android:permissionGroup="com.augmentalis.voiceui.permission-group.BASIC"
+        android:protectionLevel="normal"
+        android:label="Trigger VoiceUI Gestures" />
+        
+    <permission 
+        android:name="com.augmentalis.voiceui.permission.SHOW_HUD"
+        android:permissionGroup="com.augmentalis.voiceui.permission-group.BASIC"
+        android:protectionLevel="normal"
+        android:label="Show HUD Notifications" />
+        
+    <permission 
+        android:name="com.augmentalis.voiceui.permission.REGISTER_COMMANDS"
+        android:permissionGroup="com.augmentalis.voiceui.permission-group.ADVANCED"
+        android:protectionLevel="signature"
+        android:label="Register Voice Commands" />
+
+    <application>
+        
+        <!-- Main VoiceUI Service -->
+        <service
+            android:name=".service.VoiceUIService"
+            android:exported="true"
+            android:permission="com.augmentalis.voiceui.permission.CONTROL_WINDOWS">
+            <intent-filter>
+                <action android:name="com.augmentalis.voiceui.service.WINDOW_SERVICE" />
+                <action android:name="com.augmentalis.voiceui.service.VOICE_SERVICE" />
+            </intent-filter>
+        </service>
+        
+        <!-- Intent Receiver for Actions -->
+        <receiver
+            android:name=".receiver.VoiceUIReceiver"
+            android:exported="true">
+            <intent-filter>
+                <!-- Theme Intents -->
+                <action android:name="com.augmentalis.voiceui.action.THEME_CHANGE" />
+                <action android:name="com.augmentalis.voiceui.action.THEME_GET" />
+                <action android:name="com.augmentalis.voiceui.action.THEME_REGISTER" />
+                
+                <!-- Gesture Intents -->
+                <action android:name="com.augmentalis.voiceui.action.GESTURE_ENABLE" />
+                <action android:name="com.augmentalis.voiceui.action.GESTURE_TRIGGER" />
+                <action android:name="com.augmentalis.voiceui.action.GESTURE_CONFIG" />
+                
+                <!-- Window Intents -->
+                <action android:name="com.augmentalis.voiceui.action.WINDOW_CREATE" />
+                <action android:name="com.augmentalis.voiceui.action.WINDOW_SHOW" />
+                <action android:name="com.augmentalis.voiceui.action.WINDOW_HIDE" />
+                <action android:name="com.augmentalis.voiceui.action.WINDOW_MOVE" />
+                <action android:name="com.augmentalis.voiceui.action.WINDOW_RESIZE" />
+                
+                <!-- HUD Intents -->
+                <action android:name="com.augmentalis.voiceui.action.HUD_NOTIFY" />
+                <action android:name="com.augmentalis.voiceui.action.HUD_UPDATE" />
+                <action android:name="com.augmentalis.voiceui.action.HUD_TOGGLE" />
+                
+                <!-- Notification Intents -->
+                <action android:name="com.augmentalis.voiceui.action.NOTIFY_CUSTOM" />
+                <action android:name="com.augmentalis.voiceui.action.NOTIFY_CLEAR" />
+                
+                <!-- Voice Command Intents -->
+                <action android:name="com.augmentalis.voiceui.action.VOICE_REGISTER" />
+                <action android:name="com.augmentalis.voiceui.action.VOICE_PROCESS" />
+                <action android:name="com.augmentalis.voiceui.action.VOICE_ENABLE" />
+                
+                <!-- Chart Intents -->
+                <action android:name="com.augmentalis.voiceui.action.CHART_CREATE" />
+                <action android:name="com.augmentalis.voiceui.action.CHART_UPDATE" />
+            </intent-filter>
+        </receiver>
+        
+        <!-- Content Provider -->
+        <provider
+            android:name=".provider.VoiceUIProvider"
+            android:authorities="com.augmentalis.voiceui.provider"
+            android:exported="true"
+            android:readPermission="com.augmentalis.voiceui.permission.CHANGE_THEME"
+            android:writePermission="com.augmentalis.voiceui.permission.CONTROL_WINDOWS" />
+            
+    </application>
+
+</manifest>

@@ -1,0 +1,85 @@
+# MagicElements YAML Example: Login Screen
+# This is equivalent to the DSL LoginScreen example
+
+theme: iOS26LiquidGlass
+
+components:
+  - Column:
+      padding: 24
+      arrangement: Center
+      horizontalAlignment: Center
+      children:
+        # Title
+        - Text:
+            text: "Welcome Back"
+            font: Title
+            color: "#007AFF"
+
+        # Subtitle
+        - Text:
+            text: "Sign in to continue"
+            font: Caption
+            color: "#8E8E93"
+            padding:
+              top: 8
+              bottom: 8
+
+        # Email field
+        - TextField:
+            value: ""
+            placeholder: "Email"
+            label: "Email Address"
+            leadingIcon: "email"
+            style:
+              width: Fill
+              padding:
+                top: 8
+                bottom: 8
+
+        # Password field
+        - TextField:
+            value: ""
+            placeholder: "Password"
+            label: "Password"
+            leadingIcon: "lock"
+            trailingIcon: "visibility"
+            style:
+              width: Fill
+              padding:
+                top: 8
+                bottom: 8
+
+        # Login button
+        - Button:
+            text: "Sign In"
+            style: Primary
+            onClick: handleLogin
+            style:
+              width: Fill
+              padding:
+                top: 16
+                bottom: 16
+              border:
+                radius: 12
+
+        # Divider row
+        - Row:
+            arrangement: Center
+            padding:
+              top: 24
+              bottom: 24
+            children:
+              - Text:
+                  text: "Don't have an account?"
+                  font: Caption
+                  color: "#8E8E93"
+
+        # Sign up button
+        - Button:
+            text: "Create Account"
+            style: Outlined
+            onClick: handleSignUp
+            style:
+              width: Fill
+              border:
+                radius: 12

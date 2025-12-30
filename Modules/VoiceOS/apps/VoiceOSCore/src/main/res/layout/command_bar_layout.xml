@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  command_bar_layout.xml - Material Design 3 Bottom Command Bar
+  Path: modules/apps/VoiceOSCore/src/main/res/layout/command_bar_layout.xml
+
+  Bottom command bar for LearnApp exploration progress and controls.
+  Replaces full-screen overlay to allow user interaction during learning.
+
+  Design Specs:
+  - Height: 48dp (minimum touch target)
+  - Elevation: 8dp
+  - Gravity: BOTTOM
+  - Material 3 design system
+  - Dark theme optimized
+
+  Author: VOS4 Development Team
+  Created: 2025-12-06
+-->
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/command_bar_root"
+    android:layout_width="match_parent"
+    android:layout_height="48dp"
+    android:layout_gravity="bottom"
+    app:cardElevation="8dp"
+    app:cardCornerRadius="0dp"
+    app:cardBackgroundColor="?attr/colorSurface"
+    style="@style/Widget.LearnApp.CommandBar">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingStart="16dp"
+        android:paddingEnd="8dp">
+
+        <!-- Progress Indicator -->
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/progress_indicator"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:indeterminate="false"
+            app:indicatorSize="24dp"
+            app:trackThickness="2dp"
+            app:indicatorColor="?attr/colorPrimary"
+            app:trackColor="?attr/colorSurfaceVariant"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            tools:progress="45" />
+
+        <!-- Status Text -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/status_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:text="Learning app..."
+            android:textAppearance="@style/TextAppearance.LearnApp.CommandBar.Status"
+            android:textColor="?attr/colorOnSurface"
+            android:singleLine="true"
+            android:ellipsize="end"
+            app:layout_constraintStart_toEndOf="@id/progress_indicator"
+            app:layout_constraintEnd_toStartOf="@id/pause_button"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            tools:text="Learning com.example.app... 45%" />
+
+        <!-- Pause/Resume Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/pause_button"
+            style="@style/Widget.LearnApp.CommandBar.Button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:icon="@drawable/ic_pause"
+            app:iconSize="24dp"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconTint="?attr/colorOnSurface"
+            app:backgroundTint="@android:color/transparent"
+            app:rippleColor="?attr/colorPrimary"
+            android:contentDescription="Pause learning"
+            app:layout_constraintEnd_toStartOf="@id/close_button"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <!-- Close Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/close_button"
+            style="@style/Widget.LearnApp.CommandBar.Button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:icon="@drawable/ic_close"
+            app:iconSize="24dp"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconTint="?attr/colorOnSurface"
+            app:backgroundTint="@android:color/transparent"
+            app:rippleColor="?attr/colorError"
+            android:contentDescription="Stop learning"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>

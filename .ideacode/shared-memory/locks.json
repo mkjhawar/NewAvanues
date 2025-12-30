@@ -1,0 +1,1 @@
+{"version":"1.0.0","locks":[],"policy":{"module_lock_duration":"2h","file_lock_duration":"1h","stale_threshold":"30m","conflict_action":"warn"}}

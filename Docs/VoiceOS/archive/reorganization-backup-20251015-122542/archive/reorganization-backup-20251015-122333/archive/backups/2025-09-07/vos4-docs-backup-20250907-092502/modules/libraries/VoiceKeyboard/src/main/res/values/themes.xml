@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base theme for VoiceKeyboard -->
+    <style name="Theme.VOS4" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <!-- Primary brand color -->
+        <item name="colorPrimary">@color/key_function_background</item>
+        <item name="colorPrimaryVariant">@color/key_function_background</item>
+        <item name="colorOnPrimary">@color/key_function_text</item>
+        <!-- Secondary brand color -->
+        <item name="colorSecondary">@color/voice_input_active</item>
+        <item name="colorSecondaryVariant">@color/voice_input_active</item>
+        <item name="colorOnSecondary">@android:color/white</item>
+        <!-- Status bar color -->
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+    </style>
+    
+    <!-- Removed deprecated keyboard themes - using custom KeyboardView with programmatic theming -->
+</resources>

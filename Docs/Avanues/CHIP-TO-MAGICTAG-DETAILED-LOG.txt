@@ -1,0 +1,81 @@
+CHIP → MAGICTAG RENAME DETAILED LOG
+======================================================================
+
+Files with Content Updated: 16
+Total Changes: 147
+Files Renamed: 17
+
+
+CONTENT UPDATES:
+----------------------------------------------------------------------
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/__tests__/components/material/FilterChip.test.tsx: 38 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/ActionChip.tsx: 3 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/Chip.tsx: 3 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/ChipTheme.tsx: 5 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/ChoiceChip.tsx: 3 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/FilterChip.tsx: 3 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/InputChip.tsx: 3 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/RawChip.tsx: 3 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/stories/Material/Chips.stories.tsx: 20 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonMain/kotlin/com/augmentalis/avaelements/flutter/material/chips/ActionChip.kt: 6 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonMain/kotlin/com/augmentalis/avaelements/flutter/material/chips/InputChip.kt: 7 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonTest/kotlin/com/augmentalis/avaelements/flutter/material/chips/ActionChipTest.kt: 12 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonTest/kotlin/com/augmentalis/avaelements/flutter/material/chips/ChoiceChipTest.kt: 9 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonTest/kotlin/com/augmentalis/avaelements/flutter/material/chips/FilterChipTest.kt: 15 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonTest/kotlin/com/augmentalis/avaelements/flutter/material/chips/InputChipTest.kt: 12 changes
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/test/kotlin/com/augmentalis/avaelements/flutter/visual/material/ChipsVisualTest.kt: 5 changes
+
+
+FILE RENAMES:
+----------------------------------------------------------------------
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/__tests__/components/material/FilterChip.test.tsx
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/__tests__/components/material/MagicFilter.test.tsx
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/ActionChip.tsx
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/MagicAction.tsx
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/Chip.tsx
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/MagicTag.tsx
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/ChipTheme.tsx
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/MagicTagTheme.tsx
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/ChoiceChip.tsx
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/MagicChoice.tsx
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/FilterChip.tsx
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/MagicFilter.tsx
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/InputChip.tsx
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/MagicInput.tsx
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/RawChip.tsx
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/src/flutterparity/material/chips/MagicTagBase.tsx
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/stories/Material/Chips.stories.tsx
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/Web/stories/Material/MagicTags.stories.tsx
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/Tests/SwiftUIRendererTests/ChipComponentTests.swift
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/Tests/SwiftUIRendererTests/MagicTagComponentTests.swift
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonMain/kotlin/com/augmentalis/avaelements/flutter/material/chips/ActionChip.kt
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonMain/kotlin/com/augmentalis/avaelements/flutter/material/chips/MagicAction.kt
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonMain/kotlin/com/augmentalis/avaelements/flutter/material/chips/InputChip.kt
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonMain/kotlin/com/augmentalis/avaelements/flutter/material/chips/MagicInput.kt
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonTest/kotlin/com/augmentalis/avaelements/flutter/material/chips/ActionChipTest.kt
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonTest/kotlin/com/augmentalis/avaelements/flutter/material/chips/MagicActionTest.kt
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonTest/kotlin/com/augmentalis/avaelements/flutter/material/chips/ChoiceChipTest.kt
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonTest/kotlin/com/augmentalis/avaelements/flutter/material/chips/MagicChoiceTest.kt
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonTest/kotlin/com/augmentalis/avaelements/flutter/material/chips/FilterChipTest.kt
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonTest/kotlin/com/augmentalis/avaelements/flutter/material/chips/MagicFilterTest.kt
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonTest/kotlin/com/augmentalis/avaelements/flutter/material/chips/InputChipTest.kt
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/commonTest/kotlin/com/augmentalis/avaelements/flutter/material/chips/MagicInputTest.kt
+
+/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/test/kotlin/com/augmentalis/avaelements/flutter/visual/material/ChipsVisualTest.kt
+  → /Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/components/flutter-parity/src/test/kotlin/com/augmentalis/avaelements/flutter/visual/material/MagicTagsVisualTest.kt
+

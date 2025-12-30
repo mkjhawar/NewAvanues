@@ -1,0 +1,1204 @@
+/**
+ * CommandGeneratorTest.kt - Unit tests for CommandGenerator
+ * Path: apps/VoiceOSCore/src/test/java/com/augmentalis/voiceoscore/scraping/CommandGeneratorTest.kt
+ *
+ * Author: Manoj Jhawar
+ * Code-Reviewed-By: Claude Code (IDEACODE v12.1)
+ * Created: 2025-12-18
+ *
+ * Comprehensive unit tests for CommandGenerator covering:
+ * - Command generation for all element types
+ * - Confidence score calculation
+ * - Synonym generation
+ * - State-aware command generation
+ * - Interaction-weighted commands
+ * - Edge cases and error handling
+ */
+
+package com.augmentalis.voiceoscore.scraping
+
+import android.content.Context
+import com.augmentalis.database.dto.GeneratedCommandDTO
+import com.augmentalis.database.dto.ScrapedElementDTO
+import com.augmentalis.database.ElementStateHistoryQueries
+import com.augmentalis.database.UserInteractionQueries
+import io.mockk.*
+import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+
+/**
+ * Unit tests for CommandGenerator
+ *
+ * Test Coverage:
+ * 1. Text extraction (text > contentDescription > viewId)
+ * 2. Click command generation
+ * 3. Long click command generation
+ * 4. Input command generation
+ * 5. Scroll command generation
+ * 6. Focus command generation
+ * 7. Confidence calculation
+ * 8. Synonym generation
+ * 9. State-aware commands
+ * 10. Interaction-weighted commands
+ * 11. Batch processing
+ * 12. Edge cases
+ */
+class CommandGeneratorTest {
+
+    private lateinit var context: Context
+    private lateinit var elementStateHistoryQueries: ElementStateHistoryQueries
+    private lateinit var userInteractionQueries: UserInteractionQueries
+    private lateinit var generator: CommandGenerator
+
+    @Before
+    fun setup() {
+        context = mockk(relaxed = true)
+        elementStateHistoryQueries = mockk(relaxed = true)
+        userInteractionQueries = mockk(relaxed = true)
+
+        generator = CommandGenerator(
+            context,
+            elementStateHistoryQueries,
+            userInteractionQueries
+        )
+    }
+
+    // ========================================
+    // TEST GROUP 1: Text Extraction
+    // ========================================
+
+    @Test
+    fun `test extract text from element text field`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            contentDescription = "Submit Button",
+            viewIdResourceName = "com.example:id/submit_btn",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands[0].commandText.contains("submit"))
+    }
+
+    @Test
+    fun `test extract text from contentDescription when text is empty`() = runBlocking {
+        val element = createMockElement(
+            text = null,
+            contentDescription = "Submit Button",
+            viewIdResourceName = "com.example:id/submit_btn",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands[0].commandText.contains("submit button"))
+    }
+
+    @Test
+    fun `test extract text from viewId when text and contentDescription are empty`() = runBlocking {
+        val element = createMockElement(
+            text = null,
+            contentDescription = null,
+            viewIdResourceName = "com.example:id/submit_button",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands[0].commandText.contains("submit button"))
+    }
+
+    @Test
+    fun `test no commands generated when no text available`() = runBlocking {
+        val element = createMockElement(
+            text = null,
+            contentDescription = null,
+            viewIdResourceName = null,
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isEmpty())
+    }
+
+    @Test
+    fun `test extract text trims whitespace`() = runBlocking {
+        val element = createMockElement(
+            text = "  Submit  ",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertEquals("click submit", commands[0].commandText)
+    }
+
+    @Test
+    fun `test extract text handles viewId with package prefix`() = runBlocking {
+        val element = createMockElement(
+            text = null,
+            contentDescription = null,
+            viewIdResourceName = "com.example.app:id/submit_button_action",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands[0].commandText.contains("submit button action"))
+    }
+
+    @Test
+    fun `test extract text replaces underscores with spaces in viewId`() = runBlocking {
+        val element = createMockElement(
+            text = null,
+            contentDescription = null,
+            viewIdResourceName = "com.example:id/save_and_exit",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands[0].commandText.contains("save and exit"))
+    }
+
+    // ========================================
+    // TEST GROUP 2: Click Commands
+    // ========================================
+
+    @Test
+    fun `test generate click command for clickable button`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            className = "android.widget.Button",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertEquals("click submit", commands[0].commandText)
+        assertEquals("click", commands[0].actionType)
+    }
+
+    @Test
+    fun `test click command includes synonyms`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        val synonyms = JSONArray(commands[0].synonyms ?: "[]")
+        assertTrue(synonyms.length() > 0)
+
+        val synonymsList = (0 until synonyms.length()).map { synonyms.getString(it) }
+        assertTrue(synonymsList.contains("submit"))
+        assertTrue(synonymsList.any { it.contains("click") || it.contains("tap") || it.contains("press") })
+    }
+
+    @Test
+    fun `test click command with common button text generates semantic synonyms`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        val synonyms = JSONArray(commands[0].synonyms ?: "[]")
+        val synonymsList = (0 until synonyms.length()).map { synonyms.getString(it) }
+
+        // Should include semantic synonyms like "send", "post", "confirm"
+        assertTrue(synonymsList.any { it.contains("send") || it.contains("confirm") })
+    }
+
+    @Test
+    fun `test no click command generated for non-clickable element`() = runBlocking {
+        val element = createMockElement(
+            text = "Label",
+            isClickable = 0L,
+            isLongClickable = 0L,
+            isEditable = 0L,
+            isScrollable = 0L,
+            isFocusable = 0L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isEmpty())
+    }
+
+    @Test
+    fun `test click command confidence is within valid range`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands[0].confidence >= 0.0)
+        assertTrue(commands[0].confidence <= 1.0)
+    }
+
+    // ========================================
+    // TEST GROUP 3: Long Click Commands
+    // ========================================
+
+    @Test
+    fun `test generate long click command for long clickable element`() = runBlocking {
+        val element = createMockElement(
+            text = "Settings",
+            isClickable = 1L,
+            isLongClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        // Should generate both click and long click commands
+        assertTrue(commands.size >= 2)
+        assertTrue(commands.any { it.actionType == "long_click" })
+
+        val longClickCmd = commands.first { it.actionType == "long_click" }
+        assertEquals("long press settings", longClickCmd.commandText)
+    }
+
+    @Test
+    fun `test long click command has synonyms`() = runBlocking {
+        val element = createMockElement(
+            text = "Settings",
+            isLongClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        val longClickCmd = commands.firstOrNull { it.actionType == "long_click" }
+        assertNotNull(longClickCmd)
+
+        val synonyms = JSONArray(longClickCmd?.synonyms ?: "[]")
+        val synonymsList = (0 until synonyms.length()).map { synonyms.getString(it) }
+
+        assertTrue(synonymsList.any { it.contains("hold") || it.contains("long") })
+    }
+
+    @Test
+    fun `test long click command has slightly lower confidence than click`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            className = "android.widget.Button",
+            isClickable = 1L,
+            isLongClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        val clickCmd = commands.firstOrNull { it.actionType == "click" }
+        val longClickCmd = commands.firstOrNull { it.actionType == "long_click" }
+
+        assertNotNull(clickCmd)
+        assertNotNull(longClickCmd)
+
+        // Long click should have slightly lower confidence
+        assertTrue(longClickCmd!!.confidence < clickCmd!!.confidence)
+    }
+
+    // ========================================
+    // TEST GROUP 4: Input Commands
+    // ========================================
+
+    @Test
+    fun `test generate input command for editable field`() = runBlocking {
+        val element = createMockElement(
+            text = "Username",
+            className = "android.widget.EditText",
+            isEditable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        val inputCmd = commands.firstOrNull { it.actionType == "type" }
+        assertNotNull(inputCmd)
+        assertEquals("type in username", inputCmd?.commandText)
+    }
+
+    @Test
+    fun `test input command has input verb synonyms`() = runBlocking {
+        val element = createMockElement(
+            text = "Email",
+            isEditable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        val inputCmd = commands.firstOrNull { it.actionType == "type" }
+        assertNotNull(inputCmd)
+
+        val synonyms = JSONArray(inputCmd?.synonyms ?: "[]")
+        val synonymsList = (0 until synonyms.length()).map { synonyms.getString(it) }
+
+        assertTrue(synonymsList.any { it.contains("enter") || it.contains("input") || it.contains("write") })
+    }
+
+    // ========================================
+    // TEST GROUP 5: Scroll Commands
+    // ========================================
+
+    @Test
+    fun `test generate scroll command for scrollable element`() = runBlocking {
+        val element = createMockElement(
+            text = "Content List",
+            className = "android.widget.ScrollView",
+            isScrollable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        val scrollCmd = commands.firstOrNull { it.actionType == "scroll" }
+        assertNotNull(scrollCmd)
+        assertEquals("scroll content list", scrollCmd?.commandText)
+    }
+
+    @Test
+    fun `test scroll command has lower confidence than click`() = runBlocking {
+        val element = createMockElement(
+            text = "List",
+            className = "android.widget.ScrollView",
+            isScrollable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        val scrollCmd = commands.firstOrNull { it.actionType == "scroll" }
+        assertNotNull(scrollCmd)
+
+        // Scroll commands get 0.8x multiplier
+        assertTrue(scrollCmd!!.confidence < 1.0)
+    }
+
+    // ========================================
+    // TEST GROUP 6: Focus Commands
+    // ========================================
+
+    @Test
+    fun `test generate focus command for focusable non-clickable element`() = runBlocking {
+        val element = createMockElement(
+            text = "Search Field",
+            isClickable = 0L,
+            isFocusable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        val focusCmd = commands.firstOrNull { it.actionType == "focus" }
+        assertNotNull(focusCmd)
+        assertEquals("focus search field", focusCmd?.commandText)
+    }
+
+    @Test
+    fun `test no focus command for focusable clickable element`() = runBlocking {
+        val element = createMockElement(
+            text = "Button",
+            isClickable = 1L,
+            isFocusable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        // Should not generate focus command if element is clickable
+        assertFalse(commands.any { it.actionType == "focus" })
+    }
+
+    @Test
+    fun `test focus command has lower confidence`() = runBlocking {
+        val element = createMockElement(
+            text = "Field",
+            isClickable = 0L,
+            isFocusable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        val focusCmd = commands.firstOrNull { it.actionType == "focus" }
+        assertNotNull(focusCmd)
+
+        // Focus commands get 0.7x multiplier
+        assertTrue(focusCmd!!.confidence < 1.0)
+    }
+
+    // ========================================
+    // TEST GROUP 7: Confidence Calculation
+    // ========================================
+
+    @Test
+    fun `test confidence higher for text source than contentDescription`() = runBlocking {
+        // Use View class (0 type bonus) and short text to avoid clamping to 1.0
+        val element1 = createMockElement(
+            text = "Sub",  // Short text (3 chars = 0.1 bonus)
+            className = "android.view.View",  // Generic class, 0 bonus
+            isClickable = 1L
+        )
+
+        val element2 = createMockElement(
+            text = null,
+            contentDescription = "Sub",
+            className = "android.view.View",
+            isClickable = 1L
+        )
+
+        val commands1 = generator.generateCommands(element1)
+        val commands2 = generator.generateCommands(element2)
+
+        assertTrue("Text source should have higher confidence than contentDescription",
+            commands1[0].confidence > commands2[0].confidence)
+    }
+
+    @Test
+    fun `test confidence higher for contentDescription than viewId`() = runBlocking {
+        // Use View class and short text to avoid clamping
+        val element1 = createMockElement(
+            text = null,
+            contentDescription = "Sub",
+            className = "android.view.View",
+            isClickable = 1L
+        )
+
+        val element2 = createMockElement(
+            text = null,
+            contentDescription = null,
+            viewIdResourceName = "com.example:id/sub",
+            className = "android.view.View",
+            isClickable = 1L
+        )
+
+        val commands1 = generator.generateCommands(element1)
+        val commands2 = generator.generateCommands(element2)
+
+        assertTrue("ContentDescription should have higher confidence than viewId",
+            commands1[0].confidence > commands2[0].confidence)
+    }
+
+    @Test
+    fun `test confidence higher for button class name`() = runBlocking {
+        // Use contentDescription (0.2 bonus) and short text (0.1 bonus) to avoid clamping
+        // Button: 0.5 + 0.2 + 0.1 + 0.2 = 1.0
+        // TextView: 0.5 + 0.2 + 0.1 + 0.1 = 0.9
+        val element1 = createMockElement(
+            text = null,
+            contentDescription = "Sub",  // Short, 3 chars = 0.1 bonus
+            className = "android.widget.Button",  // 0.2 bonus
+            isClickable = 1L
+        )
+
+        val element2 = createMockElement(
+            text = null,
+            contentDescription = "Sub",
+            className = "android.widget.TextView",  // 0.1 bonus when clickable
+            isClickable = 1L
+        )
+
+        val commands1 = generator.generateCommands(element1)
+        val commands2 = generator.generateCommands(element2)
+
+        assertTrue("Button class should have higher confidence than TextView",
+            commands1[0].confidence > commands2[0].confidence)
+    }
+
+    @Test
+    fun `test confidence penalized for special characters`() = runBlocking {
+        // Use View class to avoid hitting 1.0 ceiling
+        val element1 = createMockElement(
+            text = "Submit",
+            className = "android.view.View",
+            isClickable = 1L
+        )
+
+        val element2 = createMockElement(
+            text = "Sub@mit#",  // 2 special chars = -0.10f penalty
+            className = "android.view.View",
+            isClickable = 1L
+        )
+
+        val commands1 = generator.generateCommands(element1)
+        val commands2 = generator.generateCommands(element2)
+
+        assertTrue("Text without special chars should have higher confidence",
+            commands1[0].confidence > commands2[0].confidence)
+    }
+
+    @Test
+    fun `test confidence penalized for numbers`() = runBlocking {
+        // Use View class to avoid hitting 1.0 ceiling
+        val element1 = createMockElement(
+            text = "Submit",
+            className = "android.view.View",
+            isClickable = 1L
+        )
+
+        val element2 = createMockElement(
+            text = "Submit123",  // 3 numbers = -0.06f penalty
+            className = "android.view.View",
+            isClickable = 1L
+        )
+
+        val commands1 = generator.generateCommands(element1)
+        val commands2 = generator.generateCommands(element2)
+
+        assertTrue("Text without numbers should have higher confidence",
+            commands1[0].confidence > commands2[0].confidence)
+    }
+
+    @Test
+    fun `test confidence optimal for text length 5-20`() = runBlocking {
+        val element1 = createMockElement(
+            text = "Submit Button",
+            className = "android.widget.Button",
+            isClickable = 1L
+        )
+
+        val element2 = createMockElement(
+            text = "S",
+            className = "android.widget.Button",
+            isClickable = 1L
+        )
+
+        val commands1 = generator.generateCommands(element1)
+        val commands2 = generator.generateCommands(element2)
+
+        assertTrue(commands1[0].confidence > commands2[0].confidence)
+    }
+
+    @Test
+    fun `test confidence clamped between 0 and 1`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            className = "android.widget.Button",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.all { it.confidence >= 0.0 && it.confidence <= 1.0 })
+    }
+
+    // ========================================
+    // TEST GROUP 8: Synonym Generation
+    // ========================================
+
+    @Test
+    fun `test synonym generation for submit button`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        val synonyms = JSONArray(commands[0].synonyms ?: "[]")
+        val synonymsList = (0 until synonyms.length()).map { synonyms.getString(it) }
+
+        // Should include semantic synonyms
+        assertTrue(synonymsList.any { it.contains("send") || it.contains("confirm") || it.contains("post") })
+    }
+
+    @Test
+    fun `test synonym generation for cancel button`() = runBlocking {
+        val element = createMockElement(
+            text = "Cancel",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        val synonyms = JSONArray(commands[0].synonyms ?: "[]")
+        val synonymsList = (0 until synonyms.length()).map { synonyms.getString(it) }
+
+        assertTrue(synonymsList.any { it.contains("close") || it.contains("dismiss") || it.contains("exit") })
+    }
+
+    @Test
+    fun `test synonym generation includes action verbs`() = runBlocking {
+        val element = createMockElement(
+            text = "Settings",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        val synonyms = JSONArray(commands[0].synonyms ?: "[]")
+        val synonymsList = (0 until synonyms.length()).map { synonyms.getString(it) }
+
+        // Should include click verbs
+        assertTrue(synonymsList.any { it.contains("click") })
+        assertTrue(synonymsList.any { it.contains("tap") })
+    }
+
+    @Test
+    fun `test synonyms are distinct with no duplicates`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        val synonyms = JSONArray(commands[0].synonyms ?: "[]")
+        val synonymsList = (0 until synonyms.length()).map { synonyms.getString(it) }
+
+        // No duplicates
+        assertEquals(synonymsList.size, synonymsList.distinct().size)
+    }
+
+    // ========================================
+    // TEST GROUP 9: State-Aware Commands
+    // ========================================
+
+    @Test
+    fun `test generate check command for unchecked checkbox`() = runBlocking {
+        val element = createMockElement(
+            text = "Accept Terms",
+            className = "android.widget.CheckBox",
+            isCheckable = 1L
+        )
+
+        coEvery {
+            elementStateHistoryQueries.getCurrentState(any(), StateType.CHECKED)
+        } returns null
+
+        val commands = generator.generateStateAwareCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands[0].commandText.contains("check"))
+
+        val synonyms = JSONArray(commands[0].synonyms ?: "[]")
+        val synonymsList = (0 until synonyms.length()).map { synonyms.getString(it) }
+        assertTrue(synonymsList.any { it.contains("tick") || it.contains("select") })
+    }
+
+    @Test
+    fun `test generate uncheck command for checked checkbox`() = runBlocking {
+        val element = createMockElement(
+            text = "Accept Terms",
+            className = "android.widget.CheckBox",
+            isCheckable = 1L
+        )
+
+        coEvery {
+            elementStateHistoryQueries.getCurrentState(any(), StateType.CHECKED)
+        } returns mockk {
+            every { newValue } returns "true"
+        }
+
+        val commands = generator.generateStateAwareCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands[0].commandText.contains("uncheck"))
+
+        val synonyms = JSONArray(commands[0].synonyms ?: "[]")
+        val synonymsList = (0 until synonyms.length()).map { synonyms.getString(it) }
+        assertTrue(synonymsList.any { it.contains("untick") || it.contains("deselect") })
+    }
+
+    @Test
+    fun `test generate expand command for collapsed expandable element`() = runBlocking {
+        val element = createMockElement(
+            text = "Details",
+            className = "android.widget.ExpandableListView"
+        )
+
+        coEvery {
+            elementStateHistoryQueries.getCurrentState(any(), StateType.EXPANDED)
+        } returns mockk {
+            every { newValue } returns "false"
+        }
+
+        val commands = generator.generateStateAwareCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands[0].commandText.contains("expand"))
+
+        val synonyms = JSONArray(commands[0].synonyms ?: "[]")
+        val synonymsList = (0 until synonyms.length()).map { synonyms.getString(it) }
+        assertTrue(synonymsList.any { it.contains("open") || it.contains("unfold") })
+    }
+
+    @Test
+    fun `test generate collapse command for expanded expandable element`() = runBlocking {
+        val element = createMockElement(
+            text = "Details",
+            className = "android.widget.ExpandableListView"
+        )
+
+        coEvery {
+            elementStateHistoryQueries.getCurrentState(any(), StateType.EXPANDED)
+        } returns mockk {
+            every { newValue } returns "true"
+        }
+
+        val commands = generator.generateStateAwareCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands[0].commandText.contains("collapse"))
+
+        val synonyms = JSONArray(commands[0].synonyms ?: "[]")
+        val synonymsList = (0 until synonyms.length()).map { synonyms.getString(it) }
+        assertTrue(synonymsList.any { it.contains("close") || it.contains("fold") })
+    }
+
+    @Test
+    fun `test generate select command for unselected element`() = runBlocking {
+        val element = createMockElement(
+            text = "Option 1",
+            isClickable = 1L
+        )
+
+        coEvery {
+            elementStateHistoryQueries.getCurrentState(any(), StateType.SELECTED)
+        } returns mockk {
+            every { newValue } returns "false"
+        }
+
+        val commands = generator.generateStateAwareCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands[0].commandText.contains("select"))
+
+        val synonyms = JSONArray(commands[0].synonyms ?: "[]")
+        val synonymsList = (0 until synonyms.length()).map { synonyms.getString(it) }
+        assertTrue(synonymsList.any { it.contains("choose") || it.contains("pick") })
+    }
+
+    @Test
+    fun `test generate deselect command for selected element`() = runBlocking {
+        val element = createMockElement(
+            text = "Option 1",
+            isClickable = 1L
+        )
+
+        coEvery {
+            elementStateHistoryQueries.getCurrentState(any(), StateType.SELECTED)
+        } returns mockk {
+            every { newValue } returns "true"
+        }
+
+        val commands = generator.generateStateAwareCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands[0].commandText.contains("deselect"))
+    }
+
+    // ========================================
+    // TEST GROUP 10: Interaction-Weighted Commands
+    // ========================================
+
+    @Test
+    fun `test interaction weighted commands boost confidence for frequently used elements`() = runBlocking {
+        // Use View class to have a lower base confidence that can be boosted
+        val element = createMockElement(
+            text = "Sub",  // Short text (3 chars = 0.1 bonus)
+            className = "android.view.View",  // No type bonus
+            isClickable = 1L
+        )
+
+        coEvery {
+            userInteractionQueries.getInteractionCount(any())
+        } returns 150  // Very frequently used
+
+        coEvery {
+            userInteractionQueries.getSuccessFailureRatio(any())
+        } returns mockk {
+            every { successful } returns 140
+            every { failed } returns 10
+        }
+
+        val commands = generator.generateInteractionWeightedCommands(element)
+        val baseCommands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(baseCommands.isNotEmpty())
+
+        // Weighted commands should have higher confidence
+        assertTrue("Weighted confidence should be higher than base",
+            commands[0].confidence >= baseCommands[0].confidence)
+    }
+
+    @Test
+    fun `test interaction weighted commands penalize unreliable elements`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            className = "android.widget.Button",
+            isClickable = 1L
+        )
+
+        coEvery {
+            userInteractionQueries.getInteractionCount(any())
+        } returns 10
+
+        coEvery {
+            userInteractionQueries.getSuccessFailureRatio(any())
+        } returns mockk {
+            every { successful } returns 3
+            every { failed } returns 7  // 30% success rate
+        }
+
+        val commands = generator.generateInteractionWeightedCommands(element)
+        val baseCommands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(baseCommands.isNotEmpty())
+
+        // Weighted commands should have lower confidence due to poor success rate
+        assertTrue(commands[0].confidence < baseCommands[0].confidence)
+    }
+
+    @Test
+    fun `test interaction weighted commands handle no interaction history`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            isClickable = 1L
+        )
+
+        coEvery {
+            userInteractionQueries.getInteractionCount(any())
+        } returns 0
+
+        coEvery {
+            userInteractionQueries.getSuccessFailureRatio(any())
+        } returns null
+
+        val commands = generator.generateInteractionWeightedCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        // Confidence should be clamped between 0 and 1
+        assertTrue(commands.all { it.confidence >= 0.0 && it.confidence <= 1.0 })
+    }
+
+    @Test
+    fun `test interaction weighted commands clamps confidence to valid range`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            className = "android.widget.Button",
+            isClickable = 1L
+        )
+
+        coEvery {
+            userInteractionQueries.getInteractionCount(any())
+        } returns 1000  // Extremely high
+
+        coEvery {
+            userInteractionQueries.getSuccessFailureRatio(any())
+        } returns mockk {
+            every { successful } returns 1000
+            every { failed } returns 0  // 100% success
+        }
+
+        val commands = generator.generateInteractionWeightedCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        // Should be clamped to 1.0
+        assertTrue(commands.all { it.confidence <= 1.0 })
+    }
+
+    // ========================================
+    // TEST GROUP 11: Batch Processing
+    // ========================================
+
+    @Test
+    fun `test generate commands for multiple elements`() = runBlocking {
+        val elements = listOf(
+            createMockElement(text = "Button 1", isClickable = 1L, elementHash = "hash1"),
+            createMockElement(text = "Button 2", isClickable = 1L, elementHash = "hash2"),
+            createMockElement(text = "Button 3", isClickable = 1L, elementHash = "hash3")
+        )
+
+        val commands = generator.generateCommandsForElements(elements)
+
+        assertEquals(3, commands.size)
+        assertEquals("hash1", commands[0].elementHash)
+        assertEquals("hash2", commands[1].elementHash)
+        assertEquals("hash3", commands[2].elementHash)
+    }
+
+    @Test
+    fun `test batch processing handles empty list`() = runBlocking {
+        val commands = generator.generateCommandsForElements(emptyList())
+
+        assertTrue(commands.isEmpty())
+    }
+
+    @Test
+    fun `test batch processing skips elements with no text`() = runBlocking {
+        val elements = listOf(
+            createMockElement(text = "Button 1", isClickable = 1L),
+            createMockElement(text = null, contentDescription = null, viewIdResourceName = null, isClickable = 1L),
+            createMockElement(text = "Button 3", isClickable = 1L)
+        )
+
+        val commands = generator.generateCommandsForElements(elements)
+
+        assertEquals(2, commands.size)
+    }
+
+    // ========================================
+    // TEST GROUP 12: Edge Cases
+    // ========================================
+
+    @Test
+    fun `test element with multiple capabilities generates multiple commands`() = runBlocking {
+        val element = createMockElement(
+            text = "Field",
+            isClickable = 1L,
+            isLongClickable = 1L,
+            isEditable = 1L,
+            isFocusable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        // Should generate click, long_click, and type commands
+        // (not focus since element is clickable)
+        assertTrue(commands.size >= 3)
+        assertTrue(commands.any { it.actionType == "click" })
+        assertTrue(commands.any { it.actionType == "long_click" })
+        assertTrue(commands.any { it.actionType == "type" })
+    }
+
+    @Test
+    fun `test element with very short text generates low confidence`() = runBlocking {
+        // Use View class to avoid button bonus
+        val element = createMockElement(
+            text = "X",  // 1 char = -0.2 length penalty
+            className = "android.view.View",  // No type bonus
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        // Very short text should have lower confidence
+        // 0.5 (base) + 0.3 (text) - 0.2 (short) + 0.0 (View) = 0.6
+        assertTrue("Short text should have confidence < 0.8, was ${commands[0].confidence}",
+            commands[0].confidence < 0.8)
+    }
+
+    @Test
+    fun `test element with very long text generates lower confidence`() = runBlocking {
+        val element = createMockElement(
+            text = "This is a very long text that exceeds the optimal length for command generation",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        // Very long text should have lower confidence
+        assertTrue(commands[0].confidence < 1.0)
+    }
+
+    @Test
+    fun `test low confidence commands are filtered out`() = runBlocking {
+        val element = createMockElement(
+            text = "X",  // Very short
+            className = "android.view.View",  // Generic class
+            viewIdResourceName = null,
+            contentDescription = null,
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        // All returned commands should have confidence >= MIN_CONFIDENCE (0.2)
+        assertTrue(commands.all { it.confidence >= 0.2 })
+    }
+
+    @Test
+    fun `test empty text after trimming returns no commands`() = runBlocking {
+        // All text sources must be empty/blank for no commands
+        val element = createMockElement(
+            text = "   ",  // Blank after trimming
+            contentDescription = null,
+            viewIdResourceName = null,  // No fallback
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue("Empty text should generate no commands", commands.isEmpty())
+    }
+
+    @Test
+    fun `test special characters in text are handled correctly`() = runBlocking {
+        val element = createMockElement(
+            text = "Save & Exit",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertEquals("click save & exit", commands[0].commandText)
+    }
+
+    @Test
+    fun `test unicode characters in text are handled correctly`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit ✓",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands[0].commandText.contains("submit"))
+    }
+
+    @Test
+    fun `test case normalization to lowercase`() = runBlocking {
+        val element = createMockElement(
+            text = "SUBMIT BUTTON",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertEquals("click submit button", commands[0].commandText)
+    }
+
+    @Test
+    fun `test appId is preserved in generated commands`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            isClickable = 1L,
+            appId = "com.example.testapp"
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertEquals("com.example.testapp", commands[0].appId)
+    }
+
+    @Test
+    fun `test createdAt timestamp is set`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            isClickable = 1L
+        )
+
+        val beforeTime = System.currentTimeMillis()
+        val commands = generator.generateCommands(element)
+        val afterTime = System.currentTimeMillis()
+
+        assertTrue(commands.isNotEmpty())
+        assertTrue(commands[0].createdAt >= beforeTime)
+        assertTrue(commands[0].createdAt <= afterTime)
+    }
+
+    @Test
+    fun `test isUserApproved defaults to 0`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertEquals(0L, commands[0].isUserApproved)
+    }
+
+    @Test
+    fun `test usageCount defaults to 0`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertEquals(0L, commands[0].usageCount)
+    }
+
+    @Test
+    fun `test lastUsed defaults to null`() = runBlocking {
+        val element = createMockElement(
+            text = "Submit",
+            isClickable = 1L
+        )
+
+        val commands = generator.generateCommands(element)
+
+        assertTrue(commands.isNotEmpty())
+        assertNull(commands[0].lastUsed)
+    }
+
+    // ========================================
+    // Helper Methods
+    // ========================================
+
+    private fun createMockElement(
+        id: Long = 1L,
+        elementHash: String = "test_hash_${System.nanoTime()}",
+        appId: String = "com.example.app",
+        className: String = "android.widget.Button",
+        viewIdResourceName: String? = "com.example:id/button",
+        text: String? = "Button",
+        contentDescription: String? = null,
+        isClickable: Long = 0L,
+        isLongClickable: Long = 0L,
+        isEditable: Long = 0L,
+        isScrollable: Long = 0L,
+        isCheckable: Long = 0L,
+        isFocusable: Long = 0L
+    ): ScrapedElementDTO {
+        return ScrapedElementDTO(
+            id = id,
+            elementHash = elementHash,
+            appId = appId,
+            uuid = null,
+            className = className,
+            viewIdResourceName = viewIdResourceName,
+            text = text,
+            contentDescription = contentDescription,
+            bounds = "{\"left\":0,\"top\":0,\"right\":100,\"bottom\":50}",
+            isClickable = isClickable,
+            isLongClickable = isLongClickable,
+            isEditable = isEditable,
+            isScrollable = isScrollable,
+            isCheckable = isCheckable,
+            isFocusable = isFocusable,
+            isEnabled = 1L,
+            depth = 1L,
+            indexInParent = 0L,
+            scrapedAt = System.currentTimeMillis(),
+            semanticRole = null,
+            inputType = null,
+            visualWeight = null,
+            isRequired = null,
+            formGroupId = null,
+            placeholderText = null,
+            validationPattern = null,
+            backgroundColor = null,
+            screen_hash = null
+        )
+    }
+}

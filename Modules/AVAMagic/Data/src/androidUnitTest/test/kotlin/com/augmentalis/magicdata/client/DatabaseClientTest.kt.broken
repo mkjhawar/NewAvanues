@@ -1,0 +1,703 @@
+package com.augmentalis.voiceavanue.client
+
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import android.os.RemoteException
+import com.augmentalis.voiceavanue.IDatabase
+import com.augmentalis.voiceavanue.models.AppSettings
+import com.augmentalis.voiceavanue.models.User
+import com.augmentalis.voiceavanue.models.VoiceCommand
+import io.mockk.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.*
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/**
+ * Comprehensive unit tests for DatabaseClient.
+ *
+ * Tests cover:
+ * - Singleton pattern and thread safety
+ * - Connection lifecycle management
+ * - All 22 CRUD operations
+ * - Error handling and recovery
+ * - Remote exception handling
+ *
+ * @author Manoj Jhawar, manoj@ideahq.net
+ * @version 1.0.0
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class DatabaseClientTest {
+
+    private lateinit var mockContext: Context
+    private lateinit var mockIDatabase: IDatabase
+    private lateinit var mockIBinder: IBinder
+    private lateinit var client: DatabaseClient
+    private val testDispatcher = StandardTestDispatcher()
+
+    @Before
+    fun setup() {
+        // Setup test coroutine dispatcher
+        Dispatchers.setMain(testDispatcher)
+
+        // Create mocks
+        mockContext = mockk(relaxed = true)
+        mockIDatabase = mockk(relaxed = true)
+        mockIBinder = mockk(relaxed = true)
+
+        // Mock IBinder to return IDatabase
+        every { IDatabase.Stub.asInterface(mockIBinder) } returns mockIDatabase
+
+        // Mock Context.bindService to succeed
+        every {
+            mockContext.bindService(any<Intent>(), any<ServiceConnection>(), any())
+        } answers {
+            val connection = secondArg<ServiceConnection>()
+            // Simulate successful connection
+            connection.onServiceConnected(
+                ComponentName("com.augmentalis.voiceavanue", "DatabaseService"),
+                mockIBinder
+            )
+            true
+        }
+
+        // Reset singleton instance using reflection for each test
+        val instanceField = DatabaseClient::class.java.getDeclaredField("instance")
+        instanceField.isAccessible = true
+        instanceField.set(null, null)
+
+        // Get fresh instance
+        client = DatabaseClient.getInstance(mockContext)
+    }
+
+    @After
+    fun teardown() {
+        Dispatchers.resetMain()
+        clearAllMocks()
+    }
+
+    // ===== Singleton Pattern Tests =====
+
+    @Test
+    fun `getInstance returns same instance across multiple calls`() {
+        val instance1 = DatabaseClient.getInstance(mockContext)
+        val instance2 = DatabaseClient.getInstance(mockContext)
+        val instance3 = DatabaseClient.getInstance(mockContext)
+
+        assertTrue(instance1 === instance2)
+        assertTrue(instance2 === instance3)
+    }
+
+    @Test
+    fun `getInstance uses application context not activity context`() {
+        val mockAppContext = mockk<Context>(relaxed = true)
+        every { mockContext.applicationContext } returns mockAppContext
+
+        DatabaseClient.getInstance(mockContext)
+
+        verify { mockContext.applicationContext }
+    }
+
+    // ===== Connection Lifecycle Tests =====
+
+    @Test
+    fun `connect returns true when service binds successfully`() = runTest {
+        val result = client.connect()
+
+        assertTrue(result)
+        assertTrue(client.isConnected())
+        verify { mockContext.bindService(any<Intent>(), any<ServiceConnection>(), Context.BIND_AUTO_CREATE) }
+    }
+
+    @Test
+    fun `connect returns true if already connected`() = runTest {
+        // Connect once
+        client.connect()
+        assertTrue(client.isConnected())
+
+        // Connect again
+        val result = client.connect()
+
+        assertTrue(result)
+        assertTrue(client.isConnected())
+        // Should only bind once
+        verify(exactly = 1) { mockContext.bindService(any<Intent>(), any<ServiceConnection>(), any()) }
+    }
+
+    @Test
+    fun `connect returns false when service binding fails`() = runTest {
+        // Mock bindService to fail
+        every { mockContext.bindService(any<Intent>(), any<ServiceConnection>(), any()) } returns false
+
+        val result = client.connect()
+
+        assertFalse(result)
+        assertFalse(client.isConnected())
+    }
+
+    @Test
+    fun `disconnect unbinds service and clears connection`() = runTest {
+        client.connect()
+        assertTrue(client.isConnected())
+
+        client.disconnect()
+
+        assertFalse(client.isConnected())
+        verify { mockContext.unbindService(any<ServiceConnection>()) }
+    }
+
+    @Test
+    fun `disconnect handles already unbound service gracefully`() = runTest {
+        client.connect()
+
+        // Mock unbindService to throw IllegalArgumentException
+        every { mockContext.unbindService(any<ServiceConnection>()) } throws IllegalArgumentException("Service not bound")
+
+        // Should not throw exception
+        client.disconnect()
+
+        assertFalse(client.isConnected())
+    }
+
+    @Test
+    fun `disconnect on never-connected client does nothing`() {
+        // Never connected
+        assertFalse(client.isConnected())
+
+        // Should not throw
+        client.disconnect()
+
+        verify(exactly = 0) { mockContext.unbindService(any<ServiceConnection>()) }
+    }
+
+    @Test
+    fun `isConnected returns false when service is disconnected`() = runTest {
+        client.connect()
+        assertTrue(client.isConnected())
+
+        // Simulate service disconnection
+        val connectionSlot = slot<ServiceConnection>()
+        verify { mockContext.bindService(any<Intent>(), capture(connectionSlot), any()) }
+        connectionSlot.captured.onServiceDisconnected(ComponentName("test", "test"))
+
+        assertFalse(client.isConnected())
+    }
+
+    // ===== User Operations Tests (6 methods) =====
+
+    @Test
+    fun `getAllUsers returns list from service`() = runTest {
+        client.connect()
+        val users = listOf(
+            User(1, "Alice", "alice@test.com", 1000L),
+            User(2, "Bob", "bob@test.com", 2000L)
+        )
+        every { mockIDatabase.getAllUsers() } returns users
+
+        val result = client.getAllUsers()
+
+        assertEquals(users, result)
+        verify { mockIDatabase.getAllUsers() }
+    }
+
+    @Test
+    fun `getAllUsers returns empty list when service returns null`() = runTest {
+        client.connect()
+        every { mockIDatabase.getAllUsers() } returns null
+
+        val result = client.getAllUsers()
+
+        assertEquals(emptyList(), result)
+    }
+
+    @Test
+    fun `getAllUsers returns empty list on RemoteException`() = runTest {
+        client.connect()
+        every { mockIDatabase.getAllUsers() } throws RemoteException("Service crashed")
+
+        val result = client.getAllUsers()
+
+        assertEquals(emptyList(), result)
+    }
+
+    @Test
+    fun `getUserById returns user from service`() = runTest {
+        client.connect()
+        val user = User(1, "Alice", "alice@test.com", 1000L)
+        every { mockIDatabase.getUserById(1) } returns user
+
+        val result = client.getUserById(1)
+
+        assertEquals(user, result)
+        verify { mockIDatabase.getUserById(1) }
+    }
+
+    @Test
+    fun `getUserById returns null when not found`() = runTest {
+        client.connect()
+        every { mockIDatabase.getUserById(999) } returns null
+
+        val result = client.getUserById(999)
+
+        assertNull(result)
+    }
+
+    @Test
+    fun `insertUser delegates to service`() = runTest {
+        client.connect()
+        val user = User.createNew("Charlie", "charlie@test.com")
+        every { mockIDatabase.insertUser(user) } just Runs
+
+        client.insertUser(user)
+
+        verify { mockIDatabase.insertUser(user) }
+    }
+
+    @Test
+    fun `updateUser delegates to service`() = runTest {
+        client.connect()
+        val user = User(1, "Alice Updated", "alice@test.com", 1000L)
+        every { mockIDatabase.updateUser(user) } just Runs
+
+        client.updateUser(user)
+
+        verify { mockIDatabase.updateUser(user) }
+    }
+
+    @Test
+    fun `deleteUser delegates to service`() = runTest {
+        client.connect()
+        every { mockIDatabase.deleteUser(1) } just Runs
+
+        client.deleteUser(1)
+
+        verify { mockIDatabase.deleteUser(1) }
+    }
+
+    @Test
+    fun `getUserCount returns count from service`() = runTest {
+        client.connect()
+        every { mockIDatabase.getUserCount() } returns 42
+
+        val result = client.getUserCount()
+
+        assertEquals(42, result)
+    }
+
+    @Test
+    fun `getUserCount returns 0 on RemoteException`() = runTest {
+        client.connect()
+        every { mockIDatabase.getUserCount() } throws RemoteException("Service error")
+
+        val result = client.getUserCount()
+
+        assertEquals(0, result)
+    }
+
+    // ===== Voice Command Operations Tests (6 methods) =====
+
+    @Test
+    fun `getAllVoiceCommands returns list from service`() = runTest {
+        client.connect()
+        val commands = listOf(
+            VoiceCommand(1, "open email", "OPEN_EMAIL", "navigation"),
+            VoiceCommand(2, "call john", "CALL_JOHN", "phone")
+        )
+        every { mockIDatabase.getAllVoiceCommands() } returns commands
+
+        val result = client.getAllVoiceCommands()
+
+        assertEquals(commands, result)
+    }
+
+    @Test
+    fun `getAllVoiceCommands returns empty list when service returns null`() = runTest {
+        client.connect()
+        every { mockIDatabase.getAllVoiceCommands() } returns null
+
+        val result = client.getAllVoiceCommands()
+
+        assertEquals(emptyList(), result)
+    }
+
+    @Test
+    fun `getVoiceCommandById returns command from service`() = runTest {
+        client.connect()
+        val command = VoiceCommand(1, "open email", "OPEN_EMAIL", "navigation")
+        every { mockIDatabase.getVoiceCommandById(1) } returns command
+
+        val result = client.getVoiceCommandById(1)
+
+        assertEquals(command, result)
+    }
+
+    @Test
+    fun `getVoiceCommandsByCategory returns filtered list`() = runTest {
+        client.connect()
+        val commands = listOf(
+            VoiceCommand(1, "open email", "OPEN_EMAIL", "navigation"),
+            VoiceCommand(2, "open calendar", "OPEN_CALENDAR", "navigation")
+        )
+        every { mockIDatabase.getVoiceCommandsByCategory("navigation") } returns commands
+
+        val result = client.getVoiceCommandsByCategory("navigation")
+
+        assertEquals(commands, result)
+        verify { mockIDatabase.getVoiceCommandsByCategory("navigation") }
+    }
+
+    @Test
+    fun `insertVoiceCommand delegates to service`() = runTest {
+        client.connect()
+        val command = VoiceCommand.createNew("test command", "TEST_ACTION", "test")
+        every { mockIDatabase.insertVoiceCommand(command) } just Runs
+
+        client.insertVoiceCommand(command)
+
+        verify { mockIDatabase.insertVoiceCommand(command) }
+    }
+
+    @Test
+    fun `updateVoiceCommand delegates to service`() = runTest {
+        client.connect()
+        val command = VoiceCommand(1, "updated command", "UPDATED_ACTION", "test")
+        every { mockIDatabase.updateVoiceCommand(command) } just Runs
+
+        client.updateVoiceCommand(command)
+
+        verify { mockIDatabase.updateVoiceCommand(command) }
+    }
+
+    @Test
+    fun `deleteVoiceCommand delegates to service`() = runTest {
+        client.connect()
+        every { mockIDatabase.deleteVoiceCommand(1) } just Runs
+
+        client.deleteVoiceCommand(1)
+
+        verify { mockIDatabase.deleteVoiceCommand(1) }
+    }
+
+    // ===== Settings Operations Tests (4 methods) =====
+
+    @Test
+    fun `getSettings returns settings from service`() = runTest {
+        client.connect()
+        val settings = AppSettings.default()
+        every { mockIDatabase.getSettings() } returns settings
+
+        val result = client.getSettings()
+
+        assertEquals(settings, result)
+    }
+
+    @Test
+    fun `getSettings returns null when not found`() = runTest {
+        client.connect()
+        every { mockIDatabase.getSettings() } returns null
+
+        val result = client.getSettings()
+
+        assertNull(result)
+    }
+
+    @Test
+    fun `updateSettings delegates to service`() = runTest {
+        client.connect()
+        val settings = AppSettings(1, voiceEnabled = false, theme = "dark", language = "es", notificationsEnabled = false)
+        every { mockIDatabase.updateSettings(settings) } just Runs
+
+        client.updateSettings(settings)
+
+        verify { mockIDatabase.updateSettings(settings) }
+    }
+
+    @Test
+    fun `getSettingValue returns value from service`() = runTest {
+        client.connect()
+        every { mockIDatabase.getSettingValue("theme") } returns "dark"
+
+        val result = client.getSettingValue("theme")
+
+        assertEquals("dark", result)
+    }
+
+    @Test
+    fun `getSettingValue returns null when key not found`() = runTest {
+        client.connect()
+        every { mockIDatabase.getSettingValue("unknown") } returns null
+
+        val result = client.getSettingValue("unknown")
+
+        assertNull(result)
+    }
+
+    @Test
+    fun `setSettingValue delegates to service`() = runTest {
+        client.connect()
+        every { mockIDatabase.setSettingValue("theme", "dark") } just Runs
+
+        client.setSettingValue("theme", "dark")
+
+        verify { mockIDatabase.setSettingValue("theme", "dark") }
+    }
+
+    // ===== Maintenance Operations Tests (4 methods) =====
+
+    @Test
+    fun `clearAllData delegates to service`() = runTest {
+        client.connect()
+        every { mockIDatabase.clearAllData() } just Runs
+
+        client.clearAllData()
+
+        verify { mockIDatabase.clearAllData() }
+    }
+
+    @Test
+    fun `getDatabaseSize returns size from service`() = runTest {
+        client.connect()
+        every { mockIDatabase.getDatabaseSize() } returns 1024000L
+
+        val result = client.getDatabaseSize()
+
+        assertEquals(1024000L, result)
+    }
+
+    @Test
+    fun `getDatabaseSize returns 0 on error`() = runTest {
+        client.connect()
+        every { mockIDatabase.getDatabaseSize() } throws RemoteException("Error")
+
+        val result = client.getDatabaseSize()
+
+        assertEquals(0L, result)
+    }
+
+    @Test
+    fun `vacuum delegates to service`() = runTest {
+        client.connect()
+        every { mockIDatabase.vacuum() } just Runs
+
+        client.vacuum()
+
+        verify { mockIDatabase.vacuum() }
+    }
+
+    @Test
+    fun `getDatabaseVersion returns version from service`() = runTest {
+        client.connect()
+        every { mockIDatabase.getDatabaseVersion() } returns "1.0.0"
+
+        val result = client.getDatabaseVersion()
+
+        assertEquals("1.0.0", result)
+    }
+
+    @Test
+    fun `getDatabaseVersion returns null on error`() = runTest {
+        client.connect()
+        every { mockIDatabase.getDatabaseVersion() } throws RemoteException("Error")
+
+        val result = client.getDatabaseVersion()
+
+        assertNull(result)
+    }
+
+    // ===== Health & Utility Tests =====
+
+    @Test
+    fun `isHealthy returns true when service is healthy`() = runTest {
+        client.connect()
+        every { mockIDatabase.isHealthy() } returns true
+
+        val result = client.isHealthy()
+
+        assertTrue(result)
+    }
+
+    @Test
+    fun `isHealthy returns false when service is unhealthy`() = runTest {
+        client.connect()
+        every { mockIDatabase.isHealthy() } returns false
+
+        val result = client.isHealthy()
+
+        assertFalse(result)
+    }
+
+    @Test
+    fun `isHealthy returns false when not connected`() = runTest {
+        // Never connected
+        assertFalse(client.isConnected())
+
+        val result = client.isHealthy()
+
+        assertFalse(result)
+    }
+
+    @Test
+    fun `isHealthy returns false on RemoteException`() = runTest {
+        client.connect()
+        every { mockIDatabase.isHealthy() } throws RemoteException("Service error")
+
+        val result = client.isHealthy()
+
+        assertFalse(result)
+    }
+
+    @Test
+    fun `getLastAccessTime returns timestamp from service`() = runTest {
+        client.connect()
+        every { mockIDatabase.getLastAccessTime() } returns 123456789L
+
+        val result = client.getLastAccessTime()
+
+        assertEquals(123456789L, result)
+    }
+
+    @Test
+    fun `getLastAccessTime returns 0 on error`() = runTest {
+        client.connect()
+        every { mockIDatabase.getLastAccessTime() } throws RemoteException("Error")
+
+        val result = client.getLastAccessTime()
+
+        assertEquals(0L, result)
+    }
+
+    // ===== Error Handling Tests =====
+
+    @Test
+    fun `operations throw IllegalStateException when not connected`() = runTest {
+        // Never connected
+        assertFalse(client.isConnected())
+
+        var exceptionThrown = false
+        try {
+            client.getAllUsers()
+        } catch (e: IllegalStateException) {
+            exceptionThrown = true
+            assertTrue(e.message!!.contains("not connected"))
+        }
+
+        assertTrue(exceptionThrown)
+    }
+
+    @Test
+    fun `RemoteException triggers reconnection attempt`() = runTest {
+        client.connect()
+
+        // First call throws RemoteException
+        every { mockIDatabase.getAllUsers() } throws RemoteException("Service crashed")
+
+        // Mock reconnection
+        val reconnectSlot = mutableListOf<ServiceConnection>()
+        every {
+            mockContext.bindService(any<Intent>(), capture(reconnectSlot), any())
+        } answers {
+            if (reconnectSlot.size > 1) {
+                // Second connection attempt
+                reconnectSlot.last().onServiceConnected(
+                    ComponentName("com.augmentalis.voiceavanue", "DatabaseService"),
+                    mockIBinder
+                )
+            }
+            true
+        }
+
+        val result = client.getAllUsers()
+
+        // Should return empty list after error
+        assertEquals(emptyList(), result)
+
+        // Verify disconnect was called
+        verify { mockContext.unbindService(any<ServiceConnection>()) }
+
+        // Verify reconnection attempt was made
+        verify(atLeast = 2) { mockContext.bindService(any<Intent>(), any<ServiceConnection>(), any()) }
+    }
+
+    @Test
+    fun `multiple RemoteExceptions handle reconnection correctly`() = runTest {
+        client.connect()
+
+        // Multiple operations throw RemoteException
+        every { mockIDatabase.getUserCount() } throws RemoteException("Error 1")
+        every { mockIDatabase.getDatabaseSize() } throws RemoteException("Error 2")
+
+        client.getUserCount()
+        client.getDatabaseSize()
+
+        // Should attempt reconnection for each error
+        verify(atLeast = 2) { mockContext.unbindService(any<ServiceConnection>()) }
+    }
+
+    @Test
+    fun `void operations handle RemoteException gracefully`() = runTest {
+        client.connect()
+        val user = User.createNew("Test", "test@test.com")
+        every { mockIDatabase.insertUser(any()) } throws RemoteException("Service error")
+
+        // Should not throw, should handle gracefully
+        client.insertUser(user)
+
+        verify { mockIDatabase.insertUser(user) }
+    }
+
+    // ===== Edge Cases =====
+
+    @Test
+    fun `operations return safe defaults on null service`() = runTest {
+        client.connect()
+        client.disconnect()
+        assertFalse(client.isConnected())
+
+        var exceptionThrown = false
+        try {
+            client.getAllUsers()
+        } catch (e: IllegalStateException) {
+            exceptionThrown = true
+        }
+
+        assertTrue(exceptionThrown)
+    }
+
+    @Test
+    fun `concurrent operations work correctly`() = runTest {
+        client.connect()
+        every { mockIDatabase.getUserCount() } returns 10
+        every { mockIDatabase.getDatabaseSize() } returns 2048L
+
+        // Launch concurrent operations
+        val count = client.getUserCount()
+        val size = client.getDatabaseSize()
+
+        assertEquals(10, count)
+        assertEquals(2048L, size)
+    }
+
+    @Test
+    fun `client handles service returning empty collections`() = runTest {
+        client.connect()
+        every { mockIDatabase.getAllUsers() } returns emptyList()
+        every { mockIDatabase.getAllVoiceCommands() } returns emptyList()
+
+        val users = client.getAllUsers()
+        val commands = client.getAllVoiceCommands()
+
+        assertEquals(emptyList(), users)
+        assertEquals(emptyList(), commands)
+    }
+}

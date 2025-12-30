@@ -1,0 +1,154 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "overlays-commands.vos",
+    "category": "overlays",
+    "display_name": "Overlay Controls",
+    "description": "Voice commands for managing screen overlays and hints",
+    "command_count": 7
+  },
+  "locale": "fr-FR",
+  "commands": [
+    {
+      "action": "SHOW_NUMBER",
+      "cmd": "afficher number",
+      "syn": [
+        "afficher numbers",
+        "afficher hint",
+        "display numbers",
+        "numbers visible",
+        "reveal numbers",
+        "afficher hints",
+        "display hints",
+        "hints visible",
+        "reveal hints",
+        "number superposition",
+        "display number superposition",
+        "afficher number superposition",
+        "numbers on",
+        "hints on"
+      ]
+    },
+    {
+      "action": "HIDE_NUMBER",
+      "cmd": "masquer number",
+      "syn": [
+        "masquer numbers",
+        "masquer hint",
+        "conceal numbers",
+        "numbers hidden",
+        "remove numbers",
+        "masquer hints",
+        "conceal hints",
+        "hints hidden",
+        "remove hints",
+        "clear superposition",
+        "numbers off",
+        "hints off",
+        "remove superposition",
+        "number superposition off"
+      ]
+    },
+    {
+      "action": "SHOW_HELP",
+      "cmd": "afficher aide",
+      "syn": [
+        "display aide",
+        "aide",
+        "assistance",
+        "support",
+        "guide",
+        "tutorial",
+        "instructions",
+        "aide menu",
+        "user guide",
+        "manual",
+        "how to",
+        "afficher assistance",
+        "display support",
+        "get aide"
+      ]
+    },
+    {
+      "action": "HIDE_HELP",
+      "cmd": "masquer aide",
+      "syn": [
+        "fermer aide",
+        "dismiss aide",
+        "assistance fermer",
+        "support masquer",
+        "exit aide",
+        "aide away",
+        "remove aide",
+        "aide off",
+        "aide invisible",
+        "aide gone",
+        "fermer guide",
+        "exit tutorial",
+        "fermer assistance",
+        "dismiss support"
+      ]
+    },
+    {
+      "action": "SHOW_COMMAND",
+      "cmd": "afficher commands",
+      "syn": [
+        "afficher command",
+        "display commands",
+        "command list",
+        "commands visible",
+        "reveal commands",
+        "command menu",
+        "voice commands",
+        "available commands",
+        "command aide",
+        "command guide",
+        "afficher voice commands",
+        "display voice commands",
+        "list commands",
+        "command options"
+      ]
+    },
+    {
+      "action": "HIDE_COMMAND",
+      "cmd": "masquer commands",
+      "syn": [
+        "masquer command",
+        "conceal commands",
+        "commands hidden",
+        "remove commands",
+        "command away",
+        "commands off",
+        "commands invisible",
+        "commands gone",
+        "fermer commands",
+        "dismiss commands",
+        "command menu off",
+        "voice commands off",
+        "masquer command list",
+        "fermer command menu"
+      ]
+    },
+    {
+      "action": "SCAN_COMMANDS",
+      "cmd": "scan commands",
+      "syn": [
+        "search commands",
+        "find commands",
+        "look for commands",
+        "command search",
+        "command scan",
+        "detect commands",
+        "identify commands",
+        "discover commands",
+        "explore commands",
+        "review commands",
+        "browse commands",
+        "examine commands",
+        "check commands",
+        "locate commands"
+      ]
+    }
+  ]
+}

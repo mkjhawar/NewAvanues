@@ -1,0 +1,114 @@
+// vuid.proto - VUID element service definitions
+//
+// Copyright (C) Manoj Jhawar, Intelligent Devices LLC
+// Created: 2025-12-28
+//
+// Replaces: UUIDCreator AIDL interfaces
+
+syntax = "proto3";
+
+package com.augmentalis.universalrpc.vuid;
+
+option java_package = "com.augmentalis.universalrpc.vuid";
+option java_multiple_files = true;
+
+// VUID element data
+message VUIDElement {
+    string vuid = 1;              // Voice-addressable UID
+    string package_name = 2;      // App package name
+    string class_name = 3;        // Element class name
+    string text = 4;              // Element text content
+    string content_desc = 5;      // Content description
+    Bounds bounds = 6;            // Screen bounds
+    bool clickable = 7;
+    bool scrollable = 8;
+    bool focusable = 9;
+    bool editable = 10;
+    string resource_id = 11;
+    int32 depth = 12;             // Hierarchy depth
+    repeated VUIDElement children = 13;
+}
+
+message Bounds {
+    int32 left = 1;
+    int32 top = 2;
+    int32 right = 3;
+    int32 bottom = 4;
+}
+
+// Command result
+message VUIDCommandResult {
+    string request_id = 1;
+    bool success = 2;
+    string message = 3;
+    VUIDElement element = 4;      // Target element if applicable
+}
+
+// Element query request
+message ElementQueryRequest {
+    string request_id = 1;
+    string package_name = 2;
+    oneof query {
+        string vuid = 3;          // Query by VUID
+        string text = 4;          // Query by text
+        Bounds bounds = 5;        // Query by bounds
+        string resource_id = 6;   // Query by resource ID
+    }
+}
+
+// Screen scrape request
+message ScrapeRequest {
+    string request_id = 1;
+    string package_name = 2;
+    int32 max_depth = 3;          // Maximum hierarchy depth
+    bool include_invisible = 4;
+}
+
+// Screen scrape response
+message ScrapeResponse {
+    string request_id = 1;
+    bool success = 2;
+    string package_name = 3;
+    string activity_name = 4;
+    repeated VUIDElement elements = 5;
+    int64 timestamp = 6;
+}
+
+// Element action request
+message ElementActionRequest {
+    string request_id = 1;
+    string vuid = 2;
+    string action = 3;            // "click", "long_click", "set_text", "scroll"
+    map<string, string> params = 4;
+}
+
+// Service definition
+service VUIDCreatorService {
+    // Query element by various criteria
+    rpc QueryElement(ElementQueryRequest) returns (VUIDCommandResult);
+
+    // Scrape current screen
+    rpc ScrapeScreen(ScrapeRequest) returns (ScrapeResponse);
+
+    // Execute action on element
+    rpc ExecuteAction(ElementActionRequest) returns (VUIDCommandResult);
+
+    // Generate VUID for element
+    rpc GenerateVUID(GenerateVUIDRequest) returns (VUIDCommandResult);
+
+    // Stream screen changes
+    rpc StreamScreenChanges(StreamScreenRequest) returns (stream ScrapeResponse);
+}
+
+message GenerateVUIDRequest {
+    string request_id = 1;
+    string package_name = 2;
+    Bounds bounds = 3;
+    string hint = 4;              // Optional hint for VUID generation
+}
+
+message StreamScreenRequest {
+    string request_id = 1;
+    string package_name = 2;
+    int32 debounce_ms = 3;        // Debounce interval
+}

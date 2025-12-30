@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntax602.build/master.swiftdeps"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/VersionMarkerModules/SwiftSyntax602/Empty.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntax602.build/Empty.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntax602.build/Empty.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntax602.build/Empty~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntax602.build/Empty.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftSyntax602.build/Empty.dia"
+  }
+}

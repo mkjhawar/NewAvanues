@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ford Explorer O2 Sensor Diagnostic - AVA AvaCode Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            color: #1a202c;
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header .subtitle {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 12px;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .progress-label {
+            font-size: 14px;
+            color: #718096;
+            font-weight: 600;
+        }
+
+        .progress-percentage {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .progress-bar-bg {
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+        }
+
+        .step-indicators {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 16px;
+        }
+
+        .step-indicator {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
+            font-size: 11px;
+            color: #a0aec0;
+            position: relative;
+        }
+
+        .step-indicator.completed {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .step-indicator.active {
+            color: #1a202c;
+            font-weight: 700;
+        }
+
+        .step-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            margin: 0 auto 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .step-indicator.completed .step-dot {
+            background: #667eea;
+            color: white;
+        }
+
+        .step-indicator.active .step-dot {
+            background: #764ba2;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        /* Form Card */
+        .form-card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .form-title {
+            font-size: 24px;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .form-description {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .required {
+            color: #e53e3e;
+            margin-left: 4px;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-hint {
+            font-size: 12px;
+            color: #a0aec0;
+            margin-top: 4px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #f7fafc;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .checkbox-group:hover {
+            background: #edf2f7;
+        }
+
+        .checkbox-input {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+        }
+
+        .checkbox-label {
+            font-size: 14px;
+            color: #1a202c;
+            cursor: pointer;
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #1a202c;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Info Card */
+        .info-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .info-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+        }
+
+        .info-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 13px;
+            color: #718096;
+        }
+
+        .info-value {
+            font-size: 13px;
+            color: #1a202c;
+            font-weight: 600;
+        }
+
+        /* Alert Box */
+        .alert {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: start;
+        }
+
+        .alert-warning {
+            background: #fef5e7;
+            border-left: 4px solid #f39c12;
+        }
+
+        .alert-info {
+            background: #ebf8ff;
+            border-left: 4px solid #3182ce;
+        }
+
+        .alert-success {
+            background: #f0fff4;
+            border-left: 4px solid #38a169;
+        }
+
+        .alert-icon {
+            font-size: 20px;
+            margin-right: 12px;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .alert-message {
+            font-size: 13px;
+            color: #4a5568;
+        }
+
+        /* DTC Card */
+        .dtc-card {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .dtc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .dtc-code {
+            font-size: 18px;
+            font-weight: 700;
+            color: #e53e3e;
+            font-family: 'Courier New', monospace;
+        }
+
+        .dtc-severity {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .dtc-description {
+            font-size: 14px;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .dtc-details {
+            font-size: 12px;
+            color: #718096;
+        }
+
+        /* Specs Table */
+        .specs-table {
+            width: 100%;
+            font-size: 13px;
+        }
+
+        .specs-table td {
+            padding: 8px 0;
+        }
+
+        .specs-table .spec-label {
+            color: #718096;
+            width: 60%;
+        }
+
+        .specs-table .spec-value {
+            color: #1a202c;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        /* TSB Card */
+        .tsb-card {
+            background: #fff5f5;
+            border: 2px solid #feb2b2;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 16px;
+        }
+
+        .tsb-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #c53030;
+            margin-bottom: 4px;
+        }
+
+        .tsb-content {
+            font-size: 12px;
+            color: #742a2a;
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                🔧 Ford Explorer O2 Sensor Diagnostic
+                <span class="badge">AVA Powered</span>
+            </h1>
+            <p class="subtitle">Intelligent diagnostic workflow generated from Ford service manual</p>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-container">
+            <div class="progress-header">
+                <span class="progress-label">Diagnostic Progress</span>
+                <span class="progress-percentage">30%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: 30%"></div>
+            </div>
+            <div class="step-indicators">
+                <div class="step-indicator completed">
+                    <div class="step-dot">✓</div>
+                    Initial
+                </div>
+                <div class="step-indicator completed">
+                    <div class="step-dot">✓</div>
+                    Tools
+                </div>
+                <div class="step-indicator active">
+                    <div class="step-dot">3</div>
+                    Visual
+                </div>
+                <div class="step-indicator">
+                    <div class="step-dot">4</div>
+                    Electrical
+                </div>
+                <div class="step-indicator">
+                    <div class="step-dot">5</div>
+                    Analysis
+                </div>
+                <div class="step-indicator">
+                    <div class="step-dot">6</div>
+                    Diagnosis
+                </div>
+                <div class="step-indicator">
+                    <div class="step-dot">7</div>
+                    Repair
+                </div>
+                <div class="step-indicator">
+                    <div class="step-dot">8</div>
+                    Verify
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Main Form -->
+            <div class="form-card">
+                <h2 class="form-title">Step 3: Visual Inspection</h2>
+                <p class="form-description">Inspect oxygen sensor, wiring, and exhaust system for damage</p>
+
+                <div class="alert alert-info">
+                    <span class="alert-icon">💡</span>
+                    <div class="alert-content">
+                        <div class="alert-title">AVA Tip</div>
+                        <div class="alert-message">
+                            Look for melted insulation near exhaust manifold. 2020 Explorers have heat shield issue (TSB 20-2468).
+                        </div>
+                    </div>
+                </div>
+
+                <form id="diagnosticForm">
+                    <div class="form-group">
+                        <label class="form-label">
+                            Sensor Location (Verify Physically)
+                            <span class="required">*</span>
+                        </label>
+                        <select class="form-select" required>
+                            <option value="">Select sensor location...</option>
+                            <option value="b1s1">Bank 1 Sensor 1 (Pre-Cat)</option>
+                            <option value="b1s2">Bank 1 Sensor 2 (Post-Cat)</option>
+                            <option value="b2s1">Bank 2 Sensor 1 (Pre-Cat)</option>
+                            <option value="b2s2">Bank 2 Sensor 2 (Post-Cat)</option>
+                        </select>
+                        <p class="form-hint">Based on DTC P0131, this should be Bank 1 Sensor 1</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            Wiring Harness Condition
+                            <span class="required">*</span>
+                        </label>
+                        <select class="form-select" required>
+                            <option value="">Select condition...</option>
+                            <option value="good">Good - No damage visible</option>
+                            <option value="frayed">Damaged - Frayed/melted insulation</option>
+                            <option value="corrosion">Damaged - Connector corrosion</option>
+                            <option value="break">Damaged - Wire breakage</option>
+                            <option value="rodent">Damaged - Rodent damage</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            Connector Condition
+                            <span class="required">*</span>
+                        </label>
+                        <select class="form-select" required>
+                            <option value="">Select condition...</option>
+                            <option value="clean">Good - Clean and tight</option>
+                            <option value="dirty">Dirty - Needs cleaning</option>
+                            <option value="corroded">Corroded - Green/white deposits</option>
+                            <option value="loose">Loose - Poor connection</option>
+                            <option value="broken">Damaged - Broken pins</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            Sensor Physical Condition
+                            <span class="required">*</span>
+                        </label>
+                        <select class="form-select" required>
+                            <option value="">Select condition...</option>
+                            <option value="good">Good - No visible damage</option>
+                            <option value="soot">Contaminated - Black soot buildup</option>
+                            <option value="ash">Contaminated - White/gray ash</option>
+                            <option value="broken">Damaged - Broken housing</option>
+                            <option value="missing">Damaged - Missing tip</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            Exhaust Leaks
+                            <span class="required">*</span>
+                        </label>
+                        <select class="form-select" required>
+                            <option value="">Select...</option>
+                            <option value="none">None detected</option>
+                            <option value="minor-before">Minor leak - Before sensor</option>
+                            <option value="major-before">Major leak - Before sensor</option>
+                            <option value="minor-after">Minor leak - After sensor</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Additional Observations</label>
+                        <textarea class="form-textarea" placeholder="Note any unusual conditions, smells, or other findings..."></textarea>
+                    </div>
+
+                    <div class="alert alert-warning" style="display: none;" id="exhaustLeakWarning">
+                        <span class="alert-icon">⚠️</span>
+                        <div class="alert-content">
+                            <div class="alert-title">Critical Finding</div>
+                            <div class="alert-message">
+                                Exhaust leak detected before sensor. This will cause false readings.
+                                Repair exhaust leak before replacing sensor.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="button" class="btn btn-secondary" onclick="goBack()">
+                            ← Back
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="nextStep()">
+                            Continue to Electrical Testing →
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Vehicle Info -->
+                <div class="info-card">
+                    <h3 class="info-title">
+                        🚗 Vehicle Information
+                    </h3>
+                    <div class="info-item">
+                        <span class="info-label">VIN</span>
+                        <span class="info-value">1FM5K8GC8LGB12345</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Mileage</span>
+                        <span class="info-value">45,000 mi</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Technician</span>
+                        <span class="info-value">Mike Johnson</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Work Order</span>
+                        <span class="info-value">#WO-2024-1234</span>
+                    </div>
+                </div>
+
+                <!-- DTC Codes -->
+                <div class="info-card">
+                    <h3 class="info-title">
+                        ⚠️ Diagnostic Codes
+                    </h3>
+
+                    <div class="dtc-card">
+                        <div class="dtc-header">
+                            <span class="dtc-code">P0131</span>
+                            <span class="dtc-severity">HIGH</span>
+                        </div>
+                        <div class="dtc-description">
+                            O2 Sensor Circuit Low Voltage
+                        </div>
+                        <div class="dtc-details">
+                            Bank 1 Sensor 1 (Upstream) - Sensor reading lean
+                        </div>
+                    </div>
+
+                    <div class="dtc-card">
+                        <div class="dtc-header">
+                            <span class="dtc-code">P0135</span>
+                            <span class="dtc-severity">HIGH</span>
+                        </div>
+                        <div class="dtc-description">
+                            O2 Sensor Heater Circuit Malfunction
+                        </div>
+                        <div class="dtc-details">
+                            Bank 1 Sensor 1 - Check fuse, relay, wiring
+                        </div>
+                    </div>
+
+                    <div class="tsb-card">
+                        <div class="tsb-title">📋 Related TSB: 20-2468</div>
+                        <div class="tsb-content">
+                            Check for loose heat shield causing wire abrasion on 2020 Explorer
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Specifications -->
+                <div class="info-card">
+                    <h3 class="info-title">
+                        📊 O2 Sensor Specifications
+                    </h3>
+                    <table class="specs-table">
+                        <tr>
+                            <td class="spec-label">Heater Resistance</td>
+                            <td class="spec-value">2-14 Ω</td>
+                        </tr>
+                        <tr>
+                            <td class="spec-label">Ground Resistance</td>
+                            <td class="spec-value">&lt;0.5 Ω</td>
+                        </tr>
+                        <tr>
+                            <td class="spec-label">Heater Voltage</td>
+                            <td class="spec-value">12-14 V</td>
+                        </tr>
+                        <tr>
+                            <td class="spec-label">Signal Voltage (Idle)</td>
+                            <td class="spec-value">0.1-0.9 V</td>
+                        </tr>
+                        <tr>
+                            <td class="spec-label">Response Time</td>
+                            <td class="spec-value">&lt;1 sec</td>
+                        </tr>
+                        <tr>
+                            <td class="spec-label">Installation Torque</td>
+                            <td class="spec-value">30-40 lb-ft</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="info-card">
+                    <h3 class="info-title">
+                        ⚡ Quick Actions
+                    </h3>
+                    <button class="btn btn-secondary" style="width: 100%; margin-bottom: 8px;">
+                        📸 Add Photo
+                    </button>
+                    <button class="btn btn-secondary" style="width: 100%; margin-bottom: 8px;">
+                        💾 Save Progress
+                    </button>
+                    <button class="btn btn-secondary" style="width: 100%;">
+                        ❓ Get AVA Help
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Exhaust leak warning
+        document.querySelector('select[name="exhaust_leaks"]')?.addEventListener('change', function(e) {
+            const warning = document.getElementById('exhaustLeakWarning');
+            if (e.target.value.includes('before')) {
+                warning.style.display = 'flex';
+            } else {
+                warning.style.display = 'none';
+            }
+        });
+
+        // Navigation
+        function nextStep() {
+            // Validate form
+            const form = document.getElementById('diagnosticForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // Show success message
+            alert('✅ Visual inspection complete!\n\nProceeding to Electrical Testing...\n\nAVA has analyzed your findings and will guide you through voltage and resistance measurements.');
+
+            // In real app, would navigate to next step
+        }
+
+        function goBack() {
+            alert('⬅️ Returning to Tools & Safety Check...');
+        }
+
+        // Auto-save simulation
+        setInterval(() => {
+            console.log('Auto-saving progress...');
+        }, 30000);
+    </script>
+</body>
+</html>

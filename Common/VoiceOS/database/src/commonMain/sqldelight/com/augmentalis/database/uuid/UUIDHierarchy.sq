@@ -1,0 +1,88 @@
+-- UUIDHierarchy.sq
+-- SQLDelight schema for UUID hierarchy relationships
+-- Migrated from Room: UUIDHierarchyEntity
+
+CREATE TABLE uuid_hierarchy (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_uuid TEXT NOT NULL,
+    child_uuid TEXT NOT NULL,
+    depth INTEGER NOT NULL DEFAULT 0,
+    path TEXT NOT NULL,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (parent_uuid) REFERENCES uuid_elements(uuid) ON DELETE CASCADE,
+    FOREIGN KEY (child_uuid) REFERENCES uuid_elements(uuid) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_hierarchy_parent ON uuid_hierarchy(parent_uuid);
+CREATE INDEX idx_hierarchy_child ON uuid_hierarchy(child_uuid);
+CREATE INDEX idx_hierarchy_depth ON uuid_hierarchy(depth);
+CREATE INDEX idx_hierarchy_path ON uuid_hierarchy(path);
+
+-- Get all hierarchy relationships
+getAllHierarchy:
+SELECT * FROM uuid_hierarchy ORDER BY path, order_index;
+
+-- Get hierarchy by ID
+getHierarchyById:
+SELECT * FROM uuid_hierarchy WHERE id = ?;
+
+-- Get children of parent
+getChildrenOfParent:
+SELECT * FROM uuid_hierarchy WHERE parent_uuid = ? ORDER BY order_index;
+
+-- Get parent of child
+getParentOfChild:
+SELECT * FROM uuid_hierarchy WHERE child_uuid = ?;
+
+-- Get all descendants of parent (all depths)
+getDescendantsOfParent:
+SELECT * FROM uuid_hierarchy WHERE path LIKE ? || '%' ORDER BY depth, order_index;
+
+-- Get direct children only (depth = 0)
+getDirectChildren:
+SELECT * FROM uuid_hierarchy WHERE parent_uuid = ? AND depth = 0 ORDER BY order_index;
+
+-- Get hierarchy by path
+getHierarchyByPath:
+SELECT * FROM uuid_hierarchy WHERE path = ?;
+
+-- Insert hierarchy relationship
+insertHierarchy:
+INSERT OR REPLACE INTO uuid_hierarchy (parent_uuid, child_uuid, depth, path, order_index)
+VALUES (?, ?, ?, ?, ?);
+
+-- Update order index
+updateOrderIndex:
+UPDATE uuid_hierarchy SET order_index = ? WHERE id = ?;
+
+-- Update path
+updatePath:
+UPDATE uuid_hierarchy SET path = ? WHERE id = ?;
+
+-- Delete hierarchy by ID
+deleteHierarchy:
+DELETE FROM uuid_hierarchy WHERE id = ?;
+
+-- Delete by parent
+deleteByParent:
+DELETE FROM uuid_hierarchy WHERE parent_uuid = ?;
+
+-- Delete by child
+deleteByChild:
+DELETE FROM uuid_hierarchy WHERE child_uuid = ?;
+
+-- Count children of parent
+countChildrenOfParent:
+SELECT COUNT(*) FROM uuid_hierarchy WHERE parent_uuid = ?;
+
+-- Count total relationships
+countRelationships:
+SELECT COUNT(*) FROM uuid_hierarchy;
+
+-- Get max order index for parent
+getMaxOrderIndex:
+SELECT MAX(order_index) FROM uuid_hierarchy WHERE parent_uuid = ?;
+
+-- Delete all hierarchy
+deleteAll:
+DELETE FROM uuid_hierarchy;

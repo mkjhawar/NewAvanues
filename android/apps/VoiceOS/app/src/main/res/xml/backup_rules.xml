@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Backup rules for VOS4 Android application.
+
+  CRITICAL SECURITY REQUIREMENT:
+  Encrypted permission data MUST be excluded from Android Auto Backup.
+
+  Rationale:
+  - PluginSystem stores permission grants in EncryptedSharedPreferences
+  - Encryption keys are stored in Android Keystore (hardware-backed, device-bound)
+  - Keys are NEVER backed up (Android Keystore property)
+  - If encrypted data is backed up WITHOUT keys, attacker with backup access cannot decrypt
+  - This ensures permission data remains secure even if backup is compromised
+
+  See: docs/modules/PluginSystem/Developer-Manual for full security documentation
+-->
+<full-backup-content>
+    <!-- Exclude encrypted plugin permissions from backup (FR-010) -->
+    <exclude domain="sharedpref" path="plugin_permissions_encrypted.xml"/>
+
+    <!--
+      Note: Encryption keys in Android Keystore are automatically excluded
+      from backups (hardware-backed keys cannot be exported)
+    -->
+</full-backup-content>

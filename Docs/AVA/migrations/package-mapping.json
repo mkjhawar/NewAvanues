@@ -1,0 +1,148 @@
+{
+  "version": "1.0",
+  "created": "2025-12-18",
+  "description": "Package restructuring mapping: com.augmentalis.ava.features.* -> com.augmentalis.*",
+  "totalFiles": 536,
+  "uniquePackages": 85,
+  "hiltModules": [
+    "Modules/AVA/LLM/src/main/java/com/augmentalis/ava/features/llm/di/LLMModule.kt",
+    "Modules/AVA/Chat/src/main/kotlin/com/augmentalis/ava/features/chat/di/ChatModule.kt",
+    "Modules/AVA/Chat/src/androidMain/kotlin/com/augmentalis/ava/features/chat/event/WakeWordEventBusModule.kt",
+    "Modules/AVA/WakeWord/src/main/java/com/augmentalis/ava/features/wakeword/di/WakeWordModule.kt"
+  ],
+  "reflectionUsages": 7,
+  "mappings": [
+    {
+      "module": "memory",
+      "files": 7,
+      "old": "com.augmentalis.ava.features.memory",
+      "new": "com.augmentalis.memory",
+      "subpackages": {}
+    },
+    {
+      "module": "WakeWord",
+      "files": 12,
+      "old": "com.augmentalis.ava.features.wakeword",
+      "new": "com.augmentalis.wakeword",
+      "subpackages": {
+        "detector": "detector",
+        "di": "di"
+      }
+    },
+    {
+      "module": "Teach",
+      "files": 18,
+      "old": "com.augmentalis.ava.features.teach",
+      "new": "com.augmentalis.teach",
+      "subpackages": {}
+    },
+    {
+      "module": "Actions",
+      "files": 40,
+      "old": "com.augmentalis.ava.features.actions",
+      "new": "com.augmentalis.actions",
+      "subpackages": {
+        "executor": "executor",
+        "registry": "registry"
+      }
+    },
+    {
+      "module": "Chat",
+      "files": 47,
+      "old": "com.augmentalis.ava.features.chat",
+      "new": "com.augmentalis.chat",
+      "subpackages": {
+        "ui.state": "state",
+        "ui.components": "components",
+        "ui.dialogs": "dialogs",
+        "ui.settings": "settings",
+        "ui": "",
+        "coordinator": "coordinator",
+        "tts": "tts",
+        "domain": "domain",
+        "di": "di",
+        "event": "event"
+      }
+    },
+    {
+      "module": "RAG",
+      "files": 78,
+      "old": "com.augmentalis.ava.features.rag",
+      "new": "com.augmentalis.rag",
+      "subpackages": {
+        "data.handlers": "handlers",
+        "data.clustering": "clustering",
+        "data": "data",
+        "domain": "domain",
+        "embeddings": "embeddings",
+        "parser": "parser",
+        "search": "search",
+        "cache": "cache",
+        "ui": "ui"
+      }
+    },
+    {
+      "module": "LLM",
+      "files": 103,
+      "old": "com.augmentalis.ava.features.llm",
+      "new": "com.augmentalis.llm",
+      "subpackages": {
+        "api": "api",
+        "domain": "domain",
+        "di": "di",
+        "provider": "provider",
+        "security": "security",
+        "alc": "alc",
+        "alc.models": "alc.models",
+        "alc.tokenizer": "alc.tokenizer",
+        "alc.loader": "alc.loader",
+        "alc.inference": "alc.inference",
+        "alc.samplers": "alc.samplers",
+        "alc.interfaces": "alc.interfaces",
+        "response": "response",
+        "metrics": "metrics",
+        "download": "download"
+      }
+    },
+    {
+      "module": "Shared/NLU",
+      "files": 66,
+      "old": "com.augmentalis.ava.features.nlu",
+      "new": "com.augmentalis.nlu",
+      "subpackages": {
+        "embeddings": "embeddings",
+        "inference": "inference",
+        "locale": "locale",
+        "ava": "ava",
+        "ava.model": "ava.model"
+      }
+    }
+  ],
+  "excluded": [
+    "com.augmentalis.ava.core.data",
+    "com.augmentalis.ava.core.domain",
+    "com.augmentalis.ava.core.theme",
+    "com.augmentalis.ava.core.common"
+  ],
+  "regexPatterns": {
+    "packageDeclaration": "^package com\\.augmentalis\\.ava\\.features\\.(\\w+)\\.?(.*)$",
+    "packageReplacement": "package com.augmentalis.$1.$2",
+    "importStatement": "^import com\\.augmentalis\\.ava\\.features\\.(\\w+)\\.(.*)$",
+    "importReplacement": "import com.augmentalis.$1.$2",
+    "uiFlattening": "\\.ui\\.(state|components|dialogs|settings)",
+    "uiFlatteningReplacement": ".$1",
+    "dataFlattening": "\\.data\\.(handlers|clustering)",
+    "dataFlatteningReplacement": ".$1"
+  },
+  "crossModuleImportCounts": {
+    "ActionResult": 24,
+    "IntentClassification": 17,
+    "IntentActionHandler": 17,
+    "rag.domain.*": 14,
+    "IntentClassifier": 13,
+    "DocumentType": 12,
+    "llm.domain.*": 12,
+    "EmbeddingProvider": 10,
+    "ApiKeyManager": 10
+  }
+}

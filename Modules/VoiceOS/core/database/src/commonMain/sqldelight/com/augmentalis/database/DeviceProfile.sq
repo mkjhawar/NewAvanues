@@ -1,0 +1,49 @@
+-- DeviceProfile.sq
+-- Device-specific configuration
+
+CREATE TABLE device_profile (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    deviceType TEXT NOT NULL,
+    deviceModel TEXT NOT NULL,
+    settings TEXT NOT NULL,
+    calibrationData TEXT,
+    isActive INTEGER NOT NULL DEFAULT 1,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL
+);
+
+CREATE INDEX idx_dp_type ON device_profile(deviceType);
+CREATE INDEX idx_dp_active ON device_profile(isActive);
+
+insert:
+INSERT OR REPLACE INTO device_profile(deviceType, deviceModel, settings, calibrationData, isActive, createdAt, updatedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+getById:
+SELECT * FROM device_profile WHERE id = ?;
+
+getByType:
+SELECT * FROM device_profile WHERE deviceType = ?;
+
+getActive:
+SELECT * FROM device_profile WHERE isActive = 1;
+
+getAll:
+SELECT * FROM device_profile ORDER BY updatedAt DESC;
+
+update:
+UPDATE device_profile
+SET deviceType = ?, deviceModel = ?, settings = ?, calibrationData = ?, isActive = ?, updatedAt = ?
+WHERE id = ?;
+
+setActive:
+UPDATE device_profile SET isActive = ?, updatedAt = ? WHERE id = ?;
+
+deleteById:
+DELETE FROM device_profile WHERE id = ?;
+
+deleteAll:
+DELETE FROM device_profile;
+
+count:
+SELECT COUNT(*) FROM device_profile;

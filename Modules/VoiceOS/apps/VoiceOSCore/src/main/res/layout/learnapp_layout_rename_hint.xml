@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Rename Hint Overlay Layout
+  ~
+  ~ Shows a contextual hint teaching users how to rename buttons via voice.
+  ~ Displays at top of screen with example command.
+  ~
+  ~ Required IDs:
+  ~ - hint_card: Root MaterialCardView
+  ~ - text_title: TextView for title
+  ~ - text_example: TextView for example command
+  ~
+  ~ Created: 2025-12-22
+  ~ Author: VOS4 Development Team
+  -->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/hint_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:elevation="8dp"
+        app:cardCornerRadius="12dp"
+        app:cardBackgroundColor="#E6424242"
+        app:strokeWidth="1dp"
+        app:strokeColor="#4081C784">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Icon and Title Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <!-- Info Icon -->
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/ic_dialog_info"
+                    android:tint="#81C784"
+                    android:contentDescription="Information"
+                    android:layout_marginEnd="8dp" />
+
+                <!-- Title -->
+                <TextView
+                    android:id="@+id/text_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Rename Buttons with Voice"
+                    android:textColor="@android:color/white"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <!-- Dismiss Hint -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tap to dismiss"
+                    android:textColor="#99FFFFFF"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#40FFFFFF"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Description -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="You can rename any button to something more meaningful. For example:"
+                android:textColor="#CCFFFFFF"
+                android:textSize="14sp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Example Command (highlighted) -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="8dp"
+                app:cardBackgroundColor="#4081C784"
+                app:strokeWidth="0dp">
+
+                <TextView
+                    android:id="@+id/text_example"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="12dp"
+                    android:text="&quot;Rename Button 1 to Save&quot;"
+                    android:textColor="@android:color/white"
+                    android:textSize="16sp"
+                    android:textStyle="italic"
+                    android:fontFamily="monospace"
+                    android:gravity="center" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Auto-dismiss notice -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="This hint auto-dismisses in 3 seconds"
+                android:textColor="#99FFFFFF"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:fontStyle="italic" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</FrameLayout>

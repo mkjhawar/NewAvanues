@@ -1,0 +1,65 @@
+Component,Category,Common_AvaElements,Common_MagicIdea,Android_Mapper,iOS_Adapter,Priority,Notes
+Container,Basic Layout,YES,YES,YES,NO,HIGH,Basic wrapper
+Column,Basic Layout,YES,YES,YES,YES,HIGH,Vertical layout
+Row,Basic Layout,YES,YES,YES,YES,HIGH,Horizontal layout
+ScrollView,Basic Layout,YES,YES,YES,YES,HIGH,Scrollable container
+Grid,Basic Layout,Phase3,Phase3,NO,NO,HIGH,Grid layout - MISSING MAPPERS
+Stack,Basic Layout,Phase3,Phase3,NO,NO,HIGH,Layered layout - MISSING MAPPERS
+Spacer,Basic Layout,Phase3,Phase3,NO,NO,HIGH,Fixed spacing - MISSING MAPPERS
+Text,Foundation,YES,YES,YES,YES,COMPLETE,Text display
+Button,Foundation,YES,YES,YES,YES,COMPLETE,Clickable button
+Icon,Foundation,YES,YES,YES,YES,COMPLETE,Icon display
+Image,Foundation,YES,YES,YES,YES,COMPLETE,Image display
+Card,Foundation,YES,YES,YES,YES,COMPLETE,Material card
+Divider,Foundation,Phase3,Phase3,NO,YES,MEDIUM,Visual separator
+TextField,Form,YES,YES,YES,YES,COMPLETE,Text input
+Checkbox,Form,YES,YES,YES,YES,COMPLETE,Binary choice
+Switch,Form,YES,YES,YES,YES,COMPLETE,Toggle switch
+RadioButton,Form,Phase3,Phase3,YES,YES,COMPLETE,Single choice
+RadioGroup,Form,Phase3,Phase3,YES,NO,HIGH,Radio manager - MISSING iOS
+Slider,Form,Phase3,Phase3,YES,YES,COMPLETE,Range slider
+RangeSlider,Form,Phase3,Phase3,YES,YES,COMPLETE,Two-thumb slider
+DatePicker,Form,YES,Phase3,YES,YES,COMPLETE,Date selection
+TimePicker,Form,YES,Phase3,YES,YES,COMPLETE,Time selection
+DateRangePicker,Form,NO,NO,NO,YES,LOW,Date range - iOS only
+Dropdown,Form,YES,Phase3,YES,YES,COMPLETE,Select menu
+Autocomplete,Form,NO,Phase3,YES,YES,MEDIUM,Search select - MISSING common def
+SearchBar,Form,YES,Phase3,YES,YES,COMPLETE,Search input
+FileUpload,Form,YES,Phase3,YES,YES,COMPLETE,File picker
+ImagePicker,Form,NO,Phase3,YES,NO,MEDIUM,Image picker - MISSING iOS
+Rating,Form,YES,Phase3,YES,YES,COMPLETE,Star rating
+ColorPicker,Form,NO,NO,NO,YES,LOW,Color selection - iOS only
+IconPicker,Form,NO,NO,NO,YES,LOW,Icon selection - iOS only
+AppBar,Navigation,YES,Phase3,YES,YES,COMPLETE,Top app bar
+BottomNav,Navigation,YES,Phase3,YES,YES,COMPLETE,Bottom navigation
+Tabs,Navigation,YES,Phase3,NO,YES,HIGH,Tab navigation - MISSING Android
+Drawer,Navigation,YES,Phase3,NO,YES,HIGH,Side drawer - MISSING Android
+Breadcrumb,Navigation,YES,Phase3,YES,YES,COMPLETE,Navigation trail
+Pagination,Navigation,YES,Phase3,YES,YES,COMPLETE,Page navigation
+Alert,Feedback,YES,Phase3,YES,YES,COMPLETE,Alert message
+Toast,Feedback,YES,Phase3,YES,YES,COMPLETE,Brief notification
+Snackbar,Feedback,NO,Phase3,YES,NO,MEDIUM,Bottom notification - MISSING iOS
+Modal,Feedback,NO,Phase3,YES,NO,MEDIUM,Dialog overlay - MISSING iOS
+Dialog,Feedback,NO,NO,NO,YES,MEDIUM,Alert dialog - iOS only
+Confirm,Feedback,NO,Phase3,YES,NO,MEDIUM,Confirmation dialog - MISSING iOS
+ContextMenu,Feedback,NO,Phase3,YES,NO,MEDIUM,Right-click menu - MISSING iOS
+ProgressBar,Feedback,YES,Phase3,NO,YES,HIGH,Progress indicator - MISSING Android
+Spinner,Feedback,YES,Phase3,NO,YES,HIGH,Loading spinner - MISSING Android
+Badge,Display,YES,Phase3,NO,YES,HIGH,Notification badge - MISSING Android
+Chip,Display,YES,Phase3,NO,YES,HIGH,Tag/filter chip - MISSING Android
+Avatar,Display,YES,Phase3,NO,YES,HIGH,User avatar - MISSING Android
+Skeleton,Display,YES,Phase3,NO,NO,LOW,Loading skeleton - MISSING MAPPERS
+Tooltip,Display,YES,Phase3,NO,YES,MEDIUM,Hover tooltip - MISSING Android
+Accordion,Display,YES,NO,NO,YES,LOW,Expandable panel - iOS only
+List,Display,YES,NO,NO,YES,MEDIUM,List component - iOS only
+Carousel,Advanced Display,YES,NO,NO,NO,LOW,Image carousel - MISSING MAPPERS
+DataGrid,Advanced Display,YES,NO,NO,NO,LOW,Data table - MISSING MAPPERS
+Table,Advanced Display,YES,NO,NO,NO,LOW,Table component - MISSING MAPPERS
+TreeView,Advanced Display,YES,NO,NO,NO,LOW,Tree hierarchy - MISSING MAPPERS
+Timeline,Advanced Display,YES,NO,NO,NO,LOW,Timeline view - MISSING MAPPERS
+Stepper,Advanced Display,YES,NO,NO,NO,LOW,Step progress - MISSING MAPPERS
+Paper,Advanced Display,YES,NO,NO,NO,LOW,Material paper - MISSING MAPPERS
+EmptyState,Advanced Display,YES,NO,NO,NO,LOW,Empty placeholder - MISSING MAPPERS
+MultiSelect,Input Advanced,NO,NO,NO,YES,LOW,Multiple choice - iOS only
+TagInput,Input Advanced,NO,NO,NO,YES,LOW,Tag input field - iOS only
+ToggleButtonGroup,Input Advanced,NO,NO,NO,YES,LOW,Button group toggle - iOS only

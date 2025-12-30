@@ -1,0 +1,77 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-12-03",
+  "rules": {
+    "beforeWrite": "MUST check this registry before creating any doc file",
+    "naming": {
+      "documents": "App-Module-Description-YDDMMHH-V#.md",
+      "livingDocs": "LD-App-Module-Description-V#.md",
+      "specs": "App-Spec-Feature-YDDMM-V#.md",
+      "plans": "App-Plan-Feature-YDDMM-V#.md"
+    },
+    "dateFormats": {
+      "YDDMMHH": "Documents (Y=year last digit, DD=day, MM=month, HH=hour)",
+      "YDDMM": "Specs/Plans (Y=year last digit, DD=day, MM=month)"
+    },
+    "examples": {
+      "documents": "VoiceOS-NLU-Integration-5031215-V1.md",
+      "livingDocs": "LD-VoiceOS-Architecture-V1.md",
+      "specs": "AVA-Spec-VoiceCommands-50312-V1.md",
+      "plans": "AVA-Plan-Migration-50312-V1.md"
+    },
+    "placement": "Docs MUST be in correct App/Platform folder"
+  },
+  "structure": {
+    "Docs/Project/": "Project-level living docs (LD-*.md)",
+    "Docs/{App}/MasterSpecs/": "Universal specs for app",
+    "Docs/{App}/Platform/{Platform}/": "Platform-specific docs",
+    "Docs/Common/{Domain}/": "Cross-app shared library docs",
+    "Docs/Architecture/": "System-wide architecture docs",
+    "Docs/Archive/": "Archived/obsolete docs"
+  },
+  "validPaths": [
+    "Docs/Project/",
+    "Docs/VoiceOS/MasterSpecs/",
+    "Docs/VoiceOS/Platform/Android/",
+    "Docs/VoiceOS/Platform/iOS/",
+    "Docs/AVA/MasterSpecs/",
+    "Docs/AVA/Platform/Android/",
+    "Docs/AVA/Platform/iOS/",
+    "Docs/AVA/Platform/MacOS/",
+    "Docs/AVA/Platform/Windows/",
+    "Docs/AVA/Platform/Linux/",
+    "Docs/AVA/Platform/Web/",
+    "Docs/Avanues/MasterSpecs/",
+    "Docs/Avanues/Platform/Android/",
+    "Docs/WebAvanue/MasterSpecs/",
+    "Docs/WebAvanue/Platform/Android/",
+    "Docs/WebAvanue/Platform/iOS/",
+    "Docs/WebAvanue/Platform/Desktop/",
+    "Docs/AvaConnect/MasterSpecs/",
+    "Docs/AvaConnect/Platform/Android/",
+    "Docs/AvaConnect/Platform/Web/",
+    "Docs/Common/Database/",
+    "Docs/Common/Voice/",
+    "Docs/Common/NLU/",
+    "Docs/Common/UI/",
+    "Docs/Architecture/",
+    "Docs/Archive/"
+  ],
+  "files": [
+    {
+      "path": "Docs/Project/LD-NewAvanues-Modules-V1.md",
+      "type": "living-doc",
+      "description": "Module registry and status tracking"
+    },
+    {
+      "path": "Docs/Project/LD-NewAvanues-Architecture-V1.md",
+      "type": "living-doc",
+      "description": "System architecture documentation"
+    },
+    {
+      "path": "Docs/Project/LD-NewAvanues-Decisions-V1.md",
+      "type": "living-doc",
+      "description": "Architecture Decision Records (ADRs)"
+    }
+  ]
+}

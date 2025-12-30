@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- Medium gaze circle - medium opacity for middle animation stage -->
+    <path
+        android:fillColor="#A8007BFF"
+        android:pathData="M 60,0 A 60,60 0 1,1 59.9999,0" />
+</vector>

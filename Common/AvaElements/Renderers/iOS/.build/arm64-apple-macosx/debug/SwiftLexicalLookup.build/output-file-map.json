@@ -1,0 +1,110 @@
+{
+  "": {
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/master.swiftdeps"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/IdentifiableSyntax.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/IdentifiableSyntax.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/IdentifiableSyntax.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/IdentifiableSyntax~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/IdentifiableSyntax.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/IdentifiableSyntax.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/LookupConfig.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupConfig.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupConfig.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupConfig~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupConfig.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupConfig.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/LookupName.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupName.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupName.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupName~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupName.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupName.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/LookupResult.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupResult.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupResult.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupResult~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupResult.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookupResult.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/Scopes/CanInterleaveResultsLaterScopeSyntax.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/CanInterleaveResultsLaterScopeSyntax.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/CanInterleaveResultsLaterScopeSyntax.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/CanInterleaveResultsLaterScopeSyntax~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/CanInterleaveResultsLaterScopeSyntax.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/CanInterleaveResultsLaterScopeSyntax.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/Scopes/FunctionScopeSyntax.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/FunctionScopeSyntax.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/FunctionScopeSyntax.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/FunctionScopeSyntax~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/FunctionScopeSyntax.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/FunctionScopeSyntax.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/Scopes/GenericParameterScopeSyntax.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/GenericParameterScopeSyntax.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/GenericParameterScopeSyntax.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/GenericParameterScopeSyntax~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/GenericParameterScopeSyntax.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/GenericParameterScopeSyntax.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/Scopes/IntroducingToSequentialParentScopeSyntax.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/IntroducingToSequentialParentScopeSyntax.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/IntroducingToSequentialParentScopeSyntax.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/IntroducingToSequentialParentScopeSyntax~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/IntroducingToSequentialParentScopeSyntax.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/IntroducingToSequentialParentScopeSyntax.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/Scopes/LookInMembersScopeSyntax.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookInMembersScopeSyntax.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookInMembersScopeSyntax.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookInMembersScopeSyntax~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookInMembersScopeSyntax.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/LookInMembersScopeSyntax.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/Scopes/NominalTypeDeclSyntax.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/NominalTypeDeclSyntax.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/NominalTypeDeclSyntax.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/NominalTypeDeclSyntax~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/NominalTypeDeclSyntax.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/NominalTypeDeclSyntax.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/Scopes/ScopeImplementations.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/ScopeImplementations.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/ScopeImplementations.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/ScopeImplementations~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/ScopeImplementations.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/ScopeImplementations.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/Scopes/ScopeSyntax.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/ScopeSyntax.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/ScopeSyntax.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/ScopeSyntax~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/ScopeSyntax.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/ScopeSyntax.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/Scopes/SequentialScopeSyntax.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/SequentialScopeSyntax.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/SequentialScopeSyntax.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/SequentialScopeSyntax~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/SequentialScopeSyntax.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/SequentialScopeSyntax.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/Scopes/WithGenericParametersScopeSyntax.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/WithGenericParametersScopeSyntax.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/WithGenericParametersScopeSyntax.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/WithGenericParametersScopeSyntax~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/WithGenericParametersScopeSyntax.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/WithGenericParametersScopeSyntax.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftLexicalLookup/SimpleLookupQueries.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/SimpleLookupQueries.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/SimpleLookupQueries.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/SimpleLookupQueries~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/SimpleLookupQueries.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftLexicalLookup.build/SimpleLookupQueries.dia"
+  }
+}

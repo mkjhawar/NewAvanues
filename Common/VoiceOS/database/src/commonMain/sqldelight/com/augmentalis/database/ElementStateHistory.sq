@@ -1,0 +1,55 @@
+-- ElementStateHistory.sq
+-- Element state change tracking
+
+CREATE TABLE element_state_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    elementHash TEXT NOT NULL,
+    screenHash TEXT NOT NULL,
+    stateType TEXT NOT NULL,
+    oldValue TEXT,
+    newValue TEXT,
+    changedAt INTEGER NOT NULL,
+    triggeredBy TEXT NOT NULL
+);
+
+CREATE INDEX idx_esh_element ON element_state_history(elementHash);
+CREATE INDEX idx_esh_screen ON element_state_history(screenHash);
+CREATE INDEX idx_esh_type ON element_state_history(stateType);
+CREATE INDEX idx_esh_time ON element_state_history(changedAt);
+
+insert:
+INSERT OR REPLACE INTO element_state_history(elementHash, screenHash, stateType, oldValue, newValue, changedAt, triggeredBy)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+getById:
+SELECT * FROM element_state_history WHERE id = ?;
+
+getByElement:
+SELECT * FROM element_state_history WHERE elementHash = ? ORDER BY changedAt DESC;
+
+getByScreen:
+SELECT * FROM element_state_history WHERE screenHash = ? ORDER BY changedAt DESC;
+
+getByStateType:
+SELECT * FROM element_state_history WHERE stateType = ? ORDER BY changedAt DESC;
+
+getByTimeRange:
+SELECT * FROM element_state_history WHERE changedAt BETWEEN ? AND ? ORDER BY changedAt DESC;
+
+getByTrigger:
+SELECT * FROM element_state_history WHERE triggeredBy = ? ORDER BY changedAt DESC;
+
+deleteById:
+DELETE FROM element_state_history WHERE id = ?;
+
+deleteByElement:
+DELETE FROM element_state_history WHERE elementHash = ?;
+
+deleteOlderThan:
+DELETE FROM element_state_history WHERE changedAt < ?;
+
+deleteAll:
+DELETE FROM element_state_history;
+
+count:
+SELECT COUNT(*) FROM element_state_history;

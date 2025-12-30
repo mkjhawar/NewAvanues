@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AVA AI</string>
+
+    <!-- Navigation -->
+    <string name="nav_chat">Chat</string>
+    <string name="nav_teach">Teach AVA</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Permissions -->
+    <string name="permission_audio_rationale">AVA needs microphone access for voice input</string>
+    <string name="permission_storage_rationale">AVA needs storage access to save conversations</string>
+    <string name="permission_usage_rationale">AVA needs usage stats to provide context-aware suggestions</string>
+
+    <!-- Error messages -->
+    <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_network">Network error. Please check your connection.</string>
+    <string name="error_permission_denied">Permission denied. Please grant permission in settings.</string>
+
+    <!-- Overlay -->
+    <string name="overlay_title">AVA Assistant</string>
+    <string name="overlay_minimize_hint">Tap header to minimize</string>
+    <string name="overlay_transparency_label">Transparency</string>
+    <string name="overlay_transparency_value">%d%%</string>
+    <string name="overlay_notification_title">AVA Chat Overlay</string>
+    <string name="overlay_welcome_primary">Ask me anything!</string>
+    <string name="overlay_welcome_secondary">You can still see the app behind this overlay!</string>
+    <string name="overlay_menu_voice_input">Voice Input</string>
+    <string name="overlay_menu_clear_chat">Clear Chat</string>
+    <string name="overlay_menu_settings">Settings menu</string>
+
+    <!-- Notification -->
+    <string name="notification_channel_name">AVA Overlay</string>
+    <string name="notification_channel_description">Shows when AVA overlay is active</string>
+    <string name="notification_title">AVA Assistant</string>
+    <string name="notification_text">Tap to open overlay</string>
+</resources>

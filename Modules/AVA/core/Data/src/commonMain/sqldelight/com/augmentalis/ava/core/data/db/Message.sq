@@ -1,0 +1,89 @@
+-- Message table for chat messages
+-- Migrated from Room MessageEntity
+-- VOS4 Patterns: Composite index (conversation_id, timestamp), CASCADE delete
+
+CREATE TABLE message (
+    id TEXT PRIMARY KEY NOT NULL,
+    conversation_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    intent TEXT,
+    confidence REAL,
+    metadata TEXT,
+    FOREIGN KEY (conversation_id) REFERENCES conversation(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_message_conversation_timestamp ON message(conversation_id, timestamp);
+CREATE INDEX idx_message_role ON message(role);
+CREATE INDEX idx_message_conversation_id ON message(conversation_id);
+
+-- Insert or replace (VOS4 INSERT OR REPLACE pattern)
+insert:
+INSERT OR REPLACE INTO message (id, conversation_id, role, content, timestamp, intent, confidence, metadata)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Select all messages for a conversation
+selectByConversationId:
+SELECT * FROM message
+WHERE conversation_id = ?
+ORDER BY timestamp ASC;
+
+-- Select by ID
+selectById:
+SELECT * FROM message
+WHERE id = ?;
+
+-- Select messages with pagination
+selectByConversationIdPaginated:
+SELECT * FROM message
+WHERE conversation_id = ?
+ORDER BY timestamp DESC
+LIMIT :limit OFFSET :offset;
+
+-- Select last N messages for a conversation
+selectLastN:
+SELECT * FROM message
+WHERE conversation_id = ?
+ORDER BY timestamp DESC
+LIMIT :limit;
+
+-- Count messages in conversation
+countByConversationId:
+SELECT COUNT(*) FROM message
+WHERE conversation_id = ?;
+
+-- Delete message
+delete:
+DELETE FROM message
+WHERE id = ?;
+
+-- Delete all messages in conversation
+deleteByConversationId:
+DELETE FROM message
+WHERE conversation_id = ?;
+
+-- Update message content
+updateContent:
+UPDATE message
+SET content = ?, timestamp = ?
+WHERE id = ?;
+
+-- Update intent and confidence
+updateIntent:
+UPDATE message
+SET intent = ?, confidence = ?
+WHERE id = ?;
+
+-- Issue 4.3: Select messages by role in a conversation
+-- Uses existing idx_message_role index for efficient filtering
+-- Enables fetching only user messages (for training) or assistant messages (for feedback)
+selectByConversationIdAndRole:
+SELECT * FROM message
+WHERE conversation_id = ? AND role = ?
+ORDER BY timestamp ASC;
+
+-- Issue 4.3: Count messages by role in a conversation
+countByConversationIdAndRole:
+SELECT COUNT(*) FROM message
+WHERE conversation_id = ? AND role = ?;

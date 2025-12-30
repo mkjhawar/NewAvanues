@@ -1,0 +1,150 @@
+-- GeneratedWebCommand.sq - SQLDelight schema for generated web commands
+-- Part of LearnWeb module migration from Room to SQLDelight
+-- Author: Manoj Jhawar
+-- Date: 2025-12-17
+
+CREATE TABLE IF NOT EXISTS generated_web_commands (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    website_url_hash TEXT NOT NULL,
+    element_hash TEXT NOT NULL,
+    command_text TEXT NOT NULL,
+    synonyms TEXT NOT NULL,  -- Comma-separated
+    action TEXT NOT NULL,  -- CLICK, SCROLL_TO, FOCUS, etc.
+    xpath TEXT NOT NULL,
+    generated_at INTEGER NOT NULL,
+    usage_count INTEGER NOT NULL DEFAULT 0,
+    last_used_at INTEGER,
+    FOREIGN KEY (website_url_hash) REFERENCES scraped_websites(url_hash) ON DELETE CASCADE
+);
+
+-- Index for faster queries by website URL hash
+CREATE INDEX IF NOT EXISTS idx_generated_web_commands_website
+ON generated_web_commands(website_url_hash);
+
+-- Index for faster queries by element hash
+CREATE INDEX IF NOT EXISTS idx_generated_web_commands_element
+ON generated_web_commands(element_hash);
+
+-- Index for faster queries by action type
+CREATE INDEX IF NOT EXISTS idx_generated_web_commands_action
+ON generated_web_commands(website_url_hash, action);
+
+-- Index for faster queries by usage count
+CREATE INDEX IF NOT EXISTS idx_generated_web_commands_usage
+ON generated_web_commands(website_url_hash, usage_count DESC);
+
+-- Index for faster queries by last used
+CREATE INDEX IF NOT EXISTS idx_generated_web_commands_last_used
+ON generated_web_commands(website_url_hash, last_used_at DESC);
+
+-- Queries
+
+-- Insert or replace command
+insertGeneratedWebCommand:
+INSERT OR REPLACE INTO generated_web_commands (
+    id, website_url_hash, element_hash, command_text, synonyms,
+    action, xpath, generated_at, usage_count, last_used_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Insert command (auto-generate ID)
+insertGeneratedWebCommandAuto:
+INSERT OR REPLACE INTO generated_web_commands (
+    website_url_hash, element_hash, command_text, synonyms,
+    action, xpath, generated_at, usage_count, last_used_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Insert multiple commands
+insertGeneratedWebCommands:
+INSERT OR REPLACE INTO generated_web_commands (
+    website_url_hash, element_hash, command_text, synonyms,
+    action, xpath, generated_at, usage_count, last_used_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get all commands for a website
+getByWebsiteUrlHash:
+SELECT * FROM generated_web_commands
+WHERE website_url_hash = ?
+ORDER BY usage_count DESC;
+
+-- Get commands for a URL (via join with scraped_websites)
+getCommandsForUrl:
+SELECT gwc.* FROM generated_web_commands gwc
+JOIN scraped_websites sw ON gwc.website_url_hash = sw.url_hash
+WHERE (sw.url LIKE '%' || ? || '%' OR sw.domain LIKE '%' || ? || '%')
+ORDER BY gwc.usage_count DESC;
+
+-- Get commands by element hash
+getByElementHash:
+SELECT * FROM generated_web_commands
+WHERE element_hash = ?;
+
+-- Search commands by text (includes synonyms)
+searchCommands:
+SELECT * FROM generated_web_commands
+WHERE website_url_hash = ?
+AND (command_text LIKE '%' || ? || '%' OR synonyms LIKE '%' || ? || '%')
+COLLATE NOCASE
+ORDER BY usage_count DESC;
+
+-- Get commands by action
+getByAction:
+SELECT * FROM generated_web_commands
+WHERE website_url_hash = ? AND action = ?
+ORDER BY usage_count DESC;
+
+-- Update command usage
+updateUsage:
+UPDATE generated_web_commands
+SET usage_count = ?, last_used_at = ?
+WHERE id = ?;
+
+-- Increment command usage
+incrementUsage:
+UPDATE generated_web_commands
+SET usage_count = usage_count + 1, last_used_at = ?
+WHERE id = ?;
+
+-- Get most used commands
+getMostUsed:
+SELECT * FROM generated_web_commands
+WHERE website_url_hash = ?
+ORDER BY usage_count DESC
+LIMIT ?;
+
+-- Get recently used commands
+getRecentlyUsed:
+SELECT * FROM generated_web_commands
+WHERE website_url_hash = ? AND last_used_at IS NOT NULL
+ORDER BY last_used_at DESC
+LIMIT ?;
+
+-- Delete all commands for a website
+deleteByWebsiteUrlHash:
+DELETE FROM generated_web_commands WHERE website_url_hash = ?;
+
+-- Delete commands by element hash
+deleteByElementHash:
+DELETE FROM generated_web_commands WHERE element_hash = ?;
+
+-- Delete all commands
+deleteAll:
+DELETE FROM generated_web_commands;
+
+-- Get all commands
+getAllCommands:
+SELECT * FROM generated_web_commands
+ORDER BY usage_count DESC;
+
+-- Get command count for a website
+getCommandCount:
+SELECT COUNT(*) FROM generated_web_commands
+WHERE website_url_hash = ?;
+
+-- Get total command usage for a website
+getTotalUsage:
+SELECT SUM(usage_count) FROM generated_web_commands
+WHERE website_url_hash = ?;
+
+-- Count all commands
+count:
+SELECT COUNT(*) FROM generated_web_commands;

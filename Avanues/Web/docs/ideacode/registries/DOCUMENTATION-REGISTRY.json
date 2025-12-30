@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "last_updated": "2025-11-24",
+  "documents": {},
+  "naming_convention": {
+    "pattern": "{type}-{context}-{topic}.md",
+    "types": ["dev", "api", "user", "spec", "adr", "rfc", "test", "fix"],
+    "examples": [
+      "dev-android-setup.md",
+      "api-voice-recognition.md",
+      "user-accessibility-features.md",
+      "spec-voice-dsl.md",
+      "adr-001-kmp-migration.md"
+    ]
+  }
+}

@@ -1,0 +1,110 @@
+-- Memory table for long-term storage and personalization
+-- Migrated from Room MemoryEntity
+-- VOS4 Patterns: Importance-based indexing, access tracking, binary BLOB embeddings
+
+CREATE TABLE memory (
+    id TEXT PRIMARY KEY NOT NULL,
+    memory_type TEXT NOT NULL,
+    content TEXT NOT NULL,
+    embedding BLOB,
+    importance REAL NOT NULL,
+    created_at INTEGER NOT NULL,
+    last_accessed INTEGER NOT NULL,
+    access_count INTEGER NOT NULL DEFAULT 0,
+    metadata TEXT
+);
+
+CREATE INDEX idx_memory_type ON memory(memory_type);
+CREATE INDEX idx_memory_importance ON memory(importance);
+CREATE INDEX idx_memory_created_at ON memory(created_at);
+CREATE INDEX idx_memory_last_accessed ON memory(last_accessed);
+
+-- Insert or replace (VOS4 INSERT OR REPLACE pattern)
+insert:
+INSERT OR REPLACE INTO memory (
+    id, memory_type, content, embedding, importance,
+    created_at, last_accessed, access_count, metadata
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Select all memories
+selectAll:
+SELECT * FROM memory
+ORDER BY importance DESC, last_accessed DESC;
+
+-- Select by memory type
+selectByMemoryType:
+SELECT * FROM memory
+WHERE memory_type = ?
+ORDER BY importance DESC;
+
+-- Select by importance threshold
+selectByMinImportance:
+SELECT * FROM memory
+WHERE importance >= :minImportance
+ORDER BY importance DESC, last_accessed DESC;
+
+-- Select most accessed
+selectMostAccessed:
+SELECT * FROM memory
+ORDER BY access_count DESC
+LIMIT :limit;
+
+-- Select recently accessed
+selectRecentlyAccessed:
+SELECT * FROM memory
+ORDER BY last_accessed DESC
+LIMIT :limit;
+
+-- Select with embeddings only
+selectWithEmbeddings:
+SELECT * FROM memory
+WHERE embedding IS NOT NULL
+ORDER BY importance DESC;
+
+-- Update access stats
+updateAccessStats:
+UPDATE memory
+SET access_count = access_count + 1, last_accessed = ?
+WHERE id = ?;
+
+-- Update importance
+updateImportance:
+UPDATE memory
+SET importance = ?
+WHERE id = ?;
+
+-- Count total memories
+count:
+SELECT COUNT(*) FROM memory;
+
+-- Count by type
+countByType:
+SELECT COUNT(*) FROM memory
+WHERE memory_type = ?;
+
+-- Delete by ID
+delete:
+DELETE FROM memory
+WHERE id = ?;
+
+-- Delete by type
+deleteByType:
+DELETE FROM memory
+WHERE memory_type = ?;
+
+-- Delete low importance (cleanup)
+deleteLowImportance:
+DELETE FROM memory
+WHERE importance < :threshold;
+
+-- Select by ID
+selectById:
+SELECT * FROM memory
+WHERE id = ?
+LIMIT 1;
+
+-- Search by content
+searchByContent:
+SELECT * FROM memory
+WHERE content LIKE '%' || ? || '%'
+ORDER BY importance DESC;

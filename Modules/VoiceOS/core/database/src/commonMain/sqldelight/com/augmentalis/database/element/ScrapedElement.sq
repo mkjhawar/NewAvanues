@@ -1,0 +1,148 @@
+-- ScrapedElement.sq
+-- UI elements scraped from apps
+
+CREATE TABLE scraped_element (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    elementHash TEXT NOT NULL UNIQUE,
+    appId TEXT NOT NULL,
+    uuid TEXT,
+    className TEXT NOT NULL,
+    viewIdResourceName TEXT,
+    text TEXT,
+    contentDescription TEXT,
+    bounds TEXT NOT NULL,
+    isClickable INTEGER NOT NULL,
+    isLongClickable INTEGER NOT NULL,
+    isEditable INTEGER NOT NULL,
+    isScrollable INTEGER NOT NULL,
+    isCheckable INTEGER NOT NULL,
+    isFocusable INTEGER NOT NULL,
+    isEnabled INTEGER NOT NULL DEFAULT 1,
+    depth INTEGER NOT NULL,
+    indexInParent INTEGER NOT NULL,
+    scrapedAt INTEGER NOT NULL,
+    semanticRole TEXT,
+    inputType TEXT,
+    visualWeight TEXT,
+    isRequired INTEGER DEFAULT 0,
+    formGroupId TEXT,
+    placeholderText TEXT,
+    validationPattern TEXT,
+    backgroundColor TEXT,
+    screen_hash TEXT,
+    FOREIGN KEY (appId) REFERENCES scraped_app(appId) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_se_app ON scraped_element(appId);
+CREATE INDEX idx_se_hash ON scraped_element(elementHash);
+CREATE INDEX idx_se_uuid ON scraped_element(uuid);
+CREATE INDEX idx_se_view_id ON scraped_element(viewIdResourceName);
+CREATE INDEX idx_se_class ON scraped_element(className);
+CREATE INDEX idx_se_screen_hash ON scraped_element(appId, screen_hash);
+CREATE INDEX IF NOT EXISTS idx_scraped_element_app_hash ON scraped_element(appId, elementHash);
+
+insert:
+INSERT OR REPLACE INTO scraped_element(
+    elementHash, appId, uuid, className, viewIdResourceName, text, contentDescription,
+    bounds, isClickable, isLongClickable, isEditable, isScrollable, isCheckable,
+    isFocusable, isEnabled, depth, indexInParent, scrapedAt, semanticRole, inputType,
+    visualWeight, isRequired, formGroupId, placeholderText, validationPattern, backgroundColor, screen_hash
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getElementById:
+SELECT * FROM scraped_element WHERE id = ?;
+
+getByHash:
+SELECT * FROM scraped_element WHERE elementHash = ?;
+
+getElementByHash:
+SELECT * FROM scraped_element WHERE elementHash = ?;
+
+getByHashAndApp:
+SELECT * FROM scraped_element WHERE appId = ? AND elementHash = ? LIMIT 1;
+
+getByUuid:
+SELECT * FROM scraped_element WHERE appId = ? AND uuid = ? LIMIT 1;
+
+getByApp:
+SELECT * FROM scraped_element WHERE appId = ? ORDER BY depth, indexInParent;
+
+getElementsByAppId:
+SELECT * FROM scraped_element WHERE appId = ? ORDER BY depth, indexInParent;
+
+getClickable:
+SELECT * FROM scraped_element WHERE appId = ? AND isClickable = 1;
+
+getEditable:
+SELECT * FROM scraped_element WHERE appId = ? AND isEditable = 1;
+
+getScrollable:
+SELECT * FROM scraped_element WHERE appId = ? AND isScrollable = 1;
+
+getByClass:
+SELECT * FROM scraped_element WHERE appId = ? AND className = ?;
+
+getByViewId:
+SELECT * FROM scraped_element WHERE appId = ? AND viewIdResourceName = ?;
+
+getByTextContaining:
+SELECT * FROM scraped_element WHERE appId = ? AND text LIKE '%' || ? || '%';
+
+getByContentDesc:
+SELECT * FROM scraped_element WHERE appId = ? AND contentDescription LIKE '%' || ? || '%';
+
+getByDepth:
+SELECT * FROM scraped_element WHERE appId = ? AND depth = ?;
+
+getAll:
+SELECT * FROM scraped_element;
+
+elementHashExists:
+SELECT EXISTS(SELECT 1 FROM scraped_element WHERE elementHash = ?);
+
+deleteById:
+DELETE FROM scraped_element WHERE id = ?;
+
+deleteByHash:
+DELETE FROM scraped_element WHERE elementHash = ?;
+
+deleteByApp:
+DELETE FROM scraped_element WHERE appId = ?;
+
+deleteOlderThan:
+DELETE FROM scraped_element WHERE scrapedAt < ?;
+
+deleteAll:
+DELETE FROM scraped_element;
+
+count:
+SELECT COUNT(*) FROM scraped_element;
+
+countByApp:
+SELECT COUNT(*) FROM scraped_element WHERE appId = ?;
+
+countByScreenHash:
+SELECT COUNT(*) FROM scraped_element WHERE appId = ? AND screen_hash = ?;
+
+getByScreenHash:
+SELECT * FROM scraped_element WHERE appId = ? AND screen_hash = ? ORDER BY depth, indexInParent;
+
+getByScreenHashOnly:
+SELECT * FROM scraped_element WHERE screen_hash = ? ORDER BY depth, indexInParent;
+
+upsertElement:
+INSERT OR REPLACE INTO scraped_element(
+    elementHash, appId, uuid, className, viewIdResourceName, text, contentDescription,
+    bounds, isClickable, isLongClickable, isEditable, isScrollable, isCheckable,
+    isFocusable, isEnabled, depth, indexInParent, scrapedAt, semanticRole, inputType,
+    visualWeight, isRequired, formGroupId, placeholderText, validationPattern, backgroundColor, screen_hash
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateFormGroupIdBatch:
+UPDATE scraped_element
+SET formGroupId = :formGroupId
+WHERE elementHash IN :elementHashes;
+
+-- Get last inserted row ID (for batch insert with ID capture)
+lastInsertRowId:
+SELECT last_insert_rowid();
