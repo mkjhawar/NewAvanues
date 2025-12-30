@@ -151,6 +151,15 @@ fun HomeScreen(
         )
     }
 
+    // App Detail Bottom Sheet
+    if (uiState.showAppDetailSheet) {
+        AppDetailBottomSheet(
+            detail = uiState.selectedAppDetail,
+            isLoading = uiState.isLoadingAppDetail,
+            onDismiss = { viewModel.dismissAppDetail() }
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -209,6 +218,14 @@ fun HomeScreen(
             commandsAvailable = uiState.commandsAvailable,
             commandsToday = uiState.commandsToday,
             isLoading = uiState.isLoading
+        )
+
+        // Learned Apps Section (clickable cards)
+        LearnedAppsSection(
+            learnedApps = uiState.learnedApps,
+            onAppClick = { packageName ->
+                viewModel.onAppClicked(packageName)
+            }
         )
 
         // Accessibility Settings Button (Always Visible)
@@ -435,29 +452,36 @@ private fun StatRow(label: String, value: String) {
 }
 
 /**
- * Launch LearnApp with proper error handling.
+ * Launch LearnApp Settings (integrated into VoiceOSCore).
  *
- * Attempts to launch the LearnApp activity. If LearnApp is not installed,
- * shows a Toast message informing the user and attempts to open the Play Store.
+ * Opens the LearnApp settings screen where users can configure
+ * learning mode (Auto-Detect vs Manual) and manage learned apps.
  *
  * @param context Android context for launching activities and showing Toast
  */
 private fun launchLearnApp(context: android.content.Context) {
     try {
+        // VoiceOSCore is bundled as a library into VoiceOS app,
+        // so use VoiceOS package with VoiceOSCore class name
         val intent = Intent().apply {
             setClassName(
-                "com.augmentalis.learnapp",
-                "com.augmentalis.learnapp.LearnAppActivity"
+                "com.augmentalis.voiceos",
+                "com.augmentalis.voiceoscore.learnapp.settings.LearnAppSettingsActivity"
             )
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(intent)
     } catch (e: ActivityNotFoundException) {
-        showLearnAppNotInstalledError(context)
+        // Fallback: LearnApp settings not available, show info toast
+        Toast.makeText(
+            context,
+            "LearnApp is integrated in VoiceOS. Enable Accessibility Service first.",
+            Toast.LENGTH_LONG
+        ).show()
     } catch (e: SecurityException) {
         Toast.makeText(
             context,
-            "Permission denied to launch LearnApp",
+            "Permission denied to launch LearnApp settings",
             Toast.LENGTH_LONG
         ).show()
     } catch (e: Exception) {
@@ -469,39 +493,3 @@ private fun launchLearnApp(context: android.content.Context) {
     }
 }
 
-/**
- * Show error when LearnApp is not installed.
- *
- * Displays a Toast message and attempts to open the Play Store listing.
- *
- * @param context Android context for launching activities and showing Toast
- */
-private fun showLearnAppNotInstalledError(context: android.content.Context) {
-    Toast.makeText(
-        context,
-        "LearnApp is not installed. Opening Play Store...",
-        Toast.LENGTH_LONG
-    ).show()
-
-    try {
-        val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
-            data = Uri.parse("market://details?id=com.augmentalis.learnapp")
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(playStoreIntent)
-    } catch (e: ActivityNotFoundException) {
-        try {
-            val webIntent = Intent(Intent.ACTION_VIEW).apply {
-                data = Uri.parse("https://play.google.com/store/apps/details?id=com.augmentalis.learnapp")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(webIntent)
-        } catch (e2: Exception) {
-            Toast.makeText(
-                context,
-                "LearnApp is not installed. Please install it from the Play Store.",
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-}
