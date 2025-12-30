@@ -192,10 +192,59 @@ Y = last digit of year (5 for 2025), DD = day, MM = month, HH = hour
 
 ---
 
+## Git Index Lock Workaround
+
+When encountering `fatal: unable to write new index file` (common with large repos, multiple terminals, or slow drives), bypass using temp index + plumbing commands:
+
+### Quick Reference
+
+```bash
+# 1. Create temp index from HEAD
+GIT_INDEX_FILE=/tmp/git-index-temp git read-tree HEAD
+
+# 2. Stage files to temp index
+GIT_INDEX_FILE=/tmp/git-index-temp git add path/to/files
+
+# 3. Write tree (capture SHA)
+TREE=$(GIT_INDEX_FILE=/tmp/git-index-temp git write-tree)
+
+# 4. Create commit
+COMMIT=$(git commit-tree $TREE -p HEAD -m "message")
+
+# 5. Update branch ref
+git update-ref refs/heads/BRANCH_NAME $COMMIT
+
+# 6. Push
+git push origin BRANCH_NAME
+```
+
+### For Merges (non-fast-forward)
+
+```bash
+git fetch origin TARGET_BRANCH
+MERGE_TREE=$(git merge-tree origin/TARGET_BRANCH $COMMIT)
+MERGE=$(git commit-tree $MERGE_TREE -p origin/TARGET_BRANCH -p $COMMIT -m "merge msg")
+git update-ref refs/heads/TARGET_BRANCH $MERGE
+git push origin TARGET_BRANCH
+```
+
+### One-Liner
+
+```bash
+GIT_INDEX_FILE=/tmp/idx git read-tree HEAD && \
+GIT_INDEX_FILE=/tmp/idx git add FILE1 FILE2 && \
+TREE=$(GIT_INDEX_FILE=/tmp/idx git write-tree) && \
+COMMIT=$(git commit-tree $TREE -p HEAD -m "msg") && \
+git update-ref refs/heads/BRANCH $COMMIT && \
+git push origin BRANCH
+```
+
+---
+
 ## Inherited Rules
 
 All rules from `/Volumes/M-Drive/Coding/.claude/CLAUDE.md` apply.
 
 ---
 
-**Updated:** 2025-12-27 | **Version:** 12.4.0
+**Updated:** 2025-12-30 | **Version:** 12.4.1
