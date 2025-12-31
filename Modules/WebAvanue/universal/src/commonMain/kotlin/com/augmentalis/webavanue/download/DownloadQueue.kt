@@ -53,6 +53,7 @@ data class DownloadProgress(
  * Used to initiate a download on any platform.
  */
 data class DownloadRequest(
+    val downloadId: String,
     val url: String,
     val filename: String,
     val mimeType: String? = null,
