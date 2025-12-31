@@ -22,7 +22,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.util.UUID
+import com.augmentalis.vuid.core.VUIDGenerator
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -116,7 +116,7 @@ class CockpitServiceImpl(
                 )
 
                 val response = CockpitResponse.newBuilder()
-                    .setRequestId(UUID.randomUUID().toString())
+                    .setRequestId(VUIDGenerator.generateRequestVuid())
                     .setSuccess(true)
                     .setMessage("Device registered successfully")
                     .setResultJson(json.encodeToString(
@@ -293,7 +293,7 @@ class CockpitServiceImpl(
     ) {
         scope.launch {
             try {
-                val presetId = request.presetId.ifEmpty { UUID.randomUUID().toString() }
+                val presetId = request.presetId.ifEmpty { VUIDGenerator.generatePresetVuid() }
 
                 val layout = layoutMutex.withLock {
                     StoredLayout(
@@ -313,7 +313,7 @@ class CockpitServiceImpl(
                 }
 
                 val response = CockpitResponse.newBuilder()
-                    .setRequestId(UUID.randomUUID().toString())
+                    .setRequestId(VUIDGenerator.generateRequestVuid())
                     .setSuccess(true)
                     .setMessage("Layout saved: ${layout.name}")
                     .setResultJson(json.encodeToString(mapOf("preset_id" to presetId)))
@@ -487,7 +487,7 @@ class CockpitServiceImpl(
         request: StreamDeviceEventsRequest,
         responseObserver: StreamObserver<DeviceEvent>
     ) {
-        val streamId = UUID.randomUUID().toString()
+        val streamId = VUIDGenerator.generateStreamVuid()
         eventObservers[streamId] = responseObserver
 
         val deviceFilter = request.deviceIdsList.toSet()
@@ -615,7 +615,7 @@ class CockpitServiceImpl(
 
     private fun createErrorResponse(message: String, requestId: String = ""): CockpitResponse {
         return CockpitResponse.newBuilder()
-            .setRequestId(requestId.ifEmpty { UUID.randomUUID().toString() })
+            .setRequestId(requestId.ifEmpty { VUIDGenerator.generateRequestVuid() })
             .setSuccess(false)
             .setMessage(message)
             .build()
