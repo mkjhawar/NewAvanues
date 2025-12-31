@@ -354,7 +354,7 @@ class TouchHandlerTest : BaseVoiceOSTest() {
     }
 }
 
-// Mock TouchHandler class
+// Mock TouchHandler class with gesture detection
 class TouchHandler(private val service: IVoiceOSContext) {
     var onSingleTap: (() -> Unit)? = null
     var onDoubleTap: (() -> Unit)? = null
@@ -365,10 +365,42 @@ class TouchHandler(private val service: IVoiceOSContext) {
     var onRotate: (() -> Unit)? = null
     var onThreeFingerGesture: (() -> Unit)? = null
 
+    private var lastTapTime = Long.MIN_VALUE
+    private var startX = 0f
+    private var startY = 0f
+    private val doubleTapTimeout = 300L
+    private val swipeThreshold = 100f
+
     fun onTouchEvent(event: MotionEvent): Boolean {
-        // Simplified implementation for testing
         when (event.action) {
-            MotionEvent.ACTION_UP -> onSingleTap?.invoke()
+            MotionEvent.ACTION_DOWN -> {
+                startX = event.x
+                startY = event.y
+            }
+            MotionEvent.ACTION_UP -> {
+                val deltaX = event.x - startX
+                val deltaY = event.y - startY
+                val distance = kotlin.math.sqrt(deltaX * deltaX + deltaY * deltaY)
+
+                // Check for swipe
+                if (distance > swipeThreshold) {
+                    if (kotlin.math.abs(deltaX) > kotlin.math.abs(deltaY)) {
+                        onSwipe?.invoke(if (deltaX > 0) "right" else "left")
+                    } else {
+                        onSwipe?.invoke(if (deltaY > 0) "down" else "up")
+                    }
+                } else {
+                    // Check for double tap
+                    val currentTime = event.eventTime
+                    if (lastTapTime != Long.MIN_VALUE && currentTime - lastTapTime < doubleTapTimeout) {
+                        onDoubleTap?.invoke()
+                        lastTapTime = Long.MIN_VALUE
+                    } else {
+                        onSingleTap?.invoke()
+                        lastTapTime = currentTime
+                    }
+                }
+            }
             MotionEvent.ACTION_MOVE -> {
                 if (event.eventTime - event.downTime > 500) {
                     onLongPress?.invoke()
