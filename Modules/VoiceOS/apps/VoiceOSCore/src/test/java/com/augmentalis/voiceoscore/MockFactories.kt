@@ -60,8 +60,9 @@ object MockFactories {
             every { screenTransitions } returns mockk(relaxed = true)
             every { userInteractions } returns mockk(relaxed = true)
             every { elementStateHistory } returns mockk(relaxed = true)
-            coEvery { transaction<Unit>(any()) } coAnswers {
-                val block = firstArg<suspend () -> Unit>()
+            coEvery { transaction<Any?>(any()) } coAnswers {
+                @Suppress("UNCHECKED_CAST")
+                val block = firstArg<() -> Any?>()
                 block()
             }
         }

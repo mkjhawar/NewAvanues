@@ -30,12 +30,14 @@ class TouchHandlerTest : BaseVoiceOSTest() {
     @Before
     override fun setUp() {
         super.setUp()
+        mockkStatic(MotionEvent::class)
         mockService = mockk(relaxed = true)
         handler = TouchHandler(mockService)
     }
 
     @After
     override fun tearDown() {
+        unmockkStatic(MotionEvent::class)
         super.tearDown()
     }
 
@@ -328,22 +330,27 @@ class TouchHandlerTest : BaseVoiceOSTest() {
     // ====================
 
     private fun createMotionEvent(action: Int, x: Float, y: Float, eventTime: Long): MotionEvent {
-        return MotionEvent.obtain(0L, eventTime, action, x, y, 0)
+        return mockk<MotionEvent>(relaxed = true) {
+            every { this@mockk.action } returns action
+            every { this@mockk.x } returns x
+            every { this@mockk.y } returns y
+            every { this@mockk.eventTime } returns eventTime
+            every { this@mockk.downTime } returns 0L
+            every { pointerCount } returns 1
+            every { recycle() } just runs
+        }
     }
 
     private fun createMultiTouchEvent(action: Int, x: Float, y: Float, eventTime: Long, pointerIndex: Int): MotionEvent {
-        val properties = arrayOfNulls<MotionEvent.PointerProperties>(pointerIndex + 1)
-        val coords = arrayOfNulls<MotionEvent.PointerCoords>(pointerIndex + 1)
-
-        for (i in 0..pointerIndex) {
-            properties[i] = MotionEvent.PointerProperties().apply { id = i }
-            coords[i] = MotionEvent.PointerCoords().apply {
-                this.x = x + i * 50
-                this.y = y + i * 50
-            }
+        return mockk<MotionEvent>(relaxed = true) {
+            every { this@mockk.action } returns action
+            every { this@mockk.x } returns x
+            every { this@mockk.y } returns y
+            every { this@mockk.eventTime } returns eventTime
+            every { this@mockk.downTime } returns 0L
+            every { pointerCount } returns pointerIndex + 1
+            every { recycle() } just runs
         }
-
-        return MotionEvent.obtain(0L, eventTime, action, pointerIndex + 1, properties, coords, 0, 0, 1f, 1f, 0, 0, 0, 0)
     }
 }
 
