@@ -1,7 +1,7 @@
 package com.augmentalis.voiceoscoreng.features
 
 /**
- * Feature flag system for VoiceOSCoreNG.
+ * LearnApp Dev Toggle - Feature flag system for VoiceOSCoreNG.
  *
  * Provides a centralized way to enable/disable features based on:
  * - Build type (Debug vs Release)
@@ -15,7 +15,7 @@ package com.augmentalis.voiceoscoreng.features
  * - Staged rollouts
  * - Developer-only features
  */
-object FeatureGate {
+object LearnAppDevToggle {
 
     /**
      * Feature tier levels.
@@ -172,7 +172,7 @@ object FeatureGate {
     // ==================== Configuration ====================
 
     /**
-     * Initialize the feature gate with configuration.
+     * Initialize the dev toggle with configuration.
      *
      * @param tier The feature tier to use
      * @param isDebug Whether this is a debug build
@@ -201,6 +201,23 @@ object FeatureGate {
      * Check if currently in debug mode.
      */
     fun isDebug(): Boolean = isDebugBuild
+
+    /**
+     * Check if Dev mode is enabled.
+     */
+    fun isDevMode(): Boolean = currentTier == Tier.DEV
+
+    /**
+     * Check if Lite mode is enabled.
+     */
+    fun isLiteMode(): Boolean = currentTier == Tier.LITE
+
+    /**
+     * Toggle between Lite and Dev modes.
+     */
+    fun toggle() {
+        setTier(if (currentTier == Tier.LITE) Tier.DEV else Tier.LITE)
+    }
 
     /**
      * Add a listener for tier changes.

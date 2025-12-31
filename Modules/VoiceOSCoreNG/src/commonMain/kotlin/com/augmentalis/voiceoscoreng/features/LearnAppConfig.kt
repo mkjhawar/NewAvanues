@@ -25,7 +25,7 @@ object LearnAppConfig {
      */
     data class VariantConfig(
         val name: String,
-        val tier: FeatureGate.Tier,
+        val tier: LearnAppDevToggle.Tier,
         val processingMode: ProcessingMode,
         val maxElementsPerScan: Int,
         val maxAppsLearned: Int,
@@ -41,7 +41,7 @@ object LearnAppConfig {
      */
     val LITE_CONFIG = VariantConfig(
         name = "LearnApp Lite",
-        tier = FeatureGate.Tier.LITE,
+        tier = LearnAppDevToggle.Tier.LITE,
         processingMode = ProcessingMode.IMMEDIATE,
         maxElementsPerScan = 50,
         maxAppsLearned = 10,
@@ -57,7 +57,7 @@ object LearnAppConfig {
      */
     val DEV_CONFIG = VariantConfig(
         name = "LearnApp Dev",
-        tier = FeatureGate.Tier.DEV,
+        tier = LearnAppDevToggle.Tier.DEV,
         processingMode = ProcessingMode.HYBRID,
         maxElementsPerScan = 500,
         maxAppsLearned = -1, // Unlimited
@@ -86,15 +86,15 @@ object LearnAppConfig {
     /**
      * Set the active variant.
      */
-    fun setVariant(tier: FeatureGate.Tier) {
+    fun setVariant(tier: LearnAppDevToggle.Tier) {
         val newConfig = when (tier) {
-            FeatureGate.Tier.LITE -> LITE_CONFIG
-            FeatureGate.Tier.DEV -> DEV_CONFIG
+            LearnAppDevToggle.Tier.LITE -> LITE_CONFIG
+            LearnAppDevToggle.Tier.DEV -> DEV_CONFIG
         }
 
         if (currentConfig != newConfig) {
             currentConfig = newConfig
-            FeatureGate.setTier(tier)
+            LearnAppDevToggle.setTier(tier)
             configChangeListeners.forEach { it(newConfig) }
         }
     }
@@ -102,12 +102,12 @@ object LearnAppConfig {
     /**
      * Check if currently using Lite variant.
      */
-    fun isLite(): Boolean = currentConfig.tier == FeatureGate.Tier.LITE
+    fun isLite(): Boolean = currentConfig.tier == LearnAppDevToggle.Tier.LITE
 
     /**
      * Check if currently using Dev variant.
      */
-    fun isDev(): Boolean = currentConfig.tier == FeatureGate.Tier.DEV
+    fun isDev(): Boolean = currentConfig.tier == LearnAppDevToggle.Tier.DEV
 
     /**
      * Add a listener for configuration changes.

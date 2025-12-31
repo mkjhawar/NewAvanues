@@ -40,7 +40,7 @@ Modules/VoiceOSCoreNG/
 - Custom command templates
 - Analytics export
 - Debug overlays
-- FeatureGate for paywall/code access prep
+- LearnAppDevToggle for paywall/tier access prep
 
 ## Naming Conventions
 

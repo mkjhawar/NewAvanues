@@ -12,13 +12,13 @@ class LearnAppConfigTest {
     @BeforeTest
     fun setup() {
         LearnAppConfig.reset()
-        FeatureGate.reset()
+        LearnAppDevToggle.reset()
     }
 
     @AfterTest
     fun teardown() {
         LearnAppConfig.reset()
-        FeatureGate.reset()
+        LearnAppDevToggle.reset()
     }
 
     // ==================== Default Configuration Tests ====================
@@ -27,7 +27,7 @@ class LearnAppConfigTest {
     fun `default configuration is LITE`() {
         val config = LearnAppConfig.getConfig()
         assertEquals("LearnApp Lite", config.name)
-        assertEquals(FeatureGate.Tier.LITE, config.tier)
+        assertEquals(LearnAppDevToggle.Tier.LITE, config.tier)
     }
 
     @Test
@@ -47,7 +47,7 @@ class LearnAppConfigTest {
         val config = LearnAppConfig.LITE_CONFIG
 
         assertEquals("LearnApp Lite", config.name)
-        assertEquals(FeatureGate.Tier.LITE, config.tier)
+        assertEquals(LearnAppDevToggle.Tier.LITE, config.tier)
         assertEquals(LearnAppConfig.ProcessingMode.IMMEDIATE, config.processingMode)
         assertEquals(50, config.maxElementsPerScan)
         assertEquals(10, config.maxAppsLearned)
@@ -63,7 +63,7 @@ class LearnAppConfigTest {
         val config = LearnAppConfig.DEV_CONFIG
 
         assertEquals("LearnApp Dev", config.name)
-        assertEquals(FeatureGate.Tier.DEV, config.tier)
+        assertEquals(LearnAppDevToggle.Tier.DEV, config.tier)
         assertEquals(LearnAppConfig.ProcessingMode.HYBRID, config.processingMode)
         assertEquals(500, config.maxElementsPerScan)
         assertEquals(-1, config.maxAppsLearned)
@@ -78,7 +78,7 @@ class LearnAppConfigTest {
 
     @Test
     fun `setVariant to DEV updates configuration`() {
-        LearnAppConfig.setVariant(FeatureGate.Tier.DEV)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
 
         val config = LearnAppConfig.getConfig()
         assertEquals("LearnApp Dev", config.name)
@@ -88,8 +88,8 @@ class LearnAppConfigTest {
 
     @Test
     fun `setVariant to LITE updates configuration`() {
-        LearnAppConfig.setVariant(FeatureGate.Tier.DEV)
-        LearnAppConfig.setVariant(FeatureGate.Tier.LITE)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.LITE)
 
         val config = LearnAppConfig.getConfig()
         assertEquals("LearnApp Lite", config.name)
@@ -97,12 +97,12 @@ class LearnAppConfigTest {
     }
 
     @Test
-    fun `setVariant syncs with FeatureGate tier`() {
-        LearnAppConfig.setVariant(FeatureGate.Tier.DEV)
-        assertEquals(FeatureGate.Tier.DEV, FeatureGate.getCurrentTier())
+    fun `setVariant syncs with LearnAppDevToggle tier`() {
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
+        assertEquals(LearnAppDevToggle.Tier.DEV, LearnAppDevToggle.getCurrentTier())
 
-        LearnAppConfig.setVariant(FeatureGate.Tier.LITE)
-        assertEquals(FeatureGate.Tier.LITE, FeatureGate.getCurrentTier())
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.LITE)
+        assertEquals(LearnAppDevToggle.Tier.LITE, LearnAppDevToggle.getCurrentTier())
     }
 
     @Test
@@ -110,7 +110,7 @@ class LearnAppConfigTest {
         var notifiedConfig: LearnAppConfig.VariantConfig? = null
         LearnAppConfig.addConfigChangeListener { config -> notifiedConfig = config }
 
-        LearnAppConfig.setVariant(FeatureGate.Tier.DEV)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
 
         assertEquals("LearnApp Dev", notifiedConfig?.name)
     }
@@ -120,7 +120,7 @@ class LearnAppConfigTest {
         var callCount = 0
         LearnAppConfig.addConfigChangeListener { callCount++ }
 
-        LearnAppConfig.setVariant(FeatureGate.Tier.LITE) // Same as default
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.LITE) // Same as default
 
         assertEquals(0, callCount)
     }
@@ -131,11 +131,11 @@ class LearnAppConfigTest {
         val listener: (LearnAppConfig.VariantConfig) -> Unit = { callCount++ }
 
         LearnAppConfig.addConfigChangeListener(listener)
-        LearnAppConfig.setVariant(FeatureGate.Tier.DEV)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
         assertEquals(1, callCount)
 
         LearnAppConfig.removeConfigChangeListener(listener)
-        LearnAppConfig.setVariant(FeatureGate.Tier.LITE)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.LITE)
         assertEquals(1, callCount) // No new call
     }
 
@@ -185,37 +185,37 @@ class LearnAppConfigTest {
 
     @Test
     fun `getProcessingMode returns HYBRID for DEV`() {
-        LearnAppConfig.setVariant(FeatureGate.Tier.DEV)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
         assertEquals(LearnAppConfig.ProcessingMode.HYBRID, LearnAppConfig.getProcessingMode())
     }
 
     @Test
     fun `getMaxElementsPerScan returns 500 for DEV`() {
-        LearnAppConfig.setVariant(FeatureGate.Tier.DEV)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
         assertEquals(500, LearnAppConfig.getMaxElementsPerScan())
     }
 
     @Test
     fun `getMaxAppsLearned returns -1 (unlimited) for DEV`() {
-        LearnAppConfig.setVariant(FeatureGate.Tier.DEV)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
         assertEquals(-1, LearnAppConfig.getMaxAppsLearned())
     }
 
     @Test
     fun `isAIEnabled returns true for DEV`() {
-        LearnAppConfig.setVariant(FeatureGate.Tier.DEV)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
         assertTrue(LearnAppConfig.isAIEnabled())
     }
 
     @Test
     fun `isExplorationEnabled returns true for DEV`() {
-        LearnAppConfig.setVariant(FeatureGate.Tier.DEV)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
         assertTrue(LearnAppConfig.isExplorationEnabled())
     }
 
     @Test
     fun `isFrameworkDetectionEnabled returns true for DEV`() {
-        LearnAppConfig.setVariant(FeatureGate.Tier.DEV)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
         assertTrue(LearnAppConfig.isFrameworkDetectionEnabled())
     }
 
@@ -235,14 +235,14 @@ class LearnAppConfigTest {
 
     @Test
     fun `getSummary shows Unlimited for DEV max apps`() {
-        LearnAppConfig.setVariant(FeatureGate.Tier.DEV)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
         val summary = LearnAppConfig.getSummary()
         assertTrue(summary.contains("Unlimited"))
     }
 
     @Test
     fun `getSummary shows Enabled for DEV AI`() {
-        LearnAppConfig.setVariant(FeatureGate.Tier.DEV)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
         val summary = LearnAppConfig.getSummary()
         assertTrue(summary.contains("AI: Enabled"))
     }
@@ -257,7 +257,7 @@ class LearnAppConfigTest {
 
     @Test
     fun `reset restores LITE configuration`() {
-        LearnAppConfig.setVariant(FeatureGate.Tier.DEV)
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
         LearnAppConfig.reset()
 
         assertTrue(LearnAppConfig.isLite())
