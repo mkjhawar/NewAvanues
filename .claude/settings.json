@@ -1,0 +1,6 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "sh /Volumes/M-Drive/Coding/.claude/statusline-command.sh"
+  }
+}
