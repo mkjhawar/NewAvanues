@@ -17,6 +17,7 @@ CREATE TABLE screen_context (
     firstScraped INTEGER NOT NULL,
     lastScraped INTEGER NOT NULL,
     visitCount INTEGER NOT NULL DEFAULT 1,
+    contextualText TEXT,
     FOREIGN KEY (appId) REFERENCES scraped_app(appId) ON DELETE CASCADE
 );
 
@@ -28,8 +29,8 @@ CREATE INDEX idx_sctx_type ON screen_context(screenType);
 insert:
 INSERT OR REPLACE INTO screen_context(
     screenHash, appId, packageName, activityName, windowTitle, screenType, formContext,
-    navigationLevel, primaryAction, elementCount, hasBackButton, firstScraped, lastScraped, visitCount
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    navigationLevel, primaryAction, elementCount, hasBackButton, firstScraped, lastScraped, visitCount, contextualText
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getById:
 SELECT * FROM screen_context WHERE id = ?;

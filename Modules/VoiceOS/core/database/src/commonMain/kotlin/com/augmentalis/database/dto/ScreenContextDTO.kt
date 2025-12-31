@@ -35,7 +35,9 @@ data class ScreenContextDTO(
     val hasBackButton: Long,
     val firstScraped: Long,
     val lastScraped: Long,
-    val visitCount: Long
+    val visitCount: Long,
+    /** JSON-serialized contextual text for NLU enhancement (screen titles, breadcrumbs, section headers) */
+    val contextualText: String? = null
 )
 
 /**
@@ -57,6 +59,7 @@ fun Screen_context.toScreenContextDTO(): ScreenContextDTO {
         hasBackButton = hasBackButton,
         firstScraped = firstScraped,
         lastScraped = lastScraped,
-        visitCount = visitCount
+        visitCount = visitCount,
+        contextualText = contextualText
     )
 }
