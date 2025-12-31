@@ -16,6 +16,8 @@ import com.augmentalis.voiceoscore.BaseVoiceOSTest
 import com.augmentalis.voiceoscore.MockFactories
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assert.*
@@ -59,11 +61,11 @@ class VoiceOSCoreDatabaseAdapterIntegrationTest : BaseVoiceOSTest() {
         val elements = MockFactories.createScrapedElementEntityList(5, packageName)
         val elementDTOs = MockFactories.createScrapedElementDTOList(5, packageName)
 
-        coEvery { mockDatabase.scrapedElements.insert(any()) } just Runs
+        coEvery { mockDatabase.scrapedElements.insert(any()) } just runs
         coEvery { mockDatabase.scrapedElements.getByApp(packageName) } returns elementDTOs
-        coEvery { mockDatabase.scrapedElements.deleteByApp(packageName) } just Runs
-        coEvery { mockDatabase.generatedCommands.deleteCommandsByPackage(packageName) } just Runs
-        coEvery { mockDatabase.screenContexts.deleteByApp(packageName) } just Runs
+        coEvery { mockDatabase.scrapedElements.deleteByApp(packageName) } just runs
+        coEvery { mockDatabase.generatedCommands.deleteCommandsByPackage(packageName) } returns 0
+        coEvery { mockDatabase.screenContexts.deleteByApp(packageName) } just runs
 
         // Act - Insert
         val insertedIds = adapter.insertElementBatch(elements)
@@ -106,7 +108,7 @@ class VoiceOSCoreDatabaseAdapterIntegrationTest : BaseVoiceOSTest() {
     fun `integration - with QueryExtensions batch operations`() = runTest {
         // Arrange
         val elements = MockFactories.createScrapedElementEntityList(100)
-        coEvery { mockDatabase.scrapedElements.insert(any()) } just Runs
+        coEvery { mockDatabase.scrapedElements.insert(any()) } just runs
 
         // Act - Large batch insert
         val insertedIds = adapter.insertElementBatch(elements)
@@ -114,16 +116,16 @@ class VoiceOSCoreDatabaseAdapterIntegrationTest : BaseVoiceOSTest() {
         // Assert
         assertEquals(100, insertedIds.size)
         coVerify(exactly = 100) { mockDatabase.scrapedElements.insert(any()) }
-        verify(exactly = 1) { mockDatabase.transaction(any()) }
+        coVerify(exactly = 1) { mockDatabase.transaction<Unit>(any()) }
     }
 
     @Test
     fun `integration - with CleanupWorker coordination`() = runTest {
         // Arrange
         val packageName = "com.example.test"
-        coEvery { mockDatabase.scrapedElements.deleteByApp(packageName) } just Runs
-        coEvery { mockDatabase.generatedCommands.deleteCommandsByPackage(packageName) } just Runs
-        coEvery { mockDatabase.screenContexts.deleteByApp(packageName) } just Runs
+        coEvery { mockDatabase.scrapedElements.deleteByApp(packageName) } just runs
+        coEvery { mockDatabase.generatedCommands.deleteCommandsByPackage(packageName) } returns 0
+        coEvery { mockDatabase.screenContexts.deleteByApp(packageName) } just runs
 
         // Act - Simulate cleanup worker calling delete
         adapter.deleteAppSpecificElements(packageName)
@@ -165,7 +167,7 @@ class VoiceOSCoreDatabaseAdapterIntegrationTest : BaseVoiceOSTest() {
         // Act - Concurrent operations on multiple apps
         val results = withContext(Dispatchers.IO) {
             apps.map { packageName ->
-                kotlinx.coroutines.async {
+                async {
                     adapter.filterByApp(packageName)
                 }
             }.map { it.await() }
@@ -203,15 +205,13 @@ class VoiceOSCoreDatabaseAdapterIntegrationTest : BaseVoiceOSTest() {
         var transactionStarted = false
         var transactionCompleted = false
 
-        every { mockDatabase.transaction(any()) } answers {
+        coEvery { mockDatabase.transaction<Unit>(any()) } coAnswers {
             transactionStarted = true
-            runBlocking {
-                firstArg<suspend () -> Unit>().invoke()
-            }
+            firstArg<suspend () -> Unit>().invoke()
             transactionCompleted = true
         }
 
-        coEvery { mockDatabase.scrapedElements.insert(any()) } just Runs
+        coEvery { mockDatabase.scrapedElements.insert(any()) } just runs
 
         // Act
         adapter.insertElementBatch(elements)
@@ -219,7 +219,7 @@ class VoiceOSCoreDatabaseAdapterIntegrationTest : BaseVoiceOSTest() {
         // Assert
         assertTrue("Transaction should have started", transactionStarted)
         assertTrue("Transaction should have completed", transactionCompleted)
-        verify(exactly = 1) { mockDatabase.transaction(any()) }
+        coVerify(exactly = 1) { mockDatabase.transaction<Unit>(any()) }
     }
 
     @Test

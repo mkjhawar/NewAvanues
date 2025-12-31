@@ -13,6 +13,7 @@ package com.augmentalis.voiceoscore.database
 
 import com.augmentalis.voiceoscore.BaseVoiceOSTest
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -261,7 +262,7 @@ class DatabaseMetricsTest : BaseVoiceOSTest() {
 
         // Act - Track errors concurrently
         val jobs = List(5) {
-            kotlinx.coroutines.launch {
+            launch {
                 DatabaseMetrics.trackError(operationName, Exception("Concurrent error"))
             }
         }
