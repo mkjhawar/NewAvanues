@@ -18,7 +18,7 @@ data class BrowserSettings(
     val useDesktopMode: Boolean = false,
 
     // Scale Settings (Mode-Specific)
-    val mobilePortraitScale: Float = 1.0f,   // Mobile portrait scale (default 100%)
+    val mobilePortraitScale: Float = 0f,   // Mobile portrait scale (default 100%)
     val mobileLandscapeScale: Float = 0.75f, // Mobile landscape scale (default 75%)
 
     // Desktop Mode Settings
