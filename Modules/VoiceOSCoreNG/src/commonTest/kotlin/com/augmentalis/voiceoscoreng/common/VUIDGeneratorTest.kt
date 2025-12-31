@@ -394,7 +394,7 @@ class VUIDGeneratorTest {
     @Test
     fun `VUIDTypeCode fromCode returns null for unknown codes`() {
         assertNull(VUIDTypeCode.fromCode('x'))
-        assertNull(VUIDTypeCode.fromCode('z'))
+        assertNull(VUIDTypeCode.fromCode('y'))  // z is now LIST
         assertNull(VUIDTypeCode.fromCode('1'))
     }
 

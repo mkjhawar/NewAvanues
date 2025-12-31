@@ -1,24 +1,32 @@
 package com.augmentalis.voiceoscoreng.common
 
+import kotlin.random.Random
+
 /**
  * VUID Type Codes for Voice Unique Identifiers
  *
  * Each UI element type has a single-character code for compact representation.
  */
-enum class VUIDTypeCode(val code: Char) {
-    BUTTON('b'),
-    INPUT('i'),
-    SCROLL('s'),
-    TEXT('t'),
-    ELEMENT('e'),  // Generic fallback
-    CARD('c'),
-    LAYOUT('l'),
-    MENU('m'),
-    DIALOG('d'),
-    IMAGE('g');
+enum class VUIDTypeCode(val code: Char, val abbrev: String) {
+    BUTTON('b', "btn"),
+    INPUT('i', "inp"),
+    SCROLL('s', "scr"),
+    TEXT('t', "txt"),
+    ELEMENT('e', "elm"),  // Generic fallback
+    CARD('c', "crd"),
+    LAYOUT('l', "lay"),
+    MENU('m', "mnu"),
+    DIALOG('d', "dlg"),
+    IMAGE('g', "img"),
+    CHECKBOX('k', "chk"),
+    SWITCH('w', "swt"),
+    LIST('z', "lst"),
+    SLIDER('r', "sld"),
+    TAB('a', "tab");
 
     companion object {
         private val codeMap = entries.associateBy { it.code }
+        private val abbrevMap = entries.associateBy { it.abbrev }
 
         /**
          * Get VUIDTypeCode from character code
@@ -27,10 +35,27 @@ enum class VUIDTypeCode(val code: Char) {
         fun fromCode(code: Char): VUIDTypeCode? = codeMap[code]
 
         /**
+         * Get VUIDTypeCode from 3-char abbreviation
+         */
+        fun fromAbbrev(abbrev: String): VUIDTypeCode? = abbrevMap[abbrev.lowercase()]
+
+        /**
          * Get all valid type code characters
          */
         fun validCodes(): Set<Char> = codeMap.keys
     }
+}
+
+/**
+ * Module identifiers for internal entities
+ */
+object VUIDModule {
+    const val VOICEOS = "vos"
+    const val AVA = "ava"
+    const val WEBAVANUE = "web"
+    const val NLU = "nlu"
+    const val COCKPIT = "cpt"
+    const val COMMON = "cmn"
 }
 
 /**
@@ -233,4 +258,61 @@ object VUIDGenerator {
             .takeLast(length)
             .lowercase()
     }
+
+    // ==================== Simple Format Generation ====================
+
+    /**
+     * Generate simple VUID: {module}:{type}:{hash8}
+     * Example: ava:msg:a7f3e2c1
+     */
+    fun generateSimple(module: String, typeCode: VUIDTypeCode): String {
+        val hash8 = generateRandomHash8()
+        return "$module:${typeCode.abbrev}:$hash8"
+    }
+
+    /**
+     * Generate 8-character random hex hash
+     */
+    fun generateRandomHash8(): String {
+        return buildString {
+            repeat(8) {
+                append(HEX_CHARS[Random.nextInt(16)])
+            }
+        }
+    }
+
+    private const val HEX_CHARS = "0123456789abcdef"
+
+    // ==================== AVA Convenience Methods ====================
+
+    fun generateMessageVuid(): String = generateSimple(VUIDModule.AVA, VUIDTypeCode.ELEMENT)
+    fun generateConversationVuid(): String = generateSimple(VUIDModule.AVA, VUIDTypeCode.ELEMENT)
+    fun generateDocumentVuid(): String = generateSimple(VUIDModule.AVA, VUIDTypeCode.ELEMENT)
+    fun generateMemoryVuid(): String = generateSimple(VUIDModule.AVA, VUIDTypeCode.ELEMENT)
+
+    // ==================== WebAvanue Convenience Methods ====================
+
+    fun generateTabVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.TAB)
+    fun generateFavoriteVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.ELEMENT)
+    fun generateDownloadVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.ELEMENT)
+    fun generateHistoryVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.ELEMENT)
+    fun generateSessionVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.ELEMENT)
+
+    // ==================== Cockpit Convenience Methods ====================
+
+    fun generateRequestVuid(): String = generateSimple(VUIDModule.COCKPIT, VUIDTypeCode.ELEMENT)
+    fun generateWindowVuid(): String = generateSimple(VUIDModule.COCKPIT, VUIDTypeCode.ELEMENT)
+    fun generateStreamVuid(): String = generateSimple(VUIDModule.COCKPIT, VUIDTypeCode.ELEMENT)
+    fun generatePresetVuid(): String = generateSimple(VUIDModule.COCKPIT, VUIDTypeCode.ELEMENT)
+    fun generateDeviceVuid(): String = generateSimple(VUIDModule.COCKPIT, VUIDTypeCode.ELEMENT)
+    fun generateSyncVuid(): String = generateSimple(VUIDModule.COCKPIT, VUIDTypeCode.ELEMENT)
+
+    // ==================== Simple Format Validation ====================
+
+    private val SIMPLE_PATTERN = Regex("^[a-z]{3}:[a-z]{3}:[a-f0-9]{8}$")
+
+    /**
+     * Check if VUID is in simple format (module:type:hash8)
+     */
+    fun isSimpleFormat(vuid: String): Boolean = SIMPLE_PATTERN.matches(vuid)
 }
