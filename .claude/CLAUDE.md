@@ -1,4 +1,4 @@
-# IDEACode v14.0 - Global Instructions
+# IDEACode v15.0 - Global Instructions
 
 Scope: ALL projects in /Volumes/M-Drive/Coding/
 
@@ -60,6 +60,7 @@ Scope: ALL projects in /Volumes/M-Drive/Coding/
 | /v1/tokens/count | Token count |
 | /v1/quality/all | Quality gates |
 | /v1/autonomous/* | Autonomous loop (v14) |
+| /v1/inspect/* | Visual/A11y testing (v15) |
 
 ---
 
@@ -79,6 +80,24 @@ Run tasks until completion with safety limits.
 **Exit phrases:** "all tasks completed", "objective achieved", "implementation complete"
 
 **Usage:** `/i.develop .autonomous "feature"` or `/i.fix .autonomous "bug"`
+
+---
+
+## APP INSPECTION (v15 NEW)
+
+Visual regression + accessibility testing for running apps.
+
+| Endpoint | Purpose |
+|----------|---------|
+| POST /v1/inspect/connect | Connect to URL/app |
+| POST /v1/inspect/visual | Visual regression |
+| POST /v1/inspect/a11y | WCAG accessibility |
+| POST /v1/inspect/test | Combined test |
+| GET /v1/inspect/devices | Device profiles |
+
+**Platforms:** Web (v15.0) | Android (v15.1) | iOS (v15.2) | Desktop (v15.3)
+
+**Usage:** `/i.inspect .web .visual "http://localhost:3000"`
 
 ---
 
@@ -114,10 +133,10 @@ LD-{App}-{Module}-V#.md | App-Spec-*-YYMMDD-V#.md | App-Plan-*-YYMMDD-V#.md | *.
 
 ## COMMANDS
 
-/i.develop /i.fix /i.spec /i.plan /i.implement /i.createui /i.analyze /i.swarm
+/i.develop /i.fix /i.spec /i.plan /i.implement /i.createui /i.analyze /i.swarm /i.inspect
 
 Modifiers: .yolo .swarm .tdd .ood .solid .autonomous
 
 ---
 
-Author: Manoj Jhawar | v14.0 | 2026-01-01 | 32 skills + autonomous loop
+Author: Manoj Jhawar | v15.0 | 2026-01-01 | 32 skills + autonomous + inspect
