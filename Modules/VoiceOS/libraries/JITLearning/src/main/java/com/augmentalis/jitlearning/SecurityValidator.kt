@@ -155,7 +155,7 @@ object InputValidator {
 
     // Validation limits
     private const val MAX_PACKAGE_NAME_LENGTH = 255
-    private const val MAX_UUID_LENGTH = 64
+    private const val MAX_UUID_LENGTH = 64  // Compact VUIDs are ~30 chars, legacy up to 52
     private const val MAX_SCREEN_HASH_LENGTH = 64
     private const val MAX_TEXT_INPUT_LENGTH = 10000
     private const val MAX_SELECTOR_LENGTH = 512
@@ -166,8 +166,11 @@ object InputValidator {
     // Package name regex: standard Android package format
     private val PACKAGE_NAME_PATTERN = Pattern.compile("^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+$")
 
-    // VUID regex: alphanumeric + hyphens only
-    private val UUID_PATTERN = Pattern.compile("^[a-zA-Z0-9-]+$")
+    // VUID regex: supports both compact and legacy formats
+    // Compact format: android.instagram.com:12.0.0:btn:a7f3e2c1 (uses colons)
+    // Legacy format: com.package.name.element-hexhash (uses dots and hyphens)
+    // Module format: ava:msg:a7f3e2c1 (short module codes)
+    private val UUID_PATTERN = Pattern.compile("^[a-zA-Z0-9.:-]+$")
 
     // Screen hash regex: hexadecimal only
     private val SCREEN_HASH_PATTERN = Pattern.compile("^[a-fA-F0-9]+$")

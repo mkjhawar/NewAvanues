@@ -60,6 +60,9 @@ android {
 }
 
 dependencies {
+    // Cross-platform VUID generation (shared KMP module)
+    implementation(project(":Common:VUID"))
+
     // SQLDelight KMP Database (replaces Room)
     implementation(project(":Modules:VoiceOS:core:database"))
 

@@ -24,6 +24,7 @@ import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.database.dto.ScreenContextDTO
 import com.augmentalis.database.repositories.IGeneratedCommandRepository
 import com.augmentalis.database.repositories.IScreenContextRepository
+import com.augmentalis.voiceoscore.accessibility.extractors.ScreenContextualText
 import com.augmentalis.voiceoscore.learnapp.ai.LLMPromptFormat
 import com.augmentalis.voiceoscore.learnapp.database.repository.LearnAppRepository
 import com.augmentalis.voiceoscore.scraping.entities.ScrapedElementEntity
@@ -135,19 +136,21 @@ class AVUQuantizerIntegration(
      * @param packageName Package name of the learned app
      * @param userGoal User's goal (e.g., "open settings", "send message")
      * @param format Prompt format (COMPACT, HTML, or FULL)
+     * @param contextualText Optional contextual text for current screen (NLU enhancement)
      * @return LLM-ready prompt string, or null if no context available
      */
     suspend fun generateLLMPrompt(
         packageName: String,
         userGoal: String,
-        format: LLMPromptFormat
+        format: LLMPromptFormat,
+        contextualText: ScreenContextualText? = null
     ): String? = withContext(Dispatchers.IO) {
         val quantizedContext = getQuantizedContext(packageName) ?: return@withContext null
 
         when (format) {
-            LLMPromptFormat.COMPACT -> generateCompactPrompt(quantizedContext, userGoal)
-            LLMPromptFormat.HTML -> generateHtmlPrompt(quantizedContext, userGoal)
-            LLMPromptFormat.FULL -> generateFullPrompt(quantizedContext, userGoal)
+            LLMPromptFormat.COMPACT -> generateCompactPrompt(quantizedContext, userGoal, contextualText)
+            LLMPromptFormat.HTML -> generateHtmlPrompt(quantizedContext, userGoal, contextualText)
+            LLMPromptFormat.FULL -> generateFullPrompt(quantizedContext, userGoal, contextualText)
         }
     }
 
@@ -159,12 +162,14 @@ class AVUQuantizerIntegration(
      * @param packageName Package name of the app
      * @param currentScreenHash Hash of the current screen
      * @param userIntent User's intent (e.g., "go back", "tap search")
+     * @param contextualText Optional contextual text for current screen (NLU enhancement)
      * @return Action prediction prompt, or null if no context available
      */
     suspend fun generateActionPredictionPrompt(
         packageName: String,
         currentScreenHash: String,
-        userIntent: String
+        userIntent: String,
+        contextualText: ScreenContextualText? = null
     ): String? = withContext(Dispatchers.IO) {
         val quantizedContext = getQuantizedContext(packageName) ?: return@withContext null
         val currentScreen = quantizedContext.findScreen(currentScreenHash)
@@ -174,6 +179,22 @@ class AVUQuantizerIntegration(
             appendLine("App: ${quantizedContext.appName}")
             appendLine("Screen: ${currentScreen.screenTitle}")
             appendLine("User wants: $userIntent")
+
+            // NLU Enhancement: Include contextual text for better understanding
+            contextualText?.let { ctx ->
+                if (ctx.hasContent()) {
+                    appendLine()
+                    appendLine("Screen Context:")
+                    ctx.screenTitle?.let { appendLine("  Title: $it") }
+                    if (ctx.breadcrumbs.isNotEmpty()) {
+                        appendLine("  Path: ${ctx.breadcrumbs.joinToString(" > ")}")
+                    }
+                    if (ctx.sectionHeaders.isNotEmpty()) {
+                        appendLine("  Sections: ${ctx.sectionHeaders.joinToString(", ")}")
+                    }
+                }
+            }
+
             appendLine()
             appendLine("Available actions:")
 
@@ -568,10 +589,22 @@ class AVUQuantizerIntegration(
     // Prompt Generation
     // ============================================
 
-    private fun generateCompactPrompt(context: QuantizedContext, userGoal: String): String {
+    private fun generateCompactPrompt(
+        context: QuantizedContext,
+        userGoal: String,
+        contextualText: ScreenContextualText? = null
+    ): String {
         return buildString {
             appendLine("App: ${context.appName}")
             appendLine("Goal: $userGoal")
+
+            // NLU Enhancement: Include contextual text in compact format
+            contextualText?.let { ctx ->
+                if (ctx.hasContent()) {
+                    appendLine("Context: ${ctx.toCompactString()}")
+                }
+            }
+
             appendLine("Screens: ${context.screens.size}")
 
             val relevantScreens = context.findScreensWithElement(userGoal)
@@ -583,10 +616,30 @@ class AVUQuantizerIntegration(
         }
     }
 
-    private fun generateHtmlPrompt(context: QuantizedContext, userGoal: String): String {
+    private fun generateHtmlPrompt(
+        context: QuantizedContext,
+        userGoal: String,
+        contextualText: ScreenContextualText? = null
+    ): String {
         return buildString {
             appendLine("<app name=\"${context.appName}\" pkg=\"${context.packageName}\">")
             appendLine("  <goal>$userGoal</goal>")
+
+            // NLU Enhancement: Include contextual text as XML element
+            contextualText?.let { ctx ->
+                if (ctx.hasContent()) {
+                    appendLine("  <context>")
+                    ctx.screenTitle?.let { appendLine("    <title>$it</title>") }
+                    if (ctx.breadcrumbs.isNotEmpty()) {
+                        appendLine("    <path>${ctx.breadcrumbs.joinToString(" > ")}</path>")
+                    }
+                    if (ctx.sectionHeaders.isNotEmpty()) {
+                        appendLine("    <sections>${ctx.sectionHeaders.joinToString(", ")}</sections>")
+                    }
+                    appendLine("  </context>")
+                }
+            }
+
             appendLine("  <screens count=\"${context.screens.size}\">")
 
             context.screens.take(5).forEach { screen ->
@@ -603,7 +656,11 @@ class AVUQuantizerIntegration(
         }
     }
 
-    private fun generateFullPrompt(context: QuantizedContext, userGoal: String): String {
+    private fun generateFullPrompt(
+        context: QuantizedContext,
+        userGoal: String,
+        contextualText: ScreenContextualText? = null
+    ): String {
         return buildString {
             appendLine("# Application Context")
             appendLine("- App: ${context.appName}")
@@ -613,6 +670,26 @@ class AVUQuantizerIntegration(
             appendLine("## User Goal")
             appendLine(userGoal)
             appendLine()
+
+            // NLU Enhancement: Current Screen Context section
+            contextualText?.let { ctx ->
+                if (ctx.hasContent()) {
+                    appendLine("## Current Screen Context")
+                    ctx.screenTitle?.let { appendLine("**Screen Title**: $it") }
+                    if (ctx.breadcrumbs.isNotEmpty()) {
+                        appendLine("**Navigation Path**: ${ctx.breadcrumbs.joinToString(" > ")}")
+                    }
+                    if (ctx.sectionHeaders.isNotEmpty()) {
+                        appendLine("**Visible Sections**: ${ctx.sectionHeaders.joinToString(", ")}")
+                    }
+                    if (ctx.visibleLabels.isNotEmpty()) {
+                        appendLine("**Context Labels**: ${ctx.visibleLabels.take(5).joinToString("; ")}")
+                    }
+                    appendLine("**Estimated Tokens**: ~${ctx.estimateTokenCount()}")
+                    appendLine()
+                }
+            }
+
             appendLine("## Available Screens (${context.screens.size})")
 
             context.screens.forEach { screen ->

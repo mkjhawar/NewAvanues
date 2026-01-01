@@ -1,0 +1,127 @@
+-- Migration: Add foreign key constraints for data integrity
+-- Version: 3 -> 4
+-- Date: 2025-12-22
+-- Description: Adds missing foreign key constraints to prevent orphaned records
+--
+-- FIX: D-P0-1 - commands_generated.elementHash → scraped_element.elementHash
+-- FIX: D-P0-2 - element_command.element_uuid → uuid_elements.uuid
+-- FIX: D-P0-3 - element_quality_metric.element_uuid → uuid_elements.uuid
+--
+-- Impact: Prevents orphaned commands, ensures referential integrity
+-- Priority: P0 - Critical data integrity fix
+
+-- ==================== D-P0-1: Add FK to commands_generated ====================
+
+-- Step 1: Create new table with foreign key constraint
+CREATE TABLE commands_generated_new (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    elementHash TEXT NOT NULL,
+    commandText TEXT NOT NULL,
+    actionType TEXT NOT NULL,
+    confidence REAL NOT NULL,
+    synonyms TEXT,
+    isUserApproved INTEGER NOT NULL DEFAULT 0,
+    usageCount INTEGER NOT NULL DEFAULT 0,
+    lastUsed INTEGER,
+    createdAt INTEGER NOT NULL,
+    appId TEXT NOT NULL DEFAULT '',
+    appVersion TEXT NOT NULL DEFAULT '',
+    versionCode INTEGER NOT NULL DEFAULT 0,
+    lastVerified INTEGER,
+    isDeprecated INTEGER NOT NULL DEFAULT 0,
+    synced_to_ava INTEGER NOT NULL DEFAULT 0,
+    synced_at INTEGER,
+
+    -- FIX (2025-12-22): D-P0-1 - Add foreign key constraint
+    FOREIGN KEY (elementHash) REFERENCES scraped_element(elementHash) ON DELETE CASCADE,
+
+    UNIQUE(elementHash, commandText)
+);
+
+-- Step 2: Copy data from old table to new table
+INSERT INTO commands_generated_new
+SELECT * FROM commands_generated;
+
+-- Step 3: Drop old table
+DROP TABLE commands_generated;
+
+-- Step 4: Rename new table to original name
+ALTER TABLE commands_generated_new RENAME TO commands_generated;
+
+-- Step 5: Recreate indexes
+CREATE INDEX idx_gc_element ON commands_generated(elementHash);
+CREATE INDEX idx_gc_action ON commands_generated(actionType);
+CREATE INDEX idx_gc_confidence ON commands_generated(confidence);
+CREATE INDEX idx_gc_appId ON commands_generated(appId);
+CREATE INDEX idx_gc_versionCode ON commands_generated(versionCode);
+CREATE INDEX idx_gc_deprecated ON commands_generated(isDeprecated);
+CREATE INDEX IF NOT EXISTS idx_gc_app_version ON commands_generated(appId, versionCode, isDeprecated);
+CREATE INDEX IF NOT EXISTS idx_gc_last_verified ON commands_generated(lastVerified, isDeprecated);
+
+-- ==================== D-P0-2: Add FK to element_command ====================
+
+-- Step 1: Create new table with foreign key constraint
+CREATE TABLE element_command_new (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    element_uuid TEXT NOT NULL,
+    command_phrase TEXT NOT NULL,
+    confidence REAL DEFAULT 1.0,
+    created_at INTEGER NOT NULL,
+    created_by TEXT DEFAULT 'user',
+    is_synonym INTEGER DEFAULT 0,
+    app_id TEXT NOT NULL,
+
+    -- FIX (2025-12-22): D-P0-2 - Add foreign key constraint
+    FOREIGN KEY (element_uuid) REFERENCES uuid_elements(uuid) ON DELETE CASCADE,
+
+    UNIQUE(element_uuid, command_phrase, app_id)
+);
+
+-- Step 2: Copy data from old table to new table (only valid references)
+INSERT INTO element_command_new
+SELECT ec.* FROM element_command ec
+WHERE EXISTS (SELECT 1 FROM uuid_elements ue WHERE ue.uuid = ec.element_uuid);
+
+-- Step 3: Drop old table
+DROP TABLE element_command;
+
+-- Step 4: Rename new table to original name
+ALTER TABLE element_command_new RENAME TO element_command;
+
+-- Step 5: Recreate indexes
+CREATE INDEX IF NOT EXISTS idx_element_command_uuid ON element_command(element_uuid);
+CREATE INDEX IF NOT EXISTS idx_element_command_phrase ON element_command(command_phrase);
+CREATE INDEX IF NOT EXISTS idx_element_command_app ON element_command(app_id);
+
+-- ==================== D-P0-3: Add FK to element_quality_metric ====================
+
+-- Step 1: Create new table with foreign key constraint
+CREATE TABLE element_quality_metric_new (
+    element_uuid TEXT PRIMARY KEY,
+    app_id TEXT NOT NULL,
+    quality_score INTEGER NOT NULL,
+    has_text INTEGER NOT NULL,
+    has_content_desc INTEGER NOT NULL,
+    has_resource_id INTEGER NOT NULL,
+    command_count INTEGER DEFAULT 0,
+    manual_command_count INTEGER DEFAULT 0,
+    last_assessed INTEGER NOT NULL,
+
+    -- FIX (2025-12-22): D-P0-3 - Add foreign key constraint
+    FOREIGN KEY (element_uuid) REFERENCES uuid_elements(uuid) ON DELETE CASCADE
+);
+
+-- Step 2: Copy data from old table to new table (only valid references)
+INSERT INTO element_quality_metric_new
+SELECT eqm.* FROM element_quality_metric eqm
+WHERE EXISTS (SELECT 1 FROM uuid_elements ue WHERE ue.uuid = eqm.element_uuid);
+
+-- Step 3: Drop old table
+DROP TABLE element_quality_metric;
+
+-- Step 4: Rename new table to original name
+ALTER TABLE element_quality_metric_new RENAME TO element_quality_metric;
+
+-- Step 5: Recreate indexes
+CREATE INDEX IF NOT EXISTS idx_element_quality_app ON element_quality_metric(app_id);
+CREATE INDEX IF NOT EXISTS idx_element_quality_score ON element_quality_metric(quality_score);

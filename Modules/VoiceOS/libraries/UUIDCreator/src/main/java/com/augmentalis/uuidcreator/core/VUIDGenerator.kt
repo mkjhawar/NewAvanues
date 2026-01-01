@@ -1,91 +1,46 @@
+/**
+ * VUIDGenerator.kt - VoiceOS VUID Generation (Android Extension)
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ * Author: Manoj Jhawar
+ * Code-Reviewed-By: CCA
+ * Created: 2025-12-23
+ * Updated: 2025-12-30 - Migrated to shared KMP module with Android extensions
+ *
+ * This file provides Android-specific extensions to the shared VUIDGenerator.
+ * Core VUID generation is in Common:VUID module.
+ *
+ * ## Usage
+ * ```kotlin
+ * // Use shared module directly for compact format:
+ * import com.augmentalis.vuid.core.VUIDGenerator
+ * val vuid = VUIDGenerator.generateCompact("com.instagram.android", "12.0.0", "button")
+ *
+ * // Use Android extensions for Flutter support:
+ * import com.augmentalis.uuidcreator.core.VUIDGeneratorExt
+ * val flutterVuid = VUIDGeneratorExt.generateFromFlutterIdentifier(flutterIdentifier)
+ * ```
+ */
 package com.augmentalis.uuidcreator.core
 
 import com.augmentalis.uuidcreator.flutter.FlutterIdentifier
-import java.util.UUID
-import java.util.concurrent.atomic.AtomicLong
+import java.security.MessageDigest
+
+// Re-export shared VUIDGenerator for convenience
+// Files can import from either location
+typealias VUIDGenerator = com.augmentalis.vuid.core.VUIDGenerator
 
 /**
- * VUID Generation utility
+ * Android-specific extensions to VUIDGenerator
  *
- * Provides various VUID (VoiceUniqueID) generation strategies.
- * Uses standard UUID v4 format internally with Voice-specific terminology.
- *
- * ## VUID Priority Order
- *
- * When generating VUIDs for UI elements, prefer in this order:
- * 1. Flutter 3.19+ identifier (stable across sessions)
- * 2. Android resource-id (viewIdResourceName)
- * 3. Content-based hash (text, contentDescription)
- * 4. Spatial coordinates (for game engines)
- *
- * Migration: UUID → VUID (VoiceUniqueID)
- * Created: 2025-12-23
- * Updated: 2025-12-27 - Added Flutter 3.19+ identifier support
+ * Provides:
+ * - Flutter 3.19+ identifier support
+ * - Secure random hash generation using Android's SecureRandom
  */
-object VUIDGenerator {
-
-    private val sequenceCounter = AtomicLong(0)
-
-    /**
-     * Generate standard random VUID (uses UUID v4 internally)
-     */
-    fun generate(): String = UUID.randomUUID().toString()
-
-    /**
-     * Generate VUID with prefix
-     */
-    fun generateWithPrefix(prefix: String): String = "${prefix}-${UUID.randomUUID()}"
-
-    /**
-     * Generate sequential VUID for predictable ordering
-     */
-    fun generateSequential(prefix: String = "seq"): String {
-        val sequence = sequenceCounter.incrementAndGet()
-        return "${prefix}-${sequence}-${System.currentTimeMillis()}"
-    }
-
-    /**
-     * Generate VUID based on content hash
-     */
-    fun generateFromContent(content: String): String {
-        val hash = content.hashCode().toString(16)
-        return "content-${hash}-${System.currentTimeMillis()}"
-    }
-
-    /**
-     * Generate VUID for specific element type
-     */
-    fun generateForType(type: String, name: String? = null): String {
-        val suffix = name?.let { "-${it.replace(" ", "-").lowercase()}" } ?: ""
-        return "${type.lowercase()}${suffix}-${UUID.randomUUID().toString().takeLast(8)}"
-    }
-
-    /**
-     * Validate VUID format (accepts both VUID and UUID formats)
-     */
-    fun isValidVUID(vuid: String): Boolean {
-        return try {
-            UUID.fromString(vuid.replace(Regex("^[^-]+-"), ""))
-            true
-        } catch (e: IllegalArgumentException) {
-            vuid.matches(Regex("^[a-zA-Z0-9-_]+$"))
-        }
-    }
-
-    /**
-     * Convert VUID to UUID format for backwards compatibility
-     */
-    @Deprecated("VUID and UUID use the same format")
-    fun toUUID(vuid: String): String = vuid
-
-    /**
-     * Convert UUID to VUID format for migration
-     */
-    @Deprecated("UUID and VUID use the same format")
-    fun fromUUID(uuid: String): String = uuid
+object VUIDGeneratorExt {
 
     // ========================================================================
-    // Flutter 3.19+ Identifier Support
+    // Flutter 3.19+ Identifier Support (Android-specific)
     // ========================================================================
 
     /**
@@ -103,7 +58,7 @@ object VUIDGenerator {
             "flutter-${flutterIdentifier.toStableHash()}"
         } else {
             // Fall back to content-based generation for legacy Flutter
-            generateFromContent(flutterIdentifier.identifierValue)
+            VUIDGenerator.generateFromContent(flutterIdentifier.identifierValue)
         }
     }
 
@@ -134,13 +89,45 @@ object VUIDGenerator {
 
         return if (isStable) {
             // Generate stable hash for Flutter 3.19+
-            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            val digest = MessageDigest.getInstance("SHA-256")
             val hashBytes = digest.digest(identifierValue.toByteArray())
             val hash = hashBytes.take(16).joinToString("") { "%02x".format(it) }
             "flutter-$hash"
         } else {
             // Use content-based generation for legacy Flutter
-            generateFromContent(identifierValue)
+            VUIDGenerator.generateFromContent(identifierValue)
         }
+    }
+
+    // ========================================================================
+    // Secure Hash Generation (Android-specific)
+    // ========================================================================
+
+    /**
+     * Generate cryptographically secure 8-character hash
+     * Uses Android's SecureRandom for better entropy than kotlin.random
+     */
+    fun generateSecureHash8(): String {
+        val secureRandom = java.security.SecureRandom()
+        val bytes = ByteArray(4)
+        secureRandom.nextBytes(bytes)
+        return bytes.joinToString("") { "%02x".format(it) }
+    }
+
+    /**
+     * Generate compact VUID with secure hash (Android-optimized)
+     *
+     * Same as VUIDGenerator.generateCompact but uses SecureRandom
+     * for the hash component.
+     */
+    fun generateCompactSecure(
+        packageName: String,
+        version: String,
+        typeName: String
+    ): String {
+        val reversedPkg = com.augmentalis.vuid.core.VUIDGenerator.reversePackage(packageName)
+        val typeAbbrev = com.augmentalis.vuid.core.VUIDGenerator.TypeAbbrev.fromTypeName(typeName)
+        val hash8 = generateSecureHash8()
+        return "$reversedPkg:$version:$typeAbbrev:$hash8"
     }
 }

@@ -19,6 +19,7 @@ package com.augmentalis.voiceoscore.learnapp.ai
 
 import android.util.Log
 import com.augmentalis.database.VoiceOSDatabaseManager
+import com.augmentalis.voiceoscore.accessibility.extractors.ScreenContextualText
 import com.augmentalis.voiceoscore.learnapp.navigation.NavigationGraph
 import com.augmentalis.voiceoscore.learnapp.navigation.ScreenNode
 import com.augmentalis.voiceoscore.learnapp.models.NavigationEdge
@@ -657,9 +658,14 @@ class AIContextSerializer(
      *
      * @param context AI context
      * @param userGoal User's goal (e.g., "Open settings")
+     * @param contextualText Optional contextual text for current screen (NLU enhancement)
      * @return LLM-ready prompt
      */
-    fun toLLMPrompt(context: AIContext, userGoal: String): String {
+    fun toLLMPrompt(
+        context: AIContext,
+        userGoal: String,
+        contextualText: ScreenContextualText? = null
+    ): String {
         val prompt = StringBuilder()
 
         // Header
@@ -669,6 +675,13 @@ class AIContextSerializer(
         context.appInfo.appName?.let { prompt.appendLine("**Name**: $it") }
         prompt.appendLine("**User Goal**: $userGoal")
         prompt.appendLine()
+
+        // Contextual Text Section (NLU Enhancement)
+        if (contextualText != null && contextualText.hasContent()) {
+            prompt.appendLine("## Current Screen Context")
+            prompt.appendLine(formatContextualText(contextualText))
+            prompt.appendLine()
+        }
 
         // Statistics
         prompt.appendLine("## Statistics")
@@ -742,13 +755,26 @@ class AIContextSerializer(
      *
      * @param context AI context
      * @param userGoal User's goal
+     * @param contextualText Optional contextual text for current screen
      * @return Compact LLM prompt
      */
-    fun toCompactPrompt(context: AIContext, userGoal: String): String {
+    fun toCompactPrompt(
+        context: AIContext,
+        userGoal: String,
+        contextualText: ScreenContextualText? = null
+    ): String {
         val prompt = StringBuilder()
 
         prompt.appendLine("App: ${context.appInfo.packageName}")
         prompt.appendLine("Goal: $userGoal")
+
+        // Compact contextual text (NLU Enhancement)
+        contextualText?.let { ctx ->
+            if (ctx.hasContent()) {
+                prompt.appendLine("Context: ${ctx.toCompactString()}")
+            }
+        }
+
         prompt.appendLine("Screens: ${context.stats.totalScreens}, Elements: ${context.stats.totalElements}")
         prompt.appendLine()
 
@@ -764,4 +790,54 @@ class AIContextSerializer(
 
         return prompt.toString()
     }
+
+    /**
+     * Format contextual text for LLM prompt
+     *
+     * Converts ScreenContextualText to a formatted section for LLM consumption.
+     * Token-efficient representation focusing on semantic context.
+     *
+     * @param contextualText The screen contextual text to format
+     * @return Formatted string for prompt inclusion
+     */
+    private fun formatContextualText(contextualText: ScreenContextualText): String {
+        return buildString {
+            // Screen title provides primary context
+            contextualText.screenTitle?.let {
+                if (it.isNotBlank()) appendLine("**Screen**: $it")
+            }
+
+            // Breadcrumbs show navigation path/location
+            if (contextualText.breadcrumbs.isNotEmpty()) {
+                appendLine("**Path**: ${contextualText.breadcrumbs.joinToString(" > ")}")
+            }
+
+            // Section headers show available categories/areas
+            if (contextualText.sectionHeaders.isNotEmpty()) {
+                appendLine("**Sections**: ${contextualText.sectionHeaders.joinToString(", ")}")
+            }
+
+            // Visible labels provide additional context clues
+            if (contextualText.visibleLabels.isNotEmpty()) {
+                val truncatedLabels = contextualText.visibleLabels.take(5)
+                appendLine("**Context Labels**: ${truncatedLabels.joinToString("; ")}")
+            }
+        }
+    }
+
+    /**
+     * Generate LLM Prompt with contextual text from current screen
+     *
+     * Convenience method that includes contextual text extraction results.
+     *
+     * @param context AI context
+     * @param userGoal User's goal
+     * @param currentScreenContextualText Contextual text from current screen
+     * @return LLM-ready prompt with screen context
+     */
+    fun toLLMPromptWithContext(
+        context: AIContext,
+        userGoal: String,
+        currentScreenContextualText: ScreenContextualText
+    ): String = toLLMPrompt(context, userGoal, currentScreenContextualText)
 }
