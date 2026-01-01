@@ -1,7 +1,12 @@
 #!/bin/sh
 
-# Claude Code Enhanced Status Line (v13.0)
+# Claude Code Enhanced Status Line
 # Uses /bin/sh and fast git commands only
+# Version sourced from .ideacode/VERSION
+
+# Read version from central file
+VERSION_FILE="/Volumes/M-Drive/Coding/.ideacode/VERSION"
+VERSION=$(cat "$VERSION_FILE" 2>/dev/null || echo "?")
 
 # Git info from current directory (fast commands only)
 repo="unknown"
@@ -29,7 +34,7 @@ if [ -n "$health" ]; then
 fi
 
 # Build output
-output="IDEACODE v13.0"
+output="IDEACODE v$VERSION"
 [ -n "$api_status" ] && output="$output | $api_status"
 output="$output | $repo | $branch | MEM: OK"
 
