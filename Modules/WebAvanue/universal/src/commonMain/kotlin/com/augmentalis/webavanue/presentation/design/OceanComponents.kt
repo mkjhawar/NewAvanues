@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.staticCompositionLocalOf
 import com.augmentalis.webavanue.ui.screen.components.glass
 import com.augmentalis.webavanue.ui.screen.components.GlassLevel
 import com.augmentalis.webavanue.ui.screen.components.GlassBorder
@@ -378,3 +379,103 @@ object OceanComponents : ComponentProvider {
         )
     }
 }
+
+// ========== Theme-aware Component Provider ==========
+// Use LocalComponents.current to get the current theme's component provider.
+// Default is OceanComponents, can be overridden for MagicUI or other themes.
+
+/**
+ * CompositionLocal for the current ComponentProvider.
+ * Allows swapping component implementations based on theme.
+ *
+ * Usage:
+ * ```
+ * // Get current provider
+ * val components = LocalComponents.current
+ * components.Surface(...) { }
+ *
+ * // Or use convenience functions
+ * AppSurface(...) { }
+ *
+ * // Override for different theme
+ * CompositionLocalProvider(LocalComponents provides MagicUIComponents) {
+ *     // All components inside use MagicUI
+ * }
+ * ```
+ */
+val LocalComponents = staticCompositionLocalOf<ComponentProvider> { OceanComponents }
+
+// ========== Theme-aware wrapper functions with default values ==========
+// These use LocalComponents.current so they adapt to the current theme.
+
+/**
+ * AppSurface - Theme-aware Surface with default parameters.
+ */
+@Composable
+fun AppSurface(
+    modifier: Modifier = Modifier,
+    variant: SurfaceVariant = SurfaceVariant.Default,
+    shape: Shape? = null,
+    onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit
+) = LocalComponents.current.Surface(modifier, variant, shape, onClick, content)
+
+/**
+ * AppIcon - Theme-aware Icon with default parameters.
+ */
+@Composable
+fun AppIcon(
+    imageVector: ImageVector,
+    contentDescription: String?,
+    variant: IconVariant = IconVariant.Primary,
+    modifier: Modifier = Modifier
+) = LocalComponents.current.Icon(imageVector, contentDescription, variant, modifier)
+
+/**
+ * AppIconButton - Theme-aware IconButton with default parameters.
+ */
+@Composable
+fun AppIconButton(
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) = LocalComponents.current.IconButton(onClick, enabled, modifier, content)
+
+/**
+ * AppButton - Theme-aware Button with default parameters.
+ */
+@Composable
+fun AppButton(
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    variant: ButtonVariant = ButtonVariant.Primary,
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit
+) = LocalComponents.current.Button(onClick, enabled, variant, modifier, content)
+
+/**
+ * AppTextField - Theme-aware TextField with default parameters.
+ */
+@Composable
+fun AppTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String? = null,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    trailingIcon: (@Composable () -> Unit)? = null,
+    enabled: Boolean = true
+) = LocalComponents.current.TextField(value, onValueChange, modifier, placeholder, leadingIcon, trailingIcon, enabled)
+
+/**
+ * AppFloatingActionButton - Theme-aware FAB with default parameters.
+ */
+@Composable
+fun AppFloatingActionButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    containerColor: Color? = null,
+    contentColor: Color? = null,
+    content: @Composable () -> Unit
+) = LocalComponents.current.FloatingActionButton(onClick, modifier, containerColor, contentColor, content)

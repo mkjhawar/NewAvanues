@@ -15,9 +15,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
-import com.augmentalis.webavanue.ui.design.OceanComponents
-import com.augmentalis.webavanue.ui.design.OceanDesignTokens
+import com.augmentalis.webavanue.ui.design.AppIcon
 import com.augmentalis.webavanue.ui.design.IconVariant
+import com.augmentalis.webavanue.ui.design.OceanDesignTokens
 import kotlinx.coroutines.delay
 
 /**
@@ -155,7 +155,7 @@ private fun ColumnScope.NetworkStatusContent(status: NetworkStatus) {
                 ),
                 label = "rotation"
             )
-            OceanComponents.Icon(
+            AppIcon(
                 imageVector = icon,
                 contentDescription = title,
                 variant = iconVariant,
@@ -166,7 +166,7 @@ private fun ColumnScope.NetworkStatusContent(status: NetworkStatus) {
                     }
             )
         } else {
-            OceanComponents.Icon(
+            AppIcon(
                 imageVector = icon,
                 contentDescription = title,
                 variant = iconVariant,

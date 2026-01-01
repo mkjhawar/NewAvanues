@@ -28,9 +28,11 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import com.augmentalis.webavanue.ui.design.OceanComponents
-import com.augmentalis.webavanue.ui.design.OceanDesignTokens
+import com.augmentalis.webavanue.ui.design.AppIcon
+import com.augmentalis.webavanue.ui.design.AppIconButton
+import com.augmentalis.webavanue.ui.design.AppSurface
 import com.augmentalis.webavanue.ui.design.IconVariant
+import com.augmentalis.webavanue.ui.design.OceanDesignTokens
 import com.augmentalis.webavanue.ui.design.SurfaceVariant
 import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
 import com.augmentalis.webavanue.ui.screen.tab.CompactTabCounterBadge
@@ -190,7 +192,7 @@ fun AddressBar(
         val isPortrait = maxHeight > maxWidth
 
         // Solid surface background (no blur)
-        OceanComponents.Surface(
+        AppSurface(
             modifier = Modifier.fillMaxWidth(),
             variant = SurfaceVariant.Elevated
         ) {
@@ -232,7 +234,7 @@ fun AddressBar(
                                     contentAlignment = Alignment.Center,
                                     modifier = Modifier.fillMaxSize()
                                 ) {
-                                    OceanComponents.Icon(
+                                    AppIcon(
                                         imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                                         contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
                                         variant = if (isFavorite) IconVariant.Warning else IconVariant.Secondary,
@@ -292,7 +294,7 @@ fun AddressBar(
                                     .clickable(onClick = onHistoryClick),
                                 contentAlignment = Alignment.Center
                             ) {
-                                OceanComponents.Icon(
+                                AppIcon(
                                     imageVector = Icons.Default.History,
                                     contentDescription = "History",
                                     variant = IconVariant.Secondary,
@@ -301,14 +303,14 @@ fun AddressBar(
                             }
 
                             // Go button - smaller for portrait
-                            OceanComponents.IconButton(
+                            AppIconButton(
                                 onClick = {
                                     dismissKeyboard()
                                     onGo()
                                 },
                                 modifier = Modifier.size(24.dp)
                             ) {
-                                OceanComponents.Icon(
+                                AppIcon(
                                     imageVector = Icons.Default.Search,
                                     contentDescription = "Go (Voice: go)",
                                     variant = IconVariant.Secondary,
@@ -328,12 +330,12 @@ fun AddressBar(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         // Back button - small
-                        OceanComponents.IconButton(
+                        AppIconButton(
                             onClick = onBack,
                             enabled = canGoBack,
                             modifier = Modifier.size(24.dp)
                         ) {
-                            OceanComponents.Icon(
+                            AppIcon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
                                 variant = if (canGoBack) IconVariant.Primary else IconVariant.Disabled,
@@ -342,12 +344,12 @@ fun AddressBar(
                         }
 
                         // Forward button - small
-                        OceanComponents.IconButton(
+                        AppIconButton(
                             onClick = onForward,
                             enabled = canGoForward,
                             modifier = Modifier.size(24.dp)
                         ) {
-                            OceanComponents.Icon(
+                            AppIcon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = "Forward",
                                 variant = if (canGoForward) IconVariant.Primary else IconVariant.Disabled,
@@ -356,11 +358,11 @@ fun AddressBar(
                         }
 
                         // Refresh button - small
-                        OceanComponents.IconButton(
+                        AppIconButton(
                             onClick = onRefresh,
                             modifier = Modifier.size(24.dp)
                         ) {
-                            OceanComponents.Icon(
+                            AppIcon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = "Refresh",
                                 variant = IconVariant.Primary,
@@ -370,11 +372,11 @@ fun AddressBar(
 
                         // Reading Mode button - only show if article detected (Phase 4)
                         if (isArticleAvailable) {
-                            OceanComponents.IconButton(
+                            AppIconButton(
                                 onClick = onReadingModeToggle,
                                 modifier = Modifier.size(24.dp)
                             ) {
-                                OceanComponents.Icon(
+                                AppIcon(
                                     imageVector = Icons.Default.MenuBook,
                                     contentDescription = "Reading Mode",
                                     variant = if (isReadingMode) IconVariant.Primary else IconVariant.Secondary,
@@ -400,11 +402,11 @@ fun AddressBar(
                         )
 
                         // Command bar toggle button - shows/hides bottom command bar
-                        OceanComponents.IconButton(
+                        AppIconButton(
                             onClick = onCommandBarToggle,
                             modifier = Modifier.size(24.dp)
                         ) {
-                            OceanComponents.Icon(
+                            AppIcon(
                                 imageVector = Icons.Default.Dehaze,
                                 contentDescription = if (isCommandBarVisible) "Hide command bar" else "Show command bar",
                                 variant = IconVariant.Primary,
@@ -413,11 +415,11 @@ fun AddressBar(
                         }
 
                         // Voice/Mic button - tap to start listening
-                        OceanComponents.IconButton(
+                        AppIconButton(
                             onClick = { if (!isListening) onStartListening() },
                             modifier = Modifier.size(24.dp)
                         ) {
-                            OceanComponents.Icon(
+                            AppIcon(
                                 imageVector = Icons.Default.Mic,
                                 contentDescription = if (isListening) "Listening..." else "Tap to speak",
                                 variant = if (isListening) IconVariant.Success else IconVariant.Primary,
@@ -440,12 +442,12 @@ fun AddressBar(
                     horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)
                 ) {
                     // Back button
-                    OceanComponents.IconButton(
+                    AppIconButton(
                         onClick = onBack,
                         enabled = canGoBack,
                         modifier = Modifier.size(36.dp)
                     ) {
-                        OceanComponents.Icon(
+                        AppIcon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back (Voice: go back)",
                             variant = if (canGoBack) IconVariant.Primary else IconVariant.Disabled
@@ -453,12 +455,12 @@ fun AddressBar(
                     }
 
                     // Forward button
-                    OceanComponents.IconButton(
+                    AppIconButton(
                         onClick = onForward,
                         enabled = canGoForward,
                         modifier = Modifier.size(36.dp)
                     ) {
-                        OceanComponents.Icon(
+                        AppIcon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = "Forward (Voice: go forward)",
                             variant = if (canGoForward) IconVariant.Primary else IconVariant.Disabled
@@ -466,11 +468,11 @@ fun AddressBar(
                     }
 
                     // Refresh button - moved next to navigation arrows (left of URL)
-                    OceanComponents.IconButton(
+                    AppIconButton(
                         onClick = onRefresh,
                         modifier = Modifier.size(36.dp)
                     ) {
-                        OceanComponents.Icon(
+                        AppIcon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh (Voice: refresh)",
                             variant = IconVariant.Primary
@@ -505,7 +507,7 @@ fun AddressBar(
                                     contentAlignment = Alignment.Center,
                                     modifier = Modifier.fillMaxSize()
                                 ) {
-                                    OceanComponents.Icon(
+                                    AppIcon(
                                         imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                                         contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
                                         variant = if (isFavorite) IconVariant.Warning else IconVariant.Secondary,
@@ -565,7 +567,7 @@ fun AddressBar(
                                     .clickable(onClick = onHistoryClick),
                                 contentAlignment = Alignment.Center
                             ) {
-                                OceanComponents.Icon(
+                                AppIcon(
                                     imageVector = Icons.Default.History,
                                     contentDescription = "History",
                                     variant = IconVariant.Secondary,
@@ -582,14 +584,14 @@ fun AddressBar(
                                     .alpha(if (isWebGLSite) 0.5f else 1f)
                             )
 
-                            OceanComponents.IconButton(
+                            AppIconButton(
                                 onClick = {
                                     dismissKeyboard()
                                     onGo()
                                 },
                                 modifier = Modifier.size(32.dp)
                             ) {
-                                OceanComponents.Icon(
+                                AppIcon(
                                     imageVector = Icons.Default.Search,
                                     contentDescription = "Go (Voice: go)",
                                     variant = IconVariant.Secondary,
@@ -606,11 +608,11 @@ fun AddressBar(
                     )
 
                     // Command bar toggle button - shows/hides bottom command bar
-                    OceanComponents.IconButton(
+                    AppIconButton(
                         onClick = onCommandBarToggle,
                         modifier = Modifier.size(36.dp)
                     ) {
-                        OceanComponents.Icon(
+                        AppIcon(
                             imageVector = Icons.Default.Dehaze,
                             contentDescription = if (isCommandBarVisible) "Hide command bar" else "Show command bar",
                             variant = IconVariant.Primary
@@ -618,11 +620,11 @@ fun AddressBar(
                     }
 
                     // Voice/Mic button - tap to start listening
-                    OceanComponents.IconButton(
+                    AppIconButton(
                         onClick = { if (!isListening) onStartListening() },
                         modifier = Modifier.size(36.dp)
                     ) {
-                        OceanComponents.Icon(
+                        AppIcon(
                             imageVector = Icons.Default.Mic,
                             contentDescription = if (isListening) "Listening for command..." else "Tap to speak command",
                             variant = if (isListening) IconVariant.Success else IconVariant.Primary
