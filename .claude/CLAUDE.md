@@ -20,7 +20,7 @@ Scope: ALL projects in /Volumes/M-Drive/Coding/
 ├── .claude/
 │   ├── CLAUDE.md                  # Global instructions
 │   ├── commands/i.*.md            # Slash commands
-│   └── skills/{name}/SKILL.md     # 32 skills
+│   └── skills/{name}/SKILL.md     # 37 skills
 ├── .ideacode/
 │   ├── MASTER-INDEX.md            # Single source
 │   ├── config.idc, tech-stack.idc
@@ -37,13 +37,15 @@ Scope: ALL projects in /Volumes/M-Drive/Coding/
 
 ---
 
-## SKILLS (32)
+## SKILLS (37)
 
 **Docs:** pdf, docx, xlsx, pptx
 **Platform:** developing-android, developing-ios, developing-kmp, developing-kotlin, developing-react, developing-tauri, developing-web
 **Workflow:** develop-feature, fix-bug, create-spec, create-ui, tdd-development, ood-development, verification
 **Tools:** api-builder, mcp-builder, webapp-testing, managing-cloud-storage, implementing-webrtc
 **Design:** theme-factory, algorithmic-art
+**Repo:** managing-monorepo, managing-multirepo, managing-git
+**Cleanup:** cleanup-docs, cleanup-code
 **Meta:** skill-creator, analyze-code, analyzing-security, reviewing-code, running-tests, writing-documentation, building-html-artifacts
 
 ---
@@ -139,4 +141,4 @@ Modifiers: .yolo .swarm .tdd .ood .solid .autonomous
 
 ---
 
-Author: Manoj Jhawar | v15.0 | 2026-01-01 | 32 skills + autonomous + inspect
+Author: Manoj Jhawar | v15.0 | 2026-01-01 | 37 skills + autonomous + inspect
