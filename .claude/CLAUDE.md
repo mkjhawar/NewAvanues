@@ -6,14 +6,43 @@ NewAvanues - Platform-centric KMP monorepo (AVA, VoiceOS, WebAvanue, Cockpit, NL
 
 ## MANDATORY: Before Any File Operation
 
-1. **READ REGISTRIES FIRST:**
+1. **READ MASTER INDEX:** `/Volumes/M-Drive/Coding/.ideacode/MASTER-INDEX.md` (single source of truth)
+2. **READ REGISTRIES:**
    - `.ideacode/Registries/FOLDER-REGISTRY.md` - Folder structure
    - `.ideacode/Registries/Modules.registry.json` - Module paths
    - `.ideacode/Registries/Docs.registry.json` - Doc paths
 
-2. **Use correct case:**
+3. **Use correct case:**
    - Gradle paths: `lowercase` (android/, ios/, desktop/)
    - All other folders: `PascalCase` (Common/, Docs/, Shared/)
+
+---
+
+## KMP FOLDER CONVENTIONS (Zero Tolerance)
+
+**Gradle KMP plugin requires exact names - CANNOT be changed.**
+
+| Source Set | Purpose |
+|------------|---------|
+| `commonMain/` | Shared code |
+| `commonTest/` | Shared tests |
+| `androidMain/` | Android implementation |
+| `androidUnitTest/` | Android unit tests |
+| `androidInstrumentedTest/` | Android instrumented tests |
+| `iosMain/` | iOS implementation |
+| `iosTest/` | iOS tests |
+| `desktopMain/` | Desktop/JVM implementation |
+| `desktopTest/` | Desktop tests |
+
+**Forbidden Patterns:**
+| Pattern | Issue |
+|---------|-------|
+| `common/classes/` | Redundant nesting |
+| `utils/helpers/` | Too deep |
+| Custom test folder names | Breaks Gradle |
+| Renaming source sets | Breaks Gradle |
+
+See: `/Volumes/M-Drive/Coding/.ideacode/MASTER-INDEX.md` Section 3
 
 ---
 

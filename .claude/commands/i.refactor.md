@@ -69,12 +69,34 @@ and verification at each step. No behavior changes, only structure improvements.
 
  WORKFLOW SEQUENCE
   1. Scope Definition - What to refactor, what NOT to touch
-  2. OOD Analysis - Calculate OOD score, identify pattern opportunities
-  3. Test First - 100% coverage BEFORE refactoring (TDD MANDATORY)
-  4. Incremental Refactor - Small steps, tests after each
-  5. SOLID Validation - Check compliance after each step
-  6. Update Spec - MODIFIED internal only
-  7. Archive - Record refactoring pattern
+  2. Folder Validation - Check MASTER-INDEX.md Section 3 (KMP conventions)
+  3. OOD Analysis - Calculate OOD score, identify pattern opportunities
+  4. Test First - 100% coverage BEFORE refactoring (TDD MANDATORY)
+  5. Incremental Refactor - Small steps, tests after each
+  6. SOLID Validation - Check compliance after each step
+  7. Update Spec - MODIFIED internal only
+  8. Archive - Record refactoring pattern
+
+ FOLDER VALIDATION (ZERO TOLERANCE - Step 2)
+  MANDATORY: Read MASTER-INDEX.md before any folder operations.
+
+  KMP Source Sets (Gradle-required - CANNOT rename):
+  | Folder | Purpose |
+  | commonMain/ | Shared code |
+  | commonTest/ | Shared tests |
+  | androidMain/ | Android impl |
+  | androidUnitTest/ | Android unit tests |
+  | androidInstrumentedTest/ | Android instrumented |
+  | iosMain/, iosTest/ | iOS impl/tests |
+  | desktopMain/, desktopTest/ | Desktop impl/tests |
+
+  FORBIDDEN Actions:
+  - Rename source sets → REJECT (breaks Gradle)
+  - Create custom test folders → REJECT
+  - Add redundant nesting (classes/, helpers/) → REJECT
+  - Package depth > 4 levels → WARN
+
+  Reference: /Volumes/M-Drive/Coding/.ideacode/MASTER-INDEX.md
 
  TDD ENFORCEMENT (MANDATORY FOR REFACTORING)
   Refactoring ALWAYS uses TDD because:

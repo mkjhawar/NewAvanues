@@ -93,7 +93,10 @@ ANALYSIS:
 
 ## .code - Code Analysis
 
-### 7-Layer Framework
+### Pre-Analysis: MASTER-INDEX Check
+**MANDATORY:** Read `/Volumes/M-Drive/Coding/.ideacode/MASTER-INDEX.md` before analysis.
+
+### 8-Layer Framework
 | Layer | Focus | Priority |
 |-------|-------|----------|
 | 1 | Functional Correctness | P0 |
@@ -103,6 +106,16 @@ ANALYSIS:
 | 5 | Error Handling (try/catch, propagation) | P1 |
 | 6 | Architecture (SOLID, patterns, coupling) | P2 |
 | 7 | Performance (complexity, bottlenecks) | P2 |
+| 8 | Folder/Naming (KMP conventions) | P0 |
+
+### Layer 8: Folder Structure Validation
+| Check | Rule | Action |
+|-------|------|--------|
+| KMP source sets | Use exact Gradle names | REJECT |
+| Package depth | Max 4 levels | WARN |
+| Redundant folders | No `classes/`, `helpers/` | REJECT |
+
+**Required KMP Names:** commonMain, commonTest, androidMain, androidUnitTest, androidInstrumentedTest, iosMain, iosTest, desktopMain, desktopTest
 
 ### Output Format
 ```
