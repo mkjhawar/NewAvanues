@@ -297,6 +297,7 @@ object VUIDGenerator {
     fun generateDownloadVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.ELEMENT)
     fun generateHistoryVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.ELEMENT)
     fun generateSessionVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.ELEMENT)
+    fun generateGroupVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.LAYOUT)
 
     // ==================== Cockpit Convenience Methods ====================
 
@@ -315,4 +316,104 @@ object VUIDGenerator {
      * Check if VUID is in simple format (module:type:hash8)
      */
     fun isSimpleFormat(vuid: String): Boolean = SIMPLE_PATTERN.matches(vuid)
+
+    // ==================== Legacy Format Detection ====================
+
+    /** Legacy UUID v4 pattern (RFC 4122) */
+    private val LEGACY_UUID_PATTERN = Regex(
+        "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$",
+        RegexOption.IGNORE_CASE
+    )
+
+    /** Legacy VoiceOS pattern: com.pkg.v1.0.0.type-hash12 */
+    private val LEGACY_VOICEOS_PATTERN = Regex(
+        "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+\\.v[0-9.]+\\.[a-z]+-[a-f0-9]{12}$",
+        RegexOption.IGNORE_CASE
+    )
+
+    /**
+     * Check if VUID is in legacy UUID v4 format
+     */
+    fun isLegacyUuid(vuid: String): Boolean = LEGACY_UUID_PATTERN.matches(vuid)
+
+    /**
+     * Check if VUID is in legacy VoiceOS format
+     */
+    fun isLegacyVoiceOS(vuid: String): Boolean = LEGACY_VOICEOS_PATTERN.matches(vuid)
+
+    /**
+     * Check if any valid VUID format (compact, simple, or legacy)
+     */
+    fun isValid(vuid: String): Boolean =
+        isValidVUID(vuid) || isSimpleFormat(vuid) || isLegacyUuid(vuid) || isLegacyVoiceOS(vuid)
+
+    // ==================== Migration Utilities ====================
+
+    /**
+     * VUID format types
+     */
+    enum class VuidFormat {
+        COMPACT,        // a3f2e1-b917cc9dc (16 chars)
+        SIMPLE,         // ava:msg:a7f3e2c1
+        LEGACY_UUID,    // 550e8400-e29b-41d4-a716-446655440000
+        LEGACY_VOICEOS, // com.pkg.v1.0.0.button-a7f3e2c1d4b5
+        UNKNOWN
+    }
+
+    /**
+     * Detect the format of a VUID
+     */
+    fun detectFormat(vuid: String): VuidFormat = when {
+        isValidVUID(vuid) -> VuidFormat.COMPACT
+        isSimpleFormat(vuid) -> VuidFormat.SIMPLE
+        isLegacyUuid(vuid) -> VuidFormat.LEGACY_UUID
+        isLegacyVoiceOS(vuid) -> VuidFormat.LEGACY_VOICEOS
+        else -> VuidFormat.UNKNOWN
+    }
+
+    /**
+     * Migrate legacy VoiceOS VUID to compact format
+     *
+     * @param legacyVuid Legacy VoiceOS VUID (com.pkg.v1.0.0.type-hash12)
+     * @return Compact VUID or null if cannot migrate
+     */
+    fun migrateToCompact(legacyVuid: String): String? {
+        if (!isLegacyVoiceOS(legacyVuid)) return null
+
+        // Parse legacy format: com.pkg.v1.0.0.type-hash12
+        val lastDotIdx = legacyVuid.lastIndexOf('.')
+        val dashIdx = legacyVuid.indexOf('-', lastDotIdx)
+
+        if (lastDotIdx < 0 || dashIdx < 0) return null
+
+        val beforeType = legacyVuid.substring(0, lastDotIdx)
+        val typeName = legacyVuid.substring(lastDotIdx + 1, dashIdx)
+        val hash = legacyVuid.substring(dashIdx + 1).take(8)
+
+        // Extract package name (before .v)
+        val versionIdx = beforeType.indexOf(".v")
+        val packageName = if (versionIdx > 0) beforeType.substring(0, versionIdx) else beforeType
+
+        // Get type code from type name
+        val typeCode = getTypeCode(typeName)
+
+        // Generate compact VUID
+        val pkgHash = generatePackageHash(packageName)
+        return "$pkgHash-${typeCode.code}$hash"
+    }
+
+    /**
+     * Extract hash from any VUID format
+     * Useful for comparison/lookup across format changes
+     *
+     * @param vuid Any VUID format
+     * @return 8-char hash or null if cannot extract
+     */
+    fun extractHash(vuid: String): String? = when (detectFormat(vuid)) {
+        VuidFormat.COMPACT -> vuid.takeLast(8)
+        VuidFormat.SIMPLE -> vuid.split(":").lastOrNull()
+        VuidFormat.LEGACY_UUID -> vuid.replace("-", "").takeLast(8)
+        VuidFormat.LEGACY_VOICEOS -> vuid.substringAfter("-").take(8)
+        VuidFormat.UNKNOWN -> null
+    }
 }
