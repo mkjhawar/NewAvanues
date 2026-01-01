@@ -11,7 +11,7 @@ Intelligent Devices Enhanced Architecture - AI-Powered Development Framework
 
 ## All Commands (API-Based - 97% Token Savings)
 
-**All commands use IDEACODE API** - Auto-starts at http://localhost:3847
+**All commands use IDEACODE API** - Auto-starts at http://localhost:3850
 
 ### Core Workflow
 

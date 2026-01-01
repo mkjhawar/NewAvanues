@@ -10,7 +10,7 @@ description: Web research and deep reasoning | /i.research "topic" | /i.research
 
 This command uses the IDEACODE API for token efficiency (97% savings).
 
-API Endpoint: `http://localhost:3847/i.research`
+API Endpoint: `http://localhost:3850/i.research`
 Auto-start: API server starts automatically if not running
 
 ---

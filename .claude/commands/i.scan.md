@@ -10,7 +10,7 @@ description: Project scanning (structure, deps, todos, progress) | /i.scan
 
 This command uses the IDEACODE API for token efficiency (97% savings).
 
-API Endpoint: `http://localhost:3847/i.scan`
+API Endpoint: `http://localhost:3850/i.scan`
 Auto-start: API server starts automatically if not running
 
 ---

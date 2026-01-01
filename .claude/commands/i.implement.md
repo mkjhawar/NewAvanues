@@ -10,7 +10,7 @@ description: Execute plan with task tracking .yolo .swarm .tdd .resume | /i.impl
 
 This command uses the IDEACODE API for token efficiency (97% savings).
 
-API Endpoint: `http://localhost:3847/i.implement`
+API Endpoint: `http://localhost:3850/i.implement`
 Auto-start: API server starts automatically if not running
 
 ---

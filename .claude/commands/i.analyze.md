@@ -10,7 +10,7 @@ description: Universal analysis .code .ui .workflow .docs .review .pr .swarm | /
 
 This command uses the IDEACODE API for token efficiency (97% savings).
 
-API Endpoint: `http://localhost:3847/i.analyze`
+API Endpoint: `http://localhost:3850/i.analyze`
 Auto-start: API server starts automatically if not running
 
 ---

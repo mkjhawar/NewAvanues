@@ -10,7 +10,7 @@ description: Full workflow .yolo .swarm .tdd .ood .wiz .idea | /i.develop .yolo 
 
 This command uses the IDEACODE API for token efficiency (97% savings).
 
-API Endpoint: `http://localhost:3847/i.develop`
+API Endpoint: `http://localhost:3850/i.develop`
 Auto-start: API server starts automatically if not running
 
 ---

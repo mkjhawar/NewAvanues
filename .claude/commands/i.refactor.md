@@ -10,7 +10,7 @@ description: Guided refactoring .tdd .ood .ddd .solid .tcr | /i.refactor .ood "U
 
 This command uses the IDEACODE API for token efficiency (97% savings).
 
-API Endpoint: `http://localhost:3847/i.refactor`
+API Endpoint: `http://localhost:3850/i.refactor`
 Auto-start: API server starts automatically if not running
 
 ---

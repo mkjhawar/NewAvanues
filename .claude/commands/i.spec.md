@@ -4,7 +4,7 @@ description: Specification operations | /i.spec "feature" | /i.spec .review | /i
 
 # Task: Specification Operations
 
-API: `http://localhost:3847/i.spec` | Token savings: 97%
+API: `http://localhost:3850/i.spec` | Token savings: 97%
 
 ---
 

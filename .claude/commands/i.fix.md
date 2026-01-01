@@ -10,7 +10,7 @@ description: Bug fixing .yolo .swarm .tdd .ood .investigate .issue .tcr | /i.fix
 
 This command uses the IDEACODE API for token efficiency (97% savings).
 
-API Endpoint: `http://localhost:3847/i.fix`
+API Endpoint: `http://localhost:3850/i.fix`
 Auto-start: API server starts automatically if not running
 
 ---
