@@ -480,7 +480,7 @@ fun BrowserScreen(
                         onProgressChange = { },
                         canGoBack = { canGoBack -> tabViewModel.updateTabNavigation(tabState.tab.id, canGoBack = canGoBack) },
                         canGoForward = { canGoForward -> tabViewModel.updateTabNavigation(tabState.tab.id, canGoForward = canGoForward) },
-                        onOpenInNewTab = { url -> tabViewModel.createTab(initialUrl = url) },
+                        onOpenInNewTab = { url -> tabViewModel.createTab(url = url) },
                         sessionData = tabState.tab.sessionData,
                         onSessionDataChange = { sessionData ->
                             val updatedTab = tabState.tab.copy(sessionData = sessionData)
