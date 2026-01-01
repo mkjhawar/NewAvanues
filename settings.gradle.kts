@@ -43,6 +43,12 @@ include(":Modules:AVA:RAG")
 include(":Modules:AVA:Teach")
 include(":Modules:AVA:WakeWord")
 
+// Common Libraries (cross-platform KMP)
+include(":Common:VUID")                   // Voice Unique Identifier generator (shared across all modules)
+
+// VoiceOSCoreNG - Next-generation KMP core for VoiceOS
+include(":Modules:VoiceOSCoreNG")          // KMP types, VUID, features (shared Android/iOS/Desktop)
+
 // Shared Modules (cross-platform KMP libraries)
 include(":Modules:Shared:NLU")
 include(":Modules:Shared:Platform")

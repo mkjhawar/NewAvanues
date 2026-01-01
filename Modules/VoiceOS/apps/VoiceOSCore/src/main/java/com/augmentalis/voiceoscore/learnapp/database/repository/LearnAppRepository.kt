@@ -22,12 +22,12 @@ import com.augmentalis.voiceoscore.learnapp.models.ExplorationStats
 import com.augmentalis.voiceoscore.learnapp.models.ScreenState
 import com.augmentalis.voiceoscore.learnapp.navigation.NavigationGraph
 import com.augmentalis.voiceoscore.learnapp.navigation.ScreenNode
-import com.augmentalis.uuidcreator.core.UUIDGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
+import com.augmentalis.vuid.core.VUIDGenerator
 
 /**
  * LearnApp Repository
@@ -424,8 +424,8 @@ class LearnAppRepository(
                     metadataSource = null
                 }
 
-                // Generate session ID using VOS4 UUIDGenerator
-                val sessionId = UUIDGenerator.generate()
+                // Generate session ID (VUID for session tracking)
+                val sessionId = VUIDGenerator.generateSessionVuid()
 
                 // Create exploration session
                 val session = ExplorationSessionEntity(
@@ -465,8 +465,8 @@ class LearnAppRepository(
         getLearnedApp(packageName)
             ?: throw LearnedAppNotFoundException(packageName)
 
-        // Generate session ID using VOS4 UUIDGenerator
-        val sessionId = UUIDGenerator.generate()
+        // Generate session ID (VUID for session tracking)
+        val sessionId = VUIDGenerator.generateSessionVuid()
 
         // Create exploration session
         val session = ExplorationSessionEntity(
@@ -579,8 +579,8 @@ class LearnAppRepository(
 
                 insertLearnedApp(app) // Uses REPLACE strategy
 
-                // Generate session ID using VOS4 UUIDGenerator
-                val sessionId = UUIDGenerator.generate()
+                // Generate session ID (VUID for session tracking)
+                val sessionId = VUIDGenerator.generateSessionVuid()
 
                 // Create exploration session
                 val session = ExplorationSessionEntity(
@@ -671,7 +671,7 @@ class LearnAppRepository(
         toScreenHash: String
     ) = withContext(Dispatchers.IO) {
         databaseManager.navigationEdgeQueries.insertNavigationEdge(
-            edge_id = UUIDGenerator.generate(),
+            edge_id = VUIDGenerator.generateCompactSimple(VUIDGenerator.Module.VOICEOS, "element"),
             package_name = packageName,
             session_id = sessionId,
             from_screen_hash = fromScreenHash,

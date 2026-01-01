@@ -52,7 +52,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
-import java.util.UUID
+import com.augmentalis.vuid.core.VUIDGenerator
 
 /**
  * Accessibility Scraping Integration
@@ -1545,7 +1545,7 @@ class AccessibilityScrapingIntegration(
                     app.packageName
                 } else {
                     // Create new app entity
-                    val newAppId = UUID.randomUUID().toString()
+                    val newAppId = VUIDGenerator.generateCompactSimple(VUIDGenerator.Module.VOICEOS, "element")
                     val currentTime = System.currentTimeMillis()
                     app = AppEntity(
                         packageName = packageName,
