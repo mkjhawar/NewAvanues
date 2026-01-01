@@ -2,6 +2,19 @@
 description: Bug fixing .yolo .swarm .tdd .ood .investigate .issue .tcr | /i.fix .yolo "auth bug"
 ---
 
+# v14.0 - Autonomous Loop Support
+
+**New Modifier:** `.autonomous` - Run until bug is fixed with safety limits
+
+```
+/i.fix .autonomous "memory leak"      # Run until fixed (100 calls/hr, 30 min max)
+/i.fix .autonomous .yolo "auth race"  # Autonomous + auto-approve
+```
+
+API: `POST /v1/autonomous/start` → `POST /v1/autonomous/check` → auto-stop on completion
+
+---
+
 # /i.fix - Intelligent Bug Fix Workflow
 
 ---
@@ -27,6 +40,7 @@ Auto-start: API server starts automatically if not running
 ## Flags
 | Flag | Effect |
 |------|--------|
+| `.autonomous` | Run until fixed (100 calls/hr, 30 min max, circuit breaker) |
 | `.yolo` | Auto-progress through all stages |
 | `.investigate` | Investigate root cause first (see Investigation Mode) |
 | `.issue` | Deep issue analysis with ToT/CoT (alias for .investigate .tot) |

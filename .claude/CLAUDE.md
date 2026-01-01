@@ -1,4 +1,4 @@
-# IDEACode v13.0 - Global Instructions
+# IDEACode v14.0 - Global Instructions
 
 Scope: ALL projects in /Volumes/M-Drive/Coding/
 
@@ -59,6 +59,26 @@ Scope: ALL projects in /Volumes/M-Drive/Coding/
 | /v1/compress | AVU quantize |
 | /v1/tokens/count | Token count |
 | /v1/quality/all | Quality gates |
+| /v1/autonomous/* | Autonomous loop (v14) |
+
+---
+
+## AUTONOMOUS LOOP (v14 NEW)
+
+Run tasks until completion with safety limits.
+
+| Endpoint | Purpose |
+|----------|---------|
+| POST /v1/autonomous/start | Start session |
+| POST /v1/autonomous/check | Check continue |
+| POST /v1/autonomous/stop | Stop session |
+| GET /v1/autonomous/sessions | List sessions |
+
+**Limits:** 100 calls/hour | 30 min max | 5 stuck threshold
+
+**Exit phrases:** "all tasks completed", "objective achieved", "implementation complete"
+
+**Usage:** `/i.develop .autonomous "feature"` or `/i.fix .autonomous "bug"`
 
 ---
 
@@ -96,8 +116,8 @@ LD-{App}-{Module}-V#.md | App-Spec-*-YYMMDD-V#.md | App-Plan-*-YYMMDD-V#.md | *.
 
 /i.develop /i.fix /i.spec /i.plan /i.implement /i.createui /i.analyze /i.swarm
 
-Modifiers: .yolo .swarm .tdd .ood .solid
+Modifiers: .yolo .swarm .tdd .ood .solid .autonomous
 
 ---
 
-Author: Manoj Jhawar | v13.0 | 2025-12-31 | 32 skills
+Author: Manoj Jhawar | v14.0 | 2026-01-01 | 32 skills + autonomous loop
