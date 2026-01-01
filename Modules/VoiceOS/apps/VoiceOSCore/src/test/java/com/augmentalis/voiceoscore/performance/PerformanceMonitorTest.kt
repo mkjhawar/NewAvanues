@@ -122,9 +122,10 @@ class PerformanceMonitorTest : BaseVoiceOSTest() {
             monitor.recordLatency("fast_op", Random.nextLong(10, 30))
         }
 
-        // Slow operation with high p95 and variation (bottleneck criteria)
+        // Slow operation with high p95 and high variation (bottleneck criteria)
+        // Range of 100-300ms gives stdDev ≈ 57.7 (range/sqrt(12)) which exceeds 50.0 threshold
         repeat(100) {
-            monitor.recordLatency("bottleneck_op", Random.nextLong(150, 300))
+            monitor.recordLatency("bottleneck_op", Random.nextLong(100, 300))
         }
 
         val bottlenecks = monitor.detectBottlenecks()

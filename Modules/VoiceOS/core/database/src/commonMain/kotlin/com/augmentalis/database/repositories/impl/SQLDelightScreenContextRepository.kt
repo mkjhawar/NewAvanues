@@ -40,7 +40,8 @@ class SQLDelightScreenContextRepository(
             hasBackButton = context.hasBackButton,
             firstScraped = context.firstScraped,
             lastScraped = context.lastScraped,
-            visitCount = context.visitCount
+            visitCount = context.visitCount,
+            contextualText = context.contextualText
         )
     }
 
@@ -61,7 +62,8 @@ class SQLDelightScreenContextRepository(
                     hasBackButton = context.hasBackButton,
                     firstScraped = context.firstScraped,
                     lastScraped = context.lastScraped,
-                    visitCount = context.visitCount
+                    visitCount = context.visitCount,
+                    contextualText = context.contextualText
                 )
             }
         }

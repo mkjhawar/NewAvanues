@@ -1,9 +1,5 @@
--- Migration 5: Add pkg_hash column for compact VUID format
--- Adds pre-computed package hash to scraped_app table for efficient lookups
--- with the new compact VUID format: {reversedPkg}:{version}:{typeAbbrev}:{hash8}
+-- Migration 5: Add contextualText column to screen_context
+-- This column stores non-actionable text from the screen for NLU context enhancement
+-- The text is stored as JSON serialized ScreenContextualText data
 
--- Add pkg_hash column (nullable for backward compatibility with existing rows)
-ALTER TABLE scraped_app ADD COLUMN pkg_hash TEXT;
-
--- Create index for efficient lookups by package hash
-CREATE INDEX idx_scraped_app_pkg_hash ON scraped_app(pkg_hash);
+ALTER TABLE screen_context ADD COLUMN contextualText TEXT;

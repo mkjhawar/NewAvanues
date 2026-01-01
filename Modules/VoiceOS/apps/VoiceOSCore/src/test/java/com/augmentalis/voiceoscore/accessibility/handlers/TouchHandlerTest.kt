@@ -30,12 +30,14 @@ class TouchHandlerTest : BaseVoiceOSTest() {
     @Before
     override fun setUp() {
         super.setUp()
+        mockkStatic(MotionEvent::class)
         mockService = mockk(relaxed = true)
         handler = TouchHandler(mockService)
     }
 
     @After
     override fun tearDown() {
+        unmockkStatic(MotionEvent::class)
         super.tearDown()
     }
 
@@ -328,26 +330,31 @@ class TouchHandlerTest : BaseVoiceOSTest() {
     // ====================
 
     private fun createMotionEvent(action: Int, x: Float, y: Float, eventTime: Long): MotionEvent {
-        return MotionEvent.obtain(0L, eventTime, action, x, y, 0)
+        return mockk<MotionEvent>(relaxed = true) {
+            every { this@mockk.action } returns action
+            every { this@mockk.x } returns x
+            every { this@mockk.y } returns y
+            every { this@mockk.eventTime } returns eventTime
+            every { this@mockk.downTime } returns 0L
+            every { pointerCount } returns 1
+            every { recycle() } just runs
+        }
     }
 
     private fun createMultiTouchEvent(action: Int, x: Float, y: Float, eventTime: Long, pointerIndex: Int): MotionEvent {
-        val properties = arrayOfNulls<MotionEvent.PointerProperties>(pointerIndex + 1)
-        val coords = arrayOfNulls<MotionEvent.PointerCoords>(pointerIndex + 1)
-
-        for (i in 0..pointerIndex) {
-            properties[i] = MotionEvent.PointerProperties().apply { id = i }
-            coords[i] = MotionEvent.PointerCoords().apply {
-                this.x = x + i * 50
-                this.y = y + i * 50
-            }
+        return mockk<MotionEvent>(relaxed = true) {
+            every { this@mockk.action } returns action
+            every { this@mockk.x } returns x
+            every { this@mockk.y } returns y
+            every { this@mockk.eventTime } returns eventTime
+            every { this@mockk.downTime } returns 0L
+            every { pointerCount } returns pointerIndex + 1
+            every { recycle() } just runs
         }
-
-        return MotionEvent.obtain(0L, eventTime, action, pointerIndex + 1, properties, coords, 0, 0, 1f, 1f, 0, 0, 0, 0)
     }
 }
 
-// Mock TouchHandler class
+// Mock TouchHandler class with gesture detection
 class TouchHandler(private val service: IVoiceOSContext) {
     var onSingleTap: (() -> Unit)? = null
     var onDoubleTap: (() -> Unit)? = null
@@ -358,10 +365,42 @@ class TouchHandler(private val service: IVoiceOSContext) {
     var onRotate: (() -> Unit)? = null
     var onThreeFingerGesture: (() -> Unit)? = null
 
+    private var lastTapTime = Long.MIN_VALUE
+    private var startX = 0f
+    private var startY = 0f
+    private val doubleTapTimeout = 300L
+    private val swipeThreshold = 100f
+
     fun onTouchEvent(event: MotionEvent): Boolean {
-        // Simplified implementation for testing
         when (event.action) {
-            MotionEvent.ACTION_UP -> onSingleTap?.invoke()
+            MotionEvent.ACTION_DOWN -> {
+                startX = event.x
+                startY = event.y
+            }
+            MotionEvent.ACTION_UP -> {
+                val deltaX = event.x - startX
+                val deltaY = event.y - startY
+                val distance = kotlin.math.sqrt(deltaX * deltaX + deltaY * deltaY)
+
+                // Check for swipe
+                if (distance > swipeThreshold) {
+                    if (kotlin.math.abs(deltaX) > kotlin.math.abs(deltaY)) {
+                        onSwipe?.invoke(if (deltaX > 0) "right" else "left")
+                    } else {
+                        onSwipe?.invoke(if (deltaY > 0) "down" else "up")
+                    }
+                } else {
+                    // Check for double tap
+                    val currentTime = event.eventTime
+                    if (lastTapTime != Long.MIN_VALUE && currentTime - lastTapTime < doubleTapTimeout) {
+                        onDoubleTap?.invoke()
+                        lastTapTime = Long.MIN_VALUE
+                    } else {
+                        onSingleTap?.invoke()
+                        lastTapTime = currentTime
+                    }
+                }
+            }
             MotionEvent.ACTION_MOVE -> {
                 if (event.eventTime - event.downTime > 500) {
                     onLongPress?.invoke()

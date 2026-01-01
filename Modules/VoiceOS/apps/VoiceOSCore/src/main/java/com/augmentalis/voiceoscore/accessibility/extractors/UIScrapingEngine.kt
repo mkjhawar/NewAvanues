@@ -275,6 +275,151 @@ class UIScrapingEngine(
         }
     }
 
+    /**
+     * Extract contextual (non-actionable) text from the screen for NLU enhancement.
+     *
+     * Captures:
+     * - Screen titles and window titles
+     * - Breadcrumb navigation paths
+     * - Section headers
+     * - Non-interactive labels that provide context
+     *
+     * This data helps LLMs understand the current screen context for better navigation.
+     *
+     * @return ScreenContextualText containing extracted contextual information
+     */
+    fun extractContextualText(): ScreenContextualText {
+        var rootNode: AccessibilityNodeInfo? = null
+        try {
+            rootNode = service.rootInActiveWindow ?: return ScreenContextualText.empty()
+
+            val screenTitle = extractScreenTitle(rootNode)
+            val breadcrumbs = mutableListOf<String>()
+            val sectionHeaders = mutableListOf<String>()
+            val visibleLabels = mutableListOf<String>()
+
+            // Extract contextual text recursively
+            extractContextualTextRecursive(
+                node = rootNode,
+                depth = 0,
+                breadcrumbs = breadcrumbs,
+                sectionHeaders = sectionHeaders,
+                visibleLabels = visibleLabels
+            )
+
+            return ScreenContextualText(
+                screenTitle = screenTitle,
+                breadcrumbs = breadcrumbs.take(5),  // Limit breadcrumbs
+                sectionHeaders = sectionHeaders.take(10),  // Limit section headers
+                visibleLabels = visibleLabels.take(20)  // Limit labels for token efficiency
+            )
+        } finally {
+            @Suppress("DEPRECATION")
+            rootNode?.recycle()
+        }
+    }
+
+    /**
+     * Extract the screen title from toolbar, action bar, or window title.
+     */
+    private fun extractScreenTitle(rootNode: AccessibilityNodeInfo): String? {
+        // Try to find title from common toolbar patterns
+        val titleClasses = listOf(
+            "android.widget.Toolbar",
+            "androidx.appcompat.widget.Toolbar",
+            "com.google.android.material.appbar.MaterialToolbar"
+        )
+
+        for (className in titleClasses) {
+            val toolbars = rootNode.findAccessibilityNodeInfosByViewId("$className")
+            if (toolbars.isNotEmpty()) {
+                val toolbar = toolbars[0]
+                toolbar.text?.toString()?.takeIf { it.isNotBlank() }?.let {
+                    @Suppress("DEPRECATION")
+                    toolbar.recycle()
+                    return it
+                }
+                @Suppress("DEPRECATION")
+                toolbar.recycle()
+            }
+        }
+
+        // Fallback: look for title resource IDs
+        val titleIds = listOf("action_bar_title", "toolbar_title", "title")
+        for (titleId in titleIds) {
+            val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/$titleId")
+            if (titleNodes.isNotEmpty()) {
+                val titleNode = titleNodes[0]
+                val title = titleNode.text?.toString()?.takeIf { it.isNotBlank() }
+                @Suppress("DEPRECATION")
+                titleNode.recycle()
+                if (title != null) return title
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * Recursively extract contextual text elements from the UI tree.
+     */
+    private fun extractContextualTextRecursive(
+        node: AccessibilityNodeInfo,
+        depth: Int,
+        breadcrumbs: MutableList<String>,
+        sectionHeaders: MutableList<String>,
+        visibleLabels: MutableList<String>
+    ) {
+        if (depth > 20) return  // Limit depth for performance
+
+        val className = node.className?.toString() ?: ""
+        val text = node.text?.toString()?.trim()
+        val contentDesc = node.contentDescription?.toString()?.trim()
+
+        // Skip interactive elements (they're handled by extractUIElements)
+        val isInteractive = node.isClickable || node.isCheckable || node.isEditable
+
+        if (!isInteractive && !text.isNullOrBlank()) {
+            when {
+                // Section headers (large text views, not in lists)
+                className.contains("TextView") && text.length < 50 && depth < 5 -> {
+                    if (looksLikeHeader(text)) {
+                        sectionHeaders.add(text)
+                    } else {
+                        visibleLabels.add(text)
+                    }
+                }
+                // Breadcrumb-style navigation
+                className.contains("Breadcrumb") || contentDesc?.contains("navigation") == true -> {
+                    breadcrumbs.add(text)
+                }
+            }
+        }
+
+        // Recurse into children
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            try {
+                extractContextualTextRecursive(child, depth + 1, breadcrumbs, sectionHeaders, visibleLabels)
+            } finally {
+                @Suppress("DEPRECATION")
+                child.recycle()
+            }
+        }
+    }
+
+    /**
+     * Heuristic to detect if text looks like a section header.
+     */
+    private fun looksLikeHeader(text: String): Boolean {
+        // Headers are typically short, capitalized, and don't end with punctuation
+        return text.length in 2..40 &&
+               !text.endsWith(".") &&
+               !text.endsWith(",") &&
+               !text.contains("\n") &&
+               (text.first().isUpperCase() || text.all { it.isUpperCase() })
+    }
+
     // ============================================================================
     // SECTION: UI Tree Traversal
     // ============================================================================
@@ -841,469 +986,6 @@ class UIScrapingEngine(
         cacheMisses.set(0)
         duplicatesFiltered.set(0)
         ConditionalLogger.d(TAG) { "All caches cleared" }
-    }
-
-    // ============================================================================
-    // SECTION: Contextual Text Extraction (NLU Enhancement)
-    // ============================================================================
-
-    /**
-     * Extract contextual text from the current screen for NLU/LLM context
-     *
-     * Extracts non-actionable text elements that provide semantic context:
-     * - Screen title (toolbar/large heading)
-     * - Section headers (bold/medium-weight category text)
-     * - Breadcrumbs (navigation path indicators)
-     * - Descriptive labels (non-clickable informational text)
-     *
-     * Token budget: ~200 tokens total per screen
-     *
-     * @param rootNode Root accessibility node to extract from
-     * @param packageName Package name for screen hash generation
-     * @return ScreenContextualText containing extracted contextual elements
-     */
-    fun extractContextualText(
-        rootNode: AccessibilityNodeInfo,
-        packageName: String
-    ): ScreenContextualText {
-        val extractedItems = mutableListOf<ExtractedTextItem>()
-        val screenHash = generateScreenHash(rootNode, packageName)
-
-        // Extract contextual text recursively
-        extractContextualTextRecursive(rootNode, extractedItems, 0)
-
-        // Classify and organize extracted items
-        val screenTitle = extractedItems
-            .filter { it.category == ContextualTextCategory.SCREEN_TITLE }
-            .maxByOrNull { it.confidence }
-            ?.text
-
-        val sectionHeaders = extractedItems
-            .filter { it.category == ContextualTextCategory.SECTION_HEADER }
-            .sortedByDescending { it.confidence }
-            .take(ScreenContextualText.MAX_SECTION_HEADERS)
-            .map { it.text }
-            .distinct()
-
-        val breadcrumbs = extractedItems
-            .filter { it.category == ContextualTextCategory.BREADCRUMB }
-            .sortedBy { it.depth }
-            .take(ScreenContextualText.MAX_BREADCRUMB_DEPTH)
-            .map { it.text }
-            .distinct()
-
-        val visibleLabels = extractedItems
-            .filter { it.category == ContextualTextCategory.LABEL }
-            .sortedByDescending { it.confidence }
-            .take(ScreenContextualText.MAX_VISIBLE_LABELS)
-            .map { it.text }
-            .distinct()
-
-        val contextualText = ScreenContextualText(
-            screenHash = screenHash,
-            screenTitle = screenTitle,
-            sectionHeaders = sectionHeaders,
-            breadcrumbs = breadcrumbs,
-            visibleLabels = visibleLabels
-        )
-
-        ConditionalLogger.d(TAG) {
-            "Extracted contextual text: title='${screenTitle ?: "none"}', " +
-                    "headers=${sectionHeaders.size}, breadcrumbs=${breadcrumbs.size}, " +
-                    "labels=${visibleLabels.size}, ~${contextualText.estimateTokenCount()} tokens"
-        }
-
-        return contextualText
-    }
-
-    /**
-     * Extract contextual text for the current screen
-     *
-     * Convenience method that uses the service's root node.
-     *
-     * @param packageName Package name (optional, will be extracted if null)
-     * @return ScreenContextualText or null if no root node available
-     */
-    fun extractCurrentScreenContextualText(packageName: String? = null): ScreenContextualText? {
-        var rootNode: AccessibilityNodeInfo? = null
-        return try {
-            rootNode = service.rootInActiveWindow
-            if (rootNode == null) {
-                ConditionalLogger.w(TAG) { "No root node available for contextual text extraction" }
-                return null
-            }
-
-            val pkg = packageName ?: rootNode.packageName?.toString() ?: "unknown"
-            extractContextualText(rootNode, pkg)
-        } finally {
-            @Suppress("DEPRECATION")
-            rootNode?.recycle()
-        }
-    }
-
-    /**
-     * Recursively extract contextual text from node tree
-     */
-    private fun extractContextualTextRecursive(
-        node: AccessibilityNodeInfo,
-        items: MutableList<ExtractedTextItem>,
-        depth: Int
-    ) {
-        if (depth > MAX_DEPTH) return
-
-        try {
-            // Skip invisible nodes
-            if (!node.isVisibleToUser) return
-
-            // Get node text
-            val text = node.text?.toString()?.trim()
-            val contentDesc = node.contentDescription?.toString()?.trim()
-            val className = node.className?.toString()
-
-            // Classify and extract contextual text
-            val textToClassify = text ?: contentDesc
-
-            if (!textToClassify.isNullOrBlank() && textToClassify.length <= MAX_TEXT_LENGTH) {
-                val classification = classifyContextualText(node, textToClassify, depth)
-                if (classification.category != ContextualTextCategory.UNKNOWN &&
-                    classification.confidence > 0.3f
-                ) {
-                    items.add(classification)
-                }
-            }
-
-            // Process children
-            for (i in 0 until node.childCount) {
-                try {
-                    val child = node.getChild(i)
-                    if (child != null) {
-                        extractContextualTextRecursive(child, items, depth + 1)
-                    }
-                } catch (e: Exception) {
-                    // Continue with other children
-                }
-            }
-        } catch (e: Exception) {
-            ConditionalLogger.w(TAG) { "Error extracting contextual text at depth $depth: ${e.message}" }
-        }
-    }
-
-    /**
-     * Classify text element by its contextual role
-     *
-     * Uses heuristics based on:
-     * - Node class name (Toolbar, ActionBar)
-     * - Node position/depth in tree
-     * - Text styling indicators
-     * - Clickability (non-clickable text is more likely contextual)
-     */
-    private fun classifyContextualText(
-        node: AccessibilityNodeInfo,
-        text: String,
-        depth: Int
-    ): ExtractedTextItem {
-        val className = node.className?.toString() ?: ""
-
-        // Screen title detection
-        if (isScreenTitle(node, text, depth)) {
-            return ExtractedTextItem(
-                text = text,
-                category = ContextualTextCategory.SCREEN_TITLE,
-                confidence = calculateTitleConfidence(node, text, depth),
-                depth = depth
-            )
-        }
-
-        // Section header detection
-        if (isSectionHeader(node, text)) {
-            return ExtractedTextItem(
-                text = text,
-                category = ContextualTextCategory.SECTION_HEADER,
-                confidence = calculateHeaderConfidence(node, text),
-                depth = depth
-            )
-        }
-
-        // Breadcrumb detection
-        if (isBreadcrumb(node, text)) {
-            return ExtractedTextItem(
-                text = text,
-                category = ContextualTextCategory.BREADCRUMB,
-                confidence = 0.7f,
-                depth = depth
-            )
-        }
-
-        // Non-clickable label detection
-        if (isDescriptiveLabel(node, text)) {
-            return ExtractedTextItem(
-                text = text,
-                category = ContextualTextCategory.LABEL,
-                confidence = calculateLabelConfidence(node, text),
-                depth = depth
-            )
-        }
-
-        return ExtractedTextItem(
-            text = text,
-            category = ContextualTextCategory.UNKNOWN,
-            confidence = 0.0f,
-            depth = depth
-        )
-    }
-
-    /**
-     * Detect if node represents a screen title
-     *
-     * Screen title heuristics:
-     * - In Toolbar/ActionBar component
-     * - Near top of screen (low depth, small Y coordinate)
-     * - First large text element
-     * - Text length typically 1-50 characters
-     */
-    private fun isScreenTitle(node: AccessibilityNodeInfo, text: String, depth: Int): Boolean {
-        val className = node.className?.toString() ?: ""
-
-        // Toolbar title is highest confidence
-        if (className.contains("Toolbar", ignoreCase = true) ||
-            className.contains("ActionBar", ignoreCase = true)
-        ) {
-            return true
-        }
-
-        // Check if it's a TextView at a low depth with reasonable title length
-        if (className.contains("TextView", ignoreCase = true) &&
-            depth <= 5 &&
-            text.length in 1..50 &&
-            !node.isClickable
-        ) {
-            // Check position - titles are typically near top
-            val bounds = Rect()
-            node.getBoundsInScreen(bounds)
-            if (bounds.top < 300) { // Top ~300dp of screen
-                return true
-            }
-        }
-
-        return false
-    }
-
-    /**
-     * Detect if node represents a section header
-     *
-     * Section header heuristics:
-     * - Non-clickable TextView
-     * - Short text (1-30 characters)
-     * - May have specific resource ID patterns
-     * - Often in RecyclerView headers
-     */
-    private fun isSectionHeader(node: AccessibilityNodeInfo, text: String): Boolean {
-        val className = node.className?.toString() ?: ""
-
-        // Must be a text element
-        if (!className.contains("TextView", ignoreCase = true)) {
-            return false
-        }
-
-        // Section headers are typically non-clickable
-        if (node.isClickable) {
-            return false
-        }
-
-        // Check text length - headers are typically short
-        if (text.length !in 1..40) {
-            return false
-        }
-
-        // Check resource ID for common header patterns
-        val resourceId = node.viewIdResourceName ?: ""
-        if (resourceId.contains("header", ignoreCase = true) ||
-            resourceId.contains("title", ignoreCase = true) ||
-            resourceId.contains("category", ignoreCase = true) ||
-            resourceId.contains("section", ignoreCase = true)
-        ) {
-            return true
-        }
-
-        // Exclude generic labels
-        if (text.lowercase() in GENERIC_LABELS) {
-            return false
-        }
-
-        // Check if parent is a known container pattern
-        return isLikelyHeaderByPosition(node)
-    }
-
-    /**
-     * Check if node position suggests it's a header
-     */
-    private fun isLikelyHeaderByPosition(node: AccessibilityNodeInfo): Boolean {
-        // Headers often span significant width
-        val bounds = Rect()
-        node.getBoundsInScreen(bounds)
-
-        // Header typically has width > 50% of reasonable screen width
-        // and height < 100dp (not a large content block)
-        return bounds.width() > 200 && bounds.height() < 150
-    }
-
-    /**
-     * Detect if node represents a breadcrumb
-     *
-     * Breadcrumb heuristics:
-     * - Contains path separators (>, /, -)
-     * - In navigation component
-     * - Near top of screen
-     */
-    private fun isBreadcrumb(node: AccessibilityNodeInfo, text: String): Boolean {
-        // Check for common breadcrumb separators
-        if (text.contains(" > ") || text.contains(" / ") || text.contains(" - ")) {
-            return true
-        }
-
-        // Check resource ID for navigation patterns
-        val resourceId = node.viewIdResourceName ?: ""
-        if (resourceId.contains("breadcrumb", ignoreCase = true) ||
-            resourceId.contains("navigation", ignoreCase = true) ||
-            resourceId.contains("path", ignoreCase = true)
-        ) {
-            return true
-        }
-
-        return false
-    }
-
-    /**
-     * Detect if node represents a descriptive label
-     *
-     * Label heuristics:
-     * - Non-clickable
-     * - Not a button/interactive element
-     * - Has meaningful text (not just numbers/symbols)
-     * - Reasonable length
-     */
-    private fun isDescriptiveLabel(node: AccessibilityNodeInfo, text: String): Boolean {
-        // Must not be clickable
-        if (node.isClickable || node.isLongClickable || node.isCheckable) {
-            return false
-        }
-
-        val className = node.className?.toString() ?: ""
-
-        // Must be text-like element
-        if (!className.contains("TextView", ignoreCase = true) &&
-            !className.contains("Text", ignoreCase = true)
-        ) {
-            return false
-        }
-
-        // Skip pure numbers/dates/times
-        if (text.matches(Regex("^[0-9:./%\\-\\s]+$"))) {
-            return false
-        }
-
-        // Skip very short or very long text
-        if (text.length !in 3..100) {
-            return false
-        }
-
-        // Skip generic labels
-        if (text.lowercase() in GENERIC_LABELS) {
-            return false
-        }
-
-        return true
-    }
-
-    /**
-     * Calculate confidence score for title classification
-     */
-    private fun calculateTitleConfidence(node: AccessibilityNodeInfo, text: String, depth: Int): Float {
-        var confidence = 0.5f
-        val className = node.className?.toString() ?: ""
-
-        // Toolbar/ActionBar = high confidence
-        if (className.contains("Toolbar", ignoreCase = true) ||
-            className.contains("ActionBar", ignoreCase = true)
-        ) {
-            confidence += 0.4f
-        }
-
-        // Lower depth = higher confidence
-        if (depth <= 3) confidence += 0.2f
-        else if (depth <= 5) confidence += 0.1f
-
-        // Near top of screen = higher confidence
-        val bounds = Rect()
-        node.getBoundsInScreen(bounds)
-        if (bounds.top < 150) confidence += 0.15f
-        else if (bounds.top < 300) confidence += 0.1f
-
-        // Reasonable title length = higher confidence
-        if (text.length in 3..30) confidence += 0.1f
-
-        return confidence.coerceIn(0f, 1f)
-    }
-
-    /**
-     * Calculate confidence score for header classification
-     */
-    private fun calculateHeaderConfidence(node: AccessibilityNodeInfo, text: String): Float {
-        var confidence = 0.5f
-
-        // Resource ID hints = higher confidence
-        val resourceId = node.viewIdResourceName ?: ""
-        if (resourceId.contains("header", ignoreCase = true) ||
-            resourceId.contains("title", ignoreCase = true)
-        ) {
-            confidence += 0.3f
-        }
-
-        // Short text = higher confidence for headers
-        if (text.length in 3..20) confidence += 0.15f
-
-        // Non-clickable = higher confidence
-        if (!node.isClickable) confidence += 0.1f
-
-        return confidence.coerceIn(0f, 1f)
-    }
-
-    /**
-     * Calculate confidence score for label classification
-     */
-    private fun calculateLabelConfidence(node: AccessibilityNodeInfo, text: String): Float {
-        var confidence = 0.4f
-
-        // Non-clickable = higher confidence
-        if (!node.isClickable && !node.isLongClickable) {
-            confidence += 0.2f
-        }
-
-        // Has content description = higher confidence (accessibility labeled)
-        if (node.contentDescription != null) {
-            confidence += 0.1f
-        }
-
-        // Moderate length text = higher confidence
-        if (text.length in 10..60) confidence += 0.15f
-
-        return confidence.coerceIn(0f, 1f)
-    }
-
-    /**
-     * Generate screen hash for contextual text association
-     */
-    private fun generateScreenHash(rootNode: AccessibilityNodeInfo, packageName: String): String {
-        val activityName = rootNode.className?.toString() ?: "unknown"
-        val childCount = rootNode.childCount
-        val builder = StringBuilder()
-        builder.append(packageName).append("_")
-        builder.append(activityName).append("_")
-        builder.append(childCount)
-
-        val digest = java.security.MessageDigest.getInstance("SHA-256")
-        val hashBytes = digest.digest(builder.toString().toByteArray())
-        return hashBytes.take(16).joinToString("") { "%02x".format(it) }
     }
 
     // ============================================================================

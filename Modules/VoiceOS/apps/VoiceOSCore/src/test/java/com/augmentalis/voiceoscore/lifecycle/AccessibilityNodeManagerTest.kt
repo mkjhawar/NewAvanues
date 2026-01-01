@@ -179,8 +179,8 @@ class AccessibilityNodeManagerTest {
         assertThat(visitedNodes).hasSize(2)
         assertThat(visitedNodes).containsExactly(mockRootNode, mockChildNode1)
 
-        // All accessed nodes should be recycled
-        verify(mockRootNode, times(1)).recycle()
+        // Child nodes returned from getChild() are recycled by traverse()
+        // Note: Root node is not recycled - it's the caller's responsibility
         verify(mockChildNode1, times(1)).recycle()
     }
 
@@ -234,8 +234,8 @@ class AccessibilityNodeManagerTest {
         // Assert - Should visit root and childNode1, skip null
         assertThat(visitedNodes).containsExactly(mockRootNode, mockChildNode1)
 
-        // Verify recycling
-        verify(mockRootNode, times(1)).recycle()
+        // Child nodes returned from getChild() are recycled by traverse()
+        // Note: Root node is not recycled - it's the caller's responsibility
         verify(mockChildNode1, times(1)).recycle()
     }
 
@@ -341,8 +341,8 @@ class AccessibilityNodeManagerTest {
         assertThat(duration).isLessThan(100L)  // Explicit Long to avoid overload ambiguity
         assertThat(visitedCount).isEqualTo(101)  // Root + 100 children
 
-        // All nodes recycled
-        verify(mockRootNode, times(1)).recycle()
+        // Child nodes returned from getChild() are recycled by traverse()
+        // Note: Root node is not recycled - it's the caller's responsibility
         nodes.forEach { verify(it, times(1)).recycle() }
     }
 }

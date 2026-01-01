@@ -18,15 +18,14 @@ import android.content.Context
 import android.graphics.Rect
 import android.view.WindowManager
 import androidx.core.graphics.ColorUtils
+import com.augmentalis.voiceos.accessibility.ElementVoiceState
 import com.augmentalis.voiceoscore.BaseVoiceOSTest
 import com.google.common.truth.Truth.assertThat
 import io.mockk.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import org.junit.Ignore
 
-@Ignore("Test class out of sync with production code - needs refactoring")
 class NumberOverlayManagerTest : BaseVoiceOSTest() {
 
     private lateinit var mockContext: Context
@@ -443,7 +442,7 @@ class NumberOverlayManagerTest : BaseVoiceOSTest() {
 
         val newConfig = NumberOverlayConfig(
             enabled = true,
-            styleVariant = StyleVariant.LARGE_TEXT,  // Use large text variant for accessibility
+            styleVariant = StyleVariant.LARGE_TEXT,  // Use large variant for accessibility
             scaleFactor = 1.5f  // Larger scale for accessibility
         )
 
@@ -478,35 +477,11 @@ class NumberOverlayManagerTest : BaseVoiceOSTest() {
     }
 }
 
-// Mock data classes to support tests
-data class OverlayData(
-    val elementBounds: Rect,
-    val number: Int,
-    val state: ElementVoiceState,
-    val id: String? = null
-)
-
-enum class ElementVoiceState {
-    ENABLED_NO_NAME,
-    DISABLED,
-    ENABLED_WITH_NAME
-}
-
-data class NumberOverlayConfig(
-    val style: NumberOverlayStyle,
-    val renderConfig: NumberOverlayRenderConfig
-)
-
-data class NumberOverlayStyle(
-    val badgeSize: Int = 48,
-    val fontSize: Float = 14f
-)
-
-data class NumberOverlayRenderConfig(
-    val enabled: Boolean = true,
-    val hideOnWindowFocusLoss: Boolean = false,
-    val styleVariant: String = "default"
-)
+// Test imports use the real implementation classes from:
+// - com.augmentalis.voiceos.accessibility.ElementVoiceState
+// - com.augmentalis.voiceoscore.ui.overlays.NumberOverlayConfig
+// - com.augmentalis.voiceoscore.ui.overlays.NumberOverlayStyle
+// - com.augmentalis.voiceoscore.ui.overlays.OverlayData
 
 // Mock NumberBadgeView for testing
 class NumberBadgeView(context: Context) : android.view.View(context) {
