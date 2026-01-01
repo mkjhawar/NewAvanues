@@ -196,7 +196,7 @@ class LearnAppConfigTest {
     }
 
     @Test
-    fun `getMaxAppsLearned returns -1 (unlimited) for DEV`() {
+    fun `getMaxAppsLearned returns unlimited for DEV`() {
         LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
         assertEquals(-1, LearnAppConfig.getMaxAppsLearned())
     }

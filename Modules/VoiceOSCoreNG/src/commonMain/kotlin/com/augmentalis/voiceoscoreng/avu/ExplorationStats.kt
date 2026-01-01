@@ -28,9 +28,16 @@ data class ExplorationStats(
      * Format: STA:screens:elements:commands:avg_depth:max_depth:coverage
      */
     fun toStaLine(): String {
-        val formattedAvgDepth = "%.2f".format(avgDepth)
-        val formattedCoverage = "%.2f".format(coverage)
+        val formattedAvgDepth = formatFloat(avgDepth)
+        val formattedCoverage = formatFloat(coverage)
         return "STA:$screenCount:$elementCount:$commandCount:$formattedAvgDepth:$maxDepth:$formattedCoverage"
+    }
+
+    private fun formatFloat(value: Float): String {
+        val rounded = (value * 100).toInt()
+        val intPart = rounded / 100
+        val decPart = rounded % 100
+        return "$intPart.${decPart.toString().padStart(2, '0')}"
     }
 
     companion object {

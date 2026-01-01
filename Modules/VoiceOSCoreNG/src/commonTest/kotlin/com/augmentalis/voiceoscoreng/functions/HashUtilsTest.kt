@@ -143,7 +143,7 @@ class HashUtilsTest {
 
     @Test
     fun `generateSeededHash produces only hex characters`() {
-        val hash = HashUtils.generateSeededHash(System.currentTimeMillis(), 16)
+        val hash = HashUtils.generateSeededHash(getCurrentTimeMillis(), 16)
         assertTrue(hash.all { it in '0'..'9' || it in 'a'..'f' })
     }
 

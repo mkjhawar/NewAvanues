@@ -1,5 +1,7 @@
 package com.augmentalis.voiceoscoreng.avu
 
+import com.augmentalis.voiceoscoreng.functions.getCurrentTimeMillis
+
 /**
  * Quantized Navigation - Screen transition for AVU format.
  *
@@ -17,7 +19,7 @@ data class QuantizedNavigation(
     val toScreenHash: String,
     val triggerLabel: String,
     val triggerVuid: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = getCurrentTimeMillis()
 ) {
     /**
      * Generate AVU NAV line format.

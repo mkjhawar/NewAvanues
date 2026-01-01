@@ -25,8 +25,15 @@ data class QuantizedCommand(
      * Format: CMD:uuid:trigger:action:element_uuid:confidence
      */
     fun toCmdLine(): String {
-        val formattedConfidence = "%.2f".format(confidence)
+        val formattedConfidence = formatFloat(confidence)
         return "CMD:$uuid:$phrase:${actionType.name}:${targetVuid ?: ""}:$formattedConfidence"
+    }
+
+    private fun formatFloat(value: Float): String {
+        val rounded = (value * 100).toInt()
+        val intPart = rounded / 100
+        val decPart = rounded % 100
+        return "$intPart.${decPart.toString().padStart(2, '0')}"
     }
 
     companion object {

@@ -1,5 +1,6 @@
 package com.augmentalis.voiceoscoreng.avu
 
+import com.augmentalis.voiceoscoreng.functions.getCurrentTimeMillis
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -339,7 +340,7 @@ class AVUSerializerTest {
             appName = "Example App",
             versionCode = 1L,
             versionName = "1.0.0",
-            generatedAt = System.currentTimeMillis(),
+            generatedAt = getCurrentTimeMillis(),
             screens = screens,
             navigation = navigation,
             vocabulary = setOf("Login", "Username", "Settings"),

@@ -1,5 +1,7 @@
 package com.augmentalis.voiceoscoreng.avu
 
+import com.augmentalis.voiceoscoreng.functions.getCurrentTimeMillis
+
 /**
  * Quantized Screen - Screen representation for AVU format.
  *
@@ -16,7 +18,7 @@ data class QuantizedScreen(
     val screenTitle: String,
     val activityName: String?,
     val elements: List<QuantizedElement>,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = getCurrentTimeMillis()
 ) {
     /**
      * Find element by label (case-insensitive).

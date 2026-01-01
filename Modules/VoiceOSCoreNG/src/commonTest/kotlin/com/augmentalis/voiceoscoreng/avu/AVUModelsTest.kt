@@ -2,6 +2,7 @@ package com.augmentalis.voiceoscoreng.avu
 
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
+import com.augmentalis.voiceoscoreng.functions.getCurrentTimeMillis
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -278,7 +279,7 @@ class AVUModelsTest {
             appName = "Example App",
             versionCode = 10L,
             versionName = "1.0.0",
-            generatedAt = System.currentTimeMillis(),
+            generatedAt = getCurrentTimeMillis(),
             screens = emptyList(),
             navigation = emptyList(),
             vocabulary = emptySet(),
