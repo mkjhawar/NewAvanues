@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Claude Code Enhanced Status Line
-# Uses /bin/sh and fast git commands only
+# Uses /bin/sh and fast commands only
 # Version sourced from .ideacode/VERSION
 
 # Read version from central file
@@ -21,21 +21,40 @@ fi
 api_status=""
 health=$(curl -s --connect-timeout 0.2 --max-time 0.3 "http://localhost:3850/health" 2>/dev/null)
 if [ -n "$health" ]; then
-    rag_suffix=""
-    [ -f "/Volumes/M-Drive/Coding/ideacode/data/rag.db" ] && rag_suffix="-R"
-
-    if echo "$health" | grep -q '"ollama":true'; then
-        api_status="API${rag_suffix}:Ollama"
-    elif echo "$health" | grep -q '"anthropic":true'; then
-        api_status="API${rag_suffix}:Anthropic"
-    else
-        api_status="API${rag_suffix}"
+    # RAG suffix - docs:collections format (R87:3)
+    rag=""
+    rag_stats=$(curl -s --connect-timeout 0.1 --max-time 0.2 "http://localhost:3850/v1/search/stats" 2>/dev/null)
+    if [ -n "$rag_stats" ]; then
+        doc_count=$(echo "$rag_stats" | sed 's/.*"total_documents":\([0-9]*\).*/\1/')
+        col_count=$(echo "$rag_stats" | sed 's/.*"collections":\[\([^]]*\)\].*/\1/' | tr ',' '\n' | grep -c '"')
+        [ -n "$doc_count" ] && [ "$doc_count" -gt 0 ] 2>/dev/null && rag="R${doc_count}:${col_count}"
     fi
+
+    # Check available LLM providers from health response
+    llm_status="No LLM"
+    if echo "$health" | grep -q '"ollama":true'; then
+        # Get default model from routing config
+        routing=$(curl -s --connect-timeout 0.1 --max-time 0.2 "http://localhost:3850/v1/llm/routing" 2>/dev/null)
+        model=$(echo "$routing" | sed 's/.*"simple_model":"\([^"]*\)".*/\1/' | cut -d: -f1)
+        [ -n "$model" ] && llm_status="Ollama:$model" || llm_status="Ollama"
+    elif echo "$health" | grep -q '"anthropic":true'; then
+        llm_status="Claude"
+    elif echo "$health" | grep -q '"openai":true'; then
+        llm_status="OpenAI"
+    elif echo "$health" | grep -q '"openrouter":true'; then
+        llm_status="OpenRouter"
+    elif echo "$health" | grep -q '"groq":true'; then
+        llm_status="Groq"
+    fi
+
+    # Build status: API-R87:3-Cloud:Claude or API-R87:3-No LLM
+    api_status="API${rag:+-$rag}-${llm_status}"
+else
+    # API not running - using .md files only
+    api_status="IDC"
 fi
 
 # Build output
-output="IDEACODE v$VERSION"
-[ -n "$api_status" ] && output="$output | $api_status"
-output="$output | $repo | $branch | MEM: OK"
+output="IDC v$VERSION | $api_status | $repo:$branch"
 
 printf "%s" "$output"
