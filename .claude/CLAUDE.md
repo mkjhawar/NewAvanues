@@ -119,58 +119,15 @@ NewAvanues - Platform-centric KMP monorepo (AVA, VoiceOS, WebAvanue, Cockpit, NL
 
 ---
 
-## WORKTREES (CRITICAL)
-
-**Why:** Multiple terminals/IDEs sharing one folder causes branch conflicts. Use worktrees for parallel development.
-
-### Current Worktrees
+## WORKTREES
 
 | Worktree | Path | Branch |
 |----------|------|--------|
-| Main | /Volumes/M-Drive/Coding/NewAvanues | VoiceOSCoreNG |
-| AVAMagic | /Volumes/M-Drive/WorkTrees/Development-AVAMagic | AVAMagic-Development |
-| VoiceOS | /Volumes/M-Drive/Worktrees/Development-VoiceOS | VoiceOS-Development |
-
-### Worktree Scripts
-
-```bash
-./scripts/worktree-add.sh <branch> [base]   # Create worktree
-./scripts/worktree-list.sh                   # List all
-./scripts/worktree-remove.sh <path>          # Remove safely
-./scripts/worktree-status.sh                 # Health check
-./scripts/worktree-cleanup.sh                # Auto-remove stale
-```
-
-### Automation (Mistake Prevention)
-
-| Protection | How |
-|------------|-----|
-| No branch switching | `pre-checkout` hook blocks and suggests worktree |
-| Cleanup reminders | `post-merge` hook notifies of stale worktrees |
-| Stale detection | Branches merged/deleted are flagged for cleanup |
-
-### Worktree Rules
-
-| Rule | Requirement |
-|------|-------------|
-| One IDE per worktree | Never open same worktree in multiple IDEs |
-| No branch switching | Create new worktree instead of `git checkout` |
-| Clean up when done | `./scripts/worktree-remove.sh` after merge |
-| Naming convention | `NewAvanues__feature__<name>` or `NewAvanues__<branch>` |
-
-### Creating a Worktree
-
-```bash
-# New feature from main
-./scripts/worktree-add.sh feature/new-ui main
-
-# Track existing remote branch
-./scripts/worktree-add.sh VoiceOS-Development
-```
-
-### Full Documentation
-
-See `Docs/WORKTREES.md` for complete guide.
+| NewAvanues-AVA | /Volumes/M-Drive/Coding/NewAvanues-AVA | AVA-Development |
+| NewAvanues-VoiceOS | /Volumes/M-Drive/Coding/NewAvanues-VoiceOS | VoiceOS-Development |
+| NewAvanues-WebAvanue | /Volumes/M-Drive/Coding/NewAvanues-WebAvanue | WebAvanue-Development |
+| NewAvanues-Cockpit | /Volumes/M-Drive/Coding/NewAvanues-Cockpit | Cockpit-Development |
+| NewAvanues-NLU | /Volumes/M-Drive/Coding/NewAvanues-NLU | NLU-Development |
 
 ---
 
@@ -290,4 +247,4 @@ All rules from `/Volumes/M-Drive/Coding/.claude/CLAUDE.md` apply.
 
 ---
 
-**Updated:** 2026-01-03 | **Version:** 12.5.0
+**Updated:** 2025-12-30 | **Version:** 12.4.1
