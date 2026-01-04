@@ -30,25 +30,8 @@ if [ -n "$health" ]; then
         [ -n "$doc_count" ] && [ "$doc_count" -gt 0 ] 2>/dev/null && rag="R${doc_count}:${col_count}"
     fi
 
-    # Check available LLM providers from health response
-    llm_status="No LLM"
-    if echo "$health" | grep -q '"ollama":true'; then
-        # Get default model from routing config
-        routing=$(curl -s --connect-timeout 0.1 --max-time 0.2 "http://localhost:3850/v1/llm/routing" 2>/dev/null)
-        model=$(echo "$routing" | sed 's/.*"simple_model":"\([^"]*\)".*/\1/' | cut -d: -f1)
-        [ -n "$model" ] && llm_status="Ollama:$model" || llm_status="Ollama"
-    elif echo "$health" | grep -q '"anthropic":true'; then
-        llm_status="Claude"
-    elif echo "$health" | grep -q '"openai":true'; then
-        llm_status="OpenAI"
-    elif echo "$health" | grep -q '"openrouter":true'; then
-        llm_status="OpenRouter"
-    elif echo "$health" | grep -q '"groq":true'; then
-        llm_status="Groq"
-    fi
-
-    # Build status: API-R87:3-Cloud:Claude or API-R87:3-No LLM
-    api_status="API${rag:+-$rag}-${llm_status}"
+    # Build status: API-R87:3 (LLM routing disabled, using RAG only)
+    api_status="API${rag:+-$rag}"
 else
     # API not running - using .md files only
     api_status="IDC"
