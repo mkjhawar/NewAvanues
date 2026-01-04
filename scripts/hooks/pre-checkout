@@ -1,0 +1,82 @@
+#!/bin/bash
+# pre-checkout hook - Prevents accidental branch switching in worktrees
+#
+# WHY: In a worktree workflow, you should NEVER switch branches.
+#      Instead, create a new worktree for the other branch.
+#
+# BYPASS: Set WORKTREE_ALLOW_CHECKOUT=1 to bypass this check
+#         git checkout -b new-branch  (creating new branch is allowed)
+
+# Arguments passed by git
+PREV_HEAD="$1"
+NEW_HEAD="$2"
+CHECKOUT_TYPE="$3"  # 1 = branch checkout, 0 = file checkout
+
+# Only check branch checkouts
+if [ "$CHECKOUT_TYPE" != "1" ]; then
+    exit 0
+fi
+
+# Allow if bypass is set
+if [ "$WORKTREE_ALLOW_CHECKOUT" = "1" ]; then
+    exit 0
+fi
+
+# Get current branch
+CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "detached")
+
+# Get target branch (if checking out a branch)
+TARGET_BRANCH=$(git name-rev --name-only "$NEW_HEAD" 2>/dev/null | sed 's|remotes/origin/||')
+
+# If same branch, allow (e.g., git checkout .)
+if [ "$CURRENT_BRANCH" = "$TARGET_BRANCH" ]; then
+    exit 0
+fi
+
+# Check if this is a worktree (not the main repo)
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+GIT_COMMON_DIR="$(git rev-parse --git-common-dir)"
+
+# If .git is a file (worktree) or git-common-dir differs, this is a worktree
+if [ -f "$REPO_ROOT/.git" ] || [ "$GIT_COMMON_DIR" != "$REPO_ROOT/.git" ]; then
+    IS_WORKTREE=true
+else
+    IS_WORKTREE=false
+fi
+
+# In worktrees, warn but allow with confirmation
+if [ "$IS_WORKTREE" = true ]; then
+    echo ""
+    echo "WARNING: Branch switching in a worktree is not recommended!"
+    echo ""
+    echo "  Current: $CURRENT_BRANCH"
+    echo "  Target:  $TARGET_BRANCH"
+    echo ""
+    echo "Best practice: Create a new worktree instead:"
+    echo "  cd $(dirname "$REPO_ROOT")/$(basename "$REPO_ROOT" | cut -d'_' -f1)"
+    echo "  ./scripts/worktree-add.sh $TARGET_BRANCH"
+    echo ""
+    echo "To proceed anyway, run:"
+    echo "  WORKTREE_ALLOW_CHECKOUT=1 git checkout $TARGET_BRANCH"
+    echo ""
+    exit 1
+fi
+
+# In main worktree, also warn if there are other worktrees
+WORKTREE_COUNT=$(git worktree list | wc -l | tr -d ' ')
+if [ "$WORKTREE_COUNT" -gt 1 ]; then
+    # Check if any worktree is using the target branch
+    if git worktree list | grep -q "\[$TARGET_BRANCH\]"; then
+        echo ""
+        echo "ERROR: Branch '$TARGET_BRANCH' is already checked out in another worktree!"
+        echo ""
+        git worktree list | grep "\[$TARGET_BRANCH\]"
+        echo ""
+        echo "Use that worktree instead, or remove it first:"
+        echo "  ./scripts/worktree-remove.sh $TARGET_BRANCH"
+        echo ""
+        exit 1
+    fi
+fi
+
+exit 0
