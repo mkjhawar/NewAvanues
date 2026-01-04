@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "locale": "en-US",
+  "fallback": "en-US",
+  "updated": "2025-11-14",
+  "author": "VOS4 Team",
+  "metadata": {
+    "category": "notifications",
+    "display_name": "Notifications",
+    "description": "Voice commands for managing system notifications",
+    "source_file": "notifications-commands.vos",
+    "schema": "4-element: [id, primary, synonyms, description]"
+  },
+  "commands": [
+    [
+      "show_notifications",
+      "show notification",
+      [
+        "notification",
+        "display notifications",
+        "open notifications",
+        "notifications visible",
+        "reveal notifications",
+        "show notifications",
+        "display messages",
+        "show messages",
+        "open messages",
+        "view alerts",
+        "show alerts",
+        "notifications now",
+        "show notifs",
+        "display notifs"
+      ],
+      "Show Notification (Notifications)"
+    ],
+    [
+      "hide_notifications",
+      "hide notification",
+      [
+        "hide notifications",
+        "close notifications",
+        "dismiss notifications",
+        "notifications hidden",
+        "conceal notifications",
+        "clear notifications",
+        "remove notifications",
+        "close messages",
+        "hide messages",
+        "dismiss alerts",
+        "notifications away",
+        "hide notifs",
+        "close notifs",
+        "get rid of notifications"
+      ],
+      "Hide Notification (Notifications)"
+    ]
+  ]
+}

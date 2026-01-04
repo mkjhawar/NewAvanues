@@ -1,0 +1,54 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "scroll-commands.vos",
+    "category": "scroll",
+    "display_name": "Scrolling",
+    "description": "Voice commands for scrolling content",
+    "command_count": 2
+  },
+  "locale": "de-DE",
+  "commands": [
+    {
+      "action": "SCROLL_UP",
+      "cmd": "scrollen hoch",
+      "syn": [
+        "page hoch",
+        "move hoch",
+        "upward scrollen",
+        "scrollen upward",
+        "gehen hoch",
+        "scrollen upwards",
+        "page upwards",
+        "move upwards",
+        "gehen upwards",
+        "scrollen hoch the page",
+        "move hoch the page",
+        "scrollen it hoch",
+        "page hoch jetzt",
+        "move it hoch"
+      ]
+    },
+    {
+      "action": "SCROLL_DOWN",
+      "cmd": "scrollen runter",
+      "syn": [
+        "page runter",
+        "move runter",
+        "downward scrollen",
+        "scrollen downward",
+        "gehen runter",
+        "scrollen downwards",
+        "page downwards",
+        "move downwards",
+        "gehen downwards",
+        "scrollen runter the page",
+        "move runter the page",
+        "scrollen it runter",
+        "page runter jetzt",
+        "move it runter"
+      ]
+    }
+  ]
+}

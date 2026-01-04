@@ -1,0 +1,205 @@
+{
+  "version": "1.0",
+  "locale": "en-US",
+  "fallback": "en-US",
+  "updated": "2025-11-14",
+  "author": "VOS4 Team",
+  "metadata": {
+    "category": "navigation",
+    "display_name": "Navigation",
+    "description": "Voice commands for navigating the system and apps",
+    "source_file": "navigation-commands.vos",
+    "schema": "4-element: [id, primary, synonyms, description]"
+  },
+  "commands": [
+    [
+      "navigate_home",
+      "navigate home",
+      [
+        "go home",
+        "return home",
+        "home screen",
+        "main screen",
+        "open app drawer",
+        "home page",
+        "main page",
+        "go to home",
+        "back to home",
+        "home button",
+        "navigate to home",
+        "return to home",
+        "go back home",
+        "take me home"
+      ],
+      "Navigate Home (Navigation)"
+    ],
+    [
+      "open_recent_apps",
+      "open recent apps",
+      [
+        "recent apps",
+        "recent applications",
+        "app switcher",
+        "task switcher",
+        "recent programs",
+        "recent tasks",
+        "app history",
+        "open recent",
+        "switch apps",
+        "recent list",
+        "recent applications please",
+        "show recent apps",
+        "display recent apps",
+        "view recent apps"
+      ],
+      "Open Recent Apps (Navigation)"
+    ],
+    [
+      "open_settings",
+      "open settings",
+      [
+        "settings",
+        "preferences",
+        "configuration",
+        "options",
+        "system settings",
+        "device settings",
+        "setup",
+        "control panel",
+        "settings menu",
+        "preferences menu",
+        "open preferences",
+        "open configuration",
+        "open options",
+        "show settings"
+      ],
+      "Open Settings (Navigation)"
+    ],
+    [
+      "open_connection",
+      "open connections",
+      [
+        "connections",
+        "network settings",
+        "connectivity",
+        "connection settings",
+        "network options",
+        "wireless settings",
+        "internet settings",
+        "network menu",
+        "connection menu",
+        "connectivity settings",
+        "network configuration",
+        "wireless configuration",
+        "internet configuration",
+        "connection options"
+      ],
+      "Open Connections (Navigation)"
+    ],
+    [
+      "open_sound",
+      "open sound",
+      [
+        "sound settings",
+        "audio settings",
+        "volume settings",
+        "sound options",
+        "audio options",
+        "sound menu",
+        "audio menu",
+        "sound preferences",
+        "audio preferences",
+        "sound control",
+        "audio control",
+        "volume control",
+        "sound configuration",
+        "audio configuration"
+      ],
+      "Open Sound (Navigation)"
+    ],
+    [
+      "open_display",
+      "open display",
+      [
+        "display settings",
+        "screen settings",
+        "display options",
+        "screen options",
+        "display menu",
+        "screen menu",
+        "display preferences",
+        "screen preferences",
+        "visual settings",
+        "display control",
+        "screen control",
+        "display configuration",
+        "screen configuration",
+        "brightness settings"
+      ],
+      "Open Display (Navigation)"
+    ],
+    [
+      "open_security",
+      "open security",
+      [
+        "security settings",
+        "privacy settings",
+        "security options",
+        "privacy options",
+        "security menu",
+        "privacy menu",
+        "security preferences",
+        "privacy preferences",
+        "protection settings",
+        "safety settings",
+        "security control",
+        "privacy control",
+        "security configuration",
+        "privacy configuration"
+      ],
+      "Open Security (Navigation)"
+    ],
+    [
+      "open_about",
+      "open about",
+      [
+        "about device",
+        "device info",
+        "system info",
+        "about phone",
+        "device information",
+        "system information",
+        "about system",
+        "phone info",
+        "about menu",
+        "device details",
+        "system details",
+        "phone details",
+        "device specifications",
+        "system specifications"
+      ],
+      "Open About (Navigation)"
+    ],
+    [
+      "go_back",
+      "navigate back",
+      [
+        "go back",
+        "return",
+        "previous page",
+        "back",
+        "back button",
+        "go previous",
+        "navigate previous",
+        "back page",
+        "previous",
+        "last page",
+        "return to previous",
+        "go to previous",
+        "step back",
+        "move back"
+      ],
+      "Navigate Back (Navigation)"
+    ]
+  ]
+}

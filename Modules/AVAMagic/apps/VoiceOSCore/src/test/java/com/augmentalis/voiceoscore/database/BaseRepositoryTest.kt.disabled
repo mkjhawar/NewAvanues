@@ -1,0 +1,231 @@
+/**
+ * BaseRepositoryTest.kt - Base class for repository tests
+ *
+ * Provides common test utilities for testing SQLDelight repositories.
+ * Handles database setup, teardown, and common assertions.
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ * Author: Agent 4 - Test Migration Specialist
+ * Created: 2025-11-27
+ * Context: Phase 4 - Restoration Plan Production-Ready
+ */
+package com.augmentalis.voiceoscore.database
+
+import com.augmentalis.database.VoiceOSDatabaseManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.*
+import org.junit.After
+import org.junit.Before
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+
+/**
+ * Base class for repository unit tests.
+ *
+ * Provides:
+ * - Fresh database for each test
+ * - Coroutine test support
+ * - Common assertion helpers
+ * - Transaction helpers
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+abstract class BaseRepositoryTest {
+
+    /**
+     * Test database manager.
+     * Fresh instance created for each test.
+     */
+    protected lateinit var databaseManager: VoiceOSDatabaseManager
+
+    /**
+     * Test dispatcher for coroutine tests.
+     */
+    protected lateinit var testDispatcher: TestDispatcher
+
+    /**
+     * Setup executed before each test.
+     *
+     * Creates fresh database and test dispatcher.
+     */
+    @Before
+    open fun setUp() {
+        testDispatcher = StandardTestDispatcher()
+        Dispatchers.setMain(testDispatcher)
+
+        databaseManager = TestDatabaseFactory.createTestDatabase()
+    }
+
+    /**
+     * Teardown executed after each test.
+     *
+     * Cleans up database and resets dispatcher.
+     */
+    @After
+    open fun tearDown() {
+        TestDatabaseFactory.closeDatabase(databaseManager)
+        Dispatchers.resetMain()
+    }
+
+    // ==================== Transaction Helpers ====================
+
+    /**
+     * Executes block within a transaction.
+     *
+     * Transaction is automatically committed on success,
+     * rolled back on exception.
+     *
+     * @param block Code to execute in transaction
+     * @return Result of block
+     */
+    protected fun <T> withTransaction(block: () -> T): T {
+        return databaseManager.database.transactionWithResult {
+            block()
+        }
+    }
+
+    /**
+     * Executes suspending block within a transaction.
+     *
+     * @param block Suspending code to execute
+     * @return Result of block
+     */
+    protected suspend fun <T> withTransactionSuspend(block: suspend () -> T): T {
+        return databaseManager.database.transactionWithResult {
+            runTest {
+                block()
+            }
+        }
+    }
+
+    // ==================== Assertion Helpers ====================
+
+    /**
+     * Asserts that a query returns expected number of rows.
+     *
+     * @param expected Expected row count
+     * @param actual Actual query result list
+     * @param message Optional failure message
+     */
+    protected fun <T> assertRowCount(
+        expected: Int,
+        actual: List<T>,
+        message: String = "Row count mismatch"
+    ) {
+        assertEquals(expected, actual.size, message)
+    }
+
+    /**
+     * Asserts that a query returns at least one row.
+     *
+     * @param result Query result list
+     * @param message Optional failure message
+     */
+    protected fun <T> assertNotEmpty(
+        result: List<T>,
+        message: String = "Result should not be empty"
+    ) {
+        assertTrue(result.isNotEmpty(), message)
+    }
+
+    /**
+     * Asserts that a query returns exactly one row.
+     *
+     * @param result Query result list
+     * @param message Optional failure message
+     * @return The single result row
+     */
+    protected fun <T> assertSingleResult(
+        result: List<T>,
+        message: String = "Expected exactly one result"
+    ): T {
+        assertEquals(1, result.size, message)
+        return result[0]
+    }
+
+    /**
+     * Asserts that an entity was inserted successfully.
+     *
+     * Checks that the returned ID is valid (>0).
+     *
+     * @param insertedId ID returned from insert operation
+     * @param message Optional failure message
+     */
+    protected fun assertInsertSuccessful(
+        insertedId: Long,
+        message: String = "Insert should return valid ID"
+    ) {
+        assertTrue(insertedId > 0, message)
+    }
+
+    /**
+     * Asserts that an update affected expected number of rows.
+     *
+     * @param expected Expected affected rows
+     * @param actual Actual affected rows
+     * @param message Optional failure message
+     */
+    protected fun assertUpdateCount(
+        expected: Int,
+        actual: Int,
+        message: String = "Update count mismatch"
+    ) {
+        assertEquals(expected, actual, message)
+    }
+
+    // ==================== Query Helpers ====================
+
+    /**
+     * Executes a query and returns results as list.
+     *
+     * @param query Query to execute
+     * @return List of results
+     */
+    protected fun <T : Any> executeQuery(query: com.squareup.sqldelight.Query<T>): List<T> {
+        return query.executeAsList()
+    }
+
+    /**
+     * Executes a query and returns single result or null.
+     *
+     * @param query Query to execute
+     * @return Single result or null
+     */
+    protected fun <T : Any> executeQuerySingle(query: com.squareup.sqldelight.Query<T>): T? {
+        return query.executeAsOneOrNull()
+    }
+
+    // ==================== Data Helpers ====================
+
+    /**
+     * Creates a test timestamp (current time).
+     *
+     * @return Current timestamp in milliseconds
+     */
+    protected fun createTestTimestamp(): Long {
+        return System.currentTimeMillis()
+    }
+
+    /**
+     * Creates a test UUID.
+     *
+     * @param prefix Optional prefix for easy identification
+     * @return Test UUID string
+     */
+    protected fun createTestUuid(prefix: String = "test"): String {
+        return "$prefix-${System.currentTimeMillis()}-${(0..9999).random()}"
+    }
+
+    /**
+     * Waits for async operations to complete.
+     *
+     * Advances test dispatcher by specified time.
+     *
+     * @param millis Time to advance in milliseconds
+     */
+    protected fun waitForAsync(millis: Long = 100) {
+        testDispatcher.scheduler.advanceTimeBy(millis)
+        testDispatcher.scheduler.runCurrent()
+    }
+}
