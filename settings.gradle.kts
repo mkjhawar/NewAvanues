@@ -145,5 +145,6 @@ include(":Modules:AVAMagic:AVAUI:Renderers:iOS")        // iOS SwiftUI renderer 
 include(":Modules:AVAMagic:AVAUI:Renderers:Desktop")    // Desktop Compose renderer
 include(":Modules:AVAMagic:AVAUI:Renderers:Web")        // Web React renderer
 
-// Android App
+// Android Apps
 include(":android:apps:webavanue")
+include(":android:apps:voiceoscoreng")  // VoiceOSCoreNG test app
