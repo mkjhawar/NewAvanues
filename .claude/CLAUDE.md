@@ -151,7 +151,7 @@ NewAvanues - Platform-centric KMP monorepo (AVA, VoiceOS, WebAvanue, Cockpit, NL
 
 | Protection | How |
 |------------|-----|
-| No branch switching | `pre-checkout` hook blocks and suggests worktree |
+| Safe checkout | `git co <branch>` warns and prompts (use after setup) |
 | Cleanup reminders | `post-merge` hook notifies of stale worktrees |
 | Stale detection | Branches merged/deleted are flagged for cleanup |
 

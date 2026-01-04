@@ -195,11 +195,20 @@ cat /tmp/git-idx-temp > .git/index
 
 This repo has automation to prevent common worktree mistakes.
 
+### Git Alias (Safe Checkout)
+
+After running `./scripts/setup-hooks.sh`, use:
+
+```bash
+git co <branch>    # Instead of 'git checkout'
+```
+
+This warns about worktree workflow and prompts before switching.
+
 ### Git Hooks (Automatic)
 
 | Hook | Purpose |
 |------|---------|
-| `pre-checkout` | **Blocks branch switching** in worktrees. Prompts to create new worktree instead. |
 | `post-merge` | After merge, **notifies** if any worktrees can be cleaned up. |
 
 ### Status Check
