@@ -10,11 +10,10 @@
  */
 package com.augmentalis.voiceoscoreng
 
-import com.augmentalis.voiceoscoreng.avu.QuantizedCommand
+import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.handlers.*
-import com.augmentalis.voiceoscoreng.managers.*
-import com.augmentalis.voiceoscoreng.repository.RepositoryProvider
-import com.augmentalis.voiceoscoreng.speech.*
+import com.augmentalis.voiceoscoreng.handlers.*
+import com.augmentalis.voiceoscoreng.features.*
 import kotlinx.coroutines.flow.*
 
 /**

@@ -1,7 +1,7 @@
 package com.augmentalis.voiceoscoreng.command
 
-import com.augmentalis.voiceoscoreng.avu.CommandActionType
-import com.augmentalis.voiceoscoreng.avu.QuantizedCommand
+import com.augmentalis.voiceoscoreng.common.CommandActionType
+import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

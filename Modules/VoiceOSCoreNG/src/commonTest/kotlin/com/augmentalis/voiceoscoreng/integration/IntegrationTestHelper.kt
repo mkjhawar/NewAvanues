@@ -10,14 +10,14 @@
  */
 package com.augmentalis.voiceoscoreng.integration
 
-import com.augmentalis.voiceoscoreng.avu.CommandActionType
-import com.augmentalis.voiceoscoreng.avu.QuantizedCommand
+import com.augmentalis.voiceoscoreng.common.CommandActionType
+import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.FrameworkType
 import com.augmentalis.voiceoscoreng.common.VUIDGenerator
 import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
-import com.augmentalis.voiceoscoreng.execution.ActionResult
+import com.augmentalis.voiceoscoreng.handlers.ActionResult
 
 /**
  * Test fixture factory for creating common test elements.

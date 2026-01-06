@@ -15,13 +15,13 @@
  */
 package com.augmentalis.voiceoscoreng.theme
 
-import com.augmentalis.voiceoscoreng.overlay.OverlayTheme
-import com.augmentalis.voiceoscoreng.overlay.ThemeValidationResult
-import com.augmentalis.voiceoscoreng.overlay.colorWithAlpha
-import com.augmentalis.voiceoscoreng.overlay.extractAlpha
-import com.augmentalis.voiceoscoreng.overlay.extractRed
-import com.augmentalis.voiceoscoreng.overlay.extractGreen
-import com.augmentalis.voiceoscoreng.overlay.extractBlue
+import com.augmentalis.voiceoscoreng.features.OverlayTheme
+import com.augmentalis.voiceoscoreng.features.ThemeValidationResult
+import com.augmentalis.voiceoscoreng.features.colorWithAlpha
+import com.augmentalis.voiceoscoreng.features.extractAlpha
+import com.augmentalis.voiceoscoreng.features.extractRed
+import com.augmentalis.voiceoscoreng.features.extractGreen
+import com.augmentalis.voiceoscoreng.features.extractBlue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

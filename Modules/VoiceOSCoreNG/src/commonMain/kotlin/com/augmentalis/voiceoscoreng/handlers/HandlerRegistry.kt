@@ -10,7 +10,7 @@
  */
 package com.augmentalis.voiceoscoreng.handlers
 
-import com.augmentalis.voiceoscoreng.avu.QuantizedCommand
+import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 

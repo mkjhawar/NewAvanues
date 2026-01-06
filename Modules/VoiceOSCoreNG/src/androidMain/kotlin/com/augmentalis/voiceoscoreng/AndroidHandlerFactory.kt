@@ -68,13 +68,13 @@ class AndroidHandlerFactory(
  */
 fun VoiceOSCoreNG.Companion.createForAndroid(
     service: AccessibilityService,
-    configuration: com.augmentalis.voiceoscoreng.managers.ServiceConfiguration =
-        com.augmentalis.voiceoscoreng.managers.ServiceConfiguration.DEFAULT
+    configuration: com.augmentalis.voiceoscoreng.handlers.ServiceConfiguration =
+        com.augmentalis.voiceoscoreng.handlers.ServiceConfiguration.DEFAULT
 ): VoiceOSCoreNG {
     return VoiceOSCoreNG.Builder()
         .withHandlerFactory(AndroidHandlerFactory.create(service))
         .withSpeechEngineFactory(
-            com.augmentalis.voiceoscoreng.speech.SpeechEngineFactoryProvider.create(service)
+            com.augmentalis.voiceoscoreng.features.SpeechEngineFactoryProvider.create(service)
         )
         .withConfiguration(configuration)
         .build()

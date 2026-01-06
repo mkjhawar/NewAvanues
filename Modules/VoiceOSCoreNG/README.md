@@ -175,7 +175,13 @@ val framework = FrameworkDetector.detect(
 
 ---
 
-## Project Structure
+## Project Structure (IDEACODE-Compliant)
+
+**Note:** This module follows IDEACODE v17 folder conventions with exactly 4 packages:
+- `common/` - Shared classes and data models
+- `functions/` - Utilities and helpers
+- `handlers/` - Command handlers and execution
+- `features/` - Feature implementations
 
 ```
 Modules/VoiceOSCoreNG/
@@ -183,78 +189,103 @@ Modules/VoiceOSCoreNG/
 ├── README.md                     # This file
 ├── src/
 │   ├── commonMain/kotlin/com/augmentalis/voiceoscoreng/
-│   │   ├── avu/                  # AVU serialization format
+│   │   ├── VoiceOSCoreNG.kt      # Main facade
+│   │   ├── common/               # Shared classes and data models
 │   │   │   ├── AVUSerializer.kt
 │   │   │   ├── CommandActionType.kt
+│   │   │   ├── CommandGenerator.kt
+│   │   │   ├── CommandMatcher.kt
+│   │   │   ├── CommandRegistry.kt
+│   │   │   ├── ComponentDefinition.kt
+│   │   │   ├── ComponentFactory.kt
+│   │   │   ├── ElementInfo.kt
+│   │   │   ├── ElementProcessingResult.kt
 │   │   │   ├── ElementType.kt
+│   │   │   ├── FrameworkInfo.kt
+│   │   │   ├── IComponentRenderer.kt
+│   │   │   ├── ProcessingMode.kt
 │   │   │   ├── QuantizedCommand.kt
 │   │   │   ├── QuantizedContext.kt
 │   │   │   ├── QuantizedElement.kt
 │   │   │   ├── QuantizedNavigation.kt
-│   │   │   └── QuantizedScreen.kt
-│   │   ├── command/              # Command generation
-│   │   │   ├── CommandGenerator.kt
-│   │   │   ├── CommandMatcher.kt
-│   │   │   ├── CommandRegistry.kt
-│   │   │   └── StaticCommandRegistry.kt
-│   │   ├── common/               # Core data types
-│   │   │   ├── ElementInfo.kt
-│   │   │   ├── ElementProcessingResult.kt
-│   │   │   ├── FrameworkInfo.kt
-│   │   │   ├── ProcessingMode.kt
+│   │   │   ├── QuantizedScreen.kt
+│   │   │   ├── StaticCommandRegistry.kt
 │   │   │   └── VUIDGenerator.kt
-│   │   ├── execution/            # Action execution
-│   │   │   ├── ActionResult.kt
-│   │   │   ├── CommandDispatcher.kt
-│   │   │   └── IActionExecutor.kt
-│   │   ├── exploration/          # App exploration
-│   │   │   └── ExplorationBridge.kt
-│   │   ├── extraction/           # Element extraction
+│   │   ├── functions/            # Utilities and helpers
+│   │   │   ├── DangerousElementDetector.kt
+│   │   │   ├── DatabaseConverters.kt
+│   │   │   ├── ElementFilterUtils.kt
 │   │   │   ├── ElementParser.kt
 │   │   │   ├── ExtractionBundle.kt
-│   │   │   └── PlatformExtractor.kt
-│   │   ├── features/             # Feature tiers
-│   │   │   ├── LearnAppConfig.kt
-│   │   │   └── LearnAppDevToggle.kt
-│   │   ├── fingerprinting/       # Screen fingerprinting
-│   │   │   └── ScreenFingerprinter.kt
-│   │   ├── functions/            # Utilities
-│   │   │   ├── ElementFilterUtils.kt
 │   │   │   ├── HashUtils.kt
+│   │   │   ├── JITLearningAdapter.kt
+│   │   │   ├── LearnAppCoreAdapter.kt
 │   │   │   ├── LoggingUtils.kt
+│   │   │   ├── MigrationGuide.kt
+│   │   │   ├── PlatformExtractor.kt
+│   │   │   ├── ScreenFingerprinter.kt
+│   │   │   ├── TypeAliases.kt
 │   │   │   └── ValidationUtils.kt
-│   │   ├── handlers/             # Framework handlers
+│   │   ├── handlers/             # Command handlers and execution
+│   │   │   ├── ActionCoordinator.kt
+│   │   │   ├── ActionResult.kt
+│   │   │   ├── CommandDispatcher.kt
 │   │   │   ├── FlutterHandler.kt
 │   │   │   ├── FrameworkHandler.kt
+│   │   │   ├── HandlerRegistry.kt
+│   │   │   ├── HandlerResult.kt
+│   │   │   ├── IActionExecutor.kt
+│   │   │   ├── IHandler.kt
+│   │   │   ├── InputHandler.kt
+│   │   │   ├── MetricsCollector.kt
 │   │   │   ├── NativeHandler.kt
+│   │   │   ├── NavigationHandler.kt
 │   │   │   ├── ReactNativeHandler.kt
+│   │   │   ├── ServiceState.kt
+│   │   │   ├── SystemHandler.kt
+│   │   │   ├── UIHandler.kt
 │   │   │   ├── UnityHandler.kt
 │   │   │   └── WebViewHandler.kt
-│   │   ├── database/             # Database integration
-│   │   │   └── DatabaseConverters.kt   # Domain ↔ DTO conversion
-│   │   ├── safety/               # Safety features
-│   │   │   └── DangerousElementDetector.kt
-│   │   └── speech/               # Speech recognition
+│   │   └── features/             # Feature implementations
+│   │       ├── BaseOverlay.kt
+│   │       ├── CommandStatusOverlay.kt
+│   │       ├── ConfidenceOverlay.kt
+│   │       ├── ContextMenuOverlay.kt
+│   │       ├── IOverlay.kt
 │   │       ├── ISpeechEngine.kt
 │   │       ├── ISpeechEngineFactory.kt
+│   │       ├── IThemeProvider.kt
+│   │       ├── LearnAppConfig.kt
+│   │       ├── LearnAppDevToggle.kt
+│   │       ├── NumberedSelectionOverlay.kt
+│   │       ├── NumberOverlayRenderer.kt
+│   │       ├── NumberOverlayStyle.kt
+│   │       ├── OverlayConfig.kt
+│   │       ├── OverlayCoordinator.kt
+│   │       ├── OverlayManager.kt
+│   │       ├── OverlayTheme.kt
+│   │       ├── OverlayThemes.kt
 │   │       ├── SpeechConfig.kt
 │   │       ├── SpeechEngine.kt
-│   │       └── SpeechMode.kt
+│   │       ├── SpeechMode.kt
+│   │       ├── ThemeProvider.kt
+│   │       ├── ThemeVariant.kt
+│   │       ├── VivokaEngineFactory.kt
+│   │       ├── YamlThemeConfig.kt
+│   │       └── YamlThemeParser.kt
 │   ├── commonTest/               # Shared tests
 │   ├── androidMain/              # Android implementation
 │   │   └── kotlin/com/augmentalis/voiceoscoreng/
-│   │       ├── core/VoiceOSCoreNG.kt
-│   │       ├── execution/AndroidActionExecutor.kt
-│   │       ├── exploration/ExplorationEngine.kt
-│   │       ├── jit/JitProcessor.kt
-│   │       ├── speech/AndroidSTTEngineImpl.kt
-│   │       └── ui/               # Compose UI components
+│   │       ├── AndroidHandlerFactory.kt
+│   │       ├── handlers/         # Android executors
+│   │       ├── functions/        # Platform utilities
+│   │       └── features/         # Android features (UI, Speech, JIT)
 │   ├── androidUnitTest/          # Android-specific tests
 │   ├── iosMain/                  # iOS implementation
 │   ├── iosTest/                  # iOS-specific tests
 │   ├── desktopMain/              # Desktop (JVM) implementation
 │   └── desktopTest/              # Desktop-specific tests
-└── Common/                       # Legacy structure (being migrated)
+└── Common/UI/                    # AVAUI YAML definitions
 ```
 
 ---

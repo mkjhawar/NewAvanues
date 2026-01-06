@@ -14,20 +14,20 @@
  */
 package com.augmentalis.voiceoscoreng.integration
 
-import com.augmentalis.voiceoscoreng.avu.CommandActionType
-import com.augmentalis.voiceoscoreng.avu.QuantizedCommand
-import com.augmentalis.voiceoscoreng.command.CommandGenerator
+import com.augmentalis.voiceoscoreng.common.CommandActionType
+import com.augmentalis.voiceoscoreng.common.QuantizedCommand
+import com.augmentalis.voiceoscoreng.common.CommandGenerator
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.FrameworkDetector
 import com.augmentalis.voiceoscoreng.common.FrameworkType
 import com.augmentalis.voiceoscoreng.common.VUIDGenerator
 import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
-import com.augmentalis.voiceoscoreng.execution.ActionResult
-import com.augmentalis.voiceoscoreng.execution.ElementBounds
-import com.augmentalis.voiceoscoreng.execution.IActionExecutor
-import com.augmentalis.voiceoscoreng.execution.ScrollDirection
-import com.augmentalis.voiceoscoreng.execution.VolumeDirection
+import com.augmentalis.voiceoscoreng.handlers.ActionResult
+import com.augmentalis.voiceoscoreng.handlers.ElementBounds
+import com.augmentalis.voiceoscoreng.handlers.IActionExecutor
+import com.augmentalis.voiceoscoreng.handlers.ScrollDirection
+import com.augmentalis.voiceoscoreng.handlers.VolumeDirection
 import com.augmentalis.voiceoscoreng.handlers.FlutterHandler
 import com.augmentalis.voiceoscoreng.handlers.FrameworkHandler
 import com.augmentalis.voiceoscoreng.handlers.FrameworkHandlerRegistry
@@ -35,7 +35,7 @@ import com.augmentalis.voiceoscoreng.handlers.NativeHandler
 import com.augmentalis.voiceoscoreng.handlers.ReactNativeHandler
 import com.augmentalis.voiceoscoreng.handlers.UnityHandler
 import com.augmentalis.voiceoscoreng.handlers.WebViewHandler
-import com.augmentalis.voiceoscoreng.safety.DangerousElementDetector
+import com.augmentalis.voiceoscoreng.functions.DangerousElementDetector
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test

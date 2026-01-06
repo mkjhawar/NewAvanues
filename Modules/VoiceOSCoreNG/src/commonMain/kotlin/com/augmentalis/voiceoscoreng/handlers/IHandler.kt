@@ -10,7 +10,8 @@
  */
 package com.augmentalis.voiceoscoreng.handlers
 
-import com.augmentalis.voiceoscoreng.avu.QuantizedCommand
+import com.augmentalis.voiceoscoreng.common.CommandActionType
+import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 
 /**
  * Interface for action handlers.
@@ -67,7 +68,7 @@ interface IHandler {
     ): HandlerResult = execute(
         command = QuantizedCommand(
             phrase = action,
-            actionType = com.augmentalis.voiceoscoreng.avu.CommandActionType.EXECUTE,
+            actionType = CommandActionType.EXECUTE,
             targetVuid = null,
             confidence = 1.0f
         ),

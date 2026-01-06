@@ -16,8 +16,8 @@
  */
 package com.augmentalis.voiceoscoreng.integration
 
-import com.augmentalis.voiceoscoreng.avu.QuantizedCommand
-import com.augmentalis.voiceoscoreng.avu.CommandActionType
+import com.augmentalis.voiceoscoreng.common.QuantizedCommand
+import com.augmentalis.voiceoscoreng.common.CommandActionType
 import com.augmentalis.voiceoscoreng.common.VUIDGenerator
 import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
 import kotlinx.coroutines.test.runTest

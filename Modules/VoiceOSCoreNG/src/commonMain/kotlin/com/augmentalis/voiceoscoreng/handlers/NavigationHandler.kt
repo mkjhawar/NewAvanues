@@ -9,7 +9,7 @@
  */
 package com.augmentalis.voiceoscoreng.handlers
 
-import com.augmentalis.voiceoscoreng.avu.QuantizedCommand
+import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 
 /**
  * Handler for navigation actions.
