@@ -1,11 +1,21 @@
 /**
  * LearnAppCore - Shared Business Logic Library
  *
+ * ╔═══════════════════════════════════════════════════════════════════════════╗
+ * ║  ⚠️  DEPRECATED - Use VoiceOSCoreNG instead                               ║
+ * ║                                                                           ║
+ * ║  This module has been consolidated into Modules/VoiceOSCoreNG             ║
+ * ║  See DEPRECATED.md for migration guide                                    ║
+ * ║                                                                           ║
+ * ║  New dependency: implementation(project(":Modules:VoiceOSCoreNG"))        ║
+ * ╚═══════════════════════════════════════════════════════════════════════════╝
+ *
  * Provides unified element processing for both JIT and Exploration modes.
  * Zero dependencies between JIT and LearnApp - only shared core logic.
  *
  * Author: Manoj Jhawar
  * Created: 2025-12-11 (JIT-LearnApp Separation)
+ * Deprecated: 2026-01-06 (Consolidated into VoiceOSCoreNG)
  */
 
 plugins {
