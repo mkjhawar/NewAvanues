@@ -580,21 +580,33 @@ private fun FabMenuItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .height(40.dp)  // Fixed height for consistency
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (enabled) iconColor else Color.Gray,
-            modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
+        // Icon with consistent container
+        Surface(
+            modifier = Modifier.size(28.dp),
+            shape = RoundedCornerShape(6.dp),
+            color = if (enabled) iconColor.copy(alpha = 0.15f) else Color.Gray.copy(alpha = 0.1f)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (enabled) iconColor else Color.Gray,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(5.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = text,
-            fontSize = 13.sp,
-            color = if (enabled) Color.White else Color.Gray
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (enabled) Color.White else Color.Gray,
+            modifier = Modifier.weight(1f)
         )
     }
 }
