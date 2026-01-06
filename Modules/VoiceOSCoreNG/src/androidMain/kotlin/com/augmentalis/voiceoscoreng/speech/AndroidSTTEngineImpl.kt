@@ -92,7 +92,7 @@ class AndroidSTTEngineImpl(private val context: Context) : ISpeechEngine {
             if (!SpeechRecognizer.isRecognitionAvailable(context)) {
                 val error = "Speech recognition not available on this device"
                 Log.e(TAG, error)
-                _state.value = EngineState.Error(error)
+                _state.value = EngineState.Error(error, recoverable = false)
                 return Result.failure(IllegalStateException(error))
             }
 
@@ -131,7 +131,7 @@ class AndroidSTTEngineImpl(private val context: Context) : ISpeechEngine {
 
             Log.d(TAG, "Starting Android STT listening")
             shouldRestart = true
-            continuousMode = currentConfig?.mode == RecognitionMode.CONTINUOUS
+            continuousMode = currentConfig?.mode?.supportsContinuous() == true
 
             mainHandler.post {
                 try {
@@ -340,9 +340,7 @@ class AndroidSTTEngineImpl(private val context: Context) : ISpeechEngine {
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
 
-            config.timeoutMs?.let {
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, it)
-            }
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, config.silenceTimeout)
 
             // Prefer offline recognition if available (Android 23+)
             putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, config.preferOffline)

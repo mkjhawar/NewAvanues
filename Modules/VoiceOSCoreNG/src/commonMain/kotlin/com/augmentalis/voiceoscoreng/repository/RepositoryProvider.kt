@@ -10,8 +10,7 @@
  */
 package com.augmentalis.voiceoscoreng.repository
 
-import com.augmentalis.database.repositories.IGeneratedCommandRepository
-import com.augmentalis.database.repositories.IScrapedElementRepository
+import com.augmentalis.voiceoscoreng.speech.currentTimeMillis
 
 /**
  * Repository provider for dependency injection.
@@ -78,17 +77,17 @@ object RepositoryProvider {
      * This is the recommended production configuration that saves
      * commands and elements to the same database as VoiceOSCore.
      *
-     * @param commandRepository IGeneratedCommandRepository from VoiceOS/core/database
-     * @param elementRepository IScrapedElementRepository from VoiceOS/core/database
+     * @param commandRepository ICommandRepository implementation backed by SQLDelight
+     * @param vuidRepository IVuidRepository implementation backed by SQLDelight
      * @param configHistoryRepository Optional config history repository
      */
     fun configureWithSQLDelight(
-        commandRepository: IGeneratedCommandRepository,
-        elementRepository: IScrapedElementRepository,
+        commandRepository: ICommandRepository,
+        vuidRepository: IVuidRepository,
         configHistoryRepository: IConfigHistoryRepository? = null
     ) {
-        _commandRepository = SQLDelightCommandRepositoryAdapter(commandRepository)
-        _vuidRepository = SQLDelightVuidRepositoryAdapter(elementRepository)
+        _commandRepository = commandRepository
+        _vuidRepository = vuidRepository
         _configHistory = configHistoryRepository ?: InMemoryConfigHistoryRepository()
         _isUsingSQLDelight = true
     }
@@ -171,7 +170,7 @@ data class ConfigHistoryEntry(
     val commandCount: Int,
     val activeApp: String?,
     val activeScreen: String?,
-    val timestamp: Long = System.currentTimeMillis(),
+    val timestamp: Long = currentTimeMillis(),
     val metadata: Map<String, String> = emptyMap()
 )
 

@@ -255,7 +255,7 @@ class ActionCoordinator {
     /**
      * Platform-specific currentTimeMillis.
      */
-    private fun currentTimeMillis(): Long = com.augmentalis.voiceoscoreng.repository.currentTimeMillis()
+    private fun currentTimeMillis(): Long = com.augmentalis.voiceoscoreng.speech.currentTimeMillis()
 }
 
 /**

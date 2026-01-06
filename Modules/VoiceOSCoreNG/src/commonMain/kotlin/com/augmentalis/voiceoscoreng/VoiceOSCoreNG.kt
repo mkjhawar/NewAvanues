@@ -64,8 +64,8 @@ class VoiceOSCoreNG private constructor(
     /**
      * Speech recognition results flow.
      */
-    val speechResults: SharedFlow<SpeechResult>
-        get() = speechEngine?.results ?: MutableSharedFlow()
+    val speechResults: Flow<SpeechResult>
+        get() = speechEngine?.results ?: emptyFlow()
 
     /**
      * Initialize the core.
@@ -93,9 +93,7 @@ class VoiceOSCoreNG private constructor(
                     speechEngine = engineResult.getOrNull()
                     val config = SpeechConfig(
                         language = configuration.voiceLanguage,
-                        confidenceThreshold = configuration.confidenceThreshold,
-                        enableWakeWord = configuration.enableWakeWord,
-                        wakeWord = configuration.wakeWord
+                        confidenceThreshold = configuration.confidenceThreshold
                     )
                     speechEngine?.initialize(config)
                 }
@@ -244,6 +242,10 @@ class VoiceOSCoreNG private constructor(
         coordinator.dispose()
 
         stateManager.transition(ServiceState.Stopped)
+    }
+
+    companion object {
+        // Companion object for extension functions
     }
 
     /**

@@ -29,12 +29,6 @@ import kotlinx.coroutines.flow.StateFlow
 interface IVivokaEngine : ISpeechEngine {
 
     /**
-     * Engine type (always VIVOKA).
-     */
-    override val engineType: SpeechEngine
-        get() = SpeechEngine.VIVOKA
-
-    /**
      * Whether wake word detection is enabled.
      */
     val isWakeWordEnabled: StateFlow<Boolean>

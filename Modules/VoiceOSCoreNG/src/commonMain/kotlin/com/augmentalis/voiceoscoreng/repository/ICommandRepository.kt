@@ -100,15 +100,18 @@ class InMemoryCommandRepository : ICommandRepository {
     }
 
     override suspend fun deleteByScreen(packageName: String, screenId: String): Result<Unit> {
-        commands.entries.removeIf {
-            it.value.metadata["packageName"] == packageName &&
-            it.value.metadata["screenId"] == screenId
-        }
+        val keysToRemove = commands.entries
+            .filter { it.value.metadata["packageName"] == packageName && it.value.metadata["screenId"] == screenId }
+            .map { it.key }
+        keysToRemove.forEach { commands.remove(it) }
         return Result.success(Unit)
     }
 
     override suspend fun deleteByApp(packageName: String): Result<Unit> {
-        commands.entries.removeIf { it.value.metadata["packageName"] == packageName }
+        val keysToRemove = commands.entries
+            .filter { it.value.metadata["packageName"] == packageName }
+            .map { it.key }
+        keysToRemove.forEach { commands.remove(it) }
         return Result.success(Unit)
     }
 

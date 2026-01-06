@@ -140,9 +140,18 @@ object CommandGenerator {
      */
     private fun CommandActionType.verb(): String = when (this) {
         CommandActionType.CLICK -> "click"
+        CommandActionType.TAP -> "tap"
         CommandActionType.LONG_CLICK -> "hold"
+        CommandActionType.EXECUTE -> "execute"
         CommandActionType.TYPE -> "type"
+        CommandActionType.FOCUS -> "focus"
+        CommandActionType.SCROLL_DOWN -> "scroll down"
+        CommandActionType.SCROLL_UP -> "scroll up"
+        CommandActionType.SCROLL_LEFT -> "scroll left"
+        CommandActionType.SCROLL_RIGHT -> "scroll right"
+        CommandActionType.SCROLL -> "scroll"
         CommandActionType.NAVIGATE -> "go to"
         CommandActionType.CUSTOM -> "activate"
+        else -> "activate"
     }
 }

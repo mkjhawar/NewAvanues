@@ -69,8 +69,7 @@ class CommandDispatcher(
      * Update dynamic commands from screen scraping.
      */
     fun updateDynamicCommands(commands: List<QuantizedCommand>) {
-        dynamicRegistry.clear()
-        commands.forEach { dynamicRegistry.register(it) }
+        dynamicRegistry.update(commands)
         _state.value = _state.value.copy(
             dynamicCommandCount = commands.size
         )

@@ -307,11 +307,12 @@ class AndroidActionExecutor(
     // ═══════════════════════════════════════════════════════════════════
 
     override suspend fun executeCommand(command: QuantizedCommand): ActionResult {
+        val targetVuid = command.targetVuid ?: return ActionResult.Error("No target VUID specified")
         return when (command.actionType) {
-            CommandActionType.CLICK -> tap(command.targetVuid)
-            CommandActionType.LONG_CLICK -> longPress(command.targetVuid)
-            CommandActionType.FOCUS -> focus(command.targetVuid)
-            CommandActionType.TYPE -> enterText(command.phrase, command.targetVuid)
+            CommandActionType.CLICK -> tap(targetVuid)
+            CommandActionType.LONG_CLICK -> longPress(targetVuid)
+            CommandActionType.FOCUS -> focus(targetVuid)
+            CommandActionType.TYPE -> enterText(command.phrase, targetVuid)
             CommandActionType.SCROLL_DOWN -> scroll(ScrollDirection.DOWN)
             CommandActionType.SCROLL_UP -> scroll(ScrollDirection.UP)
             CommandActionType.SCROLL_LEFT -> scroll(ScrollDirection.LEFT)
@@ -320,7 +321,7 @@ class AndroidActionExecutor(
             CommandActionType.HOME -> home()
             CommandActionType.RECENT_APPS -> recentApps()
             CommandActionType.APP_DRAWER -> appDrawer()
-            CommandActionType.NAVIGATE -> tap(command.targetVuid) // Navigate = tap on nav element
+            CommandActionType.NAVIGATE -> tap(targetVuid) // Navigate = tap on nav element
             else -> executeAction(command.actionType)
         }
     }

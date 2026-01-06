@@ -33,8 +33,8 @@ class StubVivokaEngine(
     private val _currentModel = MutableStateFlow<VivokaModel?>(null)
 
     override val state: StateFlow<EngineState> = _state.asStateFlow()
-    override val results: SharedFlow<SpeechResult> = _results.asSharedFlow()
-    override val errors: SharedFlow<SpeechError> = _errors.asSharedFlow()
+    override val results: Flow<SpeechResult> = _results.asSharedFlow()
+    override val errors: Flow<SpeechError> = _errors.asSharedFlow()
     override val isWakeWordEnabled: StateFlow<Boolean> = _isWakeWordEnabled.asStateFlow()
     override val wakeWordDetected: SharedFlow<WakeWordEvent> = _wakeWordDetected.asSharedFlow()
     override val availableModels: StateFlow<List<VivokaModel>> = _availableModels.asStateFlow()
@@ -48,12 +48,28 @@ class StubVivokaEngine(
         return Result.failure(UnsupportedOperationException(reason))
     }
 
-    override suspend fun stopListening(): Result<Unit> {
+    override suspend fun stopListening() {
+        // No-op for stub
+    }
+
+    override suspend fun updateCommands(commands: List<String>): Result<Unit> {
         return Result.failure(UnsupportedOperationException(reason))
     }
 
-    override suspend fun shutdown(): Result<Unit> {
-        return Result.success(Unit) // Shutdown always succeeds
+    override suspend fun updateConfiguration(config: SpeechConfig): Result<Unit> {
+        return Result.failure(UnsupportedOperationException(reason))
+    }
+
+    override fun isRecognizing(): Boolean = false
+
+    override fun isInitialized(): Boolean = false
+
+    override fun getEngineType(): SpeechEngine = SpeechEngine.VIVOKA
+
+    override fun getSupportedFeatures(): Set<EngineFeature> = emptySet()
+
+    override suspend fun destroy() {
+        _state.value = EngineState.Destroyed
     }
 
     override suspend fun loadModel(modelId: String): Result<Unit> {

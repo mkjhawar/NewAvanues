@@ -10,6 +10,7 @@
  */
 package com.augmentalis.voiceoscoreng.repository
 
+import com.augmentalis.voiceoscoreng.speech.currentTimeMillis
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -131,12 +132,12 @@ data class VuidEntry(
     /**
      * Creation timestamp
      */
-    val createdAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = currentTimeMillis(),
 
     /**
      * Last updated timestamp
      */
-    val updatedAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = currentTimeMillis(),
 
     /**
      * Additional metadata
@@ -196,7 +197,7 @@ class InMemoryVuidRepository : IVuidRepository {
 
     override suspend fun updateAlias(vuid: String, alias: String): Result<Unit> {
         entries[vuid]?.let {
-            entries[vuid] = it.copy(alias = alias, updatedAt = System.currentTimeMillis())
+            entries[vuid] = it.copy(alias = alias, updatedAt = currentTimeMillis())
         }
         return Result.success(Unit)
     }
@@ -207,7 +208,10 @@ class InMemoryVuidRepository : IVuidRepository {
     }
 
     override suspend fun deleteByPackage(packageName: String): Result<Unit> {
-        entries.entries.removeIf { it.value.packageName == packageName }
+        val keysToRemove = entries.entries
+            .filter { it.value.packageName == packageName }
+            .map { it.key }
+        keysToRemove.forEach { entries.remove(it) }
         return Result.success(Unit)
     }
 

@@ -53,7 +53,7 @@ class DesktopActionExecutor : IActionExecutor {
 
     override suspend fun longPress(vuid: String, durationMs: Long): ActionResult {
         return ActionResult.NotSupported(
-            actionType = CommandActionType.LONG_PRESS,
+            actionType = CommandActionType.LONG_CLICK,
             message = "Desktop: VUID element targeting requires accessibility API integration"
         )
     }
@@ -454,7 +454,7 @@ class DesktopActionExecutor : IActionExecutor {
                 val vuid = params["vuid"] as? String
                 if (vuid != null) tap(vuid) else ActionResult.Error("Missing vuid parameter")
             }
-            CommandActionType.LONG_PRESS -> {
+            CommandActionType.LONG_CLICK -> {
                 val vuid = params["vuid"] as? String
                 val duration = (params["duration"] as? Number)?.toLong() ?: 500L
                 if (vuid != null) longPress(vuid, duration) else ActionResult.Error("Missing vuid parameter")
@@ -463,7 +463,7 @@ class DesktopActionExecutor : IActionExecutor {
                 val vuid = params["vuid"] as? String
                 if (vuid != null) focus(vuid) else ActionResult.Error("Missing vuid parameter")
             }
-            CommandActionType.TEXT_INPUT -> {
+            CommandActionType.TYPE -> {
                 val text = params["text"] as? String ?: ""
                 val vuid = params["vuid"] as? String
                 enterText(text, vuid)

@@ -1,0 +1,630 @@
+# DebugPanel.yaml - Developer-Only Debug Panel
+# AVAUI YAML format for VoiceOSCoreNG debug information display
+#
+# Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+# Author: VOS4 Development Team
+# Created: 2026-01-06
+#
+# Maps to: LearnAppConfig.kt (debug overlay feature)
+
+---
+component:
+  name: DebugPanel
+  type: overlay
+  platform: all
+  devOnly: true
+  description: |
+    Developer-only debug panel showing real-time VoiceOSCoreNG metrics.
+    Only visible when LearnAppConfig.isDebugOverlayEnabled() returns true.
+    Displays: element count, framework detection, confidence, timing, etc.
+
+theme:
+  inherit: VoiceOSCoreNGTheme
+  tokens:
+    panelBackground: "0xDD000000"   # Near-black with 87% opacity
+    panelBorder: "0xFF00FF41"       # Neon green for dev visibility
+    labelColor: "0xFF888888"        # Grey for labels
+    valueColor: "0xFF00FF41"        # Neon green for values
+    warningColor: "0xFFFF9800"      # Orange for warnings
+    errorColor: "0xFFF44336"        # Red for errors
+    successColor: "0xFF4CAF50"      # Green for success
+
+# ============================================================================
+# LAYOUT STRUCTURE
+# ============================================================================
+layout:
+  type: stack
+  id: debugPanelRoot
+  props:
+    fillMaxSize: false
+    alignment: topRight
+
+  children:
+    # Collapsible debug panel
+    - widget: CollapsiblePanel
+      id: debugPanel
+      props:
+        alignment: topRight
+        margin:
+          top: ${spacing.paddingXLarge}
+          right: ${spacing.paddingMedium}
+        defaultExpanded: false
+
+      children:
+        # Toggle button
+        - widget: ToggleButton
+          id: toggleButton
+          props:
+            size: 40
+            background: ${panelBackground}
+            cornerRadius: ${shapes.cornerRadiusSmall}
+            borderWidth: 1
+            borderColor: ${panelBorder}
+
+          children:
+            - widget: Icon
+              props:
+                icon: ${isExpanded ? 'expand_less' : 'bug_report'}
+                size: ${sizes.iconMedium}
+                color: ${panelBorder}
+
+          accessibility:
+            role: button
+            contentDescription: ${isExpanded ? 'Collapse debug panel' : 'Expand debug panel'}
+            minTouchTarget: ${accessibility.minimumTouchTarget}
+
+        # Expanded panel content
+        - widget: Container
+          id: panelContent
+          condition: ${isExpanded}
+          props:
+            background: ${panelBackground}
+            cornerRadius: ${shapes.cornerRadiusMedium}
+            borderWidth: 1
+            borderColor: ${panelBorder}
+            padding: ${spacing.paddingMedium}
+            minWidth: 280
+            maxWidth: 320
+
+          children:
+            - widget: Column
+              props:
+                spacing: ${spacing.spacingSmall}
+
+              children:
+                # Header
+                - widget: Row
+                  props:
+                    alignment: spaceBetween
+
+                  children:
+                    - widget: Text
+                      props:
+                        text: "VoiceOSCoreNG Debug"
+                        color: ${panelBorder}
+                        fontSize: ${typography.captionSize}
+                        fontWeight: ${typography.fontWeightBold}
+
+                    - widget: Text
+                      props:
+                        text: ${currentMode}
+                        color: ${currentMode == 'DEV' ? successColor : labelColor}
+                        fontSize: ${typography.smallSize}
+                        fontWeight: ${typography.fontWeightMedium}
+
+                # Divider
+                - widget: Divider
+                  props:
+                    color: ${colors.divider}
+                    thickness: 1
+
+                # === Configuration Section ===
+                - widget: SectionHeader
+                  props:
+                    text: "Configuration"
+
+                - widget: DebugRow
+                  props:
+                    label: "Tier"
+                    value: ${tierName}
+                    valueColor: ${tierName == 'DEV' ? successColor : labelColor}
+
+                - widget: DebugRow
+                  props:
+                    label: "Processing Mode"
+                    value: ${processingMode}
+
+                - widget: DebugRow
+                  props:
+                    label: "Max Elements"
+                    value: ${maxElementsPerScan == -1 ? 'Unlimited' : maxElementsPerScan}
+
+                - widget: DebugRow
+                  props:
+                    label: "Max Apps"
+                    value: ${maxAppsLearned == -1 ? 'Unlimited' : maxAppsLearned}
+
+                # Divider
+                - widget: Divider
+                  props:
+                    color: ${colors.divider}
+                    thickness: 1
+
+                # === Features Section ===
+                - widget: SectionHeader
+                  props:
+                    text: "Features"
+
+                - widget: FeatureRow
+                  props:
+                    label: "AI"
+                    enabled: ${enableAI}
+
+                - widget: FeatureRow
+                  props:
+                    label: "NLU"
+                    enabled: ${enableNLU}
+
+                - widget: FeatureRow
+                  props:
+                    label: "Exploration"
+                    enabled: ${enableExploration}
+
+                - widget: FeatureRow
+                  props:
+                    label: "Framework Detection"
+                    enabled: ${enableFrameworkDetection}
+
+                - widget: FeatureRow
+                  props:
+                    label: "Caching"
+                    enabled: ${cacheEnabled}
+
+                - widget: FeatureRow
+                  props:
+                    label: "Analytics"
+                    enabled: ${analyticsEnabled}
+
+                # Divider
+                - widget: Divider
+                  props:
+                    color: ${colors.divider}
+                    thickness: 1
+
+                # === Runtime Metrics Section ===
+                - widget: SectionHeader
+                  props:
+                    text: "Runtime Metrics"
+
+                - widget: DebugRow
+                  props:
+                    label: "Elements Found"
+                    value: ${elementsFound}
+                    valueColor: ${elementsFound > 0 ? valueColor : labelColor}
+
+                - widget: DebugRow
+                  props:
+                    label: "Current App"
+                    value: ${currentAppName}
+                    truncate: true
+
+                - widget: DebugRow
+                  props:
+                    label: "Framework"
+                    value: ${detectedFramework}
+                    valueColor: ${detectedFramework != 'Unknown' ? successColor : labelColor}
+
+                - widget: DebugRow
+                  props:
+                    label: "Screen Hash"
+                    value: ${screenHash}
+                    truncate: true
+                    monospace: true
+
+                # Divider
+                - widget: Divider
+                  props:
+                    color: ${colors.divider}
+                    thickness: 1
+
+                # === Performance Section ===
+                - widget: SectionHeader
+                  props:
+                    text: "Performance"
+
+                - widget: DebugRow
+                  props:
+                    label: "Scan Time"
+                    value: ${scanTimeMs}ms
+                    valueColor: ${getScanTimeColor(scanTimeMs)}
+
+                - widget: DebugRow
+                  props:
+                    label: "Process Time"
+                    value: ${processTimeMs}ms
+                    valueColor: ${getProcessTimeColor(processTimeMs)}
+
+                - widget: DebugRow
+                  props:
+                    label: "Confidence"
+                    value: ${formatPercentage(lastConfidence)}
+                    valueColor: ${getConfidenceColor(lastConfidence)}
+
+                - widget: DebugRow
+                  props:
+                    label: "Commands Generated"
+                    value: ${commandsGenerated}
+
+                # Divider
+                - widget: Divider
+                  props:
+                    color: ${colors.divider}
+                    thickness: 1
+
+                # === Speech Section ===
+                - widget: SectionHeader
+                  props:
+                    text: "Speech"
+
+                - widget: DebugRow
+                  props:
+                    label: "Engine"
+                    value: ${speechEngine}
+
+                - widget: DebugRow
+                  props:
+                    label: "Mode"
+                    value: ${speechMode}
+
+                - widget: DebugRow
+                  props:
+                    label: "Last Utterance"
+                    value: ${lastUtterance}
+                    truncate: true
+
+                # Actions row
+                - widget: Row
+                  props:
+                    spacing: ${spacing.spacingSmall}
+                    alignment: end
+                    marginTop: ${spacing.spacingMedium}
+
+                  children:
+                    - widget: TextButton
+                      props:
+                        text: "Copy"
+                        color: ${panelBorder}
+                        fontSize: ${typography.smallSize}
+                      onTap: ${copyDebugInfo}
+                      accessibility:
+                        role: button
+                        contentDescription: "Copy debug info to clipboard"
+                        minTouchTarget: ${accessibility.minimumTouchTarget}
+
+                    - widget: TextButton
+                      props:
+                        text: "Clear"
+                        color: ${warningColor}
+                        fontSize: ${typography.smallSize}
+                      onTap: ${clearMetrics}
+                      accessibility:
+                        role: button
+                        contentDescription: "Clear debug metrics"
+                        minTouchTarget: ${accessibility.minimumTouchTarget}
+
+# ============================================================================
+# CUSTOM WIDGETS
+# ============================================================================
+widgets:
+  SectionHeader:
+    props:
+      text: string
+    layout:
+      - widget: Text
+        props:
+          text: ${text}
+          color: ${labelColor}
+          fontSize: ${typography.smallSize}
+          fontWeight: ${typography.fontWeightBold}
+          textTransform: uppercase
+          letterSpacing: 1
+
+  DebugRow:
+    props:
+      label: string
+      value: string
+      valueColor: color = ${valueColor}
+      truncate: boolean = false
+      monospace: boolean = false
+    layout:
+      - widget: Row
+        props:
+          alignment: spaceBetween
+        children:
+          - widget: Text
+            props:
+              text: ${label}
+              color: ${labelColor}
+              fontSize: ${typography.smallSize}
+          - widget: Text
+            props:
+              text: ${truncate && value.length > 16 ? value.substring(0, 16) + '...' : value}
+              color: ${valueColor}
+              fontSize: ${typography.smallSize}
+              fontFamily: ${monospace ? 'monospace' : 'default'}
+
+  FeatureRow:
+    props:
+      label: string
+      enabled: boolean
+    layout:
+      - widget: Row
+        props:
+          alignment: spaceBetween
+        children:
+          - widget: Text
+            props:
+              text: ${label}
+              color: ${labelColor}
+              fontSize: ${typography.smallSize}
+          - widget: Text
+            props:
+              text: ${enabled ? 'ON' : 'OFF'}
+              color: ${enabled ? successColor : errorColor}
+              fontSize: ${typography.smallSize}
+              fontWeight: ${typography.fontWeightBold}
+
+# ============================================================================
+# STATES
+# ============================================================================
+states:
+  - name: visible
+    props:
+      opacity: 1.0
+
+  - name: hidden
+    props:
+      opacity: 0.0
+
+  - name: expanded
+    props:
+      isExpanded: true
+
+  - name: collapsed
+    props:
+      isExpanded: false
+
+# ============================================================================
+# ANIMATIONS
+# ============================================================================
+animations:
+  show:
+    duration: ${animations.durationFast}
+    easing: ${animations.easingEnter}
+    properties:
+      opacity: { from: 0.0, to: 1.0 }
+      translateX: { from: 50, to: 0 }
+
+  hide:
+    duration: ${animations.durationFast}
+    easing: ${animations.easingExit}
+    properties:
+      opacity: { from: 1.0, to: 0.0 }
+      translateX: { from: 0, to: 50 }
+
+  expand:
+    duration: ${animations.durationNormal}
+    easing: ${animations.easingDefault}
+    properties:
+      height: { from: 0, to: auto }
+      opacity: { from: 0.0, to: 1.0 }
+
+  collapse:
+    duration: ${animations.durationFast}
+    easing: ${animations.easingDefault}
+    properties:
+      height: { from: auto, to: 0 }
+      opacity: { from: 1.0, to: 0.0 }
+
+  valueUpdate:
+    duration: 200
+    easing: ${animations.easingDefault}
+    properties:
+      backgroundColor: { from: ${panelBorder}, to: transparent }
+
+# ============================================================================
+# ACCESSIBILITY
+# ============================================================================
+accessibility:
+  role: region
+  contentDescription: "Debug information panel"
+
+  announcements:
+    onExpand: "Debug panel expanded"
+    onCollapse: "Debug panel collapsed"
+    onCopy: "Debug info copied to clipboard"
+    onClear: "Debug metrics cleared"
+
+  navigation:
+    supportsFocus: true
+    focusOrder: sequential
+    skipInAccessibility: true  # Hide from screen readers in production
+
+# ============================================================================
+# DATA BINDINGS
+# ============================================================================
+data:
+  # Panel state
+  isExpanded:
+    type: boolean
+    default: false
+    description: "Whether panel is expanded"
+
+  # Configuration from LearnAppConfig
+  currentMode:
+    type: string
+    default: "LITE"
+    enum: ["LITE", "DEV"]
+
+  tierName:
+    type: string
+    computed: ${currentMode}
+
+  processingMode:
+    type: string
+    default: "IMMEDIATE"
+    enum: ["IMMEDIATE", "BATCH", "HYBRID"]
+
+  maxElementsPerScan:
+    type: number
+    default: 100
+
+  maxAppsLearned:
+    type: number
+    default: 25
+
+  # Feature flags
+  enableAI:
+    type: boolean
+    default: true
+
+  enableNLU:
+    type: boolean
+    default: true
+
+  enableExploration:
+    type: boolean
+    default: false
+
+  enableFrameworkDetection:
+    type: boolean
+    default: false
+
+  cacheEnabled:
+    type: boolean
+    default: true
+
+  analyticsEnabled:
+    type: boolean
+    default: false
+
+  # Runtime metrics
+  elementsFound:
+    type: number
+    default: 0
+
+  currentAppName:
+    type: string
+    default: "Unknown"
+
+  detectedFramework:
+    type: string
+    default: "Unknown"
+    enum: ["Native", "Flutter", "ReactNative", "Unity", "WebView", "Unknown"]
+
+  screenHash:
+    type: string
+    default: ""
+
+  # Performance metrics
+  scanTimeMs:
+    type: number
+    default: 0
+
+  processTimeMs:
+    type: number
+    default: 0
+
+  lastConfidence:
+    type: number
+    default: 0.0
+
+  commandsGenerated:
+    type: number
+    default: 0
+
+  # Speech metrics
+  speechEngine:
+    type: string
+    default: "Platform STT"
+
+  speechMode:
+    type: string
+    default: "CONTINUOUS"
+
+  lastUtterance:
+    type: string
+    default: ""
+
+# ============================================================================
+# FUNCTIONS
+# ============================================================================
+functions:
+  formatPercentage:
+    params: [value]
+    returns: string
+    logic: |
+      return Math.round(value * 100) + "%"
+
+  getConfidenceColor:
+    params: [value]
+    returns: color
+    logic: |
+      if (value >= 0.8) return successColor
+      if (value >= 0.6) return warningColor
+      return errorColor
+
+  getScanTimeColor:
+    params: [ms]
+    returns: color
+    logic: |
+      if (ms < 50) return successColor
+      if (ms < 200) return warningColor
+      return errorColor
+
+  getProcessTimeColor:
+    params: [ms]
+    returns: color
+    logic: |
+      if (ms < 100) return successColor
+      if (ms < 500) return warningColor
+      return errorColor
+
+  copyDebugInfo:
+    returns: void
+    logic: |
+      const info = generateDebugReport()
+      copyToClipboard(info)
+
+  clearMetrics:
+    returns: void
+    logic: |
+      elementsFound = 0
+      scanTimeMs = 0
+      processTimeMs = 0
+      commandsGenerated = 0
+      lastUtterance = ""
+
+  generateDebugReport:
+    returns: string
+    logic: |
+      return [
+        "=== VoiceOSCoreNG Debug Report ===",
+        "Tier: " + tierName,
+        "Mode: " + processingMode,
+        "Max Elements: " + maxElementsPerScan,
+        "Framework: " + detectedFramework,
+        "Elements: " + elementsFound,
+        "Scan Time: " + scanTimeMs + "ms",
+        "Process Time: " + processTimeMs + "ms",
+        "Confidence: " + formatPercentage(lastConfidence),
+        "Screen Hash: " + screenHash,
+        "=================================="
+      ].join("\n")
+
+# ============================================================================
+# VISIBILITY CONDITION
+# ============================================================================
+visibility:
+  condition: ${LearnAppConfig.isDebugOverlayEnabled()}
+  devModeOnly: true

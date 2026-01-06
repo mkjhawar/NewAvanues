@@ -21,8 +21,14 @@ enum class CommandActionType {
     /** Click/tap action */
     CLICK,
 
+    /** Tap action (alias for CLICK) */
+    TAP,
+
     /** Long press/hold action */
     LONG_CLICK,
+
+    /** Execute/run action (generic) */
+    EXECUTE,
 
     /** Text input action */
     TYPE,
@@ -45,6 +51,9 @@ enum class CommandActionType {
 
     /** Scroll right */
     SCROLL_RIGHT,
+
+    /** Generic scroll (direction determined by context) */
+    SCROLL,
 
     // ═══════════════════════════════════════════════════════════════════
     // Navigation Actions
@@ -152,8 +161,8 @@ enum class CommandActionType {
      * Check if this is an element interaction action
      */
     fun isElementAction(): Boolean = this in listOf(
-        CLICK, LONG_CLICK, TYPE, FOCUS,
-        SCROLL_DOWN, SCROLL_UP, SCROLL_LEFT, SCROLL_RIGHT
+        CLICK, TAP, LONG_CLICK, TYPE, FOCUS, EXECUTE,
+        SCROLL_DOWN, SCROLL_UP, SCROLL_LEFT, SCROLL_RIGHT, SCROLL
     )
 
     /**

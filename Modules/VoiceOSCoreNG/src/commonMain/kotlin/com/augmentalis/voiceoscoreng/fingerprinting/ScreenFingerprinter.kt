@@ -10,6 +10,8 @@
  */
 package com.augmentalis.voiceoscoreng.fingerprinting
 
+import com.augmentalis.voiceoscoreng.speech.currentTimeMillis
+
 /**
  * Screen fingerprinter for generating unique screen identifiers.
  *
@@ -173,7 +175,7 @@ data class ScreenState(
     val popupType: PopupType = PopupType.UNKNOWN,
     val elementCount: Int = 0,
     val structuralHash: String? = null,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = currentTimeMillis()
 ) {
     /**
      * Check if this represents the same screen as another state.

@@ -91,7 +91,7 @@ class AndroidVivokaEngine(
                 return Result.failure(IllegalStateException("Engine not ready"))
             }
 
-            _state.value = EngineState.Listening(SpeechEngine.VIVOKA)
+            _state.value = EngineState.Listening
 
             // Start delegate listening
             vivokaDelegate?.let { delegate ->
@@ -110,31 +110,59 @@ class AndroidVivokaEngine(
         }
     }
 
-    override suspend fun stopListening(): Result<Unit> {
-        return try {
+    override suspend fun stopListening() {
+        try {
             vivokaDelegate?.let { delegate ->
                 val method = delegate.javaClass.getMethod("stopListening")
                 method.invoke(delegate)
             }
-
             _state.value = EngineState.Ready(SpeechEngine.VIVOKA)
-            Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            _errors.tryEmit(SpeechError(
+                code = SpeechError.ErrorCode.AUDIO_ERROR,
+                message = "Failed to stop listening: ${e.message}",
+                recoverable = true
+            ))
         }
     }
 
-    override suspend fun shutdown(): Result<Unit> {
-        return try {
+    override suspend fun updateCommands(commands: List<String>): Result<Unit> {
+        // Vivoka doesn't support dynamic command updates in the same way
+        // Commands are handled via NLU integration
+        return Result.success(Unit)
+    }
+
+    override suspend fun updateConfiguration(config: SpeechConfig): Result<Unit> {
+        // Configuration updates would require re-initialization
+        return Result.success(Unit)
+    }
+
+    override fun isRecognizing(): Boolean = _state.value is EngineState.Listening
+
+    override fun isInitialized(): Boolean = _state.value is EngineState.Ready
+
+    override fun getEngineType(): SpeechEngine = SpeechEngine.VIVOKA
+
+    override fun getSupportedFeatures(): Set<EngineFeature> = setOf(
+        EngineFeature.OFFLINE_MODE,
+        EngineFeature.CONTINUOUS_RECOGNITION,
+        EngineFeature.WAKE_WORD,
+        EngineFeature.CUSTOM_VOCABULARY
+    )
+
+    override suspend fun destroy() {
+        try {
             vivokaDelegate?.let { delegate ->
                 val method = delegate.javaClass.getMethod("shutdown")
                 method.invoke(delegate)
             }
             vivokaDelegate = null
-            _state.value = EngineState.Uninitialized
-            Result.success(Unit)
+            _state.value = EngineState.Destroyed
         } catch (e: Exception) {
-            Result.failure(e)
+            _state.value = EngineState.Error(
+                message = "Failed to destroy: ${e.message}",
+                recoverable = false
+            )
         }
     }
 

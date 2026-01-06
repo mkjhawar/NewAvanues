@@ -41,7 +41,7 @@ class IOSActionExecutor : IActionExecutor {
     override suspend fun longPress(vuid: String, durationMs: Long): ActionResult {
         // TODO: Bridge to Swift UIAccessibilityCustomAction for long press
         return ActionResult.NotSupported(
-            actionType = CommandActionType.LONG_PRESS,
+            actionType = CommandActionType.LONG_CLICK,
             message = "iOS longPress: requires Swift bridge implementation"
         )
     }
@@ -57,7 +57,7 @@ class IOSActionExecutor : IActionExecutor {
     override suspend fun enterText(text: String, vuid: String?): ActionResult {
         // TODO: Use UITextInput protocol
         return ActionResult.NotSupported(
-            actionType = CommandActionType.TEXT_INPUT,
+            actionType = CommandActionType.TYPE,
             message = "iOS enterText: requires Swift bridge implementation"
         )
     }
@@ -252,7 +252,7 @@ class IOSActionExecutor : IActionExecutor {
                 val vuid = params["vuid"] as? String
                 if (vuid != null) tap(vuid) else ActionResult.Error("Missing vuid parameter")
             }
-            CommandActionType.LONG_PRESS -> {
+            CommandActionType.LONG_CLICK -> {
                 val vuid = params["vuid"] as? String
                 val duration = (params["duration"] as? Number)?.toLong() ?: 500L
                 if (vuid != null) longPress(vuid, duration) else ActionResult.Error("Missing vuid parameter")
@@ -261,7 +261,7 @@ class IOSActionExecutor : IActionExecutor {
                 val vuid = params["vuid"] as? String
                 if (vuid != null) focus(vuid) else ActionResult.Error("Missing vuid parameter")
             }
-            CommandActionType.TEXT_INPUT -> {
+            CommandActionType.TYPE -> {
                 val text = params["text"] as? String ?: ""
                 val vuid = params["vuid"] as? String
                 enterText(text, vuid)
