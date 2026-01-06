@@ -161,18 +161,18 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         try {
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.MATCH_PARENT,  // Full height so drawer handle is visible
+            WindowManager.LayoutParams.WRAP_CONTENT,  // Only as big as the FAB
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             else
                 WindowManager.LayoutParams.TYPE_PHONE,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,  // Allow touches outside overlay
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,  // Let touches pass through
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.END or Gravity.CENTER_VERTICAL  // Right edge, centered vertically
-            x = 0  // Flush to right edge
+            x = 0
             y = 0
         }
 
@@ -414,347 +414,217 @@ private fun OverlayContent(onClose: () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme()
     ) {
-        // Use Box with proper alignment for the drawer handle on right edge
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.CenterEnd  // Align to right edge, centered vertically
+        // Compact FAB-based overlay - doesn't block touches on other apps
+        Column(
+            horizontalAlignment = Alignment.End
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-            // Results panel (shown when has results)
-            if (showResults && explorationResults != null) {
-                ResultsPanel(
-                    result = explorationResults!!,
-                    onClose = { showResults = false }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-
-            // Sliding drawer panel
+            // Menu panel (shown when FAB is tapped)
             if (drawerOpen) {
                 Card(
                     modifier = Modifier
-                        .width(260.dp)
-                        .padding(vertical = 16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFF5F5F5)  // Light gray background
-                    ),
-                    shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+                        .width(240.dp)
+                        .padding(end = 8.dp, bottom = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2E)),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.padding(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        // Status indicator
+                        // Status
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(bottom = 4.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Icon(
                                 imageVector = if (isConnected) Icons.Default.CheckCircle else Icons.Default.Warning,
                                 contentDescription = null,
                                 tint = if (isConnected) Color(0xFF10B981) else Color(0xFFDC2626),
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(12.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (isConnected) "Service Connected" else "Enable Accessibility",
-                                fontSize = 11.sp,
+                                text = if (isConnected) "Connected" else "Enable Accessibility",
+                                fontSize = 10.sp,
                                 color = Color.Gray
                             )
                         }
 
-                        // Test Mode Toggle
-                        DrawerActionButton(
-                            text = if (testModeEnabled) "Disable Test Mode" else "Enable Test Mode",
-                            icon = Icons.Default.Science,
-                            iconColor = Color(0xFFDC2626),  // Red
-                            onClick = { testModeEnabled = !testModeEnabled }
-                        )
-
-                        // Scan / Run All Tests
-                        DrawerActionButton(
-                            text = "Scan Current App",
+                        // Scan Current App
+                        FabMenuItem(
                             icon = Icons.Default.PlayArrow,
-                            iconColor = Color(0xFF3B82F6),  // Blue
+                            text = "Scan App",
+                            iconColor = Color(0xFF3B82F6),
                             enabled = isConnected,
                             onClick = {
                                 VoiceOSAccessibilityService.exploreCurrentApp()
                                 showResults = true
+                                drawerOpen = false
                             }
                         )
 
-                        // Scan All Windows / Test Exploration
-                        DrawerActionButton(
-                            text = "Scan All Windows",
+                        // Scan All Windows
+                        FabMenuItem(
                             icon = Icons.Default.Explore,
-                            iconColor = Color(0xFF6B7280),  // Gray
+                            text = "Scan All",
+                            iconColor = Color(0xFF6B7280),
                             enabled = isConnected,
                             onClick = {
                                 VoiceOSAccessibilityService.exploreAllApps()
                                 showResults = true
+                                drawerOpen = false
                             }
                         )
 
-                        // Show/Hide Results
+                        // Show Results (if available)
                         if (explorationResults != null) {
-                            DrawerActionButton(
-                                text = if (showResults) "Hide Results" else "Show Results",
+                            FabMenuItem(
                                 icon = Icons.Default.Visibility,
-                                iconColor = Color(0xFFF59E0B),  // Amber
-                                onClick = { showResults = !showResults }
+                                text = if (showResults) "Hide Results" else "Show Results",
+                                iconColor = Color(0xFFF59E0B),
+                                onClick = {
+                                    showResults = !showResults
+                                    drawerOpen = false
+                                }
                             )
                         }
 
-                        // View Config
-                        DrawerActionButton(
-                            text = "View Config",
-                            icon = Icons.Default.Info,
-                            iconColor = Color(0xFF6366F1),  // Indigo
-                            onClick = { showConfigPanel = true }
+                        // Test Mode Toggle
+                        FabMenuItem(
+                            icon = Icons.Default.Science,
+                            text = if (testModeEnabled) "Test: ON" else "Test: OFF",
+                            iconColor = if (testModeEnabled) Color(0xFF10B981) else Color(0xFFDC2626),
+                            onClick = { testModeEnabled = !testModeEnabled }
                         )
 
-                        // Developer Settings - Expandable Section
-                        DrawerActionButton(
-                            text = if (devSettingsExpanded) "Hide Dev Settings" else "Developer Settings",
-                            icon = if (devSettingsExpanded) Icons.Default.ExpandLess else Icons.Default.Settings,
-                            iconColor = Color(0xFF1E3A5F),  // Dark blue
+                        // Developer Settings
+                        FabMenuItem(
+                            icon = Icons.Default.Settings,
+                            text = "Dev Settings",
+                            iconColor = Color(0xFF6366F1),
                             onClick = { devSettingsExpanded = !devSettingsExpanded }
                         )
 
-                        // Expandable Developer Settings Content
+                        // Dev settings expanded content
                         if (devSettingsExpanded) {
-                            Card(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 4.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFE5E7EB)),
-                                shape = RoundedCornerShape(8.dp)
+                                    .background(Color(0xFF2D2D3D), RoundedCornerShape(8.dp))
+                                    .padding(8.dp)
                             ) {
-                                Column(modifier = Modifier.padding(8.dp)) {
-                                    // Debug Logging Toggle
-                                    DrawerSettingsToggle(
-                                        label = "Debug Logging",
-                                        checked = debugLogging,
-                                        onCheckedChange = { debugLogging = it }
-                                    )
-
-                                    // Show VUIDs Toggle
-                                    DrawerSettingsToggle(
-                                        label = "Show VUIDs Overlay",
-                                        checked = showVuidsOverlay,
-                                        onCheckedChange = { showVuidsOverlay = it }
-                                    )
-
-                                    // Auto-minimize Toggle
-                                    DrawerSettingsToggle(
-                                        label = "Auto-minimize App",
-                                        checked = autoMinimize,
-                                        onCheckedChange = { autoMinimize = it }
-                                    )
-
-                                    // Test Mode indicator
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 4.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text("Test Mode", fontSize = 11.sp, color = Color(0xFF374151))
-                                        Text(
-                                            text = if (testModeEnabled) "ON" else "OFF",
-                                            fontSize = 11.sp,
-                                            color = if (testModeEnabled) Color(0xFF10B981) else Color.Gray,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
+                                CompactToggle("Debug Log", debugLogging) { debugLogging = it }
+                                CompactToggle("Show VUIDs", showVuidsOverlay) { showVuidsOverlay = it }
+                                CompactToggle("Auto-min", autoMinimize) { autoMinimize = it }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Divider(color = Color.Gray.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
 
-                        // Close Overlay button at bottom
-                        DrawerActionButton(
-                            text = "Close Overlay",
+                        // Close Overlay
+                        FabMenuItem(
                             icon = Icons.Default.Close,
-                            iconColor = Color(0xFF6B7280),
+                            text = "Close",
+                            iconColor = Color.Gray,
                             onClick = onClose
                         )
                     }
                 }
             }
 
-            // Drawer handle/tab
-            Card(
-                modifier = Modifier
-                    .width(40.dp)
-                    .height(100.dp)
-                    .clickable { drawerOpen = !drawerOpen },
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isConnected) Color(0xFF1E3A5F) else Color(0xFFDC2626)
-                ),
-                shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+            // Results panel (compact, below menu)
+            if (showResults && explorationResults != null) {
+                Card(
+                    modifier = Modifier
+                        .width(300.dp)
+                        .heightIn(max = 350.dp)
+                        .padding(end = 8.dp, bottom = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2E)),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
-                    Icon(
-                        imageVector = if (drawerOpen) Icons.Default.ChevronRight else Icons.Default.ChevronLeft,
-                        contentDescription = "Toggle drawer",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Icon(
-                        imageVector = Icons.Default.Scanner,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
+                    ResultsPanel(
+                        result = explorationResults!!,
+                        onClose = { showResults = false }
                     )
                 }
             }
 
-            // Error indicator
-            lastError?.let { error ->
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = error,
-                    fontSize = 10.sp,
-                    color = Color.Red,
-                    modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
-                        .padding(4.dp)
+            // FAB Button
+            FloatingActionButton(
+                onClick = { drawerOpen = !drawerOpen },
+                modifier = Modifier.size(56.dp),
+                containerColor = if (isConnected) Color(0xFF1E3A5F) else Color(0xFFDC2626),
+                contentColor = Color.White,
+                shape = CircleShape
+            ) {
+                Icon(
+                    imageVector = if (drawerOpen) Icons.Default.Close else Icons.Default.Scanner,
+                    contentDescription = "Scanner Menu",
+                    modifier = Modifier.size(28.dp)
                 )
             }
-            }  // End Row
+        }
+    }
+}
 
-            // Config Panel Overlay
-            if (showConfigPanel) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .clickable { showConfigPanel = false },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Card(
-                        modifier = Modifier
-                            .width(320.dp)
-                            .padding(16.dp)
-                            .clickable(enabled = false) {},
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2E)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("LearnApp Configuration", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                IconButton(onClick = { showConfigPanel = false }, modifier = Modifier.size(24.dp)) {
-                                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(16.dp))
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            ConfigRow("Variant", "LearnApp Lite")
-                            ConfigRow("Tier", "LITE")
-                            ConfigRow("Test Mode", if (testModeEnabled) "ENABLED" else "DISABLED")
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Processing", color = Color.Gray, fontSize = 11.sp)
-                            ConfigRow("Mode", "IMMEDIATE")
-                            ConfigRow("Max Elements", "Unlimited")
-                            ConfigRow("Max Apps", "Unlimited")
-                            ConfigRow("Batch Timeout", "3000ms")
-                            ConfigRow("Exploration Depth", "5")
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Features", color = Color.Gray, fontSize = 11.sp)
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                FeatureBadge("AI", true)
-                                FeatureBadge("NLU", true)
-                                FeatureBadge("Exploration", true)
-                            }
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                FeatureBadge("Detection", true)
-                                FeatureBadge("Caching", true)
-                                FeatureBadge("Analytics", true)
-                            }
-                        }
-                    }
-                }
-            }
+@Composable
+private fun FabMenuItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+    iconColor: Color,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (enabled) iconColor else Color.Gray,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = text,
+            fontSize = 13.sp,
+            color = if (enabled) Color.White else Color.Gray
+        )
+    }
+}
 
-            // Developer Settings Panel Overlay
-            if (showDevSettings) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .clickable { showDevSettings = false },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Card(
-                        modifier = Modifier
-                            .width(320.dp)
-                            .padding(16.dp)
-                            .clickable(enabled = false) {},
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2E)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Developer Settings", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                IconButton(onClick = { showDevSettings = false }, modifier = Modifier.size(24.dp)) {
-                                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(16.dp))
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            // Debug logging toggle
-                            SettingsToggle(
-                                label = "Debug Logging",
-                                description = "Enable verbose logging",
-                                checked = true,
-                                onCheckedChange = { }
-                            )
-
-                            // Show VUIDs toggle
-                            SettingsToggle(
-                                label = "Show VUIDs in Overlay",
-                                description = "Display VUIDs on scanned elements",
-                                checked = false,
-                                onCheckedChange = { }
-                            )
-
-                            // Auto-minimize toggle
-                            SettingsToggle(
-                                label = "Auto-minimize App",
-                                description = "Minimize after starting overlay",
-                                checked = true,
-                                onCheckedChange = { }
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Scan Settings", color = Color.Gray, fontSize = 11.sp)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            ConfigRow("Scan Delay", "0ms")
-                            ConfigRow("Max Depth", "10")
-                            ConfigRow("Hash Algorithm", "MD5")
-                        }
-                    }
-                }
-            }
-        }  // End Box
-    }  // End MaterialTheme
+@Composable
+private fun CompactToggle(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, fontSize = 10.sp, color = Color.White)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.height(16.dp),
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = Color(0xFF10B981),
+                uncheckedThumbColor = Color.Gray,
+                uncheckedTrackColor = Color.DarkGray
+            )
+        )
+    }
 }
 
 @Composable
