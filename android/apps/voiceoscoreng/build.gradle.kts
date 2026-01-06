@@ -61,8 +61,10 @@ android {
 }
 
 dependencies {
-    // VoiceOSCoreNG library (via composite build substitution)
-    implementation("com.augmentalis:voiceoscoreng")
+    // VoiceOSCoreNG library
+    // For monorepo: uses project reference
+    // For standalone: uses composite build substitution (see settings.gradle.kts)
+    implementation(project(":Modules:VoiceOSCoreNG"))
 
     // Core Android
     implementation("androidx.core:core-ktx:1.12.0")

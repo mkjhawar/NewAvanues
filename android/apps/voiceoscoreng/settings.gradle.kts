@@ -16,9 +16,11 @@ dependencyResolutionManagement {
 
 rootProject.name = "VoiceOSCoreNGApp"
 
-// Include the VoiceOSCoreNG library module from Modules as composite build
+// Include the VoiceOSCoreNG library module for standalone builds
+// This makes :Modules:VoiceOSCoreNG resolve to the composite build
 includeBuild("../../../Modules/VoiceOSCoreNG") {
     dependencySubstitution {
-        substitute(module("com.augmentalis:voiceoscoreng")).using(project(":"))
+        // Substitute project reference used in build.gradle.kts
+        substitute(project(":Modules:VoiceOSCoreNG")).using(project(":"))
     }
 }
