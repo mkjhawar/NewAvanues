@@ -2,6 +2,7 @@ package com.augmentalis.voiceoscoreng.avu
 
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
+import com.augmentalis.voiceoscoreng.common.ElementType
 import com.augmentalis.voiceoscoreng.functions.getCurrentTimeMillis
 import kotlin.test.Test
 import kotlin.test.assertEquals

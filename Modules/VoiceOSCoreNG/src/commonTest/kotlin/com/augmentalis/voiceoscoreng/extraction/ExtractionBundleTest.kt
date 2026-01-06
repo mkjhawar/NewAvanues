@@ -1,5 +1,5 @@
 package com.augmentalis.voiceoscoreng.extraction
-
+import com.augmentalis.voiceoscoreng.common.Bounds
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.test.assertNotNull

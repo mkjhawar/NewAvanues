@@ -16,6 +16,8 @@
 package com.augmentalis.voiceoscoreng.theme
 
 import com.augmentalis.voiceoscoreng.features.OverlayTheme
+import com.augmentalis.voiceoscoreng.features.YamlThemeParser
+import com.augmentalis.voiceoscoreng.features.ThemeParseResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

@@ -16,6 +16,8 @@
 package com.augmentalis.voiceoscoreng.theme
 
 import com.augmentalis.voiceoscoreng.features.OverlayTheme
+import com.augmentalis.voiceoscoreng.features.ThemeProvider
+import com.augmentalis.voiceoscoreng.features.ThemeVariant
 import com.augmentalis.voiceoscoreng.features.ThemeValidationResult
 import com.augmentalis.voiceoscoreng.features.colorWithAlpha
 import com.augmentalis.voiceoscoreng.features.extractAlpha

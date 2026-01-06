@@ -16,7 +16,7 @@
  * - Rendering parameter generation
  */
 package com.augmentalis.voiceoscoreng.overlay
-
+import com.augmentalis.voiceoscoreng.common.Bounds
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
