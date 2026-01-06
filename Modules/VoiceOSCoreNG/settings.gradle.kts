@@ -14,11 +14,4 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "VoiceOSCoreNGApp"
-
-// Include the VoiceOSCoreNG library module from Modules as composite build
-includeBuild("../../../Modules/VoiceOSCoreNG") {
-    dependencySubstitution {
-        substitute(module("com.augmentalis:voiceoscoreng")).using(project(":"))
-    }
-}
+rootProject.name = "VoiceOSCoreNG"
