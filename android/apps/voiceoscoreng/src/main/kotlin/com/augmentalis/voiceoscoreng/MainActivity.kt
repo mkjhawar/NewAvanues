@@ -510,6 +510,8 @@ private fun ScannerControlCard() {
                 Button(
                     onClick = {
                         OverlayService.start(context)
+                        // Minimize the app so user can navigate to other apps
+                        (context as? ComponentActivity)?.moveTaskToBack(true)
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {

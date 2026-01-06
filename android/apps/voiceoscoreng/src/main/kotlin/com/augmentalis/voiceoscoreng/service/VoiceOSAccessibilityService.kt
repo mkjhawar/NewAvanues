@@ -178,11 +178,14 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             )
         }
 
-        // Generate simple AVU output
-        val avuOutput = generateSimpleAVU(packageName, elements)
+        // Derive labels for ALL elements (looking at children for empty parents)
+        val elementLabels = deriveElementLabels(elements, hierarchy)
 
         // Generate commands (pass hierarchy to find child labels)
-        val commands = generateCommands(elements, hierarchy, packageName)
+        val commands = generateCommands(elements, hierarchy, elementLabels, packageName)
+
+        // Generate AVU output with derived labels
+        val avuOutput = generateAVU(packageName, elements, elementLabels, commands)
 
         val duration = System.currentTimeMillis() - startTime
 
@@ -213,7 +216,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 duplicateElements = duplicates
             ),
             commands = commands,
-            avuOutput = avuOutput
+            avuOutput = avuOutput,
+            elementLabels = elementLabels  // Map of index -> derived label
         )
     }
 
@@ -280,40 +284,124 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun generateSimpleAVU(packageName: String, elements: List<ElementInfo>): String {
-        return buildString {
-            appendLine("# Avanues Universal Format v1.0")
-            appendLine("# Package: $packageName")
-            appendLine("# Elements: ${elements.size}")
-            appendLine()
-            appendLine("schema: avu-1.0")
-            appendLine("version: 1.0.0")
-            appendLine("package: $packageName")
-            appendLine()
-            appendLine("@elements:")
+    /**
+     * Derive labels for ALL elements by looking at child TextViews when parent has no text.
+     * Returns a map of elementIndex -> derivedLabel
+     */
+    private fun deriveElementLabels(
+        elements: List<ElementInfo>,
+        hierarchy: List<HierarchyNode>
+    ): Map<Int, String> {
+        val labels = mutableMapOf<Int, String>()
 
-            elements.forEachIndexed { index, element ->
-                val typeCode = VUIDGenerator.getTypeCode(element.className)
-                val label = element.voiceLabel.take(30)
-                val actionable = if (element.isClickable) "T" else "F"
-
-                appendLine("  - idx:$index type:${typeCode.abbrev} label:\"$label\" act:$actionable")
+        elements.forEachIndexed { index, element ->
+            // First try the element's own content
+            var label: String? = when {
+                element.text.isNotBlank() -> element.text.take(30)
+                element.contentDescription.isNotBlank() -> element.contentDescription.take(30)
+                element.resourceId.isNotBlank() -> element.resourceId.substringAfterLast("/").replace("_", " ")
+                else -> null
             }
 
-            appendLine()
-            appendLine("@commands:")
-            elements.filter { it.isClickable }.take(20).forEach { element ->
-                val label = element.voiceLabel
-                if (label.isNotBlank()) {
-                    appendLine("  - \"tap $label\" -> click")
+            // If no label, look at children (especially for clickable Views wrapping TextViews)
+            if (label == null) {
+                val node = hierarchy.getOrNull(index)
+                if (node != null && node.childCount > 0) {
+                    for (childIdx in (index + 1) until minOf(index + 10, elements.size)) {
+                        val childNode = hierarchy.getOrNull(childIdx) ?: continue
+                        if (childNode.depth <= node.depth) break
+                        if (childNode.depth == node.depth + 1) {
+                            val childElement = elements[childIdx]
+                            if (childElement.text.isNotBlank()) {
+                                label = childElement.text.take(30)
+                                break
+                            }
+                            if (childElement.contentDescription.isNotBlank()) {
+                                label = childElement.contentDescription.take(30)
+                                break
+                            }
+                        }
+                    }
                 }
             }
+
+            // Store the label (or fallback to class name)
+            labels[index] = label ?: element.className.substringAfterLast(".")
+        }
+
+        return labels
+    }
+
+    /**
+     * Generate AVU (Avanues Universal) format output with proper command names
+     */
+    private fun generateAVU(
+        packageName: String,
+        elements: List<ElementInfo>,
+        elementLabels: Map<Int, String>,
+        commands: List<GeneratedCommand>
+    ): String {
+        return buildString {
+            appendLine("# Avanues Universal Format v2.0")
+            appendLine("# Package: $packageName")
+            appendLine("# Elements: ${elements.size}")
+            appendLine("# Commands: ${commands.size}")
+            appendLine()
+            appendLine("schema: avu-2.0")
+            appendLine("version: 2.0.0")
+            appendLine("package: $packageName")
+            appendLine()
+
+            // Elements section with derived labels
+            appendLine("@elements:")
+            elements.forEachIndexed { index, element ->
+                val typeCode = VUIDGenerator.getTypeCode(element.className)
+                val label = elementLabels[index] ?: element.className.substringAfterLast(".")
+                val clickable = if (element.isClickable) "T" else "F"
+                val scrollable = if (element.isScrollable) "T" else "F"
+                appendLine("  - idx:$index type:${typeCode.abbrev} label:\"$label\" click:$clickable scroll:$scrollable")
+            }
+            appendLine()
+
+            // Commands section with voice phrases
+            appendLine("@commands:")
+            if (commands.isEmpty()) {
+                appendLine("  # No actionable elements found")
+            } else {
+                commands.forEach { cmd ->
+                    // The voice command is just the label (e.g., "Accessibility", "Reset")
+                    // The action (tap/scroll/toggle) is metadata
+                    appendLine("  - voice:\"${cmd.derivedLabel}\" action:${cmd.action} vuid:${cmd.targetVuid}")
+                    // Also include alternate phrases
+                    appendLine("    alternates: [\"${cmd.phrase}\", \"press ${cmd.derivedLabel}\", \"select ${cmd.derivedLabel}\"]")
+                }
+            }
+            appendLine()
+
+            // Actionable elements summary
+            appendLine("@actionable:")
+            val actionableElements = elements.mapIndexedNotNull { index, element ->
+                if (element.isClickable || element.isScrollable) {
+                    val label = elementLabels[index] ?: return@mapIndexedNotNull null
+                    val action = when {
+                        element.isClickable -> "tap"
+                        element.isScrollable -> "scroll"
+                        else -> "interact"
+                    }
+                    "  - \"$label\" -> $action"
+                } else null
+            }
+            actionableElements.forEach { appendLine(it) }
         }
     }
 
+    /**
+     * Generate voice commands for actionable elements
+     */
     private fun generateCommands(
         elements: List<ElementInfo>,
         hierarchy: List<HierarchyNode>,
+        elementLabels: Map<Int, String>,
         packageName: String
     ): List<GeneratedCommand> {
         return elements
@@ -321,70 +409,40 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 // Only process clickable or scrollable elements
                 if (!element.isClickable && !element.isScrollable) return@mapIndexedNotNull null
 
-                // Build a descriptive label - check element itself first
-                var label: String? = when {
-                    element.text.isNotBlank() -> element.text.take(30)
-                    element.contentDescription.isNotBlank() -> element.contentDescription.take(30)
-                    element.resourceId.isNotBlank() -> element.resourceId.substringAfterLast("/").replace("_", " ")
-                    else -> null
+                // Get the pre-derived label
+                val label = elementLabels[index]
+
+                // Skip if label is just the class name (no meaningful content)
+                if (label == null || label == element.className.substringAfterLast(".")) {
+                    return@mapIndexedNotNull null
                 }
-
-                // If no label on the element itself, look at child elements for a label
-                if (label == null) {
-                    val node = hierarchy.getOrNull(index)
-                    if (node != null && node.childCount > 0) {
-                        // Look at immediate children (next few indices based on depth)
-                        for (childIdx in (index + 1) until minOf(index + 10, elements.size)) {
-                            val childNode = hierarchy.getOrNull(childIdx) ?: continue
-                            // Only look at direct children (depth = node.depth + 1)
-                            if (childNode.depth <= node.depth) break
-                            if (childNode.depth == node.depth + 1) {
-                                val childElement = elements[childIdx]
-                                // Found a child with text content
-                                if (childElement.text.isNotBlank()) {
-                                    label = childElement.text.take(30)
-                                    break
-                                }
-                                if (childElement.contentDescription.isNotBlank()) {
-                                    label = childElement.contentDescription.take(30)
-                                    break
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Skip elements with no meaningful label
-                if (label == null) return@mapIndexedNotNull null
-
-                val simpleName = element.className.substringAfterLast(".")
 
                 val actionType = when {
                     element.isClickable && element.className.contains("Button") -> "tap"
                     element.isClickable && element.className.contains("EditText") -> "focus"
-                    element.isClickable && element.className.contains("ImageView") -> "click"
+                    element.isClickable && element.className.contains("ImageView") -> "tap"
                     element.isClickable && element.className.contains("CheckBox") -> "toggle"
                     element.isClickable && element.className.contains("Switch") -> "toggle"
-                    element.isClickable -> "tap"  // Use "tap" for better voice recognition
+                    element.isClickable -> "tap"
                     element.isScrollable -> "scroll"
                     else -> "interact"
                 }
 
                 val typeCode = VUIDGenerator.getTypeCode(element.className)
-                val elemHash = HashUtils.generateHash(element.resourceId.ifEmpty { label ?: element.className }, 8)
+                val elemHash = HashUtils.generateHash(element.resourceId.ifEmpty { label }, 8)
                 val vuid = VUIDGenerator.generate(packageName, typeCode, elemHash)
 
                 GeneratedCommand(
-                    phrase = "$actionType $label",
+                    phrase = "$actionType $label",  // Full voice phrase: "tap Reset"
                     alternates = listOf(
                         "press $label",
                         "select $label",
-                        label
+                        label  // Just the label also works
                     ),
                     targetVuid = vuid,
-                    action = actionType,
+                    action = actionType,  // Action type for execution
                     element = element,
-                    derivedLabel = label  // Store the derived label
+                    derivedLabel = label  // The clean label without action prefix
                 )
             }
     }
@@ -404,8 +462,19 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 duplicates = emptyList(),
                 deduplicationStats = DeduplicationStats(0, 0, 0, emptyList()),
                 commands = emptyList(),
-                avuOutput = ""
+                avuOutput = "",
+                elementLabels = emptyMap()
             )
+        }
+
+        // Merge elementLabels with re-indexed keys
+        val mergedLabels = mutableMapOf<Int, String>()
+        var offset = 0
+        results.forEach { result ->
+            result.elementLabels.forEach { (idx, label) ->
+                mergedLabels[idx + offset] = label
+            }
+            offset += result.elements.size
         }
 
         return ExplorationResult(
@@ -426,7 +495,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 duplicateElements = results.flatMap { it.deduplicationStats.duplicateElements }
             ),
             commands = results.flatMap { it.commands },
-            avuOutput = results.joinToString("\n---\n") { it.avuOutput }
+            avuOutput = results.joinToString("\n---\n") { it.avuOutput },
+            elementLabels = mergedLabels
         )
     }
 }
@@ -445,7 +515,8 @@ data class ExplorationResult(
     val duplicates: List<DuplicateInfo>,
     val deduplicationStats: DeduplicationStats,
     val commands: List<GeneratedCommand>,
-    val avuOutput: String
+    val avuOutput: String,
+    val elementLabels: Map<Int, String> = emptyMap()  // index -> derived label (from self or child)
 )
 
 data class VUIDInfo(

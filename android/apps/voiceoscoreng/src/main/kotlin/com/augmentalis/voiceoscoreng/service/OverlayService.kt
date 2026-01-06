@@ -161,18 +161,19 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         try {
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.MATCH_PARENT,  // Full height so drawer handle is visible
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             else
                 WindowManager.LayoutParams.TYPE_PHONE,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,  // Allow touches outside overlay
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.END
-            x = 16
-            y = 200
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL  // Right edge, centered vertically
+            x = 0  // Flush to right edge
+            y = 0
         }
 
         val composeView = ComposeView(this).apply {
@@ -287,7 +288,9 @@ private fun exportResultsToMarkdown(context: Context, result: ExplorationResult)
             appendLine("| # | Label | VUID | Type | Clickable |")
             appendLine("|---|-------|------|------|-----------|")
             result.vuids.forEachIndexed { index, vuidInfo ->
-                val label = vuidInfo.element.voiceLabel.ifBlank { vuidInfo.element.className.substringAfterLast(".") }
+                // Use derived label from elementLabels map (includes labels from children)
+                val label = result.elementLabels[index]
+                    ?: vuidInfo.element.voiceLabel.ifBlank { vuidInfo.element.className.substringAfterLast(".") }
                 val type = vuidInfo.element.className.substringAfterLast(".")
                 val clickable = if (vuidInfo.element.isClickable) "✓" else ""
                 appendLine("| $index | ${label.take(30)} | `${vuidInfo.vuid}` | $type | $clickable |")
@@ -301,10 +304,12 @@ private fun exportResultsToMarkdown(context: Context, result: ExplorationResult)
                 val indent = "  ".repeat(node.depth)
                 val marker = if (node.childCount > 0) "▼" else "•"
                 val element = result.elements.getOrNull(node.index)
-                val label = element?.voiceLabel?.ifBlank { null } ?: ""
+                // Use derived label from elementLabels map
+                val label = result.elementLabels[node.index]
+                    ?: element?.voiceLabel?.ifBlank { null } ?: ""
                 val vuid = result.vuids.getOrNull(node.index)?.vuid ?: ""
                 val extra = buildString {
-                    if (label.isNotBlank()) append(" \"$label\"")
+                    if (label.isNotBlank() && label != node.className) append(" \"$label\"")
                     if (element?.isClickable == true) append(" [click]")
                     if (vuid.isNotBlank()) append(" → $vuid")
                 }
@@ -340,7 +345,9 @@ private fun exportResultsToMarkdown(context: Context, result: ExplorationResult)
                 appendLine("| Element | Hash | First Seen Index |")
                 appendLine("|---------|------|------------------|")
                 result.deduplicationStats.duplicateElements.forEach { dup ->
-                    val label = dup.element.voiceLabel.ifBlank { dup.element.className.substringAfterLast(".") }
+                    // Use derived label from elementLabels using firstSeenIndex
+                    val label = result.elementLabels[dup.firstSeenIndex]
+                        ?: dup.element.voiceLabel.ifBlank { dup.element.className.substringAfterLast(".") }
                     appendLine("| $label | `${dup.hash.take(16)}` | ${dup.firstSeenIndex} |")
                 }
                 appendLine()
@@ -382,8 +389,11 @@ private fun exportResultsToMarkdown(context: Context, result: ExplorationResult)
 
 @Composable
 private fun OverlayContent(onClose: () -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+    var drawerOpen by remember { mutableStateOf(false) }
     var showResults by remember { mutableStateOf(false) }
+    var testModeEnabled by remember { mutableStateOf(true) }
+    var showConfigPanel by remember { mutableStateOf(false) }
+    var showDevSettings by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val isConnectedFromService by VoiceOSAccessibilityService.isConnected.collectAsState()
@@ -398,55 +408,70 @@ private fun OverlayContent(onClose: () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme()
     ) {
-        Column(
-            horizontalAlignment = Alignment.End
+        // Use Box with proper alignment for the drawer handle on right edge
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.CenterEnd  // Align to right edge, centered vertically
         ) {
-            // Results panel (shown when expanded and has results)
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+            // Results panel (shown when has results)
             if (showResults && explorationResults != null) {
                 ResultsPanel(
                     result = explorationResults!!,
                     onClose = { showResults = false }
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.width(8.dp))
             }
 
-            // Expanded menu
-            if (expanded) {
+            // Sliding drawer panel
+            if (drawerOpen) {
                 Card(
                     modifier = Modifier
-                        .width(220.dp)
-                        .padding(4.dp),
+                        .width(260.dp)
+                        .padding(vertical = 16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF1E1E2E)
+                        containerColor = Color(0xFFF5F5F5)  // Light gray background
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
                 ) {
-                    Column(modifier = Modifier.padding(8.dp)) {
-                        // Status
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Status indicator
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(8.dp)
+                            modifier = Modifier.padding(bottom = 4.dp)
                         ) {
                             Icon(
                                 imageVector = if (isConnected) Icons.Default.CheckCircle else Icons.Default.Warning,
                                 contentDescription = null,
-                                tint = if (isConnected) Color.Green else Color.Red,
-                                modifier = Modifier.size(16.dp)
+                                tint = if (isConnected) Color(0xFF10B981) else Color(0xFFDC2626),
+                                modifier = Modifier.size(14.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = if (isConnected) "Service Connected" else "Enable Accessibility",
-                                fontSize = 12.sp,
-                                color = Color.White
+                                fontSize = 11.sp,
+                                color = Color.Gray
                             )
                         }
 
-                        Divider(color = Color.Gray.copy(alpha = 0.3f))
+                        // Test Mode Toggle
+                        DrawerActionButton(
+                            text = if (testModeEnabled) "Disable Test Mode" else "Enable Test Mode",
+                            icon = Icons.Default.Science,
+                            iconColor = Color(0xFFDC2626),  // Red
+                            onClick = { testModeEnabled = !testModeEnabled }
+                        )
 
-                        // Scan current app
-                        MenuButton(
-                            icon = Icons.Default.Search,
+                        // Scan / Run All Tests
+                        DrawerActionButton(
                             text = "Scan Current App",
+                            icon = Icons.Default.PlayArrow,
+                            iconColor = Color(0xFF3B82F6),  // Blue
                             enabled = isConnected,
                             onClick = {
                                 VoiceOSAccessibilityService.exploreCurrentApp()
@@ -454,10 +479,11 @@ private fun OverlayContent(onClose: () -> Unit) {
                             }
                         )
 
-                        // Scan all windows
-                        MenuButton(
-                            icon = Icons.Default.Layers,
+                        // Scan All Windows / Test Exploration
+                        DrawerActionButton(
                             text = "Scan All Windows",
+                            icon = Icons.Default.Explore,
+                            iconColor = Color(0xFF6B7280),  // Gray
                             enabled = isConnected,
                             onClick = {
                                 VoiceOSAccessibilityService.exploreAllApps()
@@ -465,45 +491,80 @@ private fun OverlayContent(onClose: () -> Unit) {
                             }
                         )
 
-                        // Show/hide results
+                        // Show/Hide Results
                         if (explorationResults != null) {
-                            MenuButton(
-                                icon = Icons.Default.Visibility,
+                            DrawerActionButton(
                                 text = if (showResults) "Hide Results" else "Show Results",
+                                icon = Icons.Default.Visibility,
+                                iconColor = Color(0xFFF59E0B),  // Amber
                                 onClick = { showResults = !showResults }
                             )
                         }
 
-                        Divider(color = Color.Gray.copy(alpha = 0.3f))
+                        // View Config
+                        DrawerActionButton(
+                            text = "View Config",
+                            icon = Icons.Default.Info,
+                            iconColor = Color(0xFF6366F1),  // Indigo
+                            onClick = { showConfigPanel = true }
+                        )
 
-                        // Close overlay
-                        MenuButton(
-                            icon = Icons.Default.Close,
+                        // Developer Settings
+                        DrawerActionButton(
+                            text = "Developer Settings",
+                            icon = Icons.Default.Settings,
+                            iconColor = Color(0xFF1E3A5F),  // Dark blue
+                            onClick = { showDevSettings = true }
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Close Overlay button at bottom
+                        DrawerActionButton(
                             text = "Close Overlay",
+                            icon = Icons.Default.Close,
+                            iconColor = Color(0xFF6B7280),
                             onClick = onClose
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // FAB
-            FloatingActionButton(
-                onClick = { expanded = !expanded },
-                modifier = Modifier.size(56.dp),
-                containerColor = if (isConnected) Color(0xFF6366F1) else Color(0xFFDC2626),
-                shape = CircleShape
+            // Drawer handle/tab
+            Card(
+                modifier = Modifier
+                    .width(40.dp)
+                    .height(100.dp)
+                    .clickable { drawerOpen = !drawerOpen },
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isConnected) Color(0xFF1E3A5F) else Color(0xFFDC2626)
+                ),
+                shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
             ) {
-                Icon(
-                    imageVector = if (expanded) Icons.Default.Close else Icons.Default.Scanner,
-                    contentDescription = "Scanner",
-                    tint = Color.White
-                )
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = if (drawerOpen) Icons.Default.ChevronRight else Icons.Default.ChevronLeft,
+                        contentDescription = "Toggle drawer",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Icon(
+                        imageVector = Icons.Default.Scanner,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
             // Error indicator
             lastError?.let { error ->
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = error,
                     fontSize = 10.sp,
@@ -513,7 +574,244 @@ private fun OverlayContent(onClose: () -> Unit) {
                         .padding(4.dp)
                 )
             }
+            }  // End Row
+
+            // Config Panel Overlay
+            if (showConfigPanel) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable { showConfigPanel = false },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .width(320.dp)
+                            .padding(16.dp)
+                            .clickable(enabled = false) {},
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2E)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("LearnApp Configuration", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                IconButton(onClick = { showConfigPanel = false }, modifier = Modifier.size(24.dp)) {
+                                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            ConfigRow("Variant", "LearnApp Lite")
+                            ConfigRow("Tier", "LITE")
+                            ConfigRow("Test Mode", if (testModeEnabled) "ENABLED" else "DISABLED")
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Processing", color = Color.Gray, fontSize = 11.sp)
+                            ConfigRow("Mode", "IMMEDIATE")
+                            ConfigRow("Max Elements", "Unlimited")
+                            ConfigRow("Max Apps", "Unlimited")
+                            ConfigRow("Batch Timeout", "3000ms")
+                            ConfigRow("Exploration Depth", "5")
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Features", color = Color.Gray, fontSize = 11.sp)
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                FeatureBadge("AI", true)
+                                FeatureBadge("NLU", true)
+                                FeatureBadge("Exploration", true)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                FeatureBadge("Detection", true)
+                                FeatureBadge("Caching", true)
+                                FeatureBadge("Analytics", true)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Developer Settings Panel Overlay
+            if (showDevSettings) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable { showDevSettings = false },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .width(320.dp)
+                            .padding(16.dp)
+                            .clickable(enabled = false) {},
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2E)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Developer Settings", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                IconButton(onClick = { showDevSettings = false }, modifier = Modifier.size(24.dp)) {
+                                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Debug logging toggle
+                            SettingsToggle(
+                                label = "Debug Logging",
+                                description = "Enable verbose logging",
+                                checked = true,
+                                onCheckedChange = { }
+                            )
+
+                            // Show VUIDs toggle
+                            SettingsToggle(
+                                label = "Show VUIDs in Overlay",
+                                description = "Display VUIDs on scanned elements",
+                                checked = false,
+                                onCheckedChange = { }
+                            )
+
+                            // Auto-minimize toggle
+                            SettingsToggle(
+                                label = "Auto-minimize App",
+                                description = "Minimize after starting overlay",
+                                checked = true,
+                                onCheckedChange = { }
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Scan Settings", color = Color.Gray, fontSize = 11.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            ConfigRow("Scan Delay", "0ms")
+                            ConfigRow("Max Depth", "10")
+                            ConfigRow("Hash Algorithm", "MD5")
+                        }
+                    }
+                }
+            }
+        }  // End Box
+    }  // End MaterialTheme
+}
+
+@Composable
+private fun DrawerActionButton(
+    text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconColor: Color,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        // Text label with rounded background
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White,
+            shadowElevation = 1.dp,
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = text,
+                fontSize = 13.sp,
+                color = if (enabled) Color(0xFF374151) else Color.Gray,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+            )
         }
+        Spacer(modifier = Modifier.width(8.dp))
+        // Icon with colored background
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = if (enabled) iconColor else Color.Gray,
+            modifier = Modifier.size(44.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(10.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ConfigRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, color = Color.Gray, fontSize = 11.sp)
+        Text(value, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun FeatureBadge(name: String, enabled: Boolean) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = if (enabled) Color(0xFF10B981).copy(alpha = 0.2f) else Color.Gray.copy(alpha = 0.2f),
+        modifier = Modifier.padding(end = 4.dp, top = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (enabled) "✓" else "✗",
+                color = if (enabled) Color(0xFF10B981) else Color.Gray,
+                fontSize = 10.sp
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(name, color = Color.White, fontSize = 10.sp)
+        }
+    }
+}
+
+@Composable
+private fun SettingsToggle(
+    label: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, color = Color.White, fontSize = 12.sp)
+            Text(description, color = Color.Gray, fontSize = 10.sp)
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = Color(0xFF10B981),
+                uncheckedThumbColor = Color.Gray,
+                uncheckedTrackColor = Color.DarkGray
+            )
+        )
     }
 }
 
@@ -559,19 +857,31 @@ private fun ResultsPanel(
     val context = LocalContext.current
     val tabs = listOf("Summary", "VUIDs", "Hierarchy", "Duplicates", "Commands", "AVU")
 
-    // Export success dialog
+    // Export result card (overlay instead of dialog - dialogs don't work in Service context)
     if (showExportDialog && exportResult != null) {
-        AlertDialog(
-            onDismissRequest = { showExportDialog = false },
-            title = {
-                Text(
-                    text = if (exportResult!!.success) "Export Successful" else "Export Failed",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable { showExportDialog = false },
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier
+                    .width(300.dp)
+                    .padding(16.dp)
+                    .clickable(enabled = false) {},  // Consume clicks
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2E)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = if (exportResult!!.success) "Export Successful" else "Export Failed",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                     if (exportResult!!.success) {
                         Text("File saved:", color = Color.Gray, fontSize = 12.sp)
                         Spacer(modifier = Modifier.height(4.dp))
@@ -594,16 +904,18 @@ private fun ResultsPanel(
                             color = Color(0xFFEF4444)
                         )
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showExportDialog = false }) {
+                            Text("OK", color = Color(0xFF10B981))
+                        }
+                    }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showExportDialog = false }) {
-                    Text("OK", color = Color(0xFF10B981))
-                }
-            },
-            containerColor = Color(0xFF1E1E2E),
-            shape = RoundedCornerShape(12.dp)
-        )
+            }
+        }
     }
 
     Card(
@@ -748,32 +1060,67 @@ private fun StatRow(label: String, value: String) {
 @Composable
 private fun VUIDsTab(result: ExplorationResult) {
     LazyColumn {
-        items(result.vuids.take(50)) { vuidInfo ->
+        val vuidsToShow = result.vuids.take(50)
+        items(vuidsToShow.size) { index ->
+            val vuidInfo = vuidsToShow[index]
+            // Use derived label from elementLabels map
+            val label = result.elementLabels[index]
+                ?: vuidInfo.element.voiceLabel.ifBlank { vuidInfo.element.className.substringAfterLast(".") }
+            val isClickable = vuidInfo.element.isClickable
+            val isScrollable = vuidInfo.element.isScrollable
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
             ) {
-                Text(
-                    text = vuidInfo.element.voiceLabel.ifBlank { vuidInfo.element.className.substringAfterLast(".") },
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = label,
+                        color = when {
+                            isClickable -> Color(0xFF10B981)  // Green for clickable
+                            isScrollable -> Color(0xFF3B82F6)  // Blue for scrollable
+                            else -> Color.White
+                        },
+                        fontSize = 11.sp,
+                        fontWeight = if (isClickable || isScrollable) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (isClickable) {
+                        Text(
+                            text = "[TAP]",
+                            color = Color(0xFF10B981),
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+                    if (isScrollable) {
+                        Text(
+                            text = "[SCROLL]",
+                            color = Color(0xFF3B82F6),
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+                }
                 Text(
                     text = "VUID: ${vuidInfo.vuid}",
                     color = Color(0xFF6366F1),
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
                 )
-                Text(
-                    text = "Hash: ${vuidInfo.hash.take(16)}...",
-                    color = Color.Gray,
-                    fontSize = 9.sp,
-                    fontFamily = FontFamily.Monospace
-                )
+                // Show the command if this element has one
+                result.commands.find { it.element == vuidInfo.element }?.let { cmd ->
+                    Text(
+                        text = "Voice: \"${cmd.derivedLabel}\" → ${cmd.action}",
+                        color = Color(0xFFF59E0B),
+                        fontSize = 9.sp
+                    )
+                }
                 Divider(color = Color.Gray.copy(alpha = 0.2f), modifier = Modifier.padding(top = 4.dp))
             }
         }
@@ -843,10 +1190,11 @@ private fun HierarchyTab(result: ExplorationResult) {
                     }
                 }
 
-                // Label (if any)
-                element?.voiceLabel?.takeIf { it.isNotBlank() }?.let { label ->
+                // Label - use derived label from elementLabels map
+                val derivedLabel = result.elementLabels[node.index]
+                if (derivedLabel != null && derivedLabel != node.className) {
                     Text(
-                        text = "\"$label\"",
+                        text = "\"$derivedLabel\"",
                         color = Color(0xFFF59E0B),
                         fontSize = 9.sp,
                         maxLines = 1,
@@ -919,15 +1267,24 @@ private fun DuplicatesTab(result: ExplorationResult) {
             }
         } else {
             items(stats.duplicateElements.take(20)) { dup ->
+                // Get label from elementLabels using firstSeenIndex (original element)
+                val label = result.elementLabels[dup.firstSeenIndex]
+                    ?: dup.element.className.substringAfterLast(".")
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
                 ) {
                     Text(
-                        text = dup.element.voiceLabel.ifBlank { dup.element.className.substringAfterLast(".") },
+                        text = label,
                         color = Color(0xFFF59E0B),
                         fontSize = 11.sp
+                    )
+                    Text(
+                        text = "Type: ${dup.element.className.substringAfterLast(".")}",
+                        color = Color.Gray,
+                        fontSize = 9.sp
                     )
                     Text(
                         text = "Hash: ${dup.hash.take(16)}...",
