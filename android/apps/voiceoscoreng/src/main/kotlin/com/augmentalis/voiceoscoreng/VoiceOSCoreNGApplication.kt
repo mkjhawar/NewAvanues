@@ -2,7 +2,7 @@ package com.augmentalis.voiceoscoreng
 
 import android.app.Application
 import com.augmentalis.voiceoscoreng.app.BuildConfig
-import com.augmentalis.voiceoscoreng.core.VoiceOSCoreNG
+import com.augmentalis.voiceoscoreng.handlers.VoiceOSCoreNG
 import com.augmentalis.voiceoscoreng.features.LearnAppDevToggle
 
 /**

@@ -6,10 +6,10 @@ import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscoreng.avu.QuantizedCommand
-import com.augmentalis.voiceoscoreng.command.CommandGenerator
-import com.augmentalis.voiceoscoreng.command.CommandMatcher
-import com.augmentalis.voiceoscoreng.command.CommandRegistry
+import com.augmentalis.voiceoscoreng.common.QuantizedCommand
+import com.augmentalis.voiceoscoreng.common.CommandGenerator
+import com.augmentalis.voiceoscoreng.common.CommandMatcher
+import com.augmentalis.voiceoscoreng.common.CommandRegistry
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.VUIDGenerator

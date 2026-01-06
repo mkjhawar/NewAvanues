@@ -27,13 +27,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.augmentalis.voiceoscoreng.core.VoiceOSCoreNG
+import com.augmentalis.voiceoscoreng.handlers.VoiceOSCoreNG
 import com.augmentalis.voiceoscoreng.features.LearnAppConfig
 import com.augmentalis.voiceoscoreng.features.LearnAppDevToggle
+import com.augmentalis.voiceoscoreng.features.DeveloperSettingsScreen
+import com.augmentalis.voiceoscoreng.features.TestModeFab
 import com.augmentalis.voiceoscoreng.service.OverlayService
 import com.augmentalis.voiceoscoreng.service.VoiceOSAccessibilityService
-import com.augmentalis.voiceoscoreng.ui.DeveloperSettingsScreen
-import com.augmentalis.voiceoscoreng.ui.TestModeFab
 import com.augmentalis.voiceoscoreng.ui.theme.VoiceOSCoreNGTheme
 
 /**
