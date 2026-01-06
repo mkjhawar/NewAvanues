@@ -6,6 +6,10 @@ import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.augmentalis.voiceoscoreng.avu.QuantizedCommand
+import com.augmentalis.voiceoscoreng.command.CommandGenerator
+import com.augmentalis.voiceoscoreng.command.CommandMatcher
+import com.augmentalis.voiceoscoreng.command.CommandRegistry
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.VUIDGenerator
@@ -30,6 +34,9 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
+    /** In-memory command registry for the current screen - uses KMP shared implementation */
+    private val commandRegistry = CommandRegistry()
+
     companion object {
         private var instance: VoiceOSAccessibilityService? = null
 
@@ -50,6 +57,24 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         fun exploreAllApps() {
             instance?.performFullExploration()
+        }
+
+        /**
+         * Match voice input against current commands using KMP CommandMatcher.
+         * @param voiceInput Raw voice input string
+         * @return MatchResult from KMP implementation
+         */
+        fun matchVoiceCommand(voiceInput: String): CommandMatcher.MatchResult {
+            return instance?.let { service ->
+                CommandMatcher.match(voiceInput, service.commandRegistry)
+            } ?: CommandMatcher.MatchResult.NoMatch
+        }
+
+        /**
+         * Get all currently registered commands.
+         */
+        fun getCurrentCommands(): List<QuantizedCommand> {
+            return instance?.commandRegistry?.all() ?: emptyList()
         }
     }
 
@@ -396,7 +421,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Generate voice commands for actionable elements
+     * Generate voice commands for actionable elements using KMP CommandGenerator.
+     * Also updates the in-memory CommandRegistry for voice matching.
      */
     private fun generateCommands(
         elements: List<ElementInfo>,
@@ -404,6 +430,17 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         elementLabels: Map<Int, String>,
         packageName: String
     ): List<GeneratedCommand> {
+        // Generate QuantizedCommands using KMP CommandGenerator
+        val quantizedCommands = elements.mapNotNull { element ->
+            CommandGenerator.fromElement(element, packageName)
+        }
+
+        // Update the registry for voice matching
+        commandRegistry.update(quantizedCommands)
+
+        Log.d(TAG, "Generated ${quantizedCommands.size} commands via KMP CommandGenerator, registered in CommandRegistry")
+
+        // Also create legacy GeneratedCommand for UI display (backwards compatibility)
         return elements
             .mapIndexedNotNull { index, element ->
                 // Only process clickable or scrollable elements
