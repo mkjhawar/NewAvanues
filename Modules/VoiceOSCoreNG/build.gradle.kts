@@ -1,6 +1,17 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.serialization)
+}
+
+// Version constants for standalone builds
+object Versions {
+    const val coroutines = "1.8.0"
+    const val serialization = "1.6.3"
+    const val androidxCore = "1.12.0"
+    const val junit = "4.13.2"
+    const val androidxTestJunit = "1.1.5"
+    const val espresso = "3.5.1"
 }
 
 kotlin {
@@ -30,36 +41,43 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // Coroutines
-                implementation(libs.kotlinx.coroutines.core)
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.coroutines}")
 
                 // Serialization
-                implementation(libs.kotlinx.serialization.json)
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${Versions.serialization}")
             }
         }
 
         val commonTest by getting {
             dependencies {
-                implementation(libs.kotlin.test)
+                implementation(kotlin("test"))
             }
         }
 
         val androidMain by getting {
             dependencies {
                 // Android-specific dependencies
-                implementation(libs.androidx.core.ktx)
+                implementation("androidx.core:core-ktx:${Versions.androidxCore}")
+
+                // Compose dependencies for UI components
+                implementation(platform("androidx.compose:compose-bom:2024.02.00"))
+                implementation("androidx.compose.ui:ui")
+                implementation("androidx.compose.material3:material3")
+                implementation("androidx.compose.material:material-icons-extended")
+                implementation("androidx.compose.ui:ui-tooling-preview")
             }
         }
 
         val androidUnitTest by getting {
             dependencies {
-                implementation(libs.junit)
+                implementation("junit:junit:${Versions.junit}")
             }
         }
 
         val androidInstrumentedTest by getting {
             dependencies {
-                implementation(libs.androidx.test.junit)
-                implementation(libs.androidx.test.espresso.core)
+                implementation("androidx.test.ext:junit:${Versions.androidxTestJunit}")
+                implementation("androidx.test.espresso:espresso-core:${Versions.espresso}")
             }
         }
 
@@ -106,5 +124,13 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.15"
     }
 }
