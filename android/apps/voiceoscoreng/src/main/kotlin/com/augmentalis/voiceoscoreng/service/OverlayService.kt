@@ -245,9 +245,19 @@ private fun isAccessibilityServiceEnabled(context: Context): Boolean {
 }
 
 /**
+ * Result of export operation
+ */
+data class ExportResult(
+    val success: Boolean,
+    val fileName: String,
+    val fullPath: String,
+    val message: String
+)
+
+/**
  * Export scan results to a markdown file in the app's external files directory
  */
-private fun exportResultsToMarkdown(context: Context, result: ExplorationResult): String {
+private fun exportResultsToMarkdown(context: Context, result: ExplorationResult): ExportResult {
     return try {
         val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
         val fileName = "scan_results_$timestamp.md"
@@ -306,10 +316,18 @@ private fun exportResultsToMarkdown(context: Context, result: ExplorationResult)
             appendLine("## Commands (${result.commands.size})")
             appendLine()
             if (result.commands.isNotEmpty()) {
-                appendLine("| Voice Command | Action | Target VUID |")
-                appendLine("|---------------|--------|-------------|")
+                appendLine("| Voice Command | Element Type | Label Source | Target VUID |")
+                appendLine("|---------------|--------------|--------------|-------------|")
                 result.commands.forEach { cmd ->
-                    appendLine("| \"${cmd.phrase}\" | ${cmd.action} | `${cmd.targetVuid}` |")
+                    val elemType = cmd.element.className.substringAfterLast(".")
+                    val labelSource = when {
+                        cmd.element.text.isNotBlank() -> "text"
+                        cmd.element.contentDescription.isNotBlank() -> "contentDesc"
+                        cmd.element.resourceId.isNotBlank() -> "resourceId"
+                        cmd.derivedLabel.isNotBlank() -> "child text"
+                        else -> "unknown"
+                    }
+                    appendLine("| \"${cmd.phrase}\" | $elemType | $labelSource | `${cmd.targetVuid}` |")
                 }
             } else {
                 appendLine("*No commands generated*")
@@ -345,10 +363,20 @@ private fun exportResultsToMarkdown(context: Context, result: ExplorationResult)
         file.writeText(markdown)
 
         Log.d(TAG, "Exported scan results to: ${file.absolutePath}")
-        "Saved: $fileName"
+        ExportResult(
+            success = true,
+            fileName = fileName,
+            fullPath = file.absolutePath,
+            message = "Scan results exported successfully"
+        )
     } catch (e: Exception) {
         Log.e(TAG, "Failed to export results", e)
-        "Export failed: ${e.message}"
+        ExportResult(
+            success = false,
+            fileName = "",
+            fullPath = "",
+            message = "Export failed: ${e.message}"
+        )
     }
 }
 
@@ -526,9 +554,57 @@ private fun ResultsPanel(
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var isExpanded by remember { mutableStateOf(false) }
-    var exportStatus by remember { mutableStateOf<String?>(null) }
+    var showExportDialog by remember { mutableStateOf(false) }
+    var exportResult by remember { mutableStateOf<ExportResult?>(null) }
     val context = LocalContext.current
     val tabs = listOf("Summary", "VUIDs", "Hierarchy", "Duplicates", "Commands", "AVU")
+
+    // Export success dialog
+    if (showExportDialog && exportResult != null) {
+        AlertDialog(
+            onDismissRequest = { showExportDialog = false },
+            title = {
+                Text(
+                    text = if (exportResult!!.success) "Export Successful" else "Export Failed",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    if (exportResult!!.success) {
+                        Text("File saved:", color = Color.Gray, fontSize = 12.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = exportResult!!.fileName,
+                            color = Color(0xFF10B981),
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Location:", color = Color.Gray, fontSize = 12.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = exportResult!!.fullPath,
+                            color = Color.White,
+                            fontSize = 11.sp
+                        )
+                    } else {
+                        Text(
+                            text = exportResult!!.message,
+                            color = Color(0xFFEF4444)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showExportDialog = false }) {
+                    Text("OK", color = Color(0xFF10B981))
+                }
+            },
+            containerColor = Color(0xFF1E1E2E),
+            shape = RoundedCornerShape(12.dp)
+        )
+    }
 
     Card(
         modifier = Modifier
@@ -563,7 +639,8 @@ private fun ResultsPanel(
                     // Export button
                     IconButton(
                         onClick = {
-                            exportStatus = exportResultsToMarkdown(context, result)
+                            exportResult = exportResultsToMarkdown(context, result)
+                            showExportDialog = true
                         },
                         modifier = Modifier.size(24.dp)
                     ) {
@@ -597,16 +674,6 @@ private fun ResultsPanel(
                         )
                     }
                 }
-            }
-
-            // Export status message
-            exportStatus?.let { status ->
-                Text(
-                    text = status,
-                    color = if (status.startsWith("Saved")) Color(0xFF10B981) else Color(0xFFEF4444),
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                )
             }
 
             // Tabs

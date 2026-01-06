@@ -181,8 +181,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         // Generate simple AVU output
         val avuOutput = generateSimpleAVU(packageName, elements)
 
-        // Generate commands
-        val commands = generateCommands(elements, packageName)
+        // Generate commands (pass hierarchy to find child labels)
+        val commands = generateCommands(elements, hierarchy, packageName)
 
         val duration = System.currentTimeMillis() - startTime
 
@@ -311,23 +311,67 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun generateCommands(elements: List<ElementInfo>, packageName: String): List<GeneratedCommand> {
+    private fun generateCommands(
+        elements: List<ElementInfo>,
+        hierarchy: List<HierarchyNode>,
+        packageName: String
+    ): List<GeneratedCommand> {
         return elements
-            .filter { it.isClickable || it.isScrollable }
-            .mapNotNull { element ->
-                val label = element.voiceLabel
-                if (label.isBlank()) return@mapNotNull null
+            .mapIndexedNotNull { index, element ->
+                // Only process clickable or scrollable elements
+                if (!element.isClickable && !element.isScrollable) return@mapIndexedNotNull null
+
+                // Build a descriptive label - check element itself first
+                var label: String? = when {
+                    element.text.isNotBlank() -> element.text.take(30)
+                    element.contentDescription.isNotBlank() -> element.contentDescription.take(30)
+                    element.resourceId.isNotBlank() -> element.resourceId.substringAfterLast("/").replace("_", " ")
+                    else -> null
+                }
+
+                // If no label on the element itself, look at child elements for a label
+                if (label == null) {
+                    val node = hierarchy.getOrNull(index)
+                    if (node != null && node.childCount > 0) {
+                        // Look at immediate children (next few indices based on depth)
+                        for (childIdx in (index + 1) until minOf(index + 10, elements.size)) {
+                            val childNode = hierarchy.getOrNull(childIdx) ?: continue
+                            // Only look at direct children (depth = node.depth + 1)
+                            if (childNode.depth <= node.depth) break
+                            if (childNode.depth == node.depth + 1) {
+                                val childElement = elements[childIdx]
+                                // Found a child with text content
+                                if (childElement.text.isNotBlank()) {
+                                    label = childElement.text.take(30)
+                                    break
+                                }
+                                if (childElement.contentDescription.isNotBlank()) {
+                                    label = childElement.contentDescription.take(30)
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Skip elements with no meaningful label
+                if (label == null) return@mapIndexedNotNull null
+
+                val simpleName = element.className.substringAfterLast(".")
 
                 val actionType = when {
                     element.isClickable && element.className.contains("Button") -> "tap"
                     element.isClickable && element.className.contains("EditText") -> "focus"
-                    element.isClickable -> "click"
+                    element.isClickable && element.className.contains("ImageView") -> "click"
+                    element.isClickable && element.className.contains("CheckBox") -> "toggle"
+                    element.isClickable && element.className.contains("Switch") -> "toggle"
+                    element.isClickable -> "tap"  // Use "tap" for better voice recognition
                     element.isScrollable -> "scroll"
                     else -> "interact"
                 }
 
                 val typeCode = VUIDGenerator.getTypeCode(element.className)
-                val elemHash = HashUtils.generateHash(element.resourceId.ifEmpty { element.text }, 8)
+                val elemHash = HashUtils.generateHash(element.resourceId.ifEmpty { label ?: element.className }, 8)
                 val vuid = VUIDGenerator.generate(packageName, typeCode, elemHash)
 
                 GeneratedCommand(
@@ -339,7 +383,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     ),
                     targetVuid = vuid,
                     action = actionType,
-                    element = element
+                    element = element,
+                    derivedLabel = label  // Store the derived label
                 )
             }
     }
@@ -435,5 +480,6 @@ data class GeneratedCommand(
     val alternates: List<String>,
     val targetVuid: String,
     val action: String,
-    val element: ElementInfo
+    val element: ElementInfo,
+    val derivedLabel: String = ""  // Label derived from child elements if parent has none
 )
