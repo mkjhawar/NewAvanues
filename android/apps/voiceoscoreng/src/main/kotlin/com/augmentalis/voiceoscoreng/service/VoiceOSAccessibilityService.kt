@@ -186,6 +186,15 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         val duration = System.currentTimeMillis() - startTime
 
+        Log.d(TAG, "=== DEDUPLICATION RESULTS ===")
+        Log.d(TAG, "Total elements: ${elements.size}")
+        Log.d(TAG, "Unique hashes: ${seenHashes.size}")
+        Log.d(TAG, "Duplicates found: ${duplicates.size}")
+        duplicates.take(5).forEach { dup ->
+            Log.d(TAG, "  DUP: ${dup.element.className.substringAfterLast(".")} '${dup.element.text.take(20)}' first@${dup.firstSeenIndex}")
+        }
+        Log.d(TAG, "=============================")
+
         return ExplorationResult(
             packageName = packageName,
             timestamp = System.currentTimeMillis(),
@@ -198,9 +207,9 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             hierarchy = hierarchy,
             duplicates = duplicates,
             deduplicationStats = DeduplicationStats(
-                totalHashes = seenHashes.size,
-                uniqueHashes = seenHashes.size - duplicates.size,
-                duplicateCount = duplicates.size,
+                totalHashes = elements.size,  // Total elements processed
+                uniqueHashes = seenHashes.size,  // Unique hash count
+                duplicateCount = duplicates.size,  // Number of duplicate occurrences
                 duplicateElements = duplicates
             ),
             commands = commands,
@@ -232,16 +241,17 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             packageName = node.packageName?.toString() ?: ""
         )
 
-        // Generate hash for deduplication
-        val hashInput = "${element.className}|${element.resourceId}|${element.text}|${element.bounds}"
+        // Generate hash for deduplication - use className|resourceId|text (NOT bounds, as bounds make every element unique)
+        val hashInput = "${element.className}|${element.resourceId}|${element.text}"
         val hash = HashUtils.generateHash(hashInput, 16)
 
         if (seenHashes.contains(hash)) {
+            Log.d(TAG, "DUPLICATE FOUND: hash=$hash class=${element.className.substringAfterLast(".")} text='${element.text.take(20)}'")
             duplicates.add(DuplicateInfo(
                 hash = hash,
                 element = element,
                 firstSeenIndex = elements.indexOfFirst { e ->
-                    val h = HashUtils.generateHash("${e.className}|${e.resourceId}|${e.text}|${e.bounds}", 16)
+                    val h = HashUtils.generateHash("${e.className}|${e.resourceId}|${e.text}", 16)
                     h == hash
                 }
             ))

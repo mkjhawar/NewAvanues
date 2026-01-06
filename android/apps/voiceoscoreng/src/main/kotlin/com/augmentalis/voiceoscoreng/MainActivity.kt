@@ -333,12 +333,12 @@ private const val TAG = "VoiceOSCoreNGMain"
  * This is a fallback for when the StateFlow isn't updated (e.g., service enabled via ADB).
  */
 private fun isAccessibilityServiceEnabled(context: Context): Boolean {
+    // First try AccessibilityManager API
     val accessibilityManager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
-        ?: return false
 
-    val enabledServices = accessibilityManager.getEnabledAccessibilityServiceList(
+    val enabledServices = accessibilityManager?.getEnabledAccessibilityServiceList(
         AccessibilityServiceInfo.FEEDBACK_ALL_MASK
-    )
+    ) ?: emptyList()
 
     val ourServiceName = "${context.packageName}/${VoiceOSAccessibilityService::class.java.canonicalName}"
 
@@ -348,7 +348,7 @@ private fun isAccessibilityServiceEnabled(context: Context): Boolean {
         android.util.Log.d(TAG, "  - Service: id=${serviceInfo.id}, pkg=${serviceInfo.resolveInfo?.serviceInfo?.packageName}")
     }
 
-    val isEnabled = enabledServices.any { serviceInfo ->
+    val apiEnabled = enabledServices.any { serviceInfo ->
         val serviceId = serviceInfo.id
         val match = serviceId == ourServiceName ||
             serviceId.contains("VoiceOSAccessibilityService") ||
@@ -357,7 +357,22 @@ private fun isAccessibilityServiceEnabled(context: Context): Boolean {
         match
     }
 
-    android.util.Log.d(TAG, "isAccessibilityServiceEnabled result: $isEnabled")
+    // Fallback: check settings directly (for ADB-enabled services)
+    val settingsEnabled = try {
+        val enabledServicesSetting = Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: ""
+        val settingsMatch = enabledServicesSetting.contains(context.packageName)
+        android.util.Log.d(TAG, "Settings check: '$enabledServicesSetting', match=$settingsMatch")
+        settingsMatch
+    } catch (e: Exception) {
+        android.util.Log.e(TAG, "Failed to check settings", e)
+        false
+    }
+
+    val isEnabled = apiEnabled || settingsEnabled
+    android.util.Log.d(TAG, "isAccessibilityServiceEnabled result: apiEnabled=$apiEnabled, settingsEnabled=$settingsEnabled, final=$isEnabled")
     return isEnabled
 }
 
