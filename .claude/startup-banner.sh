@@ -40,77 +40,91 @@ if [[ -f "$git_dir" ]]; then
     in_worktree=true
 fi
 
-# Large monorepos that need worktree isolation
-MONOREPOS="NewAvanues VoiceOS Avanues"
+# Detect if repo is a monorepo (needs worktree isolation)
+# Checks for: .monorepo marker, common monorepo configs, Modules/ or packages/ dirs
+is_monorepo() {
+    local root="$1"
+    # Marker file
+    [[ -f "$root/.monorepo" ]] && return 0
+    # Common monorepo configs
+    [[ -f "$root/lerna.json" ]] && return 0
+    [[ -f "$root/nx.json" ]] && return 0
+    [[ -f "$root/pnpm-workspace.yaml" ]] && return 0
+    [[ -f "$root/rush.json" ]] && return 0
+    [[ -f "$root/turbo.json" ]] && return 0
+    # IDC config with monorepo flag
+    [[ -f "$root/.ideacode/config.idc" ]] && grep -q "monorepo:true" "$root/.ideacode/config.idc" 2>/dev/null && return 0
+    # Directory structure (Modules/ or packages/ with 3+ subdirs)
+    [[ -d "$root/Modules" ]] && [[ $(ls -d "$root/Modules"/*/ 2>/dev/null | wc -l) -ge 3 ]] && return 0
+    [[ -d "$root/packages" ]] && [[ $(ls -d "$root/packages"/*/ 2>/dev/null | wc -l) -ge 3 ]] && return 0
+    return 1
+}
 
 # Worktree logic
 worktree_msg=""
 if [[ "$in_worktree" == "false" ]] && [[ -d "$git_dir" ]]; then
     # Check if this is a monorepo that needs isolation
-    for mono in $MONOREPOS; do
-        if [[ "$repo_name" == "$mono" ]]; then
-            # Generate worktree name with module and PID for readability
-            if [[ -n "$module_name" ]]; then
-                wt_name="${repo_name}__${module_name}__t$$"
-            else
-                wt_name="${repo_name}__main__t$$"
-            fi
-            wt_path="/Volumes/M-Drive/Worktrees/${wt_name}"
+    if is_monorepo "$repo_root"; then
+        # Generate worktree name with module and PID for readability
+        if [[ -n "$module_name" ]]; then
+            wt_name="${repo_name}__${module_name}__t$$"
+        else
+            wt_name="${repo_name}__main__t$$"
+        fi
+        wt_path="/Volumes/M-Drive/Worktrees/${wt_name}"
 
-            # Check if worktree already exists
-            if [[ -d "$wt_path" ]]; then
-                worktree_msg="
+        # Check if worktree already exists
+        if [[ -d "$wt_path" ]]; then
+            worktree_msg="
 ║  WORKTREE EXISTS: ${wt_name}
 ║
 ║  Run:  cd ${wt_path} && claude
 "
+        else
+            # Create the worktree
+            mkdir -p /Volumes/M-Drive/Worktrees
+
+            # Add .gitignore to Worktrees if not exists
+            if [[ ! -f "/Volumes/M-Drive/Worktrees/.gitignore" ]]; then
+                echo -e ".DS_Store\n*.swp\n*~" > /Volumes/M-Drive/Worktrees/.gitignore
+            fi
+
+            branch=$(cd "$repo_root" && git branch --show-current 2>/dev/null)
+
+            if [[ -n "$branch" ]]; then
+                # Create worktree on same branch
+                (cd "$repo_root" && git worktree add "$wt_path" "$branch" 2>/dev/null) || \
+                (cd "$repo_root" && git worktree add "$wt_path" --detach 2>/dev/null)
             else
-                # Create the worktree
-                mkdir -p /Volumes/M-Drive/Worktrees
+                (cd "$repo_root" && git worktree add "$wt_path" --detach 2>/dev/null)
+            fi
 
-                # Add .gitignore to Worktrees if not exists
-                if [[ ! -f "/Volumes/M-Drive/Worktrees/.gitignore" ]]; then
-                    echo -e ".DS_Store\n*.swp\n*~" > /Volumes/M-Drive/Worktrees/.gitignore
+            if [[ -d "$wt_path" ]]; then
+                # Copy .claude settings to worktree
+                if [[ -d "$repo_root/.claude" ]]; then
+                    cp -r "$repo_root/.claude" "$wt_path/.claude" 2>/dev/null
                 fi
-
-                branch=$(cd "$repo_root" && git branch --show-current 2>/dev/null)
-
-                if [[ -n "$branch" ]]; then
-                    # Create worktree on same branch
-                    (cd "$repo_root" && git worktree add "$wt_path" "$branch" 2>/dev/null) || \
-                    (cd "$repo_root" && git worktree add "$wt_path" --detach 2>/dev/null)
-                else
-                    (cd "$repo_root" && git worktree add "$wt_path" --detach 2>/dev/null)
+                # Copy .ideacode config
+                if [[ -d "$repo_root/.ideacode" ]]; then
+                    cp -r "$repo_root/.ideacode" "$wt_path/.ideacode" 2>/dev/null
                 fi
+                # Remove .DS_Store files from copied directories
+                find "$wt_path/.claude" "$wt_path/.ideacode" -name ".DS_Store" -delete 2>/dev/null
 
-                if [[ -d "$wt_path" ]]; then
-                    # Copy .claude settings to worktree
-                    if [[ -d "$repo_root/.claude" ]]; then
-                        cp -r "$repo_root/.claude" "$wt_path/.claude" 2>/dev/null
-                    fi
-                    # Copy .ideacode config
-                    if [[ -d "$repo_root/.ideacode" ]]; then
-                        cp -r "$repo_root/.ideacode" "$wt_path/.ideacode" 2>/dev/null
-                    fi
-                    # Remove .DS_Store files from copied directories
-                    find "$wt_path/.claude" "$wt_path/.ideacode" -name ".DS_Store" -delete 2>/dev/null
-
-                    worktree_msg="
+                worktree_msg="
 ║  WORKTREE CREATED: ${wt_name}
 ║  Branch: ${branch:-detached}
 ║
 ║  Run:  cd ${wt_path} && claude
 "
-                else
-                    worktree_msg="
+            else
+                worktree_msg="
 ║  WARNING: Failed to create worktree
 ║  Working in main repo (may cause conflicts)
 "
-                fi
             fi
-            break
         fi
-    done
+    fi
 fi
 
 # Already in worktree
