@@ -230,12 +230,8 @@ Modules/VoiceOSCoreNG/
 │   │   │   ├── ReactNativeHandler.kt
 │   │   │   ├── UnityHandler.kt
 │   │   │   └── WebViewHandler.kt
-│   │   ├── repository/           # Data persistence
-│   │   │   ├── ICommandRepository.kt
-│   │   │   ├── IVuidRepository.kt
-│   │   │   ├── RepositoryProvider.kt
-│   │   │   ├── SQLDelightCommandRepositoryAdapter.kt
-│   │   │   └── SQLDelightVuidRepositoryAdapter.kt
+│   │   ├── database/             # Database integration
+│   │   │   └── DatabaseConverters.kt   # Domain ↔ DTO conversion
 │   │   ├── safety/               # Safety features
 │   │   │   └── DangerousElementDetector.kt
 │   │   └── speech/               # Speech recognition

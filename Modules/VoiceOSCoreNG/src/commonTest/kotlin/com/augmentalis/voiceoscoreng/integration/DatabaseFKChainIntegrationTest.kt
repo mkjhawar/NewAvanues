@@ -16,11 +16,6 @@
  */
 package com.augmentalis.voiceoscoreng.integration
 
-import com.augmentalis.voiceoscoreng.repository.ICommandRepository
-import com.augmentalis.voiceoscoreng.repository.IVuidRepository
-import com.augmentalis.voiceoscoreng.repository.InMemoryCommandRepository
-import com.augmentalis.voiceoscoreng.repository.InMemoryVuidRepository
-import com.augmentalis.voiceoscoreng.repository.VuidEntry
 import com.augmentalis.voiceoscoreng.avu.QuantizedCommand
 import com.augmentalis.voiceoscoreng.avu.CommandActionType
 import com.augmentalis.voiceoscoreng.common.VUIDGenerator
@@ -91,8 +86,8 @@ class DatabaseFKChainIntegrationTest {
     private fun createTestElement(
         appId: String,
         vuid: String = VUIDGenerator.generate(appId, VUIDTypeCode.BUTTON, "elem-${System.nanoTime()}")
-    ): VuidEntry {
-        return VuidEntry(
+    ): TestVuidEntry {
+        return TestVuidEntry(
             vuid = vuid,
             packageName = appId,
             activityName = "MainActivity",
@@ -596,11 +591,14 @@ data class ScrapedAppEntity(
  * does with PRAGMA foreign_keys = ON. In production, the actual
  * SQLDelightVuidRepositoryAdapter delegates to the database which
  * enforces these constraints.
+ *
+ * Note: This is a self-contained test class that doesn't depend on
+ * production repository interfaces - it uses TestVuidEntry directly.
  */
-class TestVuidRepository : IVuidRepository {
+class TestVuidRepository {
 
     private val apps = mutableMapOf<String, ScrapedAppEntity>()
-    private val entries = mutableMapOf<String, VuidEntry>()
+    private val entries = mutableMapOf<String, TestVuidEntry>()
 
     /**
      * Register an app to satisfy FK constraints.
@@ -617,7 +615,7 @@ class TestVuidRepository : IVuidRepository {
     /**
      * Save with FK validation - ensures app exists.
      */
-    suspend fun saveWithFKValidation(entry: VuidEntry): Result<Unit> {
+    suspend fun saveWithFKValidation(entry: TestVuidEntry): Result<Unit> {
         if (!appExists(entry.packageName)) {
             return Result.failure(ForeignKeyConstraintException(
                 "FK constraint violation: app '${entry.packageName}' not found"
@@ -630,7 +628,7 @@ class TestVuidRepository : IVuidRepository {
     /**
      * Batch save with FK validation.
      */
-    suspend fun saveAllWithFKValidation(entries: List<VuidEntry>): Result<Unit> {
+    suspend fun saveAllWithFKValidation(entries: List<TestVuidEntry>): Result<Unit> {
         // Validate all FKs first
         for (entry in entries) {
             if (!appExists(entry.packageName)) {
@@ -661,59 +659,59 @@ class TestVuidRepository : IVuidRepository {
         return Result.success(Unit)
     }
 
-    // IVuidRepository implementation
+    // Repository methods using TestVuidEntry
 
-    override suspend fun save(entry: VuidEntry): Result<Unit> {
+    suspend fun save(entry: TestVuidEntry): Result<Unit> {
         entries[entry.vuid] = entry
         return Result.success(Unit)
     }
 
-    override suspend fun saveAll(entries: List<VuidEntry>): Result<Unit> {
+    suspend fun saveAll(entries: List<TestVuidEntry>): Result<Unit> {
         entries.forEach { this.entries[it.vuid] = it }
         return Result.success(Unit)
     }
 
-    override suspend fun getById(vuid: String): VuidEntry? = entries[vuid]
+    suspend fun getById(vuid: String): TestVuidEntry? = entries[vuid]
 
-    override suspend fun getByPackage(packageName: String): List<VuidEntry> {
+    suspend fun getByPackage(packageName: String): List<TestVuidEntry> {
         return entries.values.filter { it.packageName == packageName }
     }
 
-    override suspend fun getByScreen(packageName: String, activityName: String): List<VuidEntry> {
+    suspend fun getByScreen(packageName: String, activityName: String): List<TestVuidEntry> {
         return entries.values.filter {
             it.packageName == packageName && it.activityName == activityName
         }
     }
 
-    override suspend fun updateAlias(vuid: String, alias: String): Result<Unit> {
+    suspend fun updateAlias(vuid: String, alias: String): Result<Unit> {
         entries[vuid]?.let {
             entries[vuid] = it.copy(alias = alias, updatedAt = System.currentTimeMillis())
         }
         return Result.success(Unit)
     }
 
-    override suspend fun delete(vuid: String): Result<Unit> {
+    suspend fun delete(vuid: String): Result<Unit> {
         entries.remove(vuid)
         return Result.success(Unit)
     }
 
-    override suspend fun deleteByPackage(packageName: String): Result<Unit> {
+    suspend fun deleteByPackage(packageName: String): Result<Unit> {
         entries.entries.removeAll { it.value.packageName == packageName }
         return Result.success(Unit)
     }
 
-    override suspend fun exists(vuid: String): Boolean = entries.containsKey(vuid)
+    suspend fun exists(vuid: String): Boolean = entries.containsKey(vuid)
 
-    override fun observeByScreen(packageName: String, activityName: String) =
+    fun observeByScreen(packageName: String, activityName: String) =
         kotlinx.coroutines.flow.flowOf(getByScreenSync(packageName, activityName))
 
-    private fun getByScreenSync(packageName: String, activityName: String): List<VuidEntry> {
+    private fun getByScreenSync(packageName: String, activityName: String): List<TestVuidEntry> {
         return entries.values.filter {
             it.packageName == packageName && it.activityName == activityName
         }
     }
 
-    override suspend fun getByHash(hash: String): VuidEntry? {
+    suspend fun getByHash(hash: String): TestVuidEntry? {
         return entries.values.find { it.contentHash == hash }
     }
 }
@@ -722,11 +720,13 @@ class TestVuidRepository : IVuidRepository {
  * Test repository that simulates FK constraint validation for commands.
  *
  * Validates that commands reference existing elements before saving.
+ *
+ * Note: This is a self-contained test class that doesn't depend on
+ * production repository interfaces - uses QuantizedCommand directly.
  */
 class TestCommandRepository(
     private val vuidRepository: TestVuidRepository
-) : ICommandRepository {
-
+) {
     private val commands = mutableMapOf<String, QuantizedCommand>()
 
     /**
@@ -783,34 +783,34 @@ class TestCommandRepository(
         return Result.success(Unit)
     }
 
-    // ICommandRepository implementation
+    // Repository methods using QuantizedCommand
 
-    override suspend fun save(command: QuantizedCommand): Result<Unit> {
+    suspend fun save(command: QuantizedCommand): Result<Unit> {
         commands[command.vuid] = command
         return Result.success(Unit)
     }
 
-    override suspend fun saveAll(commands: List<QuantizedCommand>): Result<Unit> {
+    suspend fun saveAll(commands: List<QuantizedCommand>): Result<Unit> {
         commands.forEach { this.commands[it.vuid] = it }
         return Result.success(Unit)
     }
 
-    override suspend fun getByApp(packageName: String): List<QuantizedCommand> {
+    suspend fun getByApp(packageName: String): List<QuantizedCommand> {
         return commands.values.filter { it.metadata["packageName"] == packageName }
     }
 
-    override suspend fun getByScreen(packageName: String, screenId: String): List<QuantizedCommand> {
+    suspend fun getByScreen(packageName: String, screenId: String): List<QuantizedCommand> {
         return commands.values.filter {
             it.metadata["packageName"] == packageName &&
             it.metadata["screenId"] == screenId
         }
     }
 
-    override suspend fun getByVuid(vuid: String): QuantizedCommand? {
+    suspend fun getByVuid(vuid: String): QuantizedCommand? {
         return commands.values.find { it.targetVuid == vuid }
     }
 
-    override suspend fun deleteByScreen(packageName: String, screenId: String): Result<Unit> {
+    suspend fun deleteByScreen(packageName: String, screenId: String): Result<Unit> {
         commands.entries.removeAll {
             it.value.metadata["packageName"] == packageName &&
             it.value.metadata["screenId"] == screenId
@@ -818,12 +818,12 @@ class TestCommandRepository(
         return Result.success(Unit)
     }
 
-    override suspend fun deleteByApp(packageName: String): Result<Unit> {
+    suspend fun deleteByApp(packageName: String): Result<Unit> {
         commands.entries.removeAll { it.value.metadata["packageName"] == packageName }
         return Result.success(Unit)
     }
 
-    override fun observeByScreen(packageName: String, screenId: String) =
+    fun observeByScreen(packageName: String, screenId: String) =
         kotlinx.coroutines.flow.flowOf(getByScreenSync(packageName, screenId))
 
     private fun getByScreenSync(packageName: String, screenId: String): List<QuantizedCommand> {
@@ -833,7 +833,7 @@ class TestCommandRepository(
         }
     }
 
-    override suspend fun countByApp(packageName: String): Long {
+    suspend fun countByApp(packageName: String): Long {
         return commands.values.count { it.metadata["packageName"] == packageName }.toLong()
     }
 }
@@ -842,3 +842,32 @@ class TestCommandRepository(
  * Custom exception for FK constraint violations.
  */
 class ForeignKeyConstraintException(message: String) : Exception(message)
+
+/**
+ * Test-only VUID entry model for FK chain testing.
+ *
+ * This is a self-contained test model that doesn't depend on production code.
+ * Mirrors the structure needed for FK constraint validation tests.
+ */
+data class TestVuidEntry(
+    val vuid: String,
+    val packageName: String,
+    val activityName: String,
+    val contentHash: String,
+    val elementType: String,
+    val text: String? = null,
+    val contentDescription: String? = null,
+    val alias: String? = null,
+    val bounds: IntArray? = null,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || this::class != other::class) return false
+        other as TestVuidEntry
+        return vuid == other.vuid
+    }
+
+    override fun hashCode(): Int = vuid.hashCode()
+}
