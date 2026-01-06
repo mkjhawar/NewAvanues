@@ -620,22 +620,37 @@ private fun CompactToggle(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .height(32.dp)
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, fontSize = 10.sp, color = Color.White)
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = Modifier.height(16.dp),
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = Color(0xFF10B981),
-                uncheckedThumbColor = Color.Gray,
-                uncheckedTrackColor = Color.DarkGray
-            )
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = Color.White,
+            modifier = Modifier.weight(1f)
         )
+        // Custom compact toggle instead of oversized Switch
+        Box(
+            modifier = Modifier
+                .width(36.dp)
+                .height(20.dp)
+                .background(
+                    color = if (checked) Color(0xFF10B981) else Color(0xFF4B5563),
+                    shape = RoundedCornerShape(10.dp)
+                )
+                .clickable { onCheckedChange(!checked) },
+            contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(2.dp)
+                    .size(16.dp)
+                    .background(Color.White, CircleShape)
+            )
+        }
     }
 }
 
