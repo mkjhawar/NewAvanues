@@ -394,6 +394,12 @@ private fun OverlayContent(onClose: () -> Unit) {
     var testModeEnabled by remember { mutableStateOf(true) }
     var showConfigPanel by remember { mutableStateOf(false) }
     var showDevSettings by remember { mutableStateOf(false) }
+    var devSettingsExpanded by remember { mutableStateOf(false) }  // Expandable section in drawer
+
+    // Developer settings state
+    var debugLogging by remember { mutableStateOf(true) }
+    var showVuidsOverlay by remember { mutableStateOf(false) }
+    var autoMinimize by remember { mutableStateOf(true) }
 
     val context = LocalContext.current
     val isConnectedFromService by VoiceOSAccessibilityService.isConnected.collectAsState()
@@ -509,13 +515,64 @@ private fun OverlayContent(onClose: () -> Unit) {
                             onClick = { showConfigPanel = true }
                         )
 
-                        // Developer Settings
+                        // Developer Settings - Expandable Section
                         DrawerActionButton(
-                            text = "Developer Settings",
-                            icon = Icons.Default.Settings,
+                            text = if (devSettingsExpanded) "Hide Dev Settings" else "Developer Settings",
+                            icon = if (devSettingsExpanded) Icons.Default.ExpandLess else Icons.Default.Settings,
                             iconColor = Color(0xFF1E3A5F),  // Dark blue
-                            onClick = { showDevSettings = true }
+                            onClick = { devSettingsExpanded = !devSettingsExpanded }
                         )
+
+                        // Expandable Developer Settings Content
+                        if (devSettingsExpanded) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 4.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFE5E7EB)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    // Debug Logging Toggle
+                                    DrawerSettingsToggle(
+                                        label = "Debug Logging",
+                                        checked = debugLogging,
+                                        onCheckedChange = { debugLogging = it }
+                                    )
+
+                                    // Show VUIDs Toggle
+                                    DrawerSettingsToggle(
+                                        label = "Show VUIDs Overlay",
+                                        checked = showVuidsOverlay,
+                                        onCheckedChange = { showVuidsOverlay = it }
+                                    )
+
+                                    // Auto-minimize Toggle
+                                    DrawerSettingsToggle(
+                                        label = "Auto-minimize App",
+                                        checked = autoMinimize,
+                                        onCheckedChange = { autoMinimize = it }
+                                    )
+
+                                    // Test Mode indicator
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("Test Mode", fontSize = 11.sp, color = Color(0xFF374151))
+                                        Text(
+                                            text = if (testModeEnabled) "ON" else "OFF",
+                                            fontSize = 11.sp,
+                                            color = if (testModeEnabled) Color(0xFF10B981) else Color.Gray,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(8.dp))
 
@@ -746,6 +803,34 @@ private fun DrawerActionButton(
                     .padding(10.dp)
             )
         }
+    }
+}
+
+@Composable
+private fun DrawerSettingsToggle(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, fontSize = 11.sp, color = Color(0xFF374151))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.height(20.dp),
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = Color(0xFF10B981),
+                uncheckedThumbColor = Color.Gray,
+                uncheckedTrackColor = Color.LightGray
+            )
+        )
     }
 }
 
