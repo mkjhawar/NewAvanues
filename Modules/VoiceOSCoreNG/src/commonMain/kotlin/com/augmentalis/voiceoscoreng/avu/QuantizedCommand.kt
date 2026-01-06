@@ -6,19 +6,52 @@ package com.augmentalis.voiceoscoreng.avu
  * Represents a learned voice command that triggers an action
  * on a UI element.
  *
- * @property uuid Command unique identifier
+ * @property uuid Command unique identifier (same as vuid for consistency)
  * @property phrase Voice phrase that triggers this command
  * @property actionType Type of action to perform
  * @property targetVuid Target element VUID (nullable for navigation)
  * @property confidence Confidence score (0.0 - 1.0)
+ * @property metadata Additional data (packageName, screenId, appVersion, etc.)
  */
 data class QuantizedCommand(
     val uuid: String = "",
     val phrase: String,
     val actionType: CommandActionType,
     val targetVuid: String?,
-    val confidence: Float
+    val confidence: Float,
+    val metadata: Map<String, String> = emptyMap()
 ) {
+    /**
+     * VUID alias for uuid (for repository consistency).
+     */
+    val vuid: String get() = uuid
+
+    /**
+     * Package name from metadata.
+     */
+    val packageName: String? get() = metadata["packageName"]
+
+    /**
+     * Screen ID from metadata.
+     */
+    val screenId: String? get() = metadata["screenId"]
+
+    /**
+     * App version from metadata.
+     */
+    val appVersion: String? get() = metadata["appVersion"]
+
+    /**
+     * Create a copy with additional metadata.
+     */
+    fun withMetadata(key: String, value: String): QuantizedCommand =
+        copy(metadata = metadata + (key to value))
+
+    /**
+     * Create a copy with multiple metadata entries.
+     */
+    fun withMetadata(entries: Map<String, String>): QuantizedCommand =
+        copy(metadata = metadata + entries)
     /**
      * Generate AVU CMD line format.
      *
