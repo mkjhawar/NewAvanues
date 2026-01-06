@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VoiceOSCoreNG</string>
+    <string name="accessibility_service_description">VoiceOSCoreNG explores app UI elements to test VUID generation, deduplication, hierarchy tracking, and command generation.</string>
+    <string name="overlay_notification_title">VoiceOS Scanner Active</string>
+    <string name="overlay_notification_text">Tap the floating button to scan current app</string>
+</resources>
