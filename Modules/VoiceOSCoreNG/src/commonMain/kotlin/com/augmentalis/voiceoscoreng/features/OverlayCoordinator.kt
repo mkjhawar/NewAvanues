@@ -102,11 +102,15 @@ private data class OverlayEntry(
  * - Priority-based visibility ordering
  * - Mutual exclusivity within groups
  * - Show/hide coordination with conflict resolution
+ * - Single-focus mode for reduced cognitive load
  *
  * ## Usage
  *
  * ```kotlin
  * val coordinator = OverlayCoordinator()
+ *
+ * // Enable single-focus mode for reduced cognitive load
+ * coordinator.singleFocusMode = true
  *
  * // Register overlays with priority and optional group
  * coordinator.register(statusOverlay, OverlayPriority.STATUS, group = "main")
@@ -134,6 +138,12 @@ private data class OverlayEntry(
  *
  * Overlays in the same group are mutually exclusive - only one can be visible at a time.
  * When showing an overlay, other overlays in the same group are automatically hidden.
+ *
+ * ## Single-Focus Mode
+ *
+ * When [singleFocusMode] is enabled, only ONE overlay can be visible at a time across
+ * the entire system. Showing any overlay will hide ALL other visible overlays.
+ * This reduces cognitive load by ensuring the user focuses on one thing at a time.
  *
  * ## Priority
  *
@@ -163,6 +173,18 @@ class OverlayCoordinator {
      * Internal state flow for visible overlays.
      */
     private val _visibleOverlaysFlow = MutableStateFlow<List<IOverlay>>(emptyList())
+
+    /**
+     * Single-focus mode for reduced cognitive load.
+     *
+     * When enabled, only ONE overlay can be visible at any time.
+     * Showing any overlay will automatically hide ALL other visible overlays.
+     *
+     * This is recommended for accessibility and to reduce visual clutter.
+     *
+     * Default: false (allows multiple overlays)
+     */
+    var singleFocusMode: Boolean = false
 
     // ═══════════════════════════════════════════════════════════════════════
     // Public Properties
@@ -299,8 +321,11 @@ class OverlayCoordinator {
     /**
      * Show an overlay by ID.
      *
-     * If the overlay is in a group, other visible overlays in the same group
-     * are automatically hidden (mutual exclusivity).
+     * Behavior depends on mode:
+     * - Normal mode: If the overlay is in a group, other visible overlays in the
+     *   same group are automatically hidden (mutual exclusivity).
+     * - Single-focus mode: ALL other visible overlays are hidden before showing
+     *   the requested overlay.
      *
      * @param id The overlay ID to show
      * @return true if the overlay was shown, false if not found or already visible
@@ -313,9 +338,14 @@ class OverlayCoordinator {
         // Already visible - no action needed
         if (entry.overlay.isVisible) return true
 
-        // Hide conflicting overlays in the same group
-        entry.group?.let { group ->
-            hideConflictingOverlays(id, group)
+        // Single-focus mode: hide ALL other overlays
+        if (singleFocusMode) {
+            hideAllExcept(id)
+        } else {
+            // Normal mode: hide conflicting overlays in the same group
+            entry.group?.let { group ->
+                hideConflictingOverlays(id, group)
+            }
         }
 
         // Show the overlay
@@ -326,6 +356,22 @@ class OverlayCoordinator {
         onOverlayShown?.invoke(id)
 
         return true
+    }
+
+    /**
+     * Hide all overlays except the specified one.
+     * Used by single-focus mode.
+     */
+    private fun hideAllExcept(exceptId: String) {
+        overlays.entries
+            .filter { (id, entry) ->
+                id != exceptId && entry.overlay.isVisible
+            }
+            .forEach { (id, entry) ->
+                entry.overlay.hide()
+                onConflictResolved?.invoke(id, exceptId)
+                onOverlayHidden?.invoke(id)
+            }
     }
 
     /**

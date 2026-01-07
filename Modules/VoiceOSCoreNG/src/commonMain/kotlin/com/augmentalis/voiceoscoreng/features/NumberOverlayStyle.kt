@@ -31,6 +31,67 @@ enum class BadgeShape {
 }
 
 /**
+ * Accessibility shape for colorblind-friendly badge differentiation.
+ *
+ * Provides dual encoding (color + shape) for users with color vision deficiency (CVD).
+ * When shape accessibility is enabled, badge shapes vary based on element state,
+ * allowing users to distinguish item states without relying solely on color.
+ *
+ * ## Accessibility Rationale
+ *
+ * Approximately 8% of males and 0.5% of females have some form of color vision
+ * deficiency. The most common forms (deuteranopia and protanopia) make it difficult
+ * to distinguish between green and orange/red colors used in the standard badge
+ * color scheme.
+ *
+ * By using distinct shapes for different states, users with CVD can:
+ * - Identify enabled items with names (CIRCLE) vs without names (SQUARE)
+ * - Recognize disabled items (DIAMOND) without relying on the grey color
+ *
+ * ## Shape Meanings
+ *
+ * | Shape   | State                          | Color (Default) |
+ * |---------|--------------------------------|-----------------|
+ * | CIRCLE  | Enabled + has name             | Green           |
+ * | SQUARE  | Enabled + no name              | Orange          |
+ * | DIAMOND | Disabled (regardless of name)  | Grey            |
+ *
+ * ## Usage
+ *
+ * Enable shape accessibility via [NumberOverlayStyle.useShapeAccessibility]:
+ * ```kotlin
+ * val style = NumberOverlayStyle(useShapeAccessibility = true)
+ * ```
+ *
+ * Or use the predefined [NumberOverlayStyles.SHAPE_ACCESSIBLE] style.
+ *
+ * @see NumberOverlayStyle.useShapeAccessibility
+ * @see NumberOverlayRenderer.getAccessibilityShape
+ */
+enum class AccessibilityShape {
+    /**
+     * Circle shape for enabled items with a meaningful name.
+     *
+     * Indicates the element can be selected by voice using its name.
+     */
+    CIRCLE,
+
+    /**
+     * Square shape for enabled items without a meaningful name.
+     *
+     * Indicates the element can be selected by number only.
+     */
+    SQUARE,
+
+    /**
+     * Diamond (rotated square) shape for disabled items.
+     *
+     * Indicates the element cannot currently be selected.
+     */
+    DIAMOND
+}
+
+/**
  * Anchor point for badge positioning relative to element.
  *
  * Determines which corner of the UI element the badge is anchored to.
@@ -71,6 +132,9 @@ enum class AnchorPoint {
  * @property shadowColor Color of the shadow (0xAARRGGBB)
  * @property shadowOffsetY Vertical offset of shadow (dp)
  * @property badgeStyle Shape variant for the badge
+ * @property useShapeAccessibility When true, badge shapes vary based on element state
+ *     to provide dual encoding (color + shape) for users with color vision deficiency.
+ *     See [AccessibilityShape] for shape meanings.
  */
 data class NumberOverlayStyle(
     // Position configuration
@@ -99,7 +163,24 @@ data class NumberOverlayStyle(
     val shadowOffsetY: Float = 2f,
 
     // Badge style variants
-    val badgeStyle: BadgeShape = BadgeShape.FILLED_CIRCLE
+    val badgeStyle: BadgeShape = BadgeShape.FILLED_CIRCLE,
+
+    // Accessibility options
+    /**
+     * Enable shape-based accessibility differentiation for colorblind users.
+     *
+     * When enabled, badge shapes vary based on element state:
+     * - CIRCLE: enabled items with names
+     * - SQUARE: enabled items without names
+     * - DIAMOND: disabled items
+     *
+     * This provides dual encoding (color + shape) so users with color vision
+     * deficiency can distinguish element states without relying on color alone.
+     *
+     * @see AccessibilityShape
+     * @see NumberOverlayRenderer.getAccessibilityShape
+     */
+    val useShapeAccessibility: Boolean = false
 )
 
 /**
@@ -232,5 +313,34 @@ object NumberOverlayStyles {
         disabledColor = 0xFF999999,   // Grey
         badgeStyle = BadgeShape.ROUNDED_RECT,
         strokeWidth = 3f
+    )
+
+    /**
+     * Shape-based accessibility style for colorblind users.
+     *
+     * Enables dual encoding (color + shape) where badge shapes vary based on
+     * element state, allowing users with color vision deficiency to distinguish
+     * item states without relying solely on color:
+     *
+     * | State                    | Shape   | Color        |
+     * |--------------------------|---------|--------------|
+     * | Enabled + has name       | CIRCLE  | Blue         |
+     * | Enabled + no name        | SQUARE  | Gold/Amber   |
+     * | Disabled                 | DIAMOND | Grey         |
+     *
+     * This style combines:
+     * - [useShapeAccessibility] = true for shape-based differentiation
+     * - Colorblind-friendly blue/gold color palette
+     * - Larger stroke width for better visibility
+     *
+     * @see AccessibilityShape
+     * @see NumberOverlayRenderer.getAccessibilityShape
+     */
+    val SHAPE_ACCESSIBLE = NumberOverlayStyle(
+        hasNameColor = 0xFF2196F3,    // Blue (CVD-friendly)
+        noNameColor = 0xFFFFC107,     // Gold/amber (CVD-friendly)
+        disabledColor = 0xFF999999,   // Grey
+        strokeWidth = 3f,
+        useShapeAccessibility = true
     )
 }

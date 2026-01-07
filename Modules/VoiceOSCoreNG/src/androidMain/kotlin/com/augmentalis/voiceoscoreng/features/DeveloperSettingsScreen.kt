@@ -12,20 +12,29 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.augmentalis.voiceoscoreng.features.LearnAppConfig
 import com.augmentalis.voiceoscoreng.features.LearnAppDevToggle
 
 /**
+ * Settings tabs for organizing developer settings.
+ */
+enum class SettingsTab(val title: String, val icon: ImageVector) {
+    BASIC("Basic", Icons.Default.Settings),
+    VOICE("Voice", Icons.Default.Mic),
+    DEVELOPER("Developer", Icons.Default.Code)
+}
+
+/**
  * Developer Settings Screen for VoiceOSCoreNG.
  *
- * Allows developers to:
- * - Toggle developer mode
- * - Override tier limits
- * - Enable/disable individual features
- * - View current configuration
+ * Organized into tabs:
+ * - Basic: Theme, High Contrast, Large Text, Reduce Motion
+ * - Voice: Confidence Threshold, Speech Engine, Confirmation Mode
+ * - Developer: Debug Overlay, Processing Mode, Limits, Framework Detection
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,6 +43,9 @@ fun DeveloperSettingsScreen(
     modifier: Modifier = Modifier
 ) {
     var devModeEnabled by remember { mutableStateOf(LearnAppConfig.DeveloperSettings.enabled) }
+    var selectedTab by remember { mutableStateOf(SettingsTab.BASIC) }
+
+    // Developer settings state
     var maxElements by remember { mutableStateOf(LearnAppConfig.DeveloperSettings.maxElementsPerScan?.toString() ?: "") }
     var maxApps by remember { mutableStateOf(LearnAppConfig.DeveloperSettings.maxAppsLearned?.toString() ?: "") }
     var forceAI by remember { mutableStateOf(LearnAppConfig.DeveloperSettings.forceEnableAI) }
@@ -47,8 +59,32 @@ fun DeveloperSettingsScreen(
     var explorationDepth by remember { mutableStateOf(LearnAppConfig.DeveloperSettings.explorationDepth?.toString() ?: "") }
     var selectedProcessingMode by remember { mutableStateOf(LearnAppConfig.DeveloperSettings.processingModeOverride) }
 
+    // Basic settings state
+    var isDarkTheme by remember { mutableStateOf(false) }
+    var highContrastEnabled by remember { mutableStateOf(false) }
+    var largeTextEnabled by remember { mutableStateOf(false) }
+    var reduceMotionEnabled by remember { mutableStateOf(false) }
+
+    // Voice settings state
+    var confidenceThreshold by remember { mutableStateOf(0.7f) }
+    var selectedSpeechEngine by remember { mutableStateOf("System Default") }
+    var confirmationMode by remember { mutableStateOf("Always") }
+
     val currentTier = LearnAppDevToggle.getCurrentTier()
-    val scrollState = rememberScrollState()
+
+    // Determine which tabs to show
+    val visibleTabs = if (devModeEnabled) {
+        SettingsTab.entries
+    } else {
+        listOf(SettingsTab.BASIC, SettingsTab.VOICE)
+    }
+
+    // Reset to BASIC tab if Developer tab becomes hidden while selected
+    LaunchedEffect(devModeEnabled) {
+        if (!devModeEnabled && selectedTab == SettingsTab.DEVELOPER) {
+            selectedTab = SettingsTab.BASIC
+        }
+    }
 
     Column(
         modifier = modifier
@@ -59,7 +95,7 @@ fun DeveloperSettingsScreen(
         TopAppBar(
             title = {
                 Text(
-                    "Developer Settings",
+                    "Settings",
                     fontWeight = FontWeight.Bold
                 )
             },
@@ -87,14 +123,10 @@ fun DeveloperSettingsScreen(
             )
         )
 
+        // Developer Mode Card (always visible at top)
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            // Developer Mode Toggle
             DevModeCard(
                 enabled = devModeEnabled,
                 onToggle = { enabled ->
@@ -103,7 +135,7 @@ fun DeveloperSettingsScreen(
                         LearnAppConfig.DeveloperSettings.enable(unlockAll = false)
                     } else {
                         LearnAppConfig.DeveloperSettings.disable()
-                        // Reset local state
+                        // Reset developer state
                         maxElements = ""
                         maxApps = ""
                         forceAI = false
@@ -132,194 +164,436 @@ fun DeveloperSettingsScreen(
                     maxApps = "-1"
                 }
             )
+        }
 
-            if (devModeEnabled) {
-                // Limits Section
-                SettingsSection(title = "Limits", icon = Icons.Default.Tune) {
-                    OutlinedTextField(
-                        value = maxElements,
-                        onValueChange = { value ->
-                            maxElements = value
-                            LearnAppConfig.DeveloperSettings.maxElementsPerScan = value.toIntOrNull()
-                        },
-                        label = { Text("Max Elements per Scan") },
-                        placeholder = { Text("Default: ${LearnAppConfig.LiteDefaults.MAX_ELEMENTS_PER_SCAN}") },
-                        supportingText = { Text("-1 for unlimited") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = maxApps,
-                        onValueChange = { value ->
-                            maxApps = value
-                            LearnAppConfig.DeveloperSettings.maxAppsLearned = value.toIntOrNull()
-                        },
-                        label = { Text("Max Apps Learned") },
-                        placeholder = { Text("Default: ${LearnAppConfig.LiteDefaults.MAX_APPS_LEARNED}") },
-                        supportingText = { Text("-1 for unlimited") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = batchTimeout,
-                        onValueChange = { value ->
-                            batchTimeout = value
-                            LearnAppConfig.DeveloperSettings.batchTimeoutMs = value.toLongOrNull()
-                        },
-                        label = { Text("Batch Timeout (ms)") },
-                        placeholder = { Text("Default: ${LearnAppConfig.LiteDefaults.BATCH_TIMEOUT_MS}ms") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = explorationDepth,
-                        onValueChange = { value ->
-                            explorationDepth = value
-                            LearnAppConfig.DeveloperSettings.explorationDepth = value.toIntOrNull()
-                        },
-                        label = { Text("Exploration Depth") },
-                        placeholder = { Text("Default: ${LearnAppConfig.LiteDefaults.EXPLORATION_DEPTH}") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                }
-
-                // Feature Toggles Section
-                SettingsSection(title = "Feature Overrides", icon = Icons.Default.ToggleOn) {
-                    FeatureToggle(
-                        title = "AI Features",
-                        description = "Element classification, naming, suggestions",
-                        checked = forceAI,
-                        onCheckedChange = {
-                            forceAI = it
-                            LearnAppConfig.DeveloperSettings.forceEnableAI = it
-                        }
-                    )
-
-                    FeatureToggle(
-                        title = "NLU Features",
-                        description = "Natural language understanding for voice commands",
-                        checked = forceNLU,
-                        onCheckedChange = {
-                            forceNLU = it
-                            LearnAppConfig.DeveloperSettings.forceEnableNLU = it
-                        }
-                    )
-
-                    FeatureToggle(
-                        title = "Exploration Mode",
-                        description = "Full app exploration and batch learning",
-                        checked = forceExploration,
-                        onCheckedChange = {
-                            forceExploration = it
-                            LearnAppConfig.DeveloperSettings.forceEnableExploration = it
-                        }
-                    )
-
-                    FeatureToggle(
-                        title = "Framework Detection",
-                        description = "Detect Flutter, Unity, React Native, WebView",
-                        checked = forceFrameworkDetection,
-                        onCheckedChange = {
-                            forceFrameworkDetection = it
-                            LearnAppConfig.DeveloperSettings.forceEnableFrameworkDetection = it
-                        }
-                    )
-
-                    FeatureToggle(
-                        title = "Caching",
-                        description = "Cache screen states for performance",
-                        checked = forceCaching,
-                        onCheckedChange = {
-                            forceCaching = it
-                            LearnAppConfig.DeveloperSettings.forceEnableCaching = it
-                        }
-                    )
-
-                    FeatureToggle(
-                        title = "Analytics",
-                        description = "Track usage and command metrics",
-                        checked = forceAnalytics,
-                        onCheckedChange = {
-                            forceAnalytics = it
-                            LearnAppConfig.DeveloperSettings.forceEnableAnalytics = it
-                        }
-                    )
-
-                    FeatureToggle(
-                        title = "Debug Overlay",
-                        description = "Show debug information overlay",
-                        checked = enableDebugOverlay,
-                        onCheckedChange = {
-                            enableDebugOverlay = it
-                            LearnAppConfig.DeveloperSettings.enableDebugOverlay = it
-                        }
-                    )
-                }
-
-                // Processing Mode Section
-                SettingsSection(title = "Processing Mode", icon = Icons.Default.Speed) {
-                    val modes = listOf(null) + LearnAppConfig.ProcessingMode.entries
-                    modes.forEach { mode ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = selectedProcessingMode == mode,
-                                onClick = {
-                                    selectedProcessingMode = mode
-                                    LearnAppConfig.DeveloperSettings.processingModeOverride = mode
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(
-                                    text = mode?.name ?: "Default (use tier setting)",
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                Text(
-                                    text = when (mode) {
-                                        LearnAppConfig.ProcessingMode.IMMEDIATE -> "Process elements immediately"
-                                        LearnAppConfig.ProcessingMode.BATCH -> "Collect and process in batches"
-                                        LearnAppConfig.ProcessingMode.HYBRID -> "Immediate for common, batch for complex"
-                                        null -> "Uses tier default"
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+        // Tab Row
+        TabRow(
+            selectedTabIndex = visibleTabs.indexOf(selectedTab).coerceAtLeast(0),
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary
+        ) {
+            visibleTabs.forEach { tab ->
+                Tab(
+                    selected = selectedTab == tab,
+                    onClick = { selectedTab = tab },
+                    text = { Text(tab.title) },
+                    icon = {
+                        Icon(
+                            tab.icon,
+                            contentDescription = tab.title,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
-                }
+                )
+            }
+        }
 
-                // Current Config Summary
-                SettingsSection(title = "Current Configuration", icon = Icons.Default.Info) {
-                    val summary = LearnAppConfig.getSummary()
+        // Tab Content
+        val scrollState = rememberScrollState()
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            when (selectedTab) {
+                SettingsTab.BASIC -> BasicSettingsContent(
+                    isDarkTheme = isDarkTheme,
+                    onDarkThemeChange = { isDarkTheme = it },
+                    highContrastEnabled = highContrastEnabled,
+                    onHighContrastChange = { highContrastEnabled = it },
+                    largeTextEnabled = largeTextEnabled,
+                    onLargeTextChange = { largeTextEnabled = it },
+                    reduceMotionEnabled = reduceMotionEnabled,
+                    onReduceMotionChange = { reduceMotionEnabled = it }
+                )
+
+                SettingsTab.VOICE -> VoiceSettingsContent(
+                    confidenceThreshold = confidenceThreshold,
+                    onConfidenceChange = { confidenceThreshold = it },
+                    selectedSpeechEngine = selectedSpeechEngine,
+                    onSpeechEngineChange = { selectedSpeechEngine = it },
+                    confirmationMode = confirmationMode,
+                    onConfirmationModeChange = { confirmationMode = it }
+                )
+
+                SettingsTab.DEVELOPER -> DeveloperSettingsContent(
+                    enableDebugOverlay = enableDebugOverlay,
+                    onDebugOverlayChange = {
+                        enableDebugOverlay = it
+                        LearnAppConfig.DeveloperSettings.enableDebugOverlay = it
+                    },
+                    selectedProcessingMode = selectedProcessingMode,
+                    onProcessingModeChange = {
+                        selectedProcessingMode = it
+                        LearnAppConfig.DeveloperSettings.processingModeOverride = it
+                    },
+                    maxElements = maxElements,
+                    onMaxElementsChange = { value ->
+                        maxElements = value
+                        LearnAppConfig.DeveloperSettings.maxElementsPerScan = value.toIntOrNull()
+                    },
+                    maxApps = maxApps,
+                    onMaxAppsChange = { value ->
+                        maxApps = value
+                        LearnAppConfig.DeveloperSettings.maxAppsLearned = value.toIntOrNull()
+                    },
+                    batchTimeout = batchTimeout,
+                    onBatchTimeoutChange = { value ->
+                        batchTimeout = value
+                        LearnAppConfig.DeveloperSettings.batchTimeoutMs = value.toLongOrNull()
+                    },
+                    explorationDepth = explorationDepth,
+                    onExplorationDepthChange = { value ->
+                        explorationDepth = value
+                        LearnAppConfig.DeveloperSettings.explorationDepth = value.toIntOrNull()
+                    },
+                    forceAI = forceAI,
+                    onForceAIChange = {
+                        forceAI = it
+                        LearnAppConfig.DeveloperSettings.forceEnableAI = it
+                    },
+                    forceNLU = forceNLU,
+                    onForceNLUChange = {
+                        forceNLU = it
+                        LearnAppConfig.DeveloperSettings.forceEnableNLU = it
+                    },
+                    forceExploration = forceExploration,
+                    onForceExplorationChange = {
+                        forceExploration = it
+                        LearnAppConfig.DeveloperSettings.forceEnableExploration = it
+                    },
+                    forceFrameworkDetection = forceFrameworkDetection,
+                    onForceFrameworkDetectionChange = {
+                        forceFrameworkDetection = it
+                        LearnAppConfig.DeveloperSettings.forceEnableFrameworkDetection = it
+                    },
+                    forceCaching = forceCaching,
+                    onForceCachingChange = {
+                        forceCaching = it
+                        LearnAppConfig.DeveloperSettings.forceEnableCaching = it
+                    },
+                    forceAnalytics = forceAnalytics,
+                    onForceAnalyticsChange = {
+                        forceAnalytics = it
+                        LearnAppConfig.DeveloperSettings.forceEnableAnalytics = it
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BasicSettingsContent(
+    isDarkTheme: Boolean,
+    onDarkThemeChange: (Boolean) -> Unit,
+    highContrastEnabled: Boolean,
+    onHighContrastChange: (Boolean) -> Unit,
+    largeTextEnabled: Boolean,
+    onLargeTextChange: (Boolean) -> Unit,
+    reduceMotionEnabled: Boolean,
+    onReduceMotionChange: (Boolean) -> Unit
+) {
+    SettingsSection(title = "Appearance", icon = Icons.Default.Palette) {
+        FeatureToggle(
+            title = "Dark Theme",
+            description = "Use dark color scheme throughout the app",
+            checked = isDarkTheme,
+            onCheckedChange = onDarkThemeChange
+        )
+
+        FeatureToggle(
+            title = "High Contrast",
+            description = "Increase contrast for better visibility",
+            checked = highContrastEnabled,
+            onCheckedChange = onHighContrastChange
+        )
+    }
+
+    SettingsSection(title = "Accessibility", icon = Icons.Default.Accessibility) {
+        FeatureToggle(
+            title = "Large Text",
+            description = "Increase text size for readability",
+            checked = largeTextEnabled,
+            onCheckedChange = onLargeTextChange
+        )
+
+        FeatureToggle(
+            title = "Reduce Motion",
+            description = "Minimize animations and transitions",
+            checked = reduceMotionEnabled,
+            onCheckedChange = onReduceMotionChange
+        )
+    }
+}
+
+@Composable
+private fun VoiceSettingsContent(
+    confidenceThreshold: Float,
+    onConfidenceChange: (Float) -> Unit,
+    selectedSpeechEngine: String,
+    onSpeechEngineChange: (String) -> Unit,
+    confirmationMode: String,
+    onConfirmationModeChange: (String) -> Unit
+) {
+    SettingsSection(title = "Recognition", icon = Icons.Default.RecordVoiceOver) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "Confidence Threshold: ${(confidenceThreshold * 100).toInt()}%",
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = "Minimum confidence required to accept voice commands",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Slider(
+                value = confidenceThreshold,
+                onValueChange = onConfidenceChange,
+                valueRange = 0.5f..1.0f,
+                steps = 9,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+
+    SettingsSection(title = "Speech Engine", icon = Icons.Default.SettingsVoice) {
+        val engines = listOf("System Default", "Google Speech", "Whisper (Local)")
+        engines.forEach { engine ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = selectedSpeechEngine == engine,
+                    onClick = { onSpeechEngineChange(engine) }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = engine,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        }
+    }
+
+    SettingsSection(title = "Confirmation", icon = Icons.Default.CheckCircle) {
+        val modes = listOf(
+            "Always" to "Always confirm before executing commands",
+            "Destructive Only" to "Confirm only for delete/modify actions",
+            "Never" to "Execute commands immediately"
+        )
+        modes.forEach { (mode, description) ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = confirmationMode == mode,
+                    onClick = { onConfirmationModeChange(mode) }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
                     Text(
-                        text = summary,
+                        text = mode,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = description,
                         style = MaterialTheme.typography.bodySmall,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(12.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DeveloperSettingsContent(
+    enableDebugOverlay: Boolean,
+    onDebugOverlayChange: (Boolean) -> Unit,
+    selectedProcessingMode: LearnAppConfig.ProcessingMode?,
+    onProcessingModeChange: (LearnAppConfig.ProcessingMode?) -> Unit,
+    maxElements: String,
+    onMaxElementsChange: (String) -> Unit,
+    maxApps: String,
+    onMaxAppsChange: (String) -> Unit,
+    batchTimeout: String,
+    onBatchTimeoutChange: (String) -> Unit,
+    explorationDepth: String,
+    onExplorationDepthChange: (String) -> Unit,
+    forceAI: Boolean,
+    onForceAIChange: (Boolean) -> Unit,
+    forceNLU: Boolean,
+    onForceNLUChange: (Boolean) -> Unit,
+    forceExploration: Boolean,
+    onForceExplorationChange: (Boolean) -> Unit,
+    forceFrameworkDetection: Boolean,
+    onForceFrameworkDetectionChange: (Boolean) -> Unit,
+    forceCaching: Boolean,
+    onForceCachingChange: (Boolean) -> Unit,
+    forceAnalytics: Boolean,
+    onForceAnalyticsChange: (Boolean) -> Unit
+) {
+    // Debug Overlay
+    SettingsSection(title = "Debug", icon = Icons.Default.BugReport) {
+        FeatureToggle(
+            title = "Debug Overlay",
+            description = "Show debug information overlay on screen",
+            checked = enableDebugOverlay,
+            onCheckedChange = onDebugOverlayChange
+        )
+    }
+
+    // Processing Mode Section
+    SettingsSection(title = "Processing Mode", icon = Icons.Default.Speed) {
+        val modes = listOf(null) + LearnAppConfig.ProcessingMode.entries
+        modes.forEach { mode ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = selectedProcessingMode == mode,
+                    onClick = { onProcessingModeChange(mode) }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = mode?.name ?: "Default (use tier setting)",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = when (mode) {
+                            LearnAppConfig.ProcessingMode.IMMEDIATE -> "Process elements immediately"
+                            LearnAppConfig.ProcessingMode.BATCH -> "Collect and process in batches"
+                            LearnAppConfig.ProcessingMode.HYBRID -> "Immediate for common, batch for complex"
+                            null -> "Uses tier default"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+
+    // Limits Section
+    SettingsSection(title = "Limits", icon = Icons.Default.Tune) {
+        OutlinedTextField(
+            value = maxElements,
+            onValueChange = onMaxElementsChange,
+            label = { Text("Max Elements per Scan") },
+            placeholder = { Text("Default: ${LearnAppConfig.LiteDefaults.MAX_ELEMENTS_PER_SCAN}") },
+            supportingText = { Text("-1 for unlimited") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = maxApps,
+            onValueChange = onMaxAppsChange,
+            label = { Text("Max Apps Learned") },
+            placeholder = { Text("Default: ${LearnAppConfig.LiteDefaults.MAX_APPS_LEARNED}") },
+            supportingText = { Text("-1 for unlimited") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = batchTimeout,
+            onValueChange = onBatchTimeoutChange,
+            label = { Text("Batch Timeout (ms)") },
+            placeholder = { Text("Default: ${LearnAppConfig.LiteDefaults.BATCH_TIMEOUT_MS}ms") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = explorationDepth,
+            onValueChange = onExplorationDepthChange,
+            label = { Text("Exploration Depth") },
+            placeholder = { Text("Default: ${LearnAppConfig.LiteDefaults.EXPLORATION_DEPTH}") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+    }
+
+    // Feature Overrides Section
+    SettingsSection(title = "Feature Overrides", icon = Icons.Default.ToggleOn) {
+        FeatureToggle(
+            title = "AI Features",
+            description = "Element classification, naming, suggestions",
+            checked = forceAI,
+            onCheckedChange = onForceAIChange
+        )
+
+        FeatureToggle(
+            title = "NLU Features",
+            description = "Natural language understanding for voice commands",
+            checked = forceNLU,
+            onCheckedChange = onForceNLUChange
+        )
+
+        FeatureToggle(
+            title = "Exploration Mode",
+            description = "Full app exploration and batch learning",
+            checked = forceExploration,
+            onCheckedChange = onForceExplorationChange
+        )
+
+        FeatureToggle(
+            title = "Framework Detection",
+            description = "Detect Flutter, Unity, React Native, WebView",
+            checked = forceFrameworkDetection,
+            onCheckedChange = onForceFrameworkDetectionChange
+        )
+
+        FeatureToggle(
+            title = "Caching",
+            description = "Cache screen states for performance",
+            checked = forceCaching,
+            onCheckedChange = onForceCachingChange
+        )
+
+        FeatureToggle(
+            title = "Analytics",
+            description = "Track usage and command metrics",
+            checked = forceAnalytics,
+            onCheckedChange = onForceAnalyticsChange
+        )
+    }
+
+    // Current Config Summary
+    SettingsSection(title = "Current Configuration", icon = Icons.Default.Info) {
+        val summary = LearnAppConfig.getSummary()
+        Text(
+            text = summary,
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(12.dp)
+        )
     }
 }
 
@@ -363,7 +637,7 @@ private fun DevModeCard(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            if (enabled) "Overrides active" else "Tap to enable",
+                            if (enabled) "Developer tab unlocked" else "Tap to unlock developer options",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -396,7 +670,7 @@ private fun DevModeCard(
 @Composable
 private fun SettingsSection(
     title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(

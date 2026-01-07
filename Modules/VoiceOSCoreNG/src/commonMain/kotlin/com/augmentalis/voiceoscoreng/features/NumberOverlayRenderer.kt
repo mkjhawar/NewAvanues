@@ -99,6 +99,7 @@ data class RectF(
  * @property center Badge center point
  * @property radius Badge radius in pixels
  * @property shape Badge shape (circle, square, etc.)
+ * @property accessibilityShape Shape for colorblind accessibility (null if not using shape accessibility)
  * @property badgeColor Background color for filled styles, stroke color for outlined
  * @property textColor Color for the number text
  * @property textSize Text size in sp
@@ -118,6 +119,7 @@ data class RenderingParams(
     val center: PointF,
     val radius: Float,
     val shape: BadgeShape,
+    val accessibilityShape: AccessibilityShape?,
     val badgeColor: Long,
     val textColor: Long,
     val textSize: Float,
@@ -229,6 +231,49 @@ class NumberOverlayRenderer(
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
+    // Accessibility Shape Selection
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Get accessibility shape for colorblind differentiation based on element state.
+     *
+     * Provides dual encoding (color + shape) for users with color vision deficiency (CVD).
+     * Shape selection follows this logic:
+     *
+     * | State                          | Shape   | Rationale                              |
+     * |--------------------------------|---------|----------------------------------------|
+     * | isEnabled=true, hasName=true   | CIRCLE  | Primary actionable items (named)       |
+     * | isEnabled=true, hasName=false  | SQUARE  | Actionable but requires number to select |
+     * | isEnabled=false                | DIAMOND | Visually distinct "unavailable" state  |
+     *
+     * ## Accessibility Rationale
+     *
+     * The circle-square-diamond progression provides distinct visual differentiation:
+     * - **CIRCLE**: Smooth, continuous shape signals "ready to use" with voice name
+     * - **SQUARE**: Angular but stable shape signals "usable" but needs number
+     * - **DIAMOND**: Rotated/tilted shape signals "different" or "unavailable"
+     *
+     * This pattern is consistent with common accessibility guidelines that recommend
+     * using multiple visual channels (color, shape, pattern) to convey information.
+     *
+     * @param item Numbered item with state information
+     * @return AccessibilityShape based on item state, or null if shape accessibility is disabled
+     * @see AccessibilityShape
+     * @see NumberOverlayStyle.useShapeAccessibility
+     */
+    fun getAccessibilityShape(item: NumberedItem): AccessibilityShape? {
+        if (!style.useShapeAccessibility) {
+            return null
+        }
+
+        return when {
+            !item.isEnabled -> AccessibilityShape.DIAMOND
+            item.hasName -> AccessibilityShape.CIRCLE
+            else -> AccessibilityShape.SQUARE
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
     // Touch Bounds
     // ═══════════════════════════════════════════════════════════════════════════
 
@@ -283,12 +328,18 @@ class NumberOverlayRenderer(
      * Returns a platform-agnostic data structure containing all information
      * needed to draw the badge using native graphics APIs.
      *
+     * When [NumberOverlayStyle.useShapeAccessibility] is enabled, the
+     * [RenderingParams.accessibilityShape] field will contain the shape
+     * to use for colorblind-friendly rendering. Platform renderers should
+     * use this shape instead of [RenderingParams.shape] when it is non-null.
+     *
      * @param item Numbered item to render
      * @return Rendering parameters for the badge
      */
     fun getRenderingParams(item: NumberedItem): RenderingParams {
         val center = calculateBadgeCenter(item.bounds)
         val badgeColor = selectBadgeColor(item)
+        val accessibilityShape = getAccessibilityShape(item)
 
         // Outlined style has no separate stroke (the outline IS the badge)
         val hasStroke = style.badgeStyle != BadgeShape.OUTLINED_CIRCLE
@@ -306,6 +357,7 @@ class NumberOverlayRenderer(
             center = center,
             radius = style.circleRadius,
             shape = style.badgeStyle,
+            accessibilityShape = accessibilityShape,
             badgeColor = badgeColor,
             textColor = style.numberColor,
             textSize = style.numberSize,
@@ -377,6 +429,19 @@ class NumberOverlayRenderer(
          */
         fun createLargeText(): NumberOverlayRenderer {
             return NumberOverlayRenderer(NumberOverlayStyles.LARGE_TEXT)
+        }
+
+        /**
+         * Create renderer with shape-based accessibility for colorblind users.
+         *
+         * Uses [AccessibilityShape] differentiation where badge shapes vary
+         * based on element state, providing dual encoding (color + shape).
+         *
+         * @see AccessibilityShape
+         * @see NumberOverlayStyles.SHAPE_ACCESSIBLE
+         */
+        fun createShapeAccessible(): NumberOverlayRenderer {
+            return NumberOverlayRenderer(NumberOverlayStyles.SHAPE_ACCESSIBLE)
         }
     }
 }

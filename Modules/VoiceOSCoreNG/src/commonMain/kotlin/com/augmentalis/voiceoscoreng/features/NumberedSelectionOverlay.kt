@@ -60,6 +60,8 @@ data class Position(val x: Int, val y: Int)
  * @property id Unique identifier for this overlay instance
  * @property style Style configuration for badge rendering
  * @property instructionText Custom instruction text (defaults to "Say a number to select")
+ * @property maxVisibleBadges Maximum number of badges to display (default 9). Items beyond this
+ *           limit are available via [getOverflowItems] and can still be selected by number.
  *
  * @see NumberOverlayStyle for styling options
  * @see NumberedItem for item data structure
@@ -68,7 +70,8 @@ data class Position(val x: Int, val y: Int)
 class NumberedSelectionOverlay(
     override val id: String = "numbered-selection-overlay-${System.currentTimeMillis()}",
     style: NumberOverlayStyle = NumberOverlayStyles.DEFAULT,
-    private val instructionText: String? = null
+    private val instructionText: String? = null,
+    val maxVisibleBadges: Int = 9
 ) : IOverlay {
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -103,6 +106,12 @@ class NumberedSelectionOverlay(
      * Whether the overlay has any items.
      */
     val hasItems: Boolean get() = _items.isNotEmpty()
+
+    /**
+     * Whether there are more items than can be displayed.
+     * True when itemCount exceeds maxVisibleBadges.
+     */
+    val hasOverflow: Boolean get() = _items.size > maxVisibleBadges
 
     private var _isDisposed: Boolean = false
 
@@ -204,6 +213,48 @@ class NumberedSelectionOverlay(
         if (autoHide) {
             _isVisible = false
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Overflow Management
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Get the items that should be visibly displayed.
+     *
+     * Returns the first [maxVisibleBadges] items from the list.
+     * These are the items that should have badges rendered on screen.
+     *
+     * @return List of items to display (up to maxVisibleBadges)
+     */
+    fun getVisibleItems(): List<NumberedItem> {
+        return _items.take(maxVisibleBadges)
+    }
+
+    /**
+     * Get the items that overflow beyond the visible limit.
+     *
+     * Returns items beyond the [maxVisibleBadges] threshold.
+     * These items exist but should not have badges rendered initially.
+     * Platform implementations may provide a "more" indicator or expandable view.
+     *
+     * @return List of overflow items (empty if no overflow)
+     */
+    fun getOverflowItems(): List<NumberedItem> {
+        return if (_items.size > maxVisibleBadges) {
+            _items.drop(maxVisibleBadges)
+        } else {
+            emptyList()
+        }
+    }
+
+    /**
+     * Get the count of overflow items.
+     *
+     * @return Number of items beyond maxVisibleBadges (0 if no overflow)
+     */
+    fun getOverflowCount(): Int {
+        return maxOf(0, _items.size - maxVisibleBadges)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -364,6 +415,7 @@ class NumberedSelectionOverlay(
      * Get announcement text for screen readers.
      *
      * Describes the current state of the overlay for accessibility.
+     * Includes overflow information when items exceed maxVisibleBadges.
      *
      * @return Announcement text for TTS/accessibility services
      */
@@ -371,6 +423,10 @@ class NumberedSelectionOverlay(
         return when {
             _items.isEmpty() -> "No items available"
             _items.size == 1 -> "1 item available. Say a number to select."
+            hasOverflow -> {
+                val overflowCount = getOverflowCount()
+                "${_items.size} items available, showing first $maxVisibleBadges. $overflowCount more items available. Say a number to select."
+            }
             else -> "${_items.size} items available. Say a number to select."
         }
     }

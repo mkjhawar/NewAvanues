@@ -20,6 +20,36 @@ import kotlinx.coroutines.flow.asStateFlow
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
+ * Semantic confidence labels for user-friendly display.
+ *
+ * Reduces cognitive load by using meaningful labels instead of percentages:
+ * - [HIGH_CONFIDENCE]: Recognition is reliable, safe to proceed
+ * - [NEEDS_CONFIRMATION]: Recognition is uncertain, ask user to confirm
+ * - [LOW_CONFIDENCE]: Recognition is poor, ask user to repeat
+ *
+ * @property label The user-facing label text
+ */
+enum class SemanticConfidenceLabel(val label: String) {
+    /**
+     * High confidence - recognition is reliable.
+     * Display: "High" (green)
+     */
+    HIGH_CONFIDENCE("High"),
+
+    /**
+     * Needs confirmation - recognition is uncertain.
+     * Display: "Confirm?" (yellow)
+     */
+    NEEDS_CONFIRMATION("Confirm?"),
+
+    /**
+     * Low confidence - recognition is poor.
+     * Display: "Repeat" (red)
+     */
+    LOW_CONFIDENCE("Repeat")
+}
+
+/**
  * Speech recognition confidence level thresholds.
  *
  * Used to provide visual feedback about recognition quality:
@@ -88,6 +118,16 @@ data class ConfidenceResult(
         confidence >= LOW_THRESHOLD -> ConfidenceLevel.LOW
         else -> ConfidenceLevel.REJECT
     }
+
+    /**
+     * Semantic label for user-friendly display.
+     *
+     * Maps [level] to a meaningful label:
+     * - HIGH → [SemanticConfidenceLabel.HIGH_CONFIDENCE] ("High")
+     * - MEDIUM → [SemanticConfidenceLabel.NEEDS_CONFIRMATION] ("Confirm?")
+     * - LOW, REJECT → [SemanticConfidenceLabel.LOW_CONFIDENCE] ("Repeat")
+     */
+    val semanticLabel: SemanticConfidenceLabel get() = ConfidenceOverlay.getSemanticLabel(level)
 
     companion object {
         /** Threshold for HIGH confidence level */
@@ -307,6 +347,44 @@ class ConfidenceOverlay : IOverlay {
             ConfidenceLevel.LOW -> COLOR_LOW
             ConfidenceLevel.REJECT -> COLOR_REJECT
         }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // Semantic Labels
+        // ═══════════════════════════════════════════════════════════════════
+
+        /**
+         * Get the semantic confidence label for a confidence level.
+         *
+         * Maps confidence levels to user-friendly semantic labels:
+         * - [ConfidenceLevel.HIGH] → [SemanticConfidenceLabel.HIGH_CONFIDENCE]
+         * - [ConfidenceLevel.MEDIUM] → [SemanticConfidenceLabel.NEEDS_CONFIRMATION]
+         * - [ConfidenceLevel.LOW] → [SemanticConfidenceLabel.LOW_CONFIDENCE]
+         * - [ConfidenceLevel.REJECT] → [SemanticConfidenceLabel.LOW_CONFIDENCE]
+         *
+         * @param level The confidence level
+         * @return The semantic label enum value
+         */
+        fun getSemanticLabel(level: ConfidenceLevel): SemanticConfidenceLabel = when (level) {
+            ConfidenceLevel.HIGH -> SemanticConfidenceLabel.HIGH_CONFIDENCE
+            ConfidenceLevel.MEDIUM -> SemanticConfidenceLabel.NEEDS_CONFIRMATION
+            ConfidenceLevel.LOW -> SemanticConfidenceLabel.LOW_CONFIDENCE
+            ConfidenceLevel.REJECT -> SemanticConfidenceLabel.LOW_CONFIDENCE
+        }
+
+        /**
+         * Get the semantic label text for a confidence level.
+         *
+         * Returns user-friendly label strings:
+         * - [ConfidenceLevel.HIGH] → "High"
+         * - [ConfidenceLevel.MEDIUM] → "Confirm?"
+         * - [ConfidenceLevel.LOW] → "Repeat"
+         * - [ConfidenceLevel.REJECT] → "Repeat"
+         *
+         * @param level The confidence level
+         * @return The user-facing label text
+         */
+        fun getSemanticLabelText(level: ConfidenceLevel): String =
+            getSemanticLabel(level).label
 
         // ═══════════════════════════════════════════════════════════════════
         // Percentage Formatting
