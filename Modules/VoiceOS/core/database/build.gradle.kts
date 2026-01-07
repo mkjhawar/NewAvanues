@@ -101,7 +101,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        minSdk = 28  // Android 9 (Pie) - Aligned with project-wide standard
+        minSdk = 26  // Android 9 (Pie) - Aligned with project-wide standard
     }
 
     compileOptions {

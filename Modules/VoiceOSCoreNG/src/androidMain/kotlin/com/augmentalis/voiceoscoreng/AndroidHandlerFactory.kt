@@ -68,8 +68,8 @@ class AndroidHandlerFactory(
  */
 fun VoiceOSCoreNG.Companion.createForAndroid(
     service: AccessibilityService,
-    configuration: com.augmentalis.voiceoscoreng.handlers.ServiceConfiguration =
-        com.augmentalis.voiceoscoreng.handlers.ServiceConfiguration.DEFAULT
+    configuration: ServiceConfiguration =
+        ServiceConfiguration.DEFAULT
 ): VoiceOSCoreNG {
     return VoiceOSCoreNG.Builder()
         .withHandlerFactory(AndroidHandlerFactory.create(service))

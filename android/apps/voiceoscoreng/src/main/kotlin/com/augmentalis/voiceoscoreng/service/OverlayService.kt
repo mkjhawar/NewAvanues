@@ -1,6 +1,7 @@
 package com.augmentalis.voiceoscoreng.service
 
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -154,6 +155,7 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             .build()
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun showOverlay() {
         Log.d(TAG, "showOverlay() called, existing view: ${overlayView != null}")
         if (overlayView != null) return
