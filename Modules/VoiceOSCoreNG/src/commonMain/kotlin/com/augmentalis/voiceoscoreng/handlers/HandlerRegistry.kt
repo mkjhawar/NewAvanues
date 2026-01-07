@@ -11,6 +11,7 @@
 package com.augmentalis.voiceoscoreng.handlers
 
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
+import com.augmentalis.voiceoscoreng.functions.LoggingUtils
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -232,7 +233,7 @@ class HandlerRegistry {
                 successCount++
             } catch (e: Exception) {
                 // Log error but continue initializing other handlers
-                println("Failed to initialize ${handler::class.simpleName}: ${e.message}")
+                LoggingUtils.w("Failed to initialize ${handler::class.simpleName}: ${e.message}", "HandlerRegistry", e)
             }
         }
 
@@ -254,7 +255,7 @@ class HandlerRegistry {
                 successCount++
             } catch (e: Exception) {
                 // Log error but continue disposing other handlers
-                println("Error disposing ${handler::class.simpleName}: ${e.message}")
+                LoggingUtils.w("Error disposing ${handler::class.simpleName}: ${e.message}", "HandlerRegistry", e)
             }
         }
 
