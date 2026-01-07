@@ -9,6 +9,7 @@
  */
 package com.augmentalis.voiceoscoreng.features
 
+import com.augmentalis.voiceoscoreng.speech.AppleSpeechEngine as RealAppleSpeechEngine
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -42,7 +43,7 @@ class IOSSpeechEngineFactory : ISpeechEngineFactory {
 
     override fun createEngine(engine: SpeechEngine): Result<ISpeechEngine> {
         return when (engine) {
-            SpeechEngine.APPLE_SPEECH -> Result.success(AppleSpeechEngine())
+            SpeechEngine.APPLE_SPEECH -> Result.success(RealAppleSpeechEngine())
             SpeechEngine.GOOGLE_CLOUD -> Result.success(IOSGoogleCloudEngine())
             SpeechEngine.AZURE -> Result.success(IOSAzureEngine())
             else -> Result.failure(

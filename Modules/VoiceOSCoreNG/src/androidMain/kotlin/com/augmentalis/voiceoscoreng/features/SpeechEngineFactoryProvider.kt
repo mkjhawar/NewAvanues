@@ -70,7 +70,11 @@ class AndroidSpeechEngineFactory(
                     ?: return Result.failure(IllegalStateException("Context required for AndroidSTT"))
                 Result.success(AndroidSTTEngineImpl(ctx))
             }
-            SpeechEngine.VOSK -> Result.success(VoskEngine())
+            SpeechEngine.VOSK -> {
+                val ctx = context
+                    ?: return Result.failure(IllegalStateException("Context required for VOSK"))
+                Result.success(VoskEngineImpl(ctx))
+            }
             SpeechEngine.GOOGLE_CLOUD -> Result.success(GoogleCloudEngine())
             SpeechEngine.AZURE -> Result.success(AzureEngine())
             SpeechEngine.VIVOKA -> {
@@ -93,7 +97,8 @@ class AndroidSpeechEngineFactory(
             SpeechEngine.VOSK -> setOf(
                 EngineFeature.OFFLINE_MODE,
                 EngineFeature.CUSTOM_VOCABULARY,
-                EngineFeature.CONTINUOUS_RECOGNITION
+                EngineFeature.CONTINUOUS_RECOGNITION,
+                EngineFeature.WORD_TIMESTAMPS
             )
             SpeechEngine.GOOGLE_CLOUD -> setOf(
                 EngineFeature.CONTINUOUS_RECOGNITION,
@@ -189,56 +194,48 @@ class AndroidSpeechEngineFactory(
 // AndroidSTTEngine is now implemented in AndroidSTTEngineImpl.kt
 // Requires Context parameter for SpeechRecognizer
 
-internal class VoskEngine : ISpeechEngine {
-    // TODO: Implement using Vosk library
-    override val state = kotlinx.coroutines.flow.MutableStateFlow<EngineState>(EngineState.Uninitialized)
-    override val results = kotlinx.coroutines.flow.MutableSharedFlow<SpeechResult>()
-    override val errors = kotlinx.coroutines.flow.MutableSharedFlow<SpeechError>()
+// VoskEngine is now implemented in VoskEngineImpl.kt
+// Requires Context parameter for file access and permissions
 
-    override suspend fun initialize(config: SpeechConfig) = Result.success(Unit)
-    override suspend fun startListening() = Result.success(Unit)
-    override suspend fun stopListening() {}
-    override suspend fun updateCommands(commands: List<String>) = Result.success(Unit)
-    override suspend fun updateConfiguration(config: SpeechConfig) = Result.success(Unit)
-    override fun isRecognizing() = false
-    override fun isInitialized() = true
-    override fun getEngineType() = SpeechEngine.VOSK
-    override fun getSupportedFeatures() = setOf(EngineFeature.OFFLINE_MODE)
-    override suspend fun destroy() {}
-}
+/**
+ * GoogleCloudEngine - Delegates to GoogleCloudEngineImpl for Google Cloud Speech-to-Text.
+ *
+ * This class is kept as an internal alias for backwards compatibility.
+ * The actual implementation is in GoogleCloudEngineImpl.kt which provides:
+ * - Streaming recognition via REST API
+ * - Partial and final results via SharedFlow
+ * - Multiple language support
+ * - Word-level timestamps
+ * - Speaker diarization
+ * - Profanity filtering
+ *
+ * Requirements:
+ * - Google Cloud API key with Speech-to-Text API enabled (apiKey in SpeechConfig)
+ * - RECORD_AUDIO permission
+ * - Network connectivity
+ *
+ * @see GoogleCloudEngineImpl
+ */
+internal class GoogleCloudEngine : ISpeechEngine by GoogleCloudEngineImpl()
 
-internal class GoogleCloudEngine : ISpeechEngine {
-    // TODO: Implement using Google Cloud Speech API
-    override val state = kotlinx.coroutines.flow.MutableStateFlow<EngineState>(EngineState.Uninitialized)
-    override val results = kotlinx.coroutines.flow.MutableSharedFlow<SpeechResult>()
-    override val errors = kotlinx.coroutines.flow.MutableSharedFlow<SpeechError>()
-
-    override suspend fun initialize(config: SpeechConfig) = Result.success(Unit)
-    override suspend fun startListening() = Result.success(Unit)
-    override suspend fun stopListening() {}
-    override suspend fun updateCommands(commands: List<String>) = Result.success(Unit)
-    override suspend fun updateConfiguration(config: SpeechConfig) = Result.success(Unit)
-    override fun isRecognizing() = false
-    override fun isInitialized() = true
-    override fun getEngineType() = SpeechEngine.GOOGLE_CLOUD
-    override fun getSupportedFeatures() = setOf<EngineFeature>()
-    override suspend fun destroy() {}
-}
-
-internal class AzureEngine : ISpeechEngine {
-    // TODO: Implement using Azure Cognitive Services SDK
-    override val state = kotlinx.coroutines.flow.MutableStateFlow<EngineState>(EngineState.Uninitialized)
-    override val results = kotlinx.coroutines.flow.MutableSharedFlow<SpeechResult>()
-    override val errors = kotlinx.coroutines.flow.MutableSharedFlow<SpeechError>()
-
-    override suspend fun initialize(config: SpeechConfig) = Result.success(Unit)
-    override suspend fun startListening() = Result.success(Unit)
-    override suspend fun stopListening() {}
-    override suspend fun updateCommands(commands: List<String>) = Result.success(Unit)
-    override suspend fun updateConfiguration(config: SpeechConfig) = Result.success(Unit)
-    override fun isRecognizing() = false
-    override fun isInitialized() = true
-    override fun getEngineType() = SpeechEngine.AZURE
-    override fun getSupportedFeatures() = setOf<EngineFeature>()
-    override suspend fun destroy() {}
-}
+/**
+ * AzureEngine - Delegates to AzureEngineImpl for Azure Cognitive Services integration.
+ *
+ * This class is kept as an internal alias for backwards compatibility.
+ * The actual implementation is in AzureEngineImpl.kt which provides:
+ * - Continuous recognition via Azure Speech SDK
+ * - Partial and final results via SharedFlow
+ * - Phrase list support for command boosting
+ * - Word-level timestamps
+ * - Speaker diarization (enterprise tier)
+ *
+ * Requirements:
+ * - Azure subscription key (apiKey in SpeechConfig)
+ * - Azure region (apiRegion in SpeechConfig)
+ * - RECORD_AUDIO permission
+ * - Network connectivity
+ *
+ * SDK Dependency (add to build.gradle.kts):
+ * implementation("com.microsoft.cognitiveservices.speech:client-sdk:1.35.0")
+ */
+internal class AzureEngine : ISpeechEngine by AzureEngineImpl()
