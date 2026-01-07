@@ -85,8 +85,8 @@ include(":Modules:VoiceOS:managers:LocalizationManager")
 
 // VoiceOS Libraries
 include(":Modules:VoiceOS:libraries:DeviceManager")
-include(":Modules:VoiceOS:libraries:JITLearning")  // JIT learning service with AIDL interface
-include(":Modules:VoiceOS:libraries:LearnAppCore")  // Shared business logic for JIT and LearnApp
+include(":Modules:VoiceOS:libraries:JITLearning")  // ⚠️ DEPRECATED (2026-01-06): Use VoiceOSCoreNG
+include(":Modules:VoiceOS:libraries:LearnAppCore")  // ⚠️ DEPRECATED (2026-01-06): Use VoiceOSCoreNG
 include(":Modules:VoiceOS:libraries:PluginSystem")
 include(":Modules:VoiceOS:libraries:SpeechRecognition")
 include(":Modules:VoiceOS:libraries:Translation")

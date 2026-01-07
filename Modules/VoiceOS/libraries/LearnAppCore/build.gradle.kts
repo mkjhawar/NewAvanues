@@ -55,6 +55,10 @@ android {
 }
 
 dependencies {
+    // VoiceOSCoreNG - Next-gen replacement (KMP)
+    // This module is DEPRECATED - consumers should migrate to VoiceOSCoreNG
+    api(project(":Modules:VoiceOSCoreNG"))  // Use api() to expose transitive types
+
     // Database module (for GeneratedCommandDTO and VoiceOSDatabaseManager)
     implementation(project(":Modules:VoiceOS:core:database"))
 

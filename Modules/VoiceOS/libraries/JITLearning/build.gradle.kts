@@ -60,8 +60,11 @@ android {
 }
 
 dependencies {
-    // LearnAppCore (shared business logic)
-    implementation(project(":Modules:VoiceOS:libraries:LearnAppCore"))
+    // VoiceOSCoreNG - Next-gen replacement (KMP)
+    implementation(project(":Modules:VoiceOSCoreNG"))
+
+    // DEPRECATED (2026-01-06) - Use VoiceOSCoreNG instead
+    implementation(project(":Modules:VoiceOS:libraries:LearnAppCore"))  // ⚠️ DEPRECATED
 
     // Database module
     implementation(project(":Modules:VoiceOS:core:database"))
