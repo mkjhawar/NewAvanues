@@ -24,6 +24,10 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+        // Azure Cognitive Services Speech SDK
+        maven("https://csspeechstorage.blob.core.windows.net/maven/")
+        // Vosk (AlphaCephei) Speech Recognition
+        maven("https://alphacephei.com/maven/")
     }
 }
 
