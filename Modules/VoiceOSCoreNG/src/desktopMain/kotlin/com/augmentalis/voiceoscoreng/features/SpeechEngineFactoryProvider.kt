@@ -464,6 +464,7 @@ internal class DesktopGoogleCloudEngine : ISpeechEngine {
 
     private val audioBuffer = mutableListOf<ByteArray>()
     private var processingJob: Job? = null
+    private var commandPhrases: List<String> = emptyList()
 
     companion object {
         private const val API_ENDPOINT = "https://speech.googleapis.com/v1/speech:recognize"
@@ -553,13 +554,22 @@ internal class DesktopGoogleCloudEngine : ISpeechEngine {
 
         val audioBase64 = Base64.getEncoder().encodeToString(audioData)
 
+        // Build speechContexts JSON for phrase boosting
+        val speechContextsJson = if (commandPhrases.isNotEmpty()) {
+            val phrasesJson = commandPhrases.joinToString(", ") { "\"${it.replace("\"", "\\\"")}\"" }
+            """, "speechContexts": [{"phrases": [$phrasesJson], "boost": 15.0}]"""
+        } else {
+            ""
+        }
+
         val requestJson = """
             {
                 "config": {
                     "encoding": "LINEAR16",
                     "sampleRateHertz": $SAMPLE_RATE,
                     "languageCode": "$language",
-                    "enableAutomaticPunctuation": true
+                    "enableAutomaticPunctuation": true,
+                    "model": "command_and_search"$speechContextsJson
                 },
                 "audio": {
                     "content": "$audioBase64"
@@ -605,8 +615,8 @@ internal class DesktopGoogleCloudEngine : ISpeechEngine {
     }
 
     override suspend fun updateCommands(commands: List<String>): Result<Unit> {
-        // Google Cloud doesn't support custom vocabulary via REST API
-        // Commands handled by CommandWordDetector wrapper
+        // Store commands for speechContexts phrase hints (boosts recognition accuracy)
+        commandPhrases = commands.take(500) // Google limits to 500 phrases per context
         return Result.success(Unit)
     }
 

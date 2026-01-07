@@ -211,6 +211,9 @@ internal class IOSGoogleCloudEngine : ISpeechEngine {
     private val bufferMutex = Mutex()
     private var processingJob: Job? = null
 
+    // Command phrases for speech context hints (boosts recognition accuracy)
+    private var commandPhrases: List<String> = emptyList()
+
     companion object {
         private const val API_ENDPOINT = "https://speech.googleapis.com/v1/speech:recognize"
         private const val SAMPLE_RATE = 16000
@@ -303,13 +306,23 @@ internal class IOSGoogleCloudEngine : ISpeechEngine {
         val nsData = audioData.toNSData()
         val audioBase64 = nsData.base64EncodedStringWithOptions(0u)
 
+        // Build speechContexts JSON for command phrase hints
+        // Boost value of 15.0 significantly increases recognition probability for listed phrases
+        val speechContextsJson = if (commandPhrases.isNotEmpty()) {
+            val phrasesJson = commandPhrases.joinToString(", ") { "\"${it.replace("\"", "\\\"")}\"" }
+            """, "speechContexts": [{"phrases": [$phrasesJson], "boost": 15.0}]"""
+        } else {
+            ""
+        }
+
         val requestJson = """
             {
                 "config": {
                     "encoding": "LINEAR16",
                     "sampleRateHertz": $SAMPLE_RATE,
                     "languageCode": "$language",
-                    "enableAutomaticPunctuation": true
+                    "enableAutomaticPunctuation": true,
+                    "model": "command_and_search"$speechContextsJson
                 },
                 "audio": {
                     "content": "$audioBase64"
@@ -368,8 +381,9 @@ internal class IOSGoogleCloudEngine : ISpeechEngine {
     }
 
     override suspend fun updateCommands(commands: List<String>): Result<Unit> {
-        // Google Cloud doesn't support custom vocabulary via REST API
-        // Commands handled by CommandWordDetector wrapper
+        // Store phrases for speechContexts - Google Cloud Speech API supports phrase hints
+        // to boost recognition accuracy for expected commands. Limit to 500 phrases.
+        commandPhrases = commands.take(500)
         return Result.success(Unit)
     }
 

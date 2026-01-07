@@ -123,6 +123,9 @@ class GoogleCloudEngineImpl : ISpeechEngine {
     // Audio buffer for accumulating chunks
     private val audioBuffer = mutableListOf<ByteArray>()
 
+    // Command phrases for speech context hints (boosts recognition accuracy)
+    private var commandPhrases: List<String> = emptyList()
+
     // JSON serializer
     private val json = Json {
         ignoreUnknownKeys = true
@@ -236,9 +239,10 @@ class GoogleCloudEngineImpl : ISpeechEngine {
     }
 
     override suspend fun updateCommands(commands: List<String>): Result<Unit> {
-        // Google Cloud Speech uses speechContexts for hints, not strict command matching
-        // Store commands for potential use in speech context hints
-        Log.d(TAG, "updateCommands: ${commands.size} commands stored for speech context hints")
+        // Google Cloud Speech uses speechContexts for hints to boost recognition accuracy
+        // Store commands for use in API requests with boost value
+        commandPhrases = commands.take(500) // Google limits to 500 phrases per context
+        Log.d(TAG, "updateCommands: ${commandPhrases.size} phrases stored for speech context boost")
         return Result.success(Unit)
     }
 
@@ -447,6 +451,15 @@ class GoogleCloudEngineImpl : ISpeechEngine {
     }
 
     private fun buildRecognitionRequest(config: SpeechConfig, base64Audio: String): String {
+        // Build speech contexts with command phrases for accuracy boost
+        // Boost value of 10-20 significantly improves recognition of target phrases
+        // Reference: https://cloud.google.com/speech-to-text/docs/speech-to-text-requests
+        val speechContexts = if (commandPhrases.isNotEmpty()) {
+            listOf(SpeechContext(phrases = commandPhrases, boost = 15.0f))
+        } else {
+            emptyList()
+        }
+
         val request = GoogleSpeechRequest(
             config = RecognitionConfig(
                 encoding = "LINEAR16",
@@ -455,7 +468,8 @@ class GoogleCloudEngineImpl : ISpeechEngine {
                 enableAutomaticPunctuation = true,
                 enableWordTimeOffsets = config.enableWordTimestamps,
                 profanityFilter = config.enableProfanityFilter,
-                model = "default"
+                model = "command_and_search", // Better for short commands
+                speechContexts = speechContexts
             ),
             audio = RecognitionAudio(content = base64Audio)
         )
