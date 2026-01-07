@@ -4,13 +4,13 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2026-01-06
- * Updated: 2026-01-07 - Add database persistence via IGeneratedCommandRepository
+ * Updated: 2026-01-07 - Add database persistence via ICommandPersistence
  *
  * This class handles on-demand learning of UI elements, generating voice commands
  * for elements that are encountered during user interaction. It supports consent-based
  * learning and tracks which elements have already been learned to avoid duplicates.
  *
- * Commands are persisted to SQLDelight database via IGeneratedCommandRepository.
+ * Commands are persisted to database via ICommandPersistence interface.
  */
 package com.augmentalis.voiceoscoreng.learnapp
 
