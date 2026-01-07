@@ -419,7 +419,7 @@ class GoogleCloudEngineImpl : ISpeechEngine {
             val combinedAudio = ByteArray(totalSize)
             var offset = 0
             for (chunk in audioBuffer) {
-                System.arraycopy(chunk, 0, combinedAudio, offset, chunk.size)
+                chunk.copyInto(combinedAudio, offset)
                 offset += chunk.size
             }
 

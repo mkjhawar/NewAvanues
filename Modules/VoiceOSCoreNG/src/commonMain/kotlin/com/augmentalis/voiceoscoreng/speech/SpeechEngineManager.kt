@@ -135,7 +135,7 @@ class SpeechEngineManager(
     private var activeEngineType: SpeechEngine? = null
     private var isMuted = false
     private var currentCommands: List<String> = emptyList()
-    private var currentConfig: SpeechConfig = SpeechConfig.DEFAULT
+    private var currentConfig: SpeechConfig = SpeechConfig()
 
     // Track engine result collection job
     private var resultCollectionJob: Job? = null
@@ -154,7 +154,7 @@ class SpeechEngineManager(
      */
     suspend fun initialize(
         engine: SpeechEngine = factory.getRecommendedEngine(),
-        config: SpeechConfig = SpeechConfig.DEFAULT,
+        config: SpeechConfig = SpeechConfig(),
         wrapWithCommandDetection: Boolean = true
     ): Result<Unit> {
         // Destroy existing engine if any

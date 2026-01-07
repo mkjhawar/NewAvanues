@@ -130,8 +130,8 @@ class CommandWordDetector(
      * Add dynamic commands from command registry.
      */
     fun addDynamicCommands(registry: CommandRegistry) {
-        val dynamicPhrases = registry.getAllCommands().map { it.phrase }
-        updateCommands(commands.toList() + dynamicPhrases)
+        val dynamicPhrases = registry.all().map { it.phrase }
+        updateCommands((commands + dynamicPhrases).toList())
     }
 
     /**
