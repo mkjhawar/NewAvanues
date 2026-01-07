@@ -17,6 +17,11 @@
  */
 package com.augmentalis.voiceoscoreng.overlay
 
+import com.augmentalis.voiceoscoreng.features.CommandState
+import com.augmentalis.voiceoscoreng.features.IOverlay
+import com.augmentalis.voiceoscoreng.features.OverlayConfig
+import com.augmentalis.voiceoscoreng.features.OverlayData
+import com.augmentalis.voiceoscoreng.features.OverlayManager
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

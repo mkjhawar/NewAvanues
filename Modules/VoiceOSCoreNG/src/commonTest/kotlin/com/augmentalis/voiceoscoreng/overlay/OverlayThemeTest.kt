@@ -8,6 +8,12 @@
  */
 package com.augmentalis.voiceoscoreng.overlay
 
+import com.augmentalis.voiceoscoreng.features.OverlayTheme
+import com.augmentalis.voiceoscoreng.features.colorWithAlpha
+import com.augmentalis.voiceoscoreng.features.extractAlpha
+import com.augmentalis.voiceoscoreng.features.extractRed
+import com.augmentalis.voiceoscoreng.features.extractGreen
+import com.augmentalis.voiceoscoreng.features.extractBlue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

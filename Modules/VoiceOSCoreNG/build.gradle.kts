@@ -8,6 +8,7 @@ plugins {
 object Versions {
     const val coroutines = "1.8.0"
     const val serialization = "1.6.3"
+    const val datetime = "0.5.0"
     const val androidxCore = "1.12.0"
     const val junit = "4.13.2"
     const val androidxTestJunit = "1.1.5"
@@ -45,12 +46,16 @@ kotlin {
 
                 // Serialization
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${Versions.serialization}")
+
+                // DateTime (KMP-compatible time utilities)
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:${Versions.datetime}")
             }
         }
 
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${Versions.coroutines}")
             }
         }
 

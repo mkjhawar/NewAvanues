@@ -36,6 +36,7 @@ import com.augmentalis.voiceoscoreng.handlers.ReactNativeHandler
 import com.augmentalis.voiceoscoreng.handlers.UnityHandler
 import com.augmentalis.voiceoscoreng.handlers.WebViewHandler
 import com.augmentalis.voiceoscoreng.functions.DangerousElementDetector
+import kotlinx.datetime.Clock
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -502,13 +503,13 @@ class ElementProcessingIntegrationTest {
         }
 
         // Process all elements
-        val startTime = System.currentTimeMillis()
+        val startTime = Clock.System.now().toEpochMilliseconds()
 
         val commands = largeElementSet.mapNotNull { element ->
             CommandGenerator.fromElement(element, "com.perf.app")
         }
 
-        val duration = System.currentTimeMillis() - startTime
+        val duration = Clock.System.now().toEpochMilliseconds() - startTime
 
         // All should generate commands
         assertEquals(100, commands.size)
@@ -714,10 +715,6 @@ class ElementProcessingIntegrationTest {
         assertTrue(result.isSuccess)
         assertTrue(result.message.contains("Execute Test"))
     }
-
-    // ==================== System.currentTimeMillis() mock for KMP ====================
-
-    private fun System.currentTimeMillis(): Long = kotlin.system.getTimeMillis()
 }
 
 /**

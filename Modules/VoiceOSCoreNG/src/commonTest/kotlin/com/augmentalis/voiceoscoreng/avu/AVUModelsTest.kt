@@ -1,8 +1,15 @@
 package com.augmentalis.voiceoscoreng.avu
 
 import com.augmentalis.voiceoscoreng.common.Bounds
+import com.augmentalis.voiceoscoreng.common.CommandActionType
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.ElementType
+import com.augmentalis.voiceoscoreng.common.ExplorationStats
+import com.augmentalis.voiceoscoreng.common.QuantizedCommand
+import com.augmentalis.voiceoscoreng.common.QuantizedContext
+import com.augmentalis.voiceoscoreng.common.QuantizedElement
+import com.augmentalis.voiceoscoreng.common.QuantizedNavigation
+import com.augmentalis.voiceoscoreng.common.QuantizedScreen
 import com.augmentalis.voiceoscoreng.functions.getCurrentTimeMillis
 import kotlin.test.Test
 import kotlin.test.assertEquals

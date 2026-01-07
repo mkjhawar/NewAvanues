@@ -18,6 +18,7 @@ import com.augmentalis.voiceoscoreng.common.FrameworkType
 import com.augmentalis.voiceoscoreng.common.VUIDGenerator
 import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
 import com.augmentalis.voiceoscoreng.handlers.ActionResult
+import kotlinx.datetime.Clock
 
 /**
  * Test fixture factory for creating common test elements.
@@ -500,18 +501,18 @@ fun List<String>.toButtonElements(packageName: String = TestFixtures.TEST_PACKAG
 }
 
 /**
- * Performance measurement utility
+ * Performance measurement utility using KMP-compatible kotlinx-datetime
  */
 class PerformanceTimer {
     private var startTime: Long = 0
     private var endTime: Long = 0
 
     fun start() {
-        startTime = kotlin.system.getTimeMillis()
+        startTime = Clock.System.now().toEpochMilliseconds()
     }
 
     fun stop(): Long {
-        endTime = kotlin.system.getTimeMillis()
+        endTime = Clock.System.now().toEpochMilliseconds()
         return duration()
     }
 

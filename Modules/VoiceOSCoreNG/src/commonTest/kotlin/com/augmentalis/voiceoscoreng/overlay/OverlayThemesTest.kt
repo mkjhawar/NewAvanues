@@ -1,5 +1,6 @@
 package com.augmentalis.voiceoscoreng.overlay
 
+import com.augmentalis.voiceoscoreng.features.OverlayThemes
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
