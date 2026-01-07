@@ -1,158 +1,135 @@
 /**
- * DatabaseConverters.kt - Conversion between domain models and database DTOs
+ * DatabaseConverters.kt - Serialization helpers for QuantizedCommand
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2026-01-06
+ * Updated: 2026-01-07 - Simplified to platform-agnostic serialization
  *
- * Provides conversion functions between VoiceOSCoreNG domain models and
- * core/database DTOs. This enables clean architecture separation:
- * - QuantizedCommand: Runtime voice command matching (domain model)
- * - GeneratedCommandDTO: Database persistence (persistence model)
+ * Provides serialization/deserialization helpers for QuantizedCommand.
+ * Platform-specific persistence implementations (Android, iOS, Desktop)
+ * can use these helpers for consistent data format.
+ *
+ * For Android SQLDelight integration, see:
+ * - AndroidCommandPersistence in androidMain
  */
 package com.augmentalis.voiceoscoreng.functions
 
 import com.augmentalis.voiceoscoreng.common.CommandActionType
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.features.currentTimeMillis
-
-// Note: These types come from core/database module
-// import com.augmentalis.database.dto.GeneratedCommandDTO
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
- * Lightweight DTO for command persistence.
+ * Serializable representation of QuantizedCommand for persistence.
  *
- * Maps to GeneratedCommandDTO from core/database.
- * Used when core/database dependency is not available (testing).
+ * This DTO is platform-agnostic and can be serialized to JSON for
+ * various storage backends (SQLite, Core Data, files, etc.)
  */
-data class CommandDTO(
-    val id: Long = 0,
-    val elementHash: String,
-    val commandText: String,
+@Serializable
+data class CommandRecord(
+    val uuid: String,
+    val phrase: String,
     val actionType: String,
-    val confidence: Double,
-    val synonyms: String? = null,
-    val isUserApproved: Long = 0,
-    val usageCount: Long = 0,
-    val lastUsed: Long? = null,
-    val createdAt: Long = currentTimeMillis(),
-    val appId: String = "",
+    val targetVuid: String?,
+    val confidence: Float,
+    val packageName: String = "",
     val appVersion: String = "",
     val versionCode: Long = 0,
-    val lastVerified: Long? = null,
-    val isDeprecated: Long = 0
+    val createdAt: Long = currentTimeMillis(),
+    val usageCount: Long = 0,
+    val isUserApproved: Boolean = false,
+    val isDeprecated: Boolean = false
 )
 
 // ============================================================================
-// QuantizedCommand ↔ CommandDTO Conversion
+// QuantizedCommand ↔ CommandRecord Conversion
 // ============================================================================
 
 /**
- * Convert QuantizedCommand to CommandDTO for database persistence.
- *
- * Maps domain model fields to persistence model:
- * - uuid → elementHash (element identifier)
- * - phrase → commandText (voice trigger)
- * - actionType → actionType (as string)
- * - confidence → confidence (Float to Double)
- * - metadata → individual fields (appId, appVersion, etc.)
+ * Convert QuantizedCommand to CommandRecord for serialization/persistence.
  */
-fun QuantizedCommand.toDTO(): CommandDTO {
-    return CommandDTO(
-        elementHash = targetVuid ?: uuid,
-        commandText = phrase,
+fun QuantizedCommand.toCommandRecord(): CommandRecord {
+    return CommandRecord(
+        uuid = uuid,
+        phrase = phrase,
         actionType = actionType.name,
-        confidence = confidence.toDouble(),
-        appId = metadata["packageName"] ?: "",
+        targetVuid = targetVuid,
+        confidence = confidence,
+        packageName = metadata["packageName"] ?: "",
         appVersion = metadata["appVersion"] ?: "",
         versionCode = metadata["versionCode"]?.toLongOrNull() ?: 0,
-        createdAt = metadata["createdAt"]?.toLongOrNull() ?: currentTimeMillis()
+        createdAt = metadata["createdAt"]?.toLongOrNull() ?: currentTimeMillis(),
+        usageCount = metadata["usageCount"]?.toLongOrNull() ?: 0,
+        isUserApproved = metadata["isUserApproved"] == "true",
+        isDeprecated = metadata["isDeprecated"] == "true"
     )
 }
 
 /**
- * Convert CommandDTO to QuantizedCommand for runtime use.
- *
- * Reconstructs domain model from persistence:
- * - elementHash → uuid and targetVuid
- * - commandText → phrase
- * - actionType → CommandActionType enum
- * - Individual fields → metadata map
+ * Convert CommandRecord back to QuantizedCommand.
  */
-fun CommandDTO.toQuantizedCommand(): QuantizedCommand {
+fun CommandRecord.toQuantizedCommand(): QuantizedCommand {
     return QuantizedCommand(
-        uuid = elementHash,
-        phrase = commandText,
+        uuid = uuid,
+        phrase = phrase,
         actionType = CommandActionType.fromString(actionType),
-        targetVuid = elementHash,
-        confidence = confidence.toFloat(),
+        targetVuid = targetVuid,
+        confidence = confidence,
         metadata = buildMap {
-            if (appId.isNotEmpty()) put("packageName", appId)
+            if (packageName.isNotEmpty()) put("packageName", packageName)
             if (appVersion.isNotEmpty()) put("appVersion", appVersion)
             if (versionCode > 0) put("versionCode", versionCode.toString())
             put("createdAt", createdAt.toString())
             if (usageCount > 0) put("usageCount", usageCount.toString())
-            if (isUserApproved == 1L) put("isUserApproved", "true")
+            if (isUserApproved) put("isUserApproved", "true")
+            if (isDeprecated) put("isDeprecated", "true")
         }
     )
 }
 
 /**
- * Convert list of CommandDTO to list of QuantizedCommand.
+ * Convert list of CommandRecord to list of QuantizedCommand.
  */
-fun List<CommandDTO>.toQuantizedCommands(): List<QuantizedCommand> =
+fun List<CommandRecord>.toQuantizedCommands(): List<QuantizedCommand> =
     map { it.toQuantizedCommand() }
 
 /**
- * Convert list of QuantizedCommand to list of CommandDTO.
+ * Convert list of QuantizedCommand to list of CommandRecord.
  */
-fun List<QuantizedCommand>.toDTOs(): List<CommandDTO> =
-    map { it.toDTO() }
+fun List<QuantizedCommand>.toCommandRecords(): List<CommandRecord> =
+    map { it.toCommandRecord() }
 
 // ============================================================================
-// VUID Entry Converters
+// JSON Serialization
 // ============================================================================
 
-/**
- * Lightweight DTO for VUID element persistence.
- *
- * Maps to VUIDElementDTO from core/database.
- */
-data class VuidDTO(
-    val vuid: String,
-    val name: String,
-    val type: String,
-    val description: String? = null,
-    val parentVuid: String? = null,
-    val isEnabled: Boolean = true,
-    val priority: Int = 0,
-    val timestamp: Long = currentTimeMillis(),
-    val metadataJson: String? = null,
-    val positionJson: String? = null
-)
-
-/**
- * Create VuidDTO from basic element info.
- */
-fun createVuidDTO(
-    vuid: String,
-    name: String,
-    type: String,
-    packageName: String? = null,
-    activityName: String? = null
-): VuidDTO {
-    val metadata = buildString {
-        append("{")
-        packageName?.let { append("\"packageName\":\"$it\"") }
-        if (packageName != null && activityName != null) append(",")
-        activityName?.let { append("\"activityName\":\"$it\"") }
-        append("}")
-    }
-
-    return VuidDTO(
-        vuid = vuid,
-        name = name,
-        type = type,
-        metadataJson = if (metadata != "{}") metadata else null
-    )
+private val json = Json {
+    ignoreUnknownKeys = true
+    encodeDefaults = true
 }
+
+/**
+ * Serialize QuantizedCommand to JSON string.
+ */
+fun QuantizedCommand.toJson(): String = json.encodeToString(toCommandRecord())
+
+/**
+ * Deserialize QuantizedCommand from JSON string.
+ */
+fun commandFromJson(jsonString: String): QuantizedCommand =
+    json.decodeFromString<CommandRecord>(jsonString).toQuantizedCommand()
+
+/**
+ * Serialize list of QuantizedCommands to JSON string.
+ */
+fun List<QuantizedCommand>.toJsonArray(): String =
+    json.encodeToString(map { it.toCommandRecord() })
+
+/**
+ * Deserialize list of QuantizedCommands from JSON string.
+ */
+fun commandsFromJsonArray(jsonString: String): List<QuantizedCommand> =
+    json.decodeFromString<List<CommandRecord>>(jsonString).toQuantizedCommands()

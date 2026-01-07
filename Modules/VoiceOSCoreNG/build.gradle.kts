@@ -70,6 +70,18 @@ kotlin {
                 implementation("androidx.compose.material3:material3")
                 implementation("androidx.compose.material:material-icons-extended")
                 implementation("androidx.compose.ui:ui-tooling-preview")
+
+                // VOSK Offline Speech Recognition
+                // Used by VoskEngineImpl for offline speech recognition
+                // Download models from: https://alphacephei.com/vosk/models
+                implementation("com.alphacephei:vosk-android:0.3.47")
+
+                // Azure Cognitive Services Speech SDK
+                // Used by AzureEngineImpl for cloud-based speech recognition
+                implementation("com.microsoft.cognitiveservices.speech:client-sdk:1.35.0")
+
+                // VoiceOS Database (SQLDelight repositories for Android command persistence)
+                implementation(project(":Modules:VoiceOS:core:database"))
             }
         }
 
