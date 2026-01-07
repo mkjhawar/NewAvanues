@@ -10,13 +10,15 @@
  */
 package com.augmentalis.voiceoscoreng.integration
 
-import com.augmentalis.voiceoscoreng.common.CommandActionType
-import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.common.Bounds
+import com.augmentalis.voiceoscoreng.common.CommandActionType
+import com.augmentalis.voiceoscoreng.common.CommandGenerator
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.FrameworkType
+import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.common.VUIDGenerator
 import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
+import com.augmentalis.voiceoscoreng.functions.DangerousElementDetector
 import com.augmentalis.voiceoscoreng.handlers.ActionResult
 import kotlinx.datetime.Clock
 
@@ -459,7 +461,7 @@ object TestAssertions {
  * Extension to check if element is dangerous
  */
 fun ElementInfo.isDangerous(): Boolean {
-    val detector = com.augmentalis.voiceoscoreng.safety.DangerousElementDetector()
+    val detector = DangerousElementDetector()
     return detector.analyze(text, contentDescription, resourceId).isDangerous
 }
 
@@ -467,7 +469,7 @@ fun ElementInfo.isDangerous(): Boolean {
  * Extension to generate command from element
  */
 fun ElementInfo.toCommand(): QuantizedCommand? {
-    return com.augmentalis.voiceoscoreng.command.CommandGenerator.fromElement(this, packageName)
+    return CommandGenerator.fromElement(this, packageName)
 }
 
 /**
