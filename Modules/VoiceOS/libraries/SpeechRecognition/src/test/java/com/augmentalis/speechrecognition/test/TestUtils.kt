@@ -115,7 +115,7 @@ object TestUtils {
             /*
             try {
                 withTimeout(timeoutMs) {
-                    val vivokaEngine = VivokaEngine(context)
+                    val vivokaEngine = VivokaAndroidEngine(context)
                     engineStates["vivoka"] = EngineState.INITIALIZING
                     val config = SpeechConfig.vivoka()
                     vivokaEngine.initialize(config)

@@ -78,7 +78,7 @@ class AndroidSpeechEngineFactory(
             SpeechEngine.GOOGLE_CLOUD -> Result.success(GoogleCloudEngine())
             SpeechEngine.AZURE -> Result.success(AzureEngine())
             SpeechEngine.VIVOKA -> {
-                Result.success(VivokaEngineFactory.create())
+                Result.success(VivokaEngineFactory.create(VivokaConfig.DEFAULT))
             }
             else -> Result.failure(
                 IllegalArgumentException("Engine ${engine.name} not available on Android")
@@ -172,12 +172,15 @@ class AndroidSpeechEngineFactory(
                 notes = "Requires NDK setup and model download"
             )
             SpeechEngine.VIVOKA -> EngineRequirements(
-                permissions = listOf("android.permission.RECORD_AUDIO"),
+                permissions = listOf(
+                    "android.permission.RECORD_AUDIO",
+                    "android.permission.READ_EXTERNAL_STORAGE"
+                ),
                 requiresModelDownload = true,
-                modelSizeMB = 60,
+                modelSizeMB = 500,  // ~500MB for full VSDK with models
                 requiresNetwork = false,
                 requiresApiKey = false,
-                notes = "Commercial license required"
+                notes = "Models loaded from external storage: /sdcard/.voiceos/vivoka/vsdk/"
             )
             else -> EngineRequirements(
                 permissions = emptyList(),

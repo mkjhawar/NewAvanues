@@ -4,22 +4,58 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2026-01-06
+ * Updated: 2026-01-07 - Direct delegation to SpeechRecognition's VivokaEngine
  *
- * Android implementation of IVivokaEngine using Vivoka SDK.
- * Connects to VoiceOS/libraries/SpeechRecognition/VivokaEngine for actual SDK calls.
+ * Thin wrapper that delegates to VivokaEngine from SpeechRecognition library.
+ * Provides ISpeechEngine interface for KMP compatibility while using
+ * the full-featured VivokaEngine implementation internally.
+ *
+ * Models are loaded from external storage to reduce APK size.
  */
 package com.augmentalis.voiceoscoreng.features
 
 import android.content.Context
-import com.augmentalis.voiceoscoreng.features.*
+import com.augmentalis.speechrecognition.SpeechConfig as SRSpeechConfig
+import com.augmentalis.speechrecognition.SpeechMode as SRSpeechMode
+import com.augmentalis.voiceos.speech.api.RecognitionResult
+import com.augmentalis.voiceos.speech.engines.vivoka.VivokaAndroidEngine
+import com.augmentalis.voiceos.speech.engines.vivoka.VivokaPathResolver
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+
+/**
+ * Status of the Vivoka SDK models on external storage.
+ */
+sealed class VivokaModelStatus {
+    /** Models are present and ready to use */
+    object Ready : VivokaModelStatus()
+
+    /** Models not found at expected location */
+    data class Missing(
+        val expectedPath: String,
+        val searchedPaths: List<String>
+    ) : VivokaModelStatus()
+
+    /** Models are being downloaded */
+    data class Downloading(val progress: Int) : VivokaModelStatus()
+
+    /** Error checking model status */
+    data class Error(val message: String) : VivokaModelStatus()
+}
 
 /**
  * Android Vivoka engine implementation.
  *
- * This is a bridge to the full VivokaEngine in VoiceOS/libraries/SpeechRecognition.
- * It delegates actual SDK calls to that implementation while providing the
- * KMP-compatible interface.
+ * Delegates to VivokaEngine from SpeechRecognition library.
+ * Provides KMP-compatible ISpeechEngine interface.
+ *
+ * Models are loaded from external storage paths:
+ * - /sdcard/.voiceos/vivoka/vsdk/ (recommended, survives uninstall)
+ * - /sdcard/Android/data/{app}/files/vsdk/
+ * - /data/data/{app}/files/vsdk/
  *
  * @param context Android application context
  * @param config Vivoka configuration
@@ -29,6 +65,9 @@ class AndroidVivokaEngine(
     private val config: VivokaConfig
 ) : IVivokaEngine {
 
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // State flows for KMP interface
     private val _state = MutableStateFlow<EngineState>(EngineState.Uninitialized)
     private val _results = MutableSharedFlow<SpeechResult>(replay = 1)
     private val _errors = MutableSharedFlow<SpeechError>(replay = 1)
@@ -36,6 +75,7 @@ class AndroidVivokaEngine(
     private val _wakeWordDetected = MutableSharedFlow<WakeWordEvent>(replay = 1)
     private val _availableModels = MutableStateFlow<List<VivokaModel>>(emptyList())
     private val _currentModel = MutableStateFlow<VivokaModel?>(null)
+    private val _modelStatus = MutableStateFlow<VivokaModelStatus>(VivokaModelStatus.Missing("", emptyList()))
 
     override val state: StateFlow<EngineState> = _state.asStateFlow()
     override val results: SharedFlow<SpeechResult> = _results.asSharedFlow()
@@ -45,37 +85,135 @@ class AndroidVivokaEngine(
     override val availableModels: StateFlow<List<VivokaModel>> = _availableModels.asStateFlow()
     override val currentModel: StateFlow<VivokaModel?> = _currentModel.asStateFlow()
 
-    // Delegate to actual Vivoka engine from SpeechRecognition library
-    private var vivokaDelegate: Any? = null
+    /** Model status flow for UI to observe */
+    val modelStatus: StateFlow<VivokaModelStatus> = _modelStatus.asStateFlow()
+
+    // Direct reference to SpeechRecognition's VivokaAndroidEngine
+    private var vivokaEngine: VivokaAndroidEngine? = null
+    private val pathResolver = VivokaPathResolver(context)
+
+    /**
+     * Check if Vivoka models are available at external storage paths.
+     * Call this before initialize() to show appropriate UI.
+     */
+    fun checkModelStatus(): VivokaModelStatus {
+        val vsdkPath = pathResolver.resolveVsdkPath()
+        val isValid = isValidVsdkDirectory(vsdkPath)
+
+        return if (isValid) {
+            _modelStatus.value = VivokaModelStatus.Ready
+            VivokaModelStatus.Ready
+        } else {
+            val status = VivokaModelStatus.Missing(
+                expectedPath = pathResolver.getManualDeploymentPath().absolutePath,
+                searchedPaths = listOf(pathResolver.getSearchPathsForLogging())
+            )
+            _modelStatus.value = status
+            status
+        }
+    }
+
+    /**
+     * Get the recommended path for manual model deployment.
+     * Users can copy VSDK files to this location.
+     */
+    fun getManualDeploymentPath(): String {
+        return pathResolver.getManualDeploymentPath().absolutePath
+    }
+
+    private fun isValidVsdkDirectory(dir: java.io.File): Boolean {
+        if (!dir.exists() || !dir.isDirectory) return false
+        val configFile = java.io.File(dir, "config/vsdk.json")
+        return configFile.exists()
+    }
+
+    /**
+     * Convert KMP SpeechConfig to SpeechRecognition's SpeechConfig.
+     */
+    private fun toSRSpeechConfig(config: SpeechConfig): SRSpeechConfig {
+        return SRSpeechConfig(
+            language = config.language,
+            mode = when (config.mode) {
+                SpeechMode.STATIC_COMMAND -> SRSpeechMode.STATIC_COMMAND
+                SpeechMode.DYNAMIC_COMMAND -> SRSpeechMode.DYNAMIC_COMMAND
+                SpeechMode.COMBINED_COMMAND -> SRSpeechMode.DYNAMIC_COMMAND  // No combined in SR, use dynamic
+                SpeechMode.DICTATION -> SRSpeechMode.DICTATION
+                SpeechMode.FREE_SPEECH -> SRSpeechMode.FREE_SPEECH
+                SpeechMode.HYBRID -> SRSpeechMode.HYBRID
+            },
+            voiceEnabled = true,
+            muteCommand = "go to sleep",
+            unmuteCommand = "wake up",
+            startDictationCommand = "start dictation",
+            stopDictationCommand = "stop dictation"
+        )
+    }
+
+    /**
+     * Convert SpeechRecognition's RecognitionResult to KMP SpeechResult.
+     */
+    private fun toSpeechResult(result: RecognitionResult): SpeechResult {
+        return SpeechResult(
+            text = result.text,
+            confidence = result.confidence,
+            isFinal = !result.isPartial,
+            timestamp = result.timestamp
+        )
+    }
 
     override suspend fun initialize(config: SpeechConfig): Result<Unit> {
         return try {
             _state.value = EngineState.Initializing
 
-            // Initialize Vivoka SDK via reflection to avoid hard dependency
-            val engineClass = Class.forName(
-                "com.augmentalis.speechrecognition.VivokaEngine"
-            )
-            val constructor = engineClass.getConstructor(Context::class.java)
-            vivokaDelegate = constructor.newInstance(context)
-
-            // Initialize the delegate
-            val initMethod = engineClass.getMethod("initialize")
-            initMethod.invoke(vivokaDelegate)
-
-            // Load default model if specified
-            this.config.modelId?.let { modelId ->
-                loadModel(modelId)
+            // Check model status first
+            val status = checkModelStatus()
+            if (status is VivokaModelStatus.Missing) {
+                _state.value = EngineState.Error(
+                    message = "Vivoka models not found. Please place VSDK files at: ${status.expectedPath}",
+                    recoverable = true
+                )
+                return Result.failure(
+                    IllegalStateException("Models missing at: ${status.expectedPath}")
+                )
             }
 
-            // Enable wake word if specified
-            this.config.wakeWord?.let { wakeWord ->
-                enableWakeWord(wakeWord)
-            }
+            // Create and initialize VivokaEngine from SpeechRecognition library
+            vivokaEngine = VivokaAndroidEngine(context)
 
-            _state.value = EngineState.Ready(SpeechEngine.VIVOKA)
-            refreshAvailableModels()
-            Result.success(Unit)
+            // Convert to SpeechRecognition's SpeechConfig format
+            val srConfig = toSRSpeechConfig(config)
+
+            val success = vivokaEngine?.initialize(srConfig) ?: false
+
+            if (success) {
+                // Set up result listener - converts RecognitionResult to SpeechResult
+                vivokaEngine?.setResultListener { result ->
+                    scope.launch {
+                        _results.emit(toSpeechResult(result))
+                    }
+                }
+
+                // Set up error listener
+                vivokaEngine?.setErrorListener { message, code ->
+                    scope.launch {
+                        _errors.emit(SpeechError(
+                            code = SpeechError.ErrorCode.RECOGNITION_FAILED,
+                            message = message,
+                            recoverable = code < 500
+                        ))
+                    }
+                }
+
+                _state.value = EngineState.Ready(SpeechEngine.VIVOKA)
+                refreshAvailableModels()
+                Result.success(Unit)
+            } else {
+                _state.value = EngineState.Error(
+                    message = "Failed to initialize Vivoka engine",
+                    recoverable = false
+                )
+                Result.failure(RuntimeException("Vivoka initialization failed"))
+            }
         } catch (e: Exception) {
             _state.value = EngineState.Error(
                 message = "Failed to initialize Vivoka: ${e.message}",
@@ -92,13 +230,7 @@ class AndroidVivokaEngine(
             }
 
             _state.value = EngineState.Listening
-
-            // Start delegate listening
-            vivokaDelegate?.let { delegate ->
-                val method = delegate.javaClass.getMethod("startListening")
-                method.invoke(delegate)
-            }
-
+            vivokaEngine?.startListening()
             Result.success(Unit)
         } catch (e: Exception) {
             _errors.emit(SpeechError(
@@ -112,10 +244,7 @@ class AndroidVivokaEngine(
 
     override suspend fun stopListening() {
         try {
-            vivokaDelegate?.let { delegate ->
-                val method = delegate.javaClass.getMethod("stopListening")
-                method.invoke(delegate)
-            }
+            vivokaEngine?.stopListening()
             _state.value = EngineState.Ready(SpeechEngine.VIVOKA)
         } catch (e: Exception) {
             _errors.tryEmit(SpeechError(
@@ -127,9 +256,12 @@ class AndroidVivokaEngine(
     }
 
     override suspend fun updateCommands(commands: List<String>): Result<Unit> {
-        // Vivoka doesn't support dynamic command updates in the same way
-        // Commands are handled via NLU integration
-        return Result.success(Unit)
+        return try {
+            vivokaEngine?.setDynamicCommands(commands)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun updateConfiguration(config: SpeechConfig): Result<Unit> {
@@ -152,11 +284,8 @@ class AndroidVivokaEngine(
 
     override suspend fun destroy() {
         try {
-            vivokaDelegate?.let { delegate ->
-                val method = delegate.javaClass.getMethod("shutdown")
-                method.invoke(delegate)
-            }
-            vivokaDelegate = null
+            vivokaEngine?.destroy()
+            vivokaEngine = null
             _state.value = EngineState.Destroyed
         } catch (e: Exception) {
             _state.value = EngineState.Error(
@@ -167,59 +296,24 @@ class AndroidVivokaEngine(
     }
 
     override suspend fun loadModel(modelId: String): Result<Unit> {
-        return try {
-            vivokaDelegate?.let { delegate ->
-                val method = delegate.javaClass.getMethod("loadModel", String::class.java)
-                method.invoke(delegate, modelId)
-
-                _currentModel.value = _availableModels.value.find { it.id == modelId }
-            }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // Model loading is handled by VivokaEngine internally
+        _currentModel.value = _availableModels.value.find { it.id == modelId }
+        return Result.success(Unit)
     }
 
     override suspend fun unloadModel(): Result<Unit> {
-        return try {
-            vivokaDelegate?.let { delegate ->
-                val method = delegate.javaClass.getMethod("unloadModel")
-                method.invoke(delegate)
-            }
-            _currentModel.value = null
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        _currentModel.value = null
+        return Result.success(Unit)
     }
 
     override suspend fun enableWakeWord(wakeWord: String): Result<Unit> {
-        return try {
-            vivokaDelegate?.let { delegate ->
-                val method = delegate.javaClass.getMethod(
-                    "enableWakeWord",
-                    String::class.java
-                )
-                method.invoke(delegate, wakeWord)
-            }
-            _isWakeWordEnabled.value = true
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        _isWakeWordEnabled.value = true
+        return Result.success(Unit)
     }
 
     override suspend fun disableWakeWord(): Result<Unit> {
-        return try {
-            vivokaDelegate?.let { delegate ->
-                val method = delegate.javaClass.getMethod("disableWakeWord")
-                method.invoke(delegate)
-            }
-            _isWakeWordEnabled.value = false
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        _isWakeWordEnabled.value = false
+        return Result.success(Unit)
     }
 
     override fun getAvailableWakeWords(): List<String> {
@@ -227,122 +321,61 @@ class AndroidVivokaEngine(
     }
 
     override suspend fun isModelDownloaded(modelId: String): Boolean {
-        return _availableModels.value.find { it.id == modelId }?.isDownloaded == true
+        return checkModelStatus() is VivokaModelStatus.Ready
     }
 
     override suspend fun downloadModel(
         modelId: String,
         progressCallback: ((Float) -> Unit)?
     ): Result<Unit> {
-        return try {
-            vivokaDelegate?.let { delegate ->
-                val method = delegate.javaClass.getMethod(
-                    "downloadModel",
-                    String::class.java
-                )
-                method.invoke(delegate, modelId)
-            }
-            refreshAvailableModels()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // Future: Implement model download
+        // For now, return instructions to manually place files
+        return Result.failure(
+            UnsupportedOperationException(
+                "Automatic download not yet implemented. " +
+                "Please manually place VSDK files at: ${getManualDeploymentPath()}"
+            )
+        )
     }
 
     override suspend fun deleteModel(modelId: String): Result<Unit> {
-        return try {
-            vivokaDelegate?.let { delegate ->
-                val method = delegate.javaClass.getMethod(
-                    "deleteModel",
-                    String::class.java
-                )
-                method.invoke(delegate, modelId)
-            }
-            refreshAvailableModels()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        return Result.failure(
+            UnsupportedOperationException("Model deletion not supported")
+        )
     }
 
     override suspend fun getModelsDiskUsage(): Long {
-        return try {
-            vivokaDelegate?.let { delegate ->
-                val method = delegate.javaClass.getMethod("getModelsDiskUsage")
-                method.invoke(delegate) as? Long ?: 0L
-            } ?: 0L
-        } catch (e: Exception) {
+        val vsdkPath = pathResolver.resolveVsdkPath()
+        return if (vsdkPath.exists()) {
+            calculateDirectorySize(vsdkPath)
+        } else {
             0L
         }
     }
 
+    private fun calculateDirectorySize(dir: java.io.File): Long {
+        var size = 0L
+        dir.walkTopDown().forEach { file ->
+            if (file.isFile) {
+                size += file.length()
+            }
+        }
+        return size
+    }
+
     private fun refreshAvailableModels() {
-        // Refresh from delegate
-        try {
-            vivokaDelegate?.let { delegate ->
-                val method = delegate.javaClass.getMethod("getAvailableModels")
-                @Suppress("UNCHECKED_CAST")
-                val models = method.invoke(delegate) as? List<*>
-                // Convert to VivokaModel (would need proper conversion)
-                _availableModels.value = models?.mapNotNull { convertToVivokaModel(it) }
-                    ?: getDefaultModels()
-            } ?: run {
-                _availableModels.value = getDefaultModels()
-            }
-        } catch (e: Exception) {
-            _availableModels.value = getDefaultModels()
-        }
-    }
-
-    private fun convertToVivokaModel(obj: Any?): VivokaModel? {
-        // Convert from delegate's model type
-        return try {
-            obj?.let {
-                val idMethod = it.javaClass.getMethod("getId")
-                val nameMethod = it.javaClass.getMethod("getName")
-                val id = idMethod.invoke(it) as? String ?: return null
-                val name = nameMethod.invoke(it) as? String ?: id
-
-                VivokaModel(
-                    id = id,
-                    name = name,
-                    language = "en-US",
-                    sizeBytes = 0L,
-                    isDownloaded = true,
-                    version = "1.0",
-                    features = setOf(VivokaFeature.OFFLINE_RECOGNITION)
-                )
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun getDefaultModels(): List<VivokaModel> {
-        return listOf(
+        _availableModels.value = listOf(
             VivokaModel(
                 id = "vivoka-en-us-general",
                 name = "English (US) General",
                 language = "en-US",
-                sizeBytes = 50_000_000,
-                isDownloaded = false,
-                version = "2.0",
+                sizeBytes = 500_000_000,
+                isDownloaded = checkModelStatus() is VivokaModelStatus.Ready,
+                version = "6.0",
                 features = setOf(
                     VivokaFeature.OFFLINE_RECOGNITION,
                     VivokaFeature.WAKE_WORD,
                     VivokaFeature.CONTINUOUS_LISTENING
-                )
-            ),
-            VivokaModel(
-                id = "vivoka-en-us-commands",
-                name = "English (US) Commands",
-                language = "en-US",
-                sizeBytes = 25_000_000,
-                isDownloaded = false,
-                version = "2.0",
-                features = setOf(
-                    VivokaFeature.OFFLINE_RECOGNITION,
-                    VivokaFeature.LOW_LATENCY
                 )
             )
         )

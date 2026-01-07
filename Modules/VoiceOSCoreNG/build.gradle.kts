@@ -71,14 +71,19 @@ kotlin {
                 implementation("androidx.compose.material:material-icons-extended")
                 implementation("androidx.compose.ui:ui-tooling-preview")
 
-                // VOSK Offline Speech Recognition
-                // Used by VoskEngineImpl for offline speech recognition
-                // Download models from: https://alphacephei.com/vosk/models
-                implementation("com.alphacephei:vosk-android:0.3.47")
+                // ==========================================================
+                // Speech Recognition Library (contains all engine implementations)
+                // ==========================================================
+                // Provides: VivokaEngine, VoskEngine, GoogleSTT, WhisperEngine
+                // Also includes: VivokaPathResolver, model management, initialization
+                implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))
 
-                // Azure Cognitive Services Speech SDK
-                // Used by AzureEngineImpl for cloud-based speech recognition
-                implementation("com.microsoft.cognitiveservices.speech:client-sdk:1.35.0")
+                // Vivoka SDK AARs (compileOnly - consuming apps must add as implementation)
+                // VoiceOSCoreNG is a library, so we can't bundle local AARs
+                // Final apps need: implementation(files("vivoka/vsdk-*.aar"))
+                compileOnly(files("${rootDir}/vivoka/vsdk-6.0.0.aar"))
+                compileOnly(files("${rootDir}/vivoka/vsdk-csdk-asr-2.0.0.aar"))
+                compileOnly(files("${rootDir}/vivoka/vsdk-csdk-core-1.0.1.aar"))
 
                 // VoiceOS Database (SQLDelight repositories for Android command persistence)
                 implementation(project(":Modules:VoiceOS:core:database"))

@@ -186,9 +186,9 @@ class VoskEngine(private val context: Context) {
 }
 
 /**
- * Mock VivokaEngine for testing (always fails in test environment)
+ * Mock VivokaAndroidEngine for testing (always fails in test environment)
  */
-class VivokaEngine(private val _context: Context) {
+class VivokaAndroidEngine(private val _context: Context) {
     
     suspend fun initialize(_config: SpeechConfig) {
         throw Exception("Vivoka SDK not available in test environment")
