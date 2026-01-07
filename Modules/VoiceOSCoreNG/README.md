@@ -424,6 +424,20 @@ Test coverage areas:
 - Framework detection
 - Feature tier switching
 - Repository adapters
+- Overlay system (theme, coordinator, manager)
+- Integration tests (FK chains, feature gates)
+
+### Known Test Issues
+
+Some test files have compilation errors due to package structure mismatch from the TDD migration:
+- Tests in `overlay/` package reference classes in `features/` package
+- ~980 unresolved references in overlay test files
+- Core functionality tests (`common/`, `avu/`, `integration/`) compile and pass
+
+**Workaround:** Run JVM tests excluding overlay tests:
+```bash
+./gradlew :Modules:VoiceOSCoreNG:jvmTest --tests "*.common.*" --tests "*.avu.*"
+```
 
 ---
 
@@ -435,6 +449,12 @@ org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0
 
 // Serialization
 org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3
+
+// Date/Time (KMP-compatible)
+org.jetbrains.kotlinx:kotlinx-datetime:0.5.0
+
+// Test Dependencies (commonTest)
+org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0
 
 // Android-specific
 androidx.core:core-ktx:1.12.0
@@ -460,6 +480,11 @@ androidx.compose:compose-bom:2024.02.00
 - KMP support for Android, iOS, Desktop
 - Feature tier system (Lite/Dev)
 - Framework detection (Flutter, Unity, React Native, WebView)
+- IDEACODE-compliant 4-package structure (common, functions, handlers, features)
+- Comprehensive overlay system (theme, coordinator, manager)
+- TDD tests for all major components
+- Migration adapters for JITLearning and LearnAppCore
+- Deprecated legacy modules (LearnAppCore, JITLearning, VoiceOSCore/learnapp)
 
 ---
 
