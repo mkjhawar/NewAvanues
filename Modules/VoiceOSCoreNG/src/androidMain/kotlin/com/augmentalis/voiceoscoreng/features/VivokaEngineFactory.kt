@@ -48,7 +48,7 @@ actual object VivokaEngineFactory {
     /**
      * Create Vivoka engine instance.
      *
-     * @return AndroidVivokaEngine if SDK available, StubVivokaEngine otherwise.
+     * @return VivokaAndroidEngine if SDK available, StubVivokaEngine otherwise.
      *         Note: Engine may still need models - call checkModelStatus() before initialize().
      */
     actual fun create(config: VivokaConfig): IVivokaEngine {
@@ -56,7 +56,7 @@ actual object VivokaEngineFactory {
             ?: throw IllegalStateException("VivokaEngineFactory not initialized. Call initialize(context) first.")
 
         return if (isAvailable()) {
-            AndroidVivokaEngine(context, config)
+            VivokaAndroidEngine(context, config)
         } else {
             // Return stub if Vivoka SDK not available
             StubVivokaEngine("Vivoka SDK not available on this device")
@@ -71,7 +71,7 @@ actual object VivokaEngineFactory {
      */
     fun createWithModelCheck(config: VivokaConfig): Pair<IVivokaEngine, VivokaModelStatus> {
         val engine = create(config)
-        val status = if (engine is AndroidVivokaEngine) {
+        val status = if (engine is VivokaAndroidEngine) {
             engine.checkModelStatus()
         } else {
             VivokaModelStatus.Error("Vivoka SDK not available")

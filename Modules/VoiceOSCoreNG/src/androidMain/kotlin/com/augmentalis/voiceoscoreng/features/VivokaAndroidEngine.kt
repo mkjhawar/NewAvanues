@@ -1,14 +1,14 @@
 /**
- * AndroidVivokaEngine.kt - Android Vivoka implementation
+ * VivokaAndroidEngine.kt - Android Vivoka implementation
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2026-01-06
- * Updated: 2026-01-07 - Direct delegation to SpeechRecognition's VivokaEngine
+ * Updated: 2026-01-08 - Use VivokaEngine (same as VoiceOSCore) for consistency
  *
- * Thin wrapper that delegates to VivokaEngine from SpeechRecognition library.
- * Provides ISpeechEngine interface for KMP compatibility while using
- * the full-featured VivokaEngine implementation internally.
+ * Android-only implementation that delegates to VivokaEngine from SpeechRecognition library.
+ * Uses the same VivokaEngine class that VoiceOSCore uses (proven working).
+ * Provides ISpeechEngine interface for KMP compatibility.
  *
  * Models are loaded from external storage to reduce APK size.
  */
@@ -18,7 +18,7 @@ import android.content.Context
 import com.augmentalis.speechrecognition.SpeechConfig as SRSpeechConfig
 import com.augmentalis.speechrecognition.SpeechMode as SRSpeechMode
 import com.augmentalis.voiceos.speech.api.RecognitionResult
-import com.augmentalis.voiceos.speech.engines.vivoka.VivokaAndroidEngine
+import com.augmentalis.voiceos.speech.engines.vivoka.VivokaEngine
 import com.augmentalis.voiceos.speech.engines.vivoka.VivokaPathResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -60,7 +60,7 @@ sealed class VivokaModelStatus {
  * @param context Android application context
  * @param config Vivoka configuration
  */
-class AndroidVivokaEngine(
+class VivokaAndroidEngine(
     private val context: Context,
     private val config: VivokaConfig
 ) : IVivokaEngine {
@@ -88,8 +88,8 @@ class AndroidVivokaEngine(
     /** Model status flow for UI to observe */
     val modelStatus: StateFlow<VivokaModelStatus> = _modelStatus.asStateFlow()
 
-    // Direct reference to SpeechRecognition's VivokaAndroidEngine
-    private var vivokaEngine: VivokaAndroidEngine? = null
+    // Direct reference to SpeechRecognition's VivokaEngine (same as VoiceOSCore uses)
+    private var vivokaEngine: VivokaEngine? = null
     private val pathResolver = VivokaPathResolver(context)
 
     /**
@@ -178,7 +178,8 @@ class AndroidVivokaEngine(
             }
 
             // Create and initialize VivokaEngine from SpeechRecognition library
-            vivokaEngine = VivokaAndroidEngine(context)
+            // Using VivokaEngine (same as VoiceOSCore) instead of VivokaAndroidEngine
+            vivokaEngine = VivokaEngine(context)
 
             // Convert to SpeechRecognition's SpeechConfig format
             val srConfig = toSRSpeechConfig(config)
