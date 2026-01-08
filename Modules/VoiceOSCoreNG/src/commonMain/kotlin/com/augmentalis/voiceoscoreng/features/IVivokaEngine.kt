@@ -17,17 +17,14 @@ import com.augmentalis.voiceoscoreng.features.SpeechEngine
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
-/**
- * Vivoka-specific speech engine interface.
- *
- * Extends base ISpeechEngine with Vivoka-specific features:
- * - Offline speech recognition
- * - Wake word detection
- * - Custom model loading
- * - NLU integration
- */
-interface IVivokaEngine : ISpeechEngine {
+// ═══════════════════════════════════════════════════════════════════
+// SEGREGATED INTERFACES (ISP compliance)
+// ═══════════════════════════════════════════════════════════════════
 
+/**
+ * Wake word detection capability.
+ */
+interface IWakeWordCapable {
     /**
      * Whether wake word detection is enabled.
      */
@@ -39,33 +36,7 @@ interface IVivokaEngine : ISpeechEngine {
     val wakeWordDetected: SharedFlow<WakeWordEvent>
 
     /**
-     * Available Vivoka models.
-     */
-    val availableModels: StateFlow<List<VivokaModel>>
-
-    /**
-     * Currently loaded model.
-     */
-    val currentModel: StateFlow<VivokaModel?>
-
-    /**
-     * Load a specific Vivoka model.
-     *
-     * @param modelId Model identifier
-     * @return Success or failure
-     */
-    suspend fun loadModel(modelId: String): Result<Unit>
-
-    /**
-     * Unload current model to free resources.
-     */
-    suspend fun unloadModel(): Result<Unit>
-
-    /**
      * Enable wake word detection.
-     *
-     * @param wakeWord Wake word phrase (e.g., "Hey Ava")
-     * @return Success or failure
      */
     suspend fun enableWakeWord(wakeWord: String): Result<Unit>
 
@@ -78,6 +49,31 @@ interface IVivokaEngine : ISpeechEngine {
      * Get available wake words.
      */
     fun getAvailableWakeWords(): List<String>
+}
+
+/**
+ * Model management capability.
+ */
+interface IModelManageable {
+    /**
+     * Available Vivoka models.
+     */
+    val availableModels: StateFlow<List<VivokaModel>>
+
+    /**
+     * Currently loaded model.
+     */
+    val currentModel: StateFlow<VivokaModel?>
+
+    /**
+     * Load a specific Vivoka model.
+     */
+    suspend fun loadModel(modelId: String): Result<Unit>
+
+    /**
+     * Unload current model to free resources.
+     */
+    suspend fun unloadModel(): Result<Unit>
 
     /**
      * Check if a specific model is downloaded.
@@ -86,15 +82,8 @@ interface IVivokaEngine : ISpeechEngine {
 
     /**
      * Download a model for offline use.
-     *
-     * @param modelId Model to download
-     * @param progressCallback Optional progress callback (0.0-1.0)
-     * @return Success or failure
      */
-    suspend fun downloadModel(
-        modelId: String,
-        progressCallback: ((Float) -> Unit)? = null
-    ): Result<Unit>
+    suspend fun downloadModel(modelId: String, progressCallback: ((Float) -> Unit)? = null): Result<Unit>
 
     /**
      * Delete a downloaded model.
@@ -106,6 +95,14 @@ interface IVivokaEngine : ISpeechEngine {
      */
     suspend fun getModelsDiskUsage(): Long
 }
+
+/**
+ * Vivoka-specific speech engine interface.
+ *
+ * Extends base ISpeechEngine with Vivoka-specific features
+ * through composition of focused interfaces.
+ */
+interface IVivokaEngine : ISpeechEngine, IWakeWordCapable, IModelManageable
 
 /**
  * Wake word detection event.

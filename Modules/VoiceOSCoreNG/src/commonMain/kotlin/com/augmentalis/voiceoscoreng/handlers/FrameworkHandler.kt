@@ -18,7 +18,15 @@ interface FrameworkHandler {
     val frameworkType: FrameworkType
 
     /**
+     * Whether this handler is a fallback (always returns true from canHandle).
+     * Default is false. Only fallback handlers should override this to true.
+     */
+    val isFallbackHandler: Boolean get() = false
+
+    /**
      * Check if this handler can process the given elements.
+     * Fallback handlers should NOT rely on always returning true -
+     * they should check actual framework markers.
      */
     fun canHandle(elements: List<ElementInfo>): Boolean
 
@@ -54,11 +62,40 @@ data class FrameworkHandlingResult(
 )
 
 /**
- * Registry for framework handlers.
+ * Configurable registry for framework handlers.
+ * Handlers can be provided at construction time or registered dynamically.
  */
-object FrameworkHandlerRegistry {
+class FrameworkHandlerRegistryImpl(
+    handlers: List<FrameworkHandler> = emptyList()
+) {
+    private val handlers = handlers.toMutableList()
 
-    private val handlers = mutableListOf<FrameworkHandler>()
+    init {
+        if (handlers.isNotEmpty()) {
+            this.handlers.sortByDescending { it.getPriority() }
+        }
+    }
+
+    companion object {
+        /**
+         * Create registry with default handlers.
+         */
+        fun withDefaults(): FrameworkHandlerRegistryImpl {
+            return FrameworkHandlerRegistryImpl(defaultHandlers())
+        }
+
+        /**
+         * Get default handler list.
+         */
+        fun defaultHandlers(): List<FrameworkHandler> = listOf(
+            FlutterHandler(),      // Priority 100
+            ComposeHandler(),      // Priority 90
+            ReactNativeHandler(),  // Priority 80
+            WebViewHandler(),      // Priority 70
+            UnityHandler(),        // Priority 60
+            NativeHandler()        // Priority 0 (fallback)
+        )
+    }
 
     /**
      * Register a framework handler.
@@ -82,9 +119,17 @@ object FrameworkHandlerRegistry {
 
     /**
      * Find the appropriate handler for given elements.
+     * Prioritizes non-fallback handlers, then falls back to fallback handlers.
      */
     fun findHandler(elements: List<ElementInfo>): FrameworkHandler? {
-        return handlers.firstOrNull { it.canHandle(elements) }
+        // First try non-fallback handlers
+        val specialized = handlers.filter { !it.isFallbackHandler }
+            .firstOrNull { it.canHandle(elements) }
+        if (specialized != null) return specialized
+
+        // Then try fallback handlers
+        return handlers.filter { it.isFallbackHandler }
+            .firstOrNull { it.canHandle(elements) }
     }
 
     /**
@@ -106,10 +151,44 @@ object FrameworkHandlerRegistry {
      */
     fun registerDefaults() {
         clear()
-        register(FlutterHandler())
-        register(UnityHandler())
-        register(ReactNativeHandler())
-        register(WebViewHandler())
-        register(NativeHandler())
+        defaultHandlers().forEach { register(it) }
     }
+}
+
+/**
+ * Global registry instance (for backward compatibility).
+ */
+object FrameworkHandlerRegistryGlobal {
+    private var instance: FrameworkHandlerRegistryImpl? = null
+
+    fun getInstance(): FrameworkHandlerRegistryImpl {
+        if (instance == null) {
+            instance = FrameworkHandlerRegistryImpl.withDefaults()
+        }
+        return instance!!
+    }
+
+    fun register(handler: FrameworkHandler) = getInstance().register(handler)
+    fun unregister(handler: FrameworkHandler) = getInstance().unregister(handler)
+    fun getHandlers() = getInstance().getHandlers()
+    fun findHandler(elements: List<ElementInfo>) = getInstance().findHandler(elements)
+    fun getHandler(type: FrameworkType) = getInstance().getHandler(type)
+    fun clear() = getInstance().clear()
+    fun registerDefaults() {
+        instance = FrameworkHandlerRegistryImpl.withDefaults()
+    }
+}
+
+/**
+ * Registry for framework handlers (backward compatible object).
+ * Delegates to FrameworkHandlerRegistryGlobal for singleton behavior.
+ */
+object FrameworkHandlerRegistry {
+    fun register(handler: FrameworkHandler) = FrameworkHandlerRegistryGlobal.register(handler)
+    fun unregister(handler: FrameworkHandler) = FrameworkHandlerRegistryGlobal.unregister(handler)
+    fun getHandlers() = FrameworkHandlerRegistryGlobal.getHandlers()
+    fun findHandler(elements: List<ElementInfo>) = FrameworkHandlerRegistryGlobal.findHandler(elements)
+    fun getHandler(type: FrameworkType) = FrameworkHandlerRegistryGlobal.getHandler(type)
+    fun clear() = FrameworkHandlerRegistryGlobal.clear()
+    fun registerDefaults() = FrameworkHandlerRegistryGlobal.registerDefaults()
 }

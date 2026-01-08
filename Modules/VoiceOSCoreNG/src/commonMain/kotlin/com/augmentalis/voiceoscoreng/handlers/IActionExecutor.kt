@@ -13,21 +13,14 @@ package com.augmentalis.voiceoscoreng.handlers
 import com.augmentalis.voiceoscoreng.common.CommandActionType
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 
+// ═══════════════════════════════════════════════════════════════════
+// SEGREGATED INTERFACES (ISP compliance)
+// ═══════════════════════════════════════════════════════════════════
+
 /**
- * Interface for executing voice command actions.
- *
- * Each platform implements this to translate commands into
- * actual UI/system interactions:
- * - Android: AccessibilityService actions
- * - iOS: UIAccessibility actions
- * - Desktop: Platform-specific automation
+ * Element-level action execution.
  */
-interface IActionExecutor {
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Element Actions
-    // ═══════════════════════════════════════════════════════════════════
-
+interface IElementActionExecutor {
     /**
      * Tap/click an element by VUID.
      *
@@ -61,11 +54,12 @@ interface IActionExecutor {
      * @return ActionResult indicating success or failure
      */
     suspend fun enterText(text: String, vuid: String? = null): ActionResult
+}
 
-    // ═══════════════════════════════════════════════════════════════════
-    // Scroll Actions
-    // ═══════════════════════════════════════════════════════════════════
-
+/**
+ * Scroll action execution.
+ */
+interface IScrollActionExecutor {
     /**
      * Scroll in specified direction.
      *
@@ -79,11 +73,12 @@ interface IActionExecutor {
         amount: Float = 0.5f,
         vuid: String? = null
     ): ActionResult
+}
 
-    // ═══════════════════════════════════════════════════════════════════
-    // Navigation Actions
-    // ═══════════════════════════════════════════════════════════════════
-
+/**
+ * Navigation action execution.
+ */
+interface INavigationActionExecutor {
     /**
      * Navigate back.
      */
@@ -103,11 +98,12 @@ interface IActionExecutor {
      * Open app drawer.
      */
     suspend fun appDrawer(): ActionResult
+}
 
-    // ═══════════════════════════════════════════════════════════════════
-    // System Actions
-    // ═══════════════════════════════════════════════════════════════════
-
+/**
+ * System action execution.
+ */
+interface ISystemActionExecutor {
     /**
      * Open system settings.
      */
@@ -134,11 +130,12 @@ interface IActionExecutor {
      * @param on True to turn on, false to turn off
      */
     suspend fun flashlight(on: Boolean): ActionResult
+}
 
-    // ═══════════════════════════════════════════════════════════════════
-    // Media Actions
-    // ═══════════════════════════════════════════════════════════════════
-
+/**
+ * Media action execution.
+ */
+interface IMediaActionExecutor {
     /**
      * Play/pause media.
      */
@@ -160,11 +157,12 @@ interface IActionExecutor {
      * @param direction Volume adjustment direction
      */
     suspend fun volume(direction: VolumeDirection): ActionResult
+}
 
-    // ═══════════════════════════════════════════════════════════════════
-    // App Actions
-    // ═══════════════════════════════════════════════════════════════════
-
+/**
+ * App-level action execution.
+ */
+interface IAppActionExecutor {
     /**
      * Open an app by type.
      *
@@ -183,11 +181,33 @@ interface IActionExecutor {
      * Close current app.
      */
     suspend fun closeApp(): ActionResult
+}
 
-    // ═══════════════════════════════════════════════════════════════════
-    // Generic Execution
-    // ═══════════════════════════════════════════════════════════════════
+/**
+ * Element lookup operations.
+ */
+interface IElementLookupExecutor {
+    /**
+     * Check if an element exists.
+     *
+     * @param vuid Voice Universal ID to check
+     * @return True if element exists and is visible
+     */
+    suspend fun elementExists(vuid: String): Boolean
 
+    /**
+     * Get element bounds.
+     *
+     * @param vuid Voice Universal ID
+     * @return ElementBounds or null if not found
+     */
+    suspend fun getElementBounds(vuid: String): ElementBounds?
+}
+
+/**
+ * Generic command execution.
+ */
+interface ICommandExecutor {
     /**
      * Execute a quantized command.
      *
@@ -209,27 +229,31 @@ interface IActionExecutor {
         actionType: CommandActionType,
         params: Map<String, Any> = emptyMap()
     ): ActionResult
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Element Lookup
-    // ═══════════════════════════════════════════════════════════════════
-
-    /**
-     * Check if an element exists.
-     *
-     * @param vuid Voice Universal ID to check
-     * @return True if element exists and is visible
-     */
-    suspend fun elementExists(vuid: String): Boolean
-
-    /**
-     * Get element bounds.
-     *
-     * @param vuid Voice Universal ID
-     * @return ElementBounds or null if not found
-     */
-    suspend fun getElementBounds(vuid: String): ElementBounds?
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// COMPOSITE INTERFACE
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Composite interface for full action execution capability.
+ * Extends all segregated interfaces for backward compatibility.
+ *
+ * Each platform implements this to translate commands into
+ * actual UI/system interactions:
+ * - Android: AccessibilityService actions
+ * - iOS: UIAccessibility actions
+ * - Desktop: Platform-specific automation
+ */
+interface IActionExecutor :
+    IElementActionExecutor,
+    IScrollActionExecutor,
+    INavigationActionExecutor,
+    ISystemActionExecutor,
+    IMediaActionExecutor,
+    IAppActionExecutor,
+    IElementLookupExecutor,
+    ICommandExecutor
 
 /**
  * Scroll direction

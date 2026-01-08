@@ -27,7 +27,9 @@ import kotlinx.coroutines.sync.withLock
  * - Performance metrics collection
  * - Voice command interpretation
  */
-class ActionCoordinator {
+class ActionCoordinator(
+    private val voiceInterpreter: IVoiceCommandInterpreter = DefaultVoiceCommandInterpreter
+) {
 
     companion object {
         private const val HANDLER_TIMEOUT_MS = 5000L
@@ -149,34 +151,7 @@ class ActionCoordinator {
      * Interpret natural language voice commands into action strings.
      */
     private fun interpretVoiceCommand(command: String): String? {
-        return when {
-            // Navigation commands
-            command.contains("go back") || command == "back" -> "back"
-            command.contains("go home") || command == "home" -> "home"
-            command.contains("scroll up") -> "scroll up"
-            command.contains("scroll down") -> "scroll down"
-            command.contains("scroll left") -> "scroll left"
-            command.contains("scroll right") -> "scroll right"
-            command.contains("swipe up") -> "swipe up"
-            command.contains("swipe down") -> "swipe down"
-            command.contains("swipe left") -> "swipe left"
-            command.contains("swipe right") -> "swipe right"
-
-            // UI commands
-            command.startsWith("click ") || command.startsWith("tap ") -> command
-            command.startsWith("press ") -> command.replace("press ", "click ")
-
-            // Input commands
-            command.startsWith("type ") -> command
-            command.startsWith("enter text ") -> command.replace("enter text ", "type ")
-
-            // System commands
-            command.contains("show notifications") || command == "notifications" -> "show notifications"
-            command.contains("quick settings") -> "quick settings"
-            command.contains("recent apps") || command == "recents" -> "recents"
-
-            else -> null
-        }
+        return voiceInterpreter.interpret(command)
     }
 
     /**
