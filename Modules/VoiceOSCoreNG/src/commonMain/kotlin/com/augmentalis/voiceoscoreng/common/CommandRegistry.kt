@@ -1,6 +1,7 @@
 package com.augmentalis.voiceoscoreng.common
 
-import com.augmentalis.voiceoscoreng.common.QuantizedCommand
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Command Registry - In-memory storage for active screen commands.
@@ -8,28 +9,43 @@ import com.augmentalis.voiceoscoreng.common.QuantizedCommand
  * Stores commands for the current screen. Replaced on each scan - no accumulation.
  * Designed for voice command lookup during execution.
  *
- * Thread-safe: All operations are synchronized for concurrent access from
+ * Thread-safe: All operations use Mutex for concurrent access from
  * accessibility service callbacks and voice recognition threads.
  */
 class CommandRegistry {
     private val commands = mutableMapOf<String, QuantizedCommand>() // keyed by VUID
-    private val lock = Any() // Synchronization lock for thread safety
+    private val mutex = Mutex() // KMP-compatible synchronization
 
     /**
      * Update registry with new commands, replacing all existing.
      * Commands with null targetVuid are ignored (cannot be indexed).
      *
-     * Thread-safe: Synchronized to prevent concurrent modification.
+     * Thread-safe: Uses mutex to prevent concurrent modification.
      *
      * @param newCommands List of commands from current scan
      */
-    fun update(newCommands: List<QuantizedCommand>) {
-        synchronized(lock) {
+    suspend fun update(newCommands: List<QuantizedCommand>) {
+        mutex.withLock {
             commands.clear()
-            newCommands.forEach { cmd ->
-                cmd.targetVuid?.let { vuid ->
+            for (cmd in newCommands) {
+                val vuid = cmd.targetVuid
+                if (vuid != null) {
                     commands[vuid] = cmd
                 }
+            }
+        }
+    }
+
+    /**
+     * Non-suspend update for use in non-coroutine contexts.
+     * Note: This is NOT thread-safe. Use update() for concurrent access.
+     */
+    fun updateSync(newCommands: List<QuantizedCommand>) {
+        commands.clear()
+        for (cmd in newCommands) {
+            val vuid = cmd.targetVuid
+            if (vuid != null) {
+                commands[vuid] = cmd
             }
         }
     }
@@ -47,30 +63,29 @@ class CommandRegistry {
         val normalized = phrase.lowercase().trim()
 
         // Take a snapshot for thread-safe iteration
-        val snapshot = synchronized(lock) { commands.values.toList() }
+        val snapshot = commands.values.toList()
 
         // Exact match first
-        snapshot.firstOrNull { cmd ->
+        val exactMatch = snapshot.firstOrNull { cmd: QuantizedCommand ->
             cmd.phrase.lowercase() == normalized
-        }?.let { return it }
+        }
+        if (exactMatch != null) return exactMatch
 
         // Partial match - check if input matches just the label part
-        return snapshot.firstOrNull { cmd ->
+        return snapshot.firstOrNull { cmd: QuantizedCommand ->
             val label = cmd.phrase.substringAfter(" ").lowercase()
-            normalized == label || normalized.endsWith(label)
+            normalized == label || normalized.endsWith(label, ignoreCase = true)
         }
     }
 
     /**
      * Find command by target VUID.
      *
-     * Thread-safe: Synchronized access.
-     *
      * @param vuid Target element VUID
      * @return QuantizedCommand or null
      */
-    fun findByVuid(vuid: String): QuantizedCommand? = synchronized(lock) {
-        commands[vuid]
+    fun findByVuid(vuid: String): QuantizedCommand? {
+        return commands[vuid]
     }
 
     /**
@@ -80,23 +95,19 @@ class CommandRegistry {
      *
      * @return List of all commands
      */
-    fun all(): List<QuantizedCommand> = synchronized(lock) {
-        commands.values.toList()
+    fun all(): List<QuantizedCommand> {
+        return commands.values.toList()
     }
 
     /**
      * Clear all commands.
-     *
-     * Thread-safe: Synchronized access.
      */
-    fun clear() = synchronized(lock) {
+    fun clear() {
         commands.clear()
     }
 
     /**
      * Current command count.
-     *
-     * Thread-safe: Synchronized access.
      */
-    val size: Int get() = synchronized(lock) { commands.size }
+    val size: Int get() = commands.size
 }

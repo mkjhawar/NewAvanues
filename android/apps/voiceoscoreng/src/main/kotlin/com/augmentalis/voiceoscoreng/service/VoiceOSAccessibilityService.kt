@@ -579,8 +579,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             CommandGenerator.fromElement(element, packageName)
         }
 
-        // Update the registry for voice matching
-        commandRegistry.update(quantizedCommands)
+        // Update the registry for voice matching (use sync version in non-suspend context)
+        commandRegistry.updateSync(quantizedCommands)
 
         Log.d(TAG, "Generated ${quantizedCommands.size} commands via KMP CommandGenerator, registered in CommandRegistry")
 
