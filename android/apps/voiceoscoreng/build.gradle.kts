@@ -66,6 +66,9 @@ dependencies {
     // For standalone: uses composite build substitution (see settings.gradle.kts)
     implementation(project(":Modules:VoiceOSCoreNG"))
 
+    // VoiceOS Database (SQLDelight) - for command persistence
+    implementation(project(":Modules:VoiceOS:core:database"))
+
     // Core Android
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")

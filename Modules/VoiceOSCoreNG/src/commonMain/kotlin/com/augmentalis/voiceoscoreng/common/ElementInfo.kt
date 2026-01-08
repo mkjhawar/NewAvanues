@@ -55,6 +55,7 @@ data class ElementInfo(
     val contentDescription: String = "",
     val bounds: Bounds = Bounds.EMPTY,
     val isClickable: Boolean = false,
+    val isLongClickable: Boolean = false,
     val isScrollable: Boolean = false,
     val isEnabled: Boolean = true,
     val packageName: String = ""

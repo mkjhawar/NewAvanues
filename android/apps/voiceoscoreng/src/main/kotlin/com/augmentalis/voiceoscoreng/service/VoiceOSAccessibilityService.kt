@@ -6,6 +6,9 @@ import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.augmentalis.voiceoscoreng.VoiceOSCoreNGApplication
+import com.augmentalis.voiceoscoreng.VoiceOSCoreNG
+import com.augmentalis.voiceoscoreng.createForAndroid
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.common.CommandGenerator
 import com.augmentalis.voiceoscoreng.common.CommandMatcher
@@ -15,6 +18,8 @@ import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.VUIDGenerator
 import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
 import com.augmentalis.voiceoscoreng.functions.HashUtils
+import com.augmentalis.voiceoscoreng.handlers.ServiceConfiguration
+import com.augmentalis.voiceoscoreng.persistence.ICommandPersistence
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,6 +41,14 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     /** In-memory command registry for the current screen - uses KMP shared implementation */
     private val commandRegistry = CommandRegistry()
+
+    /** Command persistence for saving to SQLDelight database */
+    private val commandPersistence: ICommandPersistence by lazy {
+        VoiceOSCoreNGApplication.getInstance(applicationContext).commandPersistence
+    }
+
+    /** VoiceOSCoreNG facade for voice command processing */
+    private var voiceOSCore: VoiceOSCoreNG? = null
 
     companion object {
         private var instance: VoiceOSAccessibilityService? = null
@@ -76,6 +89,33 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         fun getCurrentCommands(): List<QuantizedCommand> {
             return instance?.commandRegistry?.all() ?: emptyList()
         }
+
+        /**
+         * Start voice listening.
+         */
+        fun startListening() {
+            instance?.serviceScope?.launch {
+                instance?.voiceOSCore?.startListening()
+            }
+        }
+
+        /**
+         * Stop voice listening.
+         */
+        fun stopListening() {
+            instance?.serviceScope?.launch {
+                instance?.voiceOSCore?.stopListening()
+            }
+        }
+
+        /**
+         * Check if voice engine is listening.
+         */
+        fun isListening(): Boolean {
+            return instance?.voiceOSCore?.state?.value?.let { state ->
+                state is com.augmentalis.voiceoscoreng.handlers.ServiceState.Listening
+            } ?: false
+        }
     }
 
     override fun onServiceConnected() {
@@ -99,6 +139,46 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         } catch (e: Exception) {
             Log.e(TAG, "Error configuring serviceInfo", e)
         }
+
+        // Initialize VoiceOSCoreNG facade for voice command processing
+        initializeVoiceOSCore()
+    }
+
+    /**
+     * Initialize the VoiceOSCoreNG facade with speech engine and handlers.
+     */
+    private fun initializeVoiceOSCore() {
+        serviceScope.launch {
+            try {
+                Log.d(TAG, "Initializing VoiceOSCoreNG facade...")
+
+                // Create the facade with Android-specific handlers and speech engine
+                // Primary engine: VIVOKA (offline, commercial SDK)
+                // Fallback: ANDROID_STT (requires network)
+                voiceOSCore = VoiceOSCoreNG.createForAndroid(
+                    service = this@VoiceOSAccessibilityService,
+                    configuration = ServiceConfiguration(
+                        autoStartListening = false,  // Don't auto-start, UI will control
+                        speechEngine = "VIVOKA",     // Primary: Vivoka offline engine
+                        debugMode = true
+                    )
+                )
+
+                // Initialize the facade
+                voiceOSCore?.initialize()
+                Log.d(TAG, "VoiceOSCoreNG facade initialized successfully")
+
+                // Observe speech results and process commands
+                voiceOSCore?.speechResults?.collect { speechResult ->
+                    Log.d(TAG, "Speech result: ${speechResult.text} (confidence: ${speechResult.confidence})")
+                    if (speechResult.isFinal) {
+                        voiceOSCore?.processCommand(speechResult.text, speechResult.confidence)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize VoiceOSCoreNG facade", e)
+            }
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -111,9 +191,21 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         Log.d(TAG, "onDestroy() called")
+
+        // Dispose VoiceOSCoreNG facade
+        serviceScope.launch {
+            try {
+                voiceOSCore?.dispose()
+                Log.d(TAG, "VoiceOSCoreNG facade disposed")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error disposing VoiceOSCoreNG facade", e)
+            }
+        }
+
         super.onDestroy()
         instance = null
         _isConnected.value = false
+        voiceOSCore = null
         serviceScope.cancel()
     }
 
@@ -265,6 +357,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             contentDescription = node.contentDescription?.toString() ?: "",
             bounds = Bounds(bounds.left, bounds.top, bounds.right, bounds.bottom),
             isClickable = node.isClickable,
+            isLongClickable = node.isLongClickable,
             isScrollable = node.isScrollable,
             isEnabled = node.isEnabled,
             packageName = node.packageName?.toString() ?: ""
@@ -439,6 +532,18 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         commandRegistry.update(quantizedCommands)
 
         Log.d(TAG, "Generated ${quantizedCommands.size} commands via KMP CommandGenerator, registered in CommandRegistry")
+
+        // Persist commands to SQLDelight database
+        if (quantizedCommands.isNotEmpty()) {
+            serviceScope.launch(Dispatchers.IO) {
+                try {
+                    commandPersistence.insertBatch(quantizedCommands)
+                    Log.d(TAG, "Persisted ${quantizedCommands.size} commands to voiceos.db for package: $packageName")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to persist commands to database", e)
+                }
+            }
+        }
 
         // Also create legacy GeneratedCommand for UI display (backwards compatibility)
         return elements

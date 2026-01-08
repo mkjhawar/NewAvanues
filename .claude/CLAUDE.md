@@ -40,9 +40,25 @@ NewAvanues - Platform-centric KMP monorepo (AVA, VoiceOS, WebAvanue, Cockpit, NL
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
-| JDK | 17 | Required (JDK 24 incompatible with Gradle) |
+| JDK | 17 | **REQUIRED** - JDK 18+ incompatible with Gradle/Android |
 | Gradle | 8.x | Via wrapper |
 | Android SDK | 34 | Target API |
+
+### Setting JDK 17 for Build
+
+**macOS:**
+```bash
+# Set for current terminal session
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+
+# Verify
+java -version  # Should show 17.x.x
+
+# Then run gradle
+./gradlew build
+```
+
+**Before each build session, ensure JAVA_HOME points to JDK 17.**
 
 ---
 

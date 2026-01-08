@@ -269,6 +269,24 @@ data class OverlayTheme(
         /** Default theme instance */
         val DEFAULT = OverlayTheme()
 
+        /** Light theme variant */
+        val LIGHT = OverlayTheme(
+            primaryColor = 0xFF1976D2,  // Blue
+            backgroundColor = 0xEEFFFFFF,  // White with slight transparency
+            backdropColor = 0x4DFFFFFF,    // White with 0.3 alpha
+            textPrimaryColor = 0xFF000000,  // Black
+            textSecondaryColor = 0xB3000000,  // Black with 0.7 alpha
+            textDisabledColor = 0xFF808080,   // Gray
+            borderColor = 0xFF000000,
+            dividerColor = 0x1A000000,  // Black with 0.1 alpha
+            cardBackgroundColor = 0xEEF5F5F5,
+            tooltipBackgroundColor = 0xEE333333,
+            badgeEnabledWithNameColor = 0xFF2E7D32,  // Dark green
+            badgeEnabledNoNameColor = 0xFFF57C00,    // Dark orange
+            statusSuccessColor = 0xFF2E7D32,
+            statusErrorColor = 0xFFC62828
+        )
+
         /** Dark theme variant */
         val DARK = OverlayTheme(
             backgroundColor = 0xFF121212,
