@@ -612,59 +612,73 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     Log.d(TAG, "Step 1/3: Inserted scraped_app for $packageName")
 
                     // Step 2: Insert scraped_elements (FK parent for commands)
-                    // Build a map of elementHash -> element for commands that will be inserted
-                    val elementHashesNeeded = quantizedCommands.mapNotNull { it.metadata["elementHash"] }.toSet()
+                    // CRITICAL: Use the SAME elementHash that's in the command's metadata
+                    // to ensure FK constraint is satisfied when inserting commands
+                    val insertedHashes = mutableSetOf<String>()
                     var insertedCount = 0
 
-                    elements.forEachIndexed { index, element ->
-                        val elementHash = HashUtils.generateHash(
-                            "${element.className}|${element.resourceId}|${element.text}", 8
+                    // Iterate over commands and insert corresponding elements
+                    // using the EXACT hash from command metadata
+                    quantizedCommands.forEach { cmd ->
+                        val elementHash = cmd.metadata["elementHash"] ?: return@forEach
+
+                        // Skip if already inserted (avoid duplicates)
+                        if (elementHash in insertedHashes) return@forEach
+
+                        // Find the corresponding element by matching metadata
+                        val element = elements.find { el ->
+                            // Match by className + resourceId + label
+                            val cmdClassName = cmd.metadata["className"] ?: ""
+                            val cmdResourceId = cmd.metadata["resourceId"] ?: ""
+                            el.className == cmdClassName && el.resourceId == cmdResourceId
+                        } ?: elements.firstOrNull { el ->
+                            // Fallback: match by label
+                            val cmdLabel = cmd.metadata["label"] ?: ""
+                            el.text == cmdLabel || el.contentDescription == cmdLabel
+                        }
+
+                        // Build scraped element DTO using command's elementHash
+                        val scrapedElement = ScrapedElementDTO(
+                            id = 0,  // Auto-generated
+                            elementHash = elementHash,  // Use EXACT hash from command
+                            appId = packageName,
+                            uuid = null,
+                            className = element?.className ?: cmd.metadata["className"] ?: "",
+                            viewIdResourceName = element?.resourceId?.ifBlank { null } ?: cmd.metadata["resourceId"]?.ifBlank { null },
+                            text = element?.text?.ifBlank { null },
+                            contentDescription = element?.contentDescription?.ifBlank { null },
+                            bounds = element?.let { "${it.bounds.left},${it.bounds.top},${it.bounds.right},${it.bounds.bottom}" } ?: "0,0,0,0",
+                            isClickable = if (element?.isClickable == true) 1L else 0L,
+                            isLongClickable = if (element?.isLongClickable == true) 1L else 0L,
+                            isEditable = 0L,
+                            isScrollable = if (element?.isScrollable == true) 1L else 0L,
+                            isCheckable = 0L,
+                            isFocusable = 0L,
+                            isEnabled = if (element?.isEnabled != false) 1L else 0L,
+                            depth = 0L,
+                            indexInParent = 0L,
+                            scrapedAt = currentTime,
+                            semanticRole = null,
+                            inputType = null,
+                            visualWeight = null,
+                            isRequired = null,
+                            formGroupId = null,
+                            placeholderText = null,
+                            validationPattern = null,
+                            backgroundColor = null,
+                            screen_hash = null
                         )
-
-                        // Only insert elements that are referenced by commands
-                        if (elementHash in elementHashesNeeded ||
-                            quantizedCommands.any { it.metadata["elementHash"] == elementHash }) {
-
-                            val scrapedElement = ScrapedElementDTO(
-                                id = 0,  // Auto-generated
-                                elementHash = elementHash,
-                                appId = packageName,
-                                uuid = null,
-                                className = element.className,
-                                viewIdResourceName = element.resourceId.ifBlank { null },
-                                text = element.text.ifBlank { null },
-                                contentDescription = element.contentDescription.ifBlank { null },
-                                bounds = "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}",
-                                isClickable = if (element.isClickable) 1L else 0L,
-                                isLongClickable = if (element.isLongClickable) 1L else 0L,
-                                isEditable = 0L,  // TODO: detect from className
-                                isScrollable = if (element.isScrollable) 1L else 0L,
-                                isCheckable = 0L,  // TODO: detect from className
-                                isFocusable = 0L,  // TODO: add to ElementInfo
-                                isEnabled = if (element.isEnabled) 1L else 0L,
-                                depth = hierarchy.getOrNull(index)?.depth?.toLong() ?: 0L,
-                                indexInParent = index.toLong(),
-                                scrapedAt = currentTime,
-                                semanticRole = null,
-                                inputType = null,
-                                visualWeight = null,
-                                isRequired = null,
-                                formGroupId = null,
-                                placeholderText = null,
-                                validationPattern = null,
-                                backgroundColor = null,
-                                screen_hash = null
-                            )
-                            try {
-                                scrapedElementRepository.insert(scrapedElement)
-                                insertedCount++
-                            } catch (e: Exception) {
-                                // Element may already exist, ignore duplicate errors
-                                Log.v(TAG, "Element hash $elementHash may already exist: ${e.message}")
-                            }
+                        try {
+                            scrapedElementRepository.insert(scrapedElement)
+                            insertedHashes.add(elementHash)
+                            insertedCount++
+                        } catch (e: Exception) {
+                            // Element may already exist, ignore duplicate errors
+                            Log.v(TAG, "Element hash $elementHash may already exist: ${e.message}")
+                            insertedHashes.add(elementHash)  // Mark as "handled" even if exists
                         }
                     }
-                    Log.d(TAG, "Step 2/3: Inserted $insertedCount scraped_elements")
+                    Log.d(TAG, "Step 2/3: Inserted $insertedCount scraped_elements for ${insertedHashes.size} unique hashes")
 
                     // Step 3: Now insert commands (FK references are satisfied)
                     commandPersistence.insertBatch(quantizedCommands)
