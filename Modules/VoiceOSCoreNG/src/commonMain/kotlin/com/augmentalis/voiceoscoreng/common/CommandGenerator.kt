@@ -5,6 +5,7 @@ import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.VUIDGenerator
 import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
+import com.augmentalis.voiceoscoreng.features.currentTimeMillis
 
 /**
  * Command Generator - Creates voice commands from UI elements.
@@ -40,15 +41,42 @@ object CommandGenerator {
 
         val actionType = deriveActionType(element)
         val verb = actionType.verb()
+
+        // Generate element hash for database FK reference
+        val elementHash = deriveElementHash(element)
         val vuid = generateVuid(element, packageName)
+        val currentTime = currentTimeMillis()
 
         return QuantizedCommand(
             uuid = "", // Generated on persist if needed
             phrase = "$verb $label",
             actionType = actionType,
             targetVuid = vuid,
-            confidence = calculateConfidence(element)
+            confidence = calculateConfidence(element),
+            metadata = mapOf(
+                "packageName" to packageName,
+                "elementHash" to elementHash,
+                "createdAt" to currentTime.toString(),
+                "className" to element.className,
+                "resourceId" to element.resourceId,
+                "label" to label
+            )
         )
+    }
+
+    /**
+     * Derive a stable element hash for database FK reference.
+     * Uses the same logic as generateVuid's elementHash for consistency.
+     */
+    private fun deriveElementHash(element: ElementInfo): String {
+        val hashInput = when {
+            element.resourceId.isNotBlank() -> element.resourceId
+            element.contentDescription.isNotBlank() -> element.contentDescription
+            element.text.isNotBlank() -> element.text
+            else -> "${element.className}:${element.bounds}"
+        }
+        // Return a truncated hash suitable for database storage
+        return hashInput.hashCode().toUInt().toString(16).padStart(8, '0')
     }
 
     /**

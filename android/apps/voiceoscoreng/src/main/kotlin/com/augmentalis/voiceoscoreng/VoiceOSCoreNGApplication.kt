@@ -7,6 +7,8 @@ import com.augmentalis.voiceoscoreng.features.LearnAppDevToggle
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.repositories.IGeneratedCommandRepository
+import com.augmentalis.database.repositories.IScrapedAppRepository
+import com.augmentalis.database.repositories.IScrapedElementRepository
 import com.augmentalis.voiceoscoreng.persistence.AndroidCommandPersistence
 import com.augmentalis.voiceoscoreng.persistence.ICommandPersistence
 
@@ -35,6 +37,18 @@ class VoiceOSCoreNGApplication : Application() {
      */
     val generatedCommandRepository: IGeneratedCommandRepository
         get() = databaseManager.generatedCommands
+
+    /**
+     * Scraped app repository - for FK integrity (must insert before elements/commands).
+     */
+    val scrapedAppRepository: IScrapedAppRepository
+        get() = databaseManager.scrapedApps
+
+    /**
+     * Scraped element repository - for FK integrity (must insert before commands).
+     */
+    val scrapedElementRepository: IScrapedElementRepository
+        get() = databaseManager.scrapedElements
 
     override fun onCreate() {
         super.onCreate()

@@ -49,8 +49,21 @@ class AndroidActionExecutor(
     private val context: Context = service.applicationContext
 ) : IActionExecutor {
 
-    // Element cache for VUID lookups
-    private val elementCache = mutableMapOf<String, AccessibilityNodeInfo>()
+    // Element cache with TTL for VUID lookups
+    private data class CachedNode(
+        val node: AccessibilityNodeInfo,
+        val timestamp: Long
+    )
+
+    private val elementCache = mutableMapOf<String, CachedNode>()
+    private var lastCacheClean = System.currentTimeMillis()
+
+    companion object {
+        /** Cache TTL in milliseconds (5 seconds) */
+        private const val CACHE_TTL_MS = 5000L
+        /** Interval between cache cleanup checks */
+        private const val CACHE_CLEAN_INTERVAL_MS = 10000L
+    }
 
     // ═══════════════════════════════════════════════════════════════════
     // Element Actions
@@ -381,12 +394,46 @@ class AndroidActionExecutor(
     // ═══════════════════════════════════════════════════════════════════
 
     private fun findNodeByVuid(vuid: String): AccessibilityNodeInfo? {
-        // Check cache first
-        elementCache[vuid]?.let { return it }
+        val currentTime = System.currentTimeMillis()
+
+        // Periodic cache cleanup to prevent memory leaks
+        if (currentTime - lastCacheClean > CACHE_CLEAN_INTERVAL_MS) {
+            cleanExpiredCache(currentTime)
+        }
+
+        // Check cache first with TTL validation
+        elementCache[vuid]?.let { cached ->
+            if (currentTime - cached.timestamp < CACHE_TTL_MS) {
+                return cached.node
+            }
+            // Expired - remove and continue to search
+            elementCache.remove(vuid)
+        }
 
         // Search accessibility tree
         val root = service.rootInActiveWindow ?: return null
-        return searchForVuid(root, vuid)
+        val found = searchForVuid(root, vuid)
+
+        // Cache the result if found
+        if (found != null) {
+            elementCache[vuid] = CachedNode(found, currentTime)
+        }
+
+        return found
+    }
+
+    /**
+     * Clean expired entries from the cache.
+     */
+    private fun cleanExpiredCache(currentTime: Long) {
+        val expired = elementCache.entries.filter { (_, cached) ->
+            currentTime - cached.timestamp >= CACHE_TTL_MS
+        }.map { it.key }
+
+        expired.forEach { key ->
+            elementCache.remove(key)?.node?.recycle()  // Recycle to prevent memory leaks
+        }
+        lastCacheClean = currentTime
     }
 
     private fun searchForVuid(node: AccessibilityNodeInfo, vuid: String): AccessibilityNodeInfo? {
@@ -625,9 +672,27 @@ class AndroidActionExecutor(
     }
 
     /**
-     * Clear element cache (call when screen changes)
+     * Clear all cached elements.
+     * Call this when the screen changes to prevent stale references.
      */
     fun clearCache() {
+        // Recycle all cached nodes to prevent memory leaks
+        elementCache.values.forEach { cached ->
+            try {
+                cached.node.recycle()
+            } catch (e: Exception) {
+                // Node may already be recycled, ignore
+            }
+        }
         elementCache.clear()
+        lastCacheClean = System.currentTimeMillis()
+    }
+
+    /**
+     * Called when screen content changes.
+     * Invalidates the element cache to ensure fresh lookups.
+     */
+    fun onScreenChanged() {
+        clearCache()
     }
 }

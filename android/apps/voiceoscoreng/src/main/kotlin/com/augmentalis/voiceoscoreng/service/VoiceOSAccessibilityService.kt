@@ -2,6 +2,7 @@ package com.augmentalis.voiceoscoreng.service
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.pm.PackageManager
 import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
@@ -20,6 +21,10 @@ import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
 import com.augmentalis.voiceoscoreng.functions.HashUtils
 import com.augmentalis.voiceoscoreng.handlers.ServiceConfiguration
 import com.augmentalis.voiceoscoreng.persistence.ICommandPersistence
+import com.augmentalis.database.dto.ScrapedAppDTO
+import com.augmentalis.database.dto.ScrapedElementDTO
+import com.augmentalis.database.repositories.IScrapedAppRepository
+import com.augmentalis.database.repositories.IScrapedElementRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,6 +50,16 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     /** Command persistence for saving to SQLDelight database */
     private val commandPersistence: ICommandPersistence by lazy {
         VoiceOSCoreNGApplication.getInstance(applicationContext).commandPersistence
+    }
+
+    /** Scraped app repository - for FK integrity (must insert before elements/commands) */
+    private val scrapedAppRepository: IScrapedAppRepository by lazy {
+        VoiceOSCoreNGApplication.getInstance(applicationContext).scrapedAppRepository
+    }
+
+    /** Scraped element repository - for FK integrity (must insert before commands) */
+    private val scrapedElementRepository: IScrapedElementRepository by lazy {
+        VoiceOSCoreNGApplication.getInstance(applicationContext).scrapedElementRepository
     }
 
     /** VoiceOSCoreNG facade for voice command processing */
@@ -182,7 +197,43 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // We handle events on-demand, not automatically
+        event ?: return
+
+        // Handle screen change events to invalidate caches and regenerate commands
+        when (event.eventType) {
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                // New window/screen opened - regenerate commands
+                Log.d(TAG, "Window state changed: ${event.packageName}")
+                handleScreenChange(event.packageName?.toString())
+            }
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
+                // Content within window changed - may need to update commands
+                // Only trigger if content change is significant (e.g., not just scrolling)
+                if (event.contentChangeTypes and AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE != 0) {
+                    Log.v(TAG, "Window content changed (subtree): ${event.packageName}")
+                    // Debounce: Don't regenerate on every small change
+                    // The cache TTL will handle stale elements
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle screen change by clearing caches and optionally regenerating commands.
+     */
+    private fun handleScreenChange(packageName: String?) {
+        // Clear the in-memory command registry (will be repopulated on next exploration)
+        commandRegistry.clear()
+
+        // Note: AndroidActionExecutor cache has TTL, so it will auto-expire
+        // For immediate invalidation, the executor would need to be accessible here
+
+        // Auto-explore new screen if package is known (optional - can be triggered manually)
+        if (packageName != null && packageName != "unknown") {
+            Log.d(TAG, "Screen changed to $packageName - ready for exploration")
+            // Uncomment to auto-explore on screen change:
+            // performExploration()
+        }
     }
 
     override fun onInterrupt() {
@@ -533,12 +584,92 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         Log.d(TAG, "Generated ${quantizedCommands.size} commands via KMP CommandGenerator, registered in CommandRegistry")
 
-        // Persist commands to SQLDelight database
+        // Persist commands to SQLDelight database with proper FK order:
+        // 1. scraped_app → 2. scraped_element → 3. commands_generated
         if (quantizedCommands.isNotEmpty()) {
             serviceScope.launch(Dispatchers.IO) {
                 try {
+                    val currentTime = System.currentTimeMillis()
+
+                    // Step 1: Ensure scraped_app exists (FK parent)
+                    val appInfo = getAppInfo(packageName)
+                    val scrapedApp = ScrapedAppDTO(
+                        appId = packageName,
+                        packageName = packageName,
+                        versionCode = appInfo.versionCode,
+                        versionName = appInfo.versionName,
+                        appHash = HashUtils.generateHash(packageName + appInfo.versionCode, 8),
+                        isFullyLearned = 0,
+                        learnCompletedAt = null,
+                        scrapingMode = "DYNAMIC",
+                        scrapeCount = 1,
+                        elementCount = elements.size.toLong(),
+                        commandCount = quantizedCommands.size.toLong(),
+                        firstScrapedAt = currentTime,
+                        lastScrapedAt = currentTime
+                    )
+                    scrapedAppRepository.insert(scrapedApp)
+                    Log.d(TAG, "Step 1/3: Inserted scraped_app for $packageName")
+
+                    // Step 2: Insert scraped_elements (FK parent for commands)
+                    // Build a map of elementHash -> element for commands that will be inserted
+                    val elementHashesNeeded = quantizedCommands.mapNotNull { it.metadata["elementHash"] }.toSet()
+                    var insertedCount = 0
+
+                    elements.forEachIndexed { index, element ->
+                        val elementHash = HashUtils.generateHash(
+                            "${element.className}|${element.resourceId}|${element.text}", 8
+                        )
+
+                        // Only insert elements that are referenced by commands
+                        if (elementHash in elementHashesNeeded ||
+                            quantizedCommands.any { it.metadata["elementHash"] == elementHash }) {
+
+                            val scrapedElement = ScrapedElementDTO(
+                                id = 0,  // Auto-generated
+                                elementHash = elementHash,
+                                appId = packageName,
+                                uuid = null,
+                                className = element.className,
+                                viewIdResourceName = element.resourceId.ifBlank { null },
+                                text = element.text.ifBlank { null },
+                                contentDescription = element.contentDescription.ifBlank { null },
+                                bounds = "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}",
+                                isClickable = if (element.isClickable) 1L else 0L,
+                                isLongClickable = if (element.isLongClickable) 1L else 0L,
+                                isEditable = 0L,  // TODO: detect from className
+                                isScrollable = if (element.isScrollable) 1L else 0L,
+                                isCheckable = 0L,  // TODO: detect from className
+                                isFocusable = 0L,  // TODO: add to ElementInfo
+                                isEnabled = if (element.isEnabled) 1L else 0L,
+                                depth = hierarchy.getOrNull(index)?.depth?.toLong() ?: 0L,
+                                indexInParent = index.toLong(),
+                                scrapedAt = currentTime,
+                                semanticRole = null,
+                                inputType = null,
+                                visualWeight = null,
+                                isRequired = null,
+                                formGroupId = null,
+                                placeholderText = null,
+                                validationPattern = null,
+                                backgroundColor = null,
+                                screen_hash = null
+                            )
+                            try {
+                                scrapedElementRepository.insert(scrapedElement)
+                                insertedCount++
+                            } catch (e: Exception) {
+                                // Element may already exist, ignore duplicate errors
+                                Log.v(TAG, "Element hash $elementHash may already exist: ${e.message}")
+                            }
+                        }
+                    }
+                    Log.d(TAG, "Step 2/3: Inserted $insertedCount scraped_elements")
+
+                    // Step 3: Now insert commands (FK references are satisfied)
                     commandPersistence.insertBatch(quantizedCommands)
-                    Log.d(TAG, "Persisted ${quantizedCommands.size} commands to voiceos.db for package: $packageName")
+                    Log.d(TAG, "Step 3/3: Persisted ${quantizedCommands.size} commands to voiceos.db for package: $packageName")
+
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to persist commands to database", e)
                 }
@@ -588,6 +719,29 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 )
             }
     }
+
+    /**
+     * Get app version info for the given package name.
+     */
+    private fun getAppInfo(packageName: String): AppVersionInfo {
+        return try {
+            val packageInfo = packageManager.getPackageInfo(packageName, 0)
+            AppVersionInfo(
+                versionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    packageInfo.longVersionCode
+                } else {
+                    @Suppress("DEPRECATION")
+                    packageInfo.versionCode.toLong()
+                },
+                versionName = packageInfo.versionName ?: "unknown"
+            )
+        } catch (e: PackageManager.NameNotFoundException) {
+            Log.w(TAG, "Package not found: $packageName, using defaults")
+            AppVersionInfo(versionCode = 0, versionName = "unknown")
+        }
+    }
+
+    private data class AppVersionInfo(val versionCode: Long, val versionName: String)
 
     private fun mergeResults(results: List<ExplorationResult>): ExplorationResult {
         if (results.isEmpty()) {
