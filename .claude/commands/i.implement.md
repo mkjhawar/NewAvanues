@@ -2,6 +2,19 @@
 description: Execute plan with task tracking .yolo .swarm .tdd .resume | /i.implement plan.md
 ---
 
+# v14.0 - Autonomous Loop Support
+
+**New Modifier:** `.autonomous` - Execute plan until completion with safety limits
+
+```
+/i.implement .autonomous plan.md      # Run until done (100 calls/hr, 30 min max)
+/i.implement .autonomous .yolo plan.md  # Autonomous + auto-approve
+```
+
+API: `POST /v1/autonomous/start` → `POST /v1/autonomous/check` → auto-stop on completion
+
+---
+
 # /i.implement - Execute Implementation Plan
 
 ---
@@ -10,7 +23,7 @@ description: Execute plan with task tracking .yolo .swarm .tdd .resume | /i.impl
 
 This command uses the IDEACODE API for token efficiency (97% savings).
 
-API Endpoint: `http://localhost:3847/i.implement`
+API Endpoint: `http://localhost:3850/i.implement`
 Auto-start: API server starts automatically if not running
 
 ---
@@ -27,6 +40,7 @@ Auto-start: API server starts automatically if not running
 ## Flags
 | Flag | Effect |
 |------|--------|
+| `.autonomous` | Run until plan complete (100 calls/hr, 30 min max, circuit breaker) |
 | `.yolo` | Auto-progress, no approvals between tasks |
 | `.tdd` | Force TDD for all tasks |
 | `.skip-tdd` | Skip TDD recommendations |

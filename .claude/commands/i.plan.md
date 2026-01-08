@@ -10,7 +10,7 @@ description: Implementation plan .yolo .cot .tot .tasks .implement | /i.plan spe
 
 This command uses the IDEACODE API for token efficiency (97% savings).
 
-API Endpoint: `http://localhost:3847/i.plan`
+API Endpoint: `http://localhost:3850/i.plan`
 Auto-start: API server starts automatically if not running
 
 ---

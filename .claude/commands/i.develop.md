@@ -2,6 +2,19 @@
 description: Full workflow .yolo .swarm .tdd .ood .wiz .idea | /i.develop .yolo "dark mode"
 ---
 
+# v14.0 - Autonomous Loop Support
+
+**New Modifier:** `.autonomous` - Run until completion with safety limits
+
+```
+/i.develop .autonomous "feature"     # Run until done (100 calls/hr, 30 min max)
+/i.develop .autonomous .yolo "auth"  # Autonomous + auto-approve
+```
+
+API: `POST /v1/autonomous/start` → `POST /v1/autonomous/check` → auto-stop on completion
+
+---
+
 # /i.develop - Development Workflow
 
 ---
@@ -10,7 +23,7 @@ description: Full workflow .yolo .swarm .tdd .ood .wiz .idea | /i.develop .yolo 
 
 This command uses the IDEACODE API for token efficiency (97% savings).
 
-API Endpoint: `http://localhost:3847/i.develop`
+API Endpoint: `http://localhost:3850/i.develop`
 Auto-start: API server starts automatically if not running
 
 ---
@@ -27,6 +40,7 @@ Auto-start: API server starts automatically if not running
 ## Flags
 | Flag | Effect |
 |------|--------|
+| `.autonomous` | Run until completion (100 calls/hr, 30 min max, circuit breaker) |
 | `.yolo` | Auto-progress, no approvals |
 | `.tdd` | Force TDD mode (tests first) |
 | `.skip-tdd` | Skip TDD recommendation |

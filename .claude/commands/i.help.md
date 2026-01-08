@@ -10,7 +10,7 @@ description: Interactive help system .examples .commands .modifiers | /i.help fi
 
 This command uses the IDEACODE API for token efficiency (97% savings).
 
-API Endpoint: `http://localhost:3847/i.help`
+API Endpoint: `http://localhost:3850/i.help`
 Auto-start: API server starts automatically if not running
 
 ---

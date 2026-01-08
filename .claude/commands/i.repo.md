@@ -53,6 +53,7 @@ Initialize an existing directory with full IDEACODE structure. Perfect for:
 │   │   └── memory-manager.sh
 │   ├── agents/
 │   │   └── compliance-verifier.md
+│   ├── skills/ → /Volumes/M-Drive/Coding/.claude/skills/  # SYMLINK
 │   ├── settings.json       # Statusline config
 │   └── statusline-command.sh
 ├── .ideacode/
@@ -84,8 +85,9 @@ Initialize an existing directory with full IDEACODE structure. Perfect for:
 5. ✅ Install compliance system (hooks + agents)
 6. ✅ Deploy memory manager
 7. ✅ Deploy statusline
-8. ✅ Create .gitignore if missing
-9. ✅ Make initial commit (regular repos only)
+8. ✅ **Create skills symlink** → `/Volumes/M-Drive/Coding/.claude/skills/`
+9. ✅ Create .gitignore if missing
+10. ✅ Make initial commit (regular repos only)
 
 ### Examples
 | Command | Result |
@@ -126,15 +128,13 @@ Next steps:
 | 1 | Platforms? | android, ios, web, backend (multi-select) |
 | 2 | KMP shared code? | Y/n (if android+ios selected) |
 | 3 | Initialize git? | Y/n |
-| 4 | Copy global commands or symlink? | copy/symlink |
 
 ### Structure Created
 ```
 {ProjectName}/
 ├── .claude/
 │   ├── CLAUDE.md
-│   ├── commands/           # Symlink or copy
-│   ├── skills/
+│   ├── skills/ → /Volumes/M-Drive/Coding/.claude/skills/  # SYMLINK (always)
 │   └── settings.json
 ├── .ideacode/
 │   ├── config.yml
