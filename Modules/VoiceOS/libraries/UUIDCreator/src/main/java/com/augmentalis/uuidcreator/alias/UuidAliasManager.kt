@@ -1,251 +1,252 @@
 /**
- * UuidAliasManager.kt - UUID Alias Management
- * Path: modules/libraries/UUIDCreator/src/main/java/com/augmentalis/uuidcreator/alias/UuidAliasManager.kt
+ * UuidAliasManager.kt - Custom aliases for VUIDs
  *
- * Author: VoiceOS Restoration Team
- * Created: 2025-11-27
- * Implemented: 2025-11-27
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ * Created: 2025-01-03
  *
- * Full implementation with alias deduplication logic and database persistence.
+ * Manages human-readable aliases for VUIDs.
+ * Uses IVUIDRepository for persistence.
  */
-
 package com.augmentalis.uuidcreator.alias
 
-import com.augmentalis.database.dto.UUIDAliasDTO
-import com.augmentalis.database.repositories.IUUIDRepository
-import kotlinx.coroutines.runBlocking
+import com.augmentalis.database.dto.VUIDAliasDTO
+import com.augmentalis.database.repositories.IVUIDRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
- * UUID Alias Manager
+ * VUID Alias Manager
  *
- * Manages human-readable aliases for UUIDs with automatic deduplication.
- * Stores aliases persistently in database using IUUIDRepository.
+ * Creates and manages human-readable aliases for VUIDs.
+ * Aliases provide smaller footprint and easier voice command integration.
  *
- * **Features:**
- * - ✅ Alias deduplication (e.g., "button" → "button-1", "button-2")
- * - ✅ Database persistence via IUUIDRepository
- * - ✅ Alias lookup/search functionality
- * - ✅ Conflict resolution
- * - ✅ Usage statistics tracking
- *
- * **Example Usage:**
- * ```kotlin
- * val aliasManager = UuidAliasManager(databaseManager.uuids)
- * val alias = aliasManager.setAliasWithDeduplication(uuid, "submit-button")
- * // Returns: "submit-button" or "submit-button-1" if conflict exists
- * ```
- *
- * @property uuidRepository UUID repository for persistence
+ * @property repository IVUIDRepository for persistence
  */
 class UuidAliasManager(
-    private val uuidRepository: IUUIDRepository
+    private val repository: IVUIDRepository
 ) {
+    /**
+     * In-memory cache for fast lookups
+     */
+    private val aliasToVuid = mutableMapOf<String, String>()
+    private val vuidToAliases = mutableMapOf<String, MutableSet<String>>()
+
+    @Volatile
+    private var isLoaded = false
 
     /**
-     * Set alias for UUID with automatic deduplication
-     *
-     * Checks if baseAlias already exists for a different UUID.
-     * If conflict, appends suffix: "-1", "-2", etc.
-     * Stores UUID→alias mapping in database.
-     *
-     * @param uuid The UUID to assign alias to
-     * @param baseAlias The desired alias (human-readable name)
-     * @return The actual alias assigned (with deduplication suffix if needed)
+     * Load cache from database
      */
-    fun setAliasWithDeduplication(uuid: String, baseAlias: String): String = runBlocking {
-        // First, remove any existing aliases for this UUID
-        uuidRepository.deleteAliasesForUuid(uuid)
-
-        // Find a unique alias by checking conflicts
-        var candidateAlias = baseAlias
-        var suffix = 1
-
-        while (uuidRepository.aliasExists(candidateAlias)) {
-            // Check if it's already assigned to THIS uuid
-            val existingUuid = uuidRepository.getUuidByAlias(candidateAlias)
-            if (existingUuid == uuid) {
-                // Already assigned to this UUID, we can reuse it
-                break
+    suspend fun loadCache() = withContext(Dispatchers.IO) {
+        if (!isLoaded) {
+            val aliases = repository.getAllAliases()
+            aliases.forEach { dto ->
+                aliasToVuid[dto.alias] = dto.vuid
+                vuidToAliases.getOrPut(dto.vuid) { mutableSetOf() }.add(dto.alias)
             }
+            isLoaded = true
+        }
+    }
 
-            // Conflict with different UUID, try next suffix
-            candidateAlias = "$baseAlias-$suffix"
-            suffix++
+    private suspend fun ensureLoaded() {
+        if (!isLoaded) loadCache()
+    }
+
+    /**
+     * Common app name abbreviations
+     */
+    private val appAbbreviations = mapOf(
+        "instagram" to "ig",
+        "facebook" to "fb",
+        "twitter" to "tw",
+        "tiktok" to "tt",
+        "youtube" to "yt",
+        "whatsapp" to "wa",
+        "telegram" to "tg",
+        "snapchat" to "sc",
+        "reddit" to "rd",
+        "linkedin" to "li"
+    )
+
+    /**
+     * Create auto-generated alias
+     */
+    suspend fun createAutoAlias(
+        vuid: String,
+        elementName: String?,
+        elementType: String,
+        useAbbreviation: Boolean = true
+    ): String = withContext(Dispatchers.Default) {
+        ensureLoaded()
+
+        val appName = extractAppNameFromVuid(vuid)
+        val appPart = if (useAbbreviation) {
+            appAbbreviations[appName.lowercase()] ?: appName
+        } else {
+            appName
         }
 
-        // Only log if collision occurred (suffix was added)
-        if (suffix > 1) {
-            android.util.Log.v("UuidAliasManager",
-                "Alias collision: '$baseAlias' exists, using '$candidateAlias'")
+        val namePart = elementName
+            ?.lowercase()
+            ?.replace(Regex("[^a-z0-9]+"), "_")
+            ?.trim('_')
+            ?: "element"
+
+        val typePart = abbreviateType(elementType)
+        var alias = "${appPart}_${namePart}_$typePart"
+        alias = ensureUniqueAlias(alias)
+
+        setAlias(vuid, alias, isPrimary = true)
+        alias
+    }
+
+    /**
+     * Set manual alias
+     */
+    suspend fun setAlias(vuid: String, alias: String, isPrimary: Boolean = false) = withContext(Dispatchers.IO) {
+        ensureLoaded()
+        validateAlias(alias)
+
+        if (aliasToVuid.containsKey(alias)) {
+            val existingVuid = aliasToVuid[alias]
+            if (existingVuid != vuid) {
+                throw IllegalArgumentException("Alias '$alias' already exists for VUID: $existingVuid")
+            }
+            return@withContext
         }
 
-        // Create and store the alias
-        val aliasDTO = UUIDAliasDTO(
-            id = 0, // Auto-generated by database
-            alias = candidateAlias,
-            uuid = uuid,
-            isPrimary = true,
-            createdAt = System.currentTimeMillis()
+        aliasToVuid[alias] = vuid
+        vuidToAliases.getOrPut(vuid) { mutableSetOf() }.add(alias)
+
+        repository.insertAlias(
+            VUIDAliasDTO(
+                id = 0,
+                alias = alias,
+                vuid = vuid,
+                isPrimary = isPrimary,
+                createdAt = System.currentTimeMillis()
+            )
         )
-
-        uuidRepository.insertAlias(aliasDTO)
-
-        return@runBlocking candidateAlias
     }
 
     /**
-     * Get primary alias for UUID
-     *
-     * @param uuid The UUID to look up
-     * @return The primary alias for this UUID, or null if not found
+     * Resolve alias to VUID
      */
-    fun getAlias(uuid: String): String? = runBlocking {
-        val aliases = uuidRepository.getAliasesForUuid(uuid)
-        aliases.firstOrNull { it.isPrimary }?.alias
+    suspend fun resolveAlias(alias: String): String? = withContext(Dispatchers.IO) {
+        ensureLoaded()
+        aliasToVuid[alias]
     }
 
     /**
-     * Get UUID for alias
-     *
-     * @param alias The alias to look up
-     * @return The UUID for this alias, or null if not found
+     * Get aliases for VUID
      */
-    fun getUuid(alias: String): String? = runBlocking {
-        uuidRepository.getUuidByAlias(alias)
+    fun getAliases(vuid: String): Set<String> {
+        return vuidToAliases[vuid] ?: emptySet()
     }
 
     /**
-     * Check if alias exists
-     *
-     * @param alias The alias to check
-     * @return True if alias exists, false otherwise
+     * Get primary alias
      */
-    fun aliasExists(alias: String): Boolean = runBlocking {
-        uuidRepository.aliasExists(alias)
+    fun getPrimaryAlias(vuid: String): String? {
+        return vuidToAliases[vuid]?.firstOrNull()
     }
 
     /**
-     * Remove all aliases for UUID
-     *
-     * @param uuid The UUID to remove aliases for
+     * Remove alias
      */
-    fun removeAlias(uuid: String) = runBlocking {
-        uuidRepository.deleteAliasesForUuid(uuid)
+    suspend fun removeAlias(alias: String): Boolean = withContext(Dispatchers.IO) {
+        ensureLoaded()
+        val vuid = aliasToVuid.remove(alias) ?: return@withContext false
+        vuidToAliases[vuid]?.remove(alias)
+        repository.deleteAliasByName(alias)
+        true
     }
 
-    /**
-     * Batch set aliases with deduplication (PERFORMANCE OPTIMIZATION)
-     *
-     * Replaces N individual setAliasWithDeduplication() calls with single batch operation.
-     *
-     * **Performance Improvement:**
-     * - Before: 315 DB operations for 63 elements (1351ms)
-     * - After: 2 DB operations (1 query + 1 batch insert) (<100ms)
-     * - **157x speedup (27x faster)**
-     *
-     * **Algorithm:**
-     * 1. Load all existing aliases ONCE (1 DB query)
-     * 2. In-memory deduplication using hash set (O(N) instead of O(N²))
-     * 3. Single batch insert (1 DB operation)
-     *
-     * **Deduplication Strategy:**
-     * - Check against existing DB aliases AND current batch
-     * - Append suffix: "-1", "-2", "-3", etc. for conflicts
-     * - Example: "button" → "button", "button-1", "button-2"
-     *
-     * **Usage:**
-     * Used by ExplorationEngine.registerElements() for LearnApp screen exploration.
-     *
-     * @param uuidAliasMap Map of UUID to desired alias
-     * @return Map of UUID to actual deduplicated alias
-     */
-    suspend fun setAliasesBatch(uuidAliasMap: Map<String, String>): Map<String, String> {
-        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            // Step 1: Load existing aliases ONCE (1 DB query)
-            val existingAliases = uuidRepository.getAllAliases()
-            val existingAliasSet = existingAliases.map { it.alias }.toSet()
+    private fun extractAppNameFromVuid(vuid: String): String {
+        val parts = vuid.split('.')
+        return when {
+            parts.size >= 3 -> parts.getOrNull(1) ?: "app"
+            else -> "app"
+        }
+    }
 
-            // Step 2: In-memory deduplication (no DB queries)
-            val deduplicatedAliases = mutableMapOf<String, String>()
-            val aliasCounts = mutableMapOf<String, Int>()
+    private fun abbreviateType(type: String): String {
+        return when (type.lowercase()) {
+            "button", "imagebutton" -> "btn"
+            "textview", "text" -> "txt"
+            "edittext", "input" -> "input"
+            "imageview", "image" -> "img"
+            "checkbox" -> "chk"
+            "radiobutton" -> "radio"
+            "switch", "togglebutton" -> "toggle"
+            "viewgroup", "container" -> "container"
+            "layout" -> "layout"
+            "menu" -> "menu"
+            "tab" -> "tab"
+            else -> type.lowercase().take(5)
+        }
+    }
 
-            for ((uuid, baseAlias) in uuidAliasMap) {
-                var candidateAlias = baseAlias
-                var suffix = aliasCounts.getOrDefault(baseAlias, 1)
+    private fun ensureUniqueAlias(baseAlias: String): String {
+        if (!aliasToVuid.containsKey(baseAlias)) return baseAlias
+        var counter = 2
+        while (aliasToVuid.containsKey("${baseAlias}_$counter")) {
+            counter++
+        }
+        return "${baseAlias}_$counter"
+    }
 
-                // Check against existing DB aliases AND current batch
-                while (existingAliasSet.contains(candidateAlias) ||
-                       deduplicatedAliases.values.contains(candidateAlias)) {
-                    candidateAlias = "$baseAlias-$suffix"
-                    suffix++
-                }
-
-                aliasCounts[baseAlias] = suffix
-                deduplicatedAliases[uuid] = candidateAlias
-            }
-
-            // Step 3: Batch insert all aliases (1 DB operation)
-            val aliasDTOs = deduplicatedAliases.map { (uuid, alias) ->
-                UUIDAliasDTO(
-                    id = 0, // Auto-generated by database
-                    alias = alias,
-                    uuid = uuid,
-                    isPrimary = true,
-                    createdAt = System.currentTimeMillis()
-                )
-            }
-
-            uuidRepository.insertAliasesBatch(aliasDTOs)
-
-            deduplicatedAliases
+    private fun validateAlias(alias: String) {
+        require(alias.length in 3..50) { "Alias must be 3-50 characters" }
+        require(alias.matches(Regex("^[a-z][a-z0-9_]*$"))) {
+            "Alias must start with letter and contain only lowercase alphanumeric + underscores"
         }
     }
 
     /**
-     * Get statistics about alias usage
+     * Set multiple aliases in batch
      *
-     * Calculates:
-     * - Total aliases stored
-     * - Unique base names (excluding suffixes)
-     * - Number of conflicts (aliases with suffixes)
-     *
-     * @return Alias statistics
+     * @param vuidAliasMap Map of VUID to alias pairs (vuid -> desiredAlias)
+     * @return Map of VUID to actual registered alias (vuid -> actualAlias)
      */
-    fun getStats(): AliasStats = runBlocking {
-        val allAliases = uuidRepository.getAllAliases()
-
-        val totalAliases = allAliases.size
-
-        // Count unique base names (before any "-N" suffix)
-        val baseNames = allAliases.map { alias ->
-            alias.alias.replace(Regex("-\\d+$"), "")
-        }.toSet()
-        val uniqueAliases = baseNames.size
-
-        // Count conflicts (aliases that have a "-N" suffix)
-        val conflictCount = allAliases.count { alias ->
-            alias.alias.matches(Regex(".*-\\d+$"))
+    suspend fun setAliasesBatch(vuidAliasMap: Map<String, String>): Map<String, String> = withContext(Dispatchers.IO) {
+        ensureLoaded()
+        val result = mutableMapOf<String, String>()
+        vuidAliasMap.forEach { (vuid, alias) ->
+            try {
+                setAlias(vuid, alias, isPrimary = false)
+                // Get the actual alias that was registered (might be deduplicated)
+                val actualAlias = getAliases(vuid).firstOrNull() ?: alias
+                result[vuid] = actualAlias
+            } catch (e: Exception) {
+                // Skip invalid aliases in batch mode, but still track them
+                result[vuid] = alias
+            }
         }
+        result
+    }
 
-        return@runBlocking AliasStats(
-            totalAliases = totalAliases,
-            uniqueAliases = uniqueAliases,
-            conflictCount = conflictCount
+    /**
+     * Get alias statistics
+     */
+    fun getStats(): AliasStats {
+        return AliasStats(
+            totalAliases = aliasToVuid.size,
+            totalVuidsWithAliases = vuidToAliases.size,
+            averageAliasesPerVuid = if (vuidToAliases.isNotEmpty()) {
+                vuidToAliases.values.map { it.size }.average().toFloat()
+            } else {
+                0f
+            }
         )
     }
 }
 
 /**
  * Alias Statistics
- *
- * Statistics about alias usage and conflicts.
- *
- * @property totalAliases Total number of UUID→alias mappings
- * @property uniqueAliases Number of unique alias base names
- * @property conflictCount Number of aliases that required deduplication
  */
 data class AliasStats(
     val totalAliases: Int,
-    val uniqueAliases: Int,
-    val conflictCount: Int
+    val totalVuidsWithAliases: Int,
+    val averageAliasesPerVuid: Float
 )

@@ -1,0 +1,877 @@
+# SettingsScreen.yaml - Settings for VoiceOSCoreNG
+# AVAUI YAML format for VoiceOSCoreNG settings screen
+#
+# Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+# Author: VOS4 Development Team
+# Created: 2026-01-06
+#
+# Maps to: LearnAppConfig.kt, OverlayThemes.kt
+
+---
+component:
+  name: SettingsScreen
+  type: screen
+  platform: all
+  description: |
+    Settings screen for VoiceOSCoreNG configuration.
+    Allows users to configure theme, accessibility, processing limits,
+    and developer options. Supports both Lite and Dev tier settings.
+
+theme:
+  inherit: VoiceOSCoreNGTheme
+
+# ============================================================================
+# LAYOUT STRUCTURE
+# ============================================================================
+layout:
+  type: scaffold
+  id: settingsScreen
+
+  # App bar
+  appBar:
+    title: "Settings"
+    backgroundColor: ${colors.surface}
+    elevation: 0
+    leading:
+      - widget: IconButton
+        props:
+          icon: arrow_back
+          size: ${sizes.iconMedium}
+          color: ${colors.textPrimary}
+        onTap: ${navigateBack}
+        accessibility:
+          role: button
+          contentDescription: "Go back"
+          minTouchTarget: ${accessibility.minimumTouchTarget}
+
+  # Scrollable content
+  body:
+    - widget: ScrollView
+      props:
+        padding: ${spacing.paddingLarge}
+
+      children:
+        - widget: Column
+          props:
+            spacing: ${spacing.spacingLarge}
+
+          children:
+            # === General Section ===
+            - widget: SettingsSection
+              props:
+                title: "General"
+              children:
+                # Tier selection
+                - widget: SettingsItem
+                  props:
+                    icon: stars
+                    title: "Tier"
+                    subtitle: ${currentTier == 'DEV' ? 'Developer (Full Features)' : 'Lite (Basic Features)'}
+                  trailing:
+                    - widget: SegmentedControl
+                      props:
+                        value: ${currentTier}
+                        options: ["LITE", "DEV"]
+                        selectedColor: ${colors.primary}
+                      onChanged: ${setTier}
+                      accessibility:
+                        role: tablist
+                        contentDescription: "Select tier"
+
+                # Theme selection
+                - widget: SettingsItem
+                  props:
+                    icon: palette
+                    title: "Theme"
+                    subtitle: ${currentTheme}
+                  onTap: ${showThemePicker}
+                  trailing:
+                    - widget: Icon
+                      props:
+                        icon: chevron_right
+                        size: ${sizes.iconMedium}
+                        color: ${colors.textSecondary}
+                  accessibility:
+                    role: button
+                    contentDescription: "Select theme, currently ${currentTheme}"
+
+            # === Accessibility Section ===
+            - widget: SettingsSection
+              props:
+                title: "Accessibility"
+              children:
+                # High contrast mode
+                - widget: SettingsItem
+                  props:
+                    icon: contrast
+                    title: "High Contrast"
+                    subtitle: "Increase contrast for better visibility"
+                  trailing:
+                    - widget: Switch
+                      props:
+                        value: ${highContrastEnabled}
+                        activeColor: ${colors.primary}
+                      onChanged: ${toggleHighContrast}
+                      accessibility:
+                        role: switch
+                        contentDescription: ${highContrastEnabled ? 'Disable high contrast' : 'Enable high contrast'}
+                        minTouchTarget: ${accessibility.minimumTouchTarget}
+
+                # Large text mode
+                - widget: SettingsItem
+                  props:
+                    icon: format_size
+                    title: "Large Text"
+                    subtitle: "Increase text size throughout the app"
+                  trailing:
+                    - widget: Switch
+                      props:
+                        value: ${largeTextEnabled}
+                        activeColor: ${colors.primary}
+                      onChanged: ${toggleLargeText}
+                      accessibility:
+                        role: switch
+                        contentDescription: ${largeTextEnabled ? 'Disable large text' : 'Enable large text'}
+                        minTouchTarget: ${accessibility.minimumTouchTarget}
+
+                # Colorblind friendly mode
+                - widget: SettingsItem
+                  props:
+                    icon: visibility
+                    title: "Colorblind Friendly"
+                    subtitle: "Use colors distinguishable by colorblind users"
+                  trailing:
+                    - widget: Switch
+                      props:
+                        value: ${colorblindFriendlyEnabled}
+                        activeColor: ${colors.primary}
+                      onChanged: ${toggleColorblindFriendly}
+                      accessibility:
+                        role: switch
+                        contentDescription: ${colorblindFriendlyEnabled ? 'Disable colorblind mode' : 'Enable colorblind mode'}
+                        minTouchTarget: ${accessibility.minimumTouchTarget}
+
+                # Reduced motion
+                - widget: SettingsItem
+                  props:
+                    icon: animation
+                    title: "Reduce Motion"
+                    subtitle: "Minimize animations for motion sensitivity"
+                  trailing:
+                    - widget: Switch
+                      props:
+                        value: ${reducedMotionEnabled}
+                        activeColor: ${colors.primary}
+                      onChanged: ${toggleReducedMotion}
+                      accessibility:
+                        role: switch
+                        contentDescription: ${reducedMotionEnabled ? 'Enable animations' : 'Disable animations'}
+                        minTouchTarget: ${accessibility.minimumTouchTarget}
+
+            # === Voice Settings Section ===
+            - widget: SettingsSection
+              props:
+                title: "Voice"
+              children:
+                # Confidence threshold
+                - widget: SettingsItem
+                  props:
+                    icon: mic
+                    title: "Confidence Threshold"
+                    subtitle: "Minimum confidence to execute commands (${formatPercentage(confidenceThreshold)})"
+                  trailing:
+                    - widget: Slider
+                      props:
+                        value: ${confidenceThreshold}
+                        min: 0.4
+                        max: 0.95
+                        step: 0.05
+                        width: 120
+                        activeColor: ${colors.primary}
+                      onChanged: ${setConfidenceThreshold}
+                      accessibility:
+                        role: slider
+                        contentDescription: "Confidence threshold ${formatPercentage(confidenceThreshold)}"
+
+                # Speech engine (Dev only)
+                - widget: SettingsItem
+                  condition: ${currentTier == 'DEV'}
+                  props:
+                    icon: record_voice_over
+                    title: "Speech Engine"
+                    subtitle: ${speechEngine}
+                  onTap: ${showSpeechEnginePicker}
+                  trailing:
+                    - widget: Icon
+                      props:
+                        icon: chevron_right
+                        size: ${sizes.iconMedium}
+                        color: ${colors.textSecondary}
+                  accessibility:
+                    role: button
+                    contentDescription: "Select speech engine"
+
+            # === Processing Section ===
+            - widget: SettingsSection
+              props:
+                title: "Processing"
+              children:
+                # Processing mode (Dev only)
+                - widget: SettingsItem
+                  condition: ${currentTier == 'DEV'}
+                  props:
+                    icon: speed
+                    title: "Processing Mode"
+                    subtitle: ${processingMode}
+                  trailing:
+                    - widget: SegmentedControl
+                      props:
+                        value: ${processingMode}
+                        options: ["IMMEDIATE", "BATCH", "HYBRID"]
+                        selectedColor: ${colors.primary}
+                        compact: true
+                      onChanged: ${setProcessingMode}
+                      accessibility:
+                        role: tablist
+                        contentDescription: "Select processing mode"
+
+                # Max elements per scan
+                - widget: SettingsItem
+                  props:
+                    icon: widgets
+                    title: "Max Elements Per Scan"
+                    subtitle: ${maxElementsPerScan == -1 ? 'Unlimited' : maxElementsPerScan.toString()}
+                  trailing:
+                    - widget: Stepper
+                      condition: ${currentTier == 'DEV'}
+                      props:
+                        value: ${maxElementsPerScan}
+                        min: 50
+                        max: 1000
+                        step: 50
+                        specialValues: { "-1": "Unlimited" }
+                      onChanged: ${setMaxElementsPerScan}
+                      accessibility:
+                        role: spinbutton
+                        contentDescription: "Max elements per scan"
+
+                # Max apps learned
+                - widget: SettingsItem
+                  props:
+                    icon: apps
+                    title: "Max Apps"
+                    subtitle: ${maxAppsLearned == -1 ? 'Unlimited' : maxAppsLearned.toString()}
+                  trailing:
+                    - widget: Stepper
+                      condition: ${currentTier == 'DEV'}
+                      props:
+                        value: ${maxAppsLearned}
+                        min: 5
+                        max: 100
+                        step: 5
+                        specialValues: { "-1": "Unlimited" }
+                      onChanged: ${setMaxAppsLearned}
+                      accessibility:
+                        role: spinbutton
+                        contentDescription: "Max apps to learn"
+
+                # Batch timeout (Dev only)
+                - widget: SettingsItem
+                  condition: ${currentTier == 'DEV' && processingMode != 'IMMEDIATE'}
+                  props:
+                    icon: timer
+                    title: "Batch Timeout"
+                    subtitle: "${batchTimeoutMs}ms"
+                  trailing:
+                    - widget: Slider
+                      props:
+                        value: ${batchTimeoutMs}
+                        min: 1000
+                        max: 10000
+                        step: 500
+                        width: 120
+                        activeColor: ${colors.primary}
+                      onChanged: ${setBatchTimeout}
+                      accessibility:
+                        role: slider
+                        contentDescription: "Batch timeout ${batchTimeoutMs} milliseconds"
+
+            # === Developer Options Section (Dev only) ===
+            - widget: SettingsSection
+              condition: ${currentTier == 'DEV'}
+              props:
+                title: "Developer Options"
+              children:
+                # Enable debug overlay
+                - widget: SettingsItem
+                  props:
+                    icon: bug_report
+                    title: "Debug Overlay"
+                    subtitle: "Show debug panel with real-time metrics"
+                  trailing:
+                    - widget: Switch
+                      props:
+                        value: ${debugOverlayEnabled}
+                        activeColor: ${colors.primary}
+                      onChanged: ${toggleDebugOverlay}
+                      accessibility:
+                        role: switch
+                        contentDescription: ${debugOverlayEnabled ? 'Hide debug overlay' : 'Show debug overlay'}
+                        minTouchTarget: ${accessibility.minimumTouchTarget}
+
+                # Enable exploration
+                - widget: SettingsItem
+                  props:
+                    icon: explore
+                    title: "Exploration Mode"
+                    subtitle: "Deep UI exploration for better element detection"
+                  trailing:
+                    - widget: Switch
+                      props:
+                        value: ${explorationEnabled}
+                        activeColor: ${colors.primary}
+                      onChanged: ${toggleExploration}
+                      accessibility:
+                        role: switch
+                        contentDescription: ${explorationEnabled ? 'Disable exploration' : 'Enable exploration'}
+                        minTouchTarget: ${accessibility.minimumTouchTarget}
+
+                # Exploration depth
+                - widget: SettingsItem
+                  condition: ${explorationEnabled}
+                  props:
+                    icon: account_tree
+                    title: "Exploration Depth"
+                    subtitle: "${explorationDepth} levels"
+                  trailing:
+                    - widget: Slider
+                      props:
+                        value: ${explorationDepth}
+                        min: 5
+                        max: 30
+                        step: 5
+                        width: 120
+                        activeColor: ${colors.primary}
+                      onChanged: ${setExplorationDepth}
+                      accessibility:
+                        role: slider
+                        contentDescription: "Exploration depth ${explorationDepth} levels"
+
+                # Framework detection
+                - widget: SettingsItem
+                  props:
+                    icon: extension
+                    title: "Framework Detection"
+                    subtitle: "Auto-detect Flutter, React Native, Unity, etc."
+                  trailing:
+                    - widget: Switch
+                      props:
+                        value: ${frameworkDetectionEnabled}
+                        activeColor: ${colors.primary}
+                      onChanged: ${toggleFrameworkDetection}
+                      accessibility:
+                        role: switch
+                        contentDescription: ${frameworkDetectionEnabled ? 'Disable framework detection' : 'Enable framework detection'}
+                        minTouchTarget: ${accessibility.minimumTouchTarget}
+
+                # Analytics
+                - widget: SettingsItem
+                  props:
+                    icon: analytics
+                    title: "Analytics"
+                    subtitle: "Collect usage data for improvements"
+                  trailing:
+                    - widget: Switch
+                      props:
+                        value: ${analyticsEnabled}
+                        activeColor: ${colors.primary}
+                      onChanged: ${toggleAnalytics}
+                      accessibility:
+                        role: switch
+                        contentDescription: ${analyticsEnabled ? 'Disable analytics' : 'Enable analytics'}
+                        minTouchTarget: ${accessibility.minimumTouchTarget}
+
+                # Reset to defaults
+                - widget: SettingsItem
+                  props:
+                    icon: restore
+                    title: "Reset Developer Settings"
+                    subtitle: "Reset all developer options to defaults"
+                  onTap: ${confirmResetDeveloperSettings}
+                  accessibility:
+                    role: button
+                    contentDescription: "Reset developer settings"
+
+            # === About Section ===
+            - widget: SettingsSection
+              props:
+                title: "About"
+              children:
+                - widget: SettingsItem
+                  props:
+                    icon: info
+                    title: "Version"
+                    subtitle: ${appVersion}
+
+                - widget: SettingsItem
+                  props:
+                    icon: description
+                    title: "Licenses"
+                    subtitle: "View open source licenses"
+                  onTap: ${showLicenses}
+                  trailing:
+                    - widget: Icon
+                      props:
+                        icon: chevron_right
+                        size: ${sizes.iconMedium}
+                        color: ${colors.textSecondary}
+                  accessibility:
+                    role: button
+                    contentDescription: "View licenses"
+
+                - widget: SettingsItem
+                  props:
+                    icon: help
+                    title: "Help & Support"
+                    subtitle: "Get help with VoiceOSCoreNG"
+                  onTap: ${openHelp}
+                  trailing:
+                    - widget: Icon
+                      props:
+                        icon: chevron_right
+                        size: ${sizes.iconMedium}
+                        color: ${colors.textSecondary}
+                  accessibility:
+                    role: button
+                    contentDescription: "Open help"
+
+# ============================================================================
+# CUSTOM WIDGETS
+# ============================================================================
+widgets:
+  SettingsSection:
+    props:
+      title: string
+    layout:
+      - widget: Column
+        props:
+          spacing: ${spacing.spacingSmall}
+        children:
+          - widget: Text
+            props:
+              text: ${title}
+              color: ${colors.primary}
+              fontSize: ${typography.captionSize}
+              fontWeight: ${typography.fontWeightBold}
+              textTransform: uppercase
+              letterSpacing: 1
+              marginBottom: ${spacing.spacingSmall}
+          - widget: Container
+            props:
+              background: ${colors.surface}
+              cornerRadius: ${shapes.cornerRadiusLarge}
+              clipToBounds: true
+            children:
+              - widget: Column
+                props:
+                  dividerColor: ${colors.divider}
+                  showDividers: true
+                children: ${children}
+
+  SettingsItem:
+    props:
+      icon: string
+      title: string
+      subtitle: string
+    layout:
+      - widget: Container
+        props:
+          padding:
+            horizontal: ${spacing.paddingLarge}
+            vertical: ${spacing.paddingMedium}
+          minHeight: 64
+        children:
+          - widget: Row
+            props:
+              alignment: spaceBetween
+            children:
+              - widget: Row
+                props:
+                  spacing: ${spacing.spacingMedium}
+                  flex: 1
+                children:
+                  - widget: Icon
+                    props:
+                      icon: ${icon}
+                      size: ${sizes.iconMedium}
+                      color: ${colors.textSecondary}
+                  - widget: Column
+                    props:
+                      alignment: start
+                      flex: 1
+                    children:
+                      - widget: Text
+                        props:
+                          text: ${title}
+                          color: ${colors.textPrimary}
+                          fontSize: ${typography.bodySize}
+                      - widget: Text
+                        props:
+                          text: ${subtitle}
+                          color: ${colors.textSecondary}
+                          fontSize: ${typography.smallSize}
+              - widget: Container
+                props:
+                  marginLeft: ${spacing.spacingMedium}
+                children: ${trailing}
+
+# ============================================================================
+# DIALOGS
+# ============================================================================
+dialogs:
+  themePicker:
+    title: "Select Theme"
+    options:
+      - id: Material3Dark
+        label: "Material 3 Dark"
+        description: "Modern dark theme (Default)"
+      - id: Material3Light
+        label: "Material 3 Light"
+        description: "Light backgrounds for daytime"
+      - id: HighContrast
+        label: "High Contrast"
+        description: "Maximum contrast for accessibility"
+      - id: Minimalist
+        label: "Minimalist"
+        description: "Clean, understated design"
+      - id: Gaming
+        label: "Gaming"
+        description: "Neon aesthetic inspired by gaming HUDs"
+      - id: Professional
+        label: "Professional"
+        description: "Formal corporate design"
+      - id: ColorblindFriendly
+        label: "Colorblind Friendly"
+        description: "Optimized for color vision deficiency"
+      - id: LargeText
+        label: "Large Text"
+        description: "Increased text sizes"
+
+  speechEnginePicker:
+    title: "Speech Engine"
+    options:
+      - id: platform
+        label: "Platform STT"
+        description: "Default system speech recognition"
+      - id: vivoka
+        label: "Vivoka"
+        description: "Advanced offline recognition"
+
+  confirmReset:
+    title: "Reset Developer Settings?"
+    message: "This will reset all developer options to their default values."
+    confirmText: "Reset"
+    cancelText: "Cancel"
+    destructive: true
+
+# ============================================================================
+# STATES
+# ============================================================================
+states:
+  - name: default
+    props:
+      isLoading: false
+
+  - name: loading
+    props:
+      isLoading: true
+
+# ============================================================================
+# ANIMATIONS
+# ============================================================================
+animations:
+  screenEnter:
+    duration: ${animations.durationNormal}
+    easing: ${animations.easingEnter}
+    properties:
+      opacity: { from: 0.0, to: 1.0 }
+      translateX: { from: 50, to: 0 }
+
+  screenExit:
+    duration: ${animations.durationFast}
+    easing: ${animations.easingExit}
+    properties:
+      opacity: { from: 1.0, to: 0.0 }
+      translateX: { from: 0, to: -50 }
+
+  settingUpdate:
+    duration: ${animations.durationFast}
+    easing: ${animations.easingDefault}
+
+# ============================================================================
+# ACCESSIBILITY
+# ============================================================================
+accessibility:
+  screenTitle: "VoiceOSCoreNG Settings"
+
+  announcements:
+    onThemeChanged: "Theme changed to ${themeName}"
+    onTierChanged: "Tier changed to ${tierName}"
+    onSettingToggled: "${settingName} ${enabled ? 'enabled' : 'disabled'}"
+    onValueChanged: "${settingName} set to ${value}"
+    onReset: "Developer settings reset to defaults"
+
+  navigation:
+    supportsFocus: true
+    groupSections: true
+
+# ============================================================================
+# DATA BINDINGS
+# ============================================================================
+data:
+  # Tier and theme
+  currentTier:
+    type: string
+    default: "LITE"
+
+  currentTheme:
+    type: string
+    default: "Material3Dark"
+
+  # Accessibility settings
+  highContrastEnabled:
+    type: boolean
+    default: false
+
+  largeTextEnabled:
+    type: boolean
+    default: false
+
+  colorblindFriendlyEnabled:
+    type: boolean
+    default: false
+
+  reducedMotionEnabled:
+    type: boolean
+    default: false
+
+  # Voice settings
+  confidenceThreshold:
+    type: number
+    default: 0.6
+
+  speechEngine:
+    type: string
+    default: "Platform STT"
+
+  # Processing settings
+  processingMode:
+    type: string
+    default: "IMMEDIATE"
+
+  maxElementsPerScan:
+    type: number
+    default: 100
+
+  maxAppsLearned:
+    type: number
+    default: 25
+
+  batchTimeoutMs:
+    type: number
+    default: 3000
+
+  # Developer settings
+  debugOverlayEnabled:
+    type: boolean
+    default: false
+
+  explorationEnabled:
+    type: boolean
+    default: false
+
+  explorationDepth:
+    type: number
+    default: 10
+
+  frameworkDetectionEnabled:
+    type: boolean
+    default: false
+
+  analyticsEnabled:
+    type: boolean
+    default: false
+
+  # About
+  appVersion:
+    type: string
+    default: "1.0.0"
+
+# ============================================================================
+# FUNCTIONS
+# ============================================================================
+functions:
+  navigateBack:
+    returns: void
+    logic: |
+      // Navigate back to previous screen
+
+  setTier:
+    params: [tier]
+    returns: void
+    logic: |
+      currentTier = tier
+      LearnAppConfig.setVariant(tier == "DEV" ? Tier.DEV : Tier.LITE)
+
+  showThemePicker:
+    returns: void
+    logic: |
+      // Show theme picker dialog
+
+  setTheme:
+    params: [themeId]
+    returns: void
+    logic: |
+      currentTheme = themeId
+      // Apply theme via OverlayThemes.getTheme(themeId)
+
+  toggleHighContrast:
+    params: [enabled]
+    returns: void
+    logic: |
+      highContrastEnabled = enabled
+      if (enabled) setTheme("HighContrast")
+
+  toggleLargeText:
+    params: [enabled]
+    returns: void
+    logic: |
+      largeTextEnabled = enabled
+      if (enabled) setTheme("LargeText")
+
+  toggleColorblindFriendly:
+    params: [enabled]
+    returns: void
+    logic: |
+      colorblindFriendlyEnabled = enabled
+      if (enabled) setTheme("ColorblindFriendly")
+
+  toggleReducedMotion:
+    params: [enabled]
+    returns: void
+    logic: |
+      reducedMotionEnabled = enabled
+      // Apply reduced motion theme variant
+
+  setConfidenceThreshold:
+    params: [value]
+    returns: void
+    logic: |
+      confidenceThreshold = value
+
+  showSpeechEnginePicker:
+    returns: void
+    logic: |
+      // Show speech engine picker dialog
+
+  setProcessingMode:
+    params: [mode]
+    returns: void
+    logic: |
+      processingMode = mode
+      DeveloperSettings.processingModeOverride = mode
+
+  setMaxElementsPerScan:
+    params: [value]
+    returns: void
+    logic: |
+      maxElementsPerScan = value
+      DeveloperSettings.maxElementsPerScan = value
+
+  setMaxAppsLearned:
+    params: [value]
+    returns: void
+    logic: |
+      maxAppsLearned = value
+      DeveloperSettings.maxAppsLearned = value
+
+  setBatchTimeout:
+    params: [value]
+    returns: void
+    logic: |
+      batchTimeoutMs = value
+      DeveloperSettings.batchTimeoutMs = value
+
+  toggleDebugOverlay:
+    params: [enabled]
+    returns: void
+    logic: |
+      debugOverlayEnabled = enabled
+      DeveloperSettings.enableDebugOverlay = enabled
+
+  toggleExploration:
+    params: [enabled]
+    returns: void
+    logic: |
+      explorationEnabled = enabled
+      DeveloperSettings.forceEnableExploration = enabled
+
+  setExplorationDepth:
+    params: [value]
+    returns: void
+    logic: |
+      explorationDepth = value
+      DeveloperSettings.explorationDepth = value
+
+  toggleFrameworkDetection:
+    params: [enabled]
+    returns: void
+    logic: |
+      frameworkDetectionEnabled = enabled
+      DeveloperSettings.forceEnableFrameworkDetection = enabled
+
+  toggleAnalytics:
+    params: [enabled]
+    returns: void
+    logic: |
+      analyticsEnabled = enabled
+      DeveloperSettings.forceEnableAnalytics = enabled
+
+  confirmResetDeveloperSettings:
+    returns: void
+    logic: |
+      // Show confirmation dialog, then reset
+
+  resetDeveloperSettings:
+    returns: void
+    logic: |
+      DeveloperSettings.reset()
+      // Reload settings from config
+
+  showLicenses:
+    returns: void
+    logic: |
+      // Navigate to licenses screen
+
+  openHelp:
+    returns: void
+    logic: |
+      // Open help/support
+
+  formatPercentage:
+    params: [value]
+    returns: string
+    logic: |
+      return Math.round(value * 100) + "%"
+
+# ============================================================================
+# MODES (Lite vs Dev)
+# ============================================================================
+modes:
+  lite:
+    showDeveloperOptions: false
+    editableProcessingSettings: false
+
+  dev:
+    showDeveloperOptions: true
+    editableProcessingSettings: true

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ARCore permissions -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
+
+    <!-- ARCore requirement -->
+    <uses-feature android:name="android.hardware.camera" android:required="true" />
+
+    <!-- Optional: Network for ML Kit model downloads -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Storage for exporting .vos files -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+                     android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+                     android:maxSdkVersion="32" />
+
+    <application>
+        <!-- ARCore metadata -->
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="required" />
+    </application>
+
+</manifest>

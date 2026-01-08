@@ -14,11 +14,12 @@
 package com.augmentalis.voiceoscore.integration
 
 import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine
-import com.augmentalis.voiceoscoreng.common.Bounds
-import com.augmentalis.voiceoscoreng.common.ElementInfo
-import com.augmentalis.voiceoscoreng.extraction.registerAccessibilityExtractor
-import com.augmentalis.voiceoscoreng.extraction.registerWebScriptExecutor
-import com.augmentalis.voiceoscoreng.extraction.clearExtractors
+import com.augmentalis.voiceoscore.integration.extraction.Bounds
+import com.augmentalis.voiceoscore.integration.extraction.ElementInfo
+import com.augmentalis.voiceoscore.integration.extraction.registerAccessibilityExtractor
+import com.augmentalis.voiceoscore.integration.extraction.registerWebScriptExecutor
+import com.augmentalis.voiceoscore.integration.extraction.clearExtractors
+import com.augmentalis.voiceoscore.integration.extraction.ExtractionBundle
 
 /**
  * ExtractionIntegration - Bridges UIScrapingEngine with VoiceOSCoreNG extraction.
@@ -104,7 +105,7 @@ class ExtractionIntegration(
             return mapOf(
                 "className" to className,
                 "resourceId" to resourceId,
-                "text" to text,
+                "text" to (text ?: ""),
                 "contentDescription" to contentDescription,
                 "bounds" to "${bounds.left},${bounds.top},${bounds.right},${bounds.bottom}",
                 "isClickable" to isClickable,
@@ -157,7 +158,7 @@ class WebViewExtractionIntegration(
          * Use this to inject into WebView for element extraction.
          */
         fun getExtractionScript(): String {
-            return com.augmentalis.voiceoscoreng.extraction.ExtractionBundle.ELEMENT_EXTRACTOR_JS
+            return ExtractionBundle.ELEMENT_EXTRACTOR_JS
         }
     }
 }

@@ -1,0 +1,71 @@
+-- UserInteraction.sq
+-- User interaction tracking
+
+CREATE TABLE user_interaction (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    elementHash TEXT NOT NULL,
+    screenHash TEXT NOT NULL,
+    interactionType TEXT NOT NULL,
+    interactionTime INTEGER NOT NULL,
+    visibilityStart INTEGER,
+    visibilityDuration INTEGER
+);
+
+CREATE INDEX idx_ui_element ON user_interaction(elementHash);
+CREATE INDEX idx_ui_screen ON user_interaction(screenHash);
+CREATE INDEX idx_ui_type ON user_interaction(interactionType);
+CREATE INDEX idx_ui_time ON user_interaction(interactionTime);
+
+insert:
+INSERT OR REPLACE INTO user_interaction(elementHash, screenHash, interactionType, interactionTime, visibilityStart, visibilityDuration)
+VALUES (?, ?, ?, ?, ?, ?);
+
+getById:
+SELECT * FROM user_interaction WHERE id = ?;
+
+getByElement:
+SELECT * FROM user_interaction WHERE elementHash = ? ORDER BY interactionTime DESC;
+
+getByScreen:
+SELECT * FROM user_interaction WHERE screenHash = ? ORDER BY interactionTime DESC;
+
+getByType:
+SELECT * FROM user_interaction WHERE interactionType = ? ORDER BY interactionTime DESC;
+
+getByTimeRange:
+SELECT * FROM user_interaction WHERE interactionTime BETWEEN ? AND ? ORDER BY interactionTime DESC;
+
+getRecent:
+SELECT * FROM user_interaction ORDER BY interactionTime DESC LIMIT ?;
+
+deleteById:
+DELETE FROM user_interaction WHERE id = ?;
+
+deleteByElement:
+DELETE FROM user_interaction WHERE elementHash = ?;
+
+deleteOlderThan:
+DELETE FROM user_interaction WHERE interactionTime < ?;
+
+deleteAll:
+DELETE FROM user_interaction;
+
+count:
+SELECT COUNT(*) FROM user_interaction;
+
+countByType:
+SELECT interactionType, COUNT(*) AS count FROM user_interaction GROUP BY interactionType;
+
+-- Get interaction count for a specific element
+getInteractionCount:
+SELECT COUNT(*) FROM user_interaction WHERE elementHash = ?;
+
+-- Get success/failure ratio for an element
+-- Note: This requires interaction data with success/failure tracking
+-- For now, returns 1.0 as a default since we don't have success/failure fields
+-- The query accepts an elementHash parameter but doesn't use it (for API compatibility)
+getSuccessFailureRatio:
+SELECT 1.0 AS ratio
+FROM user_interaction
+WHERE elementHash = ?
+LIMIT 1;

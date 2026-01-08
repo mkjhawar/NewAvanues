@@ -23,7 +23,8 @@ import androidx.compose.material3.*
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.platform.LocalContext
 import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
-import com.augmentalis.webavanue.ui.design.OceanComponents
+import com.augmentalis.webavanue.ui.design.AppFloatingActionButton
+import com.augmentalis.webavanue.ui.design.AppIcon
 import com.augmentalis.webavanue.ui.design.IconVariant
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -479,6 +480,7 @@ fun BrowserScreen(
                         onProgressChange = { },
                         canGoBack = { canGoBack -> tabViewModel.updateTabNavigation(tabState.tab.id, canGoBack = canGoBack) },
                         canGoForward = { canGoForward -> tabViewModel.updateTabNavigation(tabState.tab.id, canGoForward = canGoForward) },
+                        onOpenInNewTab = { url -> tabViewModel.createTab(url = url) },
                         sessionData = tabState.tab.sessionData,
                         onSessionDataChange = { sessionData ->
                             val updatedTab = tabState.tab.copy(sessionData = sessionData)
@@ -488,6 +490,7 @@ fun BrowserScreen(
                         onDownloadStart = downloadViewModel?.let { vm ->
                             { request: DownloadRequest ->
                                 // Check WiFi-only setting
+                                var shouldProceed = true
                                 if (settings?.downloadOverWiFiOnly == true) {
                                     try {
                                         val networkChecker = com.augmentalis.webavanue.platform.NetworkChecker()
@@ -501,7 +504,7 @@ fun BrowserScreen(
                                                     duration = androidx.compose.material3.SnackbarDuration.Long
                                                 )
                                             }
-                                            return@let  // Don't start download
+                                            shouldProceed = false  // Don't start download
                                         }
                                     } catch (e: Exception) {
                                         // NetworkChecker not initialized or platform-specific error
@@ -510,24 +513,26 @@ fun BrowserScreen(
                                     }
                                 }
 
-                                // Check if we should ask for download location
-                                if (settings?.askDownloadLocation == true) {
-                                    // Show dialog to select location
-                                    pendingDownloadRequest = request
-                                    pendingDownloadSourceUrl = tabState.tab.url
-                                    pendingDownloadSourceTitle = tabState.tab.title
-                                    showDownloadLocationDialog = true
-                                } else {
-                                    // Start download directly with default or saved path from settings
-                                    vm.startDownload(
-                                        url = request.url,
-                                        filename = request.filename,
-                                        mimeType = request.mimeType,
-                                        fileSize = request.contentLength,
-                                        sourcePageUrl = tabState.tab.url,
-                                        sourcePageTitle = tabState.tab.title,
-                                        customPath = settings?.downloadPath?.ifBlank { null }
-                                    )
+                                if (shouldProceed) {
+                                    // Check if we should ask for download location
+                                    if (settings?.askDownloadLocation == true) {
+                                        // Show dialog to select location
+                                        pendingDownloadRequest = request
+                                        pendingDownloadSourceUrl = tabState.tab.url
+                                        pendingDownloadSourceTitle = tabState.tab.title
+                                        showDownloadLocationDialog = true
+                                    } else {
+                                        // Start download directly with default or saved path from settings
+                                        vm.startDownload(
+                                            url = request.url,
+                                            filename = request.filename,
+                                            mimeType = request.mimeType,
+                                            fileSize = request.contentLength,
+                                            sourcePageUrl = tabState.tab.url,
+                                            sourcePageTitle = tabState.tab.title,
+                                            customPath = settings?.downloadPath?.ifBlank { null }
+                                        )
+                                    }
                                 }
                             }
                         },
@@ -1000,11 +1005,11 @@ fun BrowserScreen(
                 )
                 .zIndex(20f)  // Elevated z-level above all other UI elements
         ) {
-            OceanComponents.FloatingActionButton(
+            AppFloatingActionButton(
                 onClick = { showVoiceHelp = !showVoiceHelp },
                 modifier = Modifier
             ) {
-                OceanComponents.Icon(
+                AppIcon(
                     imageVector = Icons.Default.HelpOutline,
                     contentDescription = "Voice commands help",
                     variant = IconVariant.OnPrimary,

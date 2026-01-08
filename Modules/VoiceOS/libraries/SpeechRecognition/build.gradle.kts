@@ -19,7 +19,7 @@ android {
     // compileSdkPreview = "VanillaIceCream"  // Android 15 - will enable when available
 
     defaultConfig {
-        minSdk = 29  // Android 10 - Minimum supported (standardized across all modules)
+        minSdk = 26  // Android 10 - Minimum supported (standardized across all modules)
         // Note: targetSdk is deprecated for libraries
         
         // Enable multi-version APK for better compatibility

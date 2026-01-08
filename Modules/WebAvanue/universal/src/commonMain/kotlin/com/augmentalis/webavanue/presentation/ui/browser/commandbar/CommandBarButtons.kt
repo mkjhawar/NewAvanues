@@ -17,9 +17,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.augmentalis.webavanue.ui.screen.theme.OceanTheme
-import com.augmentalis.webavanue.ui.design.OceanComponents
-import com.augmentalis.webavanue.ui.design.OceanDesignTokens
+import com.augmentalis.webavanue.ui.design.AppIcon
 import com.augmentalis.webavanue.ui.design.IconVariant
+import com.augmentalis.webavanue.ui.design.OceanDesignTokens
 
 /**
  * CommandButton - Standard command button with icon and label
@@ -61,7 +61,7 @@ fun CommandButton(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            OceanComponents.Icon(
+            AppIcon(
                 imageVector = icon,
                 contentDescription = label,
                 variant = if (isActive) IconVariant.OnPrimary else IconVariant.Primary,

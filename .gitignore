@@ -1,7 +1,7 @@
 # IDEACODE Standard .gitignore
 
-# Build outputs
-build/
+# Build outputs (CRITICAL - must use **/ for nested matches)
+**/build/
 *.apk
 *.ipa
 *.app
@@ -14,8 +14,9 @@ out/
 *.iml
 .DS_Store
 
-# Gradle
+# Gradle (CRITICAL - must not commit these)
 .gradle/
+**/.gradle/
 local.properties
 
 # Dependencies
@@ -39,13 +40,23 @@ node_modules/
 !.claude/README.md
 !.ideacode/README.md
 
-# Platform-specific
-.kotlin/
+# Platform-specific (CRITICAL - use **/ for nested)
+**/.kotlin/
 .cxx/
+**/.cxx/
 xcuserdata/
+
+# iOS/macOS build outputs
+DerivedData/
+**/DerivedData/
+ios/build/
+**/ios/build/
 
 # AVA Migration - Exclude large model files (>100MB)
 android/apps/AVA/external-models/**/*.bin
 android/apps/AVA/external-models/**/*.gguf
 android/apps/AVA/external-models/**/*.AON
 android/apps/AVA/external-models/**/*.safetensors
+
+# Git worktree - prevent nested repos
+NewAvanues/

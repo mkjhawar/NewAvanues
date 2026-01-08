@@ -1,37 +1,32 @@
 /**
- * VUIDAnalyticsDTO.kt - Data transfer object for UUID analytics
+ * VUIDAnalyticsDTO.kt - Data Transfer Object for VUID analytics
+ *
+ * Maps to the vuid_analytics SQLDelight table.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
 
 package com.augmentalis.database.dto
 
-import com.augmentalis.database.uuid.Uuid_analytics
-
 /**
- * DTO for UUID analytics data.
+ * DTO representing analytics for a VUID element.
+ *
+ * @param vuid VUID of the element (primary key)
+ * @param accessCount Total access count
+ * @param firstAccessed First access timestamp
+ * @param lastAccessed Most recent access timestamp
+ * @param executionTimeMs Cumulative execution time in milliseconds
+ * @param successCount Number of successful executions
+ * @param failureCount Number of failed executions
+ * @param lifecycleState Current lifecycle state (CREATED, ACTIVE, STALE, ARCHIVED)
  */
 data class VUIDAnalyticsDTO(
-    val uuid: String,
-    val accessCount: Long,
+    val vuid: String,
+    val accessCount: Long = 0,
     val firstAccessed: Long,
     val lastAccessed: Long,
-    val executionTimeMs: Long,
-    val successCount: Long,
-    val failureCount: Long,
-    val lifecycleState: String
-)
-
-/**
- * Convert SQLDelight entity to DTO.
- */
-fun Uuid_analytics.toVUIDAnalyticsDTO(): VUIDAnalyticsDTO = VUIDAnalyticsDTO(
-    uuid = uuid,
-    accessCount = access_count,
-    firstAccessed = first_accessed,
-    lastAccessed = last_accessed,
-    executionTimeMs = execution_time_ms,
-    successCount = success_count,
-    failureCount = failure_count,
-    lifecycleState = lifecycle_state
+    val executionTimeMs: Long = 0,
+    val successCount: Long = 0,
+    val failureCount: Long = 0,
+    val lifecycleState: String = "CREATED"
 )

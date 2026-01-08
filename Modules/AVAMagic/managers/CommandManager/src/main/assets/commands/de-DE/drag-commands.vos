@@ -1,0 +1,74 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "drag-commands.vos",
+    "category": "drag",
+    "display_name": "Drag Actions",
+    "description": "Voice commands for drag and drop operations",
+    "command_count": 3
+  },
+  "locale": "de-DE",
+  "commands": [
+    {
+      "action": "DRAG_UP_DOWN",
+      "cmd": "ziehen hoch",
+      "syn": [
+        "ziehen runter",
+        "ziehen vertical",
+        "move hoch runter",
+        "vertical ziehen",
+        "hoch runter ziehen",
+        "pull hoch",
+        "pull runter",
+        "move vertical",
+        "slide hoch runter",
+        "vertical move",
+        "ziehen it hoch",
+        "ziehen it runter",
+        "move it hoch and runter",
+        "vertical movement"
+      ]
+    },
+    {
+      "action": "DRAG_START",
+      "cmd": "ziehen starten",
+      "syn": [
+        "starten ziehen",
+        "begin ziehen",
+        "commence ziehen",
+        "initiate ziehen",
+        "starten dragging",
+        "begin dragging",
+        "starten moving",
+        "begin moving",
+        "starten pulling",
+        "begin pulling",
+        "starten the ziehen",
+        "begin the ziehen",
+        "commence dragging",
+        "initiate dragging"
+      ]
+    },
+    {
+      "action": "DRAG_STOP",
+      "cmd": "ziehen stoppen",
+      "syn": [
+        "stoppen ziehen",
+        "end ziehen",
+        "finish ziehen",
+        "cease ziehen",
+        "stoppen dragging",
+        "end dragging",
+        "stoppen moving",
+        "finish moving",
+        "stoppen pulling",
+        "end pulling",
+        "stoppen the ziehen",
+        "end the ziehen",
+        "cease dragging",
+        "finish dragging"
+      ]
+    }
+  ]
+}

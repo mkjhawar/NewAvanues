@@ -1,0 +1,36 @@
+-- DatabaseVersion.sq
+-- SQLDelight schema for database version tracking
+-- Migrated from Room: DatabaseVersionEntity
+
+CREATE TABLE database_version (
+    id INTEGER PRIMARY KEY DEFAULT 1,
+    json_version TEXT NOT NULL,
+    loaded_at INTEGER NOT NULL,
+    command_count INTEGER NOT NULL,
+    locales TEXT NOT NULL
+);
+
+-- Get current version (single-row table, id=1)
+getVersion:
+SELECT * FROM database_version WHERE id = 1;
+
+-- Set/update version (upsert pattern)
+setVersion:
+INSERT OR REPLACE INTO database_version (id, json_version, loaded_at, command_count, locales)
+VALUES (1, ?, ?, ?, ?);
+
+-- Clear version (force reload)
+clearVersion:
+DELETE FROM database_version;
+
+-- Check if version exists
+hasVersion:
+SELECT COUNT(*) FROM database_version WHERE id = 1;
+
+-- Get JSON version only
+getJsonVersion:
+SELECT json_version FROM database_version WHERE id = 1;
+
+-- Update loaded timestamp
+updateLoadedAt:
+UPDATE database_version SET loaded_at = ? WHERE id = 1;

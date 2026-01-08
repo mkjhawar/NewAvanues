@@ -1,7 +1,7 @@
 # VoiceOS Feature Backlog
 
-**Last Updated:** 2025-12-27
-**Version:** 1.1
+**Last Updated:** 2026-01-05
+**Version:** 1.2
 
 ---
 
@@ -33,6 +33,42 @@
 ---
 
 ## High Priority 🔴
+
+### Architecture - CRITICAL
+
+#### 0. Command Generation Architecture Gap (VoiceOSCoreNG)
+**Priority:** 🔴 CRITICAL
+**Status:** Open
+**Issue:** VoiceOS-Issue-CommandGenArchitecture-60105-V1
+**Plan:** VoiceOS-Plan-CommandGenArchitecture-60105-V1
+**Added:** 2026-01-05
+
+**Problem:** Voice command generation logic (`generateCommands()`) is misplaced in Android test app instead of KMP shared module. Commands are created as local `GeneratedCommand` objects, displayed in UI, then discarded - creating a "dead end" where no voice execution is possible.
+
+**Current Location:**
+- `android/apps/voiceoscoreng/.../VoiceOSAccessibilityService.kt:401-448`
+- Outputs: Local `GeneratedCommand` (Android-only, not persisted)
+
+**Target Location:**
+- `Modules/VoiceOSCoreNG/src/commonMain/.../command/CommandGenerator.kt`
+- Outputs: `QuantizedCommand` (KMP, wired to persistence)
+
+**Impact:**
+- Voice execution: **BLOCKED** - No commands available for matching
+- Cross-platform: **BLOCKED** - Android-only implementation
+- AVU export: **BLOCKED** - No `QuantizedCommand` objects to export
+
+**Implementation Phases:**
+- [ ] **Phase 1:** Create KMP `CommandGenerator` + `CommandRegistry` in commonMain
+- [ ] **Phase 2:** Wire command generation into element extraction pipeline
+- [ ] **Phase 3:** Implement `CommandMatcher` for voice execution
+
+**Constraints:**
+- Minimal overhead (no unnecessary storage)
+- AVU export is deferred (future work)
+- In-memory first, persist only when needed
+
+---
 
 ### Testing & Quality Assurance
 
@@ -575,4 +611,4 @@
 
 **Maintained by:** VoiceOS Team
 **Review Frequency:** Weekly
-**Last Review:** 2025-12-27
+**Last Review:** 2026-01-05

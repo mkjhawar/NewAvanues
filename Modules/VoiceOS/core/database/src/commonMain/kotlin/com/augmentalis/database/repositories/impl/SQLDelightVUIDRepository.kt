@@ -13,10 +13,6 @@ import com.augmentalis.database.dto.VUIDElementDTO
 import com.augmentalis.database.dto.VUIDHierarchyDTO
 import com.augmentalis.database.dto.VUIDAnalyticsDTO
 import com.augmentalis.database.dto.VUIDAliasDTO
-import com.augmentalis.database.dto.toVUIDElementDTO
-import com.augmentalis.database.dto.toVUIDHierarchyDTO
-import com.augmentalis.database.dto.toVUIDAnalyticsDTO
-import com.augmentalis.database.dto.toVUIDAliasDTO
 import com.augmentalis.database.repositories.IVUIDRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -28,20 +24,20 @@ class SQLDelightVUIDRepository(
     private val database: VoiceOSDatabase
 ) : IVUIDRepository {
 
-    private val elementQueries = database.uUIDElementQueries
-    private val hierarchyQueries = database.uUIDHierarchyQueries
-    private val analyticsQueries = database.uUIDAnalyticsQueries
-    private val aliasQueries = database.uUIDAliasQueries
+    private val elementQueries = database.vUIDElementQueries
+    private val hierarchyQueries = database.vUIDHierarchyQueries
+    private val analyticsQueries = database.vUIDAnalyticsQueries
+    private val aliasQueries = database.vUIDAliasQueries
 
     // ==================== Element Operations ====================
 
     override suspend fun insertElement(element: VUIDElementDTO) = withContext(Dispatchers.Default) {
         elementQueries.insertElement(
-            uuid = element.uuid,
+            vuid = element.vuid,
             name = element.name,
             type = element.type,
             description = element.description,
-            parent_uuid = element.parentUuid,
+            parent_vuid = element.parentVuid,
             is_enabled = if (element.isEnabled) 1L else 0L,
             priority = element.priority.toLong(),
             timestamp = element.timestamp,
@@ -55,12 +51,12 @@ class SQLDelightVUIDRepository(
             name = element.name,
             type = element.type,
             description = element.description,
-            parent_uuid = element.parentUuid,
+            parent_vuid = element.parentVuid,
             is_enabled = if (element.isEnabled) 1L else 0L,
             priority = element.priority.toLong(),
             metadata_json = element.metadataJson,
             position_json = element.positionJson,
-            uuid = element.uuid
+            vuid = element.vuid
         )
     }
 
@@ -69,7 +65,7 @@ class SQLDelightVUIDRepository(
     }
 
     override suspend fun getElementByUuid(uuid: String): VUIDElementDTO? = withContext(Dispatchers.Default) {
-        elementQueries.getElementByUuid(uuid).executeAsOneOrNull()?.toVUIDElementDTO()
+        elementQueries.getElementByVuid(uuid).executeAsOneOrNull()?.toVUIDElementDTO()
     }
 
     override suspend fun getAllElements(): List<VUIDElementDTO> = withContext(Dispatchers.Default) {
@@ -104,8 +100,8 @@ class SQLDelightVUIDRepository(
 
     override suspend fun insertHierarchy(hierarchy: VUIDHierarchyDTO) = withContext(Dispatchers.Default) {
         hierarchyQueries.insertHierarchy(
-            parent_uuid = hierarchy.parentUuid,
-            child_uuid = hierarchy.childUuid,
+            parent_vuid = hierarchy.parentVuid,
+            child_vuid = hierarchy.childVuid,
             depth = hierarchy.depth.toLong(),
             path = hierarchy.path,
             order_index = hierarchy.orderIndex.toLong()
@@ -128,7 +124,7 @@ class SQLDelightVUIDRepository(
 
     override suspend fun insertAnalytics(analytics: VUIDAnalyticsDTO) = withContext(Dispatchers.Default) {
         analyticsQueries.insertAnalytics(
-            uuid = analytics.uuid,
+            vuid = analytics.vuid,
             access_count = analytics.accessCount,
             first_accessed = analytics.firstAccessed,
             last_accessed = analytics.lastAccessed,
@@ -141,7 +137,7 @@ class SQLDelightVUIDRepository(
 
     override suspend fun updateAnalytics(analytics: VUIDAnalyticsDTO) = withContext(Dispatchers.Default) {
         analyticsQueries.insertAnalytics(
-            uuid = analytics.uuid,
+            vuid = analytics.vuid,
             access_count = analytics.accessCount,
             first_accessed = analytics.firstAccessed,
             last_accessed = analytics.lastAccessed,
@@ -153,7 +149,7 @@ class SQLDelightVUIDRepository(
     }
 
     override suspend fun getAnalyticsByUuid(uuid: String): VUIDAnalyticsDTO? = withContext(Dispatchers.Default) {
-        analyticsQueries.getAnalyticsByUuid(uuid).executeAsOneOrNull()?.toVUIDAnalyticsDTO()
+        analyticsQueries.getAnalyticsByVuid(uuid).executeAsOneOrNull()?.toVUIDAnalyticsDTO()
     }
 
     override suspend fun getAllAnalytics(): List<VUIDAnalyticsDTO> = withContext(Dispatchers.Default) {
@@ -183,7 +179,7 @@ class SQLDelightVUIDRepository(
             success_count = if (success) 1L else 0L,
             failure_count = if (success) 0L else 1L,
             last_accessed = timestamp,
-            uuid = uuid
+            vuid = uuid
         )
     }
 
@@ -192,7 +188,7 @@ class SQLDelightVUIDRepository(
     override suspend fun insertAlias(alias: VUIDAliasDTO) = withContext(Dispatchers.Default) {
         aliasQueries.insertAlias(
             alias = alias.alias,
-            uuid = alias.uuid,
+            vuid = alias.vuid,
             is_primary = if (alias.isPrimary) 1L else 0L,
             created_at = alias.createdAt
         )
@@ -203,7 +199,7 @@ class SQLDelightVUIDRepository(
     }
 
     override suspend fun deleteAliasesForUuid(uuid: String) = withContext(Dispatchers.Default) {
-        aliasQueries.deleteAliasesForUuid(uuid)
+        aliasQueries.deleteAliasesForVuid(uuid)
     }
 
     override suspend fun getAliasByName(alias: String): VUIDAliasDTO? = withContext(Dispatchers.Default) {
@@ -211,11 +207,11 @@ class SQLDelightVUIDRepository(
     }
 
     override suspend fun getAliasesForUuid(uuid: String): List<VUIDAliasDTO> = withContext(Dispatchers.Default) {
-        aliasQueries.getAliasesForUuid(uuid).executeAsList().map { it.toVUIDAliasDTO() }
+        aliasQueries.getAliasesForVuid(uuid).executeAsList().map { it.toVUIDAliasDTO() }
     }
 
     override suspend fun getUuidByAlias(alias: String): String? = withContext(Dispatchers.Default) {
-        aliasQueries.getUuidByAlias(alias).executeAsOneOrNull()
+        aliasQueries.getVuidByAlias(alias).executeAsOneOrNull()
     }
 
     override suspend fun aliasExists(alias: String): Boolean = withContext(Dispatchers.Default) {
@@ -226,32 +222,12 @@ class SQLDelightVUIDRepository(
         aliasQueries.getAllAliases().executeAsList().map { it.toVUIDAliasDTO() }
     }
 
-    /**
-     * Batch insert aliases in single transaction (PERFORMANCE OPTIMIZATION)
-     *
-     * Replaces N individual insertAlias() calls with single batch operation.
-     *
-     * **Performance Improvement:**
-     * - Before: N database operations (1 per alias)
-     * - After: 1 transaction with N inserts
-     * - 157x speedup for 63 elements (315 ops → 2 ops)
-     *
-     * **Algorithm:**
-     * 1. Start transaction
-     * 2. Insert all aliases in loop (batched in single transaction)
-     * 3. Commit transaction
-     *
-     * **Usage:**
-     * Used by UuidAliasManager.setAliasesBatch() for LearnApp element registration.
-     *
-     * @param aliases List of alias DTOs to insert
-     */
     override suspend fun insertAliasesBatch(aliases: List<VUIDAliasDTO>) = withContext(Dispatchers.Default) {
         database.transaction {
             aliases.forEach { alias ->
                 aliasQueries.insertAlias(
                     alias = alias.alias,
-                    uuid = alias.uuid,
+                    vuid = alias.vuid,
                     is_primary = if (alias.isPrimary) 1L else 0L,
                     created_at = alias.createdAt
                 )
@@ -263,13 +239,9 @@ class SQLDelightVUIDRepository(
 
     override suspend fun deleteAllElements() = withContext(Dispatchers.Default) {
         database.transaction {
-            // Delete all hierarchy first (FK constraint)
             hierarchyQueries.deleteAll()
-            // Delete all analytics (FK constraint)
             analyticsQueries.deleteAll()
-            // Delete all aliases (FK constraint)
             aliasQueries.deleteAll()
-            // Delete all elements
             elementQueries.deleteAll()
         }
     }
@@ -286,14 +258,52 @@ class SQLDelightVUIDRepository(
         aliasQueries.deleteAll()
     }
 
-    // ==================== Transaction Support ====================
-
-    /**
-     * Execute operations in a transaction.
-     */
     suspend fun <T> transaction(body: () -> T): T = withContext(Dispatchers.Default) {
         database.transactionWithResult {
             body()
         }
     }
 }
+
+// ==================== Extension Functions ====================
+
+private fun com.augmentalis.database.vuid.Vuid_elements.toVUIDElementDTO() = VUIDElementDTO(
+    vuid = vuid,
+    name = name,
+    type = type,
+    description = description,
+    parentVuid = parent_vuid,
+    isEnabled = is_enabled == 1L,
+    priority = priority.toInt(),
+    timestamp = timestamp,
+    metadataJson = metadata_json,
+    positionJson = position_json
+)
+
+private fun com.augmentalis.database.vuid.Vuid_hierarchy.toVUIDHierarchyDTO() = VUIDHierarchyDTO(
+    id = id,
+    parentVuid = parent_vuid,
+    childVuid = child_vuid,
+    depth = depth.toInt(),
+    path = path,
+    orderIndex = order_index.toInt()
+)
+
+private fun com.augmentalis.database.vuid.Vuid_analytics.toVUIDAnalyticsDTO() = VUIDAnalyticsDTO(
+    vuid = vuid,
+    accessCount = access_count,
+    firstAccessed = first_accessed,
+    lastAccessed = last_accessed,
+    executionTimeMs = execution_time_ms,
+    successCount = success_count,
+    failureCount = failure_count,
+    lifecycleState = lifecycle_state
+)
+
+private fun com.augmentalis.database.vuid.Vuid_aliases.toVUIDAliasDTO() = VUIDAliasDTO(
+    id = id,
+    alias = alias,
+    vuid = vuid,
+    isPrimary = is_primary == 1L,
+    createdAt = created_at
+)

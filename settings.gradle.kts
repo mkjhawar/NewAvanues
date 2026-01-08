@@ -24,6 +24,10 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+        // Azure Cognitive Services Speech SDK
+        maven("https://csspeechstorage.blob.core.windows.net/maven/")
+        // Vosk (AlphaCephei) Speech Recognition
+        maven("https://alphacephei.com/maven/")
     }
 }
 
@@ -42,6 +46,12 @@ include(":Modules:AVA:Overlay")
 include(":Modules:AVA:RAG")
 include(":Modules:AVA:Teach")
 include(":Modules:AVA:WakeWord")
+
+// Common Libraries (cross-platform KMP)
+include(":Common:VUID")                   // Voice Unique Identifier generator (shared across all modules)
+
+// VoiceOSCoreNG - Next-generation KMP core for VoiceOS
+include(":Modules:VoiceOSCoreNG")          // KMP types, VUID, features (shared Android/iOS/Desktop)
 
 // Shared Modules (cross-platform KMP libraries)
 include(":Modules:Shared:NLU")
@@ -79,8 +89,8 @@ include(":Modules:VoiceOS:managers:LocalizationManager")
 
 // VoiceOS Libraries
 include(":Modules:VoiceOS:libraries:DeviceManager")
-include(":Modules:VoiceOS:libraries:JITLearning")  // JIT learning service with AIDL interface
-include(":Modules:VoiceOS:libraries:LearnAppCore")  // Shared business logic for JIT and LearnApp
+include(":Modules:VoiceOS:libraries:JITLearning")  // ⚠️ DEPRECATED (2026-01-06): Use VoiceOSCoreNG
+include(":Modules:VoiceOS:libraries:LearnAppCore")  // ⚠️ DEPRECATED (2026-01-06): Use VoiceOSCoreNG
 include(":Modules:VoiceOS:libraries:PluginSystem")
 include(":Modules:VoiceOS:libraries:SpeechRecognition")
 include(":Modules:VoiceOS:libraries:Translation")
@@ -139,5 +149,6 @@ include(":Modules:AVAMagic:AVAUI:Renderers:iOS")        // iOS SwiftUI renderer 
 include(":Modules:AVAMagic:AVAUI:Renderers:Desktop")    // Desktop Compose renderer
 include(":Modules:AVAMagic:AVAUI:Renderers:Web")        // Web React renderer
 
-// Android App
+// Android Apps
 include(":android:apps:webavanue")
+include(":android:apps:voiceoscoreng")  // VoiceOSCoreNG test app

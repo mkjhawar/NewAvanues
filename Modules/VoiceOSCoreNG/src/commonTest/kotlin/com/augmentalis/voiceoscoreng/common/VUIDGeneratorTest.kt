@@ -423,4 +423,154 @@ class VUIDGeneratorTest {
 
         assertEquals("a3f2e1-b917cc9dc", components.toVUID())
     }
+
+    // ==================== Legacy Format Detection Tests ====================
+
+    @Test
+    fun `isLegacyUuid detects valid UUID v4 format`() {
+        assertTrue(VUIDGenerator.isLegacyUuid("550e8400-e29b-41d4-a716-446655440000"))
+        assertTrue(VUIDGenerator.isLegacyUuid("a1b2c3d4-e5f6-4789-8abc-def012345678"))
+    }
+
+    @Test
+    fun `isLegacyUuid rejects non-UUID formats`() {
+        assertFalse(VUIDGenerator.isLegacyUuid("a3f2e1-b917cc9dc")) // Compact VUID
+        assertFalse(VUIDGenerator.isLegacyUuid("ava:msg:a7f3e2c1")) // Simple format
+        assertFalse(VUIDGenerator.isLegacyUuid("not-a-uuid"))
+        assertFalse(VUIDGenerator.isLegacyUuid(""))
+    }
+
+    @Test
+    fun `isLegacyVoiceOS detects valid legacy VoiceOS format`() {
+        assertTrue(VUIDGenerator.isLegacyVoiceOS("com.instagram.android.v12.0.0.button-a7f3e2c1d4b5"))
+        assertTrue(VUIDGenerator.isLegacyVoiceOS("com.example.app.v1.0.0.input-123456789abc"))
+    }
+
+    @Test
+    fun `isLegacyVoiceOS rejects non-VoiceOS formats`() {
+        assertFalse(VUIDGenerator.isLegacyVoiceOS("a3f2e1-b917cc9dc")) // Compact VUID
+        assertFalse(VUIDGenerator.isLegacyVoiceOS("ava:msg:a7f3e2c1")) // Simple format
+        assertFalse(VUIDGenerator.isLegacyVoiceOS("not-a-voiceos-format"))
+        assertFalse(VUIDGenerator.isLegacyVoiceOS(""))
+    }
+
+    @Test
+    fun `isValid accepts all valid VUID formats`() {
+        // Compact format
+        assertTrue(VUIDGenerator.isValid("a3f2e1-b917cc9dc"))
+        // Simple format
+        assertTrue(VUIDGenerator.isValid("ava:msg:a7f3e2c1"))
+        // Legacy UUID
+        assertTrue(VUIDGenerator.isValid("550e8400-e29b-41d4-a716-446655440000"))
+        // Legacy VoiceOS
+        assertTrue(VUIDGenerator.isValid("com.instagram.android.v12.0.0.button-a7f3e2c1d4b5"))
+    }
+
+    @Test
+    fun `isValid rejects invalid formats`() {
+        assertFalse(VUIDGenerator.isValid("invalid"))
+        assertFalse(VUIDGenerator.isValid(""))
+        assertFalse(VUIDGenerator.isValid("not-any-valid-format"))
+    }
+
+    // ==================== Migration Utilities Tests ====================
+
+    @Test
+    fun `detectFormat correctly identifies compact format`() {
+        assertEquals(
+            VUIDGenerator.VuidFormat.COMPACT,
+            VUIDGenerator.detectFormat("a3f2e1-b917cc9dc")
+        )
+    }
+
+    @Test
+    fun `detectFormat correctly identifies simple format`() {
+        assertEquals(
+            VUIDGenerator.VuidFormat.SIMPLE,
+            VUIDGenerator.detectFormat("ava:msg:a7f3e2c1")
+        )
+    }
+
+    @Test
+    fun `detectFormat correctly identifies legacy UUID format`() {
+        assertEquals(
+            VUIDGenerator.VuidFormat.LEGACY_UUID,
+            VUIDGenerator.detectFormat("550e8400-e29b-41d4-a716-446655440000")
+        )
+    }
+
+    @Test
+    fun `detectFormat correctly identifies legacy VoiceOS format`() {
+        assertEquals(
+            VUIDGenerator.VuidFormat.LEGACY_VOICEOS,
+            VUIDGenerator.detectFormat("com.instagram.android.v12.0.0.button-a7f3e2c1d4b5")
+        )
+    }
+
+    @Test
+    fun `detectFormat returns UNKNOWN for invalid formats`() {
+        assertEquals(
+            VUIDGenerator.VuidFormat.UNKNOWN,
+            VUIDGenerator.detectFormat("invalid-format")
+        )
+    }
+
+    @Test
+    fun `migrateToCompact converts legacy VoiceOS format`() {
+        val legacy = "com.instagram.android.v12.0.0.button-a7f3e2c1d4b5"
+        val compact = VUIDGenerator.migrateToCompact(legacy)
+
+        assertNotNull(compact)
+        assertTrue(VUIDGenerator.isValidVUID(compact!!))
+        // Type code should be 'b' for button
+        assertEquals('b', compact.split("-")[1][0])
+        // Hash should be preserved (first 8 chars)
+        assertTrue(compact.endsWith("a7f3e2c1"))
+    }
+
+    @Test
+    fun `migrateToCompact returns null for non-VoiceOS formats`() {
+        assertNull(VUIDGenerator.migrateToCompact("a3f2e1-b917cc9dc")) // Already compact
+        assertNull(VUIDGenerator.migrateToCompact("ava:msg:a7f3e2c1")) // Simple format
+        assertNull(VUIDGenerator.migrateToCompact("invalid"))
+    }
+
+    @Test
+    fun `extractHash returns correct hash for all formats`() {
+        // Compact format
+        assertEquals("917cc9dc", VUIDGenerator.extractHash("a3f2e1-b917cc9dc"))
+        // Simple format
+        assertEquals("a7f3e2c1", VUIDGenerator.extractHash("ava:msg:a7f3e2c1"))
+        // Legacy UUID - last 8 chars of UUID without hyphens
+        assertEquals("55440000", VUIDGenerator.extractHash("550e8400-e29b-41d4-a716-446655440000"))
+        // Legacy VoiceOS
+        assertEquals("a7f3e2c1", VUIDGenerator.extractHash("com.instagram.android.v12.0.0.button-a7f3e2c1d4b5"))
+    }
+
+    @Test
+    fun `extractHash returns null for unknown formats`() {
+        assertNull(VUIDGenerator.extractHash("invalid-format"))
+        assertNull(VUIDGenerator.extractHash(""))
+    }
+
+    // ==================== Simple Format Tests ====================
+
+    @Test
+    fun `generateSimple creates valid simple format VUID`() {
+        val vuid = VUIDGenerator.generateSimple(VUIDModule.AVA, VUIDTypeCode.ELEMENT)
+
+        assertTrue(VUIDGenerator.isSimpleFormat(vuid))
+        assertTrue(vuid.startsWith("ava:elm:"))
+    }
+
+    @Test
+    fun `isSimpleFormat validates simple format correctly`() {
+        assertTrue(VUIDGenerator.isSimpleFormat("ava:msg:a7f3e2c1"))
+        assertTrue(VUIDGenerator.isSimpleFormat("vos:btn:12345678"))
+        assertTrue(VUIDGenerator.isSimpleFormat("web:tab:abcdef00"))
+
+        assertFalse(VUIDGenerator.isSimpleFormat("a3f2e1-b917cc9dc")) // Compact
+        assertFalse(VUIDGenerator.isSimpleFormat("invalid"))
+        assertFalse(VUIDGenerator.isSimpleFormat(""))
+    }
 }

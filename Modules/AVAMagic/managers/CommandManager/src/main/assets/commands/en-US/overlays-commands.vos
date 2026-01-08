@@ -1,0 +1,49 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "overlays-commands.vos",
+    "category": "overlays",
+    "display_name": "Overlay Controls",
+    "description": "Voice commands for managing screen overlays and hints",
+    "command_count": 7
+  },
+  "locale": "en-US",
+  "commands": [
+    {
+      "action": "SHOW_NUMBER",
+      "cmd": "show number",
+      "syn": ["show numbers", "show hint", "display numbers", "numbers visible", "reveal numbers", "show hints", "display hints", "hints visible", "reveal hints", "number overlay", "display number overlay", "show number overlay", "numbers on", "hints on"]
+    },
+    {
+      "action": "HIDE_NUMBER",
+      "cmd": "hide number",
+      "syn": ["hide numbers", "hide hint", "conceal numbers", "numbers hidden", "remove numbers", "hide hints", "conceal hints", "hints hidden", "remove hints", "clear overlay", "numbers off", "hints off", "remove overlay", "number overlay off"]
+    },
+    {
+      "action": "SHOW_HELP",
+      "cmd": "show help",
+      "syn": ["display help", "help", "assistance", "support", "guide", "tutorial", "instructions", "help menu", "user guide", "manual", "how to", "show assistance", "display support", "get help"]
+    },
+    {
+      "action": "HIDE_HELP",
+      "cmd": "hide help",
+      "syn": ["close help", "dismiss help", "assistance close", "support hide", "exit help", "help away", "remove help", "help off", "help invisible", "help gone", "close guide", "exit tutorial", "close assistance", "dismiss support"]
+    },
+    {
+      "action": "SHOW_COMMAND",
+      "cmd": "show commands",
+      "syn": ["show command", "display commands", "command list", "commands visible", "reveal commands", "command menu", "voice commands", "available commands", "command help", "command guide", "show voice commands", "display voice commands", "list commands", "command options"]
+    },
+    {
+      "action": "HIDE_COMMAND",
+      "cmd": "hide commands",
+      "syn": ["hide command", "conceal commands", "commands hidden", "remove commands", "command away", "commands off", "commands invisible", "commands gone", "close commands", "dismiss commands", "command menu off", "voice commands off", "hide command list", "close command menu"]
+    },
+    {
+      "action": "SCAN_COMMANDS",
+      "cmd": "scan commands",
+      "syn": ["search commands", "find commands", "look for commands", "command search", "command scan", "detect commands", "identify commands", "discover commands", "explore commands", "review commands", "browse commands", "examine commands", "check commands", "locate commands"]
+    }
+  ]
+}

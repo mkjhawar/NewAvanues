@@ -1,5 +1,5 @@
 package com.augmentalis.voiceoscoreng.common
-
+import com.augmentalis.voiceoscoreng.common.Bounds
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

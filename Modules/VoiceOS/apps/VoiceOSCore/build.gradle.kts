@@ -240,9 +240,15 @@ dependencies {
     implementation(project(":Modules:VoiceOS:apps:VoiceCursor"))
     implementation(project(":Modules:VoiceOS:libraries:UUIDCreator"))
 
-    // JIT-LearnApp Separation (2025-12-11)
-    implementation(project(":Modules:VoiceOS:libraries:JITLearning"))      // JIT service with AIDL
-    implementation(project(":Modules:VoiceOS:libraries:LearnAppCore"))     // Shared business logic
+    // VoiceOSCoreNG - Next-gen unified core (KMP)
+    // Consolidates JITLearning + LearnAppCore + learnapp/ into single cross-platform module
+    implementation(project(":Modules:VoiceOSCoreNG"))
+
+    // DEPRECATED (2026-01-06) - Use VoiceOSCoreNG instead
+    // These modules remain for backwards compatibility during migration
+    // See DEPRECATED.md in each module for migration guide
+    implementation(project(":Modules:VoiceOS:libraries:JITLearning"))      // ⚠️ DEPRECATED: Use VoiceOSCoreNG
+    implementation(project(":Modules:VoiceOS:libraries:LearnAppCore"))     // ⚠️ DEPRECATED: Use VoiceOSCoreNG
 
     // LearnApp dependencies merged (2025-11-24)
     implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))      // From LearnApp

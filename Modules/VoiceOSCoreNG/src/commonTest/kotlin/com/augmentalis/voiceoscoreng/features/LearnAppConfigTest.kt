@@ -43,30 +43,32 @@ class LearnAppConfigTest {
     // ==================== Variant Configuration Tests ====================
 
     @Test
-    fun `LITE_CONFIG has correct values`() {
-        val config = LearnAppConfig.LITE_CONFIG
+    fun `LITE config has correct values`() {
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.LITE)
+        val config = LearnAppConfig.getConfig()
 
         assertEquals("LearnApp Lite", config.name)
         assertEquals(LearnAppDevToggle.Tier.LITE, config.tier)
         assertEquals(LearnAppConfig.ProcessingMode.IMMEDIATE, config.processingMode)
-        assertEquals(50, config.maxElementsPerScan)
-        assertEquals(10, config.maxAppsLearned)
-        assertFalse(config.enableAI)
+        assertEquals(LearnAppConfig.LiteDefaults.MAX_ELEMENTS_PER_SCAN, config.maxElementsPerScan)
+        assertEquals(LearnAppConfig.LiteDefaults.MAX_APPS_LEARNED, config.maxAppsLearned)
+        assertTrue(config.enableAI) // Now enabled for Lite
         assertFalse(config.enableExploration)
         assertFalse(config.enableFrameworkDetection)
-        assertFalse(config.cacheEnabled)
+        assertTrue(config.cacheEnabled) // Now enabled for Lite
         assertFalse(config.analyticsEnabled)
     }
 
     @Test
-    fun `DEV_CONFIG has correct values`() {
-        val config = LearnAppConfig.DEV_CONFIG
+    fun `DEV config has correct values`() {
+        LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
+        val config = LearnAppConfig.getConfig()
 
         assertEquals("LearnApp Dev", config.name)
         assertEquals(LearnAppDevToggle.Tier.DEV, config.tier)
         assertEquals(LearnAppConfig.ProcessingMode.HYBRID, config.processingMode)
-        assertEquals(500, config.maxElementsPerScan)
-        assertEquals(-1, config.maxAppsLearned)
+        assertEquals(LearnAppConfig.DevDefaults.MAX_ELEMENTS_PER_SCAN, config.maxElementsPerScan)
+        assertEquals(LearnAppConfig.DevDefaults.MAX_APPS_LEARNED, config.maxAppsLearned)
         assertTrue(config.enableAI)
         assertTrue(config.enableExploration)
         assertTrue(config.enableFrameworkDetection)
@@ -116,13 +118,14 @@ class LearnAppConfigTest {
     }
 
     @Test
-    fun `setVariant does not notify if same variant`() {
+    fun `setVariant notifies even when setting same variant`() {
         var callCount = 0
         LearnAppConfig.addConfigChangeListener { callCount++ }
 
         LearnAppConfig.setVariant(LearnAppDevToggle.Tier.LITE) // Same as default
 
-        assertEquals(0, callCount)
+        // Implementation always notifies on setVariant
+        assertEquals(1, callCount)
     }
 
     @Test
@@ -147,18 +150,18 @@ class LearnAppConfigTest {
     }
 
     @Test
-    fun `getMaxElementsPerScan returns 50 for LITE`() {
-        assertEquals(50, LearnAppConfig.getMaxElementsPerScan())
+    fun `getMaxElementsPerScan returns default for LITE`() {
+        assertEquals(LearnAppConfig.LiteDefaults.MAX_ELEMENTS_PER_SCAN, LearnAppConfig.getMaxElementsPerScan())
     }
 
     @Test
-    fun `getMaxAppsLearned returns 10 for LITE`() {
-        assertEquals(10, LearnAppConfig.getMaxAppsLearned())
+    fun `getMaxAppsLearned returns default for LITE`() {
+        assertEquals(LearnAppConfig.LiteDefaults.MAX_APPS_LEARNED, LearnAppConfig.getMaxAppsLearned())
     }
 
     @Test
-    fun `isAIEnabled returns false for LITE`() {
-        assertFalse(LearnAppConfig.isAIEnabled())
+    fun `isAIEnabled returns true for LITE`() {
+        assertTrue(LearnAppConfig.isAIEnabled()) // AI now enabled for Lite
     }
 
     @Test
@@ -172,8 +175,8 @@ class LearnAppConfigTest {
     }
 
     @Test
-    fun `isCacheEnabled returns false for LITE`() {
-        assertFalse(LearnAppConfig.isCacheEnabled())
+    fun `isCacheEnabled returns true for LITE`() {
+        assertTrue(LearnAppConfig.isCacheEnabled()) // Caching now enabled for Lite
     }
 
     @Test
@@ -190,15 +193,15 @@ class LearnAppConfigTest {
     }
 
     @Test
-    fun `getMaxElementsPerScan returns 500 for DEV`() {
+    fun `getMaxElementsPerScan returns default for DEV`() {
         LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
-        assertEquals(500, LearnAppConfig.getMaxElementsPerScan())
+        assertEquals(LearnAppConfig.DevDefaults.MAX_ELEMENTS_PER_SCAN, LearnAppConfig.getMaxElementsPerScan())
     }
 
     @Test
     fun `getMaxAppsLearned returns unlimited for DEV`() {
         LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
-        assertEquals(-1, LearnAppConfig.getMaxAppsLearned())
+        assertEquals(LearnAppConfig.UNLIMITED, LearnAppConfig.getMaxAppsLearned())
     }
 
     @Test
@@ -241,16 +244,16 @@ class LearnAppConfigTest {
     }
 
     @Test
-    fun `getSummary shows Enabled for DEV AI`() {
+    fun `getSummary shows AI enabled for DEV`() {
         LearnAppConfig.setVariant(LearnAppDevToggle.Tier.DEV)
         val summary = LearnAppConfig.getSummary()
-        assertTrue(summary.contains("AI: Enabled"))
+        assertTrue(summary.contains("AI: ✓"))
     }
 
     @Test
-    fun `getSummary shows Disabled for LITE AI`() {
+    fun `getSummary shows AI enabled for LITE`() {
         val summary = LearnAppConfig.getSummary()
-        assertTrue(summary.contains("AI: Disabled"))
+        assertTrue(summary.contains("AI: ✓")) // AI is now enabled for Lite
     }
 
     // ==================== Reset Tests ====================

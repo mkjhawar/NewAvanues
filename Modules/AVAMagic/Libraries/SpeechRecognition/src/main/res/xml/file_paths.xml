@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Path for speech recognition model files -->
+    <files-path 
+        name="speech_models" 
+        path="speech_models/" />
+    
+    <!-- Path for VSDK files -->
+    <files-path 
+        name="vsdk" 
+        path="vsdk/" />
+    
+    <!-- Path for VOSK models -->
+    <files-path 
+        name="vosk_models" 
+        path="vosk_models/" />
+    
+    <!-- Path for temporary audio recordings -->
+    <cache-path 
+        name="audio_temp" 
+        path="audio/" />
+    
+    <!-- Path for exported data -->
+    <external-files-path 
+        name="exports" 
+        path="exports/" />
+</paths>

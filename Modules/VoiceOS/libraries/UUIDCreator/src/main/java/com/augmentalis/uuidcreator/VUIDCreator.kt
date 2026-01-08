@@ -1,59 +1,60 @@
+/**
+ * VUIDCreator.kt - Core VUID management class
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ * Author: VoiceOS Development Team
+ * Created: 2025-12-27
+ *
+ * Provides VUID (VoiceUniqueID) generation, element registration,
+ * and targeting for voice-controlled UI interaction.
+ */
 package com.augmentalis.uuidcreator
 
 import android.content.Context
-import android.util.Log
-import com.augmentalis.database.DatabaseDriverFactory
-import com.augmentalis.database.VoiceOSDatabaseManager
-import com.augmentalis.uuidcreator.api.IVUIDManager
-import com.augmentalis.uuidcreator.core.*
-import com.augmentalis.uuidcreator.database.repository.SQLDelightVUIDRepositoryAdapter
-import com.augmentalis.uuidcreator.models.*
-import com.augmentalis.uuidcreator.targeting.TargetResolver
-import com.augmentalis.uuidcreator.spatial.SpatialNavigator
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import com.augmentalis.uuidcreator.core.VUIDGenerator
+import com.augmentalis.uuidcreator.models.VUIDCommandResult
+import com.augmentalis.uuidcreator.models.VUIDElement
+import com.augmentalis.uuidcreator.models.VUIDPosition
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Main VUIDCreator library class
- * Voice Unique Identifier System for Voice & Spatial UI Control
+ * Core VUID management class for VoiceOS.
  *
- * Framework-agnostic VUID management with SQLDelight persistence
+ * Manages UI elements with voice-compatible unique identifiers,
+ * providing registration, lookup, and command execution capabilities.
  *
- * @property context Application context for database
+ * Features:
+ * - Element registration with automatic VUID generation
+ * - Multi-index lookups (by VUID, name, type, position)
+ * - Spatial navigation (left, right, up, down)
+ * - Voice command processing
+ * - Thread-safe operations via ConcurrentHashMap
  */
-open class VUIDCreator(
-    private val context: Context
-) : IVUIDManager {
+class VUIDCreator private constructor() {
 
     companion object {
-        private const val TAG = "VUIDCreator"
-        private const val COMMAND_TIMEOUT = 5000L
-        private const val MAX_COMMAND_HISTORY = 100
-
-        /**
-         * Global singleton instance (requires initialization)
-         */
         @Volatile
-        private var INSTANCE: VUIDCreator? = null
+        private var instance: VUIDCreator? = null
+
+        @Volatile
+        private var applicationContext: Context? = null
 
         /**
-         * Initialize singleton instance
-         *
-         * Must be called before accessing instance property.
+         * Initialize VUIDCreator with application context.
+         * This should be called once during app startup.
          *
          * @param context Application context
          */
-        @JvmStatic
-        fun initialize(context: Context): VUIDCreator {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: VUIDCreator(context.applicationContext).also {
-                    INSTANCE = it
-                    // Trigger lazy loading in background
-                    CoroutineScope(Dispatchers.IO).launch {
-                        it.ensureLoaded()
+        fun initialize(context: Context) {
+            if (applicationContext == null) {
+                synchronized(this) {
+                    if (applicationContext == null) {
+                        applicationContext = context.applicationContext
+                        // Ensure instance is created
+                        getInstance()
                     }
                 }
             }
@@ -61,418 +62,396 @@ open class VUIDCreator(
 
         /**
          * Get singleton instance
-         *
-         * @throws IllegalStateException if not initialized
          */
-        @JvmStatic
         fun getInstance(): VUIDCreator {
-            return INSTANCE ?: throw IllegalStateException(
-                "VUIDCreator not initialized. Call VUIDCreator.initialize(context) first."
-            )
-        }
-
-        /**
-         * Quick static access methods
-         */
-        @JvmStatic
-        fun create(context: Context): VUIDCreator = VUIDCreator(context)
-
-        @JvmStatic
-        fun generate(): String = VUIDGenerator.generate()
-    }
-
-    // Database and repository (SQLDelight-based)
-    private val databaseManager = VoiceOSDatabaseManager.getInstance(DatabaseDriverFactory(context))
-    private val repository = SQLDelightVUIDRepositoryAdapter(databaseManager.uuids)
-
-    // Registry with hybrid storage
-    private val registry = VUIDRegistry(repository)
-    private val targetResolver = TargetResolver(registry)
-    private val spatialNavigator = SpatialNavigator(registry)
-
-    /**
-     * Flag indicating if database has been loaded
-     */
-    @Volatile
-    private var isLoaded = false
-
-    /**
-     * Mutex for thread-safe database loading
-     */
-    private val loadMutex = Mutex()
-
-    /**
-     * Ensure database cache is loaded
-     *
-     * Called automatically on first access. Subsequent calls are no-ops.
-     */
-    suspend fun ensureLoaded() {
-        if (!isLoaded) {
-            loadMutex.withLock {
-                if (!isLoaded) {
-                    repository.loadCache()
-                    isLoaded = true
-                    Log.d(TAG, "VUIDCreator database loaded: ${repository.getCount()} elements")
-                }
+            return instance ?: synchronized(this) {
+                instance ?: VUIDCreator().also { instance = it }
             }
         }
     }
-    
-    // Legacy state management from UIKitVoiceCommandSystem (lines 105-113)
-    private val registeredTargets = ConcurrentHashMap<String, VoiceTarget>()
-    private val commandHistory = mutableListOf<VoiceCommand>()
-    private val activeContext = MutableStateFlow<String?>(null)
-    
-    private val _commandEvents = MutableSharedFlow<VoiceCommand>()
-    val commandEvents: SharedFlow<VoiceCommand> = _commandEvents.asSharedFlow()
-    
-    private val _commandResults = MutableSharedFlow<CommandResult>()
-    val commandResults: SharedFlow<CommandResult> = _commandResults.asSharedFlow()
-    
+
+    // Primary storage
+    private val elements = ConcurrentHashMap<String, VUIDElement>()
+
+    // Indexes for fast lookups
+    private val nameIndex = ConcurrentHashMap<String, MutableSet<String>>()
+    private val typeIndex = ConcurrentHashMap<String, MutableSet<String>>()
+    private val hierarchyIndex = ConcurrentHashMap<String, MutableSet<String>>()
+
+    // Position-ordered list for positional targeting
+    private val orderedElements = mutableListOf<String>()
+
+    // Command events flow for observers
+    private val _commandEvents = MutableSharedFlow<VUIDCommandResult>()
+    val commandEvents: SharedFlow<VUIDCommandResult> = _commandEvents.asSharedFlow()
+
+    // ==================== Generation ====================
+
     /**
      * Generate a new VUID
      */
-    override fun generateVUID(): String = VUIDGenerator.generate()
-    
+    fun generateUUID(): String = VUIDGenerator.generate()
+
     /**
-     * Register an element with VUID
-     *
-     * Note: Uses Dispatchers.Unconfined in runBlocking to prevent thread starvation
-     * when called from coroutine contexts.
+     * Generate a new VUID (alias)
      */
-    override fun registerElement(element: VUIDElement): String {
-        return runBlocking(Dispatchers.Unconfined) {
-            registry.register(element)
+    fun generateVUID(): String = VUIDGenerator.generate()
+
+    // ==================== Registration ====================
+
+    /**
+     * Register an element
+     * @return The element's VUID
+     */
+    fun registerElement(element: VUIDElement): String {
+        elements[element.vuid] = element
+
+        // Index by name
+        element.name?.let { name ->
+            nameIndex.getOrPut(name.lowercase()) { mutableSetOf() }.add(element.vuid)
         }
+
+        // Index by type
+        typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.vuid)
+
+        // Index by parent
+        element.parent?.let { parent ->
+            hierarchyIndex.getOrPut(parent) { mutableSetOf() }.add(element.vuid)
+        }
+
+        // Add to ordered list
+        synchronized(orderedElements) {
+            orderedElements.add(element.vuid)
+        }
+
+        return element.vuid
     }
 
     /**
      * Unregister an element
-     *
-     * Note: Uses Dispatchers.Unconfined in runBlocking to prevent thread starvation
-     * when called from coroutine contexts.
+     * @return true if element was removed
      */
-    override fun unregisterElement(vuid: String): Boolean {
-        return runBlocking(Dispatchers.Unconfined) {
-            registry.unregister(vuid)
+    fun unregisterElement(vuid: String): Boolean {
+        val element = elements.remove(vuid) ?: return false
+
+        // Remove from name index
+        element.name?.let { name ->
+            nameIndex[name.lowercase()]?.remove(vuid)
         }
+
+        // Remove from type index
+        typeIndex[element.type.lowercase()]?.remove(vuid)
+
+        // Remove from hierarchy index
+        element.parent?.let { parent ->
+            hierarchyIndex[parent]?.remove(vuid)
+        }
+
+        // Remove from ordered list
+        synchronized(orderedElements) {
+            orderedElements.remove(vuid)
+        }
+
+        return true
     }
-    
+
+    // ==================== Lookups ====================
+
     /**
      * Find element by VUID
      */
-    override fun findByVUID(vuid: String): VUIDElement? = registry.findByVUID(vuid)
-    
+    fun findByUUID(vuid: String): VUIDElement? = elements[vuid]
+
     /**
      * Find elements by name
      */
-    override fun findByName(name: String): List<VUIDElement> = registry.findByName(name)
+    fun findByName(name: String): List<VUIDElement> {
+        val vuids = nameIndex[name.lowercase()] ?: return emptyList()
+        return vuids.mapNotNull { elements[it] }
+    }
 
     /**
      * Find elements by type
      */
-    override fun findByType(type: String): List<VUIDElement> = registry.findByType(type)
-    
-    /**
-     * Find element by position
-     */
-    override fun findByPosition(position: Int): VUIDElement? {
-        val result = spatialNavigator.navigateToPosition(position)
-        return result.target
+    fun findByType(type: String): List<VUIDElement> {
+        val vuids = typeIndex[type.lowercase()] ?: return emptyList()
+        return vuids.mapNotNull { elements[it] }
     }
-    
-    /**
-     * Find elements in direction
-     */
-    override fun findInDirection(fromVUID: String, direction: String): VUIDElement? {
-        val dir = when (direction.lowercase()) {
-            "left" -> SpatialNavigator.Direction.LEFT
-            "right" -> SpatialNavigator.Direction.RIGHT
-            "up" -> SpatialNavigator.Direction.UP
-            "down" -> SpatialNavigator.Direction.DOWN
-            "forward" -> SpatialNavigator.Direction.FORWARD
-            "backward" -> SpatialNavigator.Direction.BACKWARD
-            "next" -> SpatialNavigator.Direction.NEXT
-            "previous" -> SpatialNavigator.Direction.PREVIOUS
-            "first" -> SpatialNavigator.Direction.FIRST
-            "last" -> SpatialNavigator.Direction.LAST
-            else -> return null
-        }
 
-        val result = spatialNavigator.navigate(fromVUID, dir)
-        return result.target
-    }
-    
     /**
-     * Execute action on element
+     * Find element by position (1-indexed)
+     * @param position 1 = first, 2 = second, -1 = last
      */
-    override suspend fun executeAction(vuid: String, action: String, parameters: Map<String, Any>): Boolean {
-        val element = registry.findByVUID(vuid) ?: return false
-        
-        if (!element.isEnabled) return false
-        
-        val actionHandler = element.actions[action] ?: element.actions["default"] ?: return false
-        
-        return try {
-            withTimeout(5000L) {
-                actionHandler(parameters)
-                true
-            }
-        } catch (e: Exception) {
-            false
-        }
-    }
-    
-    /**
-     * Process voice command
-     */
-    override suspend fun processVoiceCommand(command: String): VUIDCommandResult {
-        val startTime = System.currentTimeMillis()
+    fun findByPosition(position: Int): VUIDElement? {
+        synchronized(orderedElements) {
+            if (orderedElements.isEmpty()) return null
 
-        try {
-            val parsedCommand = parseVoiceCommand(command)
-            val targetResult = targetResolver.resolve(parsedCommand.targetRequest)
-
-            if (targetResult.elements.isEmpty()) {
-                return VUIDCommandResult(
-                    success = false,
-                    message = "No matching elements found",
-                    executionTime = System.currentTimeMillis() - startTime
-                )
+            val index = when {
+                position > 0 -> position - 1
+                position < 0 -> orderedElements.size + position
+                else -> return null
             }
 
-            // Execute on first matching element (highest priority)
-            val target = targetResult.elements.first()
-            val success = executeAction(target.vuid, parsedCommand.action, parsedCommand.parameters)
+            if (index < 0 || index >= orderedElements.size) return null
 
-            return VUIDCommandResult(
-                success = success,
-                targetVUID = target.vuid,
-                action = parsedCommand.action,
-                message = if (success) "Command executed successfully" else "Command execution failed",
-                executionTime = System.currentTimeMillis() - startTime
-            )
-
-        } catch (e: Exception) {
-            return VUIDCommandResult(
-                success = false,
-                error = e.message,
-                executionTime = System.currentTimeMillis() - startTime
-            )
+            return elements[orderedElements[index]]
         }
     }
-    
+
     /**
-     * Get all registered elements
+     * Find element in direction from current element
      */
-    override fun getAllElements(): List<VUIDElement> = registry.getAllElements()
-    
-    /**
-     * Clear all registrations
-     *
-     * Note: Uses Dispatchers.Unconfined in runBlocking to prevent thread starvation
-     * when called from coroutine contexts.
-     */
-    override fun clearAll() {
-        runBlocking(Dispatchers.Unconfined) {
-            registry.clear()
+    fun findInDirection(fromVuid: String, direction: String): VUIDElement? {
+        val current = elements[fromVuid] ?: return null
+        val currentPos = current.position ?: return null
+
+        return when (direction.lowercase()) {
+            "left" -> findNearestInDirection(currentPos.x, currentPos.y, -1, 0)
+            "right" -> findNearestInDirection(currentPos.x, currentPos.y, 1, 0)
+            "up" -> findNearestInDirection(currentPos.x, currentPos.y, 0, -1)
+            "down" -> findNearestInDirection(currentPos.x, currentPos.y, 0, 1)
+            "next" -> findByRelativePosition(fromVuid, 1)
+            "previous" -> findByRelativePosition(fromVuid, -1)
+            "first" -> findByPosition(1)
+            "last" -> findByPosition(-1)
+            else -> null
         }
     }
-    
+
+    private fun findNearestInDirection(x: Float, y: Float, dx: Int, dy: Int): VUIDElement? {
+        var nearest: VUIDElement? = null
+        var minDistance = Float.MAX_VALUE
+
+        for (element in elements.values) {
+            val pos = element.position ?: continue
+
+            val inDirection = when {
+                dx < 0 -> pos.x < x
+                dx > 0 -> pos.x > x
+                dy < 0 -> pos.y < y
+                dy > 0 -> pos.y > y
+                else -> false
+            }
+
+            if (inDirection) {
+                val distance = kotlin.math.abs(pos.x - x) + kotlin.math.abs(pos.y - y)
+                if (distance < minDistance) {
+                    minDistance = distance
+                    nearest = element
+                }
+            }
+        }
+
+        return nearest
+    }
+
+    private fun findByRelativePosition(fromVuid: String, offset: Int): VUIDElement? {
+        synchronized(orderedElements) {
+            val currentIndex = orderedElements.indexOf(fromVuid)
+            if (currentIndex < 0) return null
+
+            val newIndex = currentIndex + offset
+            if (newIndex < 0 || newIndex >= orderedElements.size) return null
+
+            return elements[orderedElements[newIndex]]
+        }
+    }
+
     /**
-     * Create element with VUID
+     * Get all elements
      */
-    fun createElement(
-        name: String? = null,
-        type: String = "unknown",
+    fun getAllElements(): List<VUIDElement> = elements.values.toList()
+
+    /**
+     * Navigate to element in direction
+     */
+    fun navigate(fromVuid: String, direction: String): VUIDElement? {
+        return findInDirection(fromVuid, direction)
+    }
+
+    /**
+     * Register element with auto-generated VUID
+     */
+    fun registerWithAutoVUID(
+        name: String,
+        type: String,
         position: VUIDPosition? = null,
         actions: Map<String, (Map<String, Any>) -> Unit> = emptyMap()
-    ): VUIDElement {
-        return VUIDElement(
-            vuid = generateVUID(),
+    ): String {
+        val element = VUIDElement(
             name = name,
             type = type,
             position = position,
             actions = actions
         )
-    }
-
-    /**
-     * Register element with automatic VUID generation
-     */
-    fun registerWithAutoVUID(
-        name: String? = null,
-        type: String = "unknown",
-        position: VUIDPosition? = null,
-        actions: Map<String, (Map<String, Any>) -> Unit> = emptyMap()
-    ): String {
-        val element = createElement(name, type, position, actions)
         return registerElement(element)
     }
 
-    // ===== BACKWARD COMPATIBILITY METHODS =====
+    // ==================== Actions ====================
 
     /**
-     * Generate UUID (deprecated, use generateVUID)
-     * @deprecated Use generateVUID instead
+     * Execute action on element
      */
-    @Suppress("DEPRECATION")
-    @Deprecated("Use generateVUID instead", ReplaceWith("generateVUID()"))
-    fun generateUUID(): String = generateVUID()
+    suspend fun executeAction(vuid: String, action: String, parameters: Map<String, Any>): Boolean {
+        val element = elements[vuid] ?: return false
+        return element.executeAction(action, parameters)
+    }
 
     /**
-     * Register with auto UUID (deprecated, use registerWithAutoVUID)
-     * @deprecated Use registerWithAutoVUID instead
+     * Process voice command
      */
-    @Suppress("DEPRECATION")
-    @Deprecated("Use registerWithAutoVUID instead", ReplaceWith("registerWithAutoVUID(name, type, position, actions)"))
-    fun registerWithAutoUUID(
-        name: String? = null,
-        type: String = "unknown",
-        position: VUIDPosition? = null,
-        actions: Map<String, (Map<String, Any>) -> Unit> = emptyMap()
-    ): String = registerWithAutoVUID(name, type, position, actions)
+    suspend fun processVoiceCommand(command: String): VUIDCommandResult {
+        val startTime = System.currentTimeMillis()
+        val words = command.lowercase().split(" ")
+
+        return try {
+            when {
+                words.contains("click") -> processClickCommand(words, startTime)
+                words.contains("select") -> processSelectCommand(words, startTime)
+                words.contains("go") || words.contains("move") -> processMoveCommand(words, startTime)
+                else -> VUIDCommandResult(
+                    success = false,
+                    error = "Unrecognized command: $command",
+                    executionTime = System.currentTimeMillis() - startTime
+                )
+            }
+        } catch (e: Exception) {
+            VUIDCommandResult(
+                success = false,
+                error = e.message ?: "Unknown error",
+                executionTime = System.currentTimeMillis() - startTime
+            )
+        }
+    }
+
+    private suspend fun processClickCommand(words: List<String>, startTime: Long): VUIDCommandResult {
+        // Extract target name after "click"
+        val clickIndex = words.indexOf("click")
+        val targetName = words.drop(clickIndex + 1).joinToString(" ")
+
+        val elements = findByName(targetName)
+        if (elements.isEmpty()) {
+            return VUIDCommandResult(
+                success = false,
+                error = "No element found with name: $targetName",
+                executionTime = System.currentTimeMillis() - startTime
+            )
+        }
+
+        val target = elements.first()
+        val success = target.executeAction("click")
+
+        return VUIDCommandResult(
+            success = success,
+            targetVUID = target.vuid,
+            action = "click",
+            message = if (success) "Clicked ${target.name}" else "Click failed",
+            executionTime = System.currentTimeMillis() - startTime
+        )
+    }
+
+    private fun processSelectCommand(words: List<String>, startTime: Long): VUIDCommandResult {
+        val position = when {
+            words.contains("first") -> 1
+            words.contains("second") -> 2
+            words.contains("third") -> 3
+            words.contains("fourth") -> 4
+            words.contains("fifth") -> 5
+            words.contains("last") -> -1
+            else -> words.find { it.toIntOrNull() != null }?.toInt() ?: 1
+        }
+
+        val element = findByPosition(position)
+            ?: return VUIDCommandResult(
+                success = false,
+                error = "No element at position $position",
+                executionTime = System.currentTimeMillis() - startTime
+            )
+
+        return VUIDCommandResult(
+            success = true,
+            targetVUID = element.vuid,
+            action = "select",
+            message = "Selected ${element.name ?: element.type} at position $position",
+            executionTime = System.currentTimeMillis() - startTime
+        )
+    }
+
+    private fun processMoveCommand(words: List<String>, startTime: Long): VUIDCommandResult {
+        val direction = words.find { it in listOf("left", "right", "up", "down", "next", "previous") }
+            ?: return VUIDCommandResult(
+                success = false,
+                error = "No direction specified",
+                executionTime = System.currentTimeMillis() - startTime
+            )
+
+        // Use first element as starting point if no current focus
+        val fromVuid = orderedElements.firstOrNull()
+            ?: return VUIDCommandResult(
+                success = false,
+                error = "No elements registered",
+                executionTime = System.currentTimeMillis() - startTime
+            )
+
+        val target = findInDirection(fromVuid, direction)
+            ?: return VUIDCommandResult(
+                success = false,
+                error = "No element found in direction: $direction",
+                executionTime = System.currentTimeMillis() - startTime
+            )
+
+        return VUIDCommandResult(
+            success = true,
+            targetVUID = target.vuid,
+            action = "move",
+            message = "Moved $direction to ${target.name ?: target.type}",
+            executionTime = System.currentTimeMillis() - startTime
+        )
+    }
+
+    // ==================== Stats ====================
 
     /**
-     * Find by UUID (deprecated, use findByVUID)
-     * @deprecated Use findByVUID instead
+     * Registry statistics
      */
-    @Suppress("DEPRECATION")
-    @Deprecated("Use findByVUID instead", ReplaceWith("findByVUID(uuid)"))
-    fun findByUUID(uuid: String): VUIDElement? = findByVUID(uuid)
-    
+    data class Stats(
+        val totalElements: Int,
+        val enabledElements: Int,
+        val typeBreakdown: Map<String, Int>,
+        val nameIndexSize: Int,
+        val hierarchyIndexSize: Int
+    )
+
     /**
      * Get registry statistics
      */
-    fun getStats(): RegistryStats = registry.getStats()
-    
-    /**
-     * Navigate spatially
-     */
-    fun navigate(fromVUID: String, direction: String): VUIDElement? = findInDirection(fromVUID, direction)
+    fun getStats(): Stats {
+        val typeBreakdown = mutableMapOf<String, Int>()
+        for ((type, vuids) in typeIndex) {
+            typeBreakdown[type] = vuids.size
+        }
 
-    /**
-     * Find nearest element
-     */
-    fun findNearest(fromVUID: String): VUIDElement? {
-        return spatialNavigator.findNearest(fromVUID)?.target
-    }
-    
-    /**
-     * Parse voice command into structured request
-     */
-    private fun parseVoiceCommand(command: String): ParsedCommand {
-        val normalizedCommand = command.lowercase().trim()
-        
-        // Direct VUID patterns
-        val vuidPattern = Regex("(click|select|focus)\\s+(?:element\\s+)?(?:with\\s+)?(?:vuid|uuid)[\\s-]+([a-zA-Z0-9-]+)")
-        vuidPattern.find(normalizedCommand)?.let { match ->
-            return ParsedCommand(
-                action = match.groupValues[1],
-                targetRequest = TargetResolver.TargetRequest(TargetResolver.TargetType.UUID, match.groupValues[2])
-            )
-        }
-        
-        // Position patterns
-        val positionPattern = Regex("(select|click)\\s+(first|second|third|fourth|fifth|last|\\d+)")
-        positionPattern.find(normalizedCommand)?.let { match ->
-            val positionText = match.groupValues[2]
-            val position = when (positionText) {
-                "first" -> 1
-                "second" -> 2
-                "third" -> 3
-                "fourth" -> 4
-                "fifth" -> 5
-                "last" -> -1
-                else -> positionText.toIntOrNull() ?: 1
-            }
-            return ParsedCommand(
-                action = match.groupValues[1],
-                targetRequest = TargetResolver.TargetRequest(TargetResolver.TargetType.POSITION, position = position)
-            )
-        }
-        
-        // Direction patterns
-        val directionPattern = Regex("(move|go)\\s+(left|right|up|down|forward|backward|next|previous)")
-        directionPattern.find(normalizedCommand)?.let { match ->
-            return ParsedCommand(
-                action = "focus",
-                targetRequest = TargetResolver.TargetRequest(TargetResolver.TargetType.POSITION, direction = match.groupValues[2])
-            )
-        }
-        
-        // Name patterns
-        val namePattern = Regex("(click|select|open|focus)\\s+(?:on\\s+)?(.+)")
-        namePattern.find(normalizedCommand)?.let { match ->
-            return ParsedCommand(
-                action = match.groupValues[1],
-                targetRequest = TargetResolver.TargetRequest(TargetResolver.TargetType.NAME, match.groupValues[2])
-            )
-        }
-        
-        // Default fallback
-        return ParsedCommand(
-            action = "click",
-            targetRequest = TargetResolver.TargetRequest(TargetResolver.TargetType.CONTEXT, normalizedCommand)
+        return Stats(
+            totalElements = elements.size,
+            enabledElements = elements.values.count { it.isEnabled },
+            typeBreakdown = typeBreakdown,
+            nameIndexSize = nameIndex.size,
+            hierarchyIndexSize = hierarchyIndex.size
         )
     }
-    
-    /**
-     * Register a voice target - EXACT copy from legacy UIKitVoiceCommandSystem (lines 118-128)
-     */
-    fun registerTarget(target: VoiceTarget): String {
-        registeredTargets[target.uuid] = target
-        
-        // Update parent's children list
-        target.parent?.let { parentId ->
-            registeredTargets[parentId]?.children?.add(target.uuid)
-        }
-        
-        Log.d(TAG, "Registered voice target: ${target.uuid} (${target.name})")
-        return target.uuid
-    }
-    
-    /**
-     * Unregister a voice target - EXACT copy from legacy UIKitVoiceCommandSystem (lines 133-147)
-     */
-    fun unregisterTarget(uuid: String) {
-        val target = registeredTargets.remove(uuid)
-        
-        // Remove from parent's children
-        target?.parent?.let { parentId ->
-            registeredTargets[parentId]?.children?.remove(uuid)
-        }
-        
-        // Unregister all children recursively
-        target?.children?.forEach { childId ->
-            unregisterTarget(childId)
-        }
-        
-        Log.d(TAG, "Unregistered voice target: $uuid")
-    }
-    
-    /**
-     * Set active context - EXACT copy from legacy UIKitVoiceCommandSystem (lines 469-472)
-     */
-    fun setContext(context: String?) {
-        activeContext.value = context
-        Log.d(TAG, "Context changed to: $context")
-    }
-    
-    /**
-     * Clear all registered targets - EXACT copy from legacy UIKitVoiceCommandSystem (lines 477-480)
-     */
-    fun clearTargets() {
-        registeredTargets.clear()
-        commandHistory.clear()
-    }
+
+    // ==================== Clear ====================
 
     /**
-     * Parsed command structure
+     * Clear all elements
      */
-    private data class ParsedCommand(
-        val action: String,
-        val targetRequest: TargetResolver.TargetRequest,
-        val parameters: Map<String, Any> = emptyMap()
-    )
+    fun clearAll() {
+        elements.clear()
+        nameIndex.clear()
+        typeIndex.clear()
+        hierarchyIndex.clear()
+        synchronized(orderedElements) {
+            orderedElements.clear()
+        }
+    }
 }

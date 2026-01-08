@@ -19,9 +19,11 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import com.augmentalis.webavanue.ui.design.OceanComponents
-import com.augmentalis.webavanue.ui.design.OceanDesignTokens
+import com.augmentalis.webavanue.ui.design.AppIcon
+import com.augmentalis.webavanue.ui.design.AppIconButton
+import com.augmentalis.webavanue.ui.design.AppSurface
 import com.augmentalis.webavanue.ui.design.IconVariant
+import com.augmentalis.webavanue.ui.design.OceanDesignTokens
 import com.augmentalis.webavanue.ui.design.SurfaceVariant
 
 /**
@@ -73,7 +75,7 @@ fun FindInPageBar(
         focusRequester.requestFocus()
     }
 
-    OceanComponents.Surface(
+    AppSurface(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp),
@@ -147,12 +149,12 @@ fun FindInPageBar(
             }
 
             // Previous button
-            OceanComponents.IconButton(
+            AppIconButton(
                 onClick = onPrevious,
                 enabled = totalMatches > 0,
                 modifier = Modifier.size(36.dp)
             ) {
-                OceanComponents.Icon(
+                AppIcon(
                     imageVector = Icons.Default.ArrowUpward,
                     contentDescription = "Previous match (Shift+Enter)",
                     variant = if (totalMatches > 0) IconVariant.Primary else IconVariant.Disabled
@@ -160,12 +162,12 @@ fun FindInPageBar(
             }
 
             // Next button
-            OceanComponents.IconButton(
+            AppIconButton(
                 onClick = onNext,
                 enabled = totalMatches > 0,
                 modifier = Modifier.size(36.dp)
             ) {
-                OceanComponents.Icon(
+                AppIcon(
                     imageVector = Icons.Default.ArrowDownward,
                     contentDescription = "Next match (Enter)",
                     variant = if (totalMatches > 0) IconVariant.Primary else IconVariant.Disabled
@@ -176,11 +178,11 @@ fun FindInPageBar(
             // Note: Disabled for now as Android WebView doesn't support it
             // Kept in UI for future iOS/Desktop support
             /*
-            OceanComponents.IconButton(
+            AppIconButton(
                 onClick = onCaseSensitiveToggle,
                 modifier = Modifier.size(36.dp)
             ) {
-                OceanComponents.Icon(
+                AppIcon(
                     imageVector = Icons.Default.FormatSize,
                     contentDescription = if (caseSensitive) "Case sensitive" else "Case insensitive",
                     variant = if (caseSensitive) IconVariant.Primary else IconVariant.Secondary
@@ -189,14 +191,14 @@ fun FindInPageBar(
             */
 
             // Close button
-            OceanComponents.IconButton(
+            AppIconButton(
                 onClick = {
                     focusManager.clearFocus()
                     onClose()
                 },
                 modifier = Modifier.size(36.dp)
             ) {
-                OceanComponents.Icon(
+                AppIcon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Close find bar (Escape)",
                     variant = IconVariant.Secondary

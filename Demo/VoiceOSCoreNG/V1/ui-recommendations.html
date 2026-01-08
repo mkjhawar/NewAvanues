@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceOSCoreNG UI/UX Recommendations Demo</title>
+    <style>
+        :root {
+            /* Theme Colors */
+            --primary: #2196F3;
+            --background: #121212;
+            --surface: #1E1E1E;
+            --surface-variant: #2D2D2D;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-disabled: #808080;
+
+            /* Status Colors */
+            --status-listening: #2196F3;
+            --status-processing: #FF9800;
+            --status-success: #4CAF50;
+            --status-error: #F44336;
+
+            /* Badge Colors */
+            --badge-named: #4CAF50;
+            --badge-unnamed: #FF9800;
+            --badge-disabled: #9E9E9E;
+
+            /* Spacing */
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+
+            /* Animation */
+            --transition-fast: 150ms;
+            --transition-normal: 200ms;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: var(--spacing-lg);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: var(--spacing-md);
+            color: var(--primary);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        /* Orientation Indicator */
+        .orientation-indicator {
+            text-align: center;
+            margin-bottom: var(--spacing-md);
+            padding: 8px 16px;
+            background: var(--surface);
+            border-radius: 8px;
+            display: inline-block;
+            margin-left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .orientation-indicator .mode {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Comparison Layout - Default (Portrait) */
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            transition: all 0.3s ease;
+        }
+
+        /* Portrait Mode (forced or narrow screen) */
+        body.portrait .comparison,
+        @media (max-width: 900px) {
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        body.portrait .comparison {
+            grid-template-columns: 1fr;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        body.portrait .phone-frame {
+            max-width: 280px;
+        }
+
+        body.portrait .phone-content {
+            height: 450px;
+        }
+
+        body.portrait .mock-ui {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        body.portrait .features {
+            grid-template-columns: 1fr;
+        }
+
+        /* Landscape Mode (forced or wide screen) */
+        body.landscape .comparison {
+            grid-template-columns: 1fr 1fr;
+            max-width: none;
+        }
+
+        body.landscape .phone-frame {
+            max-width: 480px;
+            width: 100%;
+        }
+
+        body.landscape .phone-content {
+            height: 280px;
+        }
+
+        body.landscape .phone-status-bar {
+            padding: 4px 12px;
+            font-size: 10px;
+        }
+
+        body.landscape .mock-ui {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            padding: 8px;
+        }
+
+        body.landscape .mock-element {
+            padding: 8px;
+        }
+
+        body.landscape .command-status {
+            padding: 8px 16px;
+            min-width: 160px;
+            bottom: 8px;
+        }
+
+        body.landscape .status-icon {
+            width: 32px;
+            height: 32px;
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+
+        body.landscape .command-text {
+            font-size: 12px;
+        }
+
+        body.landscape .status-message {
+            font-size: 11px;
+            margin-bottom: 6px;
+        }
+
+        body.landscape .instruction-bar {
+            top: 40px;
+            padding: 6px 12px;
+            font-size: 11px;
+        }
+
+        body.landscape .context-menu {
+            bottom: 60px;
+            right: 10px;
+        }
+
+        body.landscape .context-menu-title {
+            padding: 8px 12px;
+            font-size: 11px;
+        }
+
+        body.landscape .context-menu-item {
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+
+        body.landscape .app-header {
+            padding: 8px 12px;
+        }
+
+        body.landscape .app-title {
+            font-size: 14px;
+        }
+
+        body.landscape .badge {
+            width: 24px;
+            height: 24px;
+            font-size: 11px;
+            top: -6px;
+            right: -6px;
+        }
+
+        body.landscape .features {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        body.landscape .feature-card {
+            padding: var(--spacing-sm);
+        }
+
+        body.landscape .feature-card h4 {
+            font-size: 13px;
+        }
+
+        body.landscape .feature-card p {
+            font-size: 12px;
+        }
+
+        /* Settings preview in landscape */
+        body.landscape .settings-preview {
+            margin-top: var(--spacing-md);
+        }
+
+        body.landscape .settings-tab {
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        body.landscape .setting-item {
+            padding: 10px 0;
+        }
+
+        body.landscape .setting-info h5 {
+            font-size: 14px;
+        }
+
+        body.landscape .setting-info p {
+            font-size: 12px;
+        }
+
+        /* Legend in different orientations */
+        body.portrait .legend {
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        body.landscape .legend {
+            justify-content: center;
+        }
+
+        body.landscape .legend-item {
+            font-size: 11px;
+        }
+
+        /* Overlap warning in landscape */
+        body.landscape .overlap-warning {
+            font-size: 10px;
+            padding: 4px 10px;
+        }
+
+        .panel {
+            background: var(--surface);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: var(--surface-variant);
+            padding: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .panel-header.current {
+            background: linear-gradient(135deg, #c62828 0%, #8b0000 100%);
+        }
+
+        .panel-header.recommended {
+            background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+        }
+
+        .panel-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        body.landscape .panel-header {
+            padding: var(--spacing-sm);
+        }
+
+        body.landscape .panel-header h2 {
+            font-size: 13px;
+        }
+
+        .panel-body {
+            padding: var(--spacing-md);
+            min-height: 400px;
+            position: relative;
+        }
+
+        body.landscape .panel-body {
+            min-height: 320px;
+            padding: var(--spacing-sm);
+        }
+
+        /* Phone Frame */
+        .phone-frame {
+            background: var(--background);
+            border-radius: 24px;
+            border: 3px solid #333;
+            overflow: hidden;
+            max-width: 320px;
+            margin: 0 auto;
+            transition: all 0.3s ease;
+        }
+
+        body.landscape .phone-frame {
+            border-radius: 16px;
+            border-width: 2px;
+        }
+
+        .phone-status-bar {
+            background: #000;
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .phone-content {
+            height: 500px;
+            position: relative;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            overflow: hidden;
+            transition: height 0.3s ease;
+        }
+
+        /* App Header */
+        .app-header {
+            background: var(--surface);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .app-title {
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--surface-variant);
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background var(--transition-fast);
+        }
+
+        .icon-btn:hover {
+            background: var(--primary);
+        }
+
+        /* Mock UI Elements */
+        .mock-ui {
+            padding: 16px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .mock-element {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            position: relative;
+        }
+
+        .mock-element.tall {
+            grid-row: span 2;
+        }
+
+        /* Badges */
+        .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            z-index: 10;
+        }
+
+        .badge.named {
+            background: var(--badge-named);
+        }
+
+        .badge.unnamed {
+            background: var(--badge-unnamed);
+        }
+
+        .badge.disabled {
+            background: var(--badge-disabled);
+            opacity: 0.6;
+        }
+
+        /* Shape variants for colorblind */
+        .badge.shape-circle {
+            border-radius: 50%;
+        }
+
+        .badge.shape-square {
+            border-radius: 4px;
+        }
+
+        .badge.shape-diamond {
+            border-radius: 4px;
+            transform: rotate(45deg);
+        }
+
+        .badge.shape-diamond span {
+            transform: rotate(-45deg);
+        }
+
+        /* Overflow Badge */
+        .badge.overflow {
+            background: var(--surface-variant);
+            border: 2px solid var(--primary);
+            width: auto;
+            padding: 0 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .badge.overflow:hover {
+            background: var(--primary);
+        }
+
+        /* Instruction Bar */
+        .instruction-bar {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface);
+            padding: 10px 20px;
+            border-radius: 24px;
+            font-size: 14px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            white-space: nowrap;
+            z-index: 20;
+        }
+
+        /* Command Status Overlay */
+        .command-status {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface);
+            padding: 16px 24px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            min-width: 200px;
+            z-index: 30;
+        }
+
+        .command-status.listening .status-icon {
+            animation: pulse 1.5s infinite;
+        }
+
+        .command-status.processing .status-icon {
+            animation: spin 1s linear infinite;
+        }
+
+        .command-status.success .status-icon {
+            animation: bounce 0.4s;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes bounce {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .status-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 24px;
+        }
+
+        .status-icon.listening {
+            background: rgba(33, 150, 243, 0.2);
+            color: var(--status-listening);
+        }
+
+        .status-icon.processing {
+            background: rgba(255, 152, 0, 0.2);
+            color: var(--status-processing);
+        }
+
+        .status-icon.success {
+            background: rgba(76, 175, 80, 0.2);
+            color: var(--status-success);
+        }
+
+        .command-text {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .status-message {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        /* Confidence Bar */
+        .confidence-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .confidence-track {
+            width: 100px;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .confidence-fill.high {
+            background: var(--status-success);
+        }
+
+        .confidence-fill.medium {
+            background: var(--status-processing);
+        }
+
+        .confidence-fill.low {
+            background: var(--status-error);
+        }
+
+        .confidence-label {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .confidence-label.high { color: var(--status-success); }
+        .confidence-label.medium { color: var(--status-processing); }
+        .confidence-label.low { color: var(--status-error); }
+
+        /* Context Menu - Current (overlapping) */
+        .context-menu {
+            position: absolute;
+            bottom: 120px;
+            right: 20px;
+            background: var(--surface);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            overflow: hidden;
+            z-index: 25;
+        }
+
+        .context-menu-title {
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 13px;
+            background: var(--surface-variant);
+            color: var(--text-secondary);
+        }
+
+        .context-menu-item {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background var(--transition-fast);
+        }
+
+        .context-menu-item:hover {
+            background: var(--surface-variant);
+        }
+
+        .context-menu-item .num {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Overlapping Warning */
+        .overlap-warning {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(198, 40, 40, 0.9);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 100;
+            animation: flash 1s infinite;
+        }
+
+        @keyframes flash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Controls */
+        .controls {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .controls h3 {
+            margin-bottom: var(--spacing-md);
+            color: var(--primary);
+        }
+
+        .control-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .control-group label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1976D2;
+        }
+
+        .btn-secondary {
+            background: var(--surface-variant);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: #3D3D3D;
+        }
+
+        .btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Feature Cards */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+        }
+
+        .feature-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: var(--spacing-md);
+        }
+
+        .feature-card h4 {
+            color: var(--primary);
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .feature-card .badge-demo {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+            justify-content: center;
+        }
+
+        .feature-card .badge-demo .badge {
+            position: relative;
+            top: auto;
+            right: auto;
+        }
+
+        /* Settings Preview */
+        .settings-preview {
+            background: var(--surface);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-top: var(--spacing-lg);
+        }
+
+        .settings-tabs {
+            display: flex;
+            background: var(--surface-variant);
+        }
+
+        .settings-tab {
+            flex: 1;
+            padding: 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+        }
+
+        .settings-tab:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .settings-tab.active {
+            border-bottom-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .settings-content {
+            padding: var(--spacing-md);
+        }
+
+        .settings-section {
+            display: none;
+        }
+
+        .settings-section.active {
+            display: block;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-info h5 {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .setting-info p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Toggle Switch */
+        .toggle {
+            width: 48px;
+            height: 28px;
+            background: var(--surface-variant);
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: background var(--transition-fast);
+        }
+
+        .toggle.active {
+            background: var(--primary);
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform var(--transition-fast);
+        }
+
+        .toggle.active::after {
+            transform: translateX(20px);
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+            padding: var(--spacing-md);
+            background: var(--surface-variant);
+            border-radius: 8px;
+            margin-top: var(--spacing-md);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>VoiceOSCoreNG UI/UX Recommendations</h1>
+    <p class="subtitle">Interactive demo comparing current vs. recommended patterns for reduced cognitive load</p>
+
+    <!-- Orientation Indicator -->
+    <div class="orientation-indicator">
+        📱 Current Mode: <span class="mode" id="orientation-label">Auto</span>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <h3>Demo Controls</h3>
+        <div class="control-group">
+            <label>Orientation:</label>
+            <button class="btn btn-secondary" onclick="setOrientation('auto')" id="btn-auto">🔄 Auto</button>
+            <button class="btn btn-primary" onclick="setOrientation('portrait')" id="btn-portrait">📱 Portrait</button>
+            <button class="btn btn-secondary" onclick="setOrientation('landscape')" id="btn-landscape">📺 Landscape</button>
+        </div>
+        <div class="control-group">
+            <label>Command State:</label>
+            <button class="btn btn-secondary active" onclick="setCommandState('listening')">🎤 Listening</button>
+            <button class="btn btn-secondary" onclick="setCommandState('processing')">⚙️ Processing</button>
+            <button class="btn btn-secondary" onclick="setCommandState('success')">✓ Success</button>
+        </div>
+        <div class="control-group">
+            <label>Badge Count:</label>
+            <button class="btn btn-secondary" onclick="setBadgeCount(3)">3 Items</button>
+            <button class="btn btn-secondary active" onclick="setBadgeCount(9)">9 Items</button>
+            <button class="btn btn-secondary" onclick="setBadgeCount(15)">15 Items</button>
+        </div>
+        <div class="control-group">
+            <label>Accessibility:</label>
+            <button class="btn btn-secondary" onclick="toggleShapes()">Toggle Shape Mode</button>
+            <button class="btn btn-secondary" onclick="toggleHighContrast()">Toggle High Contrast</button>
+        </div>
+    </div>
+
+    <!-- Comparison -->
+    <div class="comparison">
+        <!-- Current (Problem) -->
+        <div class="panel">
+            <div class="panel-header current">
+                <span>❌</span>
+                <h2>CURRENT: Cognitive Overload</h2>
+            </div>
+            <div class="panel-body">
+                <div class="phone-frame">
+                    <div class="phone-status-bar">
+                        <span>9:41</span>
+                        <span>📶 🔋</span>
+                    </div>
+                    <div class="phone-content" id="current-phone">
+                        <div class="app-header">
+                            <span class="app-title">VoiceOS</span>
+                        </div>
+
+                        <!-- Instruction Bar -->
+                        <div class="instruction-bar">Say a number to select</div>
+
+                        <!-- Mock UI with ALL badges -->
+                        <div class="mock-ui" id="current-badges">
+                            <!-- Badges rendered by JS -->
+                        </div>
+
+                        <!-- Context Menu (overlapping!) -->
+                        <div class="context-menu" id="current-context">
+                            <div class="context-menu-title">Quick Actions</div>
+                            <div class="context-menu-item"><span class="num">1</span> Copy</div>
+                            <div class="context-menu-item"><span class="num">2</span> Paste</div>
+                            <div class="context-menu-item"><span class="num">3</span> Delete</div>
+                        </div>
+
+                        <!-- Command Status -->
+                        <div class="command-status listening" id="current-status">
+                            <div class="status-icon listening" id="current-icon">🎤</div>
+                            <div class="command-text" id="current-cmd">...</div>
+                            <div class="status-message" id="current-msg">Listening for command...</div>
+                            <!-- Separate confidence (redundant) -->
+                            <div class="confidence-bar">
+                                <div class="confidence-track">
+                                    <div class="confidence-fill high" style="width: 85%"></div>
+                                </div>
+                                <span class="confidence-label high">85%</span>
+                            </div>
+                        </div>
+
+                        <!-- Warning -->
+                        <div class="overlap-warning">⚠️ 3 Overlays Active!</div>
+                    </div>
+                </div>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-color" style="background: var(--status-error)"></div> Multiple overlays compete for attention</div>
+                    <div class="legend-item"><div class="legend-color" style="background: var(--status-processing)"></div> All badges shown at once</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommended (Solution) -->
+        <div class="panel">
+            <div class="panel-header recommended">
+                <span>✓</span>
+                <h2>RECOMMENDED: Single Focus</h2>
+            </div>
+            <div class="panel-body">
+                <div class="phone-frame">
+                    <div class="phone-status-bar">
+                        <span>9:41</span>
+                        <span>📶 🔋</span>
+                    </div>
+                    <div class="phone-content" id="recommended-phone">
+                        <div class="app-header">
+                            <span class="app-title">VoiceOS</span>
+                            <div class="header-actions">
+                                <button class="icon-btn">?</button>
+                                <button class="icon-btn">⚙</button>
+                            </div>
+                        </div>
+
+                        <!-- Mock UI with LIMITED badges + overflow -->
+                        <div class="mock-ui" id="recommended-badges">
+                            <!-- Badges rendered by JS -->
+                        </div>
+
+                        <!-- Single Unified Status (no separate overlays) -->
+                        <div class="command-status listening" id="recommended-status">
+                            <div class="status-icon listening" id="recommended-icon">🎤</div>
+                            <div class="command-text" id="recommended-cmd">...</div>
+                            <div class="status-message" id="recommended-msg">Listening for command...</div>
+                            <!-- Integrated confidence (semantic label) -->
+                            <div class="confidence-bar">
+                                <div class="confidence-track">
+                                    <div class="confidence-fill high" style="width: 85%"></div>
+                                </div>
+                                <span class="confidence-label high">High</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-color" style="background: var(--status-success)"></div> Single overlay focus</div>
+                    <div class="legend-item"><div class="legend-color" style="background: var(--primary)"></div> Max 9 badges, overflow grouped</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Explanations -->
+    <div class="features">
+        <div class="feature-card">
+            <h4>🎯 Overlay Priority System</h4>
+            <p>Only one primary overlay visible at a time. Command status takes priority during voice interactions, preventing visual clutter and confusion.</p>
+        </div>
+
+        <div class="feature-card">
+            <h4>🔢 Progressive Badge Display</h4>
+            <p>Show badges 1-9 directly on elements. Items 10+ are grouped into an expandable "More..." chip. Say "show more" to reveal additional items.</p>
+            <div class="badge-demo">
+                <div class="badge named shape-circle"><span>1</span></div>
+                <div class="badge named shape-circle"><span>2</span></div>
+                <div class="badge named shape-circle"><span>3</span></div>
+                <div class="badge overflow">+6 more ▼</div>
+            </div>
+        </div>
+
+        <div class="feature-card">
+            <h4>🎨 Shape Differentiation</h4>
+            <p>Colorblind-friendly badges use shapes in addition to colors: Circle = Named element, Square = Unnamed, Diamond = Disabled.</p>
+            <div class="badge-demo" id="shape-demo">
+                <div class="badge named shape-circle"><span>●</span></div>
+                <div class="badge unnamed shape-square"><span>■</span></div>
+                <div class="badge disabled shape-diamond"><span>◆</span></div>
+            </div>
+        </div>
+
+        <div class="feature-card">
+            <h4>📊 Integrated Confidence</h4>
+            <p>Replace percentage with semantic labels: "High" (green), "Confirm?" (yellow), "Repeat" (red). Reduces cognitive processing of numbers.</p>
+        </div>
+    </div>
+
+    <!-- Settings Restructure Preview -->
+    <h2 style="margin-top: 32px; margin-bottom: 16px;">Settings Restructure Preview</h2>
+    <div class="settings-preview">
+        <div class="settings-tabs">
+            <div class="settings-tab active" onclick="showSettingsTab('basic')">Basic</div>
+            <div class="settings-tab" onclick="showSettingsTab('voice')">Voice</div>
+            <div class="settings-tab" onclick="showSettingsTab('developer')">Developer</div>
+        </div>
+        <div class="settings-content">
+            <div class="settings-section active" id="settings-basic">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h5>Theme</h5>
+                        <p>Material 3 Dark</p>
+                    </div>
+                    <button class="btn btn-secondary">Change</button>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h5>High Contrast</h5>
+                        <p>Increase contrast for better visibility</p>
+                    </div>
+                    <div class="toggle" onclick="this.classList.toggle('active')"></div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h5>Large Text</h5>
+                        <p>Increase text size throughout the app</p>
+                    </div>
+                    <div class="toggle" onclick="this.classList.toggle('active')"></div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h5>Reduce Motion</h5>
+                        <p>Minimize animations</p>
+                    </div>
+                    <div class="toggle" onclick="this.classList.toggle('active')"></div>
+                </div>
+            </div>
+            <div class="settings-section" id="settings-voice">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h5>Confidence Threshold</h5>
+                        <p>Minimum confidence to execute commands</p>
+                    </div>
+                    <span style="color: var(--primary); font-weight: 600;">60%</span>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h5>Speech Engine</h5>
+                        <p>Platform STT (Default)</p>
+                    </div>
+                    <button class="btn btn-secondary">Change</button>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h5>Confirmation Mode</h5>
+                        <p>Ask before executing low-confidence commands</p>
+                    </div>
+                    <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+                </div>
+            </div>
+            <div class="settings-section" id="settings-developer">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h5>Debug Overlay</h5>
+                        <p>Show real-time metrics panel</p>
+                    </div>
+                    <div class="toggle" onclick="this.classList.toggle('active')"></div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h5>Processing Mode</h5>
+                        <p>How elements are processed</p>
+                    </div>
+                    <span style="color: var(--text-secondary);">Immediate</span>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h5>Max Elements Per Scan</h5>
+                        <p>Limit element detection count</p>
+                    </div>
+                    <span style="color: var(--text-secondary);">100</span>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h5>Framework Detection</h5>
+                        <p>Auto-detect Flutter, React Native, etc.</p>
+                    </div>
+                    <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h5>Reset Developer Settings</h5>
+                        <p>Restore all to defaults</p>
+                    </div>
+                    <button class="btn btn-secondary" style="color: var(--status-error);">Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentBadgeCount = 9;
+        let useShapes = false;
+        let highContrast = false;
+        let currentOrientation = 'portrait'; // 'auto', 'portrait', 'landscape'
+
+        // Orientation handling
+        function setOrientation(mode) {
+            currentOrientation = mode;
+
+            // Update button states
+            document.getElementById('btn-auto').className = mode === 'auto' ? 'btn btn-primary' : 'btn btn-secondary';
+            document.getElementById('btn-portrait').className = mode === 'portrait' ? 'btn btn-primary' : 'btn btn-secondary';
+            document.getElementById('btn-landscape').className = mode === 'landscape' ? 'btn btn-primary' : 'btn btn-secondary';
+
+            // Apply orientation class
+            document.body.classList.remove('portrait', 'landscape');
+
+            if (mode === 'auto') {
+                // Auto-detect based on window size
+                updateAutoOrientation();
+            } else {
+                document.body.classList.add(mode);
+                updateOrientationLabel(mode);
+            }
+
+            // Re-render badges for new layout
+            renderBadges();
+        }
+
+        function updateAutoOrientation() {
+            const isLandscape = window.innerWidth > window.innerHeight;
+            const detectedMode = isLandscape ? 'landscape' : 'portrait';
+            document.body.classList.remove('portrait', 'landscape');
+            document.body.classList.add(detectedMode);
+            updateOrientationLabel(`Auto (${detectedMode})`);
+        }
+
+        function updateOrientationLabel(text) {
+            const label = document.getElementById('orientation-label');
+            label.textContent = text.charAt(0).toUpperCase() + text.slice(1);
+        }
+
+        // Listen for window resize when in auto mode
+        window.addEventListener('resize', () => {
+            if (currentOrientation === 'auto') {
+                updateAutoOrientation();
+                renderBadges();
+            }
+        });
+
+        // Badge data
+        const badgeLabels = [
+            { label: 'Submit', named: true },
+            { label: 'Cancel', named: true },
+            { label: 'Settings', named: true },
+            { label: '', named: false },
+            { label: 'Help', named: true },
+            { label: '', named: false },
+            { label: 'Profile', named: true },
+            { label: '', named: false },
+            { label: 'Menu', named: true },
+            { label: 'Item 10', named: true },
+            { label: 'Item 11', named: true },
+            { label: '', named: false },
+            { label: 'Item 13', named: true },
+            { label: '', named: false },
+            { label: 'Item 15', named: true },
+        ];
+
+        function renderBadges() {
+            // Current: Show ALL badges
+            const currentContainer = document.getElementById('current-badges');
+            currentContainer.innerHTML = '';
+
+            for (let i = 0; i < currentBadgeCount; i++) {
+                const data = badgeLabels[i];
+                const div = document.createElement('div');
+                div.className = 'mock-element';
+                div.innerHTML = `
+                    <div class="badge ${data.named ? 'named' : 'unnamed'} ${useShapes ? (data.named ? 'shape-circle' : 'shape-square') : ''}">
+                        <span>${i + 1}</span>
+                    </div>
+                    <span style="font-size: 12px; color: var(--text-secondary);">${data.label || 'Element'}</span>
+                `;
+                currentContainer.appendChild(div);
+            }
+
+            // Recommended: Show max 9, then overflow
+            const recommendedContainer = document.getElementById('recommended-badges');
+            recommendedContainer.innerHTML = '';
+
+            const visibleCount = Math.min(currentBadgeCount, 9);
+            const overflowCount = Math.max(0, currentBadgeCount - 9);
+
+            for (let i = 0; i < visibleCount; i++) {
+                const data = badgeLabels[i];
+                const div = document.createElement('div');
+                div.className = 'mock-element';
+                div.innerHTML = `
+                    <div class="badge ${data.named ? 'named' : 'unnamed'} ${useShapes ? (data.named ? 'shape-circle' : 'shape-square') : ''}">
+                        <span>${i + 1}</span>
+                    </div>
+                    <span style="font-size: 12px; color: var(--text-secondary);">${data.label || 'Element'}</span>
+                `;
+                recommendedContainer.appendChild(div);
+            }
+
+            if (overflowCount > 0) {
+                const div = document.createElement('div');
+                div.className = 'mock-element';
+                div.innerHTML = `
+                    <div class="badge overflow">+${overflowCount} more ▼</div>
+                    <span style="font-size: 11px; color: var(--text-secondary);">Say "show more"</span>
+                `;
+                recommendedContainer.appendChild(div);
+            }
+        }
+
+        function setCommandState(state) {
+            // Update button states
+            document.querySelectorAll('.control-group .btn').forEach(btn => {
+                if (btn.textContent.toLowerCase().includes(state.substring(0, 4))) {
+                    btn.classList.add('active');
+                } else if (btn.onclick?.toString().includes('setCommandState')) {
+                    btn.classList.remove('active');
+                }
+            });
+
+            const icons = { listening: '🎤', processing: '⚙️', success: '✓' };
+            const messages = {
+                listening: 'Listening for command...',
+                processing: 'Processing...',
+                success: 'Done!'
+            };
+            const commands = {
+                listening: '...',
+                processing: '"Open settings"',
+                success: '"Open settings"'
+            };
+
+            ['current', 'recommended'].forEach(prefix => {
+                const status = document.getElementById(`${prefix}-status`);
+                const icon = document.getElementById(`${prefix}-icon`);
+                const cmd = document.getElementById(`${prefix}-cmd`);
+                const msg = document.getElementById(`${prefix}-msg`);
+
+                status.className = `command-status ${state}`;
+                icon.className = `status-icon ${state}`;
+                icon.textContent = icons[state];
+                cmd.textContent = commands[state];
+                msg.textContent = messages[state];
+            });
+        }
+
+        function setBadgeCount(count) {
+            currentBadgeCount = count;
+
+            // Update button states
+            document.querySelectorAll('.control-group .btn').forEach(btn => {
+                if (btn.textContent.includes(count)) {
+                    btn.classList.add('active');
+                } else if (btn.onclick?.toString().includes('setBadgeCount')) {
+                    btn.classList.remove('active');
+                }
+            });
+
+            renderBadges();
+        }
+
+        function toggleShapes() {
+            useShapes = !useShapes;
+            renderBadges();
+
+            // Update shape demo
+            const shapeDemo = document.getElementById('shape-demo');
+            if (useShapes) {
+                shapeDemo.innerHTML = `
+                    <div class="badge named shape-circle"><span>1</span></div>
+                    <div class="badge unnamed shape-square"><span>2</span></div>
+                    <div class="badge disabled shape-diamond"><span>3</span></div>
+                `;
+            } else {
+                shapeDemo.innerHTML = `
+                    <div class="badge named shape-circle"><span>●</span></div>
+                    <div class="badge unnamed shape-square"><span>■</span></div>
+                    <div class="badge disabled shape-diamond"><span>◆</span></div>
+                `;
+            }
+        }
+
+        function toggleHighContrast() {
+            highContrast = !highContrast;
+            if (highContrast) {
+                document.documentElement.style.setProperty('--background', '#000000');
+                document.documentElement.style.setProperty('--surface', '#1a1a1a');
+                document.documentElement.style.setProperty('--text-primary', '#FFFFFF');
+                document.documentElement.style.setProperty('--badge-named', '#00FF00');
+                document.documentElement.style.setProperty('--badge-unnamed', '#FFFF00');
+            } else {
+                document.documentElement.style.setProperty('--background', '#121212');
+                document.documentElement.style.setProperty('--surface', '#1E1E1E');
+                document.documentElement.style.setProperty('--text-primary', '#FFFFFF');
+                document.documentElement.style.setProperty('--badge-named', '#4CAF50');
+                document.documentElement.style.setProperty('--badge-unnamed', '#FF9800');
+            }
+        }
+
+        function showSettingsTab(tab) {
+            // Update tabs
+            document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.settings-tab:nth-child(${tab === 'basic' ? 1 : tab === 'voice' ? 2 : 3})`).classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(`settings-${tab}`).classList.add('active');
+        }
+
+        // Initial render
+        renderBadges();
+
+        // Initialize with portrait mode
+        setOrientation('portrait');
+    </script>
+</body>
+</html>

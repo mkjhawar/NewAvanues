@@ -27,7 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
-import java.util.UUID
+import com.augmentalis.vuid.core.VUIDGenerator
 
 /**
  * Configuration for comparison framework
@@ -97,7 +97,7 @@ class ComparisonFramework(
         captureState: (suspend () -> Pair<ServiceStateSnapshot, ServiceStateSnapshot>)? = null,
         ignoredStateFields: Set<String> = StateComparator.DEFAULT_IGNORED_FIELDS
     ): ComparisonResult = withContext(Dispatchers.Default) {
-        val executionId = UUID.randomUUID().toString()
+        val executionId = VUIDGenerator.generateCompactSimple(VUIDGenerator.Module.VOICEOS, "element")
         val comparisonStart = System.currentTimeMillis()
 
         Log.d(TAG, "Starting comparison: $methodName (id: $executionId)")

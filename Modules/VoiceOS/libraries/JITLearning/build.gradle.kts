@@ -1,11 +1,21 @@
 /**
  * JITLearning - Just-In-Time Learning Service
  *
+ * ╔═══════════════════════════════════════════════════════════════════════════╗
+ * ║  ⚠️  DEPRECATED - Use VoiceOSCoreNG instead                               ║
+ * ║                                                                           ║
+ * ║  This module has been consolidated into Modules/VoiceOSCoreNG             ║
+ * ║  See DEPRECATED.md for migration guide                                    ║
+ * ║                                                                           ║
+ * ║  New dependency: implementation(project(":Modules:VoiceOSCoreNG"))        ║
+ * ╚═══════════════════════════════════════════════════════════════════════════╝
+ *
  * Foreground service that runs passive screen learning in VoiceOSCore process.
  * Provides AIDL interface for coordination with LearnApp standalone app.
  *
  * Author: Manoj Jhawar
  * Created: 2025-12-11 (JIT-LearnApp Separation)
+ * Deprecated: 2026-01-06 (Consolidated into VoiceOSCoreNG)
  */
 
 plugins {
@@ -50,8 +60,11 @@ android {
 }
 
 dependencies {
-    // LearnAppCore (shared business logic)
-    implementation(project(":Modules:VoiceOS:libraries:LearnAppCore"))
+    // VoiceOSCoreNG - Next-gen replacement (KMP)
+    implementation(project(":Modules:VoiceOSCoreNG"))
+
+    // DEPRECATED (2026-01-06) - Use VoiceOSCoreNG instead
+    implementation(project(":Modules:VoiceOS:libraries:LearnAppCore"))  // ⚠️ DEPRECATED
 
     // Database module
     implementation(project(":Modules:VoiceOS:core:database"))
