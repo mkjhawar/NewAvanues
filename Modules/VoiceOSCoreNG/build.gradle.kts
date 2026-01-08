@@ -78,12 +78,15 @@ kotlin {
                 // Also includes: VivokaPathResolver, model management, initialization
                 implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))
 
-                // Vivoka SDK AARs (compileOnly - consuming apps must add as implementation)
-                // VoiceOSCoreNG is a library, so we can't bundle local AARs
-                // Final apps need: implementation(files("vivoka/vsdk-*.aar"))
-                compileOnly(files("${rootDir}/vivoka/vsdk-6.0.0.aar"))
-                compileOnly(files("${rootDir}/vivoka/vsdk-csdk-asr-2.0.0.aar"))
-                compileOnly(files("${rootDir}/vivoka/vsdk-csdk-core-1.0.1.aar"))
+                // ==========================================================
+                // Vivoka SDK (via wrapper module)
+                // ==========================================================
+                // The VivokaSDK wrapper module contains:
+                // - Extracted JAR files from AARs (in libs/)
+                // - Native .so libraries (in src/main/jniLibs/)
+                // This avoids Gradle's AAR-in-AAR restriction for library modules.
+                // Runtime: SDK looks for models in external storage (VivokaPathResolver)
+                implementation(project(":Modules:VoiceOS:libraries:VivokaSDK"))
 
                 // VoiceOS Database (SQLDelight repositories for Android command persistence)
                 implementation(project(":Modules:VoiceOS:core:database"))
