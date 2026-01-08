@@ -1,7 +1,9 @@
 package com.augmentalis.webavanue.domain.model
 
+import android.util.Log
 import kotlinx.serialization.Serializable
-
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
 /**
  * Browser settings and preferences for WebAvanue.
  * Cross-platform settings that sync across devices.
@@ -16,7 +18,7 @@ data class BrowserSettings(
     val useDesktopMode: Boolean = false,
 
     // Scale Settings (Mode-Specific)
-    val mobilePortraitScale: Float = 1.0f,   // Mobile portrait scale (default 100%)
+    val mobilePortraitScale: Float = 0f,   // Mobile portrait scale (default 100%)
     val mobileLandscapeScale: Float = 0.75f, // Mobile landscape scale (default 75%)
 
     // Desktop Mode Settings
@@ -202,6 +204,10 @@ data class BrowserSettings(
             isLandscape -> mobileLandscapeScale
             else -> mobilePortraitScale
         }
+    }
+
+    override fun toString(): String {
+        return "BrowserSettings(theme=$theme, fontSize=$fontSize, forceZoom=$forceZoom, showImages=$showImages, useDesktopMode=$useDesktopMode, mobilePortraitScale=$mobilePortraitScale, mobileLandscapeScale=$mobileLandscapeScale, desktopModeDefaultZoom=$desktopModeDefaultZoom, desktopModeWindowWidth=$desktopModeWindowWidth, desktopModeWindowHeight=$desktopModeWindowHeight, desktopModeAutoFitZoom=$desktopModeAutoFitZoom, blockPopups=$blockPopups, blockAds=$blockAds, blockTrackers=$blockTrackers, doNotTrack=$doNotTrack, clearCacheOnExit=$clearCacheOnExit, clearHistoryOnExit=$clearHistoryOnExit, clearCookiesOnExit=$clearCookiesOnExit, enableCookies=$enableCookies, enableJavaScript=$enableJavaScript, enableWebRTC=$enableWebRTC, defaultSearchEngine=$defaultSearchEngine, searchSuggestions=$searchSuggestions, voiceSearch=$voiceSearch, homePage='$homePage', newTabPage=$newTabPage, restoreTabsOnStartup=$restoreTabsOnStartup, showRestoreDialog=$showRestoreDialog, openLinksInBackground=$openLinksInBackground, openLinksInNewTab=$openLinksInNewTab, downloadPath=$downloadPath, askDownloadLocation=$askDownloadLocation, downloadOverWiFiOnly=$downloadOverWiFiOnly, syncEnabled=$syncEnabled, syncBookmarks=$syncBookmarks, syncHistory=$syncHistory, syncPasswords=$syncPasswords, syncSettings=$syncSettings, hardwareAcceleration=$hardwareAcceleration, preloadPages=$preloadPages, dataSaver=$dataSaver, autoPlay=$autoPlay, textReflow=$textReflow, enableDatabaseEncryption=$enableDatabaseEncryption, enableSecureStorage=$enableSecureStorage, enableVoiceCommands=$enableVoiceCommands, aiSummaries=$aiSummaries, aiTranslation=$aiTranslation, readAloud=$readAloud, voiceDialogAutoClose=$voiceDialogAutoClose, voiceDialogAutoCloseDelayMs=$voiceDialogAutoCloseDelayMs, commandBarAutoHide=$commandBarAutoHide, commandBarAutoHideDelayMs=$commandBarAutoHideDelayMs, enableWebXR=$enableWebXR, enableAR=$enableAR, enableVR=$enableVR, xrPerformanceMode=$xrPerformanceMode, xrAutoPauseTimeout=$xrAutoPauseTimeout, xrShowFPSIndicator=$xrShowFPSIndicator, xrRequireWiFi=$xrRequireWiFi, readingModeTheme=$readingModeTheme, readingModeFontSize=$readingModeFontSize, readingModeLineHeight=$readingModeLineHeight, readingModeFontFamily=$readingModeFontFamily, autoDetectArticles=$autoDetectArticles)"
     }
 
     companion object {

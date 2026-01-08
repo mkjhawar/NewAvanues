@@ -17,4 +17,6 @@ expect object WebViewPoolManager {
      * Remove and destroy all WebView instances
      */
     fun clearAllWebViews()
+
+    fun clearCookiesOnExit()
 }

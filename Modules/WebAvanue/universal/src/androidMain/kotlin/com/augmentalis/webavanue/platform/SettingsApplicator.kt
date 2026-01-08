@@ -38,6 +38,7 @@ class SettingsApplicator {
      */
     fun applySettings(webView: WebView, settings: BrowserSettings): Result<Unit> {
         return try {
+            Log.i("NaveenViewModel", "applySettings: $settings")
             // Validate and auto-correct settings
             val validationResult = SettingsValidation.validate(settings)
 
@@ -140,6 +141,7 @@ class SettingsApplicator {
                 // Apply desktop mode zoom (constrained to 50-200%)
                 val zoom = settings.desktopModeDefaultZoom.coerceIn(50, 200)
                 // initialScale is set on WebView, not settings
+                Log.i(TAG, "applyDisplaySettings setInitialScale zoom: $zoom")
                 webView.setInitialScale(zoom)
 
                 // Set user agent to desktop

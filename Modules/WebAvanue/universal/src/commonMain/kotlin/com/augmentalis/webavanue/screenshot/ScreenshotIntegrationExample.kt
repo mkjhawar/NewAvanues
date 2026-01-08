@@ -244,6 +244,7 @@ fun ScreenshotMenuItem(
  *
  * Call this from voice command or other automation
  */
+/*
 @Composable
 fun rememberScreenshotCapture(
     webView: Any?,
@@ -254,34 +255,37 @@ fun rememberScreenshotCapture(
 
     return remember(webView) {
         {
-            val view = webView
-            if (view != null) {
-                val capture = createScreenshotCapture(view)
+            if (webView == null) {
+                onError("No active page")
+                return@remember
+            }
 
-                scope.launch {
-                    capture.capture(
-                        ScreenshotRequest(
-                            type = ScreenshotType.VISIBLE_AREA,
-                            quality = 80,
-                            saveToGallery = true
-                        )
-                    ).collect { result ->
-                        when (result) {
-                            is ScreenshotResult.Success -> {
-                                onComplete(result.filepath)
-                            }
-                            is ScreenshotResult.Error -> {
-                                onError(result.error)
-                            }
-                            is ScreenshotResult.Progress -> {
-                                // Ignore progress for programmatic capture
-                            }
+            val capture = createScreenshotCapture(webView)
+
+            scope.launch {
+                capture.capture(
+                    ScreenshotRequest(
+                        type = ScreenshotType.VISIBLE_AREA,
+                        quality = 80,
+                        saveToGallery = true
+                    )
+                ).collect { result ->
+                    when (result) {
+                        is ScreenshotResult.Success -> {
+                            onComplete(result.filepath)
+                        }
+
+                        is ScreenshotResult.Error -> {
+                            onError(result.error)
+                        }
+
+                        is ScreenshotResult.Progress -> {
+                            // Ignore progress for programmatic capture
                         }
                     }
                 }
-            } else {
-                onError("No active page")
             }
         }
     }
 }
+*/

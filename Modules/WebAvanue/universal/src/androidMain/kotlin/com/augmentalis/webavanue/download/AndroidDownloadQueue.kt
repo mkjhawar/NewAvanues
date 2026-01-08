@@ -72,7 +72,7 @@ class AndroidDownloadQueue(
             }
 
             val managerId = downloadManager.enqueue(dmRequest)
-            val internalId = "download_${System.currentTimeMillis()}_${(0..9999).random()}"
+            val internalId = request.downloadId
 
             downloadIdMap[internalId] = managerId
             reverseIdMap[managerId] = internalId
@@ -122,15 +122,28 @@ class AndroidDownloadQueue(
     }.flowOn(Dispatchers.IO)
 
     override fun observeAllActive(): Flow<List<DownloadProgress>> = flow {
-        while (true) {
-            val activeDownloads = downloadIdMap.mapNotNull { (internalId, managerId) ->
-                queryProgress(managerId, internalId)?.takeIf { it.isActive }
+        // Track which downloads are still not terminal
+        val unfinished = downloadIdMap.keys.toMutableSet()
+
+        while (unfinished.isNotEmpty()) {
+            val snapshot = downloadIdMap.toMap()
+
+            val allProgress = snapshot.mapNotNull { (internalId, managerId) ->
+                queryProgress(managerId, internalId)
             }
-            emit(activeDownloads)
-            if (activeDownloads.isEmpty()) break
-            delay(500)
+
+            // ✅ emit everything (including COMPLETED/FAILED)
+            emit(allProgress)
+
+            // Remove terminal ones from unfinished set
+            allProgress.forEach { p ->
+                if (p.isComplete || p.isFailed) unfinished.remove(p.downloadId)
+            }
+
+            delay(1000)
         }
     }.flowOn(Dispatchers.IO)
+
 
     override suspend fun getDownloadedFilePath(downloadId: String): String? = withContext(Dispatchers.IO) {
         val managerId = downloadIdMap[downloadId] ?: return@withContext null
@@ -141,37 +154,53 @@ class AndroidDownloadQueue(
         cancel(downloadId)
     }
 
-    private fun queryProgress(managerId: Long, internalId: String): DownloadProgress? {
+    private fun queryProgress(
+        managerId: Long,
+        internalId: String
+    ): DownloadProgress? {
+
         val query = DownloadManager.Query().setFilterById(managerId)
-        val cursor = downloadManager.query(query) ?: return null
+        val cursor = downloadManager.query(query)
 
-        return cursor.use {
-            if (it.moveToFirst()) {
-                val bytesDownloaded = it.getLong(
-                    it.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
-                )
-                val bytesTotal = it.getLong(
-                    it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
-                )
-                val status = it.getInt(
-                    it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)
-                )
-                val reason = it.getInt(
-                    it.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON)
-                )
-                val localUri = it.getString(
-                    it.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI)
-                )
+        cursor.use {
+            if (!it.moveToFirst()) return null
 
-                DownloadProgress(
-                    downloadId = internalId,
-                    bytesDownloaded = bytesDownloaded,
-                    bytesTotal = bytesTotal,
-                    status = mapStatus(status),
-                    errorMessage = if (status == DownloadManager.STATUS_FAILED) reasonToString(reason) else null,
-                    localPath = localUri
-                )
-            } else null
+            val bytesDownloaded =
+                it.getLong(it.getColumnIndexOrThrow(
+                    DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR
+                ))
+
+            val bytesTotal =
+                it.getLong(it.getColumnIndexOrThrow(
+                    DownloadManager.COLUMN_TOTAL_SIZE_BYTES
+                ))
+
+            val statusInt =
+                it.getInt(it.getColumnIndexOrThrow(
+                    DownloadManager.COLUMN_STATUS
+                ))
+
+            val status = when (statusInt) {
+                DownloadManager.STATUS_PENDING -> DownloadStatus.PENDING
+                DownloadManager.STATUS_RUNNING -> DownloadStatus.DOWNLOADING
+                DownloadManager.STATUS_PAUSED -> DownloadStatus.PAUSED
+                DownloadManager.STATUS_SUCCESSFUL -> DownloadStatus.COMPLETED
+                DownloadManager.STATUS_FAILED -> DownloadStatus.FAILED
+                else -> DownloadStatus.UNKNOWN
+            }
+
+            val localUri =
+                it.getString(it.getColumnIndexOrThrow(
+                    DownloadManager.COLUMN_LOCAL_URI
+                ))
+
+            return DownloadProgress(
+                downloadId = internalId,
+                bytesDownloaded = bytesDownloaded,
+                bytesTotal = bytesTotal,
+                status = status,
+                localPath = localUri
+            )
         }
     }
 
