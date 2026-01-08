@@ -82,8 +82,8 @@ class VoiceOSCoreNG private constructor(
 
             stateManager.transition(ServiceState.Initializing(0.6f, "Initializing speech engine"))
 
-            // Create speech engine if configured
-            if (configuration.autoStartListening) {
+            // Always create speech engine (not just when autoStartListening)
+            try {
                 val engineResult = speechEngineFactory.createEngine(
                     SpeechEngine.valueOf(configuration.speechEngine)
                 )
@@ -93,8 +93,22 @@ class VoiceOSCoreNG private constructor(
                         language = configuration.voiceLanguage,
                         confidenceThreshold = configuration.confidenceThreshold
                     )
-                    speechEngine?.initialize(config)
+                    val initResult = speechEngine?.initialize(config)
+                    if (initResult?.isFailure == true) {
+                        // Log error but don't fail - voice is optional
+                        println("[VoiceOSCoreNG] Speech engine initialization failed: ${initResult.exceptionOrNull()?.message}")
+                    }
+
+                    // Only auto-start listening if configured AND initialization succeeded
+                    if (configuration.autoStartListening && initResult?.isSuccess == true) {
+                        speechEngine?.startListening()
+                    }
+                } else {
+                    println("[VoiceOSCoreNG] Speech engine creation failed: ${engineResult.exceptionOrNull()?.message}")
                 }
+            } catch (e: Exception) {
+                println("[VoiceOSCoreNG] Speech engine setup failed: ${e.message}")
+                // Continue without speech - handlers still work
             }
 
             stateManager.transition(
