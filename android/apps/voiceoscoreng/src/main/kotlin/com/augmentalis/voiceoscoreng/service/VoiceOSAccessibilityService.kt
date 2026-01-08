@@ -584,6 +584,18 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         Log.d(TAG, "Generated ${quantizedCommands.size} commands via KMP CommandGenerator, registered in CommandRegistry")
 
+        // CRITICAL: Update the speech engine with the new commands
+        // This registers dynamic grammar with Vivoka SDK so it recognizes these phrases
+        val commandPhrases = quantizedCommands.map { it.phrase }
+        serviceScope.launch {
+            try {
+                voiceOSCore?.updateCommands(commandPhrases)
+                Log.d(TAG, "Updated speech engine with ${commandPhrases.size} command phrases")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update speech engine commands", e)
+            }
+        }
+
         // Persist commands to SQLDelight database with proper FK order:
         // 1. scraped_app → 2. scraped_element → 3. commands_generated
         if (quantizedCommands.isNotEmpty()) {

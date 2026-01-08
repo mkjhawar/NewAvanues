@@ -217,6 +217,22 @@ class VoiceOSCoreNG private constructor(
     }
 
     /**
+     * Update the speech engine with dynamic commands.
+     *
+     * This must be called after screen changes to register new voice commands
+     * with the speech recognition engine (e.g., Vivoka SDK grammar).
+     *
+     * @param commands List of command phrases to recognize
+     * @return Result indicating success or failure
+     */
+    suspend fun updateCommands(commands: List<String>): Result<Unit> {
+        val engine = speechEngine ?: return Result.failure(
+            IllegalStateException("No speech engine configured")
+        )
+        return engine.updateCommands(commands)
+    }
+
+    /**
      * Check if any handler can handle the command.
      */
     suspend fun canHandle(command: String): Boolean {
