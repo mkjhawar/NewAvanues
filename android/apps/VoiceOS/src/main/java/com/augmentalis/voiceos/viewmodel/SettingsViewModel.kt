@@ -125,6 +125,51 @@ class SettingsViewModel(
         }
     }
 
+    // ============================================================
+    // Scanning Settings
+    // ============================================================
+
+    /**
+     * Sets the continuous scanning mode.
+     *
+     * When enabled, the system automatically scans screens when they change
+     * to generate voice commands for UI elements.
+     *
+     * @param enabled true to enable continuous scanning, false for manual-only
+     */
+    fun setContinuousScanningEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsDataStore.updateContinuousScanningEnabled(enabled)
+        }
+    }
+
+    /**
+     * Sets the slider drawer visibility.
+     *
+     * Developer setting that controls whether the floating slider drawer
+     * is shown for manual scan triggering.
+     *
+     * @param show true to show slider drawer, false to hide
+     */
+    fun setShowSliderDrawer(show: Boolean) {
+        viewModelScope.launch {
+            settingsDataStore.updateShowSliderDrawer(show)
+        }
+    }
+
+    /**
+     * Sets the developer mode setting.
+     *
+     * When enabled, shows developer-only options in the settings UI.
+     *
+     * @param enabled true to enable developer mode, false to hide developer options
+     */
+    fun setDeveloperModeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsDataStore.updateDeveloperModeEnabled(enabled)
+        }
+    }
+
     /**
      * Resets all settings to their default values.
      *

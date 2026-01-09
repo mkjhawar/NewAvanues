@@ -28,8 +28,16 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.augmentalis.voiceoscoreng.persistence.ScreenHashRepository
+import com.augmentalis.voiceoscoreng.persistence.ScreenHashRepositoryImpl
+import com.augmentalis.voiceoscoreng.persistence.ScreenInfo
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 private const val TAG = "VoiceOSA11yService"
+
+/** Debounce delay for screen change events (ms) */
+private const val SCREEN_CHANGE_DEBOUNCE_MS = 300L
 
 /**
  * Accessibility Service for VoiceOSCoreNG testing.
@@ -49,6 +57,35 @@ class VoiceOSAccessibilityService : AccessibilityService() {
      * This allows direct synchronous access without async wrappers.
      */
     private val commandRegistry = CommandRegistry()
+
+    /**
+     * Screen hash repository for caching known screens.
+     * Avoids re-scanning screens that have already been processed.
+     */
+    private val screenHashRepository: ScreenHashRepository = ScreenHashRepositoryImpl()
+
+    /**
+     * Whether continuous scanning is enabled.
+     * When true, screens are automatically scanned on navigation.
+     */
+    private val continuousScanningEnabled = AtomicBoolean(true)
+
+    /**
+     * Last screen change timestamp for debouncing.
+     */
+    private val lastScreenChangeTime = AtomicLong(0L)
+
+    /**
+     * Current package name for tracking.
+     */
+    @Volatile
+    private var currentPackageName: String? = null
+
+    /**
+     * Current screen hash for comparison.
+     */
+    @Volatile
+    private var currentScreenHash: String? = null
 
     /** Command persistence for saving to SQLDelight database */
     private val commandPersistence: ICommandPersistence by lazy {
@@ -130,6 +167,70 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             return instance?.voiceOSCore?.state?.value?.let { state ->
                 state is com.augmentalis.voiceoscoreng.handlers.ServiceState.Listening
             } ?: false
+        }
+
+        // ===== Continuous Monitoring Controls =====
+
+        private val _isContinuousMonitoring = MutableStateFlow(true)
+        val isContinuousMonitoring: StateFlow<Boolean> = _isContinuousMonitoring.asStateFlow()
+
+        private val _currentScreenInfo = MutableStateFlow<ScreenInfo?>(null)
+        val currentScreenInfo: StateFlow<ScreenInfo?> = _currentScreenInfo.asStateFlow()
+
+        /**
+         * Enable or disable continuous screen scanning.
+         */
+        fun setContinuousMonitoring(enabled: Boolean) {
+            instance?.continuousScanningEnabled?.set(enabled)
+            _isContinuousMonitoring.value = enabled
+            Log.d(TAG, "Continuous monitoring ${if (enabled) "ENABLED" else "DISABLED"}")
+        }
+
+        /**
+         * Check if continuous monitoring is enabled.
+         */
+        fun isContinuousMonitoringEnabled(): Boolean {
+            return instance?.continuousScanningEnabled?.get() ?: true
+        }
+
+        /**
+         * Rescan current app - clears cache for current package only.
+         * @return Number of screens cleared
+         */
+        suspend fun rescanCurrentApp(): Int {
+            val packageName = instance?.currentPackageName ?: return 0
+            val count = instance?.screenHashRepository?.clearScreensForPackage(packageName) ?: 0
+            Log.d(TAG, "Rescan Current App: cleared $count screens for $packageName")
+            // Trigger immediate rescan
+            instance?.performExploration()
+            return count
+        }
+
+        /**
+         * Rescan everything - clears ALL cached screens.
+         * @return Number of screens cleared
+         */
+        suspend fun rescanEverything(): Int {
+            val count = instance?.screenHashRepository?.clearAllScreens() ?: 0
+            Log.d(TAG, "Rescan Everything: cleared $count total screens")
+            // Trigger immediate rescan
+            instance?.performExploration()
+            return count
+        }
+
+        /**
+         * Get total count of cached screens.
+         */
+        suspend fun getCachedScreenCount(): Int {
+            return instance?.screenHashRepository?.getScreenCount() ?: 0
+        }
+
+        /**
+         * Get cached screen count for current package.
+         */
+        suspend fun getCachedScreenCountForCurrentApp(): Int {
+            val packageName = instance?.currentPackageName ?: return 0
+            return instance?.screenHashRepository?.getScreenCountForPackage(packageName) ?: 0
         }
     }
 
@@ -222,19 +323,171 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     /**
      * Handle screen change by clearing caches and optionally regenerating commands.
+     * Implements continuous monitoring with screen hash comparison.
      */
     private fun handleScreenChange(packageName: String?) {
-        // Clear the shared command registry (will be repopulated on next exploration)
-        commandRegistry.clear()
+        // Debounce rapid screen changes
+        val now = System.currentTimeMillis()
+        val lastChange = lastScreenChangeTime.get()
+        if (now - lastChange < SCREEN_CHANGE_DEBOUNCE_MS) {
+            Log.v(TAG, "Screen change debounced (${now - lastChange}ms since last)")
+            return
+        }
+        lastScreenChangeTime.set(now)
 
-        // Note: AndroidActionExecutor cache has TTL, so it will auto-expire
-        // For immediate invalidation, the executor would need to be accessible here
+        // Update current package tracking
+        currentPackageName = packageName
 
-        // Auto-explore new screen if package is known (optional - can be triggered manually)
+        // Check if continuous monitoring is enabled
+        if (!continuousScanningEnabled.get()) {
+            // Manual mode - just clear registry and wait for user action
+            commandRegistry.clear()
+            Log.d(TAG, "Screen changed to $packageName - manual mode, awaiting user scan")
+            return
+        }
+
+        // Continuous monitoring mode - auto-scan with hash comparison
         if (packageName != null && packageName != "unknown") {
-            Log.d(TAG, "Screen changed to $packageName - ready for exploration")
-            // Uncomment to auto-explore on screen change:
-            // performExploration()
+            serviceScope.launch {
+                try {
+                    // Get root node for hash generation
+                    val rootNode = rootInActiveWindow
+                    if (rootNode == null) {
+                        Log.w(TAG, "No active window for screen hash")
+                        commandRegistry.clear()
+                        return@launch
+                    }
+
+                    // Generate screen hash from current elements
+                    val screenHash = generateScreenHash(rootNode)
+                    rootNode.recycle()
+
+                    // Check if this screen is already known
+                    val isKnown = screenHashRepository.hasScreen(screenHash)
+                    val appVersion = getAppInfo(packageName).versionName
+                    val storedVersion = screenHashRepository.getAppVersion(screenHash)
+
+                    if (isKnown && appVersion == storedVersion) {
+                        // Load cached commands instead of rescanning
+                        val cachedCommands = screenHashRepository.getCommandsForScreen(screenHash)
+                        if (cachedCommands.isNotEmpty()) {
+                            commandRegistry.updateSync(cachedCommands)
+                            currentScreenHash = screenHash
+                            Log.d(TAG, "Screen known - loaded ${cachedCommands.size} cached commands for $packageName")
+
+                            // Update screen info for UI display
+                            val screenInfo = screenHashRepository.getScreenInfo(screenHash)
+                            _currentScreenInfo.value = screenInfo
+                            return@launch
+                        }
+                        // Fall through to rescan if cache is empty
+                    }
+
+                    // New or updated screen - perform full scan
+                    Log.d(TAG, "Screen changed to $packageName - ${if (isKnown) "version changed, rescanning" else "new screen, scanning"}")
+                    commandRegistry.clear()
+                    currentScreenHash = screenHash
+
+                    // Perform exploration and cache results
+                    performExplorationWithCache(screenHash, packageName, appVersion)
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in continuous monitoring", e)
+                    commandRegistry.clear()
+                }
+            }
+        } else {
+            commandRegistry.clear()
+        }
+    }
+
+    /**
+     * Generate a hash of the current screen for comparison.
+     */
+    private fun generateScreenHash(rootNode: AccessibilityNodeInfo): String {
+        val elements = mutableListOf<String>()
+        collectElementSignatures(rootNode, elements, maxDepth = 5)
+
+        val signature = elements.sorted().joinToString("|")
+        return HashUtils.generateHash(signature, 32)
+    }
+
+    /**
+     * Collect element signatures for screen hashing.
+     * Uses className, resourceId, and text (normalized) to create stable hash.
+     */
+    private fun collectElementSignatures(
+        node: AccessibilityNodeInfo,
+        signatures: MutableList<String>,
+        depth: Int = 0,
+        maxDepth: Int = 5
+    ) {
+        if (depth > maxDepth) return
+
+        // Build signature from stable properties
+        val className = node.className?.toString()?.substringAfterLast(".") ?: ""
+        val resourceId = node.viewIdResourceName?.substringAfterLast("/") ?: ""
+        val text = node.text?.toString()?.take(20)?.replace(Regex("\\d+"), "#") ?: ""
+        val isClickable = if (node.isClickable) "C" else ""
+        val isScrollable = if (node.isScrollable) "S" else ""
+
+        if (className.isNotEmpty() || resourceId.isNotEmpty()) {
+            signatures.add("$className:$resourceId:$text:$isClickable$isScrollable")
+        }
+
+        // Recurse into children
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { child ->
+                collectElementSignatures(child, signatures, depth + 1, maxDepth)
+                child.recycle()
+            }
+        }
+    }
+
+    /**
+     * Perform exploration and cache results in the screen hash repository.
+     */
+    private fun performExplorationWithCache(screenHash: String, packageName: String, appVersion: String) {
+        serviceScope.launch {
+            try {
+                val rootNode = rootInActiveWindow ?: return@launch
+
+                val result = exploreNode(rootNode)
+                _explorationResults.value = result
+                rootNode.recycle()
+
+                // Get the generated commands
+                val commands = commandRegistry.all()
+
+                // Cache the screen and commands
+                screenHashRepository.saveScreen(
+                    hash = screenHash,
+                    packageName = packageName,
+                    activityName = null,
+                    appVersion = appVersion,
+                    elementCount = result.totalElements
+                )
+                screenHashRepository.saveCommandsForScreen(screenHash, commands)
+
+                // Update screen info for UI display
+                val screenInfo = ScreenInfo(
+                    hash = screenHash,
+                    packageName = packageName,
+                    activityName = null,
+                    appVersion = appVersion,
+                    elementCount = result.totalElements,
+                    actionableCount = result.clickableElements + result.scrollableElements,
+                    commandCount = commands.size,
+                    scannedAt = System.currentTimeMillis(),
+                    isCached = false  // Just scanned, not from cache
+                )
+                _currentScreenInfo.value = screenInfo
+
+                Log.d(TAG, "Screen cached: ${screenHash.take(16)}... with ${commands.size} commands")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in exploration with cache", e)
+            }
         }
     }
 

@@ -29,11 +29,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -397,6 +399,8 @@ private fun OverlayContent(onClose: () -> Unit) {
     var showConfigPanel by remember { mutableStateOf(false) }
     var showDevSettings by remember { mutableStateOf(false) }
     var devSettingsExpanded by remember { mutableStateOf(false) }  // Expandable section in drawer
+    var showRescanConfirmation by remember { mutableStateOf(false) }  // Confirmation for Rescan Everything
+    var rescanMessage by remember { mutableStateOf<String?>(null) }  // Toast message
 
     // Developer settings state
     var debugLogging by remember { mutableStateOf(true) }
@@ -404,14 +408,74 @@ private fun OverlayContent(onClose: () -> Unit) {
     var autoMinimize by remember { mutableStateOf(true) }
 
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val isConnectedFromService by VoiceOSAccessibilityService.isConnected.collectAsState()
     val isConnectedFromSystem = remember { isAccessibilityServiceEnabled(context) }
 
     // Use either service StateFlow OR system-level check
     val isConnected = isConnectedFromService || isConnectedFromSystem
 
+    // Continuous monitoring state
+    val isContinuousMonitoring by VoiceOSAccessibilityService.isContinuousMonitoring.collectAsState()
+    val currentScreenInfo by VoiceOSAccessibilityService.currentScreenInfo.collectAsState()
+
     val explorationResults by VoiceOSAccessibilityService.explorationResults.collectAsState()
     val lastError by VoiceOSAccessibilityService.lastError.collectAsState()
+
+    // Rescan Everything confirmation dialog
+    if (showRescanConfirmation) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable { showRescanConfirmation = false },
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier
+                    .width(280.dp)
+                    .clickable(enabled = false) {},  // Consume clicks
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2E)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Rescan Everything?",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "This will clear ALL cached screens and force a rescan. This action cannot be undone.",
+                        color = Color.Gray,
+                        fontSize = 12.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showRescanConfirmation = false }) {
+                            Text("Cancel", color = Color.Gray)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        TextButton(
+                            onClick = {
+                                showRescanConfirmation = false
+                                coroutineScope.launch {
+                                    val count = VoiceOSAccessibilityService.rescanEverything()
+                                    rescanMessage = "Cleared ALL $count cached screens"
+                                }
+                            }
+                        ) {
+                            Text("Rescan All", color = Color(0xFFEF4444))
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     MaterialTheme(
         colorScheme = darkColorScheme()
@@ -492,6 +556,17 @@ private fun OverlayContent(onClose: () -> Unit) {
                             )
                         }
 
+                        // Continuous Monitoring Toggle
+                        FabMenuItem(
+                            icon = if (isContinuousMonitoring) Icons.Default.Sync else Icons.Default.SyncDisabled,
+                            text = if (isContinuousMonitoring) "Monitoring: ON" else "Monitoring: OFF",
+                            iconColor = if (isContinuousMonitoring) Color(0xFF10B981) else Color(0xFFDC2626),
+                            enabled = isConnected,
+                            onClick = {
+                                VoiceOSAccessibilityService.setContinuousMonitoring(!isContinuousMonitoring)
+                            }
+                        )
+
                         // Test Mode Toggle
                         FabMenuItem(
                             icon = Icons.Default.Science,
@@ -519,7 +594,74 @@ private fun OverlayContent(onClose: () -> Unit) {
                                 CompactToggle("Debug Log", debugLogging) { debugLogging = it }
                                 CompactToggle("Show VUIDs", showVuidsOverlay) { showVuidsOverlay = it }
                                 CompactToggle("Auto-min", autoMinimize) { autoMinimize = it }
+
+                                Divider(color = Color.Gray.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 6.dp))
+
+                                // Rescan Current App Button
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(32.dp)
+                                        .clickable {
+                                            coroutineScope.launch {
+                                                val count = VoiceOSAccessibilityService.rescanCurrentApp()
+                                                rescanMessage = "Cleared $count screens for current app"
+                                            }
+                                        }
+                                        .padding(horizontal = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Rescan Current App",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF3B82F6)
+                                    )
+                                    Icon(
+                                        Icons.Default.Refresh,
+                                        contentDescription = null,
+                                        tint = Color(0xFF3B82F6),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+
+                                // Rescan Everything Button (with confirmation)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(32.dp)
+                                        .clickable { showRescanConfirmation = true }
+                                        .padding(horizontal = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Rescan Everything",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFFEF4444)
+                                    )
+                                    Icon(
+                                        Icons.Default.DeleteSweep,
+                                        contentDescription = null,
+                                        tint = Color(0xFFEF4444),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
+                        }
+
+                        // Show rescan message
+                        rescanMessage?.let { message ->
+                            LaunchedEffect(message) {
+                                kotlinx.coroutines.delay(2000)
+                                rescanMessage = null
+                            }
+                            Text(
+                                text = message,
+                                fontSize = 10.sp,
+                                color = Color(0xFF10B981),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
                         }
 
                         Divider(color = Color.Gray.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
@@ -1010,7 +1152,66 @@ private fun ResultsPanel(
 
 @Composable
 private fun SummaryTab(result: ExplorationResult) {
+    val currentScreenInfo by VoiceOSAccessibilityService.currentScreenInfo.collectAsState()
+    val clipboardManager = LocalClipboardManager.current
+
     LazyColumn {
+        // Screen Info Card (NEW)
+        currentScreenInfo?.let { screenInfo ->
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2D2D3D))
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Screen Hash", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 12.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = if (screenInfo.isCached) "CACHED" else "NEW",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (screenInfo.isCached) Color(0xFF10B981) else Color(0xFFF59E0B),
+                                    modifier = Modifier
+                                        .background(
+                                            if (screenInfo.isCached) Color(0xFF10B981).copy(alpha = 0.2f)
+                                            else Color(0xFFF59E0B).copy(alpha = 0.2f),
+                                            RoundedCornerShape(4.dp)
+                                        )
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                IconButton(
+                                    onClick = {
+                                        clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(screenInfo.hash))
+                                    },
+                                    modifier = Modifier.size(20.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.ContentCopy,
+                                        contentDescription = "Copy Hash",
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = screenInfo.hash.take(32) + "...",
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = Color(0xFF6366F1)
+                        )
+                    }
+                }
+            }
+        }
+
         item {
             StatRow("Package", result.packageName)
             StatRow("Total Elements", result.totalElements.toString())
@@ -1122,7 +1323,82 @@ private fun VUIDsTab(result: ExplorationResult) {
 
 @Composable
 private fun HierarchyTab(result: ExplorationResult) {
+    val currentScreenInfo by VoiceOSAccessibilityService.currentScreenInfo.collectAsState()
+    val clipboardManager = LocalClipboardManager.current
+
     LazyColumn {
+        // Screen Info Header (NEW)
+        currentScreenInfo?.let { screenInfo ->
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2D2D3D))
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Fingerprint,
+                                    contentDescription = null,
+                                    tint = Color(0xFF6366F1),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Screen Hash", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 11.sp)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = if (screenInfo.isCached) "CACHED" else "NEW",
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (screenInfo.isCached) Color(0xFF10B981) else Color(0xFFF59E0B),
+                                    modifier = Modifier
+                                        .background(
+                                            if (screenInfo.isCached) Color(0xFF10B981).copy(alpha = 0.2f)
+                                            else Color(0xFFF59E0B).copy(alpha = 0.2f),
+                                            RoundedCornerShape(4.dp)
+                                        )
+                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                                IconButton(
+                                    onClick = {
+                                        clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(screenInfo.hash))
+                                    },
+                                    modifier = Modifier.size(18.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.ContentCopy,
+                                        contentDescription = "Copy",
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
+                        }
+                        Text(
+                            text = screenInfo.hash.take(24) + "...",
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = Color(0xFF6366F1)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Elements: ${screenInfo.elementCount}", fontSize = 9.sp, color = Color.Gray)
+                            Text("Actionable: ${screenInfo.actionableCount}", fontSize = 9.sp, color = Color.Gray)
+                            Text("Commands: ${screenInfo.commandCount}", fontSize = 9.sp, color = Color.Gray)
+                        }
+                    }
+                }
+            }
+        }
+
         items(result.hierarchy.take(100)) { node ->
             val element = result.elements.getOrNull(node.index)
             val vuidInfo = result.vuids.getOrNull(node.index)

@@ -31,6 +31,7 @@ import com.augmentalis.voiceoscoreng.handlers.VoiceOSCoreNG
 import com.augmentalis.voiceoscoreng.features.LearnAppConfig
 import com.augmentalis.voiceoscoreng.features.LearnAppDevToggle
 import com.augmentalis.voiceoscoreng.features.DeveloperSettingsScreen
+import com.augmentalis.voiceoscoreng.features.ScanningCallbacks
 import com.augmentalis.voiceoscoreng.features.TestModeFab
 import com.augmentalis.voiceoscoreng.service.OverlayService
 import com.augmentalis.voiceoscoreng.service.VoiceOSAccessibilityService
@@ -88,7 +89,18 @@ fun MainScreen() {
             modifier = Modifier.fillMaxHeight(0.9f)
         ) {
             DeveloperSettingsScreen(
-                onDismiss = { showDeveloperSettings = false }
+                onDismiss = { showDeveloperSettings = false },
+                scanningCallbacks = ScanningCallbacks(
+                    onSetContinuousMonitoring = { enabled ->
+                        VoiceOSAccessibilityService.setContinuousMonitoring(enabled)
+                    },
+                    onRescanCurrentApp = {
+                        VoiceOSAccessibilityService.rescanCurrentApp()
+                    },
+                    onRescanEverything = {
+                        VoiceOSAccessibilityService.rescanEverything()
+                    }
+                )
             )
         }
     }
