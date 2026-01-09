@@ -31,7 +31,7 @@ import kotlinx.coroutines.sync.withLock
  * handler?.execute(command, params)
  * ```
  */
-class HandlerRegistry {
+class HandlerRegistry : IHandlerRegistry {
 
     private val handlers = mutableMapOf<ActionCategory, MutableList<IHandler>>()
     private val mutex = Mutex()
@@ -42,7 +42,7 @@ class HandlerRegistry {
      *
      * @param handler The handler to register
      */
-    suspend fun register(handler: IHandler) {
+    override suspend fun register(handler: IHandler) {
         mutex.withLock {
             handlers.getOrPut(handler.category) { mutableListOf() }.add(handler)
         }
@@ -55,7 +55,7 @@ class HandlerRegistry {
      * @param category The category to register the handler for
      * @param handler The handler to register
      */
-    suspend fun register(category: ActionCategory, handler: IHandler) {
+    override suspend fun register(category: ActionCategory, handler: IHandler) {
         mutex.withLock {
             handlers.getOrPut(category) { mutableListOf() }.add(handler)
         }
@@ -67,7 +67,7 @@ class HandlerRegistry {
      * @param handler The handler to unregister
      * @return true if handler was found and removed
      */
-    suspend fun unregister(handler: IHandler): Boolean {
+    override suspend fun unregister(handler: IHandler): Boolean {
         mutex.withLock {
             var removed = false
             handlers.values.forEach { handlerList ->
@@ -85,7 +85,7 @@ class HandlerRegistry {
      * @param category The category to clear handlers for
      * @return Number of handlers removed
      */
-    suspend fun unregisterCategory(category: ActionCategory): Int {
+    override suspend fun unregisterCategory(category: ActionCategory): Int {
         mutex.withLock {
             val handlerList = handlers.remove(category)
             return handlerList?.size ?: 0
@@ -99,7 +99,7 @@ class HandlerRegistry {
      * @param action The action to find a handler for
      * @return Handler that can handle the action, or null
      */
-    suspend fun findHandler(action: String): IHandler? {
+    override suspend fun findHandler(action: String): IHandler? {
         mutex.withLock {
             // Check handlers by priority order
             for (category in ActionCategory.PRIORITY_ORDER) {
@@ -123,7 +123,7 @@ class HandlerRegistry {
      * @param command The command to find a handler for
      * @return Handler that can handle the command, or null
      */
-    suspend fun findHandler(command: QuantizedCommand): IHandler? {
+    override suspend fun findHandler(command: QuantizedCommand): IHandler? {
         return findHandler(command.phrase)
     }
 
@@ -133,7 +133,7 @@ class HandlerRegistry {
      * @param category The category to get handlers for
      * @return List of handlers for the category (empty if none registered)
      */
-    suspend fun getHandlersForCategory(category: ActionCategory): List<IHandler> {
+    override suspend fun getHandlersForCategory(category: ActionCategory): List<IHandler> {
         mutex.withLock {
             return handlers[category]?.toList() ?: emptyList()
         }
@@ -144,7 +144,7 @@ class HandlerRegistry {
      *
      * @return List of all registered handlers
      */
-    suspend fun getAllHandlers(): List<IHandler> {
+    override suspend fun getAllHandlers(): List<IHandler> {
         mutex.withLock {
             return handlers.values.flatten()
         }
@@ -156,7 +156,7 @@ class HandlerRegistry {
      * @param action The action to check
      * @return true if at least one handler can handle the action
      */
-    suspend fun canHandle(action: String): Boolean {
+    override suspend fun canHandle(action: String): Boolean {
         mutex.withLock {
             return handlers.values.flatten().any { it.canHandle(action) }
         }
@@ -167,7 +167,7 @@ class HandlerRegistry {
      *
      * @return List of all supported actions with category prefix
      */
-    suspend fun getAllSupportedActions(): List<String> {
+    override suspend fun getAllSupportedActions(): List<String> {
         mutex.withLock {
             return handlers.flatMap { (category, handlerList) ->
                 handlerList.flatMap { handler ->
@@ -185,7 +185,7 @@ class HandlerRegistry {
      * @param category The category to get actions for
      * @return List of supported actions for the category
      */
-    suspend fun getSupportedActions(category: ActionCategory): List<String> {
+    override suspend fun getSupportedActions(category: ActionCategory): List<String> {
         mutex.withLock {
             return handlers[category]?.flatMap { it.supportedActions } ?: emptyList()
         }
@@ -194,7 +194,7 @@ class HandlerRegistry {
     /**
      * Get total number of registered handlers.
      */
-    suspend fun getHandlerCount(): Int {
+    override suspend fun getHandlerCount(): Int {
         mutex.withLock {
             return handlers.values.sumOf { it.size }
         }
@@ -203,7 +203,7 @@ class HandlerRegistry {
     /**
      * Get number of categories with registered handlers.
      */
-    suspend fun getCategoryCount(): Int {
+    override suspend fun getCategoryCount(): Int {
         mutex.withLock {
             return handlers.size
         }
@@ -212,7 +212,7 @@ class HandlerRegistry {
     /**
      * Clear all registered handlers.
      */
-    suspend fun clear() {
+    override suspend fun clear() {
         mutex.withLock {
             handlers.clear()
         }
@@ -223,7 +223,7 @@ class HandlerRegistry {
      *
      * @return Number of handlers successfully initialized
      */
-    suspend fun initializeAll(): Int {
+    override suspend fun initializeAll(): Int {
         val allHandlers = mutex.withLock { handlers.values.flatten().toList() }
         var successCount = 0
 
@@ -245,7 +245,7 @@ class HandlerRegistry {
      *
      * @return Number of handlers successfully disposed
      */
-    suspend fun disposeAll(): Int {
+    override suspend fun disposeAll(): Int {
         val allHandlers = mutex.withLock { handlers.values.flatten().toList() }
         var successCount = 0
 
@@ -265,7 +265,7 @@ class HandlerRegistry {
     /**
      * Get debug information about registered handlers.
      */
-    suspend fun getDebugInfo(): String {
+    override suspend fun getDebugInfo(): String {
         mutex.withLock {
             return buildString {
                 appendLine("HandlerRegistry Debug Info")

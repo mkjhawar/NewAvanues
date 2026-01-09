@@ -2,6 +2,7 @@ package com.augmentalis.voiceoscoreng.common
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.concurrent.Volatile
 
 /**
  * Command Registry - In-memory storage for active screen commands.
@@ -9,61 +10,65 @@ import kotlinx.coroutines.sync.withLock
  * Stores commands for the current screen. Replaced on each scan - no accumulation.
  * Designed for voice command lookup during execution.
  *
- * Thread-safe: All operations use Mutex for concurrent access from
- * accessibility service callbacks and voice recognition threads.
+ * Thread-safety strategy:
+ * - Uses immutable snapshot pattern with @Volatile reference
+ * - Writes are protected by mutex and replace the entire map atomically
+ * - Reads access the volatile snapshot directly (no locking needed)
+ * - This provides consistent reads without blocking and safe concurrent writes
  */
 class CommandRegistry {
-    private val commands = mutableMapOf<String, QuantizedCommand>() // keyed by VUID
-    private val mutex = Mutex() // KMP-compatible synchronization
+    /**
+     * Immutable snapshot of commands, keyed by VUID.
+     * Volatile ensures visibility of writes across threads.
+     * All reads see a consistent snapshot; writes replace atomically.
+     */
+    @Volatile
+    private var commandsSnapshot: Map<String, QuantizedCommand> = emptyMap()
+
+    private val mutex = Mutex() // Protects concurrent writes
 
     /**
      * Update registry with new commands, replacing all existing.
      * Commands with null targetVuid are ignored (cannot be indexed).
      *
-     * Thread-safe: Uses mutex to prevent concurrent modification.
+     * Thread-safe: Uses mutex to serialize writes.
      *
      * @param newCommands List of commands from current scan
      */
     suspend fun update(newCommands: List<QuantizedCommand>) {
         mutex.withLock {
-            commands.clear()
-            for (cmd in newCommands) {
-                val vuid = cmd.targetVuid
-                if (vuid != null) {
-                    commands[vuid] = cmd
-                }
-            }
+            commandsSnapshot = newCommands
+                .filter { it.targetVuid != null }
+                .associateBy { it.targetVuid!! }
         }
     }
 
     /**
-     * Non-suspend update for use in non-coroutine contexts.
-     * Note: This is NOT thread-safe. Use update() for concurrent access.
+     * Synchronous update for use in non-coroutine contexts.
+     *
+     * Thread-safe: Volatile reference ensures atomic visibility of writes.
+     * Prefer suspend update() when in a coroutine context.
+     *
+     * @param newCommands List of commands from current scan
      */
     fun updateSync(newCommands: List<QuantizedCommand>) {
-        commands.clear()
-        for (cmd in newCommands) {
-            val vuid = cmd.targetVuid
-            if (vuid != null) {
-                commands[vuid] = cmd
-            }
-        }
+        commandsSnapshot = newCommands
+            .filter { it.targetVuid != null }
+            .associateBy { it.targetVuid!! }
     }
 
     /**
      * Find command by voice phrase.
      * Supports exact match and partial label match (case insensitive).
      *
-     * Thread-safe: Takes a snapshot of values for iteration.
+     * Thread-safe: Reads from immutable snapshot.
      *
      * @param phrase Voice input phrase
      * @return Matching QuantizedCommand or null
      */
     fun findByPhrase(phrase: String): QuantizedCommand? {
         val normalized = phrase.lowercase().trim()
-
-        // Take a snapshot for thread-safe iteration
-        val snapshot = commands.values.toList()
+        val snapshot = commandsSnapshot.values // Read volatile once
 
         // Exact match first
         val exactMatch = snapshot.firstOrNull { cmd: QuantizedCommand ->
@@ -81,33 +86,39 @@ class CommandRegistry {
     /**
      * Find command by target VUID.
      *
+     * Thread-safe: Reads from immutable snapshot.
+     *
      * @param vuid Target element VUID
      * @return QuantizedCommand or null
      */
     fun findByVuid(vuid: String): QuantizedCommand? {
-        return commands[vuid]
+        return commandsSnapshot[vuid]
     }
 
     /**
      * Get all commands in registry.
      *
-     * Thread-safe: Returns a defensive copy.
+     * Thread-safe: Returns values from immutable snapshot.
      *
      * @return List of all commands
      */
     fun all(): List<QuantizedCommand> {
-        return commands.values.toList()
+        return commandsSnapshot.values.toList()
     }
 
     /**
      * Clear all commands.
+     *
+     * Thread-safe: Volatile reference ensures atomic visibility.
      */
     fun clear() {
-        commands.clear()
+        commandsSnapshot = emptyMap()
     }
 
     /**
      * Current command count.
+     *
+     * Thread-safe: Reads from immutable snapshot.
      */
-    val size: Int get() = commands.size
+    val size: Int get() = commandsSnapshot.size
 }

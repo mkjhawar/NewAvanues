@@ -28,18 +28,14 @@ import kotlinx.coroutines.sync.withLock
  * - Voice command interpretation
  */
 class ActionCoordinator(
-    private val voiceInterpreter: IVoiceCommandInterpreter = DefaultVoiceCommandInterpreter
+    private val voiceInterpreter: IVoiceCommandInterpreter = DefaultVoiceCommandInterpreter,
+    private val registry: IHandlerRegistry = HandlerRegistry(),
+    private val metrics: IMetricsCollector = MetricsCollector()
 ) {
 
     companion object {
         private const val HANDLER_TIMEOUT_MS = 5000L
     }
-
-    // Handler registry
-    private val registry = HandlerRegistry()
-
-    // Performance metrics
-    private val metrics = MetricsCollector()
 
     // Coroutine scope for async operations
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())

@@ -43,14 +43,10 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class CommandDispatcher(
     private val executor: IActionExecutor,
-    dynamicRegistry: CommandRegistry = CommandRegistry()
+    dynamicRegistry: CommandRegistry = CommandRegistry(),
+    private val staticDispatcher: IStaticCommandDispatcher = StaticCommandDispatcher(executor),
+    private val dynamicDispatcher: IDynamicCommandDispatcher = DynamicCommandDispatcher(executor, dynamicRegistry)
 ) {
-    // ═══════════════════════════════════════════════════════════════════
-    // Composed Dispatchers
-    // ═══════════════════════════════════════════════════════════════════
-
-    private val staticDispatcher = StaticCommandDispatcher(executor)
-    private val dynamicDispatcher = DynamicCommandDispatcher(executor, dynamicRegistry)
 
     // ═══════════════════════════════════════════════════════════════════
     // State

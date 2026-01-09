@@ -16,7 +16,7 @@ import kotlinx.coroutines.sync.withLock
 /**
  * Collects and aggregates performance metrics for command execution.
  */
-class MetricsCollector {
+class MetricsCollector : IMetricsCollector {
 
     private val mutex = Mutex()
 
@@ -32,7 +32,7 @@ class MetricsCollector {
     /**
      * Record a command result.
      */
-    suspend fun record(result: CommandResult) {
+    override suspend fun record(result: CommandResult) {
         mutex.withLock {
             val phrase = result.command.phrase
 
@@ -55,7 +55,7 @@ class MetricsCollector {
     /**
      * Get metrics summary.
      */
-    fun getSummary(): MetricsSummary {
+    override fun getSummary(): MetricsSummary {
         return MetricsSummary(
             totalCommands = totalCommands,
             successfulCommands = successfulCommands,
@@ -93,14 +93,14 @@ class MetricsCollector {
     /**
      * Get metrics for a specific command.
      */
-    fun getMetricsForCommand(phrase: String): CommandMetricSummary? {
+    override fun getMetricsForCommand(phrase: String): CommandMetricSummary? {
         return commandMetrics[phrase]?.toSummary()
     }
 
     /**
      * Reset all metrics.
      */
-    fun reset() {
+    override fun reset() {
         commandMetrics.clear()
         totalCommands = 0
         successfulCommands = 0
@@ -111,7 +111,7 @@ class MetricsCollector {
     /**
      * Get debug information.
      */
-    fun getDebugInfo(): String {
+    override fun getDebugInfo(): String {
         val summary = getSummary()
         return buildString {
             appendLine("MetricsCollector Debug Info")

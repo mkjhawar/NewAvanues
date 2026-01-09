@@ -15,6 +15,43 @@ import com.augmentalis.voiceoscoreng.common.CommandRegistry
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 
 /**
+ * Interface for dynamic command dispatching.
+ *
+ * Enables dependency injection and testing by abstracting
+ * the dynamic command dispatch behavior.
+ */
+interface IDynamicCommandDispatcher {
+    /**
+     * Current number of dynamic commands in registry.
+     */
+    val commandCount: Int
+
+    /**
+     * Update the dynamic command registry.
+     *
+     * @param commands New list of quantized commands from screen
+     */
+    suspend fun updateCommands(commands: List<QuantizedCommand>)
+
+    /**
+     * Match a voice input to dynamic commands.
+     *
+     * @param voiceInput Raw voice input string
+     * @param threshold Minimum similarity score (0.0 - 1.0)
+     * @return DynamicMatchResult indicating match outcome
+     */
+    fun match(voiceInput: String, threshold: Float): DynamicMatchResult
+
+    /**
+     * Execute a quantized command.
+     *
+     * @param command Quantized command to execute
+     * @return ActionResult from execution
+     */
+    suspend fun execute(command: QuantizedCommand): ActionResult
+}
+
+/**
  * Result of dynamic command matching.
  *
  * Provides rich information about the match outcome:
@@ -67,11 +104,11 @@ sealed class DynamicMatchResult {
 class DynamicCommandDispatcher(
     private val executor: IActionExecutor,
     private val registry: CommandRegistry = CommandRegistry()
-) {
+) : IDynamicCommandDispatcher {
     /**
      * Current number of dynamic commands in registry.
      */
-    val commandCount: Int get() = registry.size
+    override val commandCount: Int get() = registry.size
 
     /**
      * Update the dynamic command registry.
@@ -81,7 +118,7 @@ class DynamicCommandDispatcher(
      *
      * @param commands New list of quantized commands from screen
      */
-    suspend fun updateCommands(commands: List<QuantizedCommand>) {
+    override suspend fun updateCommands(commands: List<QuantizedCommand>) {
         registry.update(commands)
     }
 
@@ -95,7 +132,7 @@ class DynamicCommandDispatcher(
      * @param threshold Minimum similarity score (0.0 - 1.0)
      * @return DynamicMatchResult indicating match outcome
      */
-    fun match(voiceInput: String, threshold: Float): DynamicMatchResult {
+    override fun match(voiceInput: String, threshold: Float): DynamicMatchResult {
         val result = CommandMatcher.match(
             voiceInput = voiceInput,
             registry = registry,
@@ -120,7 +157,7 @@ class DynamicCommandDispatcher(
      * @param command Quantized command to execute
      * @return ActionResult from execution
      */
-    suspend fun execute(command: QuantizedCommand): ActionResult {
+    override suspend fun execute(command: QuantizedCommand): ActionResult {
         return executor.executeCommand(command)
     }
 }
