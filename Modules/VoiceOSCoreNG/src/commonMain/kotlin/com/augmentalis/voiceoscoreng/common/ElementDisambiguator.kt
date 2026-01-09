@@ -286,14 +286,37 @@ class ElementDisambiguator(
             ContextStrategy.NONE -> null
             ContextStrategy.RESOURCE_ID -> extractResourceIdContext(element)
             ContextStrategy.POSITION -> getPositionContext(element, allMatches, index)
-            ContextStrategy.PARENT -> element.parentInfo
+            ContextStrategy.PARENT -> extractParentContext(element)
             ContextStrategy.AUTO -> {
                 // Try each strategy in order until we get a useful context
                 extractResourceIdContext(element)
-                    ?: element.parentInfo?.takeIf { it.isNotBlank() }
+                    ?: extractParentContext(element)
                     ?: getPositionContext(element, allMatches, index)
             }
         }
+    }
+
+    /**
+     * Extract parent context from resourceId or contentDescription.
+     * Since ElementInfo doesn't track parent hierarchy, we infer from naming patterns.
+     */
+    private fun extractParentContext(element: ElementInfo): String? {
+        // Try to extract parent context from resourceId naming convention
+        // e.g., "form_submit_button" -> "Form" or "dialog_cancel" -> "Dialog"
+        val resourceId = element.resourceId
+        if (resourceId.isNotBlank()) {
+            val idPart = resourceId.substringAfterLast("/").substringAfterLast(":")
+            val parts = idPart.split("_", "-").filter { it.isNotBlank() }
+
+            // Common parent indicators at the start
+            val parentIndicators = setOf("form", "dialog", "header", "footer", "toolbar", "nav", "menu", "card", "list", "item")
+            val parentWord = parts.firstOrNull { it.lowercase() in parentIndicators }
+
+            if (parentWord != null) {
+                return parentWord.replaceFirstChar { char -> char.uppercase() }
+            }
+        }
+        return null
     }
 
     /**

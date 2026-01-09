@@ -11,6 +11,8 @@ package com.augmentalis.voiceoscoreng.handlers
 
 import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityNodeInfo
+import com.augmentalis.voiceoscoreng.common.Bounds
+import com.augmentalis.voiceoscoreng.common.ElementInfo
 import kotlinx.coroutines.delay
 
 /**
@@ -25,6 +27,120 @@ class AndroidUIExecutor(
     private val accessibilityServiceProvider: () -> AccessibilityService?,
     private val vuidLookup: (String) -> AccessibilityNodeInfo? = { null }
 ) : UIExecutor {
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Element Discovery (for disambiguation)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    override suspend fun getScreenElements(): List<ElementInfo> {
+        val service = accessibilityServiceProvider() ?: return emptyList()
+        val rootNode = service.rootInActiveWindow ?: return emptyList()
+
+        val elements = mutableListOf<ElementInfo>()
+        collectElementsRecursive(rootNode, elements)
+        return elements
+    }
+
+    private fun collectElementsRecursive(
+        node: AccessibilityNodeInfo,
+        elements: MutableList<ElementInfo>
+    ) {
+        // Only collect actionable elements with content
+        if (node.isClickable || node.isLongClickable || node.isScrollable) {
+            val text = node.text?.toString() ?: ""
+            val contentDescription = node.contentDescription?.toString() ?: ""
+            val resourceId = node.viewIdResourceName ?: ""
+
+            // Only add if has meaningful content for voice targeting
+            if (text.isNotBlank() || contentDescription.isNotBlank() || resourceId.isNotBlank()) {
+                val rect = android.graphics.Rect()
+                node.getBoundsInScreen(rect)
+
+                elements.add(
+                    ElementInfo(
+                        className = node.className?.toString() ?: "",
+                        resourceId = resourceId,
+                        text = text,
+                        contentDescription = contentDescription,
+                        bounds = Bounds(rect.left, rect.top, rect.right, rect.bottom),
+                        isClickable = node.isClickable,
+                        isLongClickable = node.isLongClickable,
+                        isScrollable = node.isScrollable,
+                        isEnabled = node.isEnabled,
+                        packageName = node.packageName?.toString() ?: ""
+                    )
+                )
+            }
+        }
+
+        // Recurse into children
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { child ->
+                collectElementsRecursive(child, elements)
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Direct Element Actions (used after disambiguation)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    override suspend fun clickElement(element: ElementInfo): Boolean {
+        val node = findNodeByElementInfo(element) ?: return false
+        return node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+    }
+
+    override suspend fun longClickElement(element: ElementInfo): Boolean {
+        val node = findNodeByElementInfo(element) ?: return false
+        return node.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
+    }
+
+    override suspend fun doubleClickElement(element: ElementInfo): Boolean {
+        val node = findNodeByElementInfo(element) ?: return false
+        val firstClick = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        delay(50)
+        val secondClick = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        return firstClick && secondClick
+    }
+
+    private fun findNodeByElementInfo(element: ElementInfo): AccessibilityNodeInfo? {
+        val service = accessibilityServiceProvider() ?: return null
+        val rootNode = service.rootInActiveWindow ?: return null
+        return findNodeByElementInfoRecursive(rootNode, element)
+    }
+
+    private fun findNodeByElementInfoRecursive(
+        node: AccessibilityNodeInfo,
+        element: ElementInfo
+    ): AccessibilityNodeInfo? {
+        // Match by text, resourceId, and bounds
+        val nodeText = node.text?.toString() ?: ""
+        val nodeResourceId = node.viewIdResourceName ?: ""
+        val rect = android.graphics.Rect()
+        node.getBoundsInScreen(rect)
+
+        if (nodeText == element.text &&
+            nodeResourceId == element.resourceId &&
+            rect.left == element.bounds.left &&
+            rect.top == element.bounds.top
+        ) {
+            return node
+        }
+
+        // Recurse into children
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { child ->
+                val result = findNodeByElementInfoRecursive(child, element)
+                if (result != null) return result
+            }
+        }
+
+        return null
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Legacy Text/VUID Actions
+    // ═══════════════════════════════════════════════════════════════════════════
 
     override suspend fun clickByText(text: String): Boolean {
         val node = findNodeByText(text) ?: findNodeByDescription(text) ?: return false
