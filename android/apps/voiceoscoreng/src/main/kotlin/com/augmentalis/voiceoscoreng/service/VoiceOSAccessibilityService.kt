@@ -579,20 +579,21 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             CommandGenerator.fromElement(element, packageName)
         }
 
-        // Update the registry for voice matching (use sync version in non-suspend context)
+        // Update the local registry for voice matching (for CommandMatcher.match static method)
         commandRegistry.updateSync(quantizedCommands)
 
-        Log.d(TAG, "Generated ${quantizedCommands.size} commands via KMP CommandGenerator, registered in CommandRegistry")
+        Log.d(TAG, "Generated ${quantizedCommands.size} commands via KMP CommandGenerator")
 
-        // CRITICAL: Update the speech engine with the new commands
-        // This registers dynamic grammar with Vivoka SDK so it recognizes these phrases
-        val commandPhrases = quantizedCommands.map { it.phrase }
+        // CRITICAL: Update VoiceOSCoreNG with dynamic commands
+        // This does TWO things:
+        // 1. Registers commands with ActionCoordinator's CommandRegistry (for processCommand lookup with VUIDs)
+        // 2. Updates speech engine grammar (Vivoka SDK) so it recognizes these phrases
         serviceScope.launch {
             try {
-                voiceOSCore?.updateCommands(commandPhrases)
-                Log.d(TAG, "Updated speech engine with ${commandPhrases.size} command phrases")
+                voiceOSCore?.updateDynamicCommands(quantizedCommands, updateSpeechEngine = true)
+                Log.d(TAG, "Updated VoiceOSCoreNG with ${quantizedCommands.size} dynamic commands (registry + speech engine)")
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to update speech engine commands", e)
+                Log.e(TAG, "Failed to update dynamic commands", e)
             }
         }
 
