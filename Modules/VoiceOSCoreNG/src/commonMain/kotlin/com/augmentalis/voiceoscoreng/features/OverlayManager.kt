@@ -14,6 +14,11 @@
  * - Disposal management
  * - Config propagation
  *
+ * Refactored for SRP compliance using composition:
+ * - [OverlayRegistry] - Registration and lookup
+ * - [OverlayVisibilityManager] - Show/hide operations
+ * - [OverlayDisposal] - Disposal and cleanup
+ *
  * Note: This implementation is designed for single-threaded access from the main/UI thread.
  * Platform implementations should ensure all calls are made from the appropriate thread.
  * For multi-threaded scenarios, platform-specific synchronization should be applied.
@@ -29,6 +34,11 @@ package com.augmentalis.voiceoscoreng.features
  * Provides coordinated control and lifecycle management for multiple
  * [IOverlay] instances. This is the primary interface for the voice
  * command system to interact with visual overlays.
+ *
+ * Uses composition of focused managers for better SRP compliance:
+ * - [OverlayRegistry] handles registration and lookup
+ * - [OverlayVisibilityManager] handles show/hide operations
+ * - [OverlayDisposal] handles disposal and cleanup
  *
  * Usage:
  * ```kotlin
@@ -56,6 +66,26 @@ package com.augmentalis.voiceoscoreng.features
 class OverlayManager(
     config: OverlayConfig = OverlayConfig()
 ) {
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Composed Managers (SRP Delegation)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Registry for overlay storage and lookup.
+     */
+    private val registry = OverlayRegistry()
+
+    /**
+     * Manager for visibility operations.
+     */
+    private val visibility = OverlayVisibilityManager(registry)
+
+    /**
+     * Manager for disposal operations.
+     */
+    private val disposal = OverlayDisposal(registry)
+
     // ═══════════════════════════════════════════════════════════════════════
     // Configuration
     // ═══════════════════════════════════════════════════════════════════════
@@ -79,24 +109,14 @@ class OverlayManager(
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Overlay Registry
+    // Registration (Delegated to OverlayRegistry)
     // ═══════════════════════════════════════════════════════════════════════
-
-    /**
-     * Internal map of registered overlays by ID.
-     * Access should be from a single thread (typically main/UI thread).
-     */
-    private val overlays = mutableMapOf<String, IOverlay>()
 
     /**
      * Number of currently registered overlays.
      */
     val overlayCount: Int
-        get() = overlays.size
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // Registration
-    // ═══════════════════════════════════════════════════════════════════════
+        get() = registry.count
 
     /**
      * Register an overlay with the manager.
@@ -108,10 +128,7 @@ class OverlayManager(
      * @param overlay The overlay to register
      * @return true if registration succeeded
      */
-    fun register(overlay: IOverlay): Boolean {
-        overlays[overlay.id] = overlay
-        return true
-    }
+    fun register(overlay: IOverlay): Boolean = registry.register(overlay)
 
     /**
      * Unregister an overlay by ID.
@@ -122,9 +139,7 @@ class OverlayManager(
      * @param id The ID of the overlay to unregister
      * @return true if the overlay was found and removed
      */
-    fun unregister(id: String): Boolean {
-        return overlays.remove(id) != null
-    }
+    fun unregister(id: String): Boolean = registry.unregister(id)
 
     /**
      * Check if an overlay with the given ID is registered.
@@ -132,21 +147,17 @@ class OverlayManager(
      * @param id The overlay ID to check
      * @return true if an overlay with this ID is registered
      */
-    fun contains(id: String): Boolean {
-        return overlays.containsKey(id)
-    }
+    fun contains(id: String): Boolean = registry.contains(id)
 
     /**
      * Get a list of all registered overlay IDs.
      *
      * @return A new list containing all registered overlay IDs
      */
-    fun getAllOverlayIds(): List<String> {
-        return overlays.keys.toList()
-    }
+    fun getAllOverlayIds(): List<String> = registry.getAllIds()
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Lookup
+    // Lookup (Delegated to OverlayRegistry)
     // ═══════════════════════════════════════════════════════════════════════
 
     /**
@@ -155,12 +166,10 @@ class OverlayManager(
      * @param id The overlay ID to find
      * @return The overlay if found, null otherwise
      */
-    fun findById(id: String): IOverlay? {
-        return overlays[id]
-    }
+    fun findById(id: String): IOverlay? = registry.findById(id)
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Show/Hide Operations
+    // Show/Hide Operations (Delegated to OverlayVisibilityManager)
     // ═══════════════════════════════════════════════════════════════════════
 
     /**
@@ -168,18 +177,14 @@ class OverlayManager(
      *
      * Calls [IOverlay.show] on each registered overlay.
      */
-    fun showAll() {
-        overlays.values.forEach { it.show() }
-    }
+    fun showAll() = visibility.showAll()
 
     /**
      * Hide all registered overlays.
      *
      * Calls [IOverlay.hide] on each registered overlay.
      */
-    fun hideAll() {
-        overlays.values.forEach { it.hide() }
-    }
+    fun hideAll() = visibility.hideAll()
 
     /**
      * Show a specific overlay by ID.
@@ -187,15 +192,7 @@ class OverlayManager(
      * @param id The overlay ID to show
      * @return true if the overlay was found and shown
      */
-    fun show(id: String): Boolean {
-        val overlay = overlays[id]
-        return if (overlay != null) {
-            overlay.show()
-            true
-        } else {
-            false
-        }
-    }
+    fun show(id: String): Boolean = visibility.show(id)
 
     /**
      * Hide a specific overlay by ID.
@@ -203,18 +200,10 @@ class OverlayManager(
      * @param id The overlay ID to hide
      * @return true if the overlay was found and hidden
      */
-    fun hide(id: String): Boolean {
-        val overlay = overlays[id]
-        return if (overlay != null) {
-            overlay.hide()
-            true
-        } else {
-            false
-        }
-    }
+    fun hide(id: String): Boolean = visibility.hide(id)
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Visibility Queries
+    // Visibility Queries (Delegated to OverlayVisibilityManager)
     // ═══════════════════════════════════════════════════════════════════════
 
     /**
@@ -222,9 +211,7 @@ class OverlayManager(
      *
      * @return true if at least one overlay is visible
      */
-    fun isAnyVisible(): Boolean {
-        return overlays.values.any { it.isVisible }
-    }
+    fun isAnyVisible(): Boolean = visibility.isAnyVisible()
 
     /**
      * Check if a specific overlay is visible.
@@ -232,18 +219,14 @@ class OverlayManager(
      * @param id The overlay ID to check
      * @return true if the overlay exists and is visible
      */
-    fun isVisible(id: String): Boolean {
-        return overlays[id]?.isVisible ?: false
-    }
+    fun isVisible(id: String): Boolean = visibility.isVisible(id)
 
     /**
      * Get the IDs of all currently visible overlays.
      *
      * @return A list of IDs for visible overlays
      */
-    fun getVisibleOverlayIds(): List<String> {
-        return overlays.filter { it.value.isVisible }.keys.toList()
-    }
+    fun getVisibleOverlayIds(): List<String> = visibility.getVisibleIds()
 
     // ═══════════════════════════════════════════════════════════════════════
     // Update Operations
@@ -257,17 +240,13 @@ class OverlayManager(
      * @return true if the overlay was found and updated
      */
     fun update(id: String, data: OverlayData): Boolean {
-        val overlay = overlays[id]
-        return if (overlay != null) {
-            overlay.update(data)
-            true
-        } else {
-            false
-        }
+        val overlay = registry.findById(id) ?: return false
+        overlay.update(data)
+        return true
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Disposal
+    // Disposal (Delegated to OverlayDisposal)
     // ═══════════════════════════════════════════════════════════════════════
 
     /**
@@ -280,13 +259,7 @@ class OverlayManager(
      *
      * After calling this, [overlayCount] will be 0.
      */
-    fun disposeAll() {
-        overlays.values.forEach { overlay ->
-            overlay.hide()
-            overlay.dispose()
-        }
-        overlays.clear()
-    }
+    fun disposeAll() = disposal.disposeAll()
 
     /**
      * Dispose a specific overlay by ID.
@@ -296,19 +269,10 @@ class OverlayManager(
      * @param id The overlay ID to dispose
      * @return true if the overlay was found and disposed
      */
-    fun dispose(id: String): Boolean {
-        val overlay = overlays.remove(id)
-        return if (overlay != null) {
-            overlay.hide()
-            overlay.dispose()
-            true
-        } else {
-            false
-        }
-    }
+    fun dispose(id: String): Boolean = disposal.dispose(id)
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Clear (Without Disposal)
+    // Clear (Without Disposal) - Delegated to OverlayRegistry
     // ═══════════════════════════════════════════════════════════════════════
 
     /**
@@ -317,12 +281,10 @@ class OverlayManager(
      * Use this when you want to re-use overlays elsewhere.
      * Use [disposeAll] if you want to properly clean up resources.
      */
-    fun clear() {
-        overlays.clear()
-    }
+    fun clear() = registry.clear()
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Iteration
+    // Iteration (Delegated to OverlayRegistry)
     // ═══════════════════════════════════════════════════════════════════════
 
     /**
@@ -330,7 +292,5 @@ class OverlayManager(
      *
      * @param action The action to execute for each overlay
      */
-    fun forEach(action: (IOverlay) -> Unit) {
-        overlays.values.forEach(action)
-    }
+    fun forEach(action: (IOverlay) -> Unit) = registry.forEach(action)
 }

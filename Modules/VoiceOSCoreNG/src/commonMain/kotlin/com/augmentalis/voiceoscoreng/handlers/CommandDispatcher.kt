@@ -4,18 +4,16 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2026-01-05
+ * Updated: 2026-01-08 - Refactored to use composition (SRP)
  *
  * Routes matched commands to appropriate executors.
- * Handles both static and dynamic commands.
+ * Orchestrates static and dynamic command dispatchers.
  */
 package com.augmentalis.voiceoscoreng.handlers
 
 import com.augmentalis.voiceoscoreng.common.CommandActionType
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
-import com.augmentalis.voiceoscoreng.common.CommandMatcher
 import com.augmentalis.voiceoscoreng.common.CommandRegistry
-import com.augmentalis.voiceoscoreng.common.StaticCommand
-import com.augmentalis.voiceoscoreng.common.StaticCommandRegistry
 import com.augmentalis.voiceoscoreng.features.SpeechMode
 import com.augmentalis.voiceoscoreng.features.currentTimeMillis
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -28,10 +26,15 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Dispatches voice commands to appropriate action executors.
  *
+ * Orchestrates specialized dispatchers:
+ * - StaticCommandDispatcher: System-wide predefined commands
+ * - DynamicCommandDispatcher: Screen-specific commands
+ *
  * Flow:
- * 1. Voice input → CommandMatcher → MatchResult
- * 2. MatchResult → CommandDispatcher → ActionExecutor
- * 3. ActionExecutor → ActionResult → Feedback
+ * 1. Voice input → Mode check → Route to appropriate dispatcher
+ * 2. Static match (if enabled) → Execute if matched
+ * 3. Dynamic match (if enabled) → Execute if matched
+ * 4. Emit events and update state
  *
  * Supports:
  * - Static commands (system-wide)
@@ -40,8 +43,15 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class CommandDispatcher(
     private val executor: IActionExecutor,
-    private val dynamicRegistry: CommandRegistry = CommandRegistry()
+    dynamicRegistry: CommandRegistry = CommandRegistry()
 ) {
+    // ═══════════════════════════════════════════════════════════════════
+    // Composed Dispatchers
+    // ═══════════════════════════════════════════════════════════════════
+
+    private val staticDispatcher = StaticCommandDispatcher(executor)
+    private val dynamicDispatcher = DynamicCommandDispatcher(executor, dynamicRegistry)
+
     // ═══════════════════════════════════════════════════════════════════
     // State
     // ═══════════════════════════════════════════════════════════════════
@@ -69,8 +79,8 @@ class CommandDispatcher(
     /**
      * Update dynamic commands from screen scraping.
      */
-    fun updateDynamicCommands(commands: List<QuantizedCommand>) {
-        dynamicRegistry.update(commands)
+    suspend fun updateDynamicCommands(commands: List<QuantizedCommand>) {
+        dynamicDispatcher.updateCommands(commands)
         _state.value = _state.value.copy(
             dynamicCommandCount = commands.size
         )
@@ -96,9 +106,9 @@ class CommandDispatcher(
         try {
             // Step 1: Try static commands first (if mode allows)
             if (currentMode.requiresStaticCommands()) {
-                val staticResult = matchStaticCommand(voiceInput)
-                if (staticResult != null) {
-                    val actionResult = executeStaticCommand(staticResult)
+                val staticCommand = staticDispatcher.match(voiceInput)
+                if (staticCommand != null) {
+                    val actionResult = staticDispatcher.execute(staticCommand)
                     return completeDispatch(
                         voiceInput = voiceInput,
                         commandType = CommandType.STATIC,
@@ -110,26 +120,14 @@ class CommandDispatcher(
 
             // Step 2: Try dynamic commands (if mode allows)
             if (currentMode.requiresDynamicCommands()) {
-                val matchResult = CommandMatcher.match(
+                val matchResult = dynamicDispatcher.match(
                     voiceInput = voiceInput,
-                    registry = dynamicRegistry,
                     threshold = currentMode.getRecommendedConfidenceThreshold()
                 )
 
                 when (matchResult) {
-                    is CommandMatcher.MatchResult.Exact -> {
-                        val actionResult = executor.executeCommand(matchResult.command)
-                        return completeDispatch(
-                            voiceInput = voiceInput,
-                            commandType = CommandType.DYNAMIC,
-                            actionResult = actionResult,
-                            matchedCommand = matchResult.command.phrase,
-                            duration = currentTimeMillis() - startTime
-                        )
-                    }
-
-                    is CommandMatcher.MatchResult.Fuzzy -> {
-                        val actionResult = executor.executeCommand(matchResult.command)
+                    is DynamicMatchResult.Matched -> {
+                        val actionResult = dynamicDispatcher.execute(matchResult.command)
                         return completeDispatch(
                             voiceInput = voiceInput,
                             commandType = CommandType.DYNAMIC,
@@ -140,7 +138,7 @@ class CommandDispatcher(
                         )
                     }
 
-                    is CommandMatcher.MatchResult.Ambiguous -> {
+                    is DynamicMatchResult.Ambiguous -> {
                         emitEvent(DispatchEvent.Ambiguous(
                             voiceInput,
                             matchResult.candidates.map { it.phrase }
@@ -151,7 +149,7 @@ class CommandDispatcher(
                         )
                     }
 
-                    is CommandMatcher.MatchResult.NoMatch -> {
+                    is DynamicMatchResult.NoMatch -> {
                         // Fall through to no match
                     }
                 }
@@ -190,18 +188,6 @@ class CommandDispatcher(
         params: Map<String, Any> = emptyMap()
     ): ActionResult {
         return executor.executeAction(actionType, params)
-    }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Static Command Handling
-    // ═══════════════════════════════════════════════════════════════════
-
-    private fun matchStaticCommand(voiceInput: String): StaticCommand? {
-        return StaticCommandRegistry.findByPhrase(voiceInput)
-    }
-
-    private suspend fun executeStaticCommand(command: StaticCommand): ActionResult {
-        return executor.executeAction(command.actionType, command.metadata)
     }
 
     // ═══════════════════════════════════════════════════════════════════
