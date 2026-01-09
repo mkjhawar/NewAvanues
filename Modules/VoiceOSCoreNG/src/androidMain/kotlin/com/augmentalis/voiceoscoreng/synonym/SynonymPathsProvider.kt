@@ -141,3 +141,63 @@ class AndroidFileLoader : IFileLoader {
         }?.map { it.name } ?: emptyList()
     }
 }
+
+/**
+ * Factory to create a fully-configured synonym provider for Android.
+ *
+ * Usage:
+ * ```kotlin
+ * val provider = SynonymProviderFactory.create(context)
+ *
+ * val core = VoiceOSCoreNG.Builder()
+ *     .withHandlerFactory(factory)
+ *     .withSynonymProvider(provider)
+ *     .build()
+ * ```
+ */
+object SynonymProviderFactory {
+
+    /**
+     * Create a StaticSynonymProvider with Android loaders.
+     *
+     * @param context Android context
+     * @param preloadLanguages Languages to preload (default: en)
+     * @return Configured synonym provider
+     */
+    fun create(
+        context: Context,
+        preloadLanguages: List<String> = listOf("en")
+    ): ISynonymProvider {
+        // Initialize paths provider
+        SynonymPathsProvider.initialize(context)
+
+        val loader = SynonymLoader(
+            paths = SynonymPathsProvider.getPaths(),
+            resourceLoader = AndroidResourceLoader(context),
+            fileLoader = AndroidFileLoader(),
+            preferBinary = true
+        )
+
+        val provider = StaticSynonymProvider(loader)
+
+        // Preload common languages
+        provider.preload(preloadLanguages)
+
+        return provider
+    }
+
+    /**
+     * Create a CompositeProvider with optional NLM support.
+     *
+     * @param context Android context
+     * @param nlmResolver Optional NLM resolver for semantic matching
+     * @return Composite provider
+     */
+    fun createWithNlm(
+        context: Context,
+        nlmResolver: (suspend (String, List<String>, String) -> String?)? = null
+    ): ISynonymProvider {
+        val staticProvider = create(context)
+        return CompositeSynonymProvider(staticProvider, nlmResolver)
+    }
+}

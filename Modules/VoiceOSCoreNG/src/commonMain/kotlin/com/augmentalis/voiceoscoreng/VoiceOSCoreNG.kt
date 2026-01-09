@@ -10,9 +10,11 @@
  */
 package com.augmentalis.voiceoscoreng
 
+import com.augmentalis.voiceoscoreng.common.CommandMatcher
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.handlers.*
 import com.augmentalis.voiceoscoreng.features.*
+import com.augmentalis.voiceoscoreng.synonym.*
 import kotlinx.coroutines.flow.*
 
 /**
@@ -38,7 +40,8 @@ import kotlinx.coroutines.flow.*
 class VoiceOSCoreNG private constructor(
     private val handlerFactory: HandlerFactory,
     private val speechEngineFactory: ISpeechEngineFactory,
-    private val configuration: ServiceConfiguration
+    private val configuration: ServiceConfiguration,
+    private val synonymProvider: ISynonymProvider? = null
 ) {
     // Coordinator manages handler execution
     private val coordinator = ActionCoordinator()
@@ -48,6 +51,9 @@ class VoiceOSCoreNG private constructor(
 
     // Current speech engine
     private var speechEngine: ISpeechEngine? = null
+
+    // Synonym provider for fuzzy matching
+    private var activeSynonymProvider: ISynonymProvider? = synonymProvider
 
     /**
      * Service state flow.
@@ -75,10 +81,19 @@ class VoiceOSCoreNG private constructor(
             // Create handlers using factory
             val handlers = handlerFactory.createHandlers()
 
-            stateManager.transition(ServiceState.Initializing(0.3f, "Registering handlers"))
+            stateManager.transition(ServiceState.Initializing(0.2f, "Registering handlers"))
 
             // Initialize coordinator with handlers
             coordinator.initialize(handlers)
+
+            stateManager.transition(ServiceState.Initializing(0.4f, "Initializing synonyms"))
+
+            // Wire up synonym provider for fuzzy matching
+            if (configuration.synonymsEnabled && activeSynonymProvider != null) {
+                CommandMatcher.synonymProvider = activeSynonymProvider
+                CommandMatcher.defaultLanguage = configuration.effectiveSynonymLanguage()
+                println("[VoiceOSCoreNG] Synonym provider initialized for ${configuration.effectiveSynonymLanguage()}")
+            }
 
             stateManager.transition(ServiceState.Initializing(0.6f, "Initializing speech engine"))
 
@@ -327,6 +342,7 @@ class VoiceOSCoreNG private constructor(
         private var handlerFactory: HandlerFactory? = null
         private var speechEngineFactory: ISpeechEngineFactory? = null
         private var configuration: ServiceConfiguration = ServiceConfiguration.DEFAULT
+        private var synonymProvider: ISynonymProvider? = null
 
         fun withHandlerFactory(factory: HandlerFactory) = apply {
             this.handlerFactory = factory
@@ -359,11 +375,53 @@ class VoiceOSCoreNG private constructor(
             this.configuration = configuration.copy(debugMode = enabled)
         }
 
+        /**
+         * Set the synonym provider for fuzzy voice command matching.
+         *
+         * Platform-specific creation:
+         * ```kotlin
+         * // Android
+         * val loader = SynonymLoader(
+         *     AndroidSynonymPaths(context),
+         *     AndroidResourceLoader(context),
+         *     AndroidFileLoader()
+         * )
+         * builder.withSynonymProvider(StaticSynonymProvider(loader))
+         *
+         * // iOS
+         * val loader = SynonymLoader(
+         *     IOSSynonymPaths(),
+         *     IOSResourceLoader(),
+         *     IOSFileLoader()
+         * )
+         * builder.withSynonymProvider(StaticSynonymProvider(loader))
+         * ```
+         *
+         * @param provider The synonym provider to use
+         */
+        fun withSynonymProvider(provider: ISynonymProvider) = apply {
+            this.synonymProvider = provider
+        }
+
+        /**
+         * Enable/disable synonym expansion.
+         *
+         * @param enabled Whether to use synonyms for matching
+         * @param language ISO 639-1 language code (null uses voiceLanguage)
+         */
+        fun withSynonyms(enabled: Boolean, language: String? = null) = apply {
+            this.configuration = configuration.copy(
+                synonymsEnabled = enabled,
+                synonymLanguage = language
+            )
+        }
+
         fun build(): VoiceOSCoreNG {
             return VoiceOSCoreNG(
                 handlerFactory = handlerFactory ?: throw IllegalStateException("HandlerFactory required"),
                 speechEngineFactory = speechEngineFactory ?: SpeechEngineFactoryProvider.create(),
-                configuration = configuration
+                configuration = configuration,
+                synonymProvider = synonymProvider
             )
         }
     }

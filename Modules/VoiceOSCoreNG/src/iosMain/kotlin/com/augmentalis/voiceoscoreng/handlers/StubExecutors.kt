@@ -10,6 +10,8 @@
  */
 package com.augmentalis.voiceoscoreng.handlers
 
+import com.augmentalis.voiceoscoreng.common.ElementInfo
+
 /**
  * iOS stub for [NavigationExecutor].
  * TODO: Implement using UIAccessibility.
@@ -28,6 +30,15 @@ class IOSNavigationExecutor : NavigationExecutor {
  * TODO: Implement using UIAccessibility.
  */
 class IOSUIExecutor : UIExecutor {
+    // Element discovery for disambiguation
+    override suspend fun getScreenElements(): List<ElementInfo> = emptyList()
+
+    // Direct element actions (used after disambiguation)
+    override suspend fun clickElement(element: ElementInfo): Boolean = false
+    override suspend fun longClickElement(element: ElementInfo): Boolean = false
+    override suspend fun doubleClickElement(element: ElementInfo): Boolean = false
+
+    // Legacy text/VUID actions
     override suspend fun clickByText(text: String): Boolean = false
     override suspend fun clickByVuid(vuid: String): Boolean = false
     override suspend fun longClickByText(text: String): Boolean = false
