@@ -13,6 +13,7 @@ import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
+import com.augmentalis.voiceoscoreng.common.VUIDGenerator
 import kotlinx.coroutines.delay
 
 /**
@@ -148,7 +149,15 @@ class AndroidUIExecutor(
     }
 
     override suspend fun clickByVuid(vuid: String): Boolean {
-        val node = vuidLookup(vuid) ?: return false
+        // Try provided lookup first (if caller has a cache)
+        var node = vuidLookup(vuid)
+
+        // Fallback: search accessibility tree by regenerating VUIDs
+        if (node == null) {
+            node = findNodeByVuidSearch(vuid)
+        }
+
+        if (node == null) return false
         return node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
     }
 
@@ -158,7 +167,11 @@ class AndroidUIExecutor(
     }
 
     override suspend fun longClickByVuid(vuid: String): Boolean {
-        val node = vuidLookup(vuid) ?: return false
+        var node = vuidLookup(vuid)
+        if (node == null) {
+            node = findNodeByVuidSearch(vuid)
+        }
+        if (node == null) return false
         return node.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
     }
 
@@ -285,5 +298,91 @@ class AndroidUIExecutor(
         }
 
         return null
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // VUID Search - Find element by regenerating VUID from accessibility tree
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Find a node by searching the accessibility tree and matching VUIDs.
+     *
+     * VUIDs are deterministic hashes generated from:
+     * - Package name (first 6 hex chars)
+     * - Type code (single char for element type)
+     * - Element hash (8 hex chars from resourceId/contentDescription/text/bounds)
+     *
+     * This method regenerates VUIDs for visible elements and finds the match.
+     *
+     * @param targetVuid The VUID to search for
+     * @return AccessibilityNodeInfo if found, null otherwise
+     */
+    private fun findNodeByVuidSearch(targetVuid: String): AccessibilityNodeInfo? {
+        val service = accessibilityServiceProvider() ?: return null
+        val rootNode = service.rootInActiveWindow ?: return null
+        val packageName = rootNode.packageName?.toString() ?: return null
+
+        return findNodeByVuidRecursive(rootNode, targetVuid, packageName)
+    }
+
+    /**
+     * Recursively search for node matching the target VUID.
+     */
+    private fun findNodeByVuidRecursive(
+        node: AccessibilityNodeInfo,
+        targetVuid: String,
+        packageName: String
+    ): AccessibilityNodeInfo? {
+        // Only check actionable elements (same filter as command generation)
+        if (node.isClickable || node.isLongClickable || node.isScrollable) {
+            // Generate VUID for this node using same algorithm as CommandGenerator
+            val nodeVuid = generateVuidForNode(node, packageName)
+            if (nodeVuid == targetVuid) {
+                return node
+            }
+        }
+
+        // Recurse into children
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { child ->
+                val result = findNodeByVuidRecursive(child, targetVuid, packageName)
+                if (result != null) return result
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * Generate VUID for an AccessibilityNodeInfo using same algorithm as CommandGenerator.
+     *
+     * VUID format: {pkgHash6}-{typeCode}{hash8}
+     * Example: a3f2e1-b917cc9dc
+     */
+    private fun generateVuidForNode(node: AccessibilityNodeInfo, packageName: String): String {
+        val className = node.className?.toString() ?: ""
+        val resourceId = node.viewIdResourceName ?: ""
+        val contentDescription = node.contentDescription?.toString() ?: ""
+        val text = node.text?.toString() ?: ""
+        val rect = android.graphics.Rect()
+        node.getBoundsInScreen(rect)
+        val bounds = "${rect.left},${rect.top},${rect.right},${rect.bottom}"
+
+        // Get type code from class name (same as VUIDGenerator.getTypeCode)
+        val typeCode = VUIDGenerator.getTypeCode(className)
+
+        // Create element hash from most stable identifier (same priority as CommandGenerator)
+        val elementHash = when {
+            resourceId.isNotBlank() -> resourceId
+            contentDescription.isNotBlank() -> contentDescription
+            text.isNotBlank() -> text
+            else -> "$className:$bounds"
+        }
+
+        return VUIDGenerator.generate(
+            packageName = packageName,
+            typeCode = typeCode,
+            elementHash = elementHash
+        )
     }
 }
