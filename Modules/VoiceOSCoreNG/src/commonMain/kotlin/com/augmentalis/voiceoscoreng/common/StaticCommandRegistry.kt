@@ -325,6 +325,75 @@ object StaticCommandRegistry {
      * Get phrase count
      */
     val phraseCount: Int get() = allPhrases().size
+
+    // ═══════════════════════════════════════════════════════════════════
+    // NLU/LLM Integration - QuantizedCommand Export
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Get all static commands as QuantizedCommand objects for NLU/LLM.
+     *
+     * Each phrase variant becomes a separate QuantizedCommand with:
+     * - targetVuid = null (system commands, no element target)
+     * - confidence = 1.0 (always available)
+     * - metadata includes category, description, source
+     *
+     * @return List of QuantizedCommand for all static commands
+     */
+    fun allAsQuantized(): List<QuantizedCommand> {
+        return all().flatMap { it.toQuantizedCommands() }
+    }
+
+    /**
+     * Get static commands by category as QuantizedCommand.
+     *
+     * @param category Command category
+     * @return List of QuantizedCommand for category
+     */
+    fun byCategoryAsQuantized(category: CommandCategory): List<QuantizedCommand> {
+        return byCategory(category).flatMap { it.toQuantizedCommands() }
+    }
+
+    /**
+     * Export all commands in AVU CMD format for NLU/LLM.
+     *
+     * Format: CMD:uuid:trigger:action:element_uuid:confidence
+     * Static commands have empty element_uuid (system commands).
+     *
+     * @return Multi-line string with all commands in CMD format
+     */
+    fun toAvuFormat(): String {
+        return allAsQuantized().joinToString("\n") { it.toCmdLine() }
+    }
+
+    /**
+     * Get a concise NLU schema describing available commands.
+     *
+     * Returns a structured format suitable for LLM prompts:
+     * - Category grouping
+     * - Primary phrase + action type
+     * - Description for context
+     */
+    fun toNluSchema(): String {
+        return buildString {
+            appendLine("# Static Voice Commands")
+            appendLine()
+
+            CommandCategory.entries.forEach { category ->
+                val commands = byCategory(category)
+                if (commands.isNotEmpty()) {
+                    appendLine("## ${category.name}")
+                    commands.forEach { cmd ->
+                        appendLine("- ${cmd.primaryPhrase}: ${cmd.actionType.name} - ${cmd.description}")
+                        if (cmd.phrases.size > 1) {
+                            appendLine("  Aliases: ${cmd.phrases.drop(1).joinToString(", ")}")
+                        }
+                    }
+                    appendLine()
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -360,6 +429,62 @@ data class StaticCommand(
      * Primary phrase (first in list)
      */
     val primaryPhrase: String get() = phrases.first()
+
+    /**
+     * Convert to QuantizedCommand objects for NLU/LLM.
+     *
+     * Creates one QuantizedCommand per phrase variant.
+     * Static commands have:
+     * - targetVuid = null (system command, no element target)
+     * - confidence = 1.0 (always available)
+     * - uuid = static__{category}__{normalized_phrase}
+     *
+     * @return List of QuantizedCommand for each phrase
+     */
+    fun toQuantizedCommands(): List<QuantizedCommand> {
+        return phrases.map { phrase ->
+            val normalizedPhrase = phrase.lowercase().replace(" ", "_")
+            val uuid = "static__${category.name.lowercase()}__$normalizedPhrase"
+
+            QuantizedCommand(
+                uuid = uuid,
+                phrase = phrase,
+                actionType = actionType,
+                targetVuid = null, // Static commands have no target element
+                confidence = 1.0f, // Static commands are always available
+                metadata = metadata + mapOf(
+                    "source" to "static",
+                    "category" to category.name,
+                    "description" to description,
+                    "primary_phrase" to primaryPhrase
+                )
+            )
+        }
+    }
+
+    /**
+     * Convert primary phrase to a single QuantizedCommand.
+     *
+     * @return QuantizedCommand for primary phrase only
+     */
+    fun toQuantizedCommand(): QuantizedCommand {
+        val normalizedPhrase = primaryPhrase.lowercase().replace(" ", "_")
+        val uuid = "static__${category.name.lowercase()}__$normalizedPhrase"
+
+        return QuantizedCommand(
+            uuid = uuid,
+            phrase = primaryPhrase,
+            actionType = actionType,
+            targetVuid = null,
+            confidence = 1.0f,
+            metadata = metadata + mapOf(
+                "source" to "static",
+                "category" to category.name,
+                "description" to description,
+                "aliases" to phrases.drop(1).joinToString("|")
+            )
+        )
+    }
 }
 
 /**

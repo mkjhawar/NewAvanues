@@ -15,6 +15,7 @@ import com.augmentalis.voiceoscoreng.common.CommandActionType
 import com.augmentalis.voiceoscoreng.common.CommandMatcher
 import com.augmentalis.voiceoscoreng.common.CommandRegistry
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
+import com.augmentalis.voiceoscoreng.common.StaticCommandRegistry
 import com.augmentalis.voiceoscoreng.features.currentTimeMillis
 import com.augmentalis.voiceoscoreng.handlers.*
 import kotlinx.coroutines.*
@@ -272,6 +273,87 @@ class ActionCoordinator(
         val staticActions = handlerRegistry.getAllSupportedActions()
         val dynamicActions = commandRegistry.all().map { it.phrase }
         return staticActions + dynamicActions
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NLU/LLM Integration - Unified Command Access
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Get all commands (static + dynamic) as QuantizedCommand for NLU/LLM.
+     *
+     * This provides a unified view of all available voice commands:
+     * - Static commands: System-wide commands (targetVuid = null)
+     * - Dynamic commands: Screen-specific element commands (targetVuid = element VUID)
+     *
+     * The NLU/LLM can use this to:
+     * - Understand available actions
+     * - Match user intent to commands
+     * - Generate appropriate responses
+     *
+     * @return List of all available QuantizedCommand
+     */
+    fun getAllQuantizedCommands(): List<QuantizedCommand> {
+        val staticCommands = StaticCommandRegistry.allAsQuantized()
+        val dynamicCommands = commandRegistry.all()
+        return staticCommands + dynamicCommands
+    }
+
+    /**
+     * Get only static commands as QuantizedCommand.
+     *
+     * Static commands are always available regardless of screen context.
+     *
+     * @return List of static QuantizedCommand
+     */
+    fun getStaticQuantizedCommands(): List<QuantizedCommand> {
+        return StaticCommandRegistry.allAsQuantized()
+    }
+
+    /**
+     * Get commands in AVU format for NLU/LLM.
+     *
+     * Format: CMD:uuid:trigger:action:element_uuid:confidence
+     *
+     * @param includeStatic Include static commands (default: true)
+     * @param includeDynamic Include dynamic commands (default: true)
+     * @return Multi-line string in AVU CMD format
+     */
+    fun getCommandsAsAvu(includeStatic: Boolean = true, includeDynamic: Boolean = true): String {
+        val commands = mutableListOf<QuantizedCommand>()
+
+        if (includeStatic) {
+            commands.addAll(StaticCommandRegistry.allAsQuantized())
+        }
+        if (includeDynamic) {
+            commands.addAll(commandRegistry.all())
+        }
+
+        return commands.joinToString("\n") { it.toCmdLine() }
+    }
+
+    /**
+     * Get NLU schema for LLM context.
+     *
+     * Returns a human-readable schema suitable for LLM prompts,
+     * describing all available commands grouped by category.
+     *
+     * @return Formatted NLU schema string
+     */
+    fun getNluSchema(): String {
+        return buildString {
+            append(StaticCommandRegistry.toNluSchema())
+            appendLine()
+            appendLine("## Dynamic Commands (Current Screen)")
+            val dynamicCommands = commandRegistry.all()
+            if (dynamicCommands.isEmpty()) {
+                appendLine("(No screen-specific commands available)")
+            } else {
+                dynamicCommands.forEach { cmd ->
+                    appendLine("- ${cmd.phrase}: ${cmd.actionType.name} -> VUID:${cmd.targetVuid}")
+                }
+            }
+        }
     }
 
     /**

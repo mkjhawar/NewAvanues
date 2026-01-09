@@ -305,6 +305,74 @@ class VoiceOSCoreNG private constructor(
         return coordinator.getAllSupportedActions()
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NLU/LLM Integration - Unified Command Access
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Get all commands (static + dynamic) as QuantizedCommand for NLU/LLM.
+     *
+     * This provides a unified view of all available voice commands:
+     * - Static commands: System-wide commands (targetVuid = null)
+     * - Dynamic commands: Screen-specific element commands (targetVuid = element VUID)
+     *
+     * Use this to provide command context to NLU/LLM systems.
+     *
+     * @return List of all available QuantizedCommand
+     */
+    fun getAllQuantizedCommands(): List<QuantizedCommand> {
+        return coordinator.getAllQuantizedCommands()
+    }
+
+    /**
+     * Get only static commands as QuantizedCommand.
+     *
+     * Static commands are always available regardless of screen context.
+     * Useful for LLM system prompts that need base command vocabulary.
+     *
+     * @return List of static QuantizedCommand
+     */
+    fun getStaticQuantizedCommands(): List<QuantizedCommand> {
+        return coordinator.getStaticQuantizedCommands()
+    }
+
+    /**
+     * Get commands in AVU format for NLU/LLM.
+     *
+     * Format: CMD:uuid:trigger:action:element_uuid:confidence
+     *
+     * @param includeStatic Include static commands (default: true)
+     * @param includeDynamic Include dynamic commands (default: true)
+     * @return Multi-line string in AVU CMD format
+     */
+    fun getCommandsAsAvu(includeStatic: Boolean = true, includeDynamic: Boolean = true): String {
+        return coordinator.getCommandsAsAvu(includeStatic, includeDynamic)
+    }
+
+    /**
+     * Get NLU schema for LLM context.
+     *
+     * Returns a human-readable schema suitable for LLM prompts,
+     * describing all available commands grouped by category.
+     *
+     * Example usage in LLM prompt:
+     * ```
+     * val schema = core.getNluSchema()
+     * val prompt = """
+     * Available voice commands:
+     * $schema
+     *
+     * User said: "${userInput}"
+     * Which command matches best?
+     * """
+     * ```
+     *
+     * @return Formatted NLU schema string
+     */
+    fun getNluSchema(): String {
+        return coordinator.getNluSchema()
+    }
+
     /**
      * Get metrics summary.
      */
