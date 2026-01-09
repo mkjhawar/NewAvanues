@@ -16,9 +16,6 @@ import com.augmentalis.llm.domain.LLMConfig
 import com.augmentalis.llm.domain.GenerationOptions
 import com.augmentalis.llm.domain.LLMResponse
 import com.augmentalis.llm.domain.getText
-import com.augmentalis.ava.core.common.Result as AvaResult
-import com.augmentalis.ava.core.common.Result.Success as AvaSuccess
-import com.augmentalis.ava.core.common.Result.Error as AvaError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.sync.Mutex
@@ -89,19 +86,23 @@ class AndroidLlmProcessor(
 
                 val result = provider.initialize(llmConfig)
 
-                when (result) {
-                    is AvaSuccess -> {
-                        llmProviderRef.set(provider)
-                        initialized.set(true)
-                        println("[AndroidLlmProcessor] LLM initialized successfully")
-                        Result.success(Unit)
+                // Handle AVA Result type using isSuccess/isError properties
+                if (result.isSuccess) {
+                    llmProviderRef.set(provider)
+                    initialized.set(true)
+                    println("[AndroidLlmProcessor] LLM initialized successfully")
+                    Result.success(Unit)
+                } else {
+                    // Result is error - extract exception using getOrThrow in try-catch
+                    initializationFailed.set(true)
+                    val errorMessage = try {
+                        result.getOrThrow()
+                        "Unknown error"
+                    } catch (e: Throwable) {
+                        e.message ?: "LLM initialization failed"
                     }
-                    is AvaError -> {
-                        // P1-1 FIX: Return failure so callers know init failed
-                        initializationFailed.set(true)
-                        println("[AndroidLlmProcessor] LLM initialization failed: ${result.message}")
-                        Result.failure(result.exception)
-                    }
+                    println("[AndroidLlmProcessor] LLM initialization failed: $errorMessage")
+                    Result.failure(IllegalStateException(errorMessage))
                 }
             } catch (e: Exception) {
                 initializationFailed.set(true)

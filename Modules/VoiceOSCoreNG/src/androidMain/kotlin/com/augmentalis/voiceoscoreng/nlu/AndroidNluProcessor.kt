@@ -12,10 +12,8 @@ package com.augmentalis.voiceoscoreng.nlu
 
 import android.content.Context
 import com.augmentalis.nlu.IntentClassifier
+import com.augmentalis.nlu.IntentClassification
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
-import com.augmentalis.ava.core.common.Result as AvaResult
-import com.augmentalis.ava.core.common.Result.Success as AvaSuccess
-import com.augmentalis.ava.core.common.Result.Error as AvaError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -72,26 +70,32 @@ class AndroidNluProcessor(
                 // Get singleton instance of IntentClassifier
                 val classifier = IntentClassifier.getInstance(context)
 
-                // Initialize with default model path
-                val initResult = classifier?.initialize(config.modelPath)
+                if (classifier == null) {
+                    initializationFailed.set(true)
+                    println("[AndroidNluProcessor] IntentClassifier is null")
+                    return@withContext Result.failure(IllegalStateException("IntentClassifier is null"))
+                }
 
-                when (initResult) {
-                    is AvaSuccess -> {
-                        classifierRef.set(classifier)
-                        initialized.set(true)
-                        println("[AndroidNluProcessor] NLU initialized successfully")
-                        Result.success(Unit)
+                // Initialize with default model path
+                val initResult = classifier.initialize(config.modelPath)
+
+                // Handle AVA Result type using isSuccess/isError properties
+                if (initResult.isSuccess) {
+                    classifierRef.set(classifier)
+                    initialized.set(true)
+                    println("[AndroidNluProcessor] NLU initialized successfully")
+                    Result.success(Unit)
+                } else {
+                    // Result is error - extract exception using getOrThrow in try-catch
+                    initializationFailed.set(true)
+                    val errorMessage = try {
+                        initResult.getOrThrow()
+                        "Unknown error"
+                    } catch (e: Throwable) {
+                        e.message ?: "NLU initialization failed"
                     }
-                    is AvaError -> {
-                        initializationFailed.set(true)
-                        println("[AndroidNluProcessor] NLU initialization failed: ${initResult.message}")
-                        Result.failure(initResult.exception)
-                    }
-                    null -> {
-                        initializationFailed.set(true)
-                        println("[AndroidNluProcessor] NLU initialization returned null")
-                        Result.failure(IllegalStateException("IntentClassifier is null"))
-                    }
+                    println("[AndroidNluProcessor] NLU initialization failed: $errorMessage")
+                    Result.failure(IllegalStateException(errorMessage))
                 }
             } catch (e: Exception) {
                 initializationFailed.set(true)
@@ -124,15 +128,23 @@ class AndroidNluProcessor(
         try {
             val classifyResult = classifier.classifyIntent(utterance.lowercase(), candidateIntents)
 
-            when (classifyResult) {
-                is AvaSuccess -> {
-                    val classification = classifyResult.data
+            // Handle AVA Result type using isSuccess/isError properties
+            if (classifyResult.isSuccess) {
+                val classification = classifyResult.getOrNull()
+                if (classification != null) {
                     processClassificationResult(classification, candidateCommands)
+                } else {
+                    NluResult.Error("Classification returned null")
                 }
-                is AvaError -> {
-                    println("[AndroidNluProcessor] Classification failed: ${classifyResult.message}")
-                    NluResult.Error(classifyResult.message ?: "Classification failed")
+            } else {
+                val errorMessage = try {
+                    classifyResult.getOrThrow()
+                    "Unknown classification error"
+                } catch (e: Throwable) {
+                    e.message ?: "Classification failed"
                 }
+                println("[AndroidNluProcessor] Classification failed: $errorMessage")
+                NluResult.Error(errorMessage)
             }
         } catch (e: Exception) {
             println("[AndroidNluProcessor] Classification exception: ${e.message}")
@@ -144,7 +156,7 @@ class AndroidNluProcessor(
      * Process classification result and map to NluResult.
      */
     private fun processClassificationResult(
-        classification: com.augmentalis.nlu.IntentClassification,
+        classification: IntentClassification,
         candidateCommands: List<QuantizedCommand>
     ): NluResult {
         // Find the matched command
