@@ -64,8 +64,8 @@ kotlin {
                 // AVA Core modules (Android-only)
                 implementation(project(":Modules:AVA:core:Data"))
 
-                // AVA Feature modules
-                implementation(project(":Modules:AVA:LLM"))
+                // Shared AI modules
+                implementation(project(":Modules:LLM"))
 
                 // Compose dependencies
                 implementation(platform("androidx.compose:compose-bom:2023.10.01"))
