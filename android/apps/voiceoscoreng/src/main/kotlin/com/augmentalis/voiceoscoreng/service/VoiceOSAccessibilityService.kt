@@ -12,7 +12,6 @@ import com.augmentalis.voiceoscoreng.VoiceOSCoreNG
 import com.augmentalis.voiceoscoreng.createForAndroid
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.common.CommandGenerator
-import com.augmentalis.voiceoscoreng.common.CommandMatcher
 import com.augmentalis.voiceoscoreng.common.CommandRegistry
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
@@ -44,7 +43,11 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    /** In-memory command registry for the current screen - uses KMP shared implementation */
+    /**
+     * Shared command registry - single source of truth.
+     * Passed to VoiceOSCoreNG so both service and ActionCoordinator use the same instance.
+     * This allows direct synchronous access without async wrappers.
+     */
     private val commandRegistry = CommandRegistry()
 
     /** Command persistence for saving to SQLDelight database */
@@ -88,21 +91,18 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         }
 
         /**
-         * Match voice input against current commands using KMP CommandMatcher.
-         * @param voiceInput Raw voice input string
-         * @return MatchResult from KMP implementation
-         */
-        fun matchVoiceCommand(voiceInput: String): CommandMatcher.MatchResult {
-            return instance?.let { service ->
-                CommandMatcher.match(voiceInput, service.commandRegistry)
-            } ?: CommandMatcher.MatchResult.NoMatch
-        }
-
-        /**
-         * Get all currently registered commands.
+         * Get all currently registered dynamic commands.
+         * Direct access to shared registry (synchronous, no async wrapper needed).
          */
         fun getCurrentCommands(): List<QuantizedCommand> {
             return instance?.commandRegistry?.all() ?: emptyList()
+        }
+
+        /**
+         * Get count of dynamic commands for current screen.
+         */
+        fun getDynamicCommandCount(): Int {
+            return instance?.commandRegistry?.size ?: 0
         }
 
         /**
@@ -170,13 +170,15 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 // Create the facade with Android-specific handlers and speech engine
                 // Primary engine: VIVOKA (offline, commercial SDK)
                 // Fallback: ANDROID_STT (requires network)
+                // Pass shared commandRegistry so both service and ActionCoordinator use same instance
                 voiceOSCore = VoiceOSCoreNG.createForAndroid(
                     service = this@VoiceOSAccessibilityService,
                     configuration = ServiceConfiguration(
                         autoStartListening = false,  // Don't auto-start, UI will control
                         speechEngine = "VIVOKA",     // Primary: Vivoka offline engine
                         debugMode = true
-                    )
+                    ),
+                    commandRegistry = commandRegistry  // Shared registry - single source of truth
                 )
 
                 // Initialize the facade
@@ -222,7 +224,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
      * Handle screen change by clearing caches and optionally regenerating commands.
      */
     private fun handleScreenChange(packageName: String?) {
-        // Clear the in-memory command registry (will be repopulated on next exploration)
+        // Clear the shared command registry (will be repopulated on next exploration)
         commandRegistry.clear()
 
         // Note: AndroidActionExecutor cache has TTL, so it will auto-expire
@@ -579,21 +581,19 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             CommandGenerator.fromElement(element, packageName)
         }
 
-        // Update the local registry for voice matching (for CommandMatcher.match static method)
+        // Update shared registry directly (synchronous - no coroutine needed)
+        // Both service and ActionCoordinator share this same instance
         commandRegistry.updateSync(quantizedCommands)
+        Log.d(TAG, "Generated ${quantizedCommands.size} commands, updated shared registry")
 
-        Log.d(TAG, "Generated ${quantizedCommands.size} commands via KMP CommandGenerator")
-
-        // CRITICAL: Update VoiceOSCoreNG with dynamic commands
-        // This does TWO things:
-        // 1. Registers commands with ActionCoordinator's CommandRegistry (for processCommand lookup with VUIDs)
-        // 2. Updates speech engine grammar (Vivoka SDK) so it recognizes these phrases
+        // Update speech engine grammar (Vivoka SDK) so it recognizes these phrases
+        val commandPhrases = quantizedCommands.map { it.phrase }
         serviceScope.launch {
             try {
-                voiceOSCore?.updateDynamicCommands(quantizedCommands, updateSpeechEngine = true)
-                Log.d(TAG, "Updated VoiceOSCoreNG with ${quantizedCommands.size} dynamic commands (registry + speech engine)")
+                voiceOSCore?.updateCommands(commandPhrases)
+                Log.d(TAG, "Updated speech engine with ${commandPhrases.size} command phrases")
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to update dynamic commands", e)
+                Log.e(TAG, "Failed to update speech engine commands", e)
             }
         }
 

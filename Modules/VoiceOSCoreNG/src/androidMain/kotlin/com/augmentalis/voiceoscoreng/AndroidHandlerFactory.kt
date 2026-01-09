@@ -13,6 +13,7 @@ package com.augmentalis.voiceoscoreng
 import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.database.repositories.IVoiceCommandRepository
+import com.augmentalis.voiceoscoreng.common.CommandRegistry
 import com.augmentalis.voiceoscoreng.handlers.*
 import com.augmentalis.voiceoscoreng.persistence.IStaticCommandPersistence
 import com.augmentalis.voiceoscoreng.persistence.StaticCommandPersistence
@@ -75,6 +76,8 @@ class AndroidHandlerFactory(
  *
  * @param service The accessibility service instance
  * @param configuration Service configuration (optional)
+ * @param commandRegistry Optional shared CommandRegistry for direct synchronous access.
+ *        If provided, both caller and VoiceOSCoreNG share the same registry instance.
  * @param voiceCommandRepository Optional repository for static command persistence.
  *        If provided, static commands will be saved to database and registered with VoiceEngine.
  * @param locale Locale for static commands (default: "en-US")
@@ -82,6 +85,7 @@ class AndroidHandlerFactory(
 fun VoiceOSCoreNG.Companion.createForAndroid(
     service: AccessibilityService,
     configuration: ServiceConfiguration = ServiceConfiguration.DEFAULT,
+    commandRegistry: CommandRegistry? = null,
     voiceCommandRepository: IVoiceCommandRepository? = null,
     locale: String = "en-US"
 ): VoiceOSCoreNG {
@@ -91,6 +95,11 @@ fun VoiceOSCoreNG.Companion.createForAndroid(
             com.augmentalis.voiceoscoreng.features.SpeechEngineFactoryProvider.create(service)
         )
         .withConfiguration(configuration)
+
+    // Add shared command registry if provided
+    if (commandRegistry != null) {
+        builder.withCommandRegistry(commandRegistry)
+    }
 
     // Add static command persistence if repository provided
     if (voiceCommandRepository != null) {

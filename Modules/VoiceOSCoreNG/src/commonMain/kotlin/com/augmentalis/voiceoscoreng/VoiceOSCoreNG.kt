@@ -12,6 +12,7 @@
 package com.augmentalis.voiceoscoreng
 
 import com.augmentalis.voiceoscoreng.common.CommandMatcher
+import com.augmentalis.voiceoscoreng.common.CommandRegistry
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.common.StaticCommandRegistry
 import com.augmentalis.voiceoscoreng.handlers.*
@@ -46,6 +47,7 @@ class VoiceOSCoreNG private constructor(
     private val handlerFactory: HandlerFactory,
     private val speechEngineFactory: ISpeechEngineFactory,
     private val configuration: ServiceConfiguration,
+    private val commandRegistry: CommandRegistry = CommandRegistry(),
     private val synonymProvider: ISynonymProvider? = null,
     private val nluProcessor: INluProcessor? = null,
     private val llmProcessor: ILlmProcessor? = null,
@@ -54,7 +56,9 @@ class VoiceOSCoreNG private constructor(
     private val staticCommandPersistence: IStaticCommandPersistence? = null
 ) {
     // Coordinator manages handler execution (with NLU and LLM support)
+    // Uses shared commandRegistry for direct synchronous access
     private val coordinator = ActionCoordinator(
+        commandRegistry = commandRegistry,
         nluProcessor = nluProcessor,
         llmProcessor = llmProcessor,
         nluConfig = nluConfig,
@@ -525,6 +529,7 @@ class VoiceOSCoreNG private constructor(
         private var handlerFactory: HandlerFactory? = null
         private var speechEngineFactory: ISpeechEngineFactory? = null
         private var configuration: ServiceConfiguration = ServiceConfiguration.DEFAULT
+        private var commandRegistry: CommandRegistry? = null
         private var synonymProvider: ISynonymProvider? = null
         private var nluProcessor: INluProcessor? = null
         private var llmProcessor: ILlmProcessor? = null
@@ -542,6 +547,18 @@ class VoiceOSCoreNG private constructor(
 
         fun withConfiguration(config: ServiceConfiguration) = apply {
             this.configuration = config
+        }
+
+        /**
+         * Set a shared CommandRegistry for direct synchronous access.
+         *
+         * When provided, both VoiceOSCoreNG and the caller can access the same
+         * registry instance for reading/writing commands without async wrappers.
+         *
+         * @param registry Shared CommandRegistry instance
+         */
+        fun withCommandRegistry(registry: CommandRegistry) = apply {
+            this.commandRegistry = registry
         }
 
         fun withSpeechEngine(engine: SpeechEngine) = apply {
@@ -668,6 +685,7 @@ class VoiceOSCoreNG private constructor(
                 handlerFactory = handlerFactory ?: throw IllegalStateException("HandlerFactory required"),
                 speechEngineFactory = speechEngineFactory ?: SpeechEngineFactoryProvider.create(),
                 configuration = configuration,
+                commandRegistry = commandRegistry ?: CommandRegistry(),
                 synonymProvider = synonymProvider,
                 nluProcessor = nluProcessor,
                 llmProcessor = llmProcessor,
