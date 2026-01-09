@@ -19,6 +19,9 @@ object CommandGenerator {
      * Generate command from element during extraction (single pass).
      * Returns null if element is not actionable or has no useful label.
      *
+     * Commands are stored WITHOUT verbs - the element label only (e.g., "4", "More options").
+     * User provides the verb at runtime: "click 4", "tap More options", or just "4".
+     *
      * @param element Source element info
      * @param packageName Host application package name
      * @return QuantizedCommand or null if element is not suitable for voice command
@@ -40,7 +43,7 @@ object CommandGenerator {
         }
 
         val actionType = deriveActionType(element)
-        val verb = actionType.verb()
+        // Note: verb is NOT included in phrase - user provides it at runtime
 
         // Generate element hash for database FK reference
         val elementHash = deriveElementHash(element)
@@ -49,7 +52,7 @@ object CommandGenerator {
 
         return QuantizedCommand(
             uuid = "", // Generated on persist if needed
-            phrase = "$verb $label",
+            phrase = label,  // No verb - just the element label
             actionType = actionType,
             targetVuid = vuid,
             confidence = calculateConfidence(element),

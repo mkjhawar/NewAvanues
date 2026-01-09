@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 class CommandGeneratorTest {
 
     @Test
-    fun `fromElement generates click command for clickable button`() {
+    fun `fromElement generates command without verb for clickable button`() {
         val element = ElementInfo.button(
             text = "Submit",
             resourceId = "com.app:id/submit_btn",
@@ -23,13 +23,14 @@ class CommandGeneratorTest {
         val command = CommandGenerator.fromElement(element, "com.app")
 
         assertNotNull(command)
-        assertEquals("click Submit", command.phrase)
+        // Commands are stored without verbs - user provides verb at runtime
+        assertEquals("Submit", command.phrase)
         assertEquals(CommandActionType.CLICK, command.actionType)
         assertTrue(command.confidence > 0.5f)
     }
 
     @Test
-    fun `fromElement generates click command for button with content description`() {
+    fun `fromElement generates command without verb for button with content description`() {
         val element = ElementInfo(
             className = "Button",
             contentDescription = "Send message",
@@ -40,7 +41,8 @@ class CommandGeneratorTest {
         val command = CommandGenerator.fromElement(element, "com.app")
 
         assertNotNull(command)
-        assertEquals("click Send message", command.phrase)
+        // Commands are stored without verbs - user provides verb at runtime
+        assertEquals("Send message", command.phrase)
         assertEquals(CommandActionType.CLICK, command.actionType)
     }
 
@@ -74,7 +76,7 @@ class CommandGeneratorTest {
     }
 
     @Test
-    fun `fromElement generates type command for EditText`() {
+    fun `fromElement generates command without verb for EditText`() {
         val element = ElementInfo.input(
             hint = "Enter email",
             resourceId = "com.app:id/email_field",
@@ -84,7 +86,8 @@ class CommandGeneratorTest {
         val command = CommandGenerator.fromElement(element, "com.app")
 
         assertNotNull(command)
-        assertEquals("type Enter email", command.phrase)
+        // Commands are stored without verbs - user provides verb at runtime
+        assertEquals("Enter email", command.phrase)
         assertEquals(CommandActionType.TYPE, command.actionType)
     }
 
@@ -100,7 +103,8 @@ class CommandGeneratorTest {
         val command = CommandGenerator.fromElement(element, "com.app")
 
         assertNotNull(command)
-        assertEquals("click save button", command.phrase)
+        // Commands are stored without verbs - resourceId is converted to readable label
+        assertEquals("save button", command.phrase)
     }
 
     @Test

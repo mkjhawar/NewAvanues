@@ -16,6 +16,12 @@
  */
 package com.augmentalis.voiceoscoreng.common
 
+import com.augmentalis.voiceoscoreng.features.DisambiguationHighlightStyle
+import com.augmentalis.voiceoscoreng.features.DisambiguationOverlayConfig
+import com.augmentalis.voiceoscoreng.features.NumberedItem
+import com.augmentalis.voiceoscoreng.features.OverlayData
+import com.augmentalis.voiceoscoreng.features.Rect
+
 /**
  * Result of element matching against a voice command.
  *
@@ -56,6 +62,92 @@ data class DisambiguationResult(
         !needsDisambiguation -> "Found ${matches[0].voiceLabel}. Executing."
         else -> "$matchCount items match '$query'. Say a number 1 through $matchCount to select."
     }
+
+    /**
+     * Display configuration for disambiguation UI.
+     */
+    val displayConfig: DisambiguationDisplayConfig
+        get() = DisambiguationDisplayConfig(
+            showNumberBadges = needsDisambiguation,
+            highlightStyle = HighlightStyle.FLASHING_STROKE,
+            showPopup = needsDisambiguation,
+            popupMessage = "Say a number to select",
+            popupFadeDelayMs = 3000L
+        )
+}
+
+/**
+ * Configuration for disambiguation UI display.
+ */
+data class DisambiguationDisplayConfig(
+    /** Whether to show numbered badges next to elements */
+    val showNumberBadges: Boolean,
+    /** How to highlight the matching elements */
+    val highlightStyle: HighlightStyle,
+    /** Whether to show a popup instruction */
+    val showPopup: Boolean,
+    /** Message to display in popup */
+    val popupMessage: String,
+    /** How long before popup fades away (ms) */
+    val popupFadeDelayMs: Long
+)
+
+/**
+ * Styles for highlighting disambiguation elements.
+ */
+enum class HighlightStyle {
+    /** Animated flashing stroke around element */
+    FLASHING_STROKE,
+    /** Solid highlight color */
+    SOLID_HIGHLIGHT,
+    /** Pulsing glow effect */
+    PULSING_GLOW,
+    /** No highlight, just number badge */
+    BADGE_ONLY
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Extension Functions for Platform Integration
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Convert DisambiguationResult to OverlayData for rendering.
+ *
+ * This allows the disambiguation result to be passed directly to the
+ * NumberedSelectionOverlay for platform-consistent rendering.
+ */
+fun DisambiguationResult.toOverlayData(): OverlayData.NumberedItems {
+    val items = numberedItems.map { match ->
+        NumberedItem(
+            number = match.number,
+            label = match.displayLabel,
+            bounds = Rect(
+                left = match.bounds.left,
+                top = match.bounds.top,
+                right = match.bounds.right,
+                bottom = match.bounds.bottom
+            ),
+            isEnabled = match.element.isEnabled,
+            hasName = match.element.hasVoiceContent
+        )
+    }
+
+    // Convert HighlightStyle to DisambiguationHighlightStyle
+    val highlightStyle = when (displayConfig.highlightStyle) {
+        HighlightStyle.FLASHING_STROKE -> DisambiguationHighlightStyle.FLASHING_STROKE
+        HighlightStyle.SOLID_HIGHLIGHT -> DisambiguationHighlightStyle.SOLID_HIGHLIGHT
+        HighlightStyle.PULSING_GLOW -> DisambiguationHighlightStyle.PULSING_GLOW
+        HighlightStyle.BADGE_ONLY -> DisambiguationHighlightStyle.BADGE_ONLY
+    }
+
+    val overlayConfig = DisambiguationOverlayConfig(
+        highlightStyle = highlightStyle,
+        showPopup = displayConfig.showPopup,
+        popupMessage = displayConfig.popupMessage,
+        popupFadeDelayMs = displayConfig.popupFadeDelayMs
+    )
+
+    return OverlayData.NumberedItems(items, overlayConfig)
 }
 
 /**
@@ -162,7 +254,13 @@ class ElementDisambiguator(
     /**
      * Find all elements matching the voice command query.
      *
-     * @param query The text to match (e.g., "Submit", "Cancel")
+     * Matching Priority:
+     * 1. First match on `text` property (visible to user)
+     * 2. Only if no text matches, fall back to `contentDescription` (metadata)
+     *
+     * This ensures we match what the user actually SEES on screen.
+     *
+     * @param query The text to match (e.g., "Submit", "Cancel", "4")
      * @param elements All elements on the current screen
      * @param matchMode How to match elements against the query
      * @return DisambiguationResult with matches and numbered items if disambiguation needed
@@ -174,11 +272,32 @@ class ElementDisambiguator(
     ): DisambiguationResult {
         val queryLower = query.lowercase().trim()
 
-        // Find all matching elements
-        val matches = elements.filter { element ->
-            element.isEnabled && matchesQuery(element, queryLower, matchMode)
+        // Step 1: Try to match on TEXT property first (visible to user)
+        val textMatches = elements.filter { element ->
+            element.isEnabled && matchesText(element, queryLower, matchMode)
         }
 
+        // If we found text matches, use those (prefer visible text)
+        if (textMatches.isNotEmpty()) {
+            return buildDisambiguationResult(query, textMatches)
+        }
+
+        // Step 2: Fall back to contentDescription (metadata) if no text matches
+        val descriptionMatches = elements.filter { element ->
+            element.isEnabled && matchesContentDescription(element, queryLower, matchMode)
+        }
+
+        return buildDisambiguationResult(query, descriptionMatches)
+    }
+
+    /**
+     * Build disambiguation result from matches.
+     * If multiple matches, creates numbered items for user selection.
+     */
+    private fun buildDisambiguationResult(
+        query: String,
+        matches: List<ElementInfo>
+    ): DisambiguationResult {
         // If 0 or 1 match, no disambiguation needed
         if (matches.size <= 1) {
             return DisambiguationResult(
@@ -189,7 +308,8 @@ class ElementDisambiguator(
             )
         }
 
-        // Multiple matches - generate numbered items with context
+        // Multiple matches - generate numbered items for user selection
+        // Numbers will be displayed with highlighting/flashing to alert user
         val numberedItems = matches.mapIndexed { index, element ->
             val contextLabel = generateContextLabel(element, matches, index)
             val displayLabel = if (contextLabel != null) {
@@ -215,6 +335,36 @@ class ElementDisambiguator(
     }
 
     /**
+     * Match against element's TEXT property only (visible to user).
+     */
+    private fun matchesText(element: ElementInfo, queryLower: String, mode: MatchMode): Boolean {
+        val text = element.text.lowercase()
+        if (text.isBlank()) return false
+
+        return when (mode) {
+            MatchMode.EXACT -> text == queryLower
+            MatchMode.CONTAINS -> text.contains(queryLower)
+            MatchMode.STARTS_WITH -> text.startsWith(queryLower)
+            MatchMode.FUZZY -> fuzzyMatch(text, queryLower)
+        }
+    }
+
+    /**
+     * Match against element's contentDescription (metadata fallback).
+     */
+    private fun matchesContentDescription(element: ElementInfo, queryLower: String, mode: MatchMode): Boolean {
+        val description = element.contentDescription.lowercase()
+        if (description.isBlank()) return false
+
+        return when (mode) {
+            MatchMode.EXACT -> description == queryLower
+            MatchMode.CONTAINS -> description.contains(queryLower)
+            MatchMode.STARTS_WITH -> description.startsWith(queryLower)
+            MatchMode.FUZZY -> fuzzyMatch(description, queryLower)
+        }
+    }
+
+    /**
      * Select a match by number.
      *
      * @param result The disambiguation result
@@ -228,19 +378,6 @@ class ElementDisambiguator(
     // ═══════════════════════════════════════════════════════════════════════════
     // Private Implementation
     // ═══════════════════════════════════════════════════════════════════════════
-
-    private fun matchesQuery(element: ElementInfo, queryLower: String, mode: MatchMode): Boolean {
-        val label = element.voiceLabel.lowercase()
-        val text = element.text.lowercase()
-        val description = element.contentDescription.lowercase()
-
-        return when (mode) {
-            MatchMode.EXACT -> label == queryLower || text == queryLower
-            MatchMode.CONTAINS -> label.contains(queryLower) || text.contains(queryLower) || description.contains(queryLower)
-            MatchMode.STARTS_WITH -> label.startsWith(queryLower) || text.startsWith(queryLower)
-            MatchMode.FUZZY -> fuzzyMatch(label, queryLower) || fuzzyMatch(text, queryLower)
-        }
-    }
 
     private fun fuzzyMatch(text: String, query: String): Boolean {
         // Simple fuzzy matching - allow 1 character difference for short strings

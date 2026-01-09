@@ -18,6 +18,8 @@ import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.common.StaticCommandRegistry
 import com.augmentalis.voiceoscoreng.features.currentTimeMillis
 import com.augmentalis.voiceoscoreng.handlers.*
+import com.augmentalis.voiceoscoreng.nlu.*
+import com.augmentalis.voiceoscoreng.llm.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
@@ -38,18 +40,25 @@ import kotlinx.coroutines.sync.withLock
  * 1. Dynamic command lookup by VUID (fastest, most accurate)
  * 2. Dynamic command fuzzy match (handles voice variations)
  * 3. Static handler lookup (system commands)
- * 4. Voice interpreter fallback (natural language)
+ * 4. NLU classification (semantic matching via BERT)
+ * 5. LLM interpretation (natural language fallback)
+ * 6. Voice interpreter fallback (legacy keyword mapping)
  */
 class ActionCoordinator(
     private val voiceInterpreter: IVoiceCommandInterpreter = DefaultVoiceCommandInterpreter,
     private val handlerRegistry: IHandlerRegistry = HandlerRegistry(),
     private val commandRegistry: CommandRegistry = CommandRegistry(),
-    private val metrics: IMetricsCollector = MetricsCollector()
+    private val metrics: IMetricsCollector = MetricsCollector(),
+    private val nluProcessor: INluProcessor? = null,
+    private val llmProcessor: ILlmProcessor? = null,
+    private val nluConfig: NluConfig = NluConfig.DEFAULT,
+    private val llmConfig: LlmConfig = LlmConfig.DEFAULT
 ) {
 
     companion object {
         private const val HANDLER_TIMEOUT_MS = 5000L
         private const val DEFAULT_FUZZY_THRESHOLD = 0.7f
+        private const val HIGH_CONFIDENCE_THRESHOLD = 0.85f
     }
 
     /**
@@ -162,14 +171,68 @@ class ActionCoordinator(
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Verb Extraction for Dynamic Commands
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Known action verbs that can prefix a command.
+     * User says: "click 4" or "tap Submit" or just "4"
+     */
+    private val actionVerbs = listOf(
+        "click", "tap", "press", "select", "choose", "pick",
+        "long click", "long press", "hold",
+        "double tap", "double click",
+        "scroll", "swipe",
+        "focus", "type"
+    )
+
+    /**
+     * Extract verb and target from voice input.
+     *
+     * Examples:
+     * - "click 4" -> Pair("click", "4")
+     * - "tap Submit" -> Pair("tap", "submit")
+     * - "long press delete" -> Pair("long press", "delete")
+     * - "4" -> Pair(null, "4")
+     * - "scroll down" -> Pair(null, null) - this is a static command
+     *
+     * @return Pair of (verb, target) or (null, target) if no verb, or (null, null) if static command
+     */
+    private fun extractVerbAndTarget(voiceInput: String): Pair<String?, String?> {
+        val normalized = voiceInput.lowercase().trim()
+
+        // Try to match action verbs (longest first to match "long press" before "press")
+        for (verb in actionVerbs.sortedByDescending { it.length }) {
+            if (normalized.startsWith("$verb ")) {
+                val target = normalized.removePrefix("$verb ").trim()
+                return if (target.isNotBlank()) Pair(verb, target) else Pair(null, null)
+            }
+        }
+
+        // No verb found - could be just the target ("4") or a static command ("scroll down")
+        // Check if it looks like a target (not a known static command phrase)
+        val staticCommand = StaticCommandRegistry.findByPhrase(normalized)
+        return if (staticCommand != null) {
+            Pair(null, null)  // It's a static command
+        } else {
+            Pair(null, normalized)  // It's just the target (e.g., "4", "Submit")
+        }
+    }
+
     /**
      * Process a voice command string with full dynamic command support.
      *
+     * Commands in registry are stored WITHOUT verbs (e.g., "4", "Submit", "More options").
+     * User provides verb at runtime: "click 4", "tap Submit", or just "4".
+     *
      * Execution priority:
-     * 1. Dynamic command by exact phrase match (with VUID)
+     * 1. Dynamic command by target match (extracts verb, matches target in registry)
      * 2. Dynamic command by fuzzy match (handles voice variations)
      * 3. Static handler match (system commands)
-     * 4. Voice interpreter fallback (natural language)
+     * 4. NLU classification (semantic matching via BERT)
+     * 5. LLM interpretation (natural language fallback)
+     * 6. Voice interpreter fallback (legacy keyword mapping)
      *
      * @param text The voice command text
      * @param confidence Confidence level (0-1)
@@ -182,38 +245,56 @@ class ActionCoordinator(
         // Step 1: Try dynamic command lookup (has VUID for direct execution)
         // ═══════════════════════════════════════════════════════════════════
         if (commandRegistry.size > 0) {
-            // First try exact phrase match in dynamic registry
-            val exactMatch = commandRegistry.findByPhrase(normalizedText)
-            if (exactMatch != null) {
-                return processCommand(exactMatch)
-            }
+            // Extract verb and target from voice input
+            // e.g., "click 4" -> verb="click", target="4"
+            val (verb, target) = extractVerbAndTarget(normalizedText)
 
-            // Then try fuzzy matching for voice variations
-            val matchResult = CommandMatcher.match(
-                voiceInput = normalizedText,
-                registry = commandRegistry,
-                threshold = DEFAULT_FUZZY_THRESHOLD
-            )
+            if (target != null) {
+                // Try exact match with extracted target
+                val exactMatch = commandRegistry.findByPhrase(target)
+                if (exactMatch != null) {
+                    // Found! Execute the command (verb determines action type)
+                    val actionCommand = verb?.let {
+                        // Override action type based on user's verb
+                        exactMatch.copy(phrase = normalizedText)
+                    } ?: exactMatch
+                    return processCommand(actionCommand)
+                }
 
-            when (matchResult) {
-                is CommandMatcher.MatchResult.Exact -> {
-                    return processCommand(matchResult.command)
-                }
-                is CommandMatcher.MatchResult.Fuzzy -> {
-                    return processCommand(matchResult.command)
-                }
-                is CommandMatcher.MatchResult.Ambiguous -> {
-                    // Return ambiguous result - caller can show disambiguation UI
-                    return HandlerResult.awaitingSelection(
-                        message = "${matchResult.candidates.size} matches found. Please be more specific.",
-                        matchCount = matchResult.candidates.size,
-                        accessibilityAnnouncement = "Multiple matches. Say a number to select."
-                    )
-                }
-                is CommandMatcher.MatchResult.NoMatch -> {
-                    // Fall through to static handlers
+                // Then try fuzzy matching on target only
+                val matchResult = CommandMatcher.match(
+                    voiceInput = target,  // Match against target, not full input
+                    registry = commandRegistry,
+                    threshold = DEFAULT_FUZZY_THRESHOLD
+                )
+
+                when (matchResult) {
+                    is CommandMatcher.MatchResult.Exact -> {
+                        val cmd = matchResult.command.copy(phrase = normalizedText)
+                        return processCommand(cmd)
+                    }
+                    is CommandMatcher.MatchResult.Fuzzy -> {
+                        // Only use fuzzy match if confidence is high enough
+                        if (matchResult.confidence >= HIGH_CONFIDENCE_THRESHOLD) {
+                            val cmd = matchResult.command.copy(phrase = normalizedText)
+                            return processCommand(cmd)
+                        }
+                        // Low confidence fuzzy match - continue to NLU
+                    }
+                    is CommandMatcher.MatchResult.Ambiguous -> {
+                        // Return ambiguous result - caller can show disambiguation UI
+                        return HandlerResult.awaitingSelection(
+                            message = "${matchResult.candidates.size} matches found. Please be more specific.",
+                            matchCount = matchResult.candidates.size,
+                            accessibilityAnnouncement = "Multiple matches. Say a number to select."
+                        )
+                    }
+                    is CommandMatcher.MatchResult.NoMatch -> {
+                        // Fall through to static handlers
+                    }
                 }
             }
+            // If no target extracted (e.g., just "scroll down"), fall through to static handlers
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -231,7 +312,70 @@ class ActionCoordinator(
         }
 
         // ═══════════════════════════════════════════════════════════════════
-        // Step 3: Try voice interpreter (natural language fallback)
+        // Step 3: Try NLU classification (semantic matching via BERT)
+        // ═══════════════════════════════════════════════════════════════════
+        if (nluConfig.enabled && nluProcessor?.isAvailable() == true) {
+            val allCommands = getAllQuantizedCommands()
+            if (allCommands.isNotEmpty()) {
+                val nluResult = nluProcessor.classify(normalizedText, allCommands)
+
+                when (nluResult) {
+                    is NluResult.Match -> {
+                        println("[ActionCoordinator] NLU match: ${nluResult.command.phrase} (conf=${nluResult.confidence})")
+                        return processCommand(nluResult.command)
+                    }
+                    is NluResult.Ambiguous -> {
+                        return HandlerResult.awaitingSelection(
+                            message = "Multiple NLU matches found",
+                            matchCount = nluResult.candidates.size,
+                            accessibilityAnnouncement = "Multiple matches. Say a number to select."
+                        )
+                    }
+                    is NluResult.Error -> {
+                        println("[ActionCoordinator] NLU error: ${nluResult.message}")
+                        // Fall through to LLM
+                    }
+                    is NluResult.NoMatch -> {
+                        // Fall through to LLM
+                    }
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // Step 4: Try LLM interpretation (natural language fallback)
+        // ═══════════════════════════════════════════════════════════════════
+        if (llmConfig.enabled && llmProcessor?.isAvailable() == true) {
+            val nluSchema = getNluSchema()
+            val availableCommands = getAllSupportedActions()
+
+            if (availableCommands.isNotEmpty()) {
+                val llmResult = llmProcessor.interpretCommand(normalizedText, nluSchema, availableCommands)
+
+                when (llmResult) {
+                    is LlmResult.Interpreted -> {
+                        println("[ActionCoordinator] LLM interpreted: ${llmResult.matchedCommand} (conf=${llmResult.confidence})")
+                        val llmCommand = QuantizedCommand(
+                            phrase = llmResult.matchedCommand,
+                            actionType = CommandActionType.EXECUTE,
+                            targetVuid = null,
+                            confidence = llmResult.confidence
+                        )
+                        return processCommand(llmCommand)
+                    }
+                    is LlmResult.Error -> {
+                        println("[ActionCoordinator] LLM error: ${llmResult.message}")
+                        // Fall through to voice interpreter
+                    }
+                    is LlmResult.NoMatch -> {
+                        // Fall through to voice interpreter
+                    }
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // Step 5: Try voice interpreter (legacy natural language fallback)
         // ═══════════════════════════════════════════════════════════════════
         val interpretedAction = interpretVoiceCommand(normalizedText)
         if (interpretedAction != null) {
@@ -412,6 +556,14 @@ class ActionCoordinator(
             appendLine("Handlers: ${handlerRegistry.getHandlerCount()}")
             appendLine("Categories: ${handlerRegistry.getCategoryCount()}")
             appendLine("Dynamic Commands: ${commandRegistry.size}")
+            appendLine()
+            appendLine("NLU/LLM Status:")
+            appendLine("  NLU Enabled: ${nluConfig.enabled}")
+            appendLine("  NLU Available: ${nluProcessor?.isAvailable() ?: false}")
+            appendLine("  NLU Threshold: ${nluConfig.confidenceThreshold}")
+            appendLine("  LLM Enabled: ${llmConfig.enabled}")
+            appendLine("  LLM Available: ${llmProcessor?.isAvailable() ?: false}")
+            appendLine("  LLM Model Loaded: ${llmProcessor?.isModelLoaded() ?: false}")
             appendLine()
             append(handlerRegistry.getDebugInfo())
             appendLine()

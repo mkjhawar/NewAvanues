@@ -15,6 +15,9 @@ import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.handlers.*
 import com.augmentalis.voiceoscoreng.features.*
 import com.augmentalis.voiceoscoreng.synonym.*
+import com.augmentalis.voiceoscoreng.nlu.*
+import com.augmentalis.voiceoscoreng.llm.*
+import com.augmentalis.voiceoscoreng.persistence.IStaticCommandPersistence
 import kotlinx.coroutines.flow.*
 
 /**
@@ -41,10 +44,20 @@ class VoiceOSCoreNG private constructor(
     private val handlerFactory: HandlerFactory,
     private val speechEngineFactory: ISpeechEngineFactory,
     private val configuration: ServiceConfiguration,
-    private val synonymProvider: ISynonymProvider? = null
+    private val synonymProvider: ISynonymProvider? = null,
+    private val nluProcessor: INluProcessor? = null,
+    private val llmProcessor: ILlmProcessor? = null,
+    private val nluConfig: NluConfig = NluConfig.DEFAULT,
+    private val llmConfig: LlmConfig = LlmConfig.DEFAULT,
+    private val staticCommandPersistence: IStaticCommandPersistence? = null
 ) {
-    // Coordinator manages handler execution
-    private val coordinator = ActionCoordinator()
+    // Coordinator manages handler execution (with NLU and LLM support)
+    private val coordinator = ActionCoordinator(
+        nluProcessor = nluProcessor,
+        llmProcessor = llmProcessor,
+        nluConfig = nluConfig,
+        llmConfig = llmConfig
+    )
 
     // State manager tracks service lifecycle
     private val stateManager = ServiceStateManager()
@@ -86,6 +99,23 @@ class VoiceOSCoreNG private constructor(
             // Initialize coordinator with handlers
             coordinator.initialize(handlers)
 
+            stateManager.transition(ServiceState.Initializing(0.3f, "Populating static commands"))
+
+            // Populate static commands to database (if persistence is provided)
+            if (staticCommandPersistence != null) {
+                try {
+                    val count = staticCommandPersistence.populateIfNeeded()
+                    if (count > 0) {
+                        println("[VoiceOSCoreNG] Populated $count static commands to database")
+                    } else {
+                        println("[VoiceOSCoreNG] Static commands already in database")
+                    }
+                } catch (e: Exception) {
+                    println("[VoiceOSCoreNG] Static command persistence error: ${e.message}")
+                    // Continue without persistence - static commands still work in memory
+                }
+            }
+
             stateManager.transition(ServiceState.Initializing(0.4f, "Initializing synonyms"))
 
             // Wire up synonym provider for fuzzy matching
@@ -93,6 +123,40 @@ class VoiceOSCoreNG private constructor(
                 CommandMatcher.synonymProvider = activeSynonymProvider
                 CommandMatcher.defaultLanguage = configuration.effectiveSynonymLanguage()
                 println("[VoiceOSCoreNG] Synonym provider initialized for ${configuration.effectiveSynonymLanguage()}")
+            }
+
+            stateManager.transition(ServiceState.Initializing(0.5f, "Initializing NLU"))
+
+            // Initialize NLU processor (BERT-based intent classification)
+            if (nluConfig.enabled && nluProcessor != null) {
+                try {
+                    val nluResult = nluProcessor.initialize()
+                    if (nluResult.isSuccess) {
+                        println("[VoiceOSCoreNG] NLU processor initialized successfully")
+                    } else {
+                        println("[VoiceOSCoreNG] NLU initialization failed: ${nluResult.exceptionOrNull()?.message}")
+                    }
+                } catch (e: Exception) {
+                    println("[VoiceOSCoreNG] NLU initialization error: ${e.message}")
+                    // Continue without NLU - system still works with registry matching
+                }
+            }
+
+            stateManager.transition(ServiceState.Initializing(0.55f, "Initializing LLM"))
+
+            // Initialize LLM processor (natural language fallback)
+            if (llmConfig.enabled && llmProcessor != null) {
+                try {
+                    val llmResult = llmProcessor.initialize()
+                    if (llmResult.isSuccess) {
+                        println("[VoiceOSCoreNG] LLM processor initialized successfully")
+                    } else {
+                        println("[VoiceOSCoreNG] LLM initialization failed: ${llmResult.exceptionOrNull()?.message}")
+                    }
+                } catch (e: Exception) {
+                    println("[VoiceOSCoreNG] LLM initialization error: ${e.message}")
+                    // Continue without LLM - system still works with registry + NLU
+                }
             }
 
             stateManager.transition(ServiceState.Initializing(0.6f, "Initializing speech engine"))
@@ -396,8 +460,31 @@ class VoiceOSCoreNG private constructor(
         speechEngine?.destroy()
         coordinator.dispose()
 
+        // Dispose NLU and LLM processors
+        try {
+            nluProcessor?.dispose()
+        } catch (e: Exception) {
+            println("[VoiceOSCoreNG] NLU dispose error: ${e.message}")
+        }
+
+        try {
+            llmProcessor?.dispose()
+        } catch (e: Exception) {
+            println("[VoiceOSCoreNG] LLM dispose error: ${e.message}")
+        }
+
         stateManager.transition(ServiceState.Stopped)
     }
+
+    /**
+     * Check if NLU processor is available.
+     */
+    fun isNluAvailable(): Boolean = nluProcessor?.isAvailable() == true
+
+    /**
+     * Check if LLM processor is available.
+     */
+    fun isLlmAvailable(): Boolean = llmProcessor?.isAvailable() == true
 
     companion object {
         // Companion object for extension functions
@@ -411,6 +498,11 @@ class VoiceOSCoreNG private constructor(
         private var speechEngineFactory: ISpeechEngineFactory? = null
         private var configuration: ServiceConfiguration = ServiceConfiguration.DEFAULT
         private var synonymProvider: ISynonymProvider? = null
+        private var nluProcessor: INluProcessor? = null
+        private var llmProcessor: ILlmProcessor? = null
+        private var nluConfig: NluConfig = NluConfig.DEFAULT
+        private var llmConfig: LlmConfig = LlmConfig.DEFAULT
+        private var staticCommandPersistence: IStaticCommandPersistence? = null
 
         fun withHandlerFactory(factory: HandlerFactory) = apply {
             this.handlerFactory = factory
@@ -484,12 +576,76 @@ class VoiceOSCoreNG private constructor(
             )
         }
 
+        /**
+         * Set the NLU processor for semantic intent classification.
+         *
+         * @param processor NLU processor implementation
+         * @param config NLU configuration
+         */
+        fun withNluProcessor(processor: INluProcessor, config: NluConfig = NluConfig.DEFAULT) = apply {
+            this.nluProcessor = processor
+            this.nluConfig = config
+        }
+
+        /**
+         * Set the LLM processor for natural language fallback.
+         *
+         * @param processor LLM processor implementation
+         * @param config LLM configuration
+         */
+        fun withLlmProcessor(processor: ILlmProcessor, config: LlmConfig = LlmConfig.DEFAULT) = apply {
+            this.llmProcessor = processor
+            this.llmConfig = config
+        }
+
+        /**
+         * Enable NLU with default configuration.
+         * Uses platform factory to create processor.
+         *
+         * @param config NLU configuration
+         */
+        fun withNlu(config: NluConfig = NluConfig.DEFAULT) = apply {
+            this.nluConfig = config
+            // Processor will be created via factory when build() is called
+        }
+
+        /**
+         * Enable LLM with default configuration.
+         * Uses platform factory to create processor.
+         *
+         * @param config LLM configuration
+         */
+        fun withLlm(config: LlmConfig = LlmConfig.DEFAULT) = apply {
+            this.llmConfig = config
+            // Processor will be created via factory when build() is called
+        }
+
+        /**
+         * Set the static command persistence for database storage.
+         *
+         * Static commands will be populated to the database on first run,
+         * making them available for:
+         * - Speech engine vocabulary loading
+         * - Offline availability
+         * - User customization (enable/disable)
+         *
+         * @param persistence Static command persistence implementation
+         */
+        fun withStaticCommandPersistence(persistence: IStaticCommandPersistence) = apply {
+            this.staticCommandPersistence = persistence
+        }
+
         fun build(): VoiceOSCoreNG {
             return VoiceOSCoreNG(
                 handlerFactory = handlerFactory ?: throw IllegalStateException("HandlerFactory required"),
                 speechEngineFactory = speechEngineFactory ?: SpeechEngineFactoryProvider.create(),
                 configuration = configuration,
-                synonymProvider = synonymProvider
+                synonymProvider = synonymProvider,
+                nluProcessor = nluProcessor,
+                llmProcessor = llmProcessor,
+                nluConfig = nluConfig,
+                llmConfig = llmConfig,
+                staticCommandPersistence = staticCommandPersistence
             )
         }
     }

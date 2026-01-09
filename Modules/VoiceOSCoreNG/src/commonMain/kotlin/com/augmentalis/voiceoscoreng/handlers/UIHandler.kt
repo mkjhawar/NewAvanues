@@ -238,10 +238,12 @@ class UIHandler(
      *
      * Flow:
      * 1. Get all screen elements from executor
-     * 2. Find elements matching the target text
-     * 3. If single match: execute immediately
-     * 4. If multiple matches: show numbered badges ONLY on matches, wait for selection
+     * 2. ElementDisambiguator matches on TEXT first, then contentDescription fallback
+     * 3. If single match: execute directly
+     * 4. If multiple matches: show numbered badges with highlighting, popup fades
      * 5. If no matches: return failure
+     *
+     * For short targets (digits like "4"), use EXACT match to avoid false positives.
      */
     private suspend fun handleClickWithDisambiguation(
         target: String,
@@ -250,11 +252,19 @@ class UIHandler(
         // Get current screen elements
         val screenElements = executor.getScreenElements()
 
-        // Find matches using disambiguator
+        // For short targets (single digits, letters), use EXACT match
+        // For longer targets, use CONTAINS for flexibility
+        val matchMode = if (target.length <= 2) {
+            ElementDisambiguator.MatchMode.EXACT
+        } else {
+            ElementDisambiguator.MatchMode.CONTAINS
+        }
+
+        // Find matches - ElementDisambiguator prioritizes TEXT over contentDescription
         val result = disambiguator.findMatches(
             query = target,
             elements = screenElements,
-            matchMode = ElementDisambiguator.MatchMode.CONTAINS
+            matchMode = matchMode
         )
 
         return when {

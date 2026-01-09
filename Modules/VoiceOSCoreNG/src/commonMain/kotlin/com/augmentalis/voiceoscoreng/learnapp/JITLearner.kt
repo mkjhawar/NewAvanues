@@ -320,12 +320,14 @@ class JITLearner(
         val timestamp = currentTimeMillis()
 
         // Generate from text
+        // Commands are stored WITHOUT verbs - user provides verb at runtime
+        // e.g., "4" (user says "click 4" or "tap 4" or just "4")
         if (element.text.isNotBlank()) {
             commands.add(
                 QuantizedCommand(
                     uuid = "$vuid-text",
-                    phrase = "tap ${element.text.lowercase()}",
-                    actionType = CommandActionType.TAP,
+                    phrase = element.text.lowercase(),  // No verb - just the label
+                    actionType = CommandActionType.CLICK,
                     targetVuid = vuid,
                     confidence = 0.95f,
                     metadata = mapOf(
@@ -338,12 +340,13 @@ class JITLearner(
         }
 
         // Generate from contentDescription
+        // Commands are stored WITHOUT verbs - user provides verb at runtime
         if (element.contentDescription.isNotBlank()) {
             commands.add(
                 QuantizedCommand(
                     uuid = "$vuid-desc",
-                    phrase = "tap ${element.contentDescription.lowercase()}",
-                    actionType = CommandActionType.TAP,
+                    phrase = element.contentDescription.lowercase(),  // No verb - just the label
+                    actionType = CommandActionType.CLICK,
                     targetVuid = vuid,
                     confidence = 0.90f, // Slightly lower since contentDescription may be less precise
                     metadata = mapOf(

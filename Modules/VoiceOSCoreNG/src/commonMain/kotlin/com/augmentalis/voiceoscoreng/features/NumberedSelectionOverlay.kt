@@ -87,6 +87,13 @@ class NumberedSelectionOverlay(
     private var _items: MutableList<NumberedItem> = mutableListOf()
 
     /**
+     * Current disambiguation display configuration.
+     * Platform renderers should use this to determine highlight style, animations, etc.
+     */
+    private var _displayConfig: DisambiguationOverlayConfig = DisambiguationOverlayConfig.DEFAULT
+    val displayConfig: DisambiguationOverlayConfig get() = _displayConfig
+
+    /**
      * Current items displayed in the overlay.
      * Returns an immutable copy.
      */
@@ -156,6 +163,7 @@ class NumberedSelectionOverlay(
             is OverlayData.NumberedItems -> {
                 _items.clear()
                 _items.addAll(data.items)
+                _displayConfig = data.displayConfig
             }
             else -> {
                 // Ignore non-NumberedItems data
@@ -458,8 +466,60 @@ class NumberedSelectionOverlay(
      * @return Instruction text for users
      */
     fun getInstructionText(): String {
-        return instructionText ?: "Say a number to select"
+        return instructionText ?: _displayConfig.popupMessage
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Disambiguation Display Helpers (for platform renderers)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Whether to show flashing/animated stroke around elements.
+     */
+    fun shouldShowFlashingStroke(): Boolean =
+        _displayConfig.highlightStyle == DisambiguationHighlightStyle.FLASHING_STROKE
+
+    /**
+     * Whether to show solid highlight overlay on elements.
+     */
+    fun shouldShowSolidHighlight(): Boolean =
+        _displayConfig.highlightStyle == DisambiguationHighlightStyle.SOLID_HIGHLIGHT
+
+    /**
+     * Whether to show pulsing glow effect around elements.
+     */
+    fun shouldShowPulsingGlow(): Boolean =
+        _displayConfig.highlightStyle == DisambiguationHighlightStyle.PULSING_GLOW
+
+    /**
+     * Whether badges should be animated (pulse/flash).
+     */
+    fun shouldAnimateBadges(): Boolean = _displayConfig.badgeAnimationEnabled
+
+    /**
+     * Whether to show instruction popup.
+     */
+    fun shouldShowPopup(): Boolean = _displayConfig.showPopup
+
+    /**
+     * Get stroke width in dp for highlight rendering.
+     */
+    fun getHighlightStrokeWidth(): Float = _displayConfig.strokeWidth
+
+    /**
+     * Get stroke color as ARGB Long for highlight rendering.
+     */
+    fun getHighlightStrokeColor(): Long = _displayConfig.strokeColor
+
+    /**
+     * Get animation cycle duration in milliseconds.
+     */
+    fun getAnimationDurationMs(): Long = _displayConfig.animationDurationMs
+
+    /**
+     * Get popup fade delay in milliseconds.
+     */
+    fun getPopupFadeDelayMs(): Long = _displayConfig.popupFadeDelayMs
 
     // ═══════════════════════════════════════════════════════════════════════
     // Platform Time Stub (for ID generation)
