@@ -190,6 +190,70 @@ class AppHandler(
                 aliases = listOf("camera", "photo")
             )
         )
+        // Clock app with timer/alarm/stopwatch aliases
+        registerApp(
+            AppInfo(
+                packageName = "com.google.android.deskclock",
+                displayName = "Clock",
+                aliases = listOf("clock", "alarm", "alarms", "timer", "timers", "stopwatch", "world clock")
+            )
+        )
+        // Alternative clock package (Samsung, etc.)
+        registerApp(
+            AppInfo(
+                packageName = "com.sec.android.app.clockpackage",
+                displayName = "Clock",
+                aliases = listOf("clock", "alarm", "alarms", "timer", "timers", "stopwatch")
+            )
+        )
+        // AOSP Clock
+        registerApp(
+            AppInfo(
+                packageName = "com.android.deskclock",
+                displayName = "Clock",
+                aliases = listOf("clock", "alarm", "alarms", "timer", "timers", "stopwatch")
+            )
+        )
+        // Files/File Manager
+        registerApp(
+            AppInfo(
+                packageName = "com.google.android.apps.nbu.files",
+                displayName = "Files",
+                aliases = listOf("files", "file manager", "documents", "downloads")
+            )
+        )
+        // Calculator
+        registerApp(
+            AppInfo(
+                packageName = "com.google.android.calculator",
+                displayName = "Calculator",
+                aliases = listOf("calculator", "calc")
+            )
+        )
+        // Notes/Keep
+        registerApp(
+            AppInfo(
+                packageName = "com.google.android.keep",
+                displayName = "Keep Notes",
+                aliases = listOf("notes", "keep", "notepad", "memo")
+            )
+        )
+        // Weather
+        registerApp(
+            AppInfo(
+                packageName = "com.google.android.apps.weather",
+                displayName = "Weather",
+                aliases = listOf("weather", "forecast")
+            )
+        )
+        // Gmail
+        registerApp(
+            AppInfo(
+                packageName = "com.google.android.gm",
+                displayName = "Gmail",
+                aliases = listOf("gmail", "email", "mail")
+            )
+        )
     }
 
     /**
