@@ -5,8 +5,15 @@
  * Author: VOS4 Development Team
  * Created: 2026-01-06
  * Updated: 2026-01-08 - Added disambiguation for duplicate elements
+ * Updated: 2026-01-08 - Integrated with dynamic command system (VUID priority)
  *
  * KMP handler for UI element interactions (click, tap, press, etc.).
+ *
+ * ## Execution Priority:
+ *
+ * 1. **VUID path (fastest)**: If command.targetVuid is set (from dynamic commands),
+ *    execute directly via clickByVuid() - no tree search needed.
+ * 2. **Text search path**: If no VUID, fall back to UI tree search with disambiguation.
  *
  * ## Disambiguation Flow
  *

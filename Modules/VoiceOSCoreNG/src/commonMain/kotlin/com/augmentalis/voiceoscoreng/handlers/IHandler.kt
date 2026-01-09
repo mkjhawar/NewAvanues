@@ -114,14 +114,26 @@ interface IHandler {
  * Base implementation of [IHandler] with common functionality.
  *
  * Provides default canHandle implementation based on supportedActions.
+ * Supports both exact matching and prefix matching for voice commands.
  */
 abstract class BaseHandler : IHandler {
 
     override fun canHandle(action: String): Boolean {
         val normalized = action.lowercase().trim()
         return supportedActions.any { supported ->
-            normalized == supported.lowercase() ||
-            normalized.startsWith(supported.lowercase() + " ")
+            val supportedLower = supported.lowercase()
+
+            // Exact match
+            normalized == supportedLower ||
+
+            // Prefix match with space (e.g., "click submit" starts with "click ")
+            normalized.startsWith(supportedLower + " ") ||
+
+            // Handle slight voice variations - action verb match
+            // e.g., "clicking" matches "click", "scrolling" matches "scroll"
+            (supportedLower.length >= 4 &&
+             normalized.startsWith(supportedLower.dropLast(1)) &&
+             normalized.length > supportedLower.length)
         }
     }
 }

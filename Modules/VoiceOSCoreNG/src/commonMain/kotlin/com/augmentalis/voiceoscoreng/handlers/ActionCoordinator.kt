@@ -4,12 +4,16 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2026-01-06
+ * Updated: 2026-01-08 - Consolidated dynamic command support (CommandRegistry + fuzzy matching)
  *
  * KMP coordinator for managing handler registration and command execution.
+ * Now supports both static handlers AND dynamic screen-specific commands.
  */
 package com.augmentalis.voiceoscoreng.handlers
 
 import com.augmentalis.voiceoscoreng.common.CommandActionType
+import com.augmentalis.voiceoscoreng.common.CommandMatcher
+import com.augmentalis.voiceoscoreng.common.CommandRegistry
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.features.currentTimeMillis
 import com.augmentalis.voiceoscoreng.handlers.*
@@ -24,18 +28,33 @@ import kotlinx.coroutines.sync.withLock
  * Provides:
  * - Handler registration and lifecycle management
  * - Priority-based command routing
+ * - Dynamic command support (screen-specific commands with VUIDs)
+ * - Fuzzy matching for voice input variations
  * - Performance metrics collection
  * - Voice command interpretation
+ *
+ * ## Execution Priority:
+ * 1. Dynamic command lookup by VUID (fastest, most accurate)
+ * 2. Dynamic command fuzzy match (handles voice variations)
+ * 3. Static handler lookup (system commands)
+ * 4. Voice interpreter fallback (natural language)
  */
 class ActionCoordinator(
     private val voiceInterpreter: IVoiceCommandInterpreter = DefaultVoiceCommandInterpreter,
-    private val registry: IHandlerRegistry = HandlerRegistry(),
+    private val handlerRegistry: IHandlerRegistry = HandlerRegistry(),
+    private val commandRegistry: CommandRegistry = CommandRegistry(),
     private val metrics: IMetricsCollector = MetricsCollector()
 ) {
 
     companion object {
         private const val HANDLER_TIMEOUT_MS = 5000L
+        private const val DEFAULT_FUZZY_THRESHOLD = 0.7f
     }
+
+    /**
+     * Current number of dynamic commands registered.
+     */
+    val dynamicCommandCount: Int get() = commandRegistry.size
 
     // Coroutine scope for async operations
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -59,11 +78,11 @@ class ActionCoordinator(
         try {
             // Register all handlers
             handlers.forEach { handler ->
-                registry.register(handler)
+                handlerRegistry.register(handler)
             }
 
             // Initialize all handlers
-            val initCount = registry.initializeAll()
+            val initCount = handlerRegistry.initializeAll()
 
             _state.value = CoordinatorState.READY
         } catch (e: Exception) {
@@ -76,7 +95,38 @@ class ActionCoordinator(
      * Register a handler.
      */
     suspend fun registerHandler(handler: IHandler) {
-        registry.register(handler)
+        handlerRegistry.register(handler)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Dynamic Command Management
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Update dynamic commands from screen scraping.
+     *
+     * Call this after each screen scan to register the current screen's
+     * actionable elements as voice commands.
+     *
+     * @param commands List of quantized commands from UI elements
+     */
+    suspend fun updateDynamicCommands(commands: List<QuantizedCommand>) {
+        commandRegistry.update(commands)
+    }
+
+    /**
+     * Clear all dynamic commands.
+     * Call when leaving an app or screen context is invalid.
+     */
+    fun clearDynamicCommands() {
+        commandRegistry.clear()
+    }
+
+    /**
+     * Get all current dynamic commands.
+     */
+    fun getDynamicCommands(): List<QuantizedCommand> {
+        return commandRegistry.all()
     }
 
     /**
@@ -89,7 +139,7 @@ class ActionCoordinator(
         val startTime = currentTimeMillis()
 
         // Find handler
-        val handler = registry.findHandler(command)
+        val handler = handlerRegistry.findHandler(command)
         if (handler == null) {
             val result = HandlerResult.failure("No handler found for: ${command.phrase}")
             recordResult(command, result, currentTimeMillis() - startTime)
@@ -112,29 +162,77 @@ class ActionCoordinator(
     }
 
     /**
-     * Process a voice command string.
+     * Process a voice command string with full dynamic command support.
+     *
+     * Execution priority:
+     * 1. Dynamic command by exact phrase match (with VUID)
+     * 2. Dynamic command by fuzzy match (handles voice variations)
+     * 3. Static handler match (system commands)
+     * 4. Voice interpreter fallback (natural language)
      *
      * @param text The voice command text
      * @param confidence Confidence level (0-1)
      * @return HandlerResult from execution
      */
     suspend fun processVoiceCommand(text: String, confidence: Float = 1.0f): HandlerResult {
-        val normalizedCommand = text.lowercase().trim()
+        val normalizedText = text.lowercase().trim()
 
-        // Try direct command first
+        // ═══════════════════════════════════════════════════════════════════
+        // Step 1: Try dynamic command lookup (has VUID for direct execution)
+        // ═══════════════════════════════════════════════════════════════════
+        if (commandRegistry.size > 0) {
+            // First try exact phrase match in dynamic registry
+            val exactMatch = commandRegistry.findByPhrase(normalizedText)
+            if (exactMatch != null) {
+                return processCommand(exactMatch)
+            }
+
+            // Then try fuzzy matching for voice variations
+            val matchResult = CommandMatcher.match(
+                voiceInput = normalizedText,
+                registry = commandRegistry,
+                threshold = DEFAULT_FUZZY_THRESHOLD
+            )
+
+            when (matchResult) {
+                is CommandMatcher.MatchResult.Exact -> {
+                    return processCommand(matchResult.command)
+                }
+                is CommandMatcher.MatchResult.Fuzzy -> {
+                    return processCommand(matchResult.command)
+                }
+                is CommandMatcher.MatchResult.Ambiguous -> {
+                    // Return ambiguous result - caller can show disambiguation UI
+                    return HandlerResult.awaitingSelection(
+                        message = "${matchResult.candidates.size} matches found. Please be more specific.",
+                        matchCount = matchResult.candidates.size,
+                        accessibilityAnnouncement = "Multiple matches. Say a number to select."
+                    )
+                }
+                is CommandMatcher.MatchResult.NoMatch -> {
+                    // Fall through to static handlers
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // Step 2: Try static handler lookup
+        // ═══════════════════════════════════════════════════════════════════
         val directCommand = QuantizedCommand(
-            phrase = normalizedCommand,
+            phrase = normalizedText,
             actionType = CommandActionType.EXECUTE,
             targetVuid = null,
             confidence = confidence
         )
 
-        if (registry.canHandle(normalizedCommand)) {
+        if (handlerRegistry.canHandle(normalizedText)) {
             return processCommand(directCommand)
         }
 
-        // Try interpreted command
-        val interpretedAction = interpretVoiceCommand(normalizedCommand)
+        // ═══════════════════════════════════════════════════════════════════
+        // Step 3: Try voice interpreter (natural language fallback)
+        // ═══════════════════════════════════════════════════════════════════
+        val interpretedAction = interpretVoiceCommand(normalizedText)
         if (interpretedAction != null) {
             val interpretedCommand = directCommand.copy(phrase = interpretedAction)
             return processCommand(interpretedCommand)
@@ -152,16 +250,28 @@ class ActionCoordinator(
 
     /**
      * Check if any handler can handle the command.
+     * Checks both dynamic commands and static handlers.
      */
     suspend fun canHandle(command: String): Boolean {
-        return registry.canHandle(command)
+        val normalized = command.lowercase().trim()
+
+        // Check dynamic commands first
+        if (commandRegistry.findByPhrase(normalized) != null) {
+            return true
+        }
+
+        // Check static handlers
+        return handlerRegistry.canHandle(normalized)
     }
 
     /**
      * Get all supported actions.
+     * Returns both dynamic commands and static handler actions.
      */
     suspend fun getAllSupportedActions(): List<String> {
-        return registry.getAllSupportedActions()
+        val staticActions = handlerRegistry.getAllSupportedActions()
+        val dynamicActions = commandRegistry.all().map { it.phrase }
+        return staticActions + dynamicActions
     }
 
     /**
@@ -200,8 +310,9 @@ class ActionCoordinator(
         _state.value = CoordinatorState.DISPOSING
 
         try {
-            registry.disposeAll()
-            registry.clear()
+            handlerRegistry.disposeAll()
+            handlerRegistry.clear()
+            commandRegistry.clear()
             scope.cancel()
             _state.value = CoordinatorState.DISPOSED
         } catch (e: Exception) {
@@ -216,10 +327,19 @@ class ActionCoordinator(
         return buildString {
             appendLine("ActionCoordinator Debug Info")
             appendLine("State: ${_state.value}")
-            appendLine("Handlers: ${registry.getHandlerCount()}")
-            appendLine("Categories: ${registry.getCategoryCount()}")
+            appendLine("Handlers: ${handlerRegistry.getHandlerCount()}")
+            appendLine("Categories: ${handlerRegistry.getCategoryCount()}")
+            appendLine("Dynamic Commands: ${commandRegistry.size}")
             appendLine()
-            append(registry.getDebugInfo())
+            append(handlerRegistry.getDebugInfo())
+            appendLine()
+            appendLine("Dynamic Commands:")
+            commandRegistry.all().take(10).forEach { cmd ->
+                appendLine("  - ${cmd.phrase} (VUID: ${cmd.targetVuid})")
+            }
+            if (commandRegistry.size > 10) {
+                appendLine("  ... and ${commandRegistry.size - 10} more")
+            }
             appendLine()
             append(metrics.getDebugInfo())
         }

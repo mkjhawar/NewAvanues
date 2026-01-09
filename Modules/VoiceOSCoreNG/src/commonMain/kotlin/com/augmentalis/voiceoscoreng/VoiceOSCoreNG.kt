@@ -217,7 +217,7 @@ class VoiceOSCoreNG private constructor(
     }
 
     /**
-     * Update the speech engine with dynamic commands.
+     * Update the speech engine with dynamic commands (phrases only).
      *
      * This must be called after screen changes to register new voice commands
      * with the speech recognition engine (e.g., Vivoka SDK grammar).
@@ -231,6 +231,50 @@ class VoiceOSCoreNG private constructor(
         )
         return engine.updateCommands(commands)
     }
+
+    /**
+     * Update dynamic commands from UI elements.
+     *
+     * This is the primary method to call after screen scraping. It:
+     * 1. Registers commands with the ActionCoordinator for execution (with VUIDs)
+     * 2. Optionally updates the speech engine grammar
+     *
+     * @param commands List of quantized commands from UI elements
+     * @param updateSpeechEngine Whether to also update speech recognition grammar
+     * @return Result indicating success or failure
+     */
+    suspend fun updateDynamicCommands(
+        commands: List<QuantizedCommand>,
+        updateSpeechEngine: Boolean = true
+    ): Result<Unit> {
+        return try {
+            // Register commands with coordinator (includes VUIDs for direct execution)
+            coordinator.updateDynamicCommands(commands)
+
+            // Optionally update speech engine grammar
+            if (updateSpeechEngine && speechEngine != null) {
+                val phrases = commands.map { it.phrase }
+                speechEngine?.updateCommands(phrases)
+            }
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Clear all dynamic commands.
+     * Call when leaving an app or screen context is invalid.
+     */
+    fun clearDynamicCommands() {
+        coordinator.clearDynamicCommands()
+    }
+
+    /**
+     * Get current count of dynamic commands.
+     */
+    val dynamicCommandCount: Int get() = coordinator.dynamicCommandCount
 
     /**
      * Check if any handler can handle the command.

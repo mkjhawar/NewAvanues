@@ -1,0 +1,99 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# VoiceOS English Synonym Pack
+# Version: 1.0
+# Created: 2026-01-08
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@meta
+language = en
+version = 1.0
+script = latin
+tokenizer = whitespace
+
+@synonyms
+# ═══════════════════════════════════════════════════════════════════════════════
+# UI Actions
+# ═══════════════════════════════════════════════════════════════════════════════
+
+click | tap, press, push, hit, select, choose, pick, activate, touch
+long_click | long press, hold, press and hold, long tap, hold down
+double_click | double tap, tap twice, double press, double touch
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Scrolling & Navigation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+scroll_up | swipe up, go up, move up, scroll upward, page up, up
+scroll_down | swipe down, go down, move down, scroll downward, page down, down
+scroll_left | swipe left, go left, move left, scroll leftward, left
+scroll_right | swipe right, go right, move right, scroll rightward, right
+
+back | go back, return, previous, navigate back, backwards, back button
+home | go home, home screen, main screen, start, launcher
+forward | go forward, next page, forward button
+recent | recent apps, app switcher, multitask, task switcher, recents
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Text Input
+# ═══════════════════════════════════════════════════════════════════════════════
+
+type | enter, input, write, fill in, insert, key in
+clear | erase, delete, remove, empty, wipe
+select_all | highlight all, mark all, select everything
+copy | duplicate, copy text
+paste | insert copied, paste text
+cut | cut text, move to clipboard
+undo | reverse, take back, undo that
+redo | redo that, do again
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Toggles & State
+# ═══════════════════════════════════════════════════════════════════════════════
+
+expand | open, show more, unfold, reveal, expand section
+collapse | close, hide, fold, minimize, shrink, collapse section
+toggle | switch, flip, change state
+check | tick, mark, enable, check box, turn on
+uncheck | untick, unmark, disable, uncheck box, turn off
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Focus & Dismiss
+# ═══════════════════════════════════════════════════════════════════════════════
+
+focus | select field, go to, move to, jump to
+dismiss | close, cancel, exit, get rid of, close dialog
+confirm | ok, okay, yes, accept, approve, submit
+deny | no, cancel, reject, decline
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# System Controls
+# ═══════════════════════════════════════════════════════════════════════════════
+
+volume_up | louder, increase volume, turn up, volume higher
+volume_down | quieter, decrease volume, turn down, volume lower, softer
+mute | silence, quiet, no sound, mute audio
+unmute | unmute audio, sound on, turn sound on
+
+screenshot | screen capture, take screenshot, capture screen
+notifications | show notifications, notification panel, notification shade
+settings | open settings, go to settings, preferences
+search | find, look for, search for
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Media Controls
+# ═══════════════════════════════════════════════════════════════════════════════
+
+play | start, resume, play media
+pause | stop, pause media, halt
+play_pause | toggle play, play or pause
+next | next track, skip, next song, forward
+previous | previous track, back track, previous song, rewind
+stop | stop playback, end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Help & Information
+# ═══════════════════════════════════════════════════════════════════════════════
+
+help | what can i say, show commands, voice commands, assistance
+repeat | say again, what, pardon, come again
+cancel | never mind, stop, abort, forget it
