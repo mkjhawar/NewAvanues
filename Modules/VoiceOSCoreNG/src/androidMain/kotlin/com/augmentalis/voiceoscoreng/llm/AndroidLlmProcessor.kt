@@ -16,6 +16,7 @@ import com.augmentalis.llm.domain.LLMConfig
 import com.augmentalis.llm.domain.GenerationOptions
 import com.augmentalis.llm.domain.LLMResponse
 import com.augmentalis.llm.domain.getText
+import com.augmentalis.ava.core.common.Result as AvaResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.sync.Mutex

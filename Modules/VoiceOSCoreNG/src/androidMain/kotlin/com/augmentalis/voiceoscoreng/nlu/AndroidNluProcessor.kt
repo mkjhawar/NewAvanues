@@ -14,6 +14,7 @@ import android.content.Context
 import com.augmentalis.nlu.IntentClassifier
 import com.augmentalis.nlu.IntentClassification
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
+import com.augmentalis.ava.core.common.Result as AvaResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

@@ -104,6 +104,13 @@ kotlin {
                 // Provides: LocalLLMProvider, ALCEngine, model discovery
                 // Loads models from external storage: /sdcard/ava-ai-models/llm/
                 implementation(project(":Modules:LLM"))
+
+                // ==========================================================
+                // AVA Core Utils (Result type used by NLU and LLM modules)
+                // ==========================================================
+                // Provides: Result sealed class for handling success/error states
+                // Required because NLU and LLM use this Result type in their APIs
+                implementation(project(":Modules:AVA:core:Utils"))
             }
         }
 
