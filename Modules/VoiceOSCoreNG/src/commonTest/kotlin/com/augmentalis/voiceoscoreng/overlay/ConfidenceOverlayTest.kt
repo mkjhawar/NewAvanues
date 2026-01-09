@@ -11,6 +11,11 @@
  */
 package com.augmentalis.voiceoscoreng.overlay
 
+import com.augmentalis.voiceoscoreng.features.ConfidenceLevel
+import com.augmentalis.voiceoscoreng.features.ConfidenceOverlay
+import com.augmentalis.voiceoscoreng.features.ConfidenceResult
+import com.augmentalis.voiceoscoreng.features.IOverlay
+import com.augmentalis.voiceoscoreng.features.OverlayData
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

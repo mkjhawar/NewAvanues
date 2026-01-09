@@ -28,14 +28,14 @@ class CommandRegistryTest {
     fun `update replaces all commands`() {
         val registry = CommandRegistry()
 
-        registry.update(listOf(
+        registry.updateSync(listOf(
             createCommand("click Submit", "vuid1"),
             createCommand("click Cancel", "vuid2")
         ))
 
         assertEquals(2, registry.size)
 
-        registry.update(listOf(
+        registry.updateSync(listOf(
             createCommand("click OK", "vuid3")
         ))
 
@@ -47,7 +47,7 @@ class CommandRegistryTest {
     @Test
     fun `findByPhrase returns exact match`() {
         val registry = CommandRegistry()
-        registry.update(listOf(
+        registry.updateSync(listOf(
             createCommand("click Submit", "vuid1"),
             createCommand("click Cancel", "vuid2")
         ))
@@ -61,7 +61,7 @@ class CommandRegistryTest {
     @Test
     fun `findByPhrase is case insensitive`() {
         val registry = CommandRegistry()
-        registry.update(listOf(
+        registry.updateSync(listOf(
             createCommand("click Submit", "vuid1")
         ))
 
@@ -74,7 +74,7 @@ class CommandRegistryTest {
     @Test
     fun `findByPhrase matches partial phrase (label only)`() {
         val registry = CommandRegistry()
-        registry.update(listOf(
+        registry.updateSync(listOf(
             createCommand("click Submit", "vuid1")
         ))
 
@@ -87,7 +87,7 @@ class CommandRegistryTest {
     @Test
     fun `findByPhrase returns null when not found`() {
         val registry = CommandRegistry()
-        registry.update(listOf(
+        registry.updateSync(listOf(
             createCommand("click Submit", "vuid1")
         ))
 
@@ -99,7 +99,7 @@ class CommandRegistryTest {
     @Test
     fun `findByVuid returns command`() {
         val registry = CommandRegistry()
-        registry.update(listOf(
+        registry.updateSync(listOf(
             createCommand("click Submit", "vuid1")
         ))
 
@@ -112,7 +112,7 @@ class CommandRegistryTest {
     @Test
     fun `all returns all commands`() {
         val registry = CommandRegistry()
-        registry.update(listOf(
+        registry.updateSync(listOf(
             createCommand("click Submit", "vuid1"),
             createCommand("click Cancel", "vuid2"),
             createCommand("type Email", "vuid3")
@@ -126,7 +126,7 @@ class CommandRegistryTest {
     @Test
     fun `clear removes all commands`() {
         val registry = CommandRegistry()
-        registry.update(listOf(
+        registry.updateSync(listOf(
             createCommand("click Submit", "vuid1")
         ))
 
@@ -139,7 +139,7 @@ class CommandRegistryTest {
     @Test
     fun `update handles commands with null targetVuid`() {
         val registry = CommandRegistry()
-        registry.update(listOf(
+        registry.updateSync(listOf(
             QuantizedCommand(
                 uuid = "",
                 phrase = "go back",
@@ -159,7 +159,7 @@ class CommandRegistryTest {
 
         assertEquals(0, registry.size)
 
-        registry.update(listOf(
+        registry.updateSync(listOf(
             createCommand("click A", "vuid1"),
             createCommand("click B", "vuid2")
         ))

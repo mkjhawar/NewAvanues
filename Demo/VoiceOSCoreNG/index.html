@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceOSCoreNG - Interactive Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            /* Material 3 Dark Theme Colors */
+            --md-primary: #2196F3;
+            --md-on-primary: #FFFFFF;
+            --md-primary-container: #1565C0;
+            --md-secondary: #4CAF50;
+            --md-tertiary: #FF9800;
+            --md-error: #F44336;
+            --md-surface: #1E1E1E;
+            --md-surface-variant: #2D2D2D;
+            --md-background: #121212;
+            --md-on-surface: #E0E0E0;
+            --md-on-surface-variant: #B0B0B0;
+            --md-outline: #424242;
+
+            /* Overlay Colors */
+            --badge-enabled-name: #4CAF50;
+            --badge-enabled-no-name: #FF9800;
+            --badge-disabled: #757575;
+            --confidence-high: #4CAF50;
+            --confidence-medium: #FFEB3B;
+            --confidence-low: #FF9800;
+            --confidence-reject: #F44336;
+
+            /* Spacing */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+
+            /* Border Radius */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-full: 50%;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--md-background);
+            color: var(--md-on-surface);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        /* App Shell */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Top App Bar */
+        .top-app-bar {
+            background: var(--md-primary-container);
+            padding: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .top-app-bar h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .tier-badge {
+            background: var(--md-surface);
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: var(--spacing-md);
+            display: grid;
+            gap: var(--spacing-md);
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .main-content {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .main-content {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--md-surface);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .card-header {
+            background: var(--md-surface-variant);
+            padding: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            border-bottom: 1px solid var(--md-outline);
+        }
+
+        .card-header h2 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .card-content {
+            padding: var(--spacing-md);
+        }
+
+        /* Section Title */
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            padding: var(--spacing-md);
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        /* Command Status Overlay */
+        .command-status-overlay {
+            background: rgba(30, 30, 30, 0.95);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            border: 1px solid var(--md-outline);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: var(--radius-full);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.listening { background: var(--md-primary); }
+        .status-dot.processing { background: var(--md-tertiary); }
+        .status-dot.success { background: var(--md-secondary); }
+        .status-dot.error { background: var(--md-error); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(0.9); }
+        }
+
+        .status-message {
+            font-size: 0.9rem;
+            color: var(--md-on-surface-variant);
+        }
+
+        .command-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            color: var(--md-on-surface);
+        }
+
+        /* Numbered Selection Overlay */
+        .numbered-overlay-demo {
+            position: relative;
+            background: var(--md-surface-variant);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+            min-height: 300px;
+        }
+
+        .mock-ui-element {
+            background: var(--md-surface);
+            border: 1px solid var(--md-outline);
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            position: relative;
+        }
+
+        .number-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 28px;
+            height: 28px;
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .number-badge.has-name { background: var(--badge-enabled-name); }
+        .number-badge.no-name { background: var(--badge-enabled-no-name); }
+        .number-badge.disabled { background: var(--badge-disabled); }
+
+        .instruction-text {
+            text-align: center;
+            padding: var(--spacing-md);
+            color: var(--md-on-surface-variant);
+            font-size: 0.9rem;
+        }
+
+        /* Confidence Overlay */
+        .confidence-display {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .confidence-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--md-surface-variant);
+            border-radius: var(--radius-sm);
+        }
+
+        .confidence-bar-container {
+            flex: 1;
+            height: 8px;
+            background: var(--md-outline);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .confidence-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .confidence-bar.high { background: var(--confidence-high); }
+        .confidence-bar.medium { background: var(--confidence-medium); }
+        .confidence-bar.low { background: var(--confidence-low); }
+        .confidence-bar.reject { background: var(--confidence-reject); }
+
+        .confidence-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            min-width: 45px;
+        }
+
+        .confidence-label {
+            font-size: 0.8rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .confidence-label.high { background: var(--confidence-high); color: #000; }
+        .confidence-label.medium { background: var(--confidence-medium); color: #000; }
+        .confidence-label.low { background: var(--confidence-low); color: #000; }
+        .confidence-label.reject { background: var(--confidence-reject); color: #fff; }
+
+        /* Context Menu */
+        .context-menu {
+            background: var(--md-surface);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--md-outline);
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            min-width: 200px;
+        }
+
+        .context-menu-title {
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--md-on-surface-variant);
+            background: var(--md-surface-variant);
+        }
+
+        .context-menu-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .context-menu-item:hover:not(.disabled) {
+            background: var(--md-surface-variant);
+        }
+
+        .context-menu-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .context-menu-item .number {
+            width: 24px;
+            height: 24px;
+            border-radius: var(--radius-full);
+            background: var(--md-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .context-menu-item.disabled .number {
+            background: var(--badge-disabled);
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .settings-section {
+            background: var(--md-surface-variant);
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-md);
+        }
+
+        .settings-section-title {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+            color: var(--md-primary);
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-xs) 0;
+        }
+
+        .toggle-label {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toggle-label span:first-child {
+            font-size: 0.9rem;
+        }
+
+        .toggle-label span:last-child {
+            font-size: 0.75rem;
+            color: var(--md-on-surface-variant);
+        }
+
+        /* Toggle Switch */
+        .toggle {
+            position: relative;
+            width: 48px;
+            height: 24px;
+            background: var(--md-outline);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle.active {
+            background: var(--md-primary);
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: var(--radius-full);
+            background: white;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+
+        .toggle.active::after {
+            transform: translateX(24px);
+        }
+
+        /* Slider */
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--md-outline);
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: var(--radius-full);
+            background: var(--md-primary);
+            cursor: pointer;
+        }
+
+        /* Theme Preview Grid */
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-sm);
+        }
+
+        .theme-preview {
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .theme-preview:hover {
+            border-color: var(--md-primary);
+        }
+
+        .theme-preview.selected {
+            border-color: var(--md-primary);
+            background: rgba(33, 150, 243, 0.1);
+        }
+
+        .theme-preview-name {
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        .theme-colors {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+        }
+
+        .theme-color-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: var(--radius-full);
+        }
+
+        /* FAB */
+        .fab-container {
+            position: fixed;
+            bottom: var(--spacing-md);
+            right: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: var(--spacing-sm);
+            z-index: 200;
+        }
+
+        .fab {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            border: none;
+            background: var(--md-primary);
+            color: var(--md-on-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+        }
+
+        .fab:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+        }
+
+        .fab.active {
+            background: var(--md-secondary);
+        }
+
+        .fab.pulsing {
+            animation: fab-pulse 2s infinite;
+        }
+
+        @keyframes fab-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .fab-menu {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: var(--spacing-sm);
+        }
+
+        .fab-menu-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .fab-menu-label {
+            background: var(--md-surface);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .mini-fab {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-sm);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+        }
+
+        .mini-fab:hover {
+            transform: scale(1.05);
+        }
+
+        /* Badge Styles Preview */
+        .badge-styles-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-md);
+        }
+
+        .badge-style-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm);
+            background: var(--md-surface-variant);
+            border-radius: var(--radius-sm);
+        }
+
+        .badge-example {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .badge-example.outlined {
+            background: transparent;
+            border: 2.5px solid;
+        }
+
+        .badge-example.square {
+            border-radius: 4px;
+        }
+
+        .badge-example.rounded-rect {
+            border-radius: 8px;
+            width: 36px;
+        }
+
+        /* Overlay Type Cards */
+        .overlay-type-demo {
+            background: linear-gradient(135deg, var(--md-surface-variant) 0%, var(--md-surface) 100%);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            gap: var(--spacing-sm);
+        }
+
+        /* Code Block */
+        .code-block {
+            background: #0D1117;
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-md);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            overflow-x: auto;
+            color: #C9D1D9;
+        }
+
+        .code-block .keyword { color: #FF7B72; }
+        .code-block .string { color: #A5D6FF; }
+        .code-block .number { color: #79C0FF; }
+        .code-block .comment { color: #8B949E; }
+        .code-block .type { color: #FFA657; }
+
+        /* Interactive Demo Area */
+        .demo-phone {
+            background: var(--md-background);
+            border: 4px solid #333;
+            border-radius: 24px;
+            overflow: hidden;
+            max-width: 320px;
+            margin: 0 auto;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .demo-phone-notch {
+            background: #333;
+            height: 24px;
+            margin: 0 auto;
+            width: 120px;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .demo-phone-content {
+            padding: var(--spacing-md);
+            min-height: 400px;
+            position: relative;
+        }
+
+        /* Accessibility Features */
+        .accessibility-demo {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .a11y-feature {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--md-surface-variant);
+            border-radius: var(--radius-sm);
+        }
+
+        .a11y-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-full);
+            background: var(--md-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .a11y-details {
+            flex: 1;
+        }
+
+        .a11y-details h4 {
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+        }
+
+        .a11y-details p {
+            font-size: 0.75rem;
+            color: var(--md-on-surface-variant);
+        }
+
+        /* Hidden utility */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Animation classes */
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Disambiguation Demo Styles */
+        .disambiguation-demo {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+
+        .step {
+            padding: 6px 12px;
+            background: var(--md-surface-variant);
+            border-radius: 16px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .step.active {
+            background: var(--md-primary);
+            color: white;
+        }
+
+        .step.completed {
+            background: var(--md-secondary);
+            color: white;
+        }
+
+        .step-arrow {
+            color: var(--md-on-surface-variant);
+            font-size: 0.9rem;
+        }
+
+        .mock-screen {
+            background: var(--md-background);
+            border: 2px solid var(--md-outline);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            min-height: 280px;
+        }
+
+        .mock-screen-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 1px solid var(--md-outline);
+        }
+
+        .mock-product {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid var(--md-surface-variant);
+        }
+
+        .mock-product span {
+            font-size: 0.85rem;
+        }
+
+        .mock-buttons {
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+
+        .mock-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--md-outline);
+            background: var(--md-surface);
+            color: var(--md-on-surface);
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .mock-btn:hover {
+            background: var(--md-surface-variant);
+        }
+
+        .mock-btn.primary {
+            background: var(--md-primary);
+            color: white;
+            border-color: var(--md-primary);
+        }
+
+        .mock-btn.highlighted {
+            background: rgba(76, 175, 80, 0.2);
+            border-color: var(--badge-enabled-name);
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+        }
+
+        .mock-btn.selected {
+            background: var(--badge-enabled-name);
+            color: white;
+            border-color: var(--badge-enabled-name);
+            transform: scale(1.05);
+        }
+
+        .mock-btn .disambig-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--badge-enabled-name);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            animation: badgePop 0.3s ease;
+        }
+
+        @keyframes badgePop {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .mock-footer {
+            margin-top: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--md-outline);
+            text-align: right;
+        }
+
+        .voice-command-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md);
+            background: var(--md-surface-variant);
+            border-radius: var(--radius-md);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .voice-command-display .material-icons {
+            color: var(--md-primary);
+        }
+
+        .voice-command-display.listening .material-icons {
+            animation: pulse 1s infinite;
+        }
+
+        .demo-controls {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .demo-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: 8px 16px;
+            background: var(--md-primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .demo-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .demo-btn.secondary {
+            background: var(--md-surface-variant);
+            color: var(--md-on-surface);
+        }
+
+        .demo-btn .material-icons {
+            font-size: 18px;
+        }
+
+        .demo-explanation {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: rgba(33, 150, 243, 0.1);
+            border-left: 3px solid var(--md-primary);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            font-size: 0.85rem;
+        }
+
+        .demo-explanation .material-icons {
+            color: var(--md-primary);
+            font-size: 20px;
+        }
+
+        .context-label {
+            font-size: 0.65rem;
+            color: var(--md-on-surface-variant);
+            display: block;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top App Bar -->
+        <header class="top-app-bar">
+            <h1>
+                <span class="material-icons">mic</span>
+                VoiceOSCoreNG Demo
+            </h1>
+            <div class="tier-badge">
+                <span class="material-icons" style="font-size: 16px;">code</span>
+                DEV Tier
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Section: Overlay System -->
+            <h3 class="section-title">
+                <span class="material-icons">layers</span>
+                Overlay System
+            </h3>
+
+            <!-- Command Status Overlay -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="material-icons">record_voice_over</span>
+                    <h2>Command Status Overlay</h2>
+                </div>
+                <div class="card-content">
+                    <div class="command-status-overlay" id="statusOverlay">
+                        <div class="status-indicator">
+                            <div class="status-dot listening" id="statusDot"></div>
+                            <span class="status-message" id="statusMessage">Listening for command...</span>
+                        </div>
+                        <div class="command-text" id="commandText">...</div>
+                    </div>
+                    <div style="margin-top: var(--spacing-md); display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
+                        <button onclick="setStatus('listening')" class="mini-fab" style="background: var(--md-primary); color: white;">
+                            <span class="material-icons" style="font-size: 18px;">mic</span>
+                        </button>
+                        <button onclick="setStatus('processing')" class="mini-fab" style="background: var(--md-tertiary); color: white;">
+                            <span class="material-icons" style="font-size: 18px;">sync</span>
+                        </button>
+                        <button onclick="setStatus('success')" class="mini-fab" style="background: var(--md-secondary); color: white;">
+                            <span class="material-icons" style="font-size: 18px;">check</span>
+                        </button>
+                        <button onclick="setStatus('error')" class="mini-fab" style="background: var(--md-error); color: white;">
+                            <span class="material-icons" style="font-size: 18px;">error</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Numbered Selection Overlay -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="material-icons">pin</span>
+                    <h2>Numbered Selection Overlay</h2>
+                </div>
+                <div class="card-content">
+                    <div class="numbered-overlay-demo">
+                        <div class="mock-ui-element">
+                            <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">send</span>
+                            Submit Form
+                            <div class="number-badge has-name">1</div>
+                        </div>
+                        <div class="mock-ui-element">
+                            <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">close</span>
+                            Cancel
+                            <div class="number-badge has-name">2</div>
+                        </div>
+                        <div class="mock-ui-element" style="opacity: 0.6;">
+                            <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">edit</span>
+                            Edit (Disabled)
+                            <div class="number-badge disabled">3</div>
+                        </div>
+                        <div class="mock-ui-element">
+                            <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">more_horiz</span>
+                            More Options
+                            <div class="number-badge no-name">4</div>
+                        </div>
+                        <div class="instruction-text">
+                            <span class="material-icons" style="vertical-align: middle; font-size: 16px;">info</span>
+                            Say a number to select
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confidence Overlay -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="material-icons">trending_up</span>
+                    <h2>Confidence Overlay</h2>
+                </div>
+                <div class="card-content">
+                    <div class="confidence-display">
+                        <div class="confidence-item">
+                            <span style="min-width: 120px; font-size: 0.85rem;">"click submit"</span>
+                            <div class="confidence-bar-container">
+                                <div class="confidence-bar high" style="width: 92%;"></div>
+                            </div>
+                            <span class="confidence-value">92%</span>
+                            <span class="confidence-label high">High</span>
+                        </div>
+                        <div class="confidence-item">
+                            <span style="min-width: 120px; font-size: 0.85rem;">"click button"</span>
+                            <div class="confidence-bar-container">
+                                <div class="confidence-bar medium" style="width: 68%;"></div>
+                            </div>
+                            <span class="confidence-value">68%</span>
+                            <span class="confidence-label medium">Confirm?</span>
+                        </div>
+                        <div class="confidence-item">
+                            <span style="min-width: 120px; font-size: 0.85rem;">"click..."</span>
+                            <div class="confidence-bar-container">
+                                <div class="confidence-bar low" style="width: 45%;"></div>
+                            </div>
+                            <span class="confidence-value">45%</span>
+                            <span class="confidence-label low">Repeat</span>
+                        </div>
+                        <div class="confidence-item">
+                            <span style="min-width: 120px; font-size: 0.85rem;">"???"</span>
+                            <div class="confidence-bar-container">
+                                <div class="confidence-bar reject" style="width: 25%;"></div>
+                            </div>
+                            <span class="confidence-value">25%</span>
+                            <span class="confidence-label reject">Repeat</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Context Menu -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="material-icons">menu</span>
+                    <h2>Context Menu Overlay</h2>
+                </div>
+                <div class="card-content" style="display: flex; justify-content: center;">
+                    <div class="context-menu">
+                        <div class="context-menu-title">Edit Options</div>
+                        <div class="context-menu-item" onclick="selectMenuItem(1)">
+                            <span class="number">1</span>
+                            <span class="material-icons" style="font-size: 18px;">content_copy</span>
+                            <span>Copy</span>
+                        </div>
+                        <div class="context-menu-item" onclick="selectMenuItem(2)">
+                            <span class="number">2</span>
+                            <span class="material-icons" style="font-size: 18px;">content_paste</span>
+                            <span>Paste</span>
+                        </div>
+                        <div class="context-menu-item" onclick="selectMenuItem(3)">
+                            <span class="number">3</span>
+                            <span class="material-icons" style="font-size: 18px;">content_cut</span>
+                            <span>Cut</span>
+                        </div>
+                        <div class="context-menu-item disabled">
+                            <span class="number">4</span>
+                            <span class="material-icons" style="font-size: 18px;">delete</span>
+                            <span>Delete</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Duplicate Elements Disambiguation -->
+            <div class="card" style="grid-column: span 2;">
+                <div class="card-header">
+                    <span class="material-icons">content_copy</span>
+                    <h2>Duplicate Elements Disambiguation</h2>
+                </div>
+                <div class="card-content">
+                    <div class="disambiguation-demo">
+                        <!-- Step indicator -->
+                        <div class="step-indicator">
+                            <div class="step active" id="step1">1. User speaks</div>
+                            <div class="step-arrow">→</div>
+                            <div class="step" id="step2">2. Find matches</div>
+                            <div class="step-arrow">→</div>
+                            <div class="step" id="step3">3. Number duplicates</div>
+                            <div class="step-arrow">→</div>
+                            <div class="step" id="step4">4. User selects</div>
+                        </div>
+
+                        <!-- Mock screen with elements -->
+                        <div class="mock-screen" id="mockScreen">
+                            <div class="mock-screen-title">Shopping Cart</div>
+
+                            <!-- Product 1 -->
+                            <div class="mock-product">
+                                <span>iPhone 15 Pro - $999</span>
+                                <div class="mock-buttons">
+                                    <button class="mock-btn submit-btn" data-context="iPhone">Submit</button>
+                                    <button class="mock-btn">Cancel</button>
+                                </div>
+                            </div>
+
+                            <!-- Product 2 -->
+                            <div class="mock-product">
+                                <span>AirPods Pro - $249</span>
+                                <div class="mock-buttons">
+                                    <button class="mock-btn submit-btn" data-context="AirPods">Submit</button>
+                                    <button class="mock-btn">Cancel</button>
+                                </div>
+                            </div>
+
+                            <!-- Product 3 -->
+                            <div class="mock-product">
+                                <span>MacBook Air - $1299</span>
+                                <div class="mock-buttons">
+                                    <button class="mock-btn submit-btn" data-context="MacBook">Submit</button>
+                                    <button class="mock-btn">Cancel</button>
+                                </div>
+                            </div>
+
+                            <!-- Footer -->
+                            <div class="mock-footer">
+                                <button class="mock-btn primary">Checkout All</button>
+                            </div>
+                        </div>
+
+                        <!-- Voice command display -->
+                        <div class="voice-command-display" id="voiceDisplay">
+                            <span class="material-icons">mic</span>
+                            <span id="spokenCommand">Click the microphone or say "click Submit"</span>
+                        </div>
+
+                        <!-- Controls -->
+                        <div class="demo-controls">
+                            <button class="demo-btn" onclick="simulateCommand('Submit')">
+                                <span class="material-icons">mic</span>
+                                "click Submit"
+                            </button>
+                            <button class="demo-btn" onclick="simulateCommand('Cancel')">
+                                <span class="material-icons">mic</span>
+                                "click Cancel"
+                            </button>
+                            <button class="demo-btn" onclick="simulateSelection(2)">
+                                <span class="material-icons">pin</span>
+                                "Two"
+                            </button>
+                            <button class="demo-btn secondary" onclick="resetDemo()">
+                                <span class="material-icons">refresh</span>
+                                Reset
+                            </button>
+                        </div>
+
+                        <!-- Explanation -->
+                        <div class="demo-explanation" id="explanation">
+                            <span class="material-icons">info</span>
+                            <span>Numbers appear <strong>only on matching elements</strong>. Other elements remain unchanged.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Badge Styles -->
+            <h3 class="section-title">
+                <span class="material-icons">format_paint</span>
+                Badge Styles
+            </h3>
+
+            <!-- Badge Style Preview -->
+            <div class="card" style="grid-column: span 2;">
+                <div class="card-header">
+                    <span class="material-icons">palette</span>
+                    <h2>NumberOverlayStyles</h2>
+                </div>
+                <div class="card-content">
+                    <div class="badge-styles-grid">
+                        <div class="badge-style-item">
+                            <div class="badge-example" style="background: var(--badge-enabled-name); color: white;">1</div>
+                            <div>
+                                <strong>DEFAULT</strong>
+                                <div style="font-size: 0.75rem; color: var(--md-on-surface-variant);">Filled circle, 16dp radius</div>
+                            </div>
+                        </div>
+                        <div class="badge-style-item">
+                            <div class="badge-example" style="background: #1B5E20; color: white; width: 40px; height: 40px; font-size: 1rem;">1</div>
+                            <div>
+                                <strong>HIGH_CONTRAST</strong>
+                                <div style="font-size: 0.75rem; color: var(--md-on-surface-variant);">Larger, darker colors</div>
+                            </div>
+                        </div>
+                        <div class="badge-style-item">
+                            <div class="badge-example" style="background: rgba(76, 175, 80, 0.5); color: white; width: 28px; height: 28px; font-size: 0.75rem;">1</div>
+                            <div>
+                                <strong>MINIMAL</strong>
+                                <div style="font-size: 0.75rem; color: var(--md-on-surface-variant);">Semi-transparent, smaller</div>
+                            </div>
+                        </div>
+                        <div class="badge-style-item">
+                            <div class="badge-example outlined" style="border-color: var(--badge-enabled-name); color: var(--badge-enabled-name);">1</div>
+                            <div>
+                                <strong>OUTLINED</strong>
+                                <div style="font-size: 0.75rem; color: var(--md-on-surface-variant);">Stroke outline only</div>
+                            </div>
+                        </div>
+                        <div class="badge-style-item">
+                            <div class="badge-example square" style="background: var(--badge-enabled-name); color: white;">1</div>
+                            <div>
+                                <strong>SQUARE</strong>
+                                <div style="font-size: 0.75rem; color: var(--md-on-surface-variant);">Square shape badge</div>
+                            </div>
+                        </div>
+                        <div class="badge-style-item">
+                            <div class="badge-example rounded-rect" style="background: var(--badge-enabled-name); color: white;">1</div>
+                            <div>
+                                <strong>ROUNDED_RECT</strong>
+                                <div style="font-size: 0.75rem; color: var(--md-on-surface-variant);">Rounded rectangle</div>
+                            </div>
+                        </div>
+                        <div class="badge-style-item">
+                            <div class="badge-example" style="background: #2196F3; color: white;">1</div>
+                            <div>
+                                <strong>COLORBLIND_FRIENDLY</strong>
+                                <div style="font-size: 0.75rem; color: var(--md-on-surface-variant);">Blue-gold palette</div>
+                            </div>
+                        </div>
+                        <div class="badge-style-item">
+                            <div class="badge-example" style="background: #66BB6A; color: #E0E0E0;">1</div>
+                            <div>
+                                <strong>DARK_MODE</strong>
+                                <div style="font-size: 0.75rem; color: var(--md-on-surface-variant);">Lighter colors for dark BG</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Settings -->
+            <h3 class="section-title">
+                <span class="material-icons">settings</span>
+                Developer Settings
+            </h3>
+
+            <!-- Basic Settings -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="material-icons">tune</span>
+                    <h2>Basic Settings</h2>
+                </div>
+                <div class="card-content">
+                    <div class="settings-panel">
+                        <div class="settings-section">
+                            <div class="settings-section-title">
+                                <span class="material-icons" style="font-size: 18px;">palette</span>
+                                Appearance
+                            </div>
+                            <div class="toggle-row">
+                                <div class="toggle-label">
+                                    <span>Dark Theme</span>
+                                    <span>Use dark color scheme</span>
+                                </div>
+                                <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+                            </div>
+                            <div class="toggle-row">
+                                <div class="toggle-label">
+                                    <span>High Contrast</span>
+                                    <span>Increase contrast for visibility</span>
+                                </div>
+                                <div class="toggle" onclick="this.classList.toggle('active')"></div>
+                            </div>
+                        </div>
+                        <div class="settings-section">
+                            <div class="settings-section-title">
+                                <span class="material-icons" style="font-size: 18px;">accessibility</span>
+                                Accessibility
+                            </div>
+                            <div class="toggle-row">
+                                <div class="toggle-label">
+                                    <span>Large Text</span>
+                                    <span>Increase text size (+25%)</span>
+                                </div>
+                                <div class="toggle" onclick="this.classList.toggle('active')"></div>
+                            </div>
+                            <div class="toggle-row">
+                                <div class="toggle-label">
+                                    <span>Reduce Motion</span>
+                                    <span>Minimize animations</span>
+                                </div>
+                                <div class="toggle" onclick="this.classList.toggle('active')"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Voice Settings -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="material-icons">mic</span>
+                    <h2>Voice Settings</h2>
+                </div>
+                <div class="card-content">
+                    <div class="settings-panel">
+                        <div class="settings-section">
+                            <div class="settings-section-title">
+                                <span class="material-icons" style="font-size: 18px;">record_voice_over</span>
+                                Recognition
+                            </div>
+                            <div class="slider-container">
+                                <div class="slider-label">
+                                    <span>Confidence Threshold</span>
+                                    <span id="thresholdValue">70%</span>
+                                </div>
+                                <input type="range" class="slider" min="50" max="100" value="70"
+                                    oninput="document.getElementById('thresholdValue').textContent = this.value + '%'">
+                            </div>
+                        </div>
+                        <div class="settings-section">
+                            <div class="settings-section-title">
+                                <span class="material-icons" style="font-size: 18px;">check_circle</span>
+                                Confirmation
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="confirm" checked> Always
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="confirm"> Destructive Only
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="confirm"> Never
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Theme Selection -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="material-icons">color_lens</span>
+                    <h2>Theme Selection</h2>
+                </div>
+                <div class="card-content">
+                    <div class="theme-grid">
+                        <div class="theme-preview selected" onclick="selectTheme(this, 'Material3Dark')">
+                            <div class="theme-colors">
+                                <div class="theme-color-dot" style="background: #1E1E1E;"></div>
+                                <div class="theme-color-dot" style="background: #2196F3;"></div>
+                                <div class="theme-color-dot" style="background: #4CAF50;"></div>
+                            </div>
+                            <div class="theme-preview-name">Material3Dark</div>
+                        </div>
+                        <div class="theme-preview" onclick="selectTheme(this, 'Material3Light')">
+                            <div class="theme-colors">
+                                <div class="theme-color-dot" style="background: #FFFFFF; border: 1px solid #ddd;"></div>
+                                <div class="theme-color-dot" style="background: #1976D2;"></div>
+                                <div class="theme-color-dot" style="background: #2E7D32;"></div>
+                            </div>
+                            <div class="theme-preview-name">Material3Light</div>
+                        </div>
+                        <div class="theme-preview" onclick="selectTheme(this, 'HighContrast')">
+                            <div class="theme-colors">
+                                <div class="theme-color-dot" style="background: #000000;"></div>
+                                <div class="theme-color-dot" style="background: #00BFFF;"></div>
+                                <div class="theme-color-dot" style="background: #00FF00;"></div>
+                            </div>
+                            <div class="theme-preview-name">High Contrast</div>
+                        </div>
+                        <div class="theme-preview" onclick="selectTheme(this, 'Gaming')">
+                            <div class="theme-colors">
+                                <div class="theme-color-dot" style="background: #0A0A0A;"></div>
+                                <div class="theme-color-dot" style="background: #00FF41;"></div>
+                                <div class="theme-color-dot" style="background: #FF00FF;"></div>
+                            </div>
+                            <div class="theme-preview-name">Gaming</div>
+                        </div>
+                        <div class="theme-preview" onclick="selectTheme(this, 'Professional')">
+                            <div class="theme-colors">
+                                <div class="theme-color-dot" style="background: #2C2C2C;"></div>
+                                <div class="theme-color-dot" style="background: #1976D2;"></div>
+                                <div class="theme-color-dot" style="background: #757575;"></div>
+                            </div>
+                            <div class="theme-preview-name">Professional</div>
+                        </div>
+                        <div class="theme-preview" onclick="selectTheme(this, 'Minimalist')">
+                            <div class="theme-colors">
+                                <div class="theme-color-dot" style="background: #000000; opacity: 0.8;"></div>
+                                <div class="theme-color-dot" style="background: #9E9E9E;"></div>
+                                <div class="theme-color-dot" style="background: #BBBBBB;"></div>
+                            </div>
+                            <div class="theme-preview-name">Minimalist</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Accessibility -->
+            <h3 class="section-title">
+                <span class="material-icons">accessibility_new</span>
+                Accessibility Features
+            </h3>
+
+            <!-- Accessibility Demo -->
+            <div class="card" style="grid-column: span 2;">
+                <div class="card-header">
+                    <span class="material-icons">accessibility</span>
+                    <h2>Built-in Accessibility</h2>
+                </div>
+                <div class="card-content">
+                    <div class="accessibility-demo">
+                        <div class="a11y-feature">
+                            <div class="a11y-icon">
+                                <span class="material-icons">visibility</span>
+                            </div>
+                            <div class="a11y-details">
+                                <h4>High Contrast Mode</h4>
+                                <p>WCAG AAA compliant (7:1 contrast ratio), pure black/white backgrounds</p>
+                            </div>
+                        </div>
+                        <div class="a11y-feature">
+                            <div class="a11y-icon">
+                                <span class="material-icons">text_fields</span>
+                            </div>
+                            <div class="a11y-details">
+                                <h4>Large Text Support</h4>
+                                <p>25% font scale increase, 40dp badge size, 52dp minimum touch targets</p>
+                            </div>
+                        </div>
+                        <div class="a11y-feature">
+                            <div class="a11y-icon">
+                                <span class="material-icons">colorize</span>
+                            </div>
+                            <div class="a11y-details">
+                                <h4>Colorblind Friendly</h4>
+                                <p>Blue-orange safe palette, avoids red-green conflicts for all colorblindness types</p>
+                            </div>
+                        </div>
+                        <div class="a11y-feature">
+                            <div class="a11y-icon">
+                                <span class="material-icons">animation</span>
+                            </div>
+                            <div class="a11y-details">
+                                <h4>Reduced Motion</h4>
+                                <p>Disable all animations and transitions for vestibular sensitivity</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Code Example -->
+            <h3 class="section-title">
+                <span class="material-icons">code</span>
+                Usage Example
+            </h3>
+
+            <!-- Code Block -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-header">
+                    <span class="material-icons">integration_instructions</span>
+                    <h2>Kotlin Integration</h2>
+                </div>
+                <div class="card-content">
+                    <div class="code-block">
+<span class="comment">// Initialize overlay with items</span>
+<span class="keyword">val</span> overlay = <span class="type">NumberedSelectionOverlay</span>(
+    style = <span class="type">NumberOverlayStyles</span>.HIGH_CONTRAST,
+    maxVisibleBadges = <span class="number">9</span>
+)
+
+<span class="comment">// Show items for voice selection</span>
+<span class="keyword">val</span> items = listOf(
+    <span class="type">NumberedItem</span>(<span class="number">1</span>, <span class="string">"Submit"</span>, <span class="type">Rect</span>(<span class="number">100</span>, <span class="number">200</span>, <span class="number">300</span>, <span class="number">250</span>)),
+    <span class="type">NumberedItem</span>(<span class="number">2</span>, <span class="string">"Cancel"</span>, <span class="type">Rect</span>(<span class="number">100</span>, <span class="number">260</span>, <span class="number">300</span>, <span class="number">310</span>))
+)
+overlay.showItems(items)
+
+<span class="comment">// Handle voice selection</span>
+<span class="keyword">val</span> selected = overlay.selectItem(<span class="number">1</span>)
+<span class="keyword">if</span> (selected != <span class="keyword">null</span>) {
+    println(<span class="string">"Selected: ${selected.label}"</span>)
+}
+
+<span class="comment">// Cleanup</span>
+overlay.dispose()
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- FAB Menu -->
+        <div class="fab-container">
+            <div class="fab-menu" id="fabMenu" style="display: none;">
+                <div class="fab-menu-item fade-in">
+                    <span class="fab-menu-label">Enable Test Mode</span>
+                    <button class="mini-fab" style="background: var(--md-tertiary); color: white;">
+                        <span class="material-icons" style="font-size: 18px;">science</span>
+                    </button>
+                </div>
+                <div class="fab-menu-item fade-in" style="animation-delay: 0.05s;">
+                    <span class="fab-menu-label">Run Tests</span>
+                    <button class="mini-fab" style="background: var(--md-primary); color: white;">
+                        <span class="material-icons" style="font-size: 18px;">play_arrow</span>
+                    </button>
+                </div>
+                <div class="fab-menu-item fade-in" style="animation-delay: 0.1s;">
+                    <span class="fab-menu-label">Developer Settings</span>
+                    <button class="mini-fab" style="background: var(--md-surface-variant); color: var(--md-on-surface);">
+                        <span class="material-icons" style="font-size: 18px;">settings</span>
+                    </button>
+                </div>
+            </div>
+            <button class="fab pulsing" id="mainFab" onclick="toggleFabMenu()">
+                <span class="material-icons" id="fabIcon">science</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Command Status Simulation
+        const statusStates = {
+            listening: {
+                dot: 'listening',
+                message: 'Listening for command...',
+                command: '...'
+            },
+            processing: {
+                dot: 'processing',
+                message: 'Processing speech...',
+                command: '"click submit button"'
+            },
+            success: {
+                dot: 'success',
+                message: 'Command executed!',
+                command: '"click submit button"'
+            },
+            error: {
+                dot: 'error',
+                message: 'Command not recognized',
+                command: '"click ???"'
+            }
+        };
+
+        function setStatus(state) {
+            const config = statusStates[state];
+            const dot = document.getElementById('statusDot');
+            const message = document.getElementById('statusMessage');
+            const command = document.getElementById('commandText');
+
+            // Remove all status classes
+            dot.className = 'status-dot ' + config.dot;
+            message.textContent = config.message;
+            command.textContent = config.command;
+        }
+
+        // Context Menu Selection
+        function selectMenuItem(number) {
+            alert(`Selected item ${number}`);
+        }
+
+        // Theme Selection
+        function selectTheme(element, themeName) {
+            document.querySelectorAll('.theme-preview').forEach(el => {
+                el.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            console.log('Selected theme:', themeName);
+        }
+
+        // FAB Menu Toggle
+        let fabExpanded = false;
+        function toggleFabMenu() {
+            fabExpanded = !fabExpanded;
+            const menu = document.getElementById('fabMenu');
+            const fab = document.getElementById('mainFab');
+            const icon = document.getElementById('fabIcon');
+
+            if (fabExpanded) {
+                menu.style.display = 'flex';
+                fab.classList.remove('pulsing');
+                icon.textContent = 'close';
+                icon.style.transform = 'rotate(45deg)';
+            } else {
+                menu.style.display = 'none';
+                fab.classList.add('pulsing');
+                icon.textContent = 'science';
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // Auto-cycle status demo
+        let statusIndex = 0;
+        const statusOrder = ['listening', 'processing', 'success', 'listening'];
+
+        setInterval(() => {
+            if (!document.hidden) {
+                setStatus(statusOrder[statusIndex]);
+                statusIndex = (statusIndex + 1) % statusOrder.length;
+            }
+        }, 3000);
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // Disambiguation Demo Logic
+        // ═══════════════════════════════════════════════════════════════════════
+
+        let currentMatches = [];
+        let disambiguationActive = false;
+
+        function setStep(stepNum) {
+            for (let i = 1; i <= 4; i++) {
+                const step = document.getElementById(`step${i}`);
+                step.classList.remove('active', 'completed');
+                if (i < stepNum) step.classList.add('completed');
+                if (i === stepNum) step.classList.add('active');
+            }
+        }
+
+        function simulateCommand(text) {
+            // Reset first
+            clearBadges();
+
+            // Step 1: User speaks
+            setStep(1);
+            const voiceDisplay = document.getElementById('voiceDisplay');
+            const spokenCommand = document.getElementById('spokenCommand');
+            voiceDisplay.classList.add('listening');
+            spokenCommand.textContent = `"click ${text}"`;
+
+            setTimeout(() => {
+                voiceDisplay.classList.remove('listening');
+
+                // Step 2: Find matches
+                setStep(2);
+
+                // Find all buttons with matching text
+                const allButtons = document.querySelectorAll('.mock-btn');
+                currentMatches = [];
+
+                allButtons.forEach(btn => {
+                    if (btn.textContent.trim().toLowerCase().includes(text.toLowerCase())) {
+                        currentMatches.push(btn);
+                    }
+                });
+
+                setTimeout(() => {
+                    if (currentMatches.length > 1) {
+                        // Step 3: Multiple matches - show disambiguation
+                        setStep(3);
+                        disambiguationActive = true;
+
+                        currentMatches.forEach((btn, index) => {
+                            btn.classList.add('highlighted');
+
+                            // Add numbered badge
+                            const badge = document.createElement('span');
+                            badge.className = 'disambig-badge';
+                            badge.textContent = index + 1;
+                            btn.appendChild(badge);
+
+                            // Add context label from data attribute
+                            const context = btn.dataset.context;
+                            if (context) {
+                                const label = document.createElement('span');
+                                label.className = 'context-label';
+                                label.textContent = `(${context})`;
+                                btn.appendChild(label);
+                            }
+                        });
+
+                        // Update explanation
+                        document.getElementById('explanation').innerHTML = `
+                            <span class="material-icons">info</span>
+                            <span>Found <strong>${currentMatches.length} "${text}" buttons</strong>. Say a number (1-${currentMatches.length}) to select.</span>
+                        `;
+
+                        spokenCommand.textContent = `${currentMatches.length} matches found - say a number`;
+                    } else if (currentMatches.length === 1) {
+                        // Single match - execute directly
+                        setStep(4);
+                        currentMatches[0].classList.add('selected');
+                        spokenCommand.textContent = `Clicking ${text}...`;
+
+                        setTimeout(() => {
+                            currentMatches[0].classList.remove('selected');
+                            spokenCommand.textContent = `Done! Clicked ${text}`;
+                            document.getElementById('explanation').innerHTML = `
+                                <span class="material-icons">check_circle</span>
+                                <span>Single match found - executed immediately without disambiguation.</span>
+                            `;
+                        }, 1000);
+                    } else {
+                        spokenCommand.textContent = `No "${text}" button found`;
+                        document.getElementById('explanation').innerHTML = `
+                            <span class="material-icons">warning</span>
+                            <span>No matching elements found for "${text}".</span>
+                        `;
+                    }
+                }, 500);
+            }, 800);
+        }
+
+        function simulateSelection(number) {
+            if (!disambiguationActive || number > currentMatches.length) {
+                return;
+            }
+
+            setStep(4);
+            const selectedBtn = currentMatches[number - 1];
+
+            // Clear all highlights
+            currentMatches.forEach(btn => {
+                btn.classList.remove('highlighted');
+            });
+
+            // Select the chosen one
+            selectedBtn.classList.add('selected');
+
+            const context = selectedBtn.dataset.context || '';
+            const spokenCommand = document.getElementById('spokenCommand');
+            spokenCommand.textContent = `Selected #${number}${context ? ` (${context})` : ''} - executing...`;
+
+            document.getElementById('explanation').innerHTML = `
+                <span class="material-icons">check_circle</span>
+                <span>User said "${number}" - executing action on ${context || 'selected'} Submit button.</span>
+            `;
+
+            setTimeout(() => {
+                selectedBtn.classList.remove('selected');
+                selectedBtn.classList.add('highlighted');
+                clearBadges();
+                spokenCommand.textContent = `Done! Clicked Submit for ${context || 'item ' + number}`;
+                disambiguationActive = false;
+            }, 1000);
+        }
+
+        function clearBadges() {
+            document.querySelectorAll('.disambig-badge').forEach(b => b.remove());
+            document.querySelectorAll('.context-label').forEach(l => l.remove());
+            document.querySelectorAll('.mock-btn').forEach(btn => {
+                btn.classList.remove('highlighted', 'selected');
+            });
+        }
+
+        function resetDemo() {
+            clearBadges();
+            setStep(1);
+            disambiguationActive = false;
+            currentMatches = [];
+            document.getElementById('spokenCommand').textContent = 'Click the microphone or say "click Submit"';
+            document.getElementById('explanation').innerHTML = `
+                <span class="material-icons">info</span>
+                <span>Numbers appear <strong>only on matching elements</strong>. Other elements remain unchanged.</span>
+            `;
+        }
+    </script>
+</body>
+</html>

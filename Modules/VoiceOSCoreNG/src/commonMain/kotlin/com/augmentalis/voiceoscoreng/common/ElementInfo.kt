@@ -58,7 +58,13 @@ data class ElementInfo(
     val isLongClickable: Boolean = false,
     val isScrollable: Boolean = false,
     val isEnabled: Boolean = true,
-    val packageName: String = ""
+    val packageName: String = "",
+    // Compose semantics support (P2)
+    val semanticsRole: String = "",           // e.g., "Button", "Checkbox", "Tab"
+    val stateDescription: String = "",        // e.g., "Checked", "Unchecked", "Selected"
+    val isSelected: Boolean = false,          // For tabs, chips, list items
+    val isChecked: Boolean? = null,           // For checkboxes, switches (null = not applicable)
+    val testTag: String = ""                  // Compose testTag for identification
 ) {
     /**
      * Get the best available label for voice recognition

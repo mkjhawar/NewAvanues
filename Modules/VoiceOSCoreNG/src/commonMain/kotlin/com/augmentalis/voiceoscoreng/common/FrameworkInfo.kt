@@ -20,6 +20,9 @@ enum class FrameworkType {
     /** React Native cross-platform framework (JavaScript/TypeScript) */
     REACT_NATIVE,
 
+    /** Jetpack Compose declarative UI framework (Kotlin) */
+    COMPOSE,
+
     /** WebView-based hybrid app (Cordova, Capacitor, PWA, etc.) */
     WEBVIEW,
 
@@ -72,6 +75,13 @@ object FrameworkDetector {
 
     private val REACT_NATIVE_PREFIXES = listOf(
         "com.facebook.react."
+    )
+
+    private val COMPOSE_PREFIXES = listOf(
+        "androidx.compose.ui.platform.AndroidComposeView",
+        "androidx.compose.ui.platform.ComposeView",
+        "AndroidComposeView",
+        "ComposeView"
     )
 
     private val WEBVIEW_PREFIXES = listOf(
@@ -134,7 +144,17 @@ object FrameworkDetector {
             )
         }
 
-        // 5. Check for WebView-based apps
+        // 5. Check for Jetpack Compose
+        val composeIndicators = findMatchingClasses(classNames, COMPOSE_PREFIXES)
+        if (composeIndicators.isNotEmpty()) {
+            return FrameworkInfo(
+                type = FrameworkType.COMPOSE,
+                version = null,
+                packageIndicators = composeIndicators
+            )
+        }
+
+        // 6. Check for WebView-based apps
         val webViewIndicators = findMatchingClasses(classNames, WEBVIEW_PREFIXES)
         if (webViewIndicators.isNotEmpty()) {
             return FrameworkInfo(

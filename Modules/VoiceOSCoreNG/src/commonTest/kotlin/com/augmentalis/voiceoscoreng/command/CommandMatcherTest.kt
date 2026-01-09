@@ -25,7 +25,7 @@ class CommandMatcherTest {
     )
 
     private fun createRegistry(vararg commands: QuantizedCommand): CommandRegistry {
-        return CommandRegistry().apply { update(commands.toList()) }
+        return CommandRegistry().apply { updateSync(commands.toList()) }
     }
 
     // ==================== Exact Match Tests ====================

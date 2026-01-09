@@ -223,11 +223,6 @@ class LearnAppCoreAdapter {
         private const val MAX_BATCH_SIZE = 100
 
         // Legacy UUID patterns
-        private val LEGACY_VOICEOS_PATTERN = Regex(
-            "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+\\.v?[0-9.]*\\.[a-z]+-[a-f0-9]{12}$",
-            RegexOption.IGNORE_CASE
-        )
-
         private val UUID_V4_PATTERN = Regex(
             "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$",
             RegexOption.IGNORE_CASE
@@ -314,23 +309,6 @@ class LearnAppCoreAdapter {
         // ==================== UUID/VUID Migration ====================
 
         /**
-         * Check if identifier is a legacy UUID format.
-         *
-         * Detects:
-         * - VoiceOS legacy format: com.pkg.v1.0.0.type-hash12
-         * - Standard UUID v4: 550e8400-e29b-41d4-a716-446655440000
-         * - Simple legacy: com.pkg.type-hash
-         *
-         * @param identifier The identifier to check
-         * @return true if it's a legacy UUID format
-         */
-        fun isLegacyUuid(identifier: String): Boolean {
-            return LEGACY_VOICEOS_PATTERN.matches(identifier) ||
-                   UUID_V4_PATTERN.matches(identifier) ||
-                   SIMPLE_LEGACY_PATTERN.matches(identifier)
-        }
-
-        /**
          * Migrate a legacy UUID to new VUID format.
          *
          * @param legacyUuid The legacy UUID string
@@ -342,12 +320,7 @@ class LearnAppCoreAdapter {
                 return legacyUuid
             }
 
-            // Try VoiceOS legacy format
-            if (VUIDGenerator.isLegacyVoiceOS(legacyUuid)) {
-                return VUIDGenerator.migrateToCompact(legacyUuid)
-            }
-
-            // Try simple legacy format
+            // Try simple legacy format (com.pkg.type-hash)
             if (SIMPLE_LEGACY_PATTERN.matches(legacyUuid)) {
                 return migrateSimpleLegacy(legacyUuid)
             }

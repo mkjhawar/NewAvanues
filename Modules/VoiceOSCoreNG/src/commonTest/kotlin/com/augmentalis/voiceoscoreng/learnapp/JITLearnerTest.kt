@@ -380,7 +380,7 @@ class JITLearnerTest {
     @Test
     fun `onUserConsent fails when consent not granted via provider`() {
         val mockProvider = MockConsentProvider()
-        val learner = JITLearner(mockProvider)
+        val learner = JITLearner(consentProvider = mockProvider)
 
         val element = ElementInfo.button(
             text = "Submit",
@@ -401,7 +401,7 @@ class JITLearnerTest {
     fun `onUserConsent succeeds when consent granted via provider`() {
         val mockProvider = MockConsentProvider()
         mockProvider.grantConsent("com.test.app")
-        val learner = JITLearner(mockProvider)
+        val learner = JITLearner(consentProvider = mockProvider)
 
         val element = ElementInfo.button(
             text = "Submit",

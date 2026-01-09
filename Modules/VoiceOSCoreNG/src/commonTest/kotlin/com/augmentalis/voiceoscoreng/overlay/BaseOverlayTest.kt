@@ -15,6 +15,9 @@
  */
 package com.augmentalis.voiceoscoreng.overlay
 
+import com.augmentalis.voiceoscoreng.features.BaseOverlay
+import com.augmentalis.voiceoscoreng.features.OverlayType
+import com.augmentalis.voiceoscoreng.features.OverlayData
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest

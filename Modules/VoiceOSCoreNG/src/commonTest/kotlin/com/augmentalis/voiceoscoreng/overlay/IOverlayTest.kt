@@ -11,13 +11,14 @@
 package com.augmentalis.voiceoscoreng.overlay
 
 import com.augmentalis.voiceoscoreng.features.OverlayTheme
+import com.augmentalis.voiceoscoreng.features.OverlayData
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * TDD tests for IOverlay interface.
+ * TDD tests for IPositionedOverlay interface.
  *
  * Tests the interface contract with a mock implementation to verify:
  * - Identity properties (id, zIndex)
@@ -34,12 +35,12 @@ class IOverlayTest {
     // ═══════════════════════════════════════════════════════════════════════
 
     /**
-     * Mock implementation of IOverlay for testing contract behavior.
+     * Mock implementation of IPositionedOverlay for testing contract behavior.
      */
     private class MockOverlay(
         override val id: String = "mock-overlay-1",
         override val zIndex: Int = 0
-    ) : IOverlay {
+    ) : IPositionedOverlay {
         private var _isVisible: Boolean = false
         override val isVisible: Boolean get() = _isVisible
 
@@ -59,6 +60,9 @@ class IOverlayTest {
         private var _isDisposed: Boolean = false
         val isDisposed: Boolean get() = _isDisposed
 
+        private var _lastData: OverlayData? = null
+        val lastData: OverlayData? get() = _lastData
+
         override fun show() {
             if (!_isDisposed) {
                 _isVisible = true
@@ -67,6 +71,12 @@ class IOverlayTest {
 
         override fun hide() {
             _isVisible = false
+        }
+
+        override fun update(data: OverlayData) {
+            if (!_isDisposed) {
+                _lastData = data
+            }
         }
 
         override fun updatePosition(x: Int, y: Int) {
