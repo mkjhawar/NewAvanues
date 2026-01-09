@@ -4,6 +4,7 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2026-01-06
+ * Updated: 2026-01-09 - Auto-sync with installed apps on initialize
  *
  * KMP handler for app-level actions (launch, switch, close, etc.).
  * Phase 12 of the VoiceOSCoreNG handler system.
@@ -314,5 +315,16 @@ class AppHandler(
         appLauncher?.getInstalledApps()?.forEach { app ->
             registerApp(app)
         }
+    }
+
+    /**
+     * Initialize the handler.
+     *
+     * Syncs with installed apps from the platform launcher to enable
+     * voice commands for all installed apps (e.g., "open Stopwatch").
+     */
+    override suspend fun initialize() {
+        syncInstalledApps()
+        println("[AppHandler] Synced ${appRegistry.size} apps from device")
     }
 }

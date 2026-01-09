@@ -4,6 +4,7 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2026-01-06
+ * Updated: 2026-01-09 - Auto-register static commands with speech engine
  *
  * Main entry point and facade for VoiceOSCoreNG functionality.
  * Provides unified access to handlers, speech engines, and command processing.
@@ -12,6 +13,7 @@ package com.augmentalis.voiceoscoreng
 
 import com.augmentalis.voiceoscoreng.common.CommandMatcher
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
+import com.augmentalis.voiceoscoreng.common.StaticCommandRegistry
 import com.augmentalis.voiceoscoreng.handlers.*
 import com.augmentalis.voiceoscoreng.features.*
 import com.augmentalis.voiceoscoreng.synonym.*
@@ -176,6 +178,32 @@ class VoiceOSCoreNG private constructor(
                     if (initResult?.isFailure == true) {
                         // Log error but don't fail - voice is optional
                         println("[VoiceOSCoreNG] Speech engine initialization failed: ${initResult.exceptionOrNull()?.message}")
+                    }
+
+                    // Register static commands with speech engine for voice recognition
+                    if (initResult?.isSuccess == true) {
+                        stateManager.transition(ServiceState.Initializing(0.7f, "Registering static commands with speech engine"))
+                        try {
+                            val staticPhrases = if (staticCommandPersistence != null) {
+                                // Get phrases from database (includes synonyms)
+                                staticCommandPersistence.getAllPhrases()
+                            } else {
+                                // Fallback to in-memory registry
+                                StaticCommandRegistry.allPhrases()
+                            }
+
+                            if (staticPhrases.isNotEmpty()) {
+                                val updateResult = speechEngine?.updateCommands(staticPhrases)
+                                if (updateResult?.isSuccess == true) {
+                                    println("[VoiceOSCoreNG] Registered ${staticPhrases.size} static command phrases with speech engine")
+                                } else {
+                                    println("[VoiceOSCoreNG] Failed to register static commands with speech engine: ${updateResult?.exceptionOrNull()?.message}")
+                                }
+                            }
+                        } catch (e: Exception) {
+                            println("[VoiceOSCoreNG] Error registering static commands: ${e.message}")
+                            // Continue - static commands can still be processed, just not speech-recognized
+                        }
                     }
 
                     // Only auto-start listening if configured AND initialization succeeded
