@@ -14,6 +14,8 @@ import android.content.Context
 import com.augmentalis.nlu.IntentClassifier
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.ava.core.common.Result as AvaResult
+import com.augmentalis.ava.core.common.Result.Success as AvaSuccess
+import com.augmentalis.ava.core.common.Result.Error as AvaError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -74,13 +76,13 @@ class AndroidNluProcessor(
                 val initResult = classifier?.initialize(config.modelPath)
 
                 when (initResult) {
-                    is AvaResult.Success -> {
+                    is AvaSuccess -> {
                         classifierRef.set(classifier)
                         initialized.set(true)
                         println("[AndroidNluProcessor] NLU initialized successfully")
                         Result.success(Unit)
                     }
-                    is AvaResult.Error -> {
+                    is AvaError -> {
                         initializationFailed.set(true)
                         println("[AndroidNluProcessor] NLU initialization failed: ${initResult.message}")
                         Result.failure(initResult.exception)
@@ -123,11 +125,11 @@ class AndroidNluProcessor(
             val classifyResult = classifier.classifyIntent(utterance.lowercase(), candidateIntents)
 
             when (classifyResult) {
-                is AvaResult.Success -> {
+                is AvaSuccess -> {
                     val classification = classifyResult.data
                     processClassificationResult(classification, candidateCommands)
                 }
-                is AvaResult.Error -> {
+                is AvaError -> {
                     println("[AndroidNluProcessor] Classification failed: ${classifyResult.message}")
                     NluResult.Error(classifyResult.message ?: "Classification failed")
                 }

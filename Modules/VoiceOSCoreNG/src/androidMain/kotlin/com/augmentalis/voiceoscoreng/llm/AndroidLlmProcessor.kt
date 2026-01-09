@@ -17,6 +17,8 @@ import com.augmentalis.llm.domain.GenerationOptions
 import com.augmentalis.llm.domain.LLMResponse
 import com.augmentalis.llm.domain.getText
 import com.augmentalis.ava.core.common.Result as AvaResult
+import com.augmentalis.ava.core.common.Result.Success as AvaSuccess
+import com.augmentalis.ava.core.common.Result.Error as AvaError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.sync.Mutex
@@ -88,13 +90,13 @@ class AndroidLlmProcessor(
                 val result = provider.initialize(llmConfig)
 
                 when (result) {
-                    is AvaResult.Success -> {
+                    is AvaSuccess -> {
                         llmProviderRef.set(provider)
                         initialized.set(true)
                         println("[AndroidLlmProcessor] LLM initialized successfully")
                         Result.success(Unit)
                     }
-                    is AvaResult.Error -> {
+                    is AvaError -> {
                         // P1-1 FIX: Return failure so callers know init failed
                         initializationFailed.set(true)
                         println("[AndroidLlmProcessor] LLM initialization failed: ${result.message}")
