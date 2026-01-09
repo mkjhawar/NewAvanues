@@ -26,6 +26,7 @@ import com.augmentalis.database.repositories.IScrapedAppRepository
 import com.augmentalis.database.repositories.IScrapedElementRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import com.augmentalis.voiceoscoreng.persistence.ScreenHashRepository
@@ -195,42 +196,44 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         /**
          * Rescan current app - clears cache for current package only.
-         * @return Number of screens cleared
+         * Runs asynchronously in service scope.
          */
-        suspend fun rescanCurrentApp(): Int {
-            val packageName = instance?.currentPackageName ?: return 0
-            val count = instance?.screenHashRepository?.clearScreensForPackage(packageName) ?: 0
-            Log.d(TAG, "Rescan Current App: cleared $count screens for $packageName")
-            // Trigger immediate rescan
-            instance?.performExploration()
-            return count
+        fun rescanCurrentApp() {
+            instance?.serviceScope?.launch {
+                val packageName = instance?.currentPackageName ?: return@launch
+                val count = instance?.screenHashRepository?.clearScreensForPackage(packageName) ?: 0
+                Log.d(TAG, "Rescan Current App: cleared $count screens for $packageName")
+                // Trigger immediate rescan
+                instance?.performExploration()
+            }
         }
 
         /**
          * Rescan everything - clears ALL cached screens.
-         * @return Number of screens cleared
+         * Runs asynchronously in service scope.
          */
-        suspend fun rescanEverything(): Int {
-            val count = instance?.screenHashRepository?.clearAllScreens() ?: 0
-            Log.d(TAG, "Rescan Everything: cleared $count total screens")
-            // Trigger immediate rescan
-            instance?.performExploration()
-            return count
+        fun rescanEverything() {
+            instance?.serviceScope?.launch {
+                val count = instance?.screenHashRepository?.clearAllScreens() ?: 0
+                Log.d(TAG, "Rescan Everything: cleared $count total screens")
+                // Trigger immediate rescan
+                instance?.performExploration()
+            }
         }
 
         /**
          * Get total count of cached screens.
          */
-        suspend fun getCachedScreenCount(): Int {
-            return instance?.screenHashRepository?.getScreenCount() ?: 0
+        fun getCachedScreenCount(): Int {
+            return runBlocking { instance?.screenHashRepository?.getScreenCount() ?: 0 }
         }
 
         /**
          * Get cached screen count for current package.
          */
-        suspend fun getCachedScreenCountForCurrentApp(): Int {
+        fun getCachedScreenCountForCurrentApp(): Int {
             val packageName = instance?.currentPackageName ?: return 0
-            return instance?.screenHashRepository?.getScreenCountForPackage(packageName) ?: 0
+            return runBlocking { instance?.screenHashRepository?.getScreenCountForPackage(packageName) ?: 0 }
         }
     }
 
@@ -409,7 +412,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         collectElementSignatures(rootNode, elements, maxDepth = 5)
 
         val signature = elements.sorted().joinToString("|")
-        return HashUtils.generateHash(signature, 32)
+        return HashUtils.generateHash(signature, 16)
     }
 
     /**
