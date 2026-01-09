@@ -13,15 +13,23 @@ package com.augmentalis.voiceoscoreng.llm
 /**
  * Desktop stub implementation of [ILlmProcessor].
  *
- * Currently returns NoMatch for all interpretations.
- * TODO: Implement using llama.cpp JNI bindings.
+ * This is a placeholder that always returns NoMatch.
+ * The stub reports itself as NOT available via [isAvailable],
+ * indicating that LLM functionality is not implemented on this platform.
+ *
+ * TODO: Implement using llama.cpp JNI bindings or Ollama integration.
  */
 class DesktopLlmProcessor(
     private val config: LlmConfig = LlmConfig.DEFAULT
 ) : ILlmProcessor {
 
+    private var initialized = false
+
     override suspend fun initialize(): Result<Unit> {
-        // No-op for stub
+        // Stub initialization always succeeds but does nothing
+        // isAvailable() will still return false to indicate no real LLM capability
+        initialized = true
+        println("[DesktopLlmProcessor] Stub initialized - LLM not available on Desktop yet")
         return Result.success(Unit)
     }
 
@@ -30,15 +38,19 @@ class DesktopLlmProcessor(
         nluSchema: String,
         availableCommands: List<String>
     ): LlmResult {
-        // Stub always returns NoMatch
+        // Stub always returns NoMatch - no LLM capability on Desktop yet
         return LlmResult.NoMatch
     }
 
+    /**
+     * Returns false because LLM is not actually available on Desktop.
+     * Callers should check this and skip LLM fallback.
+     */
     override fun isAvailable(): Boolean = false
 
     override fun isModelLoaded(): Boolean = false
 
     override suspend fun dispose() {
-        // No-op for stub
+        initialized = false
     }
 }

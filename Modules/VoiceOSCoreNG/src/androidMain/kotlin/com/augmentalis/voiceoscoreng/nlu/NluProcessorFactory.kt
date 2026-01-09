@@ -10,14 +10,22 @@
 package com.augmentalis.voiceoscoreng.nlu
 
 import android.content.Context
+import java.lang.ref.WeakReference
 
 /**
  * Android implementation of [NluProcessorFactory].
  *
- * Must be initialized with application context before use.
+ * Uses WeakReference to prevent memory leaks from static Context storage.
+ * The applicationContext is stored weakly; if garbage collected, the factory
+ * must be re-initialized before creating processors.
  */
 actual object NluProcessorFactory {
-    private var context: Context? = null
+    /**
+     * Weak reference to application context to prevent memory leaks.
+     * Application context itself won't be GC'd, but this pattern ensures
+     * we don't accidentally hold Activity/Service contexts.
+     */
+    private var contextRef: WeakReference<Context>? = null
 
     /**
      * Initialize the factory with application context.
@@ -25,10 +33,19 @@ actual object NluProcessorFactory {
      * Must be called before [create], typically in Application.onCreate()
      * or when initializing VoiceOSCoreNG.
      *
-     * @param context Application context (will be stored as applicationContext)
+     * @param context Application context (will be stored as weak reference to applicationContext)
      */
     fun initialize(context: Context) {
-        this.context = context.applicationContext
+        contextRef = WeakReference(context.applicationContext)
+    }
+
+    /**
+     * Clear the factory state.
+     * Call when the application is being destroyed or during cleanup.
+     */
+    fun clear() {
+        contextRef?.clear()
+        contextRef = null
     }
 
     /**
@@ -36,11 +53,12 @@ actual object NluProcessorFactory {
      *
      * @param config NLU configuration
      * @return AndroidNluProcessor instance
-     * @throws IllegalStateException if factory not initialized
+     * @throws IllegalStateException if factory not initialized or context was garbage collected
      */
     actual fun create(config: NluConfig): INluProcessor {
-        val ctx = context ?: throw IllegalStateException(
-            "NluProcessorFactory not initialized. Call initialize(context) first."
+        val ctx = contextRef?.get() ?: throw IllegalStateException(
+            "NluProcessorFactory not initialized or context was garbage collected. " +
+            "Call initialize(context) first."
         )
         return AndroidNluProcessor(ctx, config)
     }

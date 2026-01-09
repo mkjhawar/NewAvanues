@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.augmentalis.voiceoscoreng"
-        minSdk = 26
+        minSdk = 28  // Android 9 (Pie) - Required for LLM module dependency
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"

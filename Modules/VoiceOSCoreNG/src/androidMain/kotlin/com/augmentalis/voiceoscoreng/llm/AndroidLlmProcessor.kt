@@ -19,8 +19,12 @@ import com.augmentalis.llm.domain.getText
 import com.augmentalis.ava.core.common.Result as AvaResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Android implementation of [ILlmProcessor] using LocalLLMProvider.
@@ -38,50 +42,70 @@ class AndroidLlmProcessor(
     private val config: LlmConfig = LlmConfig.DEFAULT
 ) : ILlmProcessor {
 
-    private var llmProvider: LocalLLMProvider? = null
-    private var isInitialized = false
+    /** Thread-safe reference to LLM provider */
+    private val llmProviderRef = AtomicReference<LocalLLMProvider?>(null)
 
-    override suspend fun initialize(): Result<Unit> = withContext(Dispatchers.IO) {
-        if (!config.enabled) {
-            println("[AndroidLlmProcessor] LLM disabled in config")
-            return@withContext Result.success(Unit)
-        }
+    /** Thread-safe initialization state */
+    private val initialized = AtomicBoolean(false)
 
-        try {
-            llmProvider = LocalLLMProvider(
-                context = context,
-                autoModelSelection = true
-            )
+    /** Thread-safe initialization failure tracking */
+    private val initializationFailed = AtomicBoolean(false)
 
-            val llmConfig = LLMConfig(
-                modelPath = config.modelBasePath,
-                device = "opencl",  // Use GPU if available
-                maxMemoryMB = 1024  // Conservative memory budget
-            )
+    /** Mutex for initialization to prevent concurrent init calls */
+    private val initMutex = Mutex()
 
-            val result = llmProvider?.initialize(llmConfig)
-
-            when (result) {
-                is AvaResult.Success -> {
-                    isInitialized = true
-                    println("[AndroidLlmProcessor] LLM initialized successfully")
-                    Result.success(Unit)
-                }
-                is AvaResult.Error -> {
-                    // LLM init failure is not critical - log and continue
-                    println("[AndroidLlmProcessor] LLM initialization failed: ${result.message}")
-                    // Don't return failure - system works without LLM
-                    Result.success(Unit)
-                }
-                null -> {
-                    println("[AndroidLlmProcessor] LLM provider is null")
-                    Result.success(Unit)
-                }
+    override suspend fun initialize(): Result<Unit> = initMutex.withLock {
+        withContext(Dispatchers.IO) {
+            // Already initialized successfully
+            if (initialized.get()) {
+                return@withContext Result.success(Unit)
             }
-        } catch (e: Exception) {
-            println("[AndroidLlmProcessor] LLM initialization exception: ${e.message}")
-            // Don't propagate failure - LLM is optional
-            Result.success(Unit)
+
+            // Already failed - don't retry
+            if (initializationFailed.get()) {
+                return@withContext Result.failure(
+                    IllegalStateException("LLM initialization previously failed")
+                )
+            }
+
+            if (!config.enabled) {
+                println("[AndroidLlmProcessor] LLM disabled in config")
+                return@withContext Result.success(Unit)
+            }
+
+            try {
+                val provider = LocalLLMProvider(
+                    context = context,
+                    autoModelSelection = true
+                )
+
+                val llmConfig = LLMConfig(
+                    modelPath = config.modelBasePath,
+                    device = "opencl",  // Use GPU if available
+                    maxMemoryMB = 1024  // Conservative memory budget
+                )
+
+                val result = provider.initialize(llmConfig)
+
+                when (result) {
+                    is AvaResult.Success -> {
+                        llmProviderRef.set(provider)
+                        initialized.set(true)
+                        println("[AndroidLlmProcessor] LLM initialized successfully")
+                        Result.success(Unit)
+                    }
+                    is AvaResult.Error -> {
+                        // P1-1 FIX: Return failure so callers know init failed
+                        initializationFailed.set(true)
+                        println("[AndroidLlmProcessor] LLM initialization failed: ${result.message}")
+                        Result.failure(result.exception)
+                    }
+                }
+            } catch (e: Exception) {
+                initializationFailed.set(true)
+                println("[AndroidLlmProcessor] LLM initialization exception: ${e.message}")
+                Result.failure(e)
+            }
         }
     }
 
@@ -94,8 +118,8 @@ class AndroidLlmProcessor(
             return@withContext LlmResult.NoMatch
         }
 
-        val provider = llmProvider
-        if (provider == null || !isInitialized) {
+        val provider = llmProviderRef.get()
+        if (provider == null || !initialized.get()) {
             return@withContext LlmResult.Error("LLM not available")
         }
 
@@ -162,25 +186,26 @@ class AndroidLlmProcessor(
         }
     }
 
-    override fun isAvailable(): Boolean = isInitialized && config.enabled && llmProvider != null
+    override fun isAvailable(): Boolean =
+        initialized.get() && config.enabled && llmProviderRef.get() != null
 
-    override fun isModelLoaded(): Boolean {
-        // Check if provider has a model loaded
-        // LocalLLMProvider doesn't expose isModelLoaded directly, so we check via health
-        return try {
-            llmProvider != null && isInitialized
-        } catch (e: Exception) {
-            false
-        }
-    }
+    override fun isModelLoaded(): Boolean =
+        llmProviderRef.get() != null && initialized.get()
+
+    /**
+     * Check if initialization failed.
+     * Useful for distinguishing "not initialized yet" from "failed to initialize".
+     */
+    fun isInitializationFailed(): Boolean = initializationFailed.get()
 
     override suspend fun dispose() = withContext(Dispatchers.IO) {
         try {
-            llmProvider?.cleanup()
+            llmProviderRef.get()?.cleanup()
         } catch (e: Exception) {
             println("[AndroidLlmProcessor] Cleanup error: ${e.message}")
         }
-        llmProvider = null
-        isInitialized = false
+        llmProviderRef.set(null)
+        initialized.set(false)
+        initializationFailed.set(false)
     }
 }

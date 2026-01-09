@@ -15,15 +15,23 @@ import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 /**
  * iOS stub implementation of [INluProcessor].
  *
- * Currently returns NoMatch for all classifications.
- * TODO: Implement using CoreML with BERT model.
+ * This is a placeholder that always returns NoMatch.
+ * The stub reports itself as NOT available via [isAvailable],
+ * indicating that NLU functionality is not implemented on this platform.
+ *
+ * TODO: Implement using CoreML with BERT model for on-device inference.
  */
 class IOSNluProcessor(
     private val config: NluConfig = NluConfig.DEFAULT
 ) : INluProcessor {
 
+    private var initialized = false
+
     override suspend fun initialize(): Result<Unit> {
-        // No-op for stub
+        // Stub initialization always succeeds but does nothing
+        // isAvailable() will still return false to indicate no real NLU capability
+        initialized = true
+        println("[IOSNluProcessor] Stub initialized - NLU not available on iOS yet")
         return Result.success(Unit)
     }
 
@@ -31,13 +39,17 @@ class IOSNluProcessor(
         utterance: String,
         candidateCommands: List<QuantizedCommand>
     ): NluResult {
-        // Stub always returns NoMatch
+        // Stub always returns NoMatch - no NLU capability on iOS yet
         return NluResult.NoMatch
     }
 
+    /**
+     * Returns false because NLU is not actually available on iOS.
+     * Callers should check this and fall back to other matching methods.
+     */
     override fun isAvailable(): Boolean = false
 
     override suspend fun dispose() {
-        // No-op for stub
+        initialized = false
     }
 }

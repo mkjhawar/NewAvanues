@@ -15,7 +15,11 @@ import com.augmentalis.nlu.IntentClassifier
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.ava.core.common.Result as AvaResult
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Android implementation of [INluProcessor] using IntentClassifier.
@@ -31,40 +35,67 @@ class AndroidNluProcessor(
     private val config: NluConfig = NluConfig.DEFAULT
 ) : INluProcessor {
 
-    private var intentClassifier: IntentClassifier? = null
-    private var isInitialized = false
+    /** Thread-safe reference to intent classifier */
+    private val classifierRef = AtomicReference<IntentClassifier?>(null)
 
-    override suspend fun initialize(): Result<Unit> = withContext(Dispatchers.IO) {
-        if (!config.enabled) {
-            println("[AndroidNluProcessor] NLU disabled in config")
-            return@withContext Result.success(Unit)
-        }
+    /** Thread-safe initialization state */
+    private val initialized = AtomicBoolean(false)
 
-        try {
-            // Get singleton instance of IntentClassifier
-            intentClassifier = IntentClassifier.getInstance(context)
+    /** Thread-safe initialization failure tracking */
+    private val initializationFailed = AtomicBoolean(false)
 
-            // Initialize with default model path
-            val initResult = intentClassifier?.initialize(config.modelPath)
+    /** Mutex for initialization to prevent concurrent init calls */
+    private val initMutex = Mutex()
 
-            when (initResult) {
-                is AvaResult.Success -> {
-                    isInitialized = true
-                    println("[AndroidNluProcessor] NLU initialized successfully")
-                    Result.success(Unit)
-                }
-                is AvaResult.Error -> {
-                    println("[AndroidNluProcessor] NLU initialization failed: ${initResult.message}")
-                    Result.failure(initResult.exception)
-                }
-                null -> {
-                    println("[AndroidNluProcessor] NLU initialization returned null")
-                    Result.failure(IllegalStateException("IntentClassifier is null"))
-                }
+    override suspend fun initialize(): Result<Unit> = initMutex.withLock {
+        withContext(Dispatchers.IO) {
+            // Already initialized successfully
+            if (initialized.get()) {
+                return@withContext Result.success(Unit)
             }
-        } catch (e: Exception) {
-            println("[AndroidNluProcessor] NLU initialization exception: ${e.message}")
-            Result.failure(e)
+
+            // Already failed - don't retry
+            if (initializationFailed.get()) {
+                return@withContext Result.failure(
+                    IllegalStateException("NLU initialization previously failed")
+                )
+            }
+
+            if (!config.enabled) {
+                println("[AndroidNluProcessor] NLU disabled in config")
+                return@withContext Result.success(Unit)
+            }
+
+            try {
+                // Get singleton instance of IntentClassifier
+                val classifier = IntentClassifier.getInstance(context)
+
+                // Initialize with default model path
+                val initResult = classifier?.initialize(config.modelPath)
+
+                when (initResult) {
+                    is AvaResult.Success -> {
+                        classifierRef.set(classifier)
+                        initialized.set(true)
+                        println("[AndroidNluProcessor] NLU initialized successfully")
+                        Result.success(Unit)
+                    }
+                    is AvaResult.Error -> {
+                        initializationFailed.set(true)
+                        println("[AndroidNluProcessor] NLU initialization failed: ${initResult.message}")
+                        Result.failure(initResult.exception)
+                    }
+                    null -> {
+                        initializationFailed.set(true)
+                        println("[AndroidNluProcessor] NLU initialization returned null")
+                        Result.failure(IllegalStateException("IntentClassifier is null"))
+                    }
+                }
+            } catch (e: Exception) {
+                initializationFailed.set(true)
+                println("[AndroidNluProcessor] NLU initialization exception: ${e.message}")
+                Result.failure(e)
+            }
         }
     }
 
@@ -72,13 +103,12 @@ class AndroidNluProcessor(
         utterance: String,
         candidateCommands: List<QuantizedCommand>
     ): NluResult = withContext(Dispatchers.Default) {
-        val classifier = intentClassifier
-
         if (!config.enabled) {
             return@withContext NluResult.NoMatch
         }
 
-        if (classifier == null || !isInitialized) {
+        val classifier = classifierRef.get()
+        if (classifier == null || !initialized.get()) {
             return@withContext NluResult.Error("NLU not initialized")
         }
 
@@ -162,11 +192,19 @@ class AndroidNluProcessor(
         return NluResult.NoMatch
     }
 
-    override fun isAvailable(): Boolean = isInitialized && config.enabled && intentClassifier != null
+    override fun isAvailable(): Boolean =
+        initialized.get() && config.enabled && classifierRef.get() != null
+
+    /**
+     * Check if initialization failed.
+     * Useful for distinguishing "not initialized yet" from "failed to initialize".
+     */
+    fun isInitializationFailed(): Boolean = initializationFailed.get()
 
     override suspend fun dispose() {
-        intentClassifier?.close()
-        intentClassifier = null
-        isInitialized = false
+        classifierRef.get()?.close()
+        classifierRef.set(null)
+        initialized.set(false)
+        initializationFailed.set(false)
     }
 }
