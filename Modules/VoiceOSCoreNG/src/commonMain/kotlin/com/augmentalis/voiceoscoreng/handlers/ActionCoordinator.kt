@@ -188,6 +188,71 @@ class ActionCoordinator(
     )
 
     /**
+     * Convert CommandActionType to a verb phrase for handler routing.
+     * This allows dynamic commands to work like static commands -
+     * the actionType determines what action is performed.
+     *
+     * @param actionType The action type from the command
+     * @param target The target element (for element actions)
+     * @return Verb phrase for handler routing
+     */
+    private fun actionTypeToPhrase(actionType: CommandActionType, target: String): String {
+        return when (actionType) {
+            // Element actions - need target
+            CommandActionType.CLICK, CommandActionType.TAP -> "tap $target"
+            CommandActionType.LONG_CLICK -> "long press $target"
+            CommandActionType.EXECUTE -> "tap $target"  // Default execute to tap
+            CommandActionType.FOCUS -> "focus $target"
+            CommandActionType.TYPE -> "type $target"
+
+            // Scroll actions
+            CommandActionType.SCROLL_DOWN -> "scroll down"
+            CommandActionType.SCROLL_UP -> "scroll up"
+            CommandActionType.SCROLL_LEFT -> "scroll left"
+            CommandActionType.SCROLL_RIGHT -> "scroll right"
+            CommandActionType.SCROLL -> "scroll down"  // Default direction
+
+            // Navigation actions - no target needed
+            CommandActionType.BACK -> "back"
+            CommandActionType.HOME -> "home"
+            CommandActionType.RECENT_APPS -> "recent apps"
+            CommandActionType.APP_DRAWER -> "app drawer"
+            CommandActionType.NAVIGATE -> "tap $target"
+
+            // System actions
+            CommandActionType.OPEN_SETTINGS -> "settings"
+            CommandActionType.NOTIFICATIONS -> "notifications"
+            CommandActionType.CLEAR_NOTIFICATIONS -> "clear notifications"
+            CommandActionType.SCREENSHOT -> "screenshot"
+            CommandActionType.FLASHLIGHT_ON -> "flashlight on"
+            CommandActionType.FLASHLIGHT_OFF -> "flashlight off"
+
+            // Media actions
+            CommandActionType.MEDIA_PLAY -> "play"
+            CommandActionType.MEDIA_PAUSE -> "pause"
+            CommandActionType.MEDIA_NEXT -> "next"
+            CommandActionType.MEDIA_PREVIOUS -> "previous"
+            CommandActionType.VOLUME_UP -> "volume up"
+            CommandActionType.VOLUME_DOWN -> "volume down"
+            CommandActionType.VOLUME_MUTE -> "mute"
+
+            // VoiceOS actions
+            CommandActionType.VOICE_MUTE -> "voice off"
+            CommandActionType.VOICE_WAKE -> "voice on"
+            CommandActionType.DICTATION_START -> "dictation"
+            CommandActionType.DICTATION_STOP -> "command mode"
+            CommandActionType.SHOW_COMMANDS -> "help"
+
+            // App actions
+            CommandActionType.OPEN_APP -> "open $target"
+            CommandActionType.CLOSE_APP -> "close app"
+
+            // Default for custom/unknown
+            CommandActionType.CUSTOM -> "tap $target"
+        }
+    }
+
+    /**
      * Extract verb and target from voice input.
      *
      * Examples:
@@ -253,11 +318,13 @@ class ActionCoordinator(
                 // Try exact match with extracted target
                 val exactMatch = commandRegistry.findByPhrase(target)
                 if (exactMatch != null) {
-                    // Found! Execute the command (verb determines action type)
-                    val actionCommand = verb?.let {
-                        // Override action type based on user's verb
-                        exactMatch.copy(phrase = normalizedText)
-                    } ?: exactMatch
+                    // Found! Execute the command
+                    // If user provided verb (e.g., "click 4"), use their phrase
+                    // If no verb (e.g., just "4"), use command's actionType for routing
+                    // This makes dynamic commands work like static commands
+                    val actionPhrase = verb?.let { normalizedText }
+                        ?: actionTypeToPhrase(exactMatch.actionType, target)
+                    val actionCommand = exactMatch.copy(phrase = actionPhrase)
                     return processCommand(actionCommand)
                 }
 
@@ -270,13 +337,19 @@ class ActionCoordinator(
 
                 when (matchResult) {
                     is CommandMatcher.MatchResult.Exact -> {
-                        val cmd = matchResult.command.copy(phrase = normalizedText)
+                        // Use command's actionType for routing (same as static commands)
+                        val actionPhrase = verb?.let { normalizedText }
+                            ?: actionTypeToPhrase(matchResult.command.actionType, target)
+                        val cmd = matchResult.command.copy(phrase = actionPhrase)
                         return processCommand(cmd)
                     }
                     is CommandMatcher.MatchResult.Fuzzy -> {
                         // Only use fuzzy match if confidence is high enough
                         if (matchResult.confidence >= HIGH_CONFIDENCE_THRESHOLD) {
-                            val cmd = matchResult.command.copy(phrase = normalizedText)
+                            // Use command's actionType for routing (same as static commands)
+                            val actionPhrase = verb?.let { normalizedText }
+                                ?: actionTypeToPhrase(matchResult.command.actionType, target)
+                            val cmd = matchResult.command.copy(phrase = actionPhrase)
                             return processCommand(cmd)
                         }
                         // Low confidence fuzzy match - continue to NLU
