@@ -107,6 +107,27 @@ class AppHandler(
     )
 
     /**
+     * Check if this handler can handle the given action.
+     *
+     * Matches:
+     * - Commands with prefix: "open maps", "launch youtube", "start calculator"
+     * - Bare app names: "maps", "youtube", "stopwatch" (if app is registered)
+     *
+     * @param action The action string to check
+     * @return true if this handler can process the action
+     */
+    override fun canHandle(action: String): Boolean {
+        // First check standard prefix matching (from BaseHandler)
+        if (super.canHandle(action)) {
+            return true
+        }
+
+        // Also check if the action is a bare app name/alias
+        // This allows users to say just "Stopwatch" instead of "open Stopwatch"
+        return findApp(action) != null
+    }
+
+    /**
      * Registry of known apps, keyed by package name.
      */
     private val appRegistry = mutableMapOf<String, AppInfo>()
@@ -194,9 +215,11 @@ class AppHandler(
     /**
      * Handle an app command string.
      *
-     * Supports prefixes: "open", "launch", "start"
+     * Supports:
+     * - Prefixed commands: "open maps", "launch youtube", "start calculator"
+     * - Bare app names: "maps", "stopwatch", "calculator" (if app is registered)
      *
-     * @param command Full command string (e.g., "open maps")
+     * @param command Full command string (e.g., "open maps" or just "maps")
      * @return Result of the app launch attempt
      */
     fun handleCommand(command: String): AppLaunchResult {
@@ -212,10 +235,18 @@ class AppHandler(
             normalizedCommand.startsWith("start ") -> {
                 openApp(normalizedCommand.substringAfter("start "))
             }
-            else -> AppLaunchResult(
-                success = false,
-                error = "Unknown app command: $command"
-            )
+            else -> {
+                // Try to open as bare app name (e.g., "stopwatch", "calculator")
+                val app = findApp(normalizedCommand)
+                if (app != null) {
+                    openApp(normalizedCommand)
+                } else {
+                    AppLaunchResult(
+                        success = false,
+                        error = "Unknown app command: $command"
+                    )
+                }
+            }
         }
     }
 
