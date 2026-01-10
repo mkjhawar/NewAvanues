@@ -29,9 +29,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
@@ -64,6 +68,7 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
+    private var numbersOverlayView: View? = null  // Full-screen numbers overlay
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
@@ -107,6 +112,7 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             Log.d(TAG, "startForeground done")
             lifecycleRegistry.currentState = Lifecycle.State.STARTED
             showOverlay()
+            showNumbersOverlay()  // Always add window, content only renders when toggle is on
             Log.d(TAG, "showOverlay done")
             lifecycleRegistry.currentState = Lifecycle.State.RESUMED
         } catch (e: Exception) {
@@ -120,6 +126,7 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     override fun onDestroy() {
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         removeOverlay()
+        removeNumbersOverlay()
         super.onDestroy()
     }
 
@@ -227,6 +234,58 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         overlayView?.let {
             windowManager.removeView(it)
             overlayView = null
+        }
+    }
+
+    /**
+     * Show or hide the numbers overlay based on current state.
+     * Called when the toggle is changed.
+     */
+    private fun showNumbersOverlay() {
+        if (numbersOverlayView != null) return
+
+        try {
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                else
+                    WindowManager.LayoutParams.TYPE_PHONE,
+                // Not focusable, not touchable - just visual overlay
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.FILL
+            }
+
+            val composeView = ComposeView(this).apply {
+                setViewTreeLifecycleOwner(this@OverlayService)
+                setViewTreeSavedStateRegistryOwner(this@OverlayService)
+                setContent {
+                    NumbersOverlayContent()
+                }
+            }
+
+            numbersOverlayView = composeView
+            windowManager.addView(composeView, params)
+            Log.d(TAG, "Numbers overlay added to WindowManager")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing numbers overlay", e)
+        }
+    }
+
+    private fun removeNumbersOverlay() {
+        numbersOverlayView?.let {
+            try {
+                windowManager.removeView(it)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error removing numbers overlay", e)
+            }
+            numbersOverlayView = null
         }
     }
 }
@@ -419,6 +478,11 @@ private fun OverlayContent(onClose: () -> Unit) {
     val isContinuousMonitoring by VoiceOSAccessibilityService.isContinuousMonitoring.collectAsState()
     val currentScreenInfo by VoiceOSAccessibilityService.currentScreenInfo.collectAsState()
 
+    // Numbers overlay state
+    val numbersOverlayMode by VoiceOSAccessibilityService.numbersOverlayMode.collectAsState()
+    val showNumbersOverlay by VoiceOSAccessibilityService.showNumbersOverlayComputed.collectAsState()
+    val numberedItems by VoiceOSAccessibilityService.numberedOverlayItems.collectAsState()
+
     val explorationResults by VoiceOSAccessibilityService.explorationResults.collectAsState()
     val lastError by VoiceOSAccessibilityService.lastError.collectAsState()
 
@@ -594,6 +658,71 @@ private fun OverlayContent(onClose: () -> Unit) {
                                 CompactToggle("Debug Log", debugLogging) { debugLogging = it }
                                 CompactToggle("Show VUIDs", showVuidsOverlay) { showVuidsOverlay = it }
                                 CompactToggle("Auto-min", autoMinimize) { autoMinimize = it }
+
+                                Divider(color = Color.Gray.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 6.dp))
+
+                                // Numbers Overlay Mode selector (tap to cycle: OFF -> AUTO -> ON)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(36.dp)
+                                        .clickable {
+                                            VoiceOSAccessibilityService.cycleNumbersOverlayMode()
+                                        }
+                                        .padding(horizontal = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "Numbers",
+                                            fontSize = 12.sp,
+                                            color = Color.White
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        // Mode badge
+                                        val modeColor = when (numbersOverlayMode) {
+                                            VoiceOSAccessibilityService.Companion.NumbersOverlayMode.ON -> Color(0xFF10B981)
+                                            VoiceOSAccessibilityService.Companion.NumbersOverlayMode.OFF -> Color(0xFF6B7280)
+                                            VoiceOSAccessibilityService.Companion.NumbersOverlayMode.AUTO -> Color(0xFF3B82F6)
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .background(modeColor.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = numbersOverlayMode.name,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = modeColor
+                                            )
+                                        }
+                                        if (numberedItems.isNotEmpty()) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "(${numberedItems.size})",
+                                                fontSize = 10.sp,
+                                                color = Color(0xFF6366F1)
+                                            )
+                                        }
+                                    }
+                                    // Status indicator
+                                    Box(
+                                        modifier = Modifier
+                                            .size(12.dp)
+                                            .background(
+                                                color = if (showNumbersOverlay) Color(0xFF10B981) else Color(0xFF4B5563),
+                                                shape = CircleShape
+                                            )
+                                    )
+                                }
+                                Text(
+                                    text = "Voice: \"numbers on/off/auto\"",
+                                    fontSize = 9.sp,
+                                    color = Color.Gray,
+                                    modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                                )
 
                                 Divider(color = Color.Gray.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 6.dp))
 
@@ -1623,6 +1752,183 @@ private fun AVUTab(result: ExplorationResult) {
                     text = "\n... truncated (${result.avuOutput.length} chars total)",
                     color = Color.Gray,
                     fontSize = 9.sp
+                )
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Numbers Overlay - Shows numbered badges on list items for voice selection
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Full-screen overlay that displays numbered badges at element positions.
+ * Users can say "first", "second", "1", "2", etc. to select items.
+ */
+@Composable
+private fun NumbersOverlayContent() {
+    val showOverlay by VoiceOSAccessibilityService.showNumbersOverlayComputed.collectAsState()
+    val items by VoiceOSAccessibilityService.numberedOverlayItems.collectAsState()
+    val mode by VoiceOSAccessibilityService.numbersOverlayMode.collectAsState()
+
+    // Don't show if mode is OFF or if computed visibility says no
+    if (!showOverlay) {
+        return
+    }
+
+    // For AUTO mode, also check if there are items
+    if (mode == VoiceOSAccessibilityService.Companion.NumbersOverlayMode.AUTO && items.isEmpty()) {
+        return
+    }
+
+    // Full-screen transparent container
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent)
+    ) {
+        // Draw numbered badge for each item
+        items.forEach { item ->
+            NumberBadge(item)
+        }
+
+        // Instruction panel at bottom
+        if (items.isNotEmpty()) {
+            NumbersInstructionPanel(
+                itemCount = items.size,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
+    }
+}
+
+/**
+ * Individual numbered badge positioned at element bounds.
+ * Uses theme colors from settings.
+ */
+@Composable
+private fun NumberBadge(item: VoiceOSAccessibilityService.Companion.NumberOverlayItem) {
+    // Get theme from settings
+    val theme by VoiceOSAccessibilityService.badgeTheme.collectAsState()
+
+    // Position badge at top-right corner of element
+    val badgeSize = 28.dp
+    val offsetX = (item.right - 36).coerceAtLeast(0)
+    val offsetY = (item.top + 4).coerceAtLeast(0)
+
+    Box(
+        modifier = Modifier
+            .offset(x = offsetX.dp, y = offsetY.dp)
+    ) {
+        // Badge circle with number - uses theme colors
+        Box(
+            modifier = Modifier
+                .size(badgeSize)
+                .clip(CircleShape)
+                .background(Color(theme.backgroundColor))
+                .padding(2.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = item.number.toString(),
+                color = Color(theme.textColor),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        // Show short label below badge if available
+        if (item.label.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .offset(y = badgeSize + 2.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color(0xEE000000))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = item.label.take(15),
+                    color = Color.White,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Instruction panel shown at bottom of screen.
+ * Supports fade animation based on InstructionBarMode setting.
+ */
+@Composable
+private fun NumbersInstructionPanel(
+    itemCount: Int,
+    modifier: Modifier = Modifier
+) {
+    val mode by VoiceOSAccessibilityService.instructionBarMode.collectAsState()
+
+    // Don't show if mode is OFF
+    if (mode == VoiceOSAccessibilityService.Companion.InstructionBarMode.OFF) {
+        return
+    }
+
+    // For AUTO mode, show briefly then fade out
+    var visible by remember { mutableStateOf(true) }
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(durationMillis = 500),
+        label = "instruction_fade"
+    )
+
+    // Trigger fade after delay in AUTO mode
+    LaunchedEffect(mode, itemCount) {
+        if (mode == VoiceOSAccessibilityService.Companion.InstructionBarMode.AUTO) {
+            visible = true
+            kotlinx.coroutines.delay(3000)  // Show for 3 seconds
+            visible = false
+        } else {
+            visible = true  // Always visible in ON mode
+        }
+    }
+
+    // Don't render if completely faded
+    if (alpha <= 0f) return
+
+    Card(
+        modifier = modifier
+            .padding(16.dp)
+            .graphicsLayer { this.alpha = alpha },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xEE000000)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Mic icon
+            Icon(
+                imageVector = Icons.Default.Mic,
+                contentDescription = "Voice",
+                tint = Color(0xFF2196F3),
+                modifier = Modifier.size(28.dp)
+            )
+            Column {
+                Text(
+                    text = "Say a number to select",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "$itemCount items: \"first\", \"second\", \"1\", \"2\"...",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 11.sp
                 )
             }
         }

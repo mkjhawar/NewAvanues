@@ -107,6 +107,20 @@ class CommandRegistry {
     }
 
     /**
+     * Add commands to the registry without replacing existing ones.
+     * Useful for adding index commands ("first", "second") alongside existing commands.
+     *
+     * Thread-safe: Volatile reference ensures atomic visibility.
+     *
+     * @param commands List of commands to add
+     */
+    fun addAll(commands: List<QuantizedCommand>) {
+        if (commands.isEmpty()) return
+        val toAdd = commands.filter { it.targetVuid != null }.associateBy { it.targetVuid!! }
+        commandsSnapshot = commandsSnapshot + toAdd
+    }
+
+    /**
      * Clear all commands.
      *
      * Thread-safe: Volatile reference ensures atomic visibility.

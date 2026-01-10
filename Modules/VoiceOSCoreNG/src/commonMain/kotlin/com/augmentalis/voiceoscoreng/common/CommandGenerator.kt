@@ -26,10 +26,34 @@ object CommandGenerator {
      * @param packageName Host application package name
      * @return QuantizedCommand or null if element is not suitable for voice command
      */
+    /**
+     * Result of command generation containing both the command and persistence flag.
+     */
+    data class GeneratedCommandResult(
+        val command: QuantizedCommand,
+        val shouldPersist: Boolean,
+        val listIndex: Int = -1  // Position in list for index-based commands
+    )
+
     fun fromElement(
         element: ElementInfo,
         packageName: String
     ): QuantizedCommand? {
+        return fromElementWithPersistence(element, packageName)?.command
+    }
+
+    /**
+     * Generate command from element with persistence information.
+     * Returns both the command and whether it should be persisted to database.
+     *
+     * @param element Source element info
+     * @param packageName Host application package name
+     * @return GeneratedCommandResult or null if element is not suitable
+     */
+    fun fromElementWithPersistence(
+        element: ElementInfo,
+        packageName: String
+    ): GeneratedCommandResult? {
         // Skip non-actionable elements
         if (!element.isActionable) return null
 
@@ -50,7 +74,10 @@ object CommandGenerator {
         val vuid = generateVuid(element, packageName)
         val currentTime = currentTimeMillis()
 
-        return QuantizedCommand(
+        // Determine if this is dynamic content (should NOT be persisted)
+        val isDynamic = element.isDynamicContent
+
+        val command = QuantizedCommand(
             uuid = "", // Generated on persist if needed
             phrase = label,  // No verb - just the element label
             actionType = actionType,
@@ -62,9 +89,131 @@ object CommandGenerator {
                 "createdAt" to currentTime.toString(),
                 "className" to element.className,
                 "resourceId" to element.resourceId,
-                "label" to label
+                "label" to label,
+                "isDynamic" to isDynamic.toString(),
+                "listIndex" to element.listIndex.toString()
             )
         )
+
+        return GeneratedCommandResult(
+            command = command,
+            shouldPersist = !isDynamic,
+            listIndex = element.listIndex
+        )
+    }
+
+    /**
+     * Generate index-based commands for list items.
+     * Creates commands like "first", "second", "item 3" for dynamic list navigation.
+     *
+     * @param listItems Elements that are list items (have listIndex >= 0)
+     * @param packageName Host application package name
+     * @return List of index commands (in-memory only, never persisted)
+     */
+    fun generateListIndexCommands(
+        listItems: List<ElementInfo>,
+        packageName: String
+    ): List<QuantizedCommand> {
+        val ordinals = listOf("first", "second", "third", "fourth", "fifth",
+            "sixth", "seventh", "eighth", "ninth", "tenth")
+
+        return listItems.filter { it.listIndex >= 0 }.mapNotNull { element ->
+            val index = element.listIndex
+            val phrase = when {
+                index < ordinals.size -> ordinals[index]
+                else -> "item ${index + 1}"
+            }
+
+            val vuid = generateVuid(element, packageName)
+
+            QuantizedCommand(
+                uuid = "",
+                phrase = phrase,
+                actionType = CommandActionType.CLICK,
+                targetVuid = vuid,
+                confidence = 0.7f,
+                metadata = mapOf(
+                    "packageName" to packageName,
+                    "elementHash" to deriveElementHash(element),
+                    "isIndexCommand" to "true",
+                    "listIndex" to index.toString()
+                )
+            )
+        }
+    }
+
+    /**
+     * Extract short sender/title from dynamic content for voice targeting.
+     * E.g., "Unread, , , Arby's, , BOGO..." → "Arby's"
+     *
+     * @param element Element with dynamic content
+     * @return Short label suitable for voice command, or null if not extractable
+     */
+    fun extractShortLabel(element: ElementInfo): String? {
+        val text = element.text.ifBlank { element.contentDescription }
+        if (text.isBlank()) return null
+
+        // Email pattern: "Unread, , , SenderName, , Subject..."
+        if (text.startsWith("Unread,")) {
+            val parts = text.split(",").map { it.trim() }
+            // Find first non-empty part after "Unread"
+            for (i in 1 until parts.size) {
+                if (parts[i].isNotBlank() && parts[i].length in 2..30) {
+                    return parts[i]
+                }
+            }
+        }
+
+        // First word if reasonably short
+        val firstWord = text.split(Regex("[,\\s]+")).firstOrNull { it.length in 2..20 }
+        return firstWord
+    }
+
+    /**
+     * Generate label-based commands for list items.
+     * Creates commands using the extracted label (sender name, title, etc.)
+     * so users can say "Lifemiles" instead of just "first".
+     *
+     * @param listItems Elements that are list items (have listIndex >= 0)
+     * @param packageName Host application package name
+     * @return List of label commands (in-memory only, never persisted)
+     */
+    fun generateListLabelCommands(
+        listItems: List<ElementInfo>,
+        packageName: String
+    ): List<QuantizedCommand> {
+        val seenLabels = mutableSetOf<String>()
+
+        return listItems.filter { it.listIndex >= 0 }.mapNotNull { element ->
+            val label = extractShortLabel(element)
+
+            // Skip if no label extracted or label already seen (avoid duplicates)
+            if (label.isNullOrBlank()) return@mapNotNull null
+
+            val normalizedLabel = label.lowercase().trim()
+            if (normalizedLabel in seenLabels) return@mapNotNull null
+            seenLabels.add(normalizedLabel)
+
+            // Skip very short labels (likely noise) or very long ones
+            if (label.length < 2 || label.length > 30) return@mapNotNull null
+
+            val vuid = generateVuid(element, packageName)
+
+            QuantizedCommand(
+                uuid = "",
+                phrase = label,  // The sender name/title as command
+                actionType = CommandActionType.CLICK,
+                targetVuid = vuid,
+                confidence = 0.8f,  // Higher confidence for label matches
+                metadata = mapOf(
+                    "packageName" to packageName,
+                    "elementHash" to deriveElementHash(element),
+                    "isLabelCommand" to "true",
+                    "listIndex" to element.listIndex.toString(),
+                    "originalLabel" to label
+                )
+            )
+        }
     }
 
     /**

@@ -178,6 +178,161 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         private val _currentScreenInfo = MutableStateFlow<ScreenInfo?>(null)
         val currentScreenInfo: StateFlow<ScreenInfo?> = _currentScreenInfo.asStateFlow()
 
+        // ===== Numbers Overlay for Voice Commands =====
+
+        /**
+         * Numbers overlay mode:
+         * - ON: Always show numbers on all clickable elements
+         * - OFF: Never show numbers
+         * - AUTO: Show numbers only when there are list items (emails, messages, etc.)
+         */
+        enum class NumbersOverlayMode {
+            ON,    // Always show
+            OFF,   // Never show
+            AUTO   // Show only for lists/duplicates
+        }
+
+        /**
+         * Data for displaying numbered badges on screen elements.
+         * Used by the numbers overlay to show which elements can be selected by number.
+         * Example: User says "first" or "1" to click element with number=1
+         */
+        data class NumberOverlayItem(
+            val number: Int,           // 1-based display number (matches "first", "second", etc.)
+            val label: String,         // Short label for display (e.g., sender name)
+            val left: Int,             // Element bounds
+            val top: Int,
+            val right: Int,
+            val bottom: Int,
+            val vuid: String           // Target VUID for executing action
+        )
+
+        private val _numberedOverlayItems = MutableStateFlow<List<NumberOverlayItem>>(emptyList())
+        val numberedOverlayItems: StateFlow<List<NumberOverlayItem>> = _numberedOverlayItems.asStateFlow()
+
+        private val _numbersOverlayMode = MutableStateFlow(NumbersOverlayMode.AUTO)
+        val numbersOverlayMode: StateFlow<NumbersOverlayMode> = _numbersOverlayMode.asStateFlow()
+
+        // Computed: should we show numbers based on mode and items?
+        val showNumbersOverlay: StateFlow<Boolean> = _numbersOverlayMode.let { modeFlow ->
+            // This is a simplified reactive pattern - in production would use combine()
+            MutableStateFlow(false).also { resultFlow ->
+                // Initial computation handled in updateNumbersOverlayVisibility()
+            }
+        }
+
+        private val _showNumbersOverlayComputed = MutableStateFlow(false)
+        val showNumbersOverlayComputed: StateFlow<Boolean> = _showNumbersOverlayComputed.asStateFlow()
+
+        // ===== Instruction Bar Settings =====
+
+        /**
+         * Instruction bar mode:
+         * - ON: Always show instruction bar
+         * - OFF: Never show instruction bar
+         * - AUTO: Show briefly then fade out (default)
+         */
+        enum class InstructionBarMode {
+            ON,    // Always visible
+            OFF,   // Never visible
+            AUTO   // Show then fade after 3 seconds
+        }
+
+        private val _instructionBarMode = MutableStateFlow(InstructionBarMode.AUTO)
+        val instructionBarMode: StateFlow<InstructionBarMode> = _instructionBarMode.asStateFlow()
+
+        fun setInstructionBarMode(mode: InstructionBarMode) {
+            _instructionBarMode.value = mode
+            Log.d(TAG, "Instruction bar mode: $mode")
+        }
+
+        fun cycleInstructionBarMode() {
+            val newMode = when (_instructionBarMode.value) {
+                InstructionBarMode.OFF -> InstructionBarMode.AUTO
+                InstructionBarMode.AUTO -> InstructionBarMode.ON
+                InstructionBarMode.ON -> InstructionBarMode.OFF
+            }
+            setInstructionBarMode(newMode)
+        }
+
+        // ===== Badge Theme Settings =====
+
+        /**
+         * Badge color themes for numbered badges.
+         */
+        enum class BadgeTheme(val backgroundColor: Long, val textColor: Long) {
+            GREEN(0xFF4CAF50, 0xFFFFFFFF),       // Default green
+            BLUE(0xFF2196F3, 0xFFFFFFFF),        // Blue
+            PURPLE(0xFF9C27B0, 0xFFFFFFFF),      // Purple
+            ORANGE(0xFFFF9800, 0xFF000000),      // Orange with black text
+            RED(0xFFF44336, 0xFFFFFFFF),         // Red
+            TEAL(0xFF009688, 0xFFFFFFFF),        // Teal
+            PINK(0xFFE91E63, 0xFFFFFFFF)         // Pink
+        }
+
+        private val _badgeTheme = MutableStateFlow(BadgeTheme.GREEN)
+        val badgeTheme: StateFlow<BadgeTheme> = _badgeTheme.asStateFlow()
+
+        fun setBadgeTheme(theme: BadgeTheme) {
+            _badgeTheme.value = theme
+            Log.d(TAG, "Badge theme: $theme")
+        }
+
+        fun cycleBadgeTheme() {
+            val themes = BadgeTheme.entries
+            val currentIndex = themes.indexOf(_badgeTheme.value)
+            val nextIndex = (currentIndex + 1) % themes.size
+            setBadgeTheme(themes[nextIndex])
+        }
+
+        /**
+         * Set the numbers overlay mode.
+         * Voice commands: "numbers on", "numbers off", "numbers auto"
+         */
+        fun setNumbersOverlayMode(mode: NumbersOverlayMode) {
+            _numbersOverlayMode.value = mode
+            updateNumbersOverlayVisibility()
+            Log.d(TAG, "Numbers overlay mode: $mode")
+        }
+
+        /**
+         * Cycle through overlay modes: OFF -> AUTO -> ON -> OFF
+         * Voice command: "show numbers" or "toggle numbers"
+         */
+        fun cycleNumbersOverlayMode() {
+            val newMode = when (_numbersOverlayMode.value) {
+                NumbersOverlayMode.OFF -> NumbersOverlayMode.AUTO
+                NumbersOverlayMode.AUTO -> NumbersOverlayMode.ON
+                NumbersOverlayMode.ON -> NumbersOverlayMode.OFF
+            }
+            setNumbersOverlayMode(newMode)
+        }
+
+        /**
+         * Update visibility based on current mode and items.
+         * Called when mode changes or when items are updated.
+         */
+        internal fun updateNumbersOverlayVisibility() {
+            val mode = _numbersOverlayMode.value
+            val hasItems = _numberedOverlayItems.value.isNotEmpty()
+
+            val shouldShow = when (mode) {
+                NumbersOverlayMode.ON -> true
+                NumbersOverlayMode.OFF -> false
+                NumbersOverlayMode.AUTO -> hasItems  // Only show when list items exist
+            }
+
+            _showNumbersOverlayComputed.value = shouldShow
+            Log.d(TAG, "Numbers overlay: mode=$mode, hasItems=$hasItems, showing=$shouldShow")
+        }
+
+        /**
+         * Legacy toggle for backward compatibility.
+         */
+        fun setShowNumbersOverlay(show: Boolean) {
+            setNumbersOverlayMode(if (show) NumbersOverlayMode.ON else NumbersOverlayMode.OFF)
+        }
+
         /**
          * Enable or disable continuous screen scanning.
          */
@@ -293,7 +448,11 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 voiceOSCore?.speechResults?.collect { speechResult ->
                     Log.d(TAG, "Speech result: ${speechResult.text} (confidence: ${speechResult.confidence})")
                     if (speechResult.isFinal) {
-                        voiceOSCore?.processCommand(speechResult.text, speechResult.confidence)
+                        // Pre-process VoiceOS control commands (numbers overlay, etc.)
+                        if (!handleVoiceOSControlCommand(speechResult.text.lowercase().trim())) {
+                            // Not a VoiceOS control command, delegate to normal processing
+                            voiceOSCore?.processCommand(speechResult.text, speechResult.confidence)
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -321,6 +480,32 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     // The cache TTL will handle stale elements
                 }
             }
+        }
+    }
+
+    /**
+     * Handle VoiceOS control commands (numbers overlay, etc.).
+     * Returns true if the command was handled, false to delegate to normal processing.
+     */
+    private fun handleVoiceOSControlCommand(command: String): Boolean {
+        return when (command) {
+            // Numbers overlay commands
+            "numbers on", "show numbers", "numbers always" -> {
+                setNumbersOverlayMode(NumbersOverlayMode.ON)
+                Log.d(TAG, "Voice command: Numbers overlay ON")
+                true
+            }
+            "numbers off", "hide numbers", "no numbers" -> {
+                setNumbersOverlayMode(NumbersOverlayMode.OFF)
+                Log.d(TAG, "Voice command: Numbers overlay OFF")
+                true
+            }
+            "numbers auto", "numbers automatic", "auto numbers" -> {
+                setNumbersOverlayMode(NumbersOverlayMode.AUTO)
+                Log.d(TAG, "Voice command: Numbers overlay AUTO")
+                true
+            }
+            else -> false // Not a VoiceOS control command
         }
     }
 
@@ -406,12 +591,26 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     /**
      * Generate a hash of the current screen for comparison.
+     *
+     * IMPORTANT: Includes screen dimensions in the hash so that different
+     * orientations/window sizes get separate cache entries. This means:
+     * - Portrait 1080x1920 = hash1
+     * - Landscape 1920x1080 = hash2
+     * - Freeform 800x600 = hash3
+     *
+     * When user rotates back to portrait, we load from hash1 cache (instant).
      */
     private fun generateScreenHash(rootNode: AccessibilityNodeInfo): String {
         val elements = mutableListOf<String>()
         collectElementSignatures(rootNode, elements, maxDepth = 5)
 
-        val signature = elements.sorted().joinToString("|")
+        // Include screen dimensions in hash for orientation/freeform support
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+        val screenHeight = displayMetrics.heightPixels
+        val dimensionKey = "${screenWidth}x${screenHeight}"
+
+        val signature = "$dimensionKey|${elements.sorted().joinToString("|")}"
         return HashUtils.generateHash(signature, 16)
     }
 
@@ -647,6 +846,32 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         )
     }
 
+    /**
+     * Dynamic container types that indicate list/dynamic content.
+     */
+    private val dynamicContainerTypes = setOf(
+        "RecyclerView",
+        "ListView",
+        "GridView",
+        "ViewPager",
+        "ViewPager2",
+        "ScrollView",
+        "HorizontalScrollView",
+        "NestedScrollView",
+        "LazyColumn",       // Compose
+        "LazyRow",          // Compose
+        "LazyVerticalGrid", // Compose
+        "LazyHorizontalGrid" // Compose
+    )
+
+    /**
+     * Check if a class name is a dynamic container.
+     */
+    private fun isDynamicContainer(className: String): Boolean {
+        val simpleName = className.substringAfterLast(".")
+        return dynamicContainerTypes.any { simpleName.contains(it, ignoreCase = true) }
+    }
+
     private fun extractElements(
         node: AccessibilityNodeInfo,
         elements: MutableList<ElementInfo>,
@@ -654,13 +879,23 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         seenHashes: MutableSet<String>,
         duplicates: MutableList<DuplicateInfo>,
         depth: Int,
-        parentIndex: Int? = null
+        parentIndex: Int? = null,
+        inDynamicContainer: Boolean = false,
+        containerType: String = "",
+        listIndex: Int = -1
     ) {
         val bounds = Rect()
         node.getBoundsInScreen(bounds)
 
+        val className = node.className?.toString() ?: ""
+
+        // Check if THIS node is a dynamic container
+        val isContainer = isDynamicContainer(className)
+        val currentContainerType = if (isContainer) className.substringAfterLast(".") else containerType
+        val isInDynamic = inDynamicContainer || isContainer
+
         val element = ElementInfo(
-            className = node.className?.toString() ?: "",
+            className = className,
             resourceId = node.viewIdResourceName ?: "",
             text = node.text?.toString() ?: "",
             contentDescription = node.contentDescription?.toString() ?: "",
@@ -669,7 +904,11 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             isLongClickable = node.isLongClickable,
             isScrollable = node.isScrollable,
             isEnabled = node.isEnabled,
-            packageName = node.packageName?.toString() ?: ""
+            packageName = node.packageName?.toString() ?: "",
+            // Dynamic content tracking
+            isInDynamicContainer = isInDynamic && !isContainer, // Container itself is not dynamic, its children are
+            containerType = if (isInDynamic && !isContainer) currentContainerType else "",
+            listIndex = if (isInDynamic && !isContainer) listIndex else -1
         )
 
         // Generate hash for deduplication - use className|resourceId|text (NOT bounds, as bounds make every element unique)
@@ -703,9 +942,16 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         ))
 
         // Recurse into children
+        // If this is a dynamic container, track child indices for list items
         for (i in 0 until node.childCount) {
             node.getChild(i)?.let { child ->
-                extractElements(child, elements, hierarchy, seenHashes, duplicates, depth + 1, currentIndex)
+                // Children of a dynamic container get the list index from their position
+                val childListIndex = if (isContainer) i else listIndex
+                extractElements(
+                    child, elements, hierarchy, seenHashes, duplicates,
+                    depth + 1, currentIndex,
+                    isInDynamic, currentContainerType, childListIndex
+                )
                 child.recycle()
             }
         }
@@ -825,6 +1071,10 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     /**
      * Generate voice commands for actionable elements using KMP CommandGenerator.
      * Also updates the in-memory CommandRegistry for voice matching.
+     *
+     * Static/Dynamic Separation:
+     * - Static commands (menus, buttons) are persisted to database
+     * - Dynamic commands (list items, emails) are kept in memory only
      */
     private fun generateCommands(
         elements: List<ElementInfo>,
@@ -832,30 +1082,110 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         elementLabels: Map<Int, String>,
         packageName: String
     ): List<GeneratedCommand> {
-        // Generate QuantizedCommands using KMP CommandGenerator
-        val quantizedCommands = elements.mapNotNull { element ->
-            CommandGenerator.fromElement(element, packageName)
+        // Generate QuantizedCommands with persistence info using KMP CommandGenerator
+        val commandResults = elements.mapNotNull { element ->
+            CommandGenerator.fromElementWithPersistence(element, packageName)
         }
 
-        // Update shared registry directly (synchronous - no coroutine needed)
-        // Both service and ActionCoordinator share this same instance
-        commandRegistry.updateSync(quantizedCommands)
-        Log.d(TAG, "Generated ${quantizedCommands.size} commands, updated shared registry")
+        // Separate static (persist) and dynamic (memory-only) commands
+        val staticCommands = commandResults.filter { it.shouldPersist }
+        val dynamicCommands = commandResults.filter { !it.shouldPersist }
 
-        // Update speech engine grammar (Vivoka SDK) so it recognizes these phrases
-        val commandPhrases = quantizedCommands.map { it.phrase }
+        // All commands go to in-memory registry for voice matching
+        val allCommands = commandResults.map { it.command }
+        commandRegistry.updateSync(allCommands)
+
+        // Also generate index commands for list items ("first", "second", etc.)
+        val listItems = elements.filter { it.listIndex >= 0 }
+        val indexCommands = CommandGenerator.generateListIndexCommands(listItems, packageName)
+        if (indexCommands.isNotEmpty()) {
+            commandRegistry.addAll(indexCommands)
+        }
+
+        // Generate label-based commands for list items (e.g., "Lifemiles" for email sender)
+        val labelCommands = CommandGenerator.generateListLabelCommands(listItems, packageName)
+        if (labelCommands.isNotEmpty()) {
+            commandRegistry.addAll(labelCommands)
+            Log.d(TAG, "Label commands for lists: ${labelCommands.take(5).map { it.phrase }}")
+        }
+
+        // Populate numbered overlay items for visual display
+        // These are the elements that can be selected by saying "first", "second", "1", "2", etc.
+        //
+        // IMPORTANT: We filter for clickable items with meaningful labels, sort by vertical
+        // position (top coordinate), and assign SEQUENTIAL numbers 1, 2, 3, etc.
+        // This ensures numbers match what user sees on screen, not nested container indices.
+        val clickableListItems = listItems
+            .filter { element ->
+                // Must have valid bounds (visible on screen)
+                val hasValidBounds = !(element.bounds.left == 0 && element.bounds.top == 0 &&
+                    element.bounds.right == 0 && element.bounds.bottom == 0)
+                // Must be clickable
+                val isClickable = element.isClickable
+                // Must have extractable label (sender name, title, etc.)
+                val hasLabel = CommandGenerator.extractShortLabel(element) != null
+
+                hasValidBounds && isClickable && hasLabel
+            }
+            .sortedBy { it.bounds.top }  // Sort by vertical position (top to bottom)
+
+        // Assign sequential numbers based on sorted order
+        val overlayItems = clickableListItems.mapIndexed { index, element ->
+            val label = CommandGenerator.extractShortLabel(element) ?: ""
+
+            // Generate VUID for this element
+            val typeCode = if (element.isClickable) VUIDTypeCode.BUTTON else VUIDTypeCode.ELEMENT
+            val elementHash = HashUtils.generateHash(
+                "${element.className}|${element.resourceId}|${element.text.ifBlank { element.contentDescription }}",
+                8
+            )
+            val vuid = VUIDGenerator.generate(packageName, typeCode, elementHash)
+
+            NumberOverlayItem(
+                number = index + 1,  // Sequential 1-based numbering by screen position
+                label = label,
+                left = element.bounds.left,
+                top = element.bounds.top,
+                right = element.bounds.right,
+                bottom = element.bounds.bottom,
+                vuid = vuid
+            )
+        }
+
+        _numberedOverlayItems.value = overlayItems
+        updateNumbersOverlayVisibility()  // Update visibility based on mode (AUTO shows when items exist)
+        if (overlayItems.isNotEmpty()) {
+            Log.d(TAG, "Numbered overlay: ${overlayItems.size} items for voice selection")
+        }
+
+        // Log the separation
+        Log.d(TAG, "Commands: ${allCommands.size} total (${staticCommands.size} static, ${dynamicCommands.size} dynamic)")
+        if (dynamicCommands.isNotEmpty()) {
+            Log.d(TAG, "Dynamic commands (not persisted): ${dynamicCommands.take(3).map { it.command.phrase.take(30) }}")
+        }
+        if (indexCommands.isNotEmpty()) {
+            Log.d(TAG, "Index commands for lists: ${indexCommands.take(5).map { it.phrase }}")
+        }
+
+        // Update speech engine grammar (Vivoka SDK) so it recognizes ALL phrases
+        // Includes: element commands, index commands ("first", "second"), and label commands ("Lifemiles")
+        val commandPhrases = allCommands.map { it.phrase } +
+            indexCommands.map { it.phrase } +
+            labelCommands.map { it.phrase }
         serviceScope.launch {
             try {
                 voiceOSCore?.updateCommands(commandPhrases)
-                Log.d(TAG, "Updated speech engine with ${commandPhrases.size} command phrases")
+                Log.d(TAG, "Updated speech engine with ${commandPhrases.size} command phrases " +
+                    "(${allCommands.size} elements, ${indexCommands.size} index, ${labelCommands.size} labels)")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to update speech engine commands", e)
             }
         }
 
-        // Persist commands to SQLDelight database with proper FK order:
-        // 1. scraped_app → 2. scraped_element → 3. commands_generated
-        if (quantizedCommands.isNotEmpty()) {
+        // ONLY persist STATIC commands to SQLDelight database
+        // Dynamic commands are kept in memory only and discarded on navigation
+        val staticQuantizedCommands = staticCommands.map { it.command }
+        if (staticQuantizedCommands.isNotEmpty()) {
             serviceScope.launch(Dispatchers.IO) {
                 try {
                     val currentTime = System.currentTimeMillis()
@@ -873,7 +1203,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                         scrapingMode = "DYNAMIC",
                         scrapeCount = 1,
                         elementCount = elements.size.toLong(),
-                        commandCount = quantizedCommands.size.toLong(),
+                        commandCount = staticQuantizedCommands.size.toLong(),
                         firstScrapedAt = currentTime,
                         lastScrapedAt = currentTime
                     )
@@ -886,9 +1216,9 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     val insertedHashes = mutableSetOf<String>()
                     var insertedCount = 0
 
-                    // Iterate over commands and insert corresponding elements
+                    // Iterate over STATIC commands only and insert corresponding elements
                     // using the EXACT hash from command metadata
-                    quantizedCommands.forEach { cmd ->
+                    staticQuantizedCommands.forEach { cmd ->
                         val elementHash = cmd.metadata["elementHash"] ?: return@forEach
 
                         // Skip if already inserted (avoid duplicates)
@@ -947,11 +1277,11 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                             insertedHashes.add(elementHash)  // Mark as "handled" even if exists
                         }
                     }
-                    Log.d(TAG, "Step 2/3: Inserted $insertedCount scraped_elements for ${insertedHashes.size} unique hashes")
+                    Log.d(TAG, "Step 2/3: Inserted $insertedCount scraped_elements for ${insertedHashes.size} unique hashes (static only)")
 
-                    // Step 3: Now insert commands (FK references are satisfied)
-                    commandPersistence.insertBatch(quantizedCommands)
-                    Log.d(TAG, "Step 3/3: Persisted ${quantizedCommands.size} commands to voiceos.db for package: $packageName")
+                    // Step 3: Now insert STATIC commands only (FK references are satisfied)
+                    commandPersistence.insertBatch(staticQuantizedCommands)
+                    Log.d(TAG, "Step 3/3: Persisted ${staticQuantizedCommands.size} STATIC commands to voiceos.db (skipped ${dynamicCommands.size} dynamic)")
 
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to persist commands to database", e)

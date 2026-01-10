@@ -183,6 +183,25 @@ object StaticCommandRegistry {
             actionType = CommandActionType.SHOW_COMMANDS,
             category = CommandCategory.VOICE_CONTROL,
             description = "Show available commands"
+        ),
+        // Numbers Overlay Control
+        StaticCommand(
+            phrases = listOf("numbers on", "show numbers", "numbers always"),
+            actionType = CommandActionType.NUMBERS_ON,
+            category = CommandCategory.VOICE_CONTROL,
+            description = "Always show numbered badges on screen elements"
+        ),
+        StaticCommand(
+            phrases = listOf("numbers off", "hide numbers", "no numbers"),
+            actionType = CommandActionType.NUMBERS_OFF,
+            category = CommandCategory.VOICE_CONTROL,
+            description = "Never show numbered badges"
+        ),
+        StaticCommand(
+            phrases = listOf("numbers auto", "numbers automatic", "auto numbers"),
+            actionType = CommandActionType.NUMBERS_AUTO,
+            category = CommandCategory.VOICE_CONTROL,
+            description = "Show numbers only for lists (emails, messages, etc.)"
         )
     )
 

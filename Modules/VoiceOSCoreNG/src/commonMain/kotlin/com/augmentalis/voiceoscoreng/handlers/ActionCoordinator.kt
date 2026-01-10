@@ -242,6 +242,9 @@ class ActionCoordinator(
             CommandActionType.DICTATION_START -> "dictation"
             CommandActionType.DICTATION_STOP -> "command mode"
             CommandActionType.SHOW_COMMANDS -> "help"
+            CommandActionType.NUMBERS_ON -> "numbers on"
+            CommandActionType.NUMBERS_OFF -> "numbers off"
+            CommandActionType.NUMBERS_AUTO -> "numbers auto"
 
             // App actions
             CommandActionType.OPEN_APP -> "open $target"
