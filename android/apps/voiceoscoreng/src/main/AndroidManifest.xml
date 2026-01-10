@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Query all packages to get app names for dialog display -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <!-- Permissions for overlay and foreground service -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name="com.augmentalis.voiceoscoreng.VoiceOSCoreNGApplication"
@@ -27,6 +36,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Settings activity launched from Accessibility Settings -->
+        <activity
+            android:name="com.augmentalis.voiceoscoreng.AccessibilitySettingsActivity"
+            android:exported="true"
+            android:label="VoiceOS Settings"
+            android:theme="@style/Theme.VoiceOSCoreNG" />
+
         <!-- Accessibility Service for UI exploration -->
         <service
             android:name="com.augmentalis.voiceoscoreng.service.VoiceOSAccessibilityService"
@@ -40,7 +56,7 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <!-- Overlay Service for floating FAB - persists when app closed -->
+        <!-- Overlay Service for numbers overlay - persists when app closed -->
         <service
             android:name="com.augmentalis.voiceoscoreng.service.OverlayService"
             android:exported="false"
@@ -50,6 +66,17 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="accessibility_overlay" />
         </service>
+
+        <!-- Boot receiver to auto-start overlay on device boot -->
+        <receiver
+            android:name="com.augmentalis.voiceoscoreng.service.BootReceiver"
+            android:exported="false"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
 
     </application>
 
