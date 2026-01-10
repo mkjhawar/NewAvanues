@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -122,6 +123,29 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    /**
+     * Called when the app's task is removed (swiped from recent apps).
+     * Restart the service to maintain overlay persistence.
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.d(TAG, "onTaskRemoved - restarting service to maintain overlay")
+        // Schedule restart via alarm manager for reliability
+        val restartIntent = Intent(applicationContext, OverlayService::class.java)
+        val pendingIntent = PendingIntent.getService(
+            applicationContext,
+            1,
+            restartIntent,
+            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        alarmManager.set(
+            android.app.AlarmManager.ELAPSED_REALTIME,
+            android.os.SystemClock.elapsedRealtime() + 1000,
+            pendingIntent
+        )
+        super.onTaskRemoved(rootIntent)
+    }
 
     override fun onDestroy() {
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
@@ -723,6 +747,77 @@ private fun OverlayContent(onClose: () -> Unit) {
                                     color = Color.Gray,
                                     modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
                                 )
+
+                                // Instruction Bar Mode
+                                val instructionBarMode by VoiceOSAccessibilityService.instructionBarMode.collectAsState()
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(32.dp)
+                                        .clickable {
+                                            VoiceOSAccessibilityService.cycleInstructionBarMode()
+                                        }
+                                        .padding(horizontal = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Instruction Bar",
+                                        fontSize = 12.sp,
+                                        color = Color.White
+                                    )
+                                    val barModeColor = when (instructionBarMode) {
+                                        VoiceOSAccessibilityService.Companion.InstructionBarMode.ON -> Color(0xFF10B981)
+                                        VoiceOSAccessibilityService.Companion.InstructionBarMode.OFF -> Color(0xFF6B7280)
+                                        VoiceOSAccessibilityService.Companion.InstructionBarMode.AUTO -> Color(0xFF3B82F6)
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .background(barModeColor.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = instructionBarMode.name,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = barModeColor
+                                        )
+                                    }
+                                }
+
+                                // Badge Theme
+                                val badgeTheme by VoiceOSAccessibilityService.badgeTheme.collectAsState()
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(32.dp)
+                                        .clickable {
+                                            VoiceOSAccessibilityService.cycleBadgeTheme()
+                                        }
+                                        .padding(horizontal = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Badge Color",
+                                        fontSize = 12.sp,
+                                        color = Color.White
+                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        // Color preview circle
+                                        Box(
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .background(Color(badgeTheme.backgroundColor), CircleShape)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = badgeTheme.name,
+                                            fontSize = 10.sp,
+                                            color = Color(badgeTheme.backgroundColor)
+                                        )
+                                    }
+                                }
 
                                 Divider(color = Color.Gray.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 6.dp))
 
@@ -1811,15 +1906,21 @@ private fun NumbersOverlayContent() {
 private fun NumberBadge(item: VoiceOSAccessibilityService.Companion.NumberOverlayItem) {
     // Get theme from settings
     val theme by VoiceOSAccessibilityService.badgeTheme.collectAsState()
+    val density = LocalDensity.current
 
-    // Position badge at top-right corner of element
+    // Position badge at top-left corner of element
+    // Element bounds are in PIXELS, must convert to dp for Compose offset
     val badgeSize = 28.dp
-    val offsetX = (item.right - 36).coerceAtLeast(0)
-    val offsetY = (item.top + 4).coerceAtLeast(0)
+    val offsetXPx = (item.left + 8).coerceAtLeast(0)  // Left side, slight inset
+    val offsetYPx = (item.top + 8).coerceAtLeast(0)   // Top of element, slight inset
+
+    // Convert pixels to dp
+    val offsetXDp = with(density) { offsetXPx.toDp() }
+    val offsetYDp = with(density) { offsetYPx.toDp() }
 
     Box(
         modifier = Modifier
-            .offset(x = offsetX.dp, y = offsetY.dp)
+            .offset(x = offsetXDp, y = offsetYDp)
     ) {
         // Badge circle with number - uses theme colors
         Box(

@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.pm.PackageManager
 import android.graphics.Rect
+import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -416,6 +417,14 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         // Initialize VoiceOSCoreNG facade for voice command processing
         initializeVoiceOSCore()
+
+        // Auto-start OverlayService if overlay permission is granted
+        if (Settings.canDrawOverlays(this)) {
+            Log.d(TAG, "Overlay permission granted, auto-starting OverlayService")
+            OverlayService.start(this)
+        } else {
+            Log.w(TAG, "Overlay permission not granted - numbers overlay will not show")
+        }
     }
 
     /**
@@ -872,6 +881,93 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         return dynamicContainerTypes.any { simpleName.contains(it, ignoreCase = true) }
     }
 
+    /**
+     * Find top-level list item rows from all list elements.
+     *
+     * The problem: When we extract elements from a RecyclerView, ALL nested children
+     * get listIndex >= 0. For example, an email row might contain:
+     * - ViewGroup (row container, listIndex=2)
+     *   - ImageView (avatar, listIndex=2)
+     *   - TextView (sender, listIndex=2)
+     *   - TextView (subject, listIndex=2)
+     *   - TextView (preview, listIndex=2)
+     *
+     * We only want ONE badge per row, positioned at the row container.
+     *
+     * Strategy:
+     * 1. Group elements by listIndex
+     * 2. For each group, find the element with the LARGEST bounds area (the container)
+     * 3. That element must be clickable or long-clickable
+     * 4. Return one element per listIndex (the top-level row)
+     *
+     * @param listItems Elements with listIndex >= 0 (inside dynamic containers)
+     * @param allElements All elements for context
+     * @return List of top-level row elements (one per listIndex)
+     */
+    /**
+     * Find actual list item rows (like email rows) from dynamic container elements.
+     *
+     * Strategy: Look for elements that have the email content pattern.
+     * Gmail emails have contentDescription like "Unread, , , SenderName, , Subject..."
+     * We use this pattern to identify actual email rows.
+     *
+     * For each valid email row, we use its own bounds for badge positioning.
+     */
+    private fun findTopLevelListItems(
+        listItems: List<ElementInfo>,
+        allElements: List<ElementInfo>
+    ): List<ElementInfo> {
+        Log.d(TAG, "findTopLevelListItems: ${listItems.size} items with listIndex >= 0")
+
+        // Filter for elements that look like actual list item rows
+        // Email rows in Gmail typically have:
+        // - contentDescription starting with "Unread," or containing sender/subject
+        // - Valid bounds with reasonable height (not tiny icons)
+        // - Are clickable or long-clickable
+        val emailRows = listItems.filter { element ->
+            // Must have valid bounds
+            val hasValidBounds = !(element.bounds.left == 0 && element.bounds.top == 0 &&
+                element.bounds.right == 0 && element.bounds.bottom == 0)
+            if (!hasValidBounds) return@filter false
+
+            // Must be actionable
+            val isActionable = element.isClickable || element.isLongClickable
+            if (!isActionable) return@filter false
+
+            // Check for email-like content (Gmail specific pattern)
+            val content = element.contentDescription.ifBlank { element.text }
+            val looksLikeEmailRow = content.startsWith("Unread,") ||
+                content.startsWith("Starred,") ||
+                content.startsWith("Read,") ||
+                (content.contains(",") && content.length > 30) // Long comma-separated content
+
+            // Also check bounds height - email rows are typically 80-200px tall
+            val height = element.bounds.bottom - element.bounds.top
+            val reasonableHeight = height in 60..300
+
+            val isEmailRow = looksLikeEmailRow && reasonableHeight
+
+            if (isEmailRow) {
+                val label = CommandGenerator.extractShortLabel(element) ?: "?"
+                Log.d(TAG, "  EMAIL ROW: '$label' bounds=(${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}) h=$height")
+            }
+
+            isEmailRow
+        }
+
+        Log.d(TAG, "findTopLevelListItems: found ${emailRows.size} email rows")
+
+        // Deduplicate by listIndex (keep first/best per row)
+        val deduped = emailRows
+            .groupBy { it.listIndex }
+            .mapNotNull { (_, elements) -> elements.firstOrNull() }
+            .sortedBy { it.bounds.top }
+
+        Log.d(TAG, "findTopLevelListItems: ${deduped.size} unique rows after dedup")
+
+        return deduped
+    }
+
     private fun extractElements(
         node: AccessibilityNodeInfo,
         elements: MutableList<ElementInfo>,
@@ -1112,33 +1208,32 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         // Populate numbered overlay items for visual display
         // These are the elements that can be selected by saying "first", "second", "1", "2", etc.
         //
-        // IMPORTANT: We filter for clickable items with meaningful labels, sort by vertical
-        // position (top coordinate), and assign SEQUENTIAL numbers 1, 2, 3, etc.
-        // This ensures numbers match what user sees on screen, not nested container indices.
-        val clickableListItems = listItems
-            .filter { element ->
-                // Must have valid bounds (visible on screen)
-                val hasValidBounds = !(element.bounds.left == 0 && element.bounds.top == 0 &&
-                    element.bounds.right == 0 && element.bounds.bottom == 0)
-                // Must be clickable
-                val isClickable = element.isClickable
-                // Must have extractable label (sender name, title, etc.)
-                val hasLabel = CommandGenerator.extractShortLabel(element) != null
-
-                hasValidBounds && isClickable && hasLabel
-            }
-            .sortedBy { it.bounds.top }  // Sort by vertical position (top to bottom)
+        // IMPORTANT: We need to find the TOP-LEVEL list item rows, not all nested children.
+        // Strategy:
+        // 1. Group elements by listIndex to find all elements within each list item row
+        // 2. For each row, find the FIRST clickable parent container (the actual row)
+        // 3. Use that container's bounds for badge positioning
+        // 4. Use consistent VUID generation matching CommandGenerator
+        //
+        // This ensures:
+        // - One badge per email row, not per nested child
+        // - Badge positioned at the actual row bounds
+        // - VUID matches what's in the command registry
+        val rowElements = findTopLevelListItems(listItems, elements)
+            .sortedBy { it.bounds.top }  // Sort by visual position (top to bottom)
 
         // Assign sequential numbers based on sorted order
-        val overlayItems = clickableListItems.mapIndexed { index, element ->
+        val overlayItems = rowElements.mapIndexed { index, element ->
             val label = CommandGenerator.extractShortLabel(element) ?: ""
 
-            // Generate VUID for this element
-            val typeCode = if (element.isClickable) VUIDTypeCode.BUTTON else VUIDTypeCode.ELEMENT
-            val elementHash = HashUtils.generateHash(
-                "${element.className}|${element.resourceId}|${element.text.ifBlank { element.contentDescription }}",
-                8
-            )
+            // Use consistent VUID generation matching CommandGenerator.generateVuid()
+            val typeCode = VUIDGenerator.getTypeCode(element.className)
+            val elementHash = when {
+                element.resourceId.isNotBlank() -> element.resourceId
+                element.contentDescription.isNotBlank() -> element.contentDescription
+                element.text.isNotBlank() -> element.text
+                else -> "${element.className}:${element.bounds}"
+            }
             val vuid = VUIDGenerator.generate(packageName, typeCode, elementHash)
 
             NumberOverlayItem(
