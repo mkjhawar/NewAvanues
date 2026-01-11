@@ -140,6 +140,15 @@ enum class CommandActionType {
     /** Show available voice commands */
     SHOW_COMMANDS,
 
+    /** Numbers overlay: always ON */
+    NUMBERS_ON,
+
+    /** Numbers overlay: always OFF */
+    NUMBERS_OFF,
+
+    /** Numbers overlay: AUTO (show for lists) */
+    NUMBERS_AUTO,
+
     // ═══════════════════════════════════════════════════════════════════
     // App Actions
     // ═══════════════════════════════════════════════════════════════════
@@ -187,7 +196,8 @@ enum class CommandActionType {
      * Check if this is a VoiceOS control action
      */
     fun isVoiceOSAction(): Boolean = this in listOf(
-        VOICE_MUTE, VOICE_WAKE, DICTATION_START, DICTATION_STOP, SHOW_COMMANDS
+        VOICE_MUTE, VOICE_WAKE, DICTATION_START, DICTATION_STOP, SHOW_COMMANDS,
+        NUMBERS_ON, NUMBERS_OFF, NUMBERS_AUTO
     )
 
     companion object {

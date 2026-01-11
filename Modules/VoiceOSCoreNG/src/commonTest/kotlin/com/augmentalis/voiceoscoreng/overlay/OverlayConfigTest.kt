@@ -8,6 +8,8 @@
  */
 package com.augmentalis.voiceoscoreng.overlay
 
+import com.augmentalis.voiceoscoreng.features.ConfigValidationResult
+import com.augmentalis.voiceoscoreng.features.OverlayConfig
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

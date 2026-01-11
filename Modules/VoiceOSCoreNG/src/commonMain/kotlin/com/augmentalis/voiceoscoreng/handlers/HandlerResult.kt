@@ -67,6 +67,23 @@ sealed class HandlerResult {
     ) : HandlerResult()
 
     /**
+     * Action requires user to select from multiple options.
+     *
+     * Used for disambiguation when multiple elements match a voice command.
+     * The system shows numbered badges only on matching elements and waits
+     * for the user to say a number.
+     *
+     * @param message Message to display/speak
+     * @param matchCount Number of matching elements
+     * @param accessibilityAnnouncement Full announcement for screen readers
+     */
+    data class AwaitingSelection(
+        val message: String,
+        val matchCount: Int,
+        val accessibilityAnnouncement: String
+    ) : HandlerResult()
+
+    /**
      * Convenience property to check if result is successful.
      */
     val isSuccess: Boolean get() = this is Success
@@ -75,6 +92,11 @@ sealed class HandlerResult {
      * Convenience property to check if result is failure.
      */
     val isFailure: Boolean get() = this is Failure
+
+    /**
+     * Convenience property to check if awaiting user selection.
+     */
+    val isAwaitingSelection: Boolean get() = this is AwaitingSelection
 
     companion object {
         /**
@@ -92,6 +114,19 @@ sealed class HandlerResult {
          * Create not handled result.
          */
         fun notHandled(): HandlerResult = NotHandled
+
+        /**
+         * Create awaiting selection result for disambiguation.
+         *
+         * @param message Message for display
+         * @param matchCount Number of elements that matched
+         * @param accessibilityAnnouncement Full announcement for TTS
+         */
+        fun awaitingSelection(
+            message: String,
+            matchCount: Int,
+            accessibilityAnnouncement: String
+        ): HandlerResult = AwaitingSelection(message, matchCount, accessibilityAnnouncement)
     }
 }
 

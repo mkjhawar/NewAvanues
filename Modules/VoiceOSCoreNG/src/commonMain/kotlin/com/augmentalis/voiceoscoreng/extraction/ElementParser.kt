@@ -91,15 +91,17 @@ object ElementParser {
 
         val elements = mutableListOf<ElementInfo>()
 
+        // Normalize JSON by removing newlines for simpler regex matching
+        val normalizedJson = json.replace("\n", " ").replace("\r", " ")
+
         // Simple JSON parsing for elements array
         val elementRegex = Regex(
             """"className"\s*:\s*"([^"]*)"""" +
             """.*?"text"\s*:\s*"([^"]*)"""" +
-            """.*?"resourceId"\s*:\s*"([^"]*)"""",
-            RegexOption.DOT_MATCHES_ALL
+            """.*?"resourceId"\s*:\s*"([^"]*)""""
         )
 
-        elementRegex.findAll(json).forEach { match ->
+        for (match: MatchResult in elementRegex.findAll(normalizedJson)) {
             elements.add(ElementInfo(
                 className = match.groupValues.getOrNull(1) ?: "",
                 text = match.groupValues.getOrNull(2) ?: "",

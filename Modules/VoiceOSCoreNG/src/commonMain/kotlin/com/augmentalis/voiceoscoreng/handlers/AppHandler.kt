@@ -4,6 +4,7 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2026-01-06
+ * Updated: 2026-01-09 - Auto-sync with installed apps on initialize
  *
  * KMP handler for app-level actions (launch, switch, close, etc.).
  * Phase 12 of the VoiceOSCoreNG handler system.
@@ -106,69 +107,33 @@ class AppHandler(
     )
 
     /**
+     * Check if this handler can handle the given action.
+     *
+     * Matches:
+     * - Commands with prefix: "open maps", "launch youtube", "start calculator"
+     * - Bare app names: "maps", "youtube", "stopwatch" (if app is registered)
+     *
+     * @param action The action string to check
+     * @return true if this handler can process the action
+     */
+    override fun canHandle(action: String): Boolean {
+        // First check standard prefix matching (from BaseHandler)
+        if (super.canHandle(action)) {
+            return true
+        }
+
+        // Also check if the action is a bare app name/alias
+        // This allows users to say just "Stopwatch" instead of "open Stopwatch"
+        return findApp(action) != null
+    }
+
+    /**
      * Registry of known apps, keyed by package name.
      */
     private val appRegistry = mutableMapOf<String, AppInfo>()
 
-    init {
-        registerCommonApps()
-    }
-
-    /**
-     * Register common apps with their aliases.
-     * These are pre-populated for better out-of-box voice recognition.
-     */
-    private fun registerCommonApps() {
-        registerApp(
-            AppInfo(
-                packageName = "com.google.android.apps.maps",
-                displayName = "Google Maps",
-                aliases = listOf("maps", "navigation")
-            )
-        )
-        registerApp(
-            AppInfo(
-                packageName = "com.google.android.youtube",
-                displayName = "YouTube",
-                aliases = listOf("youtube", "videos")
-            )
-        )
-        registerApp(
-            AppInfo(
-                packageName = "com.android.chrome",
-                displayName = "Chrome",
-                aliases = listOf("chrome", "browser", "internet")
-            )
-        )
-        registerApp(
-            AppInfo(
-                packageName = "com.android.settings",
-                displayName = "Settings",
-                aliases = listOf("settings", "preferences")
-            )
-        )
-        registerApp(
-            AppInfo(
-                packageName = "com.android.dialer",
-                displayName = "Phone",
-                aliases = listOf("phone", "dialer", "call")
-            )
-        )
-        registerApp(
-            AppInfo(
-                packageName = "com.android.mms",
-                displayName = "Messages",
-                aliases = listOf("messages", "sms", "texting")
-            )
-        )
-        registerApp(
-            AppInfo(
-                packageName = "com.android.camera",
-                displayName = "Camera",
-                aliases = listOf("camera", "photo")
-            )
-        )
-    }
+    // No hardcoded apps - all apps come from AndroidAppLauncher.getInstalledApps()
+    // which dynamically discovers installed apps with their aliases
 
     /**
      * Execute an app command.
@@ -193,9 +158,11 @@ class AppHandler(
     /**
      * Handle an app command string.
      *
-     * Supports prefixes: "open", "launch", "start"
+     * Supports:
+     * - Prefixed commands: "open maps", "launch youtube", "start calculator"
+     * - Bare app names: "maps", "stopwatch", "calculator" (if app is registered)
      *
-     * @param command Full command string (e.g., "open maps")
+     * @param command Full command string (e.g., "open maps" or just "maps")
      * @return Result of the app launch attempt
      */
     fun handleCommand(command: String): AppLaunchResult {
@@ -211,10 +178,18 @@ class AppHandler(
             normalizedCommand.startsWith("start ") -> {
                 openApp(normalizedCommand.substringAfter("start "))
             }
-            else -> AppLaunchResult(
-                success = false,
-                error = "Unknown app command: $command"
-            )
+            else -> {
+                // Try to open as bare app name (e.g., "stopwatch", "calculator")
+                val app = findApp(normalizedCommand)
+                if (app != null) {
+                    openApp(normalizedCommand)
+                } else {
+                    AppLaunchResult(
+                        success = false,
+                        error = "Unknown app command: $command"
+                    )
+                }
+            }
         }
     }
 
@@ -314,5 +289,16 @@ class AppHandler(
         appLauncher?.getInstalledApps()?.forEach { app ->
             registerApp(app)
         }
+    }
+
+    /**
+     * Initialize the handler.
+     *
+     * Syncs with installed apps from the platform launcher to enable
+     * voice commands for all installed apps (e.g., "open Stopwatch").
+     */
+    override suspend fun initialize() {
+        syncInstalledApps()
+        println("[AppHandler] Synced ${appRegistry.size} apps from device")
     }
 }

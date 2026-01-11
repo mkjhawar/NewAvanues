@@ -165,9 +165,18 @@ data class ServiceConfiguration(
     val fingerprintGesturesEnabled: Boolean = false,
     val speechEngine: String = "ANDROID_STT",
     val autoStartListening: Boolean = true,
-    val debugMode: Boolean = false
+    val debugMode: Boolean = false,
+    /** Enable synonym expansion for voice command matching */
+    val synonymsEnabled: Boolean = true,
+    /** Language for synonym expansion (ISO 639-1), defaults to voice language */
+    val synonymLanguage: String? = null
 ) {
     companion object {
         val DEFAULT = ServiceConfiguration()
+    }
+
+    /** Get the effective synonym language, falling back to voice language prefix */
+    fun effectiveSynonymLanguage(): String {
+        return synonymLanguage ?: voiceLanguage.substringBefore("-")
     }
 }

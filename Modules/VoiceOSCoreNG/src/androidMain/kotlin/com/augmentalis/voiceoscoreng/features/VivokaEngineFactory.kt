@@ -4,11 +4,11 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2026-01-06
- * Updated: 2026-01-07 - Direct SDK check (no reflection)
+ * Updated: 2026-01-08 - SDK bundled via VivokaSDK wrapper module
  *
  * Android implementation of Vivoka engine factory.
- * Creates real Vivoka engine when SDK is available.
- * Uses direct SDK class import to verify availability.
+ * Creates real Vivoka engine - SDK is always available (bundled).
+ * Runtime errors (missing models) handled during initialization.
  */
 package com.augmentalis.voiceoscoreng.features
 
@@ -48,7 +48,7 @@ actual object VivokaEngineFactory {
     /**
      * Create Vivoka engine instance.
      *
-     * @return AndroidVivokaEngine if SDK available, StubVivokaEngine otherwise.
+     * @return VivokaAndroidEngine if SDK available, StubVivokaEngine otherwise.
      *         Note: Engine may still need models - call checkModelStatus() before initialize().
      */
     actual fun create(config: VivokaConfig): IVivokaEngine {
@@ -56,7 +56,7 @@ actual object VivokaEngineFactory {
             ?: throw IllegalStateException("VivokaEngineFactory not initialized. Call initialize(context) first.")
 
         return if (isAvailable()) {
-            AndroidVivokaEngine(context, config)
+            VivokaAndroidEngine(context, config)
         } else {
             // Return stub if Vivoka SDK not available
             StubVivokaEngine("Vivoka SDK not available on this device")
@@ -71,7 +71,7 @@ actual object VivokaEngineFactory {
      */
     fun createWithModelCheck(config: VivokaConfig): Pair<IVivokaEngine, VivokaModelStatus> {
         val engine = create(config)
-        val status = if (engine is AndroidVivokaEngine) {
+        val status = if (engine is VivokaAndroidEngine) {
             engine.checkModelStatus()
         } else {
             VivokaModelStatus.Error("Vivoka SDK not available")
@@ -80,19 +80,14 @@ actual object VivokaEngineFactory {
     }
 
     /**
-     * Check if Vivoka SDK classes are available.
-     * SDK is included via Vivoka AAR dependencies in build.gradle.kts.
+     * Check if Vivoka SDK is available.
+     * SDK is bundled via VivokaSDK wrapper module (implementation dependency).
+     * Always returns true since SDK is compiled into the APK.
+     * Runtime errors (missing models, native lib issues) are handled during initialization.
      */
     private fun checkVivokaAvailability(): Boolean {
-        return try {
-            // Direct class reference - SDK is compiled in via SpeechRecognition library
-            // This will fail at class load time if SDK is not properly linked
-            Class.forName("com.vivoka.vsdk.Vsdk")
-            true
-        } catch (e: ClassNotFoundException) {
-            false
-        } catch (e: NoClassDefFoundError) {
-            false
-        }
+        // SDK is always available - bundled via implementation dependency
+        // Any runtime issues (models, native libs) are caught during engine initialization
+        return true
     }
 }

@@ -36,12 +36,19 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
  * @property continuousListening Whether continuous listening mode is enabled (default: false)
  * @property visualFeedback Whether visual feedback is enabled (default: true)
  * @property audioFeedback Whether audio feedback is enabled (default: true)
+ * @property continuousScanningEnabled Whether to auto-scan on screen changes (default: true)
+ * @property showSliderDrawer Whether to show the slider drawer (developer setting, default: false)
+ * @property developerModeEnabled Whether developer options are visible (default: false)
  */
 data class VoiceOSSettings(
     val voiceEngine: String = "Default",
     val continuousListening: Boolean = false,
     val visualFeedback: Boolean = true,
-    val audioFeedback: Boolean = true
+    val audioFeedback: Boolean = true,
+    // Continuous monitoring settings
+    val continuousScanningEnabled: Boolean = true,  // Default ON for continuous monitoring
+    val showSliderDrawer: Boolean = false,          // Developer setting - hidden by default
+    val developerModeEnabled: Boolean = false       // Unlocks developer settings section
 )
 
 /**
@@ -74,6 +81,10 @@ class VoiceOSSettingsDataStore(private val context: Context) {
         val CONTINUOUS_LISTENING = booleanPreferencesKey("continuous_listening")
         val VISUAL_FEEDBACK = booleanPreferencesKey("visual_feedback")
         val AUDIO_FEEDBACK = booleanPreferencesKey("audio_feedback")
+        // Continuous monitoring settings
+        val CONTINUOUS_SCANNING_ENABLED = booleanPreferencesKey("continuous_scanning_enabled")
+        val SHOW_SLIDER_DRAWER = booleanPreferencesKey("show_slider_drawer")
+        val DEVELOPER_MODE_ENABLED = booleanPreferencesKey("developer_mode_enabled")
     }
 
     /**
@@ -89,7 +100,11 @@ class VoiceOSSettingsDataStore(private val context: Context) {
             voiceEngine = preferences[PreferencesKeys.VOICE_ENGINE] ?: "Default",
             continuousListening = preferences[PreferencesKeys.CONTINUOUS_LISTENING] ?: false,
             visualFeedback = preferences[PreferencesKeys.VISUAL_FEEDBACK] ?: true,
-            audioFeedback = preferences[PreferencesKeys.AUDIO_FEEDBACK] ?: true
+            audioFeedback = preferences[PreferencesKeys.AUDIO_FEEDBACK] ?: true,
+            // Continuous monitoring settings
+            continuousScanningEnabled = preferences[PreferencesKeys.CONTINUOUS_SCANNING_ENABLED] ?: true,
+            showSliderDrawer = preferences[PreferencesKeys.SHOW_SLIDER_DRAWER] ?: false,
+            developerModeEnabled = preferences[PreferencesKeys.DEVELOPER_MODE_ENABLED] ?: false
         )
     }
 
@@ -147,6 +162,47 @@ class VoiceOSSettingsDataStore(private val context: Context) {
     }
 
     /**
+     * Updates the continuous scanning setting.
+     *
+     * When enabled, the system automatically scans screens on navigation
+     * to generate voice commands for UI elements.
+     *
+     * @param enabled true to enable continuous scanning, false for manual-only
+     */
+    suspend fun updateContinuousScanningEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.CONTINUOUS_SCANNING_ENABLED] = enabled
+        }
+    }
+
+    /**
+     * Updates the slider drawer visibility setting.
+     *
+     * Developer setting that controls whether the floating slider drawer
+     * is shown for manual scan triggering.
+     *
+     * @param show true to show slider drawer, false to hide
+     */
+    suspend fun updateShowSliderDrawer(show: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.SHOW_SLIDER_DRAWER] = show
+        }
+    }
+
+    /**
+     * Updates the developer mode setting.
+     *
+     * When enabled, shows developer-only options in the settings UI.
+     *
+     * @param enabled true to enable developer mode, false to hide
+     */
+    suspend fun updateDeveloperModeEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.DEVELOPER_MODE_ENABLED] = enabled
+        }
+    }
+
+    /**
      * Resets all settings to their default values.
      *
      * This is useful for troubleshooting or providing a "reset to defaults"
@@ -158,6 +214,10 @@ class VoiceOSSettingsDataStore(private val context: Context) {
             preferences[PreferencesKeys.CONTINUOUS_LISTENING] = false
             preferences[PreferencesKeys.VISUAL_FEEDBACK] = true
             preferences[PreferencesKeys.AUDIO_FEEDBACK] = true
+            // Continuous monitoring defaults
+            preferences[PreferencesKeys.CONTINUOUS_SCANNING_ENABLED] = true
+            preferences[PreferencesKeys.SHOW_SLIDER_DRAWER] = false
+            preferences[PreferencesKeys.DEVELOPER_MODE_ENABLED] = false
         }
     }
 

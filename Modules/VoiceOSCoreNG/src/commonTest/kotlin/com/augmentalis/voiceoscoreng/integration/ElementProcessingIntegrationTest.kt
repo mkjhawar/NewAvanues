@@ -25,7 +25,6 @@ import com.augmentalis.voiceoscoreng.common.VUIDGenerator
 import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
 import com.augmentalis.voiceoscoreng.handlers.ActionResult
 import com.augmentalis.voiceoscoreng.handlers.ElementBounds
-import com.augmentalis.voiceoscoreng.handlers.IActionExecutor
 import com.augmentalis.voiceoscoreng.handlers.ScrollDirection
 import com.augmentalis.voiceoscoreng.handlers.VolumeDirection
 import com.augmentalis.voiceoscoreng.handlers.FlutterHandler
@@ -718,12 +717,12 @@ class ElementProcessingIntegrationTest {
 }
 
 /**
- * Test implementation of IActionExecutor for integration testing.
+ * Test implementation for integration testing.
  *
  * Provides a mock executor that tracks registered elements and
  * simulates action execution without requiring platform-specific implementations.
  */
-class TestActionExecutor : IActionExecutor {
+class TestActionExecutor {
 
     private val registeredElements = mutableMapOf<String, ElementInfo>()
     private val executionLog = mutableListOf<String>()
@@ -776,133 +775,133 @@ class TestActionExecutor : IActionExecutor {
         }
     }
 
-    // ==================== IActionExecutor Implementation ====================
+    // ==================== Mock Action Methods for Testing ====================
 
-    override suspend fun tap(vuid: String): ActionResult {
+    suspend fun tap(vuid: String): ActionResult {
         val element = registeredElements[vuid]
             ?: return ActionResult.ElementNotFound(vuid)
         executionLog.add("TAP: ${element.voiceLabel}")
         return ActionResult.Success("Tapped: ${element.voiceLabel}")
     }
 
-    override suspend fun longPress(vuid: String, durationMs: Long): ActionResult {
+    suspend fun longPress(vuid: String, durationMs: Long): ActionResult {
         val element = registeredElements[vuid]
             ?: return ActionResult.ElementNotFound(vuid)
         executionLog.add("LONG_PRESS: ${element.voiceLabel} (${durationMs}ms)")
         return ActionResult.Success("Long pressed: ${element.voiceLabel}")
     }
 
-    override suspend fun focus(vuid: String): ActionResult {
+    suspend fun focus(vuid: String): ActionResult {
         val element = registeredElements[vuid]
             ?: return ActionResult.ElementNotFound(vuid)
         executionLog.add("FOCUS: ${element.voiceLabel}")
         return ActionResult.Success("Focused: ${element.voiceLabel}")
     }
 
-    override suspend fun enterText(text: String, vuid: String?): ActionResult {
+    suspend fun enterText(text: String, vuid: String?): ActionResult {
         executionLog.add("ENTER_TEXT: $text")
         return ActionResult.Success("Entered text: $text")
     }
 
-    override suspend fun scroll(direction: ScrollDirection, amount: Float, vuid: String?): ActionResult {
+    suspend fun scroll(direction: ScrollDirection, amount: Float, vuid: String?): ActionResult {
         executionLog.add("SCROLL: $direction ($amount)")
         return ActionResult.Success("Scrolled: $direction")
     }
 
-    override suspend fun back(): ActionResult {
+    suspend fun back(): ActionResult {
         executionLog.add("BACK")
         return ActionResult.Success("Navigated back")
     }
 
-    override suspend fun home(): ActionResult {
+    suspend fun home(): ActionResult {
         executionLog.add("HOME")
         return ActionResult.Success("Navigated to home")
     }
 
-    override suspend fun recentApps(): ActionResult {
+    suspend fun recentApps(): ActionResult {
         executionLog.add("RECENT_APPS")
         return ActionResult.Success("Showing recent apps")
     }
 
-    override suspend fun appDrawer(): ActionResult {
+    suspend fun appDrawer(): ActionResult {
         executionLog.add("APP_DRAWER")
         return ActionResult.Success("Opened app drawer")
     }
 
-    override suspend fun openSettings(): ActionResult {
+    suspend fun openSettings(): ActionResult {
         executionLog.add("OPEN_SETTINGS")
         return ActionResult.Success("Opened settings")
     }
 
-    override suspend fun showNotifications(): ActionResult {
+    suspend fun showNotifications(): ActionResult {
         executionLog.add("SHOW_NOTIFICATIONS")
         return ActionResult.Success("Showing notifications")
     }
 
-    override suspend fun clearNotifications(): ActionResult {
+    suspend fun clearNotifications(): ActionResult {
         executionLog.add("CLEAR_NOTIFICATIONS")
         return ActionResult.Success("Cleared notifications")
     }
 
-    override suspend fun screenshot(): ActionResult {
+    suspend fun screenshot(): ActionResult {
         executionLog.add("SCREENSHOT")
         return ActionResult.Success("Screenshot taken")
     }
 
-    override suspend fun flashlight(on: Boolean): ActionResult {
+    suspend fun flashlight(on: Boolean): ActionResult {
         executionLog.add("FLASHLIGHT: $on")
         return ActionResult.Success("Flashlight: $on")
     }
 
-    override suspend fun mediaPlayPause(): ActionResult {
+    suspend fun mediaPlayPause(): ActionResult {
         executionLog.add("MEDIA_PLAY_PAUSE")
         return ActionResult.Success("Media play/pause toggled")
     }
 
-    override suspend fun mediaNext(): ActionResult {
+    suspend fun mediaNext(): ActionResult {
         executionLog.add("MEDIA_NEXT")
         return ActionResult.Success("Next track")
     }
 
-    override suspend fun mediaPrevious(): ActionResult {
+    suspend fun mediaPrevious(): ActionResult {
         executionLog.add("MEDIA_PREVIOUS")
         return ActionResult.Success("Previous track")
     }
 
-    override suspend fun volume(direction: VolumeDirection): ActionResult {
+    suspend fun volume(direction: VolumeDirection): ActionResult {
         executionLog.add("VOLUME: $direction")
         return ActionResult.Success("Volume adjusted: $direction")
     }
 
-    override suspend fun openApp(appType: String): ActionResult {
+    suspend fun openApp(appType: String): ActionResult {
         executionLog.add("OPEN_APP: $appType")
         return ActionResult.Success("Opened app: $appType")
     }
 
-    override suspend fun openAppByPackage(packageName: String): ActionResult {
+    suspend fun openAppByPackage(packageName: String): ActionResult {
         executionLog.add("OPEN_APP_BY_PACKAGE: $packageName")
         return ActionResult.Success("Opened package: $packageName")
     }
 
-    override suspend fun closeApp(): ActionResult {
+    suspend fun closeApp(): ActionResult {
         executionLog.add("CLOSE_APP")
         return ActionResult.Success("Closed app")
     }
 
-    override suspend fun executeCommand(command: QuantizedCommand): ActionResult {
+    suspend fun executeCommand(command: QuantizedCommand): ActionResult {
         return executeSyncForTest(command)
     }
 
-    override suspend fun executeAction(actionType: CommandActionType, params: Map<String, Any>): ActionResult {
+    suspend fun executeAction(actionType: CommandActionType, params: Map<String, Any>): ActionResult {
         executionLog.add("EXECUTE_ACTION: $actionType with params: $params")
         return ActionResult.Success("Executed action: $actionType")
     }
 
-    override suspend fun elementExists(vuid: String): Boolean {
+    suspend fun elementExists(vuid: String): Boolean {
         return registeredElements.containsKey(vuid)
     }
 
-    override suspend fun getElementBounds(vuid: String): ElementBounds? {
+    suspend fun getElementBounds(vuid: String): ElementBounds? {
         val element = registeredElements[vuid] ?: return null
         return ElementBounds(
             left = element.bounds.left,

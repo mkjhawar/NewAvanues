@@ -2,25 +2,48 @@ package com.augmentalis.voiceoscoreng.service
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.graphics.Rect
+import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.augmentalis.voiceoscoreng.VoiceOSCoreNGApplication
+import com.augmentalis.voiceoscoreng.VoiceOSCoreNG
+import com.augmentalis.voiceoscoreng.createForAndroid
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.common.CommandGenerator
-import com.augmentalis.voiceoscoreng.common.CommandMatcher
 import com.augmentalis.voiceoscoreng.common.CommandRegistry
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.VUIDGenerator
 import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
 import com.augmentalis.voiceoscoreng.functions.HashUtils
+import com.augmentalis.voiceoscoreng.handlers.ServiceConfiguration
+import com.augmentalis.voiceoscoreng.persistence.ICommandPersistence
+import com.augmentalis.database.dto.ScrapedAppDTO
+import com.augmentalis.database.dto.ScrapedElementDTO
+import com.augmentalis.database.repositories.IScrapedAppRepository
+import com.augmentalis.database.repositories.IScrapedElementRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.augmentalis.voiceoscoreng.persistence.ScreenHashRepository
+import com.augmentalis.voiceoscoreng.persistence.ScreenHashRepositoryImpl
+import com.augmentalis.voiceoscoreng.persistence.ScreenInfo
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 private const val TAG = "VoiceOSA11yService"
+
+/** Debounce delay for screen change events (ms) */
+private const val SCREEN_CHANGE_DEBOUNCE_MS = 300L
 
 /**
  * Accessibility Service for VoiceOSCoreNG testing.
@@ -34,11 +57,86 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    /** In-memory command registry for the current screen - uses KMP shared implementation */
+    /**
+     * Broadcast receiver for controlling numbers overlay via adb commands.
+     * Usage: adb shell am broadcast -a com.augmentalis.voiceoscoreng.SET_NUMBERS_MODE --es mode "ON"
+     */
+    private val modeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == ACTION_SET_NUMBERS_MODE) {
+                val modeStr = intent.getStringExtra(EXTRA_MODE)?.uppercase() ?: return
+                Log.d(TAG, "Received broadcast to set numbers mode: $modeStr")
+                val mode = when (modeStr) {
+                    "ON" -> NumbersOverlayMode.ON
+                    "OFF" -> NumbersOverlayMode.OFF
+                    "AUTO" -> NumbersOverlayMode.AUTO
+                    else -> return
+                }
+                setNumbersOverlayMode(mode)
+            }
+        }
+    }
+
+    /**
+     * Shared command registry - single source of truth.
+     * Passed to VoiceOSCoreNG so both service and ActionCoordinator use the same instance.
+     * This allows direct synchronous access without async wrappers.
+     */
     private val commandRegistry = CommandRegistry()
+
+    /**
+     * Screen hash repository for caching known screens.
+     * Avoids re-scanning screens that have already been processed.
+     */
+    private val screenHashRepository: ScreenHashRepository = ScreenHashRepositoryImpl()
+
+    /**
+     * Whether continuous scanning is enabled.
+     * When true, screens are automatically scanned on navigation.
+     */
+    private val continuousScanningEnabled = AtomicBoolean(true)
+
+    /**
+     * Last screen change timestamp for debouncing.
+     */
+    private val lastScreenChangeTime = AtomicLong(0L)
+
+    /**
+     * Current package name for tracking.
+     */
+    @Volatile
+    private var currentPackageName: String? = null
+
+    /**
+     * Current screen hash for comparison.
+     */
+    @Volatile
+    private var currentScreenHash: String? = null
+
+    /** Command persistence for saving to SQLDelight database */
+    private val commandPersistence: ICommandPersistence by lazy {
+        VoiceOSCoreNGApplication.getInstance(applicationContext).commandPersistence
+    }
+
+    /** Scraped app repository - for FK integrity (must insert before elements/commands) */
+    private val scrapedAppRepository: IScrapedAppRepository by lazy {
+        VoiceOSCoreNGApplication.getInstance(applicationContext).scrapedAppRepository
+    }
+
+    /** Scraped element repository - for FK integrity (must insert before commands) */
+    private val scrapedElementRepository: IScrapedElementRepository by lazy {
+        VoiceOSCoreNGApplication.getInstance(applicationContext).scrapedElementRepository
+    }
+
+    /** VoiceOSCoreNG facade for voice command processing */
+    private var voiceOSCore: VoiceOSCoreNG? = null
 
     companion object {
         private var instance: VoiceOSAccessibilityService? = null
+
+        // Broadcast action for controlling numbers overlay via adb
+        const val ACTION_SET_NUMBERS_MODE = "com.augmentalis.voiceoscoreng.SET_NUMBERS_MODE"
+        const val EXTRA_MODE = "mode"  // "ON", "OFF", or "AUTO"
 
         private val _isConnected = MutableStateFlow(false)
         val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
@@ -60,21 +158,357 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         }
 
         /**
-         * Match voice input against current commands using KMP CommandMatcher.
-         * @param voiceInput Raw voice input string
-         * @return MatchResult from KMP implementation
-         */
-        fun matchVoiceCommand(voiceInput: String): CommandMatcher.MatchResult {
-            return instance?.let { service ->
-                CommandMatcher.match(voiceInput, service.commandRegistry)
-            } ?: CommandMatcher.MatchResult.NoMatch
-        }
-
-        /**
-         * Get all currently registered commands.
+         * Get all currently registered dynamic commands.
+         * Direct access to shared registry (synchronous, no async wrapper needed).
          */
         fun getCurrentCommands(): List<QuantizedCommand> {
             return instance?.commandRegistry?.all() ?: emptyList()
+        }
+
+        /**
+         * Get count of dynamic commands for current screen.
+         */
+        fun getDynamicCommandCount(): Int {
+            return instance?.commandRegistry?.size ?: 0
+        }
+
+        /**
+         * Start voice listening.
+         */
+        fun startListening() {
+            instance?.serviceScope?.launch {
+                instance?.voiceOSCore?.startListening()
+            }
+        }
+
+        /**
+         * Stop voice listening.
+         */
+        fun stopListening() {
+            instance?.serviceScope?.launch {
+                instance?.voiceOSCore?.stopListening()
+            }
+        }
+
+        /**
+         * Check if voice engine is listening.
+         */
+        fun isListening(): Boolean {
+            return instance?.voiceOSCore?.state?.value?.let { state ->
+                state is com.augmentalis.voiceoscoreng.handlers.ServiceState.Listening
+            } ?: false
+        }
+
+        // ===== Continuous Monitoring Controls =====
+
+        private val _isContinuousMonitoring = MutableStateFlow(true)
+        val isContinuousMonitoring: StateFlow<Boolean> = _isContinuousMonitoring.asStateFlow()
+
+        private val _currentScreenInfo = MutableStateFlow<ScreenInfo?>(null)
+        val currentScreenInfo: StateFlow<ScreenInfo?> = _currentScreenInfo.asStateFlow()
+
+        // ===== App Detection for Numbers Overlay =====
+
+        /**
+         * Apps that commonly have list-based UIs where numbers overlay is helpful.
+         * These apps will trigger a first-time prompt asking the user about numbers mode.
+         */
+        val TARGET_APPS = setOf(
+            // Email clients
+            "com.google.android.gm",           // Gmail
+            "com.microsoft.office.outlook",    // Outlook
+            "com.samsung.android.email.provider", // Samsung Mail
+            "com.yahoo.mobile.client.android.mail", // Yahoo Mail
+            "me.bluemail.mail",                // BlueMail
+            "org.mozilla.thunderbird",         // Thunderbird
+            // Messaging apps
+            "com.google.android.apps.messaging", // Google Messages
+            "com.whatsapp",                    // WhatsApp
+            "org.telegram.messenger",          // Telegram
+            "com.discord",                     // Discord
+            "com.Slack",                       // Slack
+            // Social media
+            "com.twitter.android",             // Twitter/X
+            "com.instagram.android",           // Instagram
+            "com.facebook.katana",             // Facebook
+            "com.linkedin.android",            // LinkedIn
+            // Task/Note apps
+            "com.todoist",                     // Todoist
+            "com.google.android.keep",         // Google Keep
+            "com.microsoft.todos",             // Microsoft To Do
+            // Shopping/Lists
+            "com.amazon.mShop.android.shopping", // Amazon
+            "com.google.android.apps.shopping.express" // Google Shopping
+        )
+
+        /**
+         * Preference for per-app numbers mode.
+         * Stored in SharedPreferences with key "app_numbers_mode_{packageName}"
+         */
+        enum class AppNumbersPreference {
+            ASK,       // Not yet decided, show dialog
+            ALWAYS,    // Always show numbers in this app
+            AUTO,      // Use AUTO mode for this app
+            NEVER      // Never show numbers in this app
+        }
+
+        // Dialog control for app detection prompt
+        private val _showAppDetectionDialog = MutableStateFlow<String?>(null) // packageName or null
+        val showAppDetectionDialog: StateFlow<String?> = _showAppDetectionDialog.asStateFlow()
+
+        private val _currentDetectedAppName = MutableStateFlow<String?>(null)
+        val currentDetectedAppName: StateFlow<String?> = _currentDetectedAppName.asStateFlow()
+
+        /**
+         * Show the app detection dialog for a specific package.
+         */
+        fun showAppDetectionDialogFor(packageName: String, appName: String) {
+            _currentDetectedAppName.value = appName
+            _showAppDetectionDialog.value = packageName
+            Log.d(TAG, "Showing app detection dialog for: $appName ($packageName)")
+        }
+
+        /**
+         * Dismiss the app detection dialog.
+         */
+        fun dismissAppDetectionDialog() {
+            _showAppDetectionDialog.value = null
+            _currentDetectedAppName.value = null
+        }
+
+        /**
+         * Handle user response from app detection dialog.
+         */
+        fun handleAppDetectionResponse(packageName: String, preference: AppNumbersPreference) {
+            instance?.saveAppNumbersPreference(packageName, preference)
+            dismissAppDetectionDialog()
+
+            // Apply the preference immediately
+            when (preference) {
+                AppNumbersPreference.ALWAYS -> setNumbersOverlayMode(NumbersOverlayMode.ON)
+                AppNumbersPreference.AUTO -> setNumbersOverlayMode(NumbersOverlayMode.AUTO)
+                AppNumbersPreference.NEVER -> setNumbersOverlayMode(NumbersOverlayMode.OFF)
+                AppNumbersPreference.ASK -> { /* No change, will ask again next time */ }
+            }
+            Log.d(TAG, "App detection response for $packageName: $preference")
+
+            // Refresh the screen to populate overlay items with the new setting
+            if (preference != AppNumbersPreference.NEVER) {
+                exploreAllApps()
+            }
+        }
+
+        // ===== Numbers Overlay for Voice Commands =====
+
+        /**
+         * Numbers overlay mode:
+         * - ON: Always show numbers on all clickable elements
+         * - OFF: Never show numbers
+         * - AUTO: Show numbers only when there are list items (emails, messages, etc.)
+         */
+        enum class NumbersOverlayMode {
+            ON,    // Always show
+            OFF,   // Never show
+            AUTO   // Show only for lists/duplicates
+        }
+
+        /**
+         * Data for displaying numbered badges on screen elements.
+         * Used by the numbers overlay to show which elements can be selected by number.
+         * Example: User says "first" or "1" to click element with number=1
+         */
+        data class NumberOverlayItem(
+            val number: Int,           // 1-based display number (matches "first", "second", etc.)
+            val label: String,         // Short label for display (e.g., sender name)
+            val left: Int,             // Element bounds
+            val top: Int,
+            val right: Int,
+            val bottom: Int,
+            val vuid: String           // Target VUID for executing action
+        )
+
+        private val _numberedOverlayItems = MutableStateFlow<List<NumberOverlayItem>>(emptyList())
+        val numberedOverlayItems: StateFlow<List<NumberOverlayItem>> = _numberedOverlayItems.asStateFlow()
+
+        private val _numbersOverlayMode = MutableStateFlow(NumbersOverlayMode.AUTO)
+        val numbersOverlayMode: StateFlow<NumbersOverlayMode> = _numbersOverlayMode.asStateFlow()
+
+        // Computed: should we show numbers based on mode and items?
+        val showNumbersOverlay: StateFlow<Boolean> = _numbersOverlayMode.let { modeFlow ->
+            // This is a simplified reactive pattern - in production would use combine()
+            MutableStateFlow(false).also { resultFlow ->
+                // Initial computation handled in updateNumbersOverlayVisibility()
+            }
+        }
+
+        private val _showNumbersOverlayComputed = MutableStateFlow(false)
+        val showNumbersOverlayComputed: StateFlow<Boolean> = _showNumbersOverlayComputed.asStateFlow()
+
+        // ===== Instruction Bar Settings =====
+
+        /**
+         * Instruction bar mode:
+         * - ON: Always show instruction bar
+         * - OFF: Never show instruction bar
+         * - AUTO: Show briefly then fade out (default)
+         */
+        enum class InstructionBarMode {
+            ON,    // Always visible
+            OFF,   // Never visible
+            AUTO   // Show then fade after 3 seconds
+        }
+
+        private val _instructionBarMode = MutableStateFlow(InstructionBarMode.AUTO)
+        val instructionBarMode: StateFlow<InstructionBarMode> = _instructionBarMode.asStateFlow()
+
+        fun setInstructionBarMode(mode: InstructionBarMode) {
+            _instructionBarMode.value = mode
+            Log.d(TAG, "Instruction bar mode: $mode")
+        }
+
+        fun cycleInstructionBarMode() {
+            val newMode = when (_instructionBarMode.value) {
+                InstructionBarMode.OFF -> InstructionBarMode.AUTO
+                InstructionBarMode.AUTO -> InstructionBarMode.ON
+                InstructionBarMode.ON -> InstructionBarMode.OFF
+            }
+            setInstructionBarMode(newMode)
+        }
+
+        // ===== Badge Theme Settings =====
+
+        /**
+         * Badge color themes for numbered badges.
+         */
+        enum class BadgeTheme(val backgroundColor: Long, val textColor: Long) {
+            GREEN(0xFF4CAF50, 0xFFFFFFFF),       // Default green
+            BLUE(0xFF2196F3, 0xFFFFFFFF),        // Blue
+            PURPLE(0xFF9C27B0, 0xFFFFFFFF),      // Purple
+            ORANGE(0xFFFF9800, 0xFF000000),      // Orange with black text
+            RED(0xFFF44336, 0xFFFFFFFF),         // Red
+            TEAL(0xFF009688, 0xFFFFFFFF),        // Teal
+            PINK(0xFFE91E63, 0xFFFFFFFF)         // Pink
+        }
+
+        private val _badgeTheme = MutableStateFlow(BadgeTheme.GREEN)
+        val badgeTheme: StateFlow<BadgeTheme> = _badgeTheme.asStateFlow()
+
+        fun setBadgeTheme(theme: BadgeTheme) {
+            _badgeTheme.value = theme
+            Log.d(TAG, "Badge theme: $theme")
+        }
+
+        fun cycleBadgeTheme() {
+            val themes = BadgeTheme.entries
+            val currentIndex = themes.indexOf(_badgeTheme.value)
+            val nextIndex = (currentIndex + 1) % themes.size
+            setBadgeTheme(themes[nextIndex])
+        }
+
+        /**
+         * Set the numbers overlay mode.
+         * Voice commands: "numbers on", "numbers off", "numbers auto"
+         */
+        fun setNumbersOverlayMode(mode: NumbersOverlayMode) {
+            _numbersOverlayMode.value = mode
+            updateNumbersOverlayVisibility()
+            Log.d(TAG, "Numbers overlay mode: $mode")
+        }
+
+        /**
+         * Cycle through overlay modes: OFF -> AUTO -> ON -> OFF
+         * Voice command: "show numbers" or "toggle numbers"
+         */
+        fun cycleNumbersOverlayMode() {
+            val newMode = when (_numbersOverlayMode.value) {
+                NumbersOverlayMode.OFF -> NumbersOverlayMode.AUTO
+                NumbersOverlayMode.AUTO -> NumbersOverlayMode.ON
+                NumbersOverlayMode.ON -> NumbersOverlayMode.OFF
+            }
+            setNumbersOverlayMode(newMode)
+        }
+
+        /**
+         * Update visibility based on current mode and items.
+         * Called when mode changes or when items are updated.
+         */
+        internal fun updateNumbersOverlayVisibility() {
+            val mode = _numbersOverlayMode.value
+            val hasItems = _numberedOverlayItems.value.isNotEmpty()
+
+            val shouldShow = when (mode) {
+                NumbersOverlayMode.ON -> true
+                NumbersOverlayMode.OFF -> false
+                NumbersOverlayMode.AUTO -> hasItems  // Only show when list items exist
+            }
+
+            _showNumbersOverlayComputed.value = shouldShow
+            Log.d(TAG, "Numbers overlay: mode=$mode, hasItems=$hasItems, showing=$shouldShow")
+        }
+
+        /**
+         * Legacy toggle for backward compatibility.
+         */
+        fun setShowNumbersOverlay(show: Boolean) {
+            setNumbersOverlayMode(if (show) NumbersOverlayMode.ON else NumbersOverlayMode.OFF)
+        }
+
+        /**
+         * Enable or disable continuous screen scanning.
+         */
+        fun setContinuousMonitoring(enabled: Boolean) {
+            instance?.continuousScanningEnabled?.set(enabled)
+            _isContinuousMonitoring.value = enabled
+            Log.d(TAG, "Continuous monitoring ${if (enabled) "ENABLED" else "DISABLED"}")
+        }
+
+        /**
+         * Check if continuous monitoring is enabled.
+         */
+        fun isContinuousMonitoringEnabled(): Boolean {
+            return instance?.continuousScanningEnabled?.get() ?: true
+        }
+
+        /**
+         * Rescan current app - clears cache for current package only.
+         * Runs asynchronously in service scope.
+         */
+        fun rescanCurrentApp() {
+            instance?.serviceScope?.launch {
+                val packageName = instance?.currentPackageName ?: return@launch
+                val count = instance?.screenHashRepository?.clearScreensForPackage(packageName) ?: 0
+                Log.d(TAG, "Rescan Current App: cleared $count screens for $packageName")
+                // Trigger immediate rescan
+                instance?.performExploration()
+            }
+        }
+
+        /**
+         * Rescan everything - clears ALL cached screens.
+         * Runs asynchronously in service scope.
+         */
+        fun rescanEverything() {
+            instance?.serviceScope?.launch {
+                val count = instance?.screenHashRepository?.clearAllScreens() ?: 0
+                Log.d(TAG, "Rescan Everything: cleared $count total screens")
+                // Trigger immediate rescan
+                instance?.performExploration()
+            }
+        }
+
+        /**
+         * Get total count of cached screens.
+         */
+        fun getCachedScreenCount(): Int {
+            return runBlocking { instance?.screenHashRepository?.getScreenCount() ?: 0 }
+        }
+
+        /**
+         * Get cached screen count for current package.
+         */
+        fun getCachedScreenCountForCurrentApp(): Int {
+            val packageName = instance?.currentPackageName ?: return 0
+            return runBlocking { instance?.screenHashRepository?.getScreenCountForPackage(packageName) ?: 0 }
         }
     }
 
@@ -99,10 +533,394 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         } catch (e: Exception) {
             Log.e(TAG, "Error configuring serviceInfo", e)
         }
+
+        // Register broadcast receiver for adb control of numbers mode
+        val filter = IntentFilter(ACTION_SET_NUMBERS_MODE)
+        registerReceiver(modeReceiver, filter, RECEIVER_EXPORTED)
+        Log.d(TAG, "Registered broadcast receiver for numbers mode control")
+
+        // Initialize VoiceOSCoreNG facade for voice command processing
+        initializeVoiceOSCore()
+
+        // Auto-start OverlayService if overlay permission is granted
+        if (Settings.canDrawOverlays(this)) {
+            Log.d(TAG, "Overlay permission granted, auto-starting OverlayService")
+            OverlayService.start(this)
+        } else {
+            Log.w(TAG, "Overlay permission not granted - numbers overlay will not show")
+        }
+    }
+
+    /**
+     * Initialize the VoiceOSCoreNG facade with speech engine and handlers.
+     */
+    private fun initializeVoiceOSCore() {
+        serviceScope.launch {
+            try {
+                Log.d(TAG, "Initializing VoiceOSCoreNG facade...")
+
+                // Create the facade with Android-specific handlers and speech engine
+                // Primary engine: VIVOKA (offline, commercial SDK)
+                // Fallback: ANDROID_STT (requires network)
+                // Pass shared commandRegistry so both service and ActionCoordinator use same instance
+                voiceOSCore = VoiceOSCoreNG.createForAndroid(
+                    service = this@VoiceOSAccessibilityService,
+                    configuration = ServiceConfiguration(
+                        autoStartListening = false,  // Don't auto-start, UI will control
+                        speechEngine = "VIVOKA",     // Primary: Vivoka offline engine
+                        debugMode = true
+                    ),
+                    commandRegistry = commandRegistry  // Shared registry - single source of truth
+                )
+
+                // Initialize the facade
+                voiceOSCore?.initialize()
+                Log.d(TAG, "VoiceOSCoreNG facade initialized successfully")
+
+                // Observe speech results and process commands
+                voiceOSCore?.speechResults?.collect { speechResult ->
+                    Log.d(TAG, "Speech result: ${speechResult.text} (confidence: ${speechResult.confidence})")
+                    if (speechResult.isFinal) {
+                        // Pre-process VoiceOS control commands (numbers overlay, etc.)
+                        if (!handleVoiceOSControlCommand(speechResult.text.lowercase().trim())) {
+                            // Not a VoiceOS control command, delegate to normal processing
+                            voiceOSCore?.processCommand(speechResult.text, speechResult.confidence)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize VoiceOSCoreNG facade", e)
+            }
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // We handle events on-demand, not automatically
+        event ?: return
+
+        // Handle screen change events to invalidate caches and regenerate commands
+        when (event.eventType) {
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                // New window/screen opened - regenerate commands
+                Log.d(TAG, "Window state changed: ${event.packageName}")
+                handleScreenChange(event.packageName?.toString())
+            }
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
+                // Content within window changed - may need to update commands
+                // Only trigger if content change is significant (e.g., not just scrolling)
+                if (event.contentChangeTypes and AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE != 0) {
+                    Log.v(TAG, "Window content changed (subtree): ${event.packageName}")
+                    // Debounce: Don't regenerate on every small change
+                    // The cache TTL will handle stale elements
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle VoiceOS control commands (numbers overlay, etc.).
+     * Returns true if the command was handled, false to delegate to normal processing.
+     */
+    private fun handleVoiceOSControlCommand(command: String): Boolean {
+        return when (command) {
+            // Numbers overlay commands
+            "numbers on", "show numbers", "numbers always" -> {
+                setNumbersOverlayMode(NumbersOverlayMode.ON)
+                Log.d(TAG, "Voice command: Numbers overlay ON")
+                true
+            }
+            "numbers off", "hide numbers", "no numbers" -> {
+                setNumbersOverlayMode(NumbersOverlayMode.OFF)
+                Log.d(TAG, "Voice command: Numbers overlay OFF")
+                true
+            }
+            "numbers auto", "numbers automatic", "auto numbers" -> {
+                setNumbersOverlayMode(NumbersOverlayMode.AUTO)
+                Log.d(TAG, "Voice command: Numbers overlay AUTO")
+                true
+            }
+            else -> false // Not a VoiceOS control command
+        }
+    }
+
+    /**
+     * Handle screen change by clearing caches and optionally regenerating commands.
+     * Implements continuous monitoring with screen hash comparison.
+     */
+    private fun handleScreenChange(packageName: String?) {
+        // Debounce rapid screen changes
+        val now = System.currentTimeMillis()
+        val lastChange = lastScreenChangeTime.get()
+        if (now - lastChange < SCREEN_CHANGE_DEBOUNCE_MS) {
+            Log.v(TAG, "Screen change debounced (${now - lastChange}ms since last)")
+            return
+        }
+        lastScreenChangeTime.set(now)
+
+        // Update current package tracking
+        currentPackageName = packageName
+
+        // Check if this is a target app that needs the numbers overlay prompt
+        if (packageName != null && TARGET_APPS.contains(packageName)) {
+            checkAndShowAppDetectionDialog(packageName)
+        }
+
+        // Check if continuous monitoring is enabled
+        if (!continuousScanningEnabled.get()) {
+            // Manual mode - just clear registry and wait for user action
+            commandRegistry.clear()
+            Log.d(TAG, "Screen changed to $packageName - manual mode, awaiting user scan")
+            return
+        }
+
+        // Continuous monitoring mode - auto-scan with hash comparison
+        if (packageName != null && packageName != "unknown") {
+            serviceScope.launch {
+                try {
+                    // Get root node for hash generation
+                    val rootNode = rootInActiveWindow
+                    if (rootNode == null) {
+                        Log.w(TAG, "No active window for screen hash")
+                        commandRegistry.clear()
+                        return@launch
+                    }
+
+                    // Generate screen hash from current elements
+                    val screenHash = generateScreenHash(rootNode)
+                    rootNode.recycle()
+
+                    // Check if this screen is already known
+                    val isKnown = screenHashRepository.hasScreen(screenHash)
+                    val appVersion = getAppInfo(packageName).versionName
+                    val storedVersion = screenHashRepository.getAppVersion(screenHash)
+
+                    if (isKnown && appVersion == storedVersion) {
+                        // Load cached commands instead of rescanning
+                        val cachedCommands = screenHashRepository.getCommandsForScreen(screenHash)
+                        if (cachedCommands.isNotEmpty()) {
+                            commandRegistry.updateSync(cachedCommands)
+                            currentScreenHash = screenHash
+                            Log.d(TAG, "Screen known - loaded ${cachedCommands.size} cached commands for $packageName")
+
+                            // Update screen info for UI display
+                            val screenInfo = screenHashRepository.getScreenInfo(screenHash)
+                            _currentScreenInfo.value = screenInfo
+                            return@launch
+                        }
+                        // Fall through to rescan if cache is empty
+                    }
+
+                    // New or updated screen - perform full scan
+                    Log.d(TAG, "Screen changed to $packageName - ${if (isKnown) "version changed, rescanning" else "new screen, scanning"}")
+                    commandRegistry.clear()
+                    currentScreenHash = screenHash
+
+                    // Perform exploration and cache results
+                    performExplorationWithCache(screenHash, packageName, appVersion)
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in continuous monitoring", e)
+                    commandRegistry.clear()
+                }
+            }
+        } else {
+            commandRegistry.clear()
+        }
+    }
+
+    // ===== App Detection Helpers =====
+
+    private val PREFS_NAME = "voiceos_app_prefs"
+    private val PREF_KEY_PREFIX = "app_numbers_mode_"
+
+    /**
+     * Check if we should show the app detection dialog for this package.
+     * Only shows if user hasn't made a choice yet.
+     */
+    private fun checkAndShowAppDetectionDialog(packageName: String) {
+        val pref = getAppNumbersPreference(packageName)
+        if (pref == AppNumbersPreference.ASK) {
+            // Get app name for display
+            val appName = try {
+                val appInfo = packageManager.getApplicationInfo(packageName, 0)
+                packageManager.getApplicationLabel(appInfo).toString()
+            } catch (e: Exception) {
+                packageName.substringAfterLast(".")
+            }
+
+            // Show the dialog
+            showAppDetectionDialogFor(packageName, appName)
+        } else {
+            // Apply saved preference
+            when (pref) {
+                AppNumbersPreference.ALWAYS -> setNumbersOverlayMode(NumbersOverlayMode.ON)
+                AppNumbersPreference.AUTO -> setNumbersOverlayMode(NumbersOverlayMode.AUTO)
+                AppNumbersPreference.NEVER -> setNumbersOverlayMode(NumbersOverlayMode.OFF)
+                else -> {}
+            }
+        }
+    }
+
+    /**
+     * Get the user's preference for numbers overlay in a specific app.
+     */
+    private fun getAppNumbersPreference(packageName: String): AppNumbersPreference {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val savedValue = prefs.getString("$PREF_KEY_PREFIX$packageName", null)
+        return savedValue?.let {
+            try {
+                AppNumbersPreference.valueOf(it)
+            } catch (e: Exception) {
+                AppNumbersPreference.ASK
+            }
+        } ?: AppNumbersPreference.ASK
+    }
+
+    /**
+     * Save the user's preference for numbers overlay in a specific app.
+     */
+    internal fun saveAppNumbersPreference(packageName: String, preference: AppNumbersPreference) {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("$PREF_KEY_PREFIX$packageName", preference.name)
+            .apply()
+        Log.d(TAG, "Saved app numbers preference: $packageName -> $preference")
+    }
+
+    /**
+     * Generate a hash of the current screen for comparison.
+     *
+     * IMPORTANT: Includes screen dimensions in the hash so that different
+     * orientations/window sizes get separate cache entries. This means:
+     * - Portrait 1080x1920 = hash1
+     * - Landscape 1920x1080 = hash2
+     * - Freeform 800x600 = hash3
+     *
+     * When user rotates back to portrait, we load from hash1 cache (instant).
+     */
+    private fun generateScreenHash(rootNode: AccessibilityNodeInfo): String {
+        val elements = mutableListOf<String>()
+        collectElementSignatures(rootNode, elements, maxDepth = 5)
+
+        // Include screen dimensions in hash for orientation/freeform support
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+        val screenHeight = displayMetrics.heightPixels
+        val dimensionKey = "${screenWidth}x${screenHeight}"
+
+        val signature = "$dimensionKey|${elements.sorted().joinToString("|")}"
+        return HashUtils.generateHash(signature, 16)
+    }
+
+    /**
+     * Collect element signatures for screen hashing.
+     *
+     * STRUCTURAL HASH: Uses only structural properties to create stable hash.
+     * Does NOT include text content to avoid false rescans from:
+     * - Changing counters ("3 unread" → "4 unread")
+     * - Timestamps ("10:45 AM" → "10:46 AM")
+     * - Dynamic data (user names, messages, etc.)
+     * - Loading states
+     *
+     * What IS included (stable structural properties):
+     * - className: The widget type (TextView, Button, etc.)
+     * - resourceId: Developer-assigned ID (stable across sessions)
+     * - depth: Position in hierarchy
+     * - childCount: Number of children (structural shape)
+     * - isClickable/isScrollable: Interaction flags
+     *
+     * This ensures same screens always produce same hash, regardless of content.
+     */
+    private fun collectElementSignatures(
+        node: AccessibilityNodeInfo,
+        signatures: MutableList<String>,
+        depth: Int = 0,
+        maxDepth: Int = 5
+    ) {
+        if (depth > maxDepth) return
+
+        // Build signature from STRUCTURAL properties only (no text content!)
+        val className = node.className?.toString()?.substringAfterLast(".") ?: ""
+        val resourceId = node.viewIdResourceName?.substringAfterLast("/") ?: ""
+        val isClickable = if (node.isClickable) "C" else ""
+        val isScrollable = if (node.isScrollable) "S" else ""
+
+        // For scrollable containers (RecyclerView, ListView, ScrollView), don't include childCount
+        // as it changes when user scrolls (items are recycled/added)
+        val isScrollableContainer = className in listOf(
+            "RecyclerView", "ListView", "GridView", "ScrollView",
+            "HorizontalScrollView", "NestedScrollView", "ViewPager", "ViewPager2"
+        ) || node.isScrollable
+
+        val childCount = if (isScrollableContainer) {
+            "v"  // "v" for variable - indicates scrollable container
+        } else {
+            "c${node.childCount}"
+        }
+
+        // Only include elements with identifying structure
+        if (className.isNotEmpty() || resourceId.isNotEmpty()) {
+            // Format: "ClassName:resourceId:depth:childCount:flags"
+            // Example: "TextView:message_count:d2:c0:C" (TextView at depth 2, no children, clickable)
+            // Example: "RecyclerView:list:d1:v:S" (RecyclerView at depth 1, variable children, scrollable)
+            signatures.add("$className:$resourceId:d$depth:$childCount:$isClickable$isScrollable")
+        }
+
+        // Recurse into children (but limit depth in scrollable containers to avoid
+        // including recycled item content which changes on scroll)
+        val childDepthLimit = if (isScrollableContainer) depth + 2 else maxDepth
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { child ->
+                collectElementSignatures(child, signatures, depth + 1, childDepthLimit)
+                child.recycle()
+            }
+        }
+    }
+
+    /**
+     * Perform exploration and cache results in the screen hash repository.
+     */
+    private fun performExplorationWithCache(screenHash: String, packageName: String, appVersion: String) {
+        serviceScope.launch {
+            try {
+                val rootNode = rootInActiveWindow ?: return@launch
+
+                val result = exploreNode(rootNode)
+                _explorationResults.value = result
+                rootNode.recycle()
+
+                // Get the generated commands
+                val commands = commandRegistry.all()
+
+                // Cache the screen and commands
+                screenHashRepository.saveScreen(
+                    hash = screenHash,
+                    packageName = packageName,
+                    activityName = null,
+                    appVersion = appVersion,
+                    elementCount = result.totalElements
+                )
+                screenHashRepository.saveCommandsForScreen(screenHash, commands)
+
+                // Update screen info for UI display
+                val screenInfo = ScreenInfo(
+                    hash = screenHash,
+                    packageName = packageName,
+                    activityName = null,
+                    appVersion = appVersion,
+                    elementCount = result.totalElements,
+                    actionableCount = result.clickableElements + result.scrollableElements,
+                    commandCount = commands.size,
+                    scannedAt = System.currentTimeMillis(),
+                    isCached = false  // Just scanned, not from cache
+                )
+                _currentScreenInfo.value = screenInfo
+
+                Log.d(TAG, "Screen cached: ${screenHash.take(16)}... with ${commands.size} commands")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in exploration with cache", e)
+            }
+        }
     }
 
     override fun onInterrupt() {
@@ -111,9 +929,28 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         Log.d(TAG, "onDestroy() called")
+
+        // Unregister broadcast receiver
+        try {
+            unregisterReceiver(modeReceiver)
+        } catch (e: Exception) {
+            Log.w(TAG, "Error unregistering receiver", e)
+        }
+
+        // Dispose VoiceOSCoreNG facade
+        serviceScope.launch {
+            try {
+                voiceOSCore?.dispose()
+                Log.d(TAG, "VoiceOSCoreNG facade disposed")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error disposing VoiceOSCoreNG facade", e)
+            }
+        }
+
         super.onDestroy()
         instance = null
         _isConnected.value = false
+        voiceOSCore = null
         serviceScope.cancel()
     }
 
@@ -246,6 +1083,119 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         )
     }
 
+    /**
+     * Dynamic container types that indicate list/dynamic content.
+     */
+    private val dynamicContainerTypes = setOf(
+        "RecyclerView",
+        "ListView",
+        "GridView",
+        "ViewPager",
+        "ViewPager2",
+        "ScrollView",
+        "HorizontalScrollView",
+        "NestedScrollView",
+        "LazyColumn",       // Compose
+        "LazyRow",          // Compose
+        "LazyVerticalGrid", // Compose
+        "LazyHorizontalGrid" // Compose
+    )
+
+    /**
+     * Check if a class name is a dynamic container.
+     */
+    private fun isDynamicContainer(className: String): Boolean {
+        val simpleName = className.substringAfterLast(".")
+        return dynamicContainerTypes.any { simpleName.contains(it, ignoreCase = true) }
+    }
+
+    /**
+     * Find top-level list item rows from all list elements.
+     *
+     * The problem: When we extract elements from a RecyclerView, ALL nested children
+     * get listIndex >= 0. For example, an email row might contain:
+     * - ViewGroup (row container, listIndex=2)
+     *   - ImageView (avatar, listIndex=2)
+     *   - TextView (sender, listIndex=2)
+     *   - TextView (subject, listIndex=2)
+     *   - TextView (preview, listIndex=2)
+     *
+     * We only want ONE badge per row, positioned at the row container.
+     *
+     * Strategy:
+     * 1. Group elements by listIndex
+     * 2. For each group, find the element with the LARGEST bounds area (the container)
+     * 3. That element must be clickable or long-clickable
+     * 4. Return one element per listIndex (the top-level row)
+     *
+     * @param listItems Elements with listIndex >= 0 (inside dynamic containers)
+     * @param allElements All elements for context
+     * @return List of top-level row elements (one per listIndex)
+     */
+    /**
+     * Find actual list item rows (like email rows) from dynamic container elements.
+     *
+     * Strategy: Look for elements that have the email content pattern.
+     * Gmail emails have contentDescription like "Unread, , , SenderName, , Subject..."
+     * We use this pattern to identify actual email rows.
+     *
+     * For each valid email row, we use its own bounds for badge positioning.
+     */
+    private fun findTopLevelListItems(
+        listItems: List<ElementInfo>,
+        allElements: List<ElementInfo>
+    ): List<ElementInfo> {
+        Log.d(TAG, "findTopLevelListItems: ${listItems.size} items with listIndex >= 0")
+
+        // Filter for elements that look like actual list item rows
+        // Email rows in Gmail typically have:
+        // - contentDescription starting with "Unread," or containing sender/subject
+        // - Valid bounds with reasonable height (not tiny icons)
+        // - Are clickable or long-clickable
+        val emailRows = listItems.filter { element ->
+            // Must have valid bounds
+            val hasValidBounds = !(element.bounds.left == 0 && element.bounds.top == 0 &&
+                element.bounds.right == 0 && element.bounds.bottom == 0)
+            if (!hasValidBounds) return@filter false
+
+            // Must be actionable
+            val isActionable = element.isClickable || element.isLongClickable
+            if (!isActionable) return@filter false
+
+            // Check for email-like content (Gmail specific pattern)
+            val content = element.contentDescription.ifBlank { element.text }
+            val looksLikeEmailRow = content.startsWith("Unread,") ||
+                content.startsWith("Starred,") ||
+                content.startsWith("Read,") ||
+                (content.contains(",") && content.length > 30) // Long comma-separated content
+
+            // Also check bounds height - email rows are typically 80-200px tall
+            val height = element.bounds.bottom - element.bounds.top
+            val reasonableHeight = height in 60..300
+
+            val isEmailRow = looksLikeEmailRow && reasonableHeight
+
+            if (isEmailRow) {
+                val label = CommandGenerator.extractShortLabel(element) ?: "?"
+                Log.d(TAG, "  EMAIL ROW: '$label' bounds=(${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}) h=$height")
+            }
+
+            isEmailRow
+        }
+
+        Log.d(TAG, "findTopLevelListItems: found ${emailRows.size} email rows")
+
+        // Deduplicate by listIndex (keep first/best per row)
+        val deduped = emailRows
+            .groupBy { it.listIndex }
+            .mapNotNull { (_, elements) -> elements.firstOrNull() }
+            .sortedBy { it.bounds.top }
+
+        Log.d(TAG, "findTopLevelListItems: ${deduped.size} unique rows after dedup")
+
+        return deduped
+    }
+
     private fun extractElements(
         node: AccessibilityNodeInfo,
         elements: MutableList<ElementInfo>,
@@ -253,21 +1203,36 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         seenHashes: MutableSet<String>,
         duplicates: MutableList<DuplicateInfo>,
         depth: Int,
-        parentIndex: Int? = null
+        parentIndex: Int? = null,
+        inDynamicContainer: Boolean = false,
+        containerType: String = "",
+        listIndex: Int = -1
     ) {
         val bounds = Rect()
         node.getBoundsInScreen(bounds)
 
+        val className = node.className?.toString() ?: ""
+
+        // Check if THIS node is a dynamic container
+        val isContainer = isDynamicContainer(className)
+        val currentContainerType = if (isContainer) className.substringAfterLast(".") else containerType
+        val isInDynamic = inDynamicContainer || isContainer
+
         val element = ElementInfo(
-            className = node.className?.toString() ?: "",
+            className = className,
             resourceId = node.viewIdResourceName ?: "",
             text = node.text?.toString() ?: "",
             contentDescription = node.contentDescription?.toString() ?: "",
             bounds = Bounds(bounds.left, bounds.top, bounds.right, bounds.bottom),
             isClickable = node.isClickable,
+            isLongClickable = node.isLongClickable,
             isScrollable = node.isScrollable,
             isEnabled = node.isEnabled,
-            packageName = node.packageName?.toString() ?: ""
+            packageName = node.packageName?.toString() ?: "",
+            // Dynamic content tracking
+            isInDynamicContainer = isInDynamic && !isContainer, // Container itself is not dynamic, its children are
+            containerType = if (isInDynamic && !isContainer) currentContainerType else "",
+            listIndex = if (isInDynamic && !isContainer) listIndex else -1
         )
 
         // Generate hash for deduplication - use className|resourceId|text (NOT bounds, as bounds make every element unique)
@@ -301,9 +1266,16 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         ))
 
         // Recurse into children
+        // If this is a dynamic container, track child indices for list items
         for (i in 0 until node.childCount) {
             node.getChild(i)?.let { child ->
-                extractElements(child, elements, hierarchy, seenHashes, duplicates, depth + 1, currentIndex)
+                // Children of a dynamic container get the list index from their position
+                val childListIndex = if (isContainer) i else listIndex
+                extractElements(
+                    child, elements, hierarchy, seenHashes, duplicates,
+                    depth + 1, currentIndex,
+                    isInDynamic, currentContainerType, childListIndex
+                )
                 child.recycle()
             }
         }
@@ -423,6 +1395,10 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     /**
      * Generate voice commands for actionable elements using KMP CommandGenerator.
      * Also updates the in-memory CommandRegistry for voice matching.
+     *
+     * Static/Dynamic Separation:
+     * - Static commands (menus, buttons) are persisted to database
+     * - Dynamic commands (list items, emails) are kept in memory only
      */
     private fun generateCommands(
         elements: List<ElementInfo>,
@@ -430,15 +1406,211 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         elementLabels: Map<Int, String>,
         packageName: String
     ): List<GeneratedCommand> {
-        // Generate QuantizedCommands using KMP CommandGenerator
-        val quantizedCommands = elements.mapNotNull { element ->
-            CommandGenerator.fromElement(element, packageName)
+        // Generate QuantizedCommands with persistence info using KMP CommandGenerator
+        val commandResults = elements.mapNotNull { element ->
+            CommandGenerator.fromElementWithPersistence(element, packageName)
         }
 
-        // Update the registry for voice matching
-        commandRegistry.update(quantizedCommands)
+        // Separate static (persist) and dynamic (memory-only) commands
+        val staticCommands = commandResults.filter { it.shouldPersist }
+        val dynamicCommands = commandResults.filter { !it.shouldPersist }
 
-        Log.d(TAG, "Generated ${quantizedCommands.size} commands via KMP CommandGenerator, registered in CommandRegistry")
+        // All commands go to in-memory registry for voice matching
+        val allCommands = commandResults.map { it.command }
+        commandRegistry.updateSync(allCommands)
+
+        // Also generate index commands for list items ("first", "second", etc.)
+        val listItems = elements.filter { it.listIndex >= 0 }
+        val indexCommands = CommandGenerator.generateListIndexCommands(listItems, packageName)
+        if (indexCommands.isNotEmpty()) {
+            commandRegistry.addAll(indexCommands)
+        }
+
+        // Generate label-based commands for list items (e.g., "Lifemiles" for email sender)
+        val labelCommands = CommandGenerator.generateListLabelCommands(listItems, packageName)
+        if (labelCommands.isNotEmpty()) {
+            commandRegistry.addAll(labelCommands)
+            Log.d(TAG, "Label commands for lists: ${labelCommands.take(5).map { it.phrase }}")
+        }
+
+        // Populate numbered overlay items for visual display
+        // These are the elements that can be selected by saying "first", "second", "1", "2", etc.
+        //
+        // IMPORTANT: We need to find the TOP-LEVEL list item rows, not all nested children.
+        // Strategy:
+        // 1. Group elements by listIndex to find all elements within each list item row
+        // 2. For each row, find the FIRST clickable parent container (the actual row)
+        // 3. Use that container's bounds for badge positioning
+        // 4. Use consistent VUID generation matching CommandGenerator
+        //
+        // This ensures:
+        // - One badge per email row, not per nested child
+        // - Badge positioned at the actual row bounds
+        // - VUID matches what's in the command registry
+        val rowElements = findTopLevelListItems(listItems, elements)
+            .sortedBy { it.bounds.top }  // Sort by visual position (top to bottom)
+
+        // Assign sequential numbers based on sorted order
+        val overlayItems = rowElements.mapIndexed { index, element ->
+            val label = CommandGenerator.extractShortLabel(element) ?: ""
+
+            // Use consistent VUID generation matching CommandGenerator.generateVuid()
+            val typeCode = VUIDGenerator.getTypeCode(element.className)
+            val elementHash = when {
+                element.resourceId.isNotBlank() -> element.resourceId
+                element.contentDescription.isNotBlank() -> element.contentDescription
+                element.text.isNotBlank() -> element.text
+                else -> "${element.className}:${element.bounds}"
+            }
+            val vuid = VUIDGenerator.generate(packageName, typeCode, elementHash)
+
+            NumberOverlayItem(
+                number = index + 1,  // Sequential 1-based numbering by screen position
+                label = label,
+                left = element.bounds.left,
+                top = element.bounds.top,
+                right = element.bounds.right,
+                bottom = element.bounds.bottom,
+                vuid = vuid
+            )
+        }
+
+        _numberedOverlayItems.value = overlayItems
+        updateNumbersOverlayVisibility()  // Update visibility based on mode (AUTO shows when items exist)
+        if (overlayItems.isNotEmpty()) {
+            Log.d(TAG, "Numbered overlay: ${overlayItems.size} items for voice selection")
+        }
+
+        // Log the separation
+        Log.d(TAG, "Commands: ${allCommands.size} total (${staticCommands.size} static, ${dynamicCommands.size} dynamic)")
+        if (dynamicCommands.isNotEmpty()) {
+            Log.d(TAG, "Dynamic commands (not persisted): ${dynamicCommands.take(3).map { it.command.phrase.take(30) }}")
+        }
+        if (indexCommands.isNotEmpty()) {
+            Log.d(TAG, "Index commands for lists: ${indexCommands.take(5).map { it.phrase }}")
+        }
+
+        // Update speech engine grammar (Vivoka SDK) so it recognizes ALL phrases
+        // Includes: element commands, index commands ("first", "second"), and label commands ("Lifemiles")
+        val commandPhrases = allCommands.map { it.phrase } +
+            indexCommands.map { it.phrase } +
+            labelCommands.map { it.phrase }
+        serviceScope.launch {
+            try {
+                voiceOSCore?.updateCommands(commandPhrases)
+                Log.d(TAG, "Updated speech engine with ${commandPhrases.size} command phrases " +
+                    "(${allCommands.size} elements, ${indexCommands.size} index, ${labelCommands.size} labels)")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update speech engine commands", e)
+            }
+        }
+
+        // ONLY persist STATIC commands to SQLDelight database
+        // Dynamic commands are kept in memory only and discarded on navigation
+        val staticQuantizedCommands = staticCommands.map { it.command }
+        if (staticQuantizedCommands.isNotEmpty()) {
+            serviceScope.launch(Dispatchers.IO) {
+                try {
+                    val currentTime = System.currentTimeMillis()
+
+                    // Step 1: Ensure scraped_app exists (FK parent)
+                    val appInfo = getAppInfo(packageName)
+                    val scrapedApp = ScrapedAppDTO(
+                        appId = packageName,
+                        packageName = packageName,
+                        versionCode = appInfo.versionCode,
+                        versionName = appInfo.versionName,
+                        appHash = HashUtils.generateHash(packageName + appInfo.versionCode, 8),
+                        isFullyLearned = 0,
+                        learnCompletedAt = null,
+                        scrapingMode = "DYNAMIC",
+                        scrapeCount = 1,
+                        elementCount = elements.size.toLong(),
+                        commandCount = staticQuantizedCommands.size.toLong(),
+                        firstScrapedAt = currentTime,
+                        lastScrapedAt = currentTime
+                    )
+                    scrapedAppRepository.insert(scrapedApp)
+                    Log.d(TAG, "Step 1/3: Inserted scraped_app for $packageName")
+
+                    // Step 2: Insert scraped_elements (FK parent for commands)
+                    // CRITICAL: Use the SAME elementHash that's in the command's metadata
+                    // to ensure FK constraint is satisfied when inserting commands
+                    val insertedHashes = mutableSetOf<String>()
+                    var insertedCount = 0
+
+                    // Iterate over STATIC commands only and insert corresponding elements
+                    // using the EXACT hash from command metadata
+                    staticQuantizedCommands.forEach { cmd ->
+                        val elementHash = cmd.metadata["elementHash"] ?: return@forEach
+
+                        // Skip if already inserted (avoid duplicates)
+                        if (elementHash in insertedHashes) return@forEach
+
+                        // Find the corresponding element by matching metadata
+                        val element = elements.find { el ->
+                            // Match by className + resourceId + label
+                            val cmdClassName = cmd.metadata["className"] ?: ""
+                            val cmdResourceId = cmd.metadata["resourceId"] ?: ""
+                            el.className == cmdClassName && el.resourceId == cmdResourceId
+                        } ?: elements.firstOrNull { el ->
+                            // Fallback: match by label
+                            val cmdLabel = cmd.metadata["label"] ?: ""
+                            el.text == cmdLabel || el.contentDescription == cmdLabel
+                        }
+
+                        // Build scraped element DTO using command's elementHash
+                        val scrapedElement = ScrapedElementDTO(
+                            id = 0,  // Auto-generated
+                            elementHash = elementHash,  // Use EXACT hash from command
+                            appId = packageName,
+                            uuid = null,
+                            className = element?.className ?: cmd.metadata["className"] ?: "",
+                            viewIdResourceName = element?.resourceId?.ifBlank { null } ?: cmd.metadata["resourceId"]?.ifBlank { null },
+                            text = element?.text?.ifBlank { null },
+                            contentDescription = element?.contentDescription?.ifBlank { null },
+                            bounds = element?.let { "${it.bounds.left},${it.bounds.top},${it.bounds.right},${it.bounds.bottom}" } ?: "0,0,0,0",
+                            isClickable = if (element?.isClickable == true) 1L else 0L,
+                            isLongClickable = if (element?.isLongClickable == true) 1L else 0L,
+                            isEditable = 0L,
+                            isScrollable = if (element?.isScrollable == true) 1L else 0L,
+                            isCheckable = 0L,
+                            isFocusable = 0L,
+                            isEnabled = if (element?.isEnabled != false) 1L else 0L,
+                            depth = 0L,
+                            indexInParent = 0L,
+                            scrapedAt = currentTime,
+                            semanticRole = null,
+                            inputType = null,
+                            visualWeight = null,
+                            isRequired = null,
+                            formGroupId = null,
+                            placeholderText = null,
+                            validationPattern = null,
+                            backgroundColor = null,
+                            screen_hash = null
+                        )
+                        try {
+                            scrapedElementRepository.insert(scrapedElement)
+                            insertedHashes.add(elementHash)
+                            insertedCount++
+                        } catch (e: Exception) {
+                            // Element may already exist, ignore duplicate errors
+                            Log.v(TAG, "Element hash $elementHash may already exist: ${e.message}")
+                            insertedHashes.add(elementHash)  // Mark as "handled" even if exists
+                        }
+                    }
+                    Log.d(TAG, "Step 2/3: Inserted $insertedCount scraped_elements for ${insertedHashes.size} unique hashes (static only)")
+
+                    // Step 3: Now insert STATIC commands only (FK references are satisfied)
+                    commandPersistence.insertBatch(staticQuantizedCommands)
+                    Log.d(TAG, "Step 3/3: Persisted ${staticQuantizedCommands.size} STATIC commands to voiceos.db (skipped ${dynamicCommands.size} dynamic)")
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to persist commands to database", e)
+                }
+            }
+        }
 
         // Also create legacy GeneratedCommand for UI display (backwards compatibility)
         return elements
@@ -483,6 +1655,29 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 )
             }
     }
+
+    /**
+     * Get app version info for the given package name.
+     */
+    private fun getAppInfo(packageName: String): AppVersionInfo {
+        return try {
+            val packageInfo = packageManager.getPackageInfo(packageName, 0)
+            AppVersionInfo(
+                versionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    packageInfo.longVersionCode
+                } else {
+                    @Suppress("DEPRECATION")
+                    packageInfo.versionCode.toLong()
+                },
+                versionName = packageInfo.versionName ?: "unknown"
+            )
+        } catch (e: PackageManager.NameNotFoundException) {
+            Log.w(TAG, "Package not found: $packageName, using defaults")
+            AppVersionInfo(versionCode = 0, versionName = "unknown")
+        }
+    }
+
+    private data class AppVersionInfo(val versionCode: Long, val versionName: String)
 
     private fun mergeResults(results: List<ExplorationResult>): ExplorationResult {
         if (results.isEmpty()) {

@@ -160,15 +160,17 @@ sealed class OverlayData {
     ) : OverlayData()
 
     /**
-     * Numbered items for selection.
+     * Numbered items for selection (disambiguation).
      *
      * Used when multiple elements match a voice command,
      * allowing the user to say a number to select.
      *
      * @property items List of numbered items to display
+     * @property displayConfig Configuration for how to render the disambiguation UI
      */
     data class NumberedItems(
-        val items: List<NumberedItem>
+        val items: List<NumberedItem>,
+        val displayConfig: DisambiguationOverlayConfig = DisambiguationOverlayConfig()
     ) : OverlayData()
 
     /**
@@ -319,4 +321,92 @@ data class Rect(
          */
         val EMPTY = Rect(0, 0, 0, 0)
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Disambiguation Display Configuration
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Configuration for disambiguation overlay display.
+ *
+ * Controls how numbered badges and selection UI are rendered across all platforms.
+ * Platform implementations should use these settings for consistent UX.
+ *
+ * @property highlightStyle How to highlight matching elements
+ * @property showPopup Whether to show instruction popup
+ * @property popupMessage Message to display in popup
+ * @property popupFadeDelayMs How long before popup fades (milliseconds)
+ * @property badgeAnimationEnabled Whether badges should animate (pulse/flash)
+ * @property strokeWidth Width of highlight stroke in dp
+ * @property strokeColor Color of highlight stroke (ARGB)
+ * @property animationDurationMs Duration of highlight animation cycle (milliseconds)
+ */
+data class DisambiguationOverlayConfig(
+    val highlightStyle: DisambiguationHighlightStyle = DisambiguationHighlightStyle.FLASHING_STROKE,
+    val showPopup: Boolean = true,
+    val popupMessage: String = "Say a number to select",
+    val popupFadeDelayMs: Long = 3000L,
+    val badgeAnimationEnabled: Boolean = true,
+    val strokeWidth: Float = 3f,
+    val strokeColor: Long = 0xFF2196F3,  // Material Blue
+    val animationDurationMs: Long = 500L
+) {
+    companion object {
+        /** Default configuration with flashing stroke and fading popup */
+        val DEFAULT = DisambiguationOverlayConfig()
+
+        /** Minimal configuration - badges only, no animation */
+        val MINIMAL = DisambiguationOverlayConfig(
+            highlightStyle = DisambiguationHighlightStyle.BADGE_ONLY,
+            showPopup = false,
+            badgeAnimationEnabled = false
+        )
+
+        /** High visibility configuration for accessibility */
+        val HIGH_VISIBILITY = DisambiguationOverlayConfig(
+            highlightStyle = DisambiguationHighlightStyle.SOLID_HIGHLIGHT,
+            strokeWidth = 5f,
+            strokeColor = 0xFFFF5722,  // Deep Orange
+            popupFadeDelayMs = 5000L
+        )
+    }
+}
+
+/**
+ * Styles for highlighting disambiguation elements.
+ *
+ * Platform implementations should render these styles consistently:
+ * - Android: Use Compose animations or custom View drawing
+ * - iOS: Use Core Animation or SwiftUI animations
+ * - Desktop: Use platform-native drawing with animation timers
+ */
+enum class DisambiguationHighlightStyle {
+    /**
+     * Animated flashing stroke around element bounds.
+     * Stroke alternates between visible and invisible at animationDurationMs interval.
+     * Best for: Drawing attention to multiple elements simultaneously.
+     */
+    FLASHING_STROKE,
+
+    /**
+     * Solid colored highlight/overlay on element.
+     * Element bounds are filled with semi-transparent color.
+     * Best for: High visibility, accessibility scenarios.
+     */
+    SOLID_HIGHLIGHT,
+
+    /**
+     * Pulsing glow effect around element.
+     * Glow radius oscillates at animationDurationMs interval.
+     * Best for: Modern UI, premium feel.
+     */
+    PULSING_GLOW,
+
+    /**
+     * Only number badge shown, no element highlighting.
+     * Minimalist approach when badges alone are sufficient.
+     * Best for: Clean UI, reduced visual noise.
+     */
+    BADGE_ONLY
 }

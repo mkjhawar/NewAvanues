@@ -60,3 +60,4 @@ android/apps/AVA/external-models/**/*.safetensors
 
 # Git worktree - prevent nested repos
 NewAvanues/
+contextsave/

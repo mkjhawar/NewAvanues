@@ -1,7 +1,7 @@
 {
   "statusLine": {
     "type": "command",
-    "command": "bash .claude/statusline-command.sh"
+    "command": "sh /Volumes/M-Drive/Coding/.claude/statusline-command.sh"
   },
   "hooks": {
     "SessionStart": [
@@ -9,7 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/startup-banner.sh"
+            "command": "bash /Volumes/M-Drive/Coding/.claude/startup-banner.sh"
           }
         ]
       }

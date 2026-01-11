@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flowcharts - VoiceOSCoreNG Documentation</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #e9ecef;
+            --text-primary: #212529;
+            --text-secondary: #495057;
+            --text-muted: #6c757d;
+            --accent-primary: #0d6efd;
+            --accent-secondary: #6610f2;
+            --border-color: #dee2e6;
+            --code-bg: #f1f3f5;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --text-primary: #e9ecef;
+            --text-secondary: #adb5bd;
+            --text-muted: #868e96;
+            --accent-primary: #4dabf7;
+            --accent-secondary: #9775fa;
+            --border-color: #343a40;
+            --code-bg: #2d2d44;
+            --shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo h1 { font-size: 1.25rem; }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.25rem;
+        }
+
+        nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 2rem;
+            position: sticky;
+            top: 64px;
+            z-index: 99;
+        }
+
+        nav ul {
+            max-width: 1200px;
+            margin: 0 auto;
+            list-style: none;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            display: block;
+            padding: 0.5rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        nav a:hover, nav a.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        h2 {
+            color: var(--accent-primary);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        h3 {
+            color: var(--text-primary);
+            margin: 2rem 0 1rem;
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .diagram-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .diagram-container h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: var(--accent-primary);
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+
+        .explanation {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .explanation h4 {
+            color: var(--accent-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .explanation ul, .explanation ol {
+            margin-left: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .explanation li {
+            margin-bottom: 0.5rem;
+        }
+
+        code {
+            background: var(--code-bg);
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            color: var(--accent-secondary);
+        }
+
+        .step-badge {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background: var(--accent-primary);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem;
+            margin-top: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        footer a { color: var(--accent-primary); text-decoration: none; }
+
+        @media (max-width: 768px) {
+            header, nav, main { padding-left: 1rem; padding-right: 1rem; }
+            nav { top: auto; position: relative; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <h1>VoiceOSCoreNG - Command Flowcharts</h1>
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()">&#9790;</button>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="architecture.html">Architecture</a></li>
+            <li><a href="flowcharts.html" class="active">Flowcharts</a></li>
+            <li><a href="sequence-diagrams.html">Sequences</a></li>
+            <li><a href="class-diagrams.html">Classes</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <h2>Command Processing Flowcharts</h2>
+        <p>
+            These flowcharts illustrate how voice commands are processed through the VoiceOSCoreNG system,
+            from initial voice input through the 5-level matching system to final action execution.
+        </p>
+
+        <div class="diagram-container">
+            <h3>Complete Command Processing Flow</h3>
+            <div class="mermaid">
+flowchart TD
+    Start(["&#127908; Voice Input"]) --> Normalize["Normalize Text<br/>lowercase, trim"]
+    Normalize --> HasDynamic{"Dynamic Commands<br/>Available?"}
+
+    HasDynamic -->|Yes| ExtractVerb["Extract Verb & Target<br/>e.g., 'click 4' -> ('click', '4')"]
+    HasDynamic -->|No| StaticCheck
+
+    ExtractVerb --> HasTarget{"Target<br/>Extracted?"}
+    HasTarget -->|Yes| ExactMatch["Try Exact Match<br/>in CommandRegistry"]
+    HasTarget -->|No| StaticCheck
+
+    ExactMatch --> FoundExact{"Exact<br/>Match?"}
+    FoundExact -->|Yes| ExecuteDynamic["Execute via Handler<br/>(with VUID)"]
+    FoundExact -->|No| FuzzyMatch["Try Fuzzy Match<br/>(threshold: 0.7)"]
+
+    FuzzyMatch --> MatchResult{"Match<br/>Result?"}
+    MatchResult -->|Exact| ExecuteDynamic
+    MatchResult -->|Fuzzy >= 0.85| ExecuteDynamic
+    MatchResult -->|Ambiguous| ReturnAmbiguous["Return AwaitingSelection<br/>(show numbered options)"]
+    MatchResult -->|No Match| StaticCheck
+
+    StaticCheck["Check Static Handlers<br/>via HandlerRegistry"] --> CanHandle{"Handler<br/>Found?"}
+    CanHandle -->|Yes| ExecuteStatic["Execute Static<br/>Handler"]
+    CanHandle -->|No| NLUCheck
+
+    NLUCheck{"NLU<br/>Enabled?"}
+    NLUCheck -->|Yes| NLUProcess["NLU Classification<br/>(BERT-based)"]
+    NLUCheck -->|No| LLMCheck
+
+    NLUProcess --> NLUResult{"NLU<br/>Match?"}
+    NLUResult -->|Match| ExecuteNLU["Execute NLU<br/>Command"]
+    NLUResult -->|Ambiguous| ReturnAmbiguous
+    NLUResult -->|No Match| LLMCheck
+
+    LLMCheck{"LLM<br/>Enabled?"}
+    LLMCheck -->|Yes| LLMProcess["LLM Interpretation<br/>(Natural Language)"]
+    LLMCheck -->|No| VoiceInterp
+
+    LLMProcess --> LLMResult{"LLM<br/>Interpreted?"}
+    LLMResult -->|Yes| ExecuteLLM["Execute LLM<br/>Command"]
+    LLMResult -->|No| VoiceInterp
+
+    VoiceInterp["Voice Interpreter<br/>(Legacy Fallback)"] --> InterpResult{"Interpreted?"}
+    InterpResult -->|Yes| ExecuteInterp["Execute Interpreted<br/>Command"]
+    InterpResult -->|No| Failure["Return Failure<br/>'Unknown command'"]
+
+    ExecuteDynamic --> Success["HandlerResult.Success"]
+    ExecuteStatic --> Success
+    ExecuteNLU --> Success
+    ExecuteLLM --> Success
+    ExecuteInterp --> Success
+
+    style Start fill:#4dabf7,stroke:#1864ab,color:#fff
+    style Success fill:#69db7c,stroke:#2b8a3e,color:#fff
+    style Failure fill:#ff6b6b,stroke:#c92a2a,color:#fff
+    style ReturnAmbiguous fill:#fcc419,stroke:#e67700,color:#000
+    style ExecuteDynamic fill:#9775fa,stroke:#6741d9,color:#fff
+    style ExecuteStatic fill:#9775fa,stroke:#6741d9,color:#fff
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h4>5-Level Priority Matching System</h4>
+            <ol>
+                <li><span class="step-badge">1</span><strong>Dynamic VUID Lookup:</strong> Direct element match using screen-scraped VUIDs (fastest)</li>
+                <li><span class="step-badge">2</span><strong>Dynamic Fuzzy Match:</strong> Handles voice variations with 85%+ confidence threshold</li>
+                <li><span class="step-badge">3</span><strong>Static Handler Lookup:</strong> System commands in HandlerRegistry by priority</li>
+                <li><span class="step-badge">4</span><strong>NLU Classification:</strong> Semantic matching via BERT-based model</li>
+                <li><span class="step-badge">5</span><strong>LLM Interpretation:</strong> Natural language fallback using large language model</li>
+                <li><span class="step-badge">6</span><strong>Voice Interpreter:</strong> Legacy keyword mapping (final fallback)</li>
+            </ol>
+        </div>
+
+        <div class="diagram-container">
+            <h3>Handler Execution Flow</h3>
+            <div class="mermaid">
+flowchart TD
+    Start(["Handler.execute(command)"]) --> GetAction["Get Normalized Action<br/>command.phrase.lowercase()"]
+    GetAction --> MatchAction{"Match Against<br/>supportedActions"}
+
+    MatchAction -->|"back/home/recents"| SystemExec["SystemExecutor<br/>.goBack() / .goHome()"]
+    MatchAction -->|"scroll/swipe"| NavExec["NavigationExecutor<br/>.scrollUp() / .scrollDown()"]
+    MatchAction -->|"open/launch"| AppExec["IAppLauncher<br/>.launchApp(packageName)"]
+    MatchAction -->|"click/tap"| UICheck{"Has VUID?"}
+    MatchAction -->|"type/delete"| InputExec["InputExecutor<br/>.enterText() / .deleteCharacter()"]
+    MatchAction -->|No Match| NotHandled["Return NotHandled"]
+
+    UICheck -->|Yes| UIVuid["UIExecutor<br/>.clickByVuid(vuid)"]
+    UICheck -->|No| UIText["UIExecutor<br/>.clickByText(target)"]
+
+    UIText --> MultiMatch{"Multiple<br/>Matches?"}
+    MultiMatch -->|Yes| Disambiguate["Show Disambiguation<br/>(numbered overlay)"]
+    MultiMatch -->|No| ExecuteClick["Execute Click"]
+
+    Disambiguate --> WaitNumber["Wait for Number<br/>Selection"]
+    WaitNumber --> ExecuteClick
+
+    SystemExec --> CheckResult{"Executor<br/>Success?"}
+    NavExec --> CheckResult
+    AppExec --> CheckResult
+    UIVuid --> CheckResult
+    ExecuteClick --> CheckResult
+    InputExec --> CheckResult
+
+    CheckResult -->|true| Success["HandlerResult.Success<br/>(message)"]
+    CheckResult -->|false| Failure["HandlerResult.Failure<br/>(reason)"]
+
+    style Start fill:#4dabf7,stroke:#1864ab,color:#fff
+    style Success fill:#69db7c,stroke:#2b8a3e,color:#fff
+    style Failure fill:#ff6b6b,stroke:#c92a2a,color:#fff
+    style NotHandled fill:#868e96,stroke:#495057,color:#fff
+    style Disambiguate fill:#fcc419,stroke:#e67700,color:#000
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h4>Handler Responsibilities</h4>
+            <ul>
+                <li><strong>SystemHandler:</strong> System navigation (back, home, recents, notifications, lock)</li>
+                <li><strong>NavigationHandler:</strong> Scroll and swipe actions (up/down/left/right)</li>
+                <li><strong>AppHandler:</strong> App launching with fuzzy name matching and alias support</li>
+                <li><strong>UIHandler:</strong> Element interactions with VUID priority and disambiguation</li>
+                <li><strong>InputHandler:</strong> Text input with validation and clipboard operations</li>
+            </ul>
+        </div>
+
+        <div class="diagram-container">
+            <h3>UI Disambiguation Flow</h3>
+            <div class="mermaid">
+flowchart TD
+    Start(["User: 'click Submit'"]) --> GetElements["Get Screen Elements<br/>executor.getScreenElements()"]
+    GetElements --> FindMatches["ElementDisambiguator<br/>.findMatches(query)"]
+
+    FindMatches --> MatchCount{"Match<br/>Count?"}
+
+    MatchCount -->|0| NoMatch["HandlerResult.Failure<br/>'Could not find element'"]
+    MatchCount -->|1| SingleMatch["Execute Click<br/>on Single Match"]
+    MatchCount -->|2+| MultiMatch["Multiple Matches<br/>Need Disambiguation"]
+
+    MultiMatch --> ShowOverlay["Show Numbered Overlay<br/>ONLY on matching elements"]
+    ShowOverlay --> Announce["TTS Announce:<br/>'3 Submit found. Say number.'"]
+    Announce --> AwaitResult["Return AwaitingSelection<br/>(matchCount, message)"]
+
+    AwaitResult --> UserSays["User Says: 'two'"]
+    UserSays --> ParseNumber["handleNumberSelection(2)"]
+    ParseNumber --> ValidNumber{"Valid<br/>Selection?"}
+
+    ValidNumber -->|Yes| ExecuteSelected["Execute Click<br/>on Element #2"]
+    ValidNumber -->|No| InvalidMsg["'Invalid selection: 2'"]
+
+    ExecuteSelected --> HideOverlay["Hide Disambiguation<br/>Overlay"]
+    HideOverlay --> Success["HandlerResult.Success"]
+
+    SingleMatch --> Success
+    InvalidMsg --> AwaitResult
+
+    style Start fill:#4dabf7,stroke:#1864ab,color:#fff
+    style Success fill:#69db7c,stroke:#2b8a3e,color:#fff
+    style NoMatch fill:#ff6b6b,stroke:#c92a2a,color:#fff
+    style ShowOverlay fill:#fcc419,stroke:#e67700,color:#000
+    style AwaitResult fill:#fcc419,stroke:#e67700,color:#000
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h4>Disambiguation Design Principles</h4>
+            <ul>
+                <li><strong>Selective Numbering:</strong> Numbers shown ONLY on matching elements, not all screen elements</li>
+                <li><strong>Voice Feedback:</strong> TTS announces match count and prompts for number selection</li>
+                <li><strong>Timeout Support:</strong> Can be cancelled via "cancel" command or timeout</li>
+                <li><strong>Match Modes:</strong> EXACT for short queries (digits), CONTAINS for longer text</li>
+            </ul>
+        </div>
+
+        <div class="diagram-container">
+            <h3>Speech Engine State Machine</h3>
+            <div class="mermaid">
+stateDiagram-v2
+    [*] --> Uninitialized
+
+    Uninitialized --> Initializing: initialize(config)
+    Initializing --> Ready: Success
+    Initializing --> Error: Init Failed
+
+    Ready --> Listening: startListening()
+    Ready --> Destroyed: destroy()
+
+    Listening --> Processing: Speech Detected
+    Listening --> Ready: stopListening()
+    Listening --> Error: Audio Error
+
+    Processing --> Ready: Result Emitted
+    Processing --> Error: Recognition Failed
+
+    Error --> Ready: Recoverable
+    Error --> Destroyed: Not Recoverable
+
+    Destroyed --> [*]
+
+    note right of Ready
+        Engine is ready
+        to start listening
+    end note
+
+    note right of Listening
+        Audio capture active
+        Waiting for speech
+    end note
+
+    note right of Processing
+        Converting speech
+        to text
+    end note
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h4>Engine State Descriptions</h4>
+            <ul>
+                <li><strong>Uninitialized:</strong> Engine created but not yet configured</li>
+                <li><strong>Initializing:</strong> Loading models, setting up audio pipeline</li>
+                <li><strong>Ready:</strong> Fully initialized, waiting for startListening()</li>
+                <li><strong>Listening:</strong> Audio capture active, detecting speech</li>
+                <li><strong>Processing:</strong> Converting detected speech to text</li>
+                <li><strong>Error:</strong> Error occurred (may be recoverable)</li>
+                <li><strong>Destroyed:</strong> Resources released, cannot be reused</li>
+            </ul>
+        </div>
+
+        <div class="diagram-container">
+            <h3>App Launch Flow</h3>
+            <div class="mermaid">
+flowchart TD
+    Start(["User: 'open maps'"]) --> Parse["Parse Command<br/>Extract app name: 'maps'"]
+    Parse --> FindApp["AppHandler.findApp('maps')"]
+
+    FindApp --> SearchOrder["Search Order:"]
+    SearchOrder --> ByName["1. Display Name<br/>'Google Maps'"]
+    ByName --> ByPackage["2. Package Name<br/>'com.google.android.apps.maps'"]
+    ByPackage --> ByAlias["3. Aliases<br/>['maps', 'navigation']"]
+
+    ByAlias --> Found{"App<br/>Found?"}
+    Found -->|No| NotFound["AppLaunchResult<br/>error: 'App not found'"]
+    Found -->|Yes| HasLauncher{"IAppLauncher<br/>Available?"}
+
+    HasLauncher -->|No| SimMode["Simulation Mode<br/>Return success"]
+    HasLauncher -->|Yes| LaunchApp["appLauncher.launchApp<br/>(packageName)"]
+
+    LaunchApp --> LaunchResult{"Launch<br/>Success?"}
+    LaunchResult -->|Yes| Success["AppLaunchResult<br/>success: true, app: info"]
+    LaunchResult -->|No| LaunchFail["AppLaunchResult<br/>error: 'Failed to launch'"]
+
+    SimMode --> Success
+
+    style Start fill:#4dabf7,stroke:#1864ab,color:#fff
+    style Success fill:#69db7c,stroke:#2b8a3e,color:#fff
+    style NotFound fill:#ff6b6b,stroke:#c92a2a,color:#fff
+    style LaunchFail fill:#ff6b6b,stroke:#c92a2a,color:#fff
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h4>App Handler Features</h4>
+            <ul>
+                <li><strong>Auto-Sync:</strong> Syncs with installed apps on initialize() via IAppLauncher</li>
+                <li><strong>Alias Support:</strong> Multiple names per app (e.g., "maps", "navigation", "Google Maps")</li>
+                <li><strong>Fuzzy Matching:</strong> Case-insensitive search across all registered apps</li>
+                <li><strong>Simulation Mode:</strong> Returns success when no launcher available (for testing)</li>
+            </ul>
+        </div>
+    </main>
+
+    <footer>
+        <p>VoiceOSCoreNG v2.0.0 | <a href="index.html">Back to Overview</a></p>
+    </footer>
+
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: savedTheme === 'dark' ? 'dark' : 'default',
+            flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }
+        });
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            location.reload();
+        }
+    </script>
+</body>
+</html>

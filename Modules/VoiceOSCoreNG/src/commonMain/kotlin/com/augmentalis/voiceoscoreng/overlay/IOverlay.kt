@@ -8,8 +8,7 @@
  * Defines the contract for VoiceOSCoreNG overlay system.
  * Platform implementations provide native rendering capabilities.
  *
- * This interface focuses on overlay positioning, sizing, and theming.
- * For data-driven overlay content, see features.IOverlay.
+ * This interface combines visibility control with data-driven content.
  */
 package com.augmentalis.voiceoscoreng.overlay
 
@@ -20,39 +19,38 @@ import com.augmentalis.voiceoscoreng.features.OverlayTheme
  *
  * Provides the contract for overlays that can be:
  * - Shown and hidden (visibility control)
- * - Positioned on screen (x, y coordinates)
- * - Sized (width, height dimensions)
- * - Themed (visual styling via OverlayTheme)
+ * - Updated with data (content display)
+ * - Toggled (convenience method)
  * - Disposed (resource cleanup)
  *
  * Each overlay has:
  * - A unique [id] for identification and management
- * - A [zIndex] for layering control (higher = front)
  * - An [isVisible] state indicating current visibility
  *
  * ## Lifecycle
  *
  * ```
- * Created -> (show/hide)* -> disposed
+ * Created -> (show/hide/toggle/update)* -> disposed
  * ```
  *
  * After [dispose] is called:
- * - [show], [updatePosition], [updateSize], [setTheme] have no effect
+ * - [show], [update] have no effect
  * - [isVisible] returns false
  * - The overlay cannot be reused
  *
  * ## Usage Example
  *
  * ```kotlin
- * val overlay: IOverlay = createOverlay("my-overlay", zIndex = 10)
+ * val overlay: IOverlay = createOverlay("my-overlay")
  *
- * // Configure
- * overlay.setTheme(OverlayTheme.DARK)
- * overlay.updatePosition(100, 200)
- * overlay.updateSize(300, 150)
+ * // Update content
+ * overlay.update(OverlayData.Status("Processing...", CommandState.PROCESSING))
  *
  * // Show
  * overlay.show()
+ *
+ * // Toggle visibility
+ * overlay.toggle()
  *
  * // Later...
  * overlay.hide()
@@ -67,7 +65,8 @@ import com.augmentalis.voiceoscoreng.features.OverlayTheme
  * - iOS: UIWindow or SwiftUI-based views
  * - Desktop: Platform-native floating windows
  *
- * @see OverlayTheme for theming options
+ * @see OverlayData for data types that can be displayed
+ * @see CommandState for command execution states
  */
 interface IOverlay {
 
@@ -93,23 +92,6 @@ interface IOverlay {
      * @return true if the overlay is currently visible to the user
      */
     val isVisible: Boolean
-
-    /**
-     * Z-index for overlay layering.
-     *
-     * Higher values render in front of lower values.
-     * Used to control overlay stacking order when multiple overlays
-     * are visible simultaneously.
-     *
-     * Common z-index conventions:
-     * - 0-9: Background overlays
-     * - 10-49: Standard overlays
-     * - 50-99: Priority overlays (e.g., status indicators)
-     * - 100+: Critical overlays (e.g., error dialogs)
-     *
-     * This value is stable and does not change over the overlay's lifetime.
-     */
-    val zIndex: Int
 
     // ═══════════════════════════════════════════════════════════════════════
     // Visibility Control
@@ -139,9 +121,83 @@ interface IOverlay {
      */
     fun hide()
 
+    /**
+     * Toggle the overlay visibility.
+     *
+     * - If hidden, calls [show]
+     * - If visible, calls [hide]
+     *
+     * Default implementation provided. Override for custom behavior.
+     */
+    fun toggle() {
+        if (isVisible) hide() else show()
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
-    // Positioning
+    // Data Management
     // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Update the overlay with new data.
+     *
+     * The overlay should re-render to reflect the new data.
+     * Has no effect if overlay is disposed.
+     *
+     * @param data The new data to display
+     * @see OverlayData for available data types
+     */
+    fun update(data: OverlayData)
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Lifecycle
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Dispose of the overlay and release all resources.
+     *
+     * After calling this method:
+     * - [isVisible] returns false
+     * - [show] has no effect
+     * - [update] has no effect
+     *
+     * This method is idempotent - calling it multiple times is safe.
+     *
+     * The overlay cannot be reused after disposal. Create a new instance
+     * if needed.
+     */
+    fun dispose()
+}
+
+/**
+ * Extended interface for overlays with positioning and theming support.
+ *
+ * Extends [IOverlay] with additional capabilities:
+ * - Screen positioning (x, y coordinates)
+ * - Sizing (width, height dimensions)
+ * - Theming (visual styling via OverlayTheme)
+ * - Z-index for layering control
+ *
+ * @see IOverlay for base overlay functionality
+ * @see OverlayTheme for theming options
+ */
+interface IPositionedOverlay : IOverlay {
+
+    /**
+     * Z-index for overlay layering.
+     *
+     * Higher values render in front of lower values.
+     * Used to control overlay stacking order when multiple overlays
+     * are visible simultaneously.
+     *
+     * Common z-index conventions:
+     * - 0-9: Background overlays
+     * - 10-49: Standard overlays
+     * - 50-99: Priority overlays (e.g., status indicators)
+     * - 100+: Critical overlays (e.g., error dialogs)
+     *
+     * This value is stable and does not change over the overlay's lifetime.
+     */
+    val zIndex: Int
 
     /**
      * Update the screen position of the overlay.
@@ -157,10 +213,6 @@ interface IOverlay {
      */
     fun updatePosition(x: Int, y: Int)
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // Sizing
-    // ═══════════════════════════════════════════════════════════════════════
-
     /**
      * Update the dimensions of the overlay.
      *
@@ -173,10 +225,6 @@ interface IOverlay {
      * @param height Height in pixels
      */
     fun updateSize(width: Int, height: Int)
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // Theming
-    // ═══════════════════════════════════════════════════════════════════════
 
     /**
      * Apply a theme to the overlay.
@@ -193,25 +241,4 @@ interface IOverlay {
      * @see OverlayTheme for available theme options and customization
      */
     fun setTheme(theme: OverlayTheme)
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // Lifecycle
-    // ═══════════════════════════════════════════════════════════════════════
-
-    /**
-     * Dispose of the overlay and release all resources.
-     *
-     * After calling this method:
-     * - [isVisible] returns false
-     * - [show] has no effect
-     * - [updatePosition] has no effect
-     * - [updateSize] has no effect
-     * - [setTheme] has no effect
-     *
-     * This method is idempotent - calling it multiple times is safe.
-     *
-     * The overlay cannot be reused after disposal. Create a new instance
-     * if needed.
-     */
-    fun dispose()
 }

@@ -28,12 +28,17 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -65,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import com.augmentalis.voiceos.BuildConfig
 import com.augmentalis.voiceos.util.AccessibilityServiceHelper
 import com.augmentalis.voiceos.viewmodel.SettingsViewModel
+import com.augmentalis.voiceoscoreng.service.VoiceOSAccessibilityService
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -82,6 +88,7 @@ fun SettingsScreen(
     var showWakeWordDialog by remember { mutableStateOf(false) }
     var showVoiceEngineDialog by remember { mutableStateOf(false) }
     var showLearnedAppsDialog by remember { mutableStateOf(false) }
+    var showRescanEverythingDialog by remember { mutableStateOf(false) }
 
     // Wake Word Dialog
     if (showWakeWordDialog) {
@@ -203,6 +210,44 @@ fun SettingsScreen(
         )
     }
 
+    // Rescan Everything Confirmation Dialog
+    if (showRescanEverythingDialog) {
+        AlertDialog(
+            onDismissRequest = { showRescanEverythingDialog = false },
+            title = { Text("Rescan Everything") },
+            text = {
+                Column {
+                    Text(
+                        text = "This will clear ALL cached screen data for all apps.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "All screens will be re-scanned on next visit. This may temporarily slow down voice command recognition.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showRescanEverythingDialog = false
+                        VoiceOSAccessibilityService.rescanEverything()
+                        Toast.makeText(context, "All screens cleared. Will rescan on next visit.", Toast.LENGTH_LONG).show()
+                    }
+                ) {
+                    Text("Clear All")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRescanEverythingDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -285,6 +330,55 @@ fun SettingsScreen(
                     checked = settings.audioFeedback,
                     onCheckedChange = { viewModel.setAudioFeedback(it) }
                 )
+            }
+
+            // Scanning Section
+            SettingsSection(title = "Scanning") {
+                SettingsToggleItem(
+                    icon = Icons.Default.Search,
+                    title = "Continuous Monitoring",
+                    subtitle = "Auto-scan when screen changes",
+                    checked = settings.continuousScanningEnabled,
+                    onCheckedChange = { viewModel.setContinuousScanningEnabled(it) }
+                )
+
+                SettingsToggleItem(
+                    icon = Icons.Default.Code,
+                    title = "Developer Mode",
+                    subtitle = "Show developer options",
+                    checked = settings.developerModeEnabled,
+                    onCheckedChange = { viewModel.setDeveloperModeEnabled(it) }
+                )
+            }
+
+            // Developer Options Section (conditionally visible)
+            if (settings.developerModeEnabled) {
+                SettingsSection(title = "Developer Options") {
+                    SettingsToggleItem(
+                        icon = Icons.Default.Visibility,
+                        title = "Show Slider Drawer",
+                        subtitle = "Manual scan control overlay",
+                        checked = settings.showSliderDrawer,
+                        onCheckedChange = { viewModel.setShowSliderDrawer(it) }
+                    )
+
+                    SettingsItem(
+                        icon = Icons.Default.Refresh,
+                        title = "Rescan Current App",
+                        subtitle = "Clear cache for current app",
+                        onClick = {
+                            VoiceOSAccessibilityService.rescanCurrentApp()
+                            Toast.makeText(context, "Current app cache cleared. Will rescan on next screen change.", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+
+                    SettingsItem(
+                        icon = Icons.Default.Build,
+                        title = "Rescan Everything",
+                        subtitle = "Clear all cached screen data",
+                        onClick = { showRescanEverythingDialog = true }
+                    )
+                }
             }
 
             // About Section

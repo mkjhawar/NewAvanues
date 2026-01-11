@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.augmentalis.voiceoscoreng"
-        minSdk = 26
+        minSdk = 28  // Android 9 (Pie) - Required for LLM module dependency
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
@@ -65,6 +65,9 @@ dependencies {
     // For monorepo: uses project reference
     // For standalone: uses composite build substitution (see settings.gradle.kts)
     implementation(project(":Modules:VoiceOSCoreNG"))
+
+    // VoiceOS Database (SQLDelight) - for command persistence
+    implementation(project(":Modules:VoiceOS:core:database"))
 
     // Core Android
     implementation("androidx.core:core-ktx:1.12.0")

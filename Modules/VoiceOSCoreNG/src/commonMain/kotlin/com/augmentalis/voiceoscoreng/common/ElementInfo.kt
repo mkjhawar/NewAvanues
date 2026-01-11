@@ -55,9 +55,20 @@ data class ElementInfo(
     val contentDescription: String = "",
     val bounds: Bounds = Bounds.EMPTY,
     val isClickable: Boolean = false,
+    val isLongClickable: Boolean = false,
     val isScrollable: Boolean = false,
     val isEnabled: Boolean = true,
-    val packageName: String = ""
+    val packageName: String = "",
+    // Compose semantics support (P2)
+    val semanticsRole: String = "",           // e.g., "Button", "Checkbox", "Tab"
+    val stateDescription: String = "",        // e.g., "Checked", "Unchecked", "Selected"
+    val isSelected: Boolean = false,          // For tabs, chips, list items
+    val isChecked: Boolean? = null,           // For checkboxes, switches (null = not applicable)
+    val testTag: String = "",                 // Compose testTag for identification
+    // Dynamic content detection (for static/dynamic UI separation)
+    val isInDynamicContainer: Boolean = false, // True if inside RecyclerView/ListView
+    val containerType: String = "",           // Container class (RecyclerView, ListView, etc.)
+    val listIndex: Int = -1                   // Position in list (-1 if not in list)
 ) {
     /**
      * Get the best available label for voice recognition
@@ -82,6 +93,40 @@ data class ElementInfo(
      */
     val isActionable: Boolean
         get() = isClickable || isScrollable
+
+    /**
+     * Check if this element is dynamic content (list items, chat messages, etc.)
+     * Dynamic elements should be kept in memory only, not persisted to database.
+     *
+     * Detection criteria:
+     * 1. Inside a dynamic container (RecyclerView, ListView)
+     * 2. Very long text (>100 chars) - likely message preview
+     * 3. Email-like patterns ("Unread, , ,")
+     */
+    val isDynamicContent: Boolean
+        get() {
+            // In dynamic container (most reliable)
+            if (isInDynamicContainer) return true
+
+            // Long text indicates message/email preview
+            val textLen = text.length + contentDescription.length
+            if (textLen > 100) return true
+
+            // Email-like patterns
+            val combined = "$text $contentDescription"
+            if (combined.startsWith("Unread,")) return true
+            if (combined.contains(" at \\d+:\\d+\\s*(AM|PM)".toRegex(RegexOption.IGNORE_CASE))) return true
+
+            return false
+        }
+
+    /**
+     * Check if this element should be persisted to database.
+     * Static UI elements (menus, buttons) are persisted.
+     * Dynamic content (list items) is kept in memory only.
+     */
+    val shouldPersist: Boolean
+        get() = !isDynamicContent && hasVoiceContent && isActionable
 
     companion object {
         /**

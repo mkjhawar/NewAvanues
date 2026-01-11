@@ -185,45 +185,6 @@ fun boundsOf(left: Int, top: Int, right: Int, bottom: Int): Bounds {
 fun String.toBounds(): Bounds? = Bounds.fromString(this)
 
 /**
- * Extension to check if a string is a legacy UUID format.
- *
- * Usage:
- * ```kotlin
- * if (identifier.isLegacyUuid()) {
- *     val vuid = identifier.migrateToVuid()
- * }
- * ```
- */
-fun String.isLegacyUuid(): Boolean {
-    return VUIDGenerator.isLegacyUuid(this) || VUIDGenerator.isLegacyVoiceOS(this)
-}
-
-/**
- * Extension to migrate a legacy UUID to VUID format.
- *
- * Usage:
- * ```kotlin
- * val vuid = legacyUuid.migrateToVuid()
- * ```
- */
-fun String.migrateToVuid(): String? {
-    return when {
-        VUIDGenerator.isLegacyVoiceOS(this) -> VUIDGenerator.migrateToCompact(this)
-        VUIDGenerator.isLegacyUuid(this) -> {
-            // For UUID v4, generate a new VUID based on the hash
-            val hash = VUIDGenerator.extractHash(this) ?: return null
-            VUIDGenerator.generate(
-                packageName = "migrated",
-                typeCode = VUIDTypeCode.ELEMENT,
-                elementHash = hash
-            )
-        }
-        VUIDGenerator.isValidVUID(this) -> this // Already a VUID
-        else -> null
-    }
-}
-
-/**
  * Extension to get element type code from class name.
  *
  * Usage:

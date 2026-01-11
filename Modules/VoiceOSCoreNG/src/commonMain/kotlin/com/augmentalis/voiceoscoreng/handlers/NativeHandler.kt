@@ -13,17 +13,49 @@ class NativeHandler : FrameworkHandler {
 
     override val frameworkType: FrameworkType = FrameworkType.NATIVE
 
+    /**
+     * Native handler is a fallback - it can handle any elements
+     * that don't have framework-specific markers.
+     */
+    override val isFallbackHandler: Boolean = true
+
     private val androidWidgets = setOf(
         "android.widget.",
         "android.view.",
         "androidx.appcompat.",
         "androidx.recyclerview.",
-        "com.google.android.material."
+        "androidx.constraintlayout.",
+        "androidx.coordinatorlayout.",
+        "androidx.viewpager2.",
+        "com.google.android.material.",
+        "androidx.compose."  // Fallback for Compose elements not caught by ComposeHandler
+    )
+
+    /**
+     * Specialized framework class prefixes that indicate non-native elements.
+     */
+    private val frameworkMarkers = setOf(
+        "io.flutter.",           // Flutter
+        "com.facebook.react.",   // React Native
+        "com.unity3d.",          // Unity
+        "org.chromium.",         // WebView
+        "android.webkit.WebView" // WebView
     )
 
     override fun canHandle(elements: List<ElementInfo>): Boolean {
-        // Native handler is the fallback - always can handle
-        return true
+        // As fallback handler, we can handle if no framework-specific markers are found
+        // OR if all elements are native Android/iOS
+        if (elements.isEmpty()) return true
+
+        // Check if any element has framework-specific markers
+        val hasFrameworkMarkers = elements.any { element ->
+            frameworkMarkers.any { marker ->
+                element.className.startsWith(marker)
+            }
+        }
+
+        // Can handle if no framework markers detected
+        return !hasFrameworkMarkers
     }
 
     override fun processElements(elements: List<ElementInfo>): List<ElementInfo> {

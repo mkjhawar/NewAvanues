@@ -360,12 +360,14 @@ object MigrationGuide {
 
     /**
      * Check if migration is required for a UUID.
+     * Note: No legacy data exists, so migration is never required.
      *
      * @param identifier The identifier to check
-     * @return true if migration is needed
+     * @return Always false - no legacy migration needed
      */
     fun requiresMigration(identifier: String): Boolean {
-        return LearnAppCoreAdapter.isLegacyUuid(identifier)
+        // No legacy data exists - migration is never required
+        return false
     }
 
     /**

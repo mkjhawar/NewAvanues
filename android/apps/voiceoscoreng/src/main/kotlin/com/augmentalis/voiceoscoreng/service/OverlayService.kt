@@ -1,6 +1,5 @@
 package com.augmentalis.voiceoscoreng.service
 
-import android.accessibilityservice.AccessibilityServiceInfo
 import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
@@ -13,28 +12,26 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.view.accessibility.AccessibilityManager
-import android.widget.FrameLayout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,17 +48,25 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import android.util.Log
 import com.augmentalis.voiceoscoreng.MainActivity
 import com.augmentalis.voiceoscoreng.app.R
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 private const val TAG = "OverlayService"
 
 /**
- * Foreground service that displays a floating overlay FAB
- * on top of all apps for triggering UI exploration.
+ * Foreground service that displays the numbers overlay on top of all apps.
+ * The overlay shows numbered badges on list items for voice selection.
+ *
+ * Settings are accessed via System Settings > Accessibility > VoiceOS > Settings
  */
 class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
     private lateinit var windowManager: WindowManager
-    private var overlayView: View? = null
+    private var numbersOverlayView: View? = null
+    private var dialogOverlayView: View? = null  // Separate touchable overlay for dialogs
+    private val serviceScope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob()
+    )
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
@@ -104,8 +109,9 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             startForeground(NOTIFICATION_ID, createNotification())
             Log.d(TAG, "startForeground done")
             lifecycleRegistry.currentState = Lifecycle.State.STARTED
-            showOverlay()
-            Log.d(TAG, "showOverlay done")
+            showNumbersOverlay()
+            observeDialogState()  // Start observing dialog state
+            Log.d(TAG, "showNumbersOverlay done")
             lifecycleRegistry.currentState = Lifecycle.State.RESUMED
         } catch (e: Exception) {
             Log.e(TAG, "Error in onStartCommand", e)
@@ -115,20 +121,116 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    /**
+     * Called when the app's task is removed (swiped from recent apps).
+     * Restart the service to maintain overlay persistence.
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.d(TAG, "onTaskRemoved - restarting service to maintain overlay")
+        val restartIntent = Intent(applicationContext, OverlayService::class.java)
+        val pendingIntent = PendingIntent.getService(
+            applicationContext,
+            1,
+            restartIntent,
+            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        alarmManager.set(
+            android.app.AlarmManager.ELAPSED_REALTIME,
+            android.os.SystemClock.elapsedRealtime() + 1000,
+            pendingIntent
+        )
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
-        removeOverlay()
+        serviceScope.cancel()
+        removeNumbersOverlay()
+        removeDialogOverlay()
         super.onDestroy()
+    }
+
+    /**
+     * Observe the dialog state and show/hide dialog overlay accordingly.
+     */
+    private fun observeDialogState() {
+        Log.d(TAG, "Starting dialog state observation")
+        serviceScope.launch {
+            VoiceOSAccessibilityService.showAppDetectionDialog.collect { packageName ->
+                Log.d(TAG, "Dialog state changed: packageName=$packageName")
+                if (packageName != null) {
+                    Log.d(TAG, "Showing dialog for package: $packageName")
+                    showDialogOverlay()
+                } else {
+                    Log.d(TAG, "Hiding dialog")
+                    removeDialogOverlay()
+                }
+            }
+        }
+    }
+
+    /**
+     * Show the dialog overlay (touchable).
+     */
+    private fun showDialogOverlay() {
+        if (dialogOverlayView != null) return
+
+        try {
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                else
+                    WindowManager.LayoutParams.TYPE_PHONE,
+                // Touchable but doesn't block other touches outside the dialog
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.FILL
+            }
+
+            val composeView = ComposeView(this).apply {
+                setViewTreeLifecycleOwner(this@OverlayService)
+                setViewTreeSavedStateRegistryOwner(this@OverlayService)
+                setContent {
+                    DialogOverlayContent()
+                }
+            }
+
+            dialogOverlayView = composeView
+            windowManager.addView(composeView, params)
+            Log.d(TAG, "Dialog overlay added to WindowManager")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing dialog overlay", e)
+        }
+    }
+
+    /**
+     * Remove the dialog overlay.
+     */
+    private fun removeDialogOverlay() {
+        dialogOverlayView?.let {
+            try {
+                windowManager.removeView(it)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error removing dialog overlay", e)
+            }
+            dialogOverlayView = null
+            Log.d(TAG, "Dialog overlay removed")
+        }
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "VoiceOS Scanner Overlay",
+                "VoiceOS Overlay",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Shows floating scanner button"
+                description = "VoiceOS accessibility overlay"
                 setShowBadge(false)
             }
 
@@ -155,1133 +257,243 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             .build()
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    private fun showOverlay() {
-        Log.d(TAG, "showOverlay() called, existing view: ${overlayView != null}")
-        if (overlayView != null) return
+    /**
+     * Show the numbers overlay - full screen transparent layer with numbered badges.
+     */
+    private fun showNumbersOverlay() {
+        if (numbersOverlayView != null) return
 
         try {
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,  // Only as big as the FAB
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            else
-                WindowManager.LayoutParams.TYPE_PHONE,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,  // Let touches pass through
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.END or Gravity.CENTER_VERTICAL  // Right edge, centered vertically
-            x = 0
-            y = 0
-        }
-
-        val composeView = ComposeView(this).apply {
-            setViewTreeLifecycleOwner(this@OverlayService)
-            setViewTreeSavedStateRegistryOwner(this@OverlayService)
-            setContent {
-                OverlayContent(
-                    onClose = { stopSelf() }
-                )
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                else
+                    WindowManager.LayoutParams.TYPE_PHONE,
+                // Not focusable, not touchable - just visual overlay
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.FILL
             }
-        }
 
-        // Make it draggable
-        var initialX = 0
-        var initialY = 0
-        var initialTouchX = 0f
-        var initialTouchY = 0f
-
-        composeView.setOnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    initialX = params.x
-                    initialY = params.y
-                    initialTouchX = event.rawX
-                    initialTouchY = event.rawY
-                    false
+            val composeView = ComposeView(this).apply {
+                setViewTreeLifecycleOwner(this@OverlayService)
+                setViewTreeSavedStateRegistryOwner(this@OverlayService)
+                setContent {
+                    NumbersOverlayContent()
                 }
-                MotionEvent.ACTION_MOVE -> {
-                    params.x = initialX - (event.rawX - initialTouchX).toInt()
-                    params.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager.updateViewLayout(composeView, params)
-                    true
-                }
-                else -> false
             }
-        }
 
-        overlayView = composeView
-        windowManager.addView(composeView, params)
-        Log.d(TAG, "Overlay view added to WindowManager")
+            numbersOverlayView = composeView
+            windowManager.addView(composeView, params)
+            Log.d(TAG, "Numbers overlay added to WindowManager")
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing overlay", e)
+            Log.e(TAG, "Error showing numbers overlay", e)
         }
     }
 
-    private fun removeOverlay() {
-        overlayView?.let {
-            windowManager.removeView(it)
-            overlayView = null
+    private fun removeNumbersOverlay() {
+        numbersOverlayView?.let {
+            try {
+                windowManager.removeView(it)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error removing numbers overlay", e)
+            }
+            numbersOverlayView = null
         }
     }
 }
 
-/**
- * Check if accessibility service is enabled at the system level (fallback check)
- */
-private fun isAccessibilityServiceEnabled(context: Context): Boolean {
-    val accessibilityManager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
-        ?: return false
-
-    val enabledServices = accessibilityManager.getEnabledAccessibilityServiceList(
-        AccessibilityServiceInfo.FEEDBACK_ALL_MASK
-    )
-
-    return enabledServices.any { serviceInfo ->
-        val serviceId = serviceInfo.id
-        serviceId.contains("VoiceOSAccessibilityService") ||
-        serviceInfo.resolveInfo?.serviceInfo?.packageName == context.packageName
-    }
-}
+// ═══════════════════════════════════════════════════════════════════════════════
+// Numbers Overlay - Shows numbered badges on list items for voice selection
+// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Result of export operation
+ * Full-screen overlay that displays numbered badges at element positions.
+ * Users can say "first", "second", "1", "2", etc. to select items.
  */
-data class ExportResult(
-    val success: Boolean,
-    val fileName: String,
-    val fullPath: String,
-    val message: String
-)
-
-/**
- * Export scan results to a markdown file in the app's external files directory
- */
-private fun exportResultsToMarkdown(context: Context, result: ExplorationResult): ExportResult {
-    return try {
-        val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
-        val fileName = "scan_results_$timestamp.md"
-
-        val markdown = buildString {
-            appendLine("# VoiceOSCoreNG Scan Results")
-            appendLine()
-            appendLine("**Scan Time:** ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date(result.timestamp))}")
-            appendLine("**Duration:** ${result.duration}ms")
-            appendLine("**Package(s):** ${result.packageName}")
-            appendLine()
-
-            appendLine("## Summary")
-            appendLine()
-            appendLine("| Metric | Value |")
-            appendLine("|--------|-------|")
-            appendLine("| Total Elements | ${result.totalElements} |")
-            appendLine("| Clickable | ${result.clickableElements} |")
-            appendLine("| Scrollable | ${result.scrollableElements} |")
-            appendLine("| Unique Hashes | ${result.deduplicationStats.uniqueHashes} |")
-            appendLine("| Duplicates | ${result.deduplicationStats.duplicateCount} |")
-            appendLine("| Commands Generated | ${result.commands.size} |")
-            appendLine()
-
-            appendLine("## VUIDs (${result.vuids.size} elements)")
-            appendLine()
-            appendLine("| # | Label | VUID | Type | Clickable |")
-            appendLine("|---|-------|------|------|-----------|")
-            result.vuids.forEachIndexed { index, vuidInfo ->
-                // Use derived label from elementLabels map (includes labels from children)
-                val label = result.elementLabels[index]
-                    ?: vuidInfo.element.voiceLabel.ifBlank { vuidInfo.element.className.substringAfterLast(".") }
-                val type = vuidInfo.element.className.substringAfterLast(".")
-                val clickable = if (vuidInfo.element.isClickable) "✓" else ""
-                appendLine("| $index | ${label.take(30)} | `${vuidInfo.vuid}` | $type | $clickable |")
-            }
-            appendLine()
-
-            appendLine("## Hierarchy")
-            appendLine()
-            appendLine("```")
-            result.hierarchy.forEach { node ->
-                val indent = "  ".repeat(node.depth)
-                val marker = if (node.childCount > 0) "▼" else "•"
-                val element = result.elements.getOrNull(node.index)
-                // Use derived label from elementLabels map
-                val label = result.elementLabels[node.index]
-                    ?: element?.voiceLabel?.ifBlank { null } ?: ""
-                val vuid = result.vuids.getOrNull(node.index)?.vuid ?: ""
-                val extra = buildString {
-                    if (label.isNotBlank() && label != node.className) append(" \"$label\"")
-                    if (element?.isClickable == true) append(" [click]")
-                    if (vuid.isNotBlank()) append(" → $vuid")
-                }
-                appendLine("$indent$marker ${node.className}$extra")
-            }
-            appendLine("```")
-            appendLine()
-
-            appendLine("## Commands (${result.commands.size})")
-            appendLine()
-            if (result.commands.isNotEmpty()) {
-                appendLine("| Voice Command | Element Type | Label Source | Target VUID |")
-                appendLine("|---------------|--------------|--------------|-------------|")
-                result.commands.forEach { cmd ->
-                    val elemType = cmd.element.className.substringAfterLast(".")
-                    val labelSource = when {
-                        cmd.element.text.isNotBlank() -> "text"
-                        cmd.element.contentDescription.isNotBlank() -> "contentDesc"
-                        cmd.element.resourceId.isNotBlank() -> "resourceId"
-                        cmd.derivedLabel.isNotBlank() -> "child text"
-                        else -> "unknown"
-                    }
-                    appendLine("| \"${cmd.phrase}\" | $elemType | $labelSource | `${cmd.targetVuid}` |")
-                }
-            } else {
-                appendLine("*No commands generated*")
-            }
-            appendLine()
-
-            if (result.deduplicationStats.duplicateElements.isNotEmpty()) {
-                appendLine("## Duplicates (${result.deduplicationStats.duplicateCount})")
-                appendLine()
-                appendLine("| Element | Hash | First Seen Index |")
-                appendLine("|---------|------|------------------|")
-                result.deduplicationStats.duplicateElements.forEach { dup ->
-                    // Use derived label from elementLabels using firstSeenIndex
-                    val label = result.elementLabels[dup.firstSeenIndex]
-                        ?: dup.element.voiceLabel.ifBlank { dup.element.className.substringAfterLast(".") }
-                    appendLine("| $label | `${dup.hash.take(16)}` | ${dup.firstSeenIndex} |")
-                }
-                appendLine()
-            }
-
-            appendLine("## AVU Output")
-            appendLine()
-            appendLine("```yaml")
-            appendLine(result.avuOutput)
-            appendLine("```")
-            appendLine()
-
-            appendLine("---")
-            appendLine("*Generated by VoiceOSCoreNG Scanner*")
-        }
-
-        // Write to app's external files directory (accessible via file manager)
-        val dir = context.getExternalFilesDir(null) ?: context.filesDir
-        val file = java.io.File(dir, fileName)
-        file.writeText(markdown)
-
-        Log.d(TAG, "Exported scan results to: ${file.absolutePath}")
-        ExportResult(
-            success = true,
-            fileName = fileName,
-            fullPath = file.absolutePath,
-            message = "Scan results exported successfully"
-        )
-    } catch (e: Exception) {
-        Log.e(TAG, "Failed to export results", e)
-        ExportResult(
-            success = false,
-            fileName = "",
-            fullPath = "",
-            message = "Export failed: ${e.message}"
-        )
-    }
-}
-
 @Composable
-private fun OverlayContent(onClose: () -> Unit) {
-    var drawerOpen by remember { mutableStateOf(false) }
-    var showResults by remember { mutableStateOf(false) }
-    var testModeEnabled by remember { mutableStateOf(true) }
-    var showConfigPanel by remember { mutableStateOf(false) }
-    var showDevSettings by remember { mutableStateOf(false) }
-    var devSettingsExpanded by remember { mutableStateOf(false) }  // Expandable section in drawer
+private fun NumbersOverlayContent() {
+    val showOverlay by VoiceOSAccessibilityService.showNumbersOverlayComputed.collectAsState()
+    val items by VoiceOSAccessibilityService.numberedOverlayItems.collectAsState()
+    val mode by VoiceOSAccessibilityService.numbersOverlayMode.collectAsState()
 
-    // Developer settings state
-    var debugLogging by remember { mutableStateOf(true) }
-    var showVuidsOverlay by remember { mutableStateOf(false) }
-    var autoMinimize by remember { mutableStateOf(true) }
-
-    val context = LocalContext.current
-    val isConnectedFromService by VoiceOSAccessibilityService.isConnected.collectAsState()
-    val isConnectedFromSystem = remember { isAccessibilityServiceEnabled(context) }
-
-    // Use either service StateFlow OR system-level check
-    val isConnected = isConnectedFromService || isConnectedFromSystem
-
-    val explorationResults by VoiceOSAccessibilityService.explorationResults.collectAsState()
-    val lastError by VoiceOSAccessibilityService.lastError.collectAsState()
-
-    MaterialTheme(
-        colorScheme = darkColorScheme()
-    ) {
-        // Compact FAB-based overlay - doesn't block touches on other apps
-        Column(
-            horizontalAlignment = Alignment.End
-        ) {
-            // Menu panel (shown when FAB is tapped)
-            if (drawerOpen) {
-                Card(
-                    modifier = Modifier
-                        .width(240.dp)
-                        .padding(end = 8.dp, bottom = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2E)),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        // Status
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (isConnected) Icons.Default.CheckCircle else Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = if (isConnected) Color(0xFF10B981) else Color(0xFFDC2626),
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (isConnected) "Connected" else "Enable Accessibility",
-                                fontSize = 10.sp,
-                                color = Color.Gray
-                            )
-                        }
-
-                        // Scan Current App
-                        FabMenuItem(
-                            icon = Icons.Default.PlayArrow,
-                            text = "Scan App",
-                            iconColor = Color(0xFF3B82F6),
-                            enabled = isConnected,
-                            onClick = {
-                                VoiceOSAccessibilityService.exploreCurrentApp()
-                                showResults = true
-                                drawerOpen = false
-                            }
-                        )
-
-                        // Scan All Windows
-                        FabMenuItem(
-                            icon = Icons.Default.Explore,
-                            text = "Scan All",
-                            iconColor = Color(0xFF6B7280),
-                            enabled = isConnected,
-                            onClick = {
-                                VoiceOSAccessibilityService.exploreAllApps()
-                                showResults = true
-                                drawerOpen = false
-                            }
-                        )
-
-                        // Show Results (if available)
-                        if (explorationResults != null) {
-                            FabMenuItem(
-                                icon = Icons.Default.Visibility,
-                                text = if (showResults) "Hide Results" else "Show Results",
-                                iconColor = Color(0xFFF59E0B),
-                                onClick = {
-                                    showResults = !showResults
-                                    drawerOpen = false
-                                }
-                            )
-                        }
-
-                        // Test Mode Toggle
-                        FabMenuItem(
-                            icon = Icons.Default.Science,
-                            text = if (testModeEnabled) "Test: ON" else "Test: OFF",
-                            iconColor = if (testModeEnabled) Color(0xFF10B981) else Color(0xFFDC2626),
-                            onClick = { testModeEnabled = !testModeEnabled }
-                        )
-
-                        // Developer Settings
-                        FabMenuItem(
-                            icon = Icons.Default.Settings,
-                            text = "Dev Settings",
-                            iconColor = Color(0xFF6366F1),
-                            onClick = { devSettingsExpanded = !devSettingsExpanded }
-                        )
-
-                        // Dev settings expanded content
-                        if (devSettingsExpanded) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(Color(0xFF2D2D3D), RoundedCornerShape(8.dp))
-                                    .padding(8.dp)
-                            ) {
-                                CompactToggle("Debug Log", debugLogging) { debugLogging = it }
-                                CompactToggle("Show VUIDs", showVuidsOverlay) { showVuidsOverlay = it }
-                                CompactToggle("Auto-min", autoMinimize) { autoMinimize = it }
-                            }
-                        }
-
-                        Divider(color = Color.Gray.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
-
-                        // Close Overlay
-                        FabMenuItem(
-                            icon = Icons.Default.Close,
-                            text = "Close",
-                            iconColor = Color.Gray,
-                            onClick = onClose
-                        )
-                    }
-                }
-            }
-
-            // Results panel (compact, below menu)
-            if (showResults && explorationResults != null) {
-                Card(
-                    modifier = Modifier
-                        .width(300.dp)
-                        .heightIn(max = 350.dp)
-                        .padding(end = 8.dp, bottom = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2E)),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                ) {
-                    ResultsPanel(
-                        result = explorationResults!!,
-                        onClose = { showResults = false }
-                    )
-                }
-            }
-
-            // FAB Button
-            FloatingActionButton(
-                onClick = { drawerOpen = !drawerOpen },
-                modifier = Modifier.size(56.dp),
-                containerColor = if (isConnected) Color(0xFF1E3A5F) else Color(0xFFDC2626),
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Icon(
-                    imageVector = if (drawerOpen) Icons.Default.Close else Icons.Default.Scanner,
-                    contentDescription = "Scanner Menu",
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-        }
+    // Don't show if mode is OFF or if computed visibility says no
+    if (!showOverlay) {
+        return
     }
-}
 
-@Composable
-private fun FabMenuItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    text: String,
-    iconColor: Color,
-    enabled: Boolean = true,
-    onClick: () -> Unit
-) {
-    Row(
+    // For AUTO mode, also check if there are items
+    if (mode == VoiceOSAccessibilityService.Companion.NumbersOverlayMode.AUTO && items.isEmpty()) {
+        return
+    }
+
+    // Full-screen transparent container
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(40.dp)  // Fixed height for consistency
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .fillMaxSize()
+            .background(Color.Transparent)
     ) {
-        // Icon with consistent container
-        Surface(
-            modifier = Modifier.size(28.dp),
-            shape = RoundedCornerShape(6.dp),
-            color = if (enabled) iconColor.copy(alpha = 0.15f) else Color.Gray.copy(alpha = 0.1f)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (enabled) iconColor else Color.Gray,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(5.dp)
+        // Draw numbered badge for each item
+        items.forEach { item ->
+            NumberBadge(item)
+        }
+
+        // Instruction panel at bottom
+        if (items.isNotEmpty()) {
+            NumbersInstructionPanel(
+                itemCount = items.size,
+                modifier = Modifier.align(Alignment.BottomCenter)
             )
         }
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = text,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color = if (enabled) Color.White else Color.Gray,
-            modifier = Modifier.weight(1f)
-        )
     }
 }
 
+/**
+ * Dialog overlay content - shown in a separate touchable overlay.
+ */
 @Composable
-private fun CompactToggle(
-    label: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(32.dp)
-            .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = Color.White,
-            modifier = Modifier.weight(1f)
-        )
-        // Custom compact toggle instead of oversized Switch
+private fun DialogOverlayContent() {
+    val showAppDialog by VoiceOSAccessibilityService.showAppDetectionDialog.collectAsState()
+    val appName by VoiceOSAccessibilityService.currentDetectedAppName.collectAsState()
+
+    showAppDialog?.let { packageName ->
         Box(
-            modifier = Modifier
-                .width(36.dp)
-                .height(20.dp)
-                .background(
-                    color = if (checked) Color(0xFF10B981) else Color(0xFF4B5563),
-                    shape = RoundedCornerShape(10.dp)
-                )
-                .clickable { onCheckedChange(!checked) },
-            contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(2.dp)
-                    .size(16.dp)
-                    .background(Color.White, CircleShape)
-            )
-        }
-    }
-}
-
-@Composable
-private fun DrawerActionButton(
-    text: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconColor: Color,
-    enabled: Boolean = true,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Text label with rounded background
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = Color.White,
-            shadowElevation = 1.dp,
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = text,
-                fontSize = 13.sp,
-                color = if (enabled) Color(0xFF374151) else Color.Gray,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        // Icon with colored background
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = if (enabled) iconColor else Color.Gray,
-            modifier = Modifier.size(44.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(10.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun DrawerSettingsToggle(
-    label: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, fontSize = 11.sp, color = Color(0xFF374151))
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = Modifier.height(20.dp),
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = Color(0xFF10B981),
-                uncheckedThumbColor = Color.Gray,
-                uncheckedTrackColor = Color.LightGray
-            )
-        )
-    }
-}
-
-@Composable
-private fun ConfigRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, color = Color.Gray, fontSize = 11.sp)
-        Text(value, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-    }
-}
-
-@Composable
-private fun FeatureBadge(name: String, enabled: Boolean) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = if (enabled) Color(0xFF10B981).copy(alpha = 0.2f) else Color.Gray.copy(alpha = 0.2f),
-        modifier = Modifier.padding(end = 4.dp, top = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (enabled) "✓" else "✗",
-                color = if (enabled) Color(0xFF10B981) else Color.Gray,
-                fontSize = 10.sp
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(name, color = Color.White, fontSize = 10.sp)
-        }
-    }
-}
-
-@Composable
-private fun SettingsToggle(
-    label: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = Color.White, fontSize = 12.sp)
-            Text(description, color = Color.Gray, fontSize = 10.sp)
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = Color(0xFF10B981),
-                uncheckedThumbColor = Color.Gray,
-                uncheckedTrackColor = Color.DarkGray
-            )
-        )
-    }
-}
-
-@Composable
-private fun MenuButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    text: String,
-    enabled: Boolean = true,
-    onClick: () -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(12.dp)
-            .then(if (!enabled) Modifier else Modifier)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (enabled) Color.White else Color.Gray,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = text,
-            fontSize = 14.sp,
-            color = if (enabled) Color.White else Color.Gray
-        )
-    }
-}
-
-@Composable
-private fun ResultsPanel(
-    result: ExplorationResult,
-    onClose: () -> Unit
-) {
-    var selectedTab by remember { mutableStateOf(0) }
-    var isExpanded by remember { mutableStateOf(false) }
-    var showExportDialog by remember { mutableStateOf(false) }
-    var exportResult by remember { mutableStateOf<ExportResult?>(null) }
-    val context = LocalContext.current
-    val tabs = listOf("Summary", "VUIDs", "Hierarchy", "Duplicates", "Commands", "AVU")
-
-    // Export result card (overlay instead of dialog - dialogs don't work in Service context)
-    if (showExportDialog && exportResult != null) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f))
-                .clickable { showExportDialog = false },
+            modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Card(
+            AppDetectionDialog(
+                appName = appName ?: packageName,
+                packageName = packageName,
                 modifier = Modifier
-                    .width(300.dp)
-                    .padding(16.dp)
-                    .clickable(enabled = false) {},  // Consume clicks
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2E)),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = if (exportResult!!.success) "Export Successful" else "Export Failed",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    if (exportResult!!.success) {
-                        Text("File saved:", color = Color.Gray, fontSize = 12.sp)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = exportResult!!.fileName,
-                            color = Color(0xFF10B981),
-                            fontWeight = FontWeight.Medium
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Location:", color = Color.Gray, fontSize = 12.sp)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = exportResult!!.fullPath,
-                            color = Color.White,
-                            fontSize = 11.sp
-                        )
-                    } else {
-                        Text(
-                            text = exportResult!!.message,
-                            color = Color(0xFFEF4444)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(onClick = { showExportDialog = false }) {
-                            Text("OK", color = Color(0xFF10B981))
-                        }
-                    }
-                }
-            }
+            )
         }
     }
+}
+
+/**
+ * Dialog shown when user enters a target app for the first time.
+ * Asks user how they want to handle numbers overlay for this app.
+ */
+@Composable
+private fun AppDetectionDialog(
+    appName: String,
+    packageName: String,
+    modifier: Modifier = Modifier
+) {
+    // Semi-transparent backdrop
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.6f))
+    )
 
     Card(
-        modifier = Modifier
-            .then(
-                if (isExpanded) {
-                    Modifier.fillMaxWidth().fillMaxHeight(0.85f)
-                } else {
-                    Modifier.width(320.dp).heightIn(max = 400.dp)
-                }
+        modifier = modifier
+            .padding(24.dp)
+            .widthIn(max = 320.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2E)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Title
+            Text(
+                text = "Enable Voice Numbers?",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
             )
-            .padding(4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1E1E2E)
-        ),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column {
-            // Header with expand and export buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Scan Results",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Row {
-                    // Export button
-                    IconButton(
-                        onClick = {
-                            exportResult = exportResultsToMarkdown(context, result)
-                            showExportDialog = true
-                        },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Save,
-                            contentDescription = "Export",
-                            tint = Color(0xFF10B981),
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    // Expand/collapse button
-                    IconButton(
-                        onClick = { isExpanded = !isExpanded },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            if (isExpanded) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                            contentDescription = if (isExpanded) "Collapse" else "Expand",
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(onClick = onClose, modifier = Modifier.size(24.dp)) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
 
-            // Tabs
-            ScrollableTabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = Color.Transparent,
-                contentColor = Color.White,
-                edgePadding = 8.dp
-            ) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = { Text(title, fontSize = 11.sp) }
-                    )
-                }
-            }
-
-            // Content
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(12.dp)
-            ) {
-                when (selectedTab) {
-                    0 -> SummaryTab(result)
-                    1 -> VUIDsTab(result)
-                    2 -> HierarchyTab(result)
-                    3 -> DuplicatesTab(result)
-                    4 -> CommandsTab(result)
-                    5 -> AVUTab(result)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SummaryTab(result: ExplorationResult) {
-    LazyColumn {
-        item {
-            StatRow("Package", result.packageName)
-            StatRow("Total Elements", result.totalElements.toString())
-            StatRow("Clickable", result.clickableElements.toString())
-            StatRow("Scrollable", result.scrollableElements.toString())
-            StatRow("Scan Time", "${result.duration}ms")
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Deduplication", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 12.sp)
-            StatRow("Unique Hashes", result.deduplicationStats.uniqueHashes.toString())
-            StatRow("Duplicates Found", result.deduplicationStats.duplicateCount.toString())
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Commands", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 12.sp)
-            StatRow("Generated", result.commands.size.toString())
-        }
-    }
-}
 
-@Composable
-private fun StatRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, color = Color.Gray, fontSize = 11.sp)
-        Text(value, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-    }
-}
+            // App name
+            Text(
+                text = appName,
+                color = Color(0xFF6366F1),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
 
-@Composable
-private fun VUIDsTab(result: ExplorationResult) {
-    LazyColumn {
-        val vuidsToShow = result.vuids.take(50)
-        items(vuidsToShow.size) { index ->
-            val vuidInfo = vuidsToShow[index]
-            // Use derived label from elementLabels map
-            val label = result.elementLabels[index]
-                ?: vuidInfo.element.voiceLabel.ifBlank { vuidInfo.element.className.substringAfterLast(".") }
-            val isClickable = vuidInfo.element.isClickable
-            val isScrollable = vuidInfo.element.isScrollable
+            Spacer(modifier = Modifier.height(12.dp))
 
+            // Description
+            Text(
+                text = "This app has list items that can be selected by voice. Would you like to enable numbered badges?",
+                color = Color.Gray,
+                fontSize = 13.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Options
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = label,
-                        color = when {
-                            isClickable -> Color(0xFF10B981)  // Green for clickable
-                            isScrollable -> Color(0xFF3B82F6)  // Blue for scrollable
-                            else -> Color.White
-                        },
-                        fontSize = 11.sp,
-                        fontWeight = if (isClickable || isScrollable) FontWeight.Bold else FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (isClickable) {
-                        Text(
-                            text = "[TAP]",
-                            color = Color(0xFF10B981),
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 4.dp)
+                // Auto (Recommended)
+                DialogButton(
+                    text = "Auto (Recommended)",
+                    color = Color(0xFF10B981),
+                    isPrimary = true,
+                    onClick = {
+                        VoiceOSAccessibilityService.handleAppDetectionResponse(
+                            packageName,
+                            VoiceOSAccessibilityService.Companion.AppNumbersPreference.AUTO
                         )
                     }
-                    if (isScrollable) {
-                        Text(
-                            text = "[SCROLL]",
-                            color = Color(0xFF3B82F6),
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 4.dp)
-                        )
-                    }
-                }
-                Text(
-                    text = "VUID: ${vuidInfo.vuid}",
-                    color = Color(0xFF6366F1),
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace
                 )
-                // Show the command if this element has one
-                result.commands.find { it.element == vuidInfo.element }?.let { cmd ->
-                    Text(
-                        text = "Voice: \"${cmd.derivedLabel}\" → ${cmd.action}",
-                        color = Color(0xFFF59E0B),
-                        fontSize = 9.sp
-                    )
-                }
-                Divider(color = Color.Gray.copy(alpha = 0.2f), modifier = Modifier.padding(top = 4.dp))
-            }
-        }
-        if (result.vuids.size > 50) {
-            item {
-                Text(
-                    text = "... and ${result.vuids.size - 50} more",
-                    color = Color.Gray,
-                    fontSize = 10.sp
-                )
-            }
-        }
-    }
-}
 
-@Composable
-private fun HierarchyTab(result: ExplorationResult) {
-    LazyColumn {
-        items(result.hierarchy.take(100)) { node ->
-            val element = result.elements.getOrNull(node.index)
-            val vuidInfo = result.vuids.getOrNull(node.index)
-            val command = result.commands.find { it.element == element }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = (node.depth * 12).dp, top = 4.dp, bottom = 4.dp)
-            ) {
-                // Main node row with class name
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = if (node.childCount > 0) "▼" else "•",
-                        color = if (node.childCount > 0) Color.White else Color.Gray,
-                        fontSize = 10.sp
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = node.className,
-                        color = when {
-                            element?.isClickable == true -> Color(0xFF10B981) // Green for clickable
-                            element?.isScrollable == true -> Color(0xFF3B82F6) // Blue for scrollable
-                            node.childCount > 0 -> Color.White
-                            else -> Color.Gray
-                        },
-                        fontSize = 10.sp,
-                        fontWeight = if (element?.isClickable == true) FontWeight.Bold else FontWeight.Normal,
-                        fontFamily = FontFamily.Monospace
-                    )
-                    // Clickable/Scrollable badges
-                    if (element?.isClickable == true) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "[TAP]",
-                            color = Color(0xFF10B981),
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Bold
+                // Always Show
+                DialogButton(
+                    text = "Always Show",
+                    color = Color(0xFF3B82F6),
+                    onClick = {
+                        VoiceOSAccessibilityService.handleAppDetectionResponse(
+                            packageName,
+                            VoiceOSAccessibilityService.Companion.AppNumbersPreference.ALWAYS
                         )
                     }
-                    if (element?.isScrollable == true) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "[SCROLL]",
-                            color = Color(0xFF3B82F6),
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Bold
+                )
+
+                // Never
+                DialogButton(
+                    text = "Never",
+                    color = Color(0xFF6B7280),
+                    onClick = {
+                        VoiceOSAccessibilityService.handleAppDetectionResponse(
+                            packageName,
+                            VoiceOSAccessibilityService.Companion.AppNumbersPreference.NEVER
                         )
                     }
-                }
-
-                // Label - use derived label from elementLabels map
-                val derivedLabel = result.elementLabels[node.index]
-                if (derivedLabel != null && derivedLabel != node.className) {
-                    Text(
-                        text = "\"$derivedLabel\"",
-                        color = Color(0xFFF59E0B),
-                        fontSize = 9.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(start = 14.dp)
-                    )
-                }
-
-                // VUID
-                vuidInfo?.let { info ->
-                    Text(
-                        text = "VUID: ${info.vuid}",
-                        color = Color(0xFF6366F1),
-                        fontSize = 8.sp,
-                        fontFamily = FontFamily.Monospace,
-                        modifier = Modifier.padding(start = 14.dp)
-                    )
-                }
-
-                // Command (if generated)
-                command?.let { cmd ->
-                    Text(
-                        text = "→ \"${cmd.phrase}\"",
-                        color = Color(0xFF10B981),
-                        fontSize = 8.sp,
-                        modifier = Modifier.padding(start = 14.dp)
-                    )
-                }
-            }
-        }
-        if (result.hierarchy.size > 100) {
-            item {
-                Text(
-                    text = "... and ${result.hierarchy.size - 100} more nodes",
-                    color = Color.Gray,
-                    fontSize = 10.sp
                 )
-            }
-        }
-    }
-}
 
-@Composable
-private fun DuplicatesTab(result: ExplorationResult) {
-    val stats = result.deduplicationStats
-
-    LazyColumn {
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF2D2D3D))
-            ) {
-                Column(modifier = Modifier.padding(8.dp)) {
-                    Text("Deduplication Stats", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    StatRow("Total Hashes", stats.totalHashes.toString())
-                    StatRow("Unique", stats.uniqueHashes.toString())
-                    StatRow("Duplicates", stats.duplicateCount.toString())
-                    if (stats.totalHashes > 0) {
-                        val ratio = (stats.uniqueHashes.toFloat() / stats.totalHashes * 100).toInt()
-                        StatRow("Uniqueness", "$ratio%")
-                    }
-                }
-            }
-        }
-
-        if (stats.duplicateElements.isEmpty()) {
-            item {
-                Text("No duplicates found!", color = Color.Green, fontSize = 11.sp)
-            }
-        } else {
-            items(stats.duplicateElements.take(20)) { dup ->
-                // Get label from elementLabels using firstSeenIndex (original element)
-                val label = result.elementLabels[dup.firstSeenIndex]
-                    ?: dup.element.className.substringAfterLast(".")
-
-                Column(
+                // Ask Later
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp)
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = label,
-                        color = Color(0xFFF59E0B),
-                        fontSize = 11.sp
-                    )
-                    Text(
-                        text = "Type: ${dup.element.className.substringAfterLast(".")}",
+                        text = "Ask Later",
                         color = Color.Gray,
-                        fontSize = 9.sp
+                        fontSize = 12.sp,
+                        modifier = Modifier
+                            .clickable {
+                                VoiceOSAccessibilityService.dismissAppDetectionDialog()
+                            }
+                            .padding(8.dp)
                     )
-                    Text(
-                        text = "Hash: ${dup.hash.take(16)}...",
-                        color = Color.Gray,
-                        fontSize = 9.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
-                    Text(
-                        text = "First seen at index: ${dup.firstSeenIndex}",
-                        color = Color.Gray,
-                        fontSize = 9.sp
-                    )
-                    Divider(color = Color.Gray.copy(alpha = 0.2f), modifier = Modifier.padding(top = 4.dp))
                 }
             }
         }
@@ -1289,64 +501,163 @@ private fun DuplicatesTab(result: ExplorationResult) {
 }
 
 @Composable
-private fun CommandsTab(result: ExplorationResult) {
-    LazyColumn {
-        items(result.commands.take(30)) { cmd ->
-            Column(
+private fun DialogButton(
+    text: String,
+    color: Color,
+    isPrimary: Boolean = false,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(44.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isPrimary) color else color.copy(alpha = 0.15f),
+            contentColor = if (isPrimary) Color.White else color
+        ),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Text(
+            text = text,
+            fontWeight = if (isPrimary) FontWeight.Bold else FontWeight.Medium,
+            fontSize = 14.sp
+        )
+    }
+}
+
+/**
+ * Individual numbered badge positioned at element bounds.
+ * Uses theme colors from settings.
+ */
+@Composable
+private fun NumberBadge(item: VoiceOSAccessibilityService.Companion.NumberOverlayItem) {
+    // Get theme from settings
+    val theme by VoiceOSAccessibilityService.badgeTheme.collectAsState()
+    val density = LocalDensity.current
+
+    // Position badge at top-left corner of element
+    // Element bounds are in PIXELS, must convert to dp for Compose offset
+    val badgeSize = 28.dp
+    val offsetXPx = (item.left + 8).coerceAtLeast(0)  // Left side, slight inset
+    val offsetYPx = (item.top + 8).coerceAtLeast(0)   // Top of element, slight inset
+
+    // Convert pixels to dp
+    val offsetXDp = with(density) { offsetXPx.toDp() }
+    val offsetYDp = with(density) { offsetYPx.toDp() }
+
+    Box(
+        modifier = Modifier
+            .offset(x = offsetXDp, y = offsetYDp)
+    ) {
+        // Badge circle with number - uses theme colors
+        Box(
+            modifier = Modifier
+                .size(badgeSize)
+                .clip(CircleShape)
+                .background(Color(theme.backgroundColor))
+                .padding(2.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = item.number.toString(),
+                color = Color(theme.textColor),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        // Show short label below badge if available
+        if (item.label.isNotEmpty()) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
+                    .offset(y = badgeSize + 2.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color(0xEE000000))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
             ) {
                 Text(
-                    text = "\"${cmd.phrase}\"",
-                    color = Color(0xFF10B981),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = "Action: ${cmd.action} → ${cmd.targetVuid}",
-                    color = Color.Gray,
+                    text = item.label.take(15),
+                    color = Color.White,
                     fontSize = 9.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-                if (cmd.alternates.isNotEmpty()) {
-                    Text(
-                        text = "Alt: ${cmd.alternates.take(2).joinToString(", ")}",
-                        color = Color.Gray.copy(alpha = 0.7f),
-                        fontSize = 9.sp
-                    )
-                }
-                Divider(color = Color.Gray.copy(alpha = 0.2f), modifier = Modifier.padding(top = 4.dp))
-            }
-        }
-        if (result.commands.size > 30) {
-            item {
-                Text(
-                    text = "... and ${result.commands.size - 30} more commands",
-                    color = Color.Gray,
-                    fontSize = 10.sp
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
     }
 }
 
+/**
+ * Instruction panel shown at bottom of screen.
+ * Supports fade animation based on InstructionBarMode setting.
+ */
 @Composable
-private fun AVUTab(result: ExplorationResult) {
-    LazyColumn {
-        item {
-            Text(
-                text = result.avuOutput.take(2000),
-                color = Color(0xFF6EE7B7),
-                fontSize = 9.sp,
-                fontFamily = FontFamily.Monospace,
-                lineHeight = 12.sp
+private fun NumbersInstructionPanel(
+    itemCount: Int,
+    modifier: Modifier = Modifier
+) {
+    val mode by VoiceOSAccessibilityService.instructionBarMode.collectAsState()
+
+    // Don't show if mode is OFF
+    if (mode == VoiceOSAccessibilityService.Companion.InstructionBarMode.OFF) {
+        return
+    }
+
+    // For AUTO mode, show briefly then fade out
+    var visible by remember { mutableStateOf(true) }
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(durationMillis = 500),
+        label = "instruction_fade"
+    )
+
+    // Trigger fade after delay in AUTO mode
+    LaunchedEffect(mode, itemCount) {
+        if (mode == VoiceOSAccessibilityService.Companion.InstructionBarMode.AUTO) {
+            visible = true
+            kotlinx.coroutines.delay(3000)  // Show for 3 seconds
+            visible = false
+        } else {
+            visible = true  // Always visible in ON mode
+        }
+    }
+
+    // Don't render if completely faded
+    if (alpha <= 0f) return
+
+    Card(
+        modifier = modifier
+            .padding(16.dp)
+            .graphicsLayer { this.alpha = alpha },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xEE000000)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Mic icon
+            Icon(
+                imageVector = Icons.Default.Mic,
+                contentDescription = "Voice",
+                tint = Color(0xFF2196F3),
+                modifier = Modifier.size(28.dp)
             )
-            if (result.avuOutput.length > 2000) {
+            Column {
                 Text(
-                    text = "\n... truncated (${result.avuOutput.length} chars total)",
-                    color = Color.Gray,
-                    fontSize = 9.sp
+                    text = "Say a number to select",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "$itemCount items: \"first\", \"second\", \"1\", \"2\"...",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 11.sp
                 )
             }
         }

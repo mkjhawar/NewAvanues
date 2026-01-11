@@ -53,10 +53,10 @@ include(":Overlay")
 project(":Overlay").projectDir = file("../../../Modules/AVA/Overlay")
 
 include(":LLM")
-project(":LLM").projectDir = file("../../../Modules/AVA/LLM")
+project(":LLM").projectDir = file("../../../Modules/LLM")
 
 include(":RAG")
-project(":RAG").projectDir = file("../../../Modules/AVA/RAG")
+project(":RAG").projectDir = file("../../../Modules/RAG")
 
 include(":Actions")
 project(":Actions").projectDir = file("../../../Modules/AVA/Actions")

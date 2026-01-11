@@ -92,54 +92,12 @@ object VUIDGenerator {
     private const val VUID_TOTAL_LENGTH = 16  // 6 + 1 (hyphen) + 1 (type) + 8 = 16
 
     // Regex pattern for valid VUID: 6 hex chars, hyphen, type code, 8 hex chars
-    private val vuidPattern = Regex("^[0-9a-f]{6}-[bisteclmdg][0-9a-f]{8}$")
+    private val vuidPattern = Regex("^[0-9a-f]{6}-[bisteclmdgkwzra][0-9a-f]{8}$")
 
-    // Class name patterns for type code mapping
-    private val buttonPatterns = setOf(
-        "button", "appcompatbutton", "materialbutton", "imagebutton",
-        "floatingactionbutton", "fab", "extendedFloatingActionButton"
-    )
+    // Regex pattern for simple format VUID: module:abbrev:hash8
+    private val simpleFormatPattern = Regex("^[a-z]{3}:[a-z]{3}:[0-9a-f]{8}$")
 
-    private val inputPatterns = setOf(
-        "edittext", "textinputedittext", "autocompletetextview", "searchview",
-        "textfield", "textinputlayout", "searchbar"
-    )
-
-    private val scrollPatterns = setOf(
-        "scrollview", "horizontalscrollview", "nestedscrollview", "recyclerview",
-        "listview", "gridview", "lazycolumn", "lazyrow", "lazyverticalgrid",
-        "lazyhorizontalgrid", "viewpager", "viewpager2"
-    )
-
-    private val textPatterns = setOf(
-        "textview", "appcompattextview", "materialtextview", "text",
-        "checkedtextview"
-    )
-
-    private val cardPatterns = setOf(
-        "cardview", "materialcardview", "card"
-    )
-
-    private val layoutPatterns = setOf(
-        "linearlayout", "relativelayout", "framelayout", "constraintlayout",
-        "coordinatorlayout", "appbarlayout", "collapsibletoolbarlayout",
-        "row", "column", "box", "surface", "scaffold"
-    )
-
-    private val menuPatterns = setOf(
-        "menu", "popupmenu", "contextmenu", "dropdownmenu", "navigationmenu",
-        "overflowmenu", "optionsmenu", "spinner"
-    )
-
-    private val dialogPatterns = setOf(
-        "dialog", "alertdialog", "bottomsheetdialog", "dialogfragment",
-        "bottomsheet", "modalbottomsheet", "datepickerdialog", "timepickerdialog"
-    )
-
-    private val imagePatterns = setOf(
-        "imageview", "appcompatimageview", "image", "icon",
-        "shapeableimageview", "circleimageview"
-    )
+    private const val HEX_CHARS = "0123456789abcdef"
 
     /**
      * Generate a VUID for a UI element
@@ -208,22 +166,48 @@ object VUIDGenerator {
      * @return The corresponding VUIDTypeCode, defaults to ELEMENT if unknown
      */
     fun getTypeCode(className: String): VUIDTypeCode {
-        val normalizedName = className.trim().lowercase()
+        return TypePatternRegistry.getTypeCode(className)
+    }
 
-        if (normalizedName.isEmpty()) return VUIDTypeCode.ELEMENT
-
-        return when {
-            buttonPatterns.any { normalizedName.contains(it) } -> VUIDTypeCode.BUTTON
-            inputPatterns.any { normalizedName.contains(it) } -> VUIDTypeCode.INPUT
-            scrollPatterns.any { normalizedName.contains(it) } -> VUIDTypeCode.SCROLL
-            textPatterns.any { normalizedName == it || normalizedName.endsWith(it) } -> VUIDTypeCode.TEXT
-            cardPatterns.any { normalizedName.contains(it) } -> VUIDTypeCode.CARD
-            layoutPatterns.any { normalizedName.contains(it) } -> VUIDTypeCode.LAYOUT
-            menuPatterns.any { normalizedName.contains(it) } -> VUIDTypeCode.MENU
-            dialogPatterns.any { normalizedName.contains(it) } -> VUIDTypeCode.DIALOG
-            imagePatterns.any { normalizedName.contains(it) } -> VUIDTypeCode.IMAGE
-            else -> VUIDTypeCode.ELEMENT
+    /**
+     * Generate 8-character random hex hash
+     */
+    fun generateRandomHash8(): String {
+        return buildString {
+            repeat(8) {
+                append(HEX_CHARS[Random.nextInt(16)])
+            }
         }
+    }
+
+    /**
+     * Generate a simple format VUID for internal module entities.
+     *
+     * Simple format: {module}:{abbrev}:{hash8}
+     * Example: ava:elm:a7f3e2c1
+     *
+     * Used for VoiceOS internal entities rather than external app elements.
+     *
+     * @param module The module identifier (e.g., VUIDModule.AVA, VUIDModule.VOICEOS)
+     * @param typeCode The type of element
+     * @return A simple format VUID string
+     */
+    fun generateSimple(module: String, typeCode: VUIDTypeCode): String {
+        val hash = generateRandomHash8()
+        return "$module:${typeCode.abbrev}:$hash"
+    }
+
+    /**
+     * Check if a string is in simple VUID format.
+     *
+     * Simple format: {module}:{abbrev}:{hash8}
+     * Example: ava:elm:a7f3e2c1
+     *
+     * @param vuid The string to check
+     * @return true if in simple format, false otherwise
+     */
+    fun isSimpleFormat(vuid: String): Boolean {
+        return simpleFormatPattern.matches(vuid)
     }
 
     /**
@@ -259,161 +243,4 @@ object VUIDGenerator {
             .lowercase()
     }
 
-    // ==================== Simple Format Generation ====================
-
-    /**
-     * Generate simple VUID: {module}:{type}:{hash8}
-     * Example: ava:msg:a7f3e2c1
-     */
-    fun generateSimple(module: String, typeCode: VUIDTypeCode): String {
-        val hash8 = generateRandomHash8()
-        return "$module:${typeCode.abbrev}:$hash8"
-    }
-
-    /**
-     * Generate 8-character random hex hash
-     */
-    fun generateRandomHash8(): String {
-        return buildString {
-            repeat(8) {
-                append(HEX_CHARS[Random.nextInt(16)])
-            }
-        }
-    }
-
-    private const val HEX_CHARS = "0123456789abcdef"
-
-    // ==================== AVA Convenience Methods ====================
-
-    fun generateMessageVuid(): String = generateSimple(VUIDModule.AVA, VUIDTypeCode.ELEMENT)
-    fun generateConversationVuid(): String = generateSimple(VUIDModule.AVA, VUIDTypeCode.ELEMENT)
-    fun generateDocumentVuid(): String = generateSimple(VUIDModule.AVA, VUIDTypeCode.ELEMENT)
-    fun generateMemoryVuid(): String = generateSimple(VUIDModule.AVA, VUIDTypeCode.ELEMENT)
-
-    // ==================== WebAvanue Convenience Methods ====================
-
-    fun generateTabVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.TAB)
-    fun generateFavoriteVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.ELEMENT)
-    fun generateDownloadVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.ELEMENT)
-    fun generateHistoryVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.ELEMENT)
-    fun generateSessionVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.ELEMENT)
-    fun generateGroupVuid(): String = generateSimple(VUIDModule.WEBAVANUE, VUIDTypeCode.LAYOUT)
-
-    // ==================== Cockpit Convenience Methods ====================
-
-    fun generateRequestVuid(): String = generateSimple(VUIDModule.COCKPIT, VUIDTypeCode.ELEMENT)
-    fun generateWindowVuid(): String = generateSimple(VUIDModule.COCKPIT, VUIDTypeCode.ELEMENT)
-    fun generateStreamVuid(): String = generateSimple(VUIDModule.COCKPIT, VUIDTypeCode.ELEMENT)
-    fun generatePresetVuid(): String = generateSimple(VUIDModule.COCKPIT, VUIDTypeCode.ELEMENT)
-    fun generateDeviceVuid(): String = generateSimple(VUIDModule.COCKPIT, VUIDTypeCode.ELEMENT)
-    fun generateSyncVuid(): String = generateSimple(VUIDModule.COCKPIT, VUIDTypeCode.ELEMENT)
-
-    // ==================== Simple Format Validation ====================
-
-    private val SIMPLE_PATTERN = Regex("^[a-z]{3}:[a-z]{3}:[a-f0-9]{8}$")
-
-    /**
-     * Check if VUID is in simple format (module:type:hash8)
-     */
-    fun isSimpleFormat(vuid: String): Boolean = SIMPLE_PATTERN.matches(vuid)
-
-    // ==================== Legacy Format Detection ====================
-
-    /** Legacy UUID v4 pattern (RFC 4122) */
-    private val LEGACY_UUID_PATTERN = Regex(
-        "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$",
-        RegexOption.IGNORE_CASE
-    )
-
-    /** Legacy VoiceOS pattern: com.pkg.v1.0.0.type-hash12 */
-    private val LEGACY_VOICEOS_PATTERN = Regex(
-        "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+\\.v[0-9.]+\\.[a-z]+-[a-f0-9]{12}$",
-        RegexOption.IGNORE_CASE
-    )
-
-    /**
-     * Check if VUID is in legacy UUID v4 format
-     */
-    fun isLegacyUuid(vuid: String): Boolean = LEGACY_UUID_PATTERN.matches(vuid)
-
-    /**
-     * Check if VUID is in legacy VoiceOS format
-     */
-    fun isLegacyVoiceOS(vuid: String): Boolean = LEGACY_VOICEOS_PATTERN.matches(vuid)
-
-    /**
-     * Check if any valid VUID format (compact, simple, or legacy)
-     */
-    fun isValid(vuid: String): Boolean =
-        isValidVUID(vuid) || isSimpleFormat(vuid) || isLegacyUuid(vuid) || isLegacyVoiceOS(vuid)
-
-    // ==================== Migration Utilities ====================
-
-    /**
-     * VUID format types
-     */
-    enum class VuidFormat {
-        COMPACT,        // a3f2e1-b917cc9dc (16 chars)
-        SIMPLE,         // ava:msg:a7f3e2c1
-        LEGACY_UUID,    // 550e8400-e29b-41d4-a716-446655440000
-        LEGACY_VOICEOS, // com.pkg.v1.0.0.button-a7f3e2c1d4b5
-        UNKNOWN
-    }
-
-    /**
-     * Detect the format of a VUID
-     */
-    fun detectFormat(vuid: String): VuidFormat = when {
-        isValidVUID(vuid) -> VuidFormat.COMPACT
-        isSimpleFormat(vuid) -> VuidFormat.SIMPLE
-        isLegacyUuid(vuid) -> VuidFormat.LEGACY_UUID
-        isLegacyVoiceOS(vuid) -> VuidFormat.LEGACY_VOICEOS
-        else -> VuidFormat.UNKNOWN
-    }
-
-    /**
-     * Migrate legacy VoiceOS VUID to compact format
-     *
-     * @param legacyVuid Legacy VoiceOS VUID (com.pkg.v1.0.0.type-hash12)
-     * @return Compact VUID or null if cannot migrate
-     */
-    fun migrateToCompact(legacyVuid: String): String? {
-        if (!isLegacyVoiceOS(legacyVuid)) return null
-
-        // Parse legacy format: com.pkg.v1.0.0.type-hash12
-        val lastDotIdx = legacyVuid.lastIndexOf('.')
-        val dashIdx = legacyVuid.indexOf('-', lastDotIdx)
-
-        if (lastDotIdx < 0 || dashIdx < 0) return null
-
-        val beforeType = legacyVuid.substring(0, lastDotIdx)
-        val typeName = legacyVuid.substring(lastDotIdx + 1, dashIdx)
-        val hash = legacyVuid.substring(dashIdx + 1).take(8)
-
-        // Extract package name (before .v)
-        val versionIdx = beforeType.indexOf(".v")
-        val packageName = if (versionIdx > 0) beforeType.substring(0, versionIdx) else beforeType
-
-        // Get type code from type name
-        val typeCode = getTypeCode(typeName)
-
-        // Generate compact VUID
-        val pkgHash = generatePackageHash(packageName)
-        return "$pkgHash-${typeCode.code}$hash"
-    }
-
-    /**
-     * Extract hash from any VUID format
-     * Useful for comparison/lookup across format changes
-     *
-     * @param vuid Any VUID format
-     * @return 8-char hash or null if cannot extract
-     */
-    fun extractHash(vuid: String): String? = when (detectFormat(vuid)) {
-        VuidFormat.COMPACT -> vuid.takeLast(8)
-        VuidFormat.SIMPLE -> vuid.split(":").lastOrNull()
-        VuidFormat.LEGACY_UUID -> vuid.replace("-", "").takeLast(8)
-        VuidFormat.LEGACY_VOICEOS -> vuid.substringAfter("-").take(8)
-        VuidFormat.UNKNOWN -> null
-    }
 }

@@ -95,65 +95,52 @@ enum class SpeechEngine {
     /**
      * Check if engine is offline capable
      */
-    fun isOfflineCapable(): Boolean = this in listOf(VOSK, WHISPER, APPLE_SPEECH, VIVOKA)
+    fun isOfflineCapable(): Boolean =
+        SpeechEngineRegistry.getCapabilities(this)?.isOfflineCapable ?: false
 
     /**
      * Check if engine requires API key
      */
-    fun requiresApiKey(): Boolean = this in listOf(GOOGLE_CLOUD, AZURE)
+    fun requiresApiKey(): Boolean =
+        SpeechEngineRegistry.getCapabilities(this)?.requiresApiKey ?: false
 
     /**
      * Check if engine requires commercial license
      */
-    fun requiresCommercialLicense(): Boolean = this == VIVOKA
+    fun requiresCommercialLicense(): Boolean =
+        SpeechEngineRegistry.getCapabilities(this)?.requiresCommercialLicense ?: false
 
     /**
      * Get human-readable display name
      */
-    fun getDisplayName(): String = when (this) {
-        VOSK -> "VOSK Offline"
-        ANDROID_STT -> "Android STT"
-        GOOGLE_CLOUD -> "Google Cloud Speech"
-        WHISPER -> "OpenAI Whisper"
-        AZURE -> "Azure Cognitive Services"
-        APPLE_SPEECH -> "Apple Speech"
-        VIVOKA -> "Vivoka VSDK"
-    }
+    fun getDisplayName(): String =
+        SpeechEngineRegistry.getCapabilities(this)?.displayName ?: name
 
     /**
      * Get estimated memory usage in MB
      */
-    fun getEstimatedMemoryUsage(): Int = when (this) {
-        VOSK -> 30
-        ANDROID_STT -> 20
-        GOOGLE_CLOUD -> 15
-        WHISPER -> 230  // Base model, varies 39-1550MB
-        AZURE -> 10
-        APPLE_SPEECH -> 25
-        VIVOKA -> 60
-    }
+    fun getEstimatedMemoryUsage(): Int =
+        SpeechEngineRegistry.getCapabilities(this)?.memoryUsageMB ?: 50
 
     companion object {
         /**
          * Get engines available on Android platform
          */
-        fun androidEngines(): List<SpeechEngine> = listOf(
-            VOSK, ANDROID_STT, GOOGLE_CLOUD, WHISPER, AZURE, VIVOKA
-        )
+        fun androidEngines(): List<SpeechEngine> =
+            SpeechEngineRegistry.getEnginesForPlatform(Platform.ANDROID)
 
         /**
          * Get engines available on iOS platform
          */
-        fun iosEngines(): List<SpeechEngine> = listOf(
-            APPLE_SPEECH, GOOGLE_CLOUD, AZURE, WHISPER
-        )
+        fun iosEngines(): List<SpeechEngine> =
+            SpeechEngineRegistry.getEnginesForPlatform(Platform.IOS)
 
         /**
          * Get engines available on Desktop platforms
          */
-        fun desktopEngines(): List<SpeechEngine> = listOf(
-            VOSK, GOOGLE_CLOUD, WHISPER, AZURE
-        )
+        fun desktopEngines(): List<SpeechEngine> =
+            SpeechEngineRegistry.getEnginesForPlatform(Platform.WINDOWS) +
+            SpeechEngineRegistry.getEnginesForPlatform(Platform.LINUX)
 
         /**
          * Get default engine for platform
@@ -166,6 +153,117 @@ enum class SpeechEngine {
             Platform.LINUX -> VOSK
         }
     }
+}
+
+/**
+ * Speech engine capabilities configuration.
+ * Allows extending engine properties without modifying the enum.
+ */
+data class SpeechEngineCapabilities(
+    val isOfflineCapable: Boolean,
+    val requiresApiKey: Boolean,
+    val requiresCommercialLicense: Boolean,
+    val displayName: String,
+    val memoryUsageMB: Int,
+    val supportedPlatforms: Set<Platform>
+)
+
+/**
+ * Registry for speech engine capabilities.
+ * Open for extension - new capabilities can be registered without modifying the enum.
+ */
+object SpeechEngineRegistry {
+    private val capabilities = mutableMapOf<SpeechEngine, SpeechEngineCapabilities>()
+
+    init {
+        // Register default capabilities
+        register(SpeechEngine.VOSK, SpeechEngineCapabilities(
+            isOfflineCapable = true,
+            requiresApiKey = false,
+            requiresCommercialLicense = false,
+            displayName = "VOSK Offline",
+            memoryUsageMB = 30,
+            supportedPlatforms = setOf(Platform.ANDROID, Platform.WINDOWS, Platform.LINUX)
+        ))
+        register(SpeechEngine.ANDROID_STT, SpeechEngineCapabilities(
+            isOfflineCapable = false,
+            requiresApiKey = false,
+            requiresCommercialLicense = false,
+            displayName = "Android STT",
+            memoryUsageMB = 20,
+            supportedPlatforms = setOf(Platform.ANDROID)
+        ))
+        register(SpeechEngine.GOOGLE_CLOUD, SpeechEngineCapabilities(
+            isOfflineCapable = false,
+            requiresApiKey = true,
+            requiresCommercialLicense = false,
+            displayName = "Google Cloud Speech",
+            memoryUsageMB = 15,
+            supportedPlatforms = Platform.entries.toSet()
+        ))
+        register(SpeechEngine.WHISPER, SpeechEngineCapabilities(
+            isOfflineCapable = true,
+            requiresApiKey = false,
+            requiresCommercialLicense = false,
+            displayName = "OpenAI Whisper",
+            memoryUsageMB = 230,
+            supportedPlatforms = Platform.entries.toSet()
+        ))
+        register(SpeechEngine.AZURE, SpeechEngineCapabilities(
+            isOfflineCapable = false,
+            requiresApiKey = true,
+            requiresCommercialLicense = false,
+            displayName = "Azure Cognitive Services",
+            memoryUsageMB = 10,
+            supportedPlatforms = Platform.entries.toSet()
+        ))
+        register(SpeechEngine.APPLE_SPEECH, SpeechEngineCapabilities(
+            isOfflineCapable = true,
+            requiresApiKey = false,
+            requiresCommercialLicense = false,
+            displayName = "Apple Speech",
+            memoryUsageMB = 25,
+            supportedPlatforms = setOf(Platform.IOS, Platform.MACOS)
+        ))
+        register(SpeechEngine.VIVOKA, SpeechEngineCapabilities(
+            isOfflineCapable = true,
+            requiresApiKey = false,
+            requiresCommercialLicense = true,
+            displayName = "Vivoka VSDK",
+            memoryUsageMB = 60,
+            supportedPlatforms = setOf(Platform.ANDROID)
+        ))
+    }
+
+    /**
+     * Register capabilities for an engine.
+     * Allows overriding default capabilities or adding new engines.
+     */
+    fun register(engine: SpeechEngine, capabilities: SpeechEngineCapabilities) {
+        this.capabilities[engine] = capabilities
+    }
+
+    /**
+     * Get capabilities for an engine.
+     */
+    fun getCapabilities(engine: SpeechEngine): SpeechEngineCapabilities? = capabilities[engine]
+
+    /**
+     * Get all registered engines.
+     */
+    fun getAllEngines(): Set<SpeechEngine> = capabilities.keys
+
+    /**
+     * Get engines for a specific platform.
+     */
+    fun getEnginesForPlatform(platform: Platform): List<SpeechEngine> =
+        capabilities.filter { platform in it.value.supportedPlatforms }.keys.toList()
+
+    /**
+     * Get offline-capable engines.
+     */
+    fun getOfflineEngines(): List<SpeechEngine> =
+        capabilities.filter { it.value.isOfflineCapable }.keys.toList()
 }
 
 /**

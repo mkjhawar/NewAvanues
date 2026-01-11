@@ -36,11 +36,22 @@ enum class SettingsTab(val title: String, val icon: ImageVector) {
  * - Voice: Confidence Threshold, Speech Engine, Confirmation Mode
  * - Developer: Debug Overlay, Processing Mode, Limits, Framework Detection
  */
+/**
+ * Callbacks for scanning operations in DeveloperSettingsScreen.
+ * These are provided by the app since VoiceOSAccessibilityService is in the app layer.
+ */
+data class ScanningCallbacks(
+    val onSetContinuousMonitoring: (Boolean) -> Unit = {},
+    val onRescanCurrentApp: () -> Unit = {},
+    val onRescanEverything: () -> Unit = {}
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeveloperSettingsScreen(
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    scanningCallbacks: ScanningCallbacks = ScanningCallbacks()
 ) {
     var devModeEnabled by remember { mutableStateOf(LearnAppConfig.DeveloperSettings.enabled) }
     var selectedTab by remember { mutableStateOf(SettingsTab.BASIC) }
@@ -65,12 +76,54 @@ fun DeveloperSettingsScreen(
     var largeTextEnabled by remember { mutableStateOf(false) }
     var reduceMotionEnabled by remember { mutableStateOf(false) }
 
+    // Scanning settings state
+    var continuousScanningEnabled by remember { mutableStateOf(true) }
+    var showSliderDrawer by remember { mutableStateOf(false) }
+    var showRescanConfirmDialog by remember { mutableStateOf(false) }
+
     // Voice settings state
     var confidenceThreshold by remember { mutableStateOf(0.7f) }
     var selectedSpeechEngine by remember { mutableStateOf("System Default") }
     var confirmationMode by remember { mutableStateOf("Always") }
 
     val currentTier = LearnAppDevToggle.getCurrentTier()
+
+    // Rescan Everything Confirmation Dialog
+    if (showRescanConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showRescanConfirmDialog = false },
+            title = { Text("Rescan Everything") },
+            text = {
+                Column {
+                    Text(
+                        text = "This will clear ALL cached screen data for all apps.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "All screens will be re-scanned on next visit. This may temporarily slow down voice command recognition.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showRescanConfirmDialog = false
+                        scanningCallbacks.onRescanEverything()
+                    }
+                ) {
+                    Text("Clear All")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRescanConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     // Determine which tabs to show
     val visibleTabs = if (devModeEnabled) {
@@ -207,7 +260,18 @@ fun DeveloperSettingsScreen(
                     largeTextEnabled = largeTextEnabled,
                     onLargeTextChange = { largeTextEnabled = it },
                     reduceMotionEnabled = reduceMotionEnabled,
-                    onReduceMotionChange = { reduceMotionEnabled = it }
+                    onReduceMotionChange = { reduceMotionEnabled = it },
+                    // Scanning settings
+                    continuousScanningEnabled = continuousScanningEnabled,
+                    onContinuousScanningChange = {
+                        continuousScanningEnabled = it
+                        scanningCallbacks.onSetContinuousMonitoring(it)
+                    },
+                    showSliderDrawer = showSliderDrawer,
+                    onShowSliderDrawerChange = { showSliderDrawer = it },
+                    devModeEnabled = devModeEnabled,
+                    onRescanCurrentApp = { scanningCallbacks.onRescanCurrentApp() },
+                    onRescanEverything = { showRescanConfirmDialog = true }
                 )
 
                 SettingsTab.VOICE -> VoiceSettingsContent(
@@ -295,8 +359,96 @@ private fun BasicSettingsContent(
     largeTextEnabled: Boolean,
     onLargeTextChange: (Boolean) -> Unit,
     reduceMotionEnabled: Boolean,
-    onReduceMotionChange: (Boolean) -> Unit
+    onReduceMotionChange: (Boolean) -> Unit,
+    // Scanning settings
+    continuousScanningEnabled: Boolean,
+    onContinuousScanningChange: (Boolean) -> Unit,
+    showSliderDrawer: Boolean,
+    onShowSliderDrawerChange: (Boolean) -> Unit,
+    devModeEnabled: Boolean,
+    onRescanCurrentApp: () -> Unit,
+    onRescanEverything: () -> Unit
 ) {
+    // Scanning Section (Primary feature)
+    SettingsSection(title = "Scanning", icon = Icons.Default.Search) {
+        FeatureToggle(
+            title = "Continuous Monitoring",
+            description = "Auto-scan when screen changes",
+            checked = continuousScanningEnabled,
+            onCheckedChange = onContinuousScanningChange
+        )
+    }
+
+    // Developer Scanning Options (only visible when dev mode is enabled)
+    if (devModeEnabled) {
+        SettingsSection(title = "Developer Scanning", icon = Icons.Default.Build) {
+            FeatureToggle(
+                title = "Show Slider Drawer",
+                description = "Manual scan control overlay",
+                checked = showSliderDrawer,
+                onCheckedChange = onShowSliderDrawerChange
+            )
+
+            // Rescan Current App button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Rescan Current App",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "Clear cache for current app",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                FilledTonalButton(onClick = onRescanCurrentApp) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Rescan")
+                }
+            }
+
+            // Rescan Everything button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Rescan Everything",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "Clear all cached screen data",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                FilledTonalButton(
+                    onClick = onRescanEverything,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                ) {
+                    Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Clear All")
+                }
+            }
+        }
+    }
+
     SettingsSection(title = "Appearance", icon = Icons.Default.Palette) {
         FeatureToggle(
             title = "Dark Theme",

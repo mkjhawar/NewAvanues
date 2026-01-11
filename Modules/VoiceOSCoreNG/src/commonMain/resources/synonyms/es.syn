@@ -1,0 +1,99 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# VoiceOS Spanish Synonym Pack (Español)
+# Version: 1.0
+# Created: 2026-01-08
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@meta
+language = es
+version = 1.0
+script = latin
+tokenizer = whitespace
+
+@synonyms
+# ═══════════════════════════════════════════════════════════════════════════════
+# Acciones de UI
+# ═══════════════════════════════════════════════════════════════════════════════
+
+click | tocar, pulsar, presionar, seleccionar, elegir, activar, toca, pulse
+long_click | mantener pulsado, pulsación larga, mantener presionado, toque largo
+double_click | doble toque, tocar dos veces, doble pulsación, doble clic
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Desplazamiento y Navegación
+# ═══════════════════════════════════════════════════════════════════════════════
+
+scroll_up | deslizar arriba, subir, desplazar arriba, arriba, sube
+scroll_down | deslizar abajo, bajar, desplazar abajo, abajo, baja
+scroll_left | deslizar izquierda, ir a la izquierda, izquierda
+scroll_right | deslizar derecha, ir a la derecha, derecha
+
+back | atrás, volver, regresar, anterior, retroceder
+home | inicio, pantalla principal, ir a inicio, casa
+forward | adelante, siguiente, avanzar
+recent | aplicaciones recientes, apps recientes, multitarea
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Entrada de Texto
+# ═══════════════════════════════════════════════════════════════════════════════
+
+type | escribir, ingresar, introducir, teclear, rellenar
+clear | borrar, eliminar, limpiar, vaciar
+select_all | seleccionar todo, marcar todo
+copy | copiar, duplicar
+paste | pegar, insertar copiado
+cut | cortar, mover al portapapeles
+undo | deshacer, revertir
+redo | rehacer, volver a hacer
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Alternar y Estado
+# ═══════════════════════════════════════════════════════════════════════════════
+
+expand | expandir, abrir, mostrar más, desplegar
+collapse | colapsar, cerrar, ocultar, plegar, minimizar
+toggle | alternar, cambiar, conmutar
+check | marcar, activar, habilitar, encender
+uncheck | desmarcar, desactivar, deshabilitar, apagar
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Enfoque y Cerrar
+# ═══════════════════════════════════════════════════════════════════════════════
+
+focus | enfocar, ir a, seleccionar campo
+dismiss | cerrar, cancelar, salir, descartar
+confirm | confirmar, aceptar, sí, vale, ok
+deny | no, cancelar, rechazar, denegar
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Controles del Sistema
+# ═══════════════════════════════════════════════════════════════════════════════
+
+volume_up | subir volumen, más alto, aumentar volumen
+volume_down | bajar volumen, más bajo, reducir volumen
+mute | silenciar, sin sonido, silencio
+unmute | activar sonido, quitar silencio
+
+screenshot | captura de pantalla, capturar pantalla
+notifications | notificaciones, mostrar notificaciones, panel de notificaciones
+settings | ajustes, configuración, preferencias
+search | buscar, encontrar, busqueda
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Controles de Media
+# ═══════════════════════════════════════════════════════════════════════════════
+
+play | reproducir, iniciar, reanudar
+pause | pausar, detener
+play_pause | reproducir o pausar, alternar reproducción
+next | siguiente, saltar, próximo
+previous | anterior, retroceder, previo
+stop | parar, detener reproducción
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Ayuda e Información
+# ═══════════════════════════════════════════════════════════════════════════════
+
+help | ayuda, qué puedo decir, comandos de voz, asistencia
+repeat | repetir, cómo, otra vez
+cancel | cancelar, olvidalo, detener, abortar

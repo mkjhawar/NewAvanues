@@ -40,12 +40,15 @@ include(":Modules:AVA:core:Theme")
 // AVA Feature Modules
 include(":Modules:AVA:Actions")
 include(":Modules:AVA:Chat")
-include(":Modules:AVA:LLM")
 include(":Modules:AVA:memory")
 include(":Modules:AVA:Overlay")
-include(":Modules:AVA:RAG")
 include(":Modules:AVA:Teach")
 include(":Modules:AVA:WakeWord")
+
+// Shared AI Modules (cross-app)
+include(":Modules:LLM")   // Language model providers and on-device inference
+include(":Modules:RAG")   // Retrieval-augmented generation pipeline
+include(":Modules:NLU")   // Natural language understanding
 
 // Common Libraries (cross-platform KMP)
 include(":Common:VUID")                   // Voice Unique Identifier generator (shared across all modules)

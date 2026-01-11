@@ -10,6 +10,11 @@
  */
 package com.augmentalis.voiceoscoreng.overlay
 
+import com.augmentalis.voiceoscoreng.features.OverlayData
+import com.augmentalis.voiceoscoreng.features.CommandState
+import com.augmentalis.voiceoscoreng.features.NumberedItem
+import com.augmentalis.voiceoscoreng.features.MenuItem
+import com.augmentalis.voiceoscoreng.features.Rect
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
