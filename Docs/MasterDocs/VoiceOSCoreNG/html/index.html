@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceOSCoreNG Documentation</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #e9ecef;
+            --text-primary: #212529;
+            --text-secondary: #495057;
+            --text-muted: #6c757d;
+            --accent-primary: #0d6efd;
+            --accent-secondary: #6610f2;
+            --border-color: #dee2e6;
+            --code-bg: #f1f3f5;
+            --success: #198754;
+            --warning: #fd7e14;
+            --danger: #dc3545;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --text-primary: #e9ecef;
+            --text-secondary: #adb5bd;
+            --text-muted: #868e96;
+            --accent-primary: #4dabf7;
+            --accent-secondary: #9775fa;
+            --border-color: #343a40;
+            --code-bg: #2d2d44;
+            --shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            padding: 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .logo span {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .version-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+        }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: background 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* Navigation */
+        nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 2rem;
+            position: sticky;
+            top: 88px;
+            z-index: 99;
+        }
+
+        nav ul {
+            max-width: 1200px;
+            margin: 0 auto;
+            list-style: none;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            display: block;
+            padding: 0.5rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        nav a:hover, nav a.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        /* Main content */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Hero section */
+        .hero {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 3rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .hero h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--accent-primary);
+        }
+
+        .hero p {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            max-width: 800px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .feature-card {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow);
+        }
+
+        .feature-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent-primary);
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 0.925rem;
+        }
+
+        /* Documentation links */
+        .doc-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .doc-link {
+            display: block;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .doc-link:hover {
+            border-color: var(--accent-primary);
+            box-shadow: var(--shadow);
+            transform: translateY(-2px);
+        }
+
+        .doc-link h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--accent-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .doc-link p {
+            color: var(--text-muted);
+            font-size: 0.925rem;
+        }
+
+        .doc-icon {
+            font-size: 1.5rem;
+        }
+
+        /* Quick reference */
+        .quick-ref {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .quick-ref h2 {
+            margin-bottom: 1.5rem;
+            color: var(--accent-primary);
+        }
+
+        .ref-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .ref-table th,
+        .ref-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .ref-table th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .ref-table tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .ref-table code {
+            background: var(--code-bg);
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            color: var(--accent-secondary);
+        }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 0.125rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .priority-1 { background: #d3f9d8; color: #2b8a3e; }
+        .priority-2 { background: #d0ebff; color: #1864ab; }
+        .priority-3 { background: #e5dbff; color: #6741d9; }
+        .priority-4 { background: #fff3bf; color: #e67700; }
+        .priority-5 { background: #ffc9c9; color: #c92a2a; }
+
+        [data-theme="dark"] .priority-1 { background: #2b8a3e; color: #d3f9d8; }
+        [data-theme="dark"] .priority-2 { background: #1864ab; color: #d0ebff; }
+        [data-theme="dark"] .priority-3 { background: #6741d9; color: #e5dbff; }
+        [data-theme="dark"] .priority-4 { background: #e67700; color: #fff3bf; }
+        [data-theme="dark"] .priority-5 { background: #c92a2a; color: #ffc9c9; }
+
+        /* Footer */
+        footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem;
+            margin-top: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        footer a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            nav {
+                padding: 0.5rem 1rem;
+                top: auto;
+                position: relative;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .hero {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">&#127908;</div>
+                <div>
+                    <h1>VoiceOSCoreNG</h1>
+                    <span>KMP Voice Command Processing Engine</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span class="version-badge">v2.0.0</span>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">&#9790;</button>
+            </div>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html" class="active">Overview</a></li>
+            <li><a href="architecture.html">Architecture</a></li>
+            <li><a href="flowcharts.html">Flowcharts</a></li>
+            <li><a href="sequence-diagrams.html">Sequences</a></li>
+            <li><a href="class-diagrams.html">Classes</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section class="hero">
+            <h2>Voice Command Processing Engine</h2>
+            <p>
+                VoiceOSCoreNG is a Kotlin Multiplatform (KMP) library that powers voice-controlled accessibility
+                for Android, iOS, and Desktop platforms. It provides a unified architecture for speech recognition,
+                command interpretation, and action execution with a 5-level priority-based matching system.
+            </p>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>&#128269; Smart Command Matching</h3>
+                    <p>5-level priority matching: Dynamic VUID, Fuzzy match, Static handlers, NLU classification, LLM interpretation</p>
+                </div>
+                <div class="feature-card">
+                    <h3>&#128268; KMP Architecture</h3>
+                    <p>Share code across Android, iOS, and Desktop with platform-specific executors for native performance</p>
+                </div>
+                <div class="feature-card">
+                    <h3>&#127908; Multiple Speech Engines</h3>
+                    <p>Support for Android STT, Google Cloud, Azure, Vivoka, Vosk, and Apple Speech with unified interface</p>
+                </div>
+                <div class="feature-card">
+                    <h3>&#128736; Handler System</h3>
+                    <p>Priority-based handlers for System, Navigation, App, UI, Device, Input, and custom actions</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Documentation</h2>
+            <div class="doc-links">
+                <a href="architecture.html" class="doc-link">
+                    <h3><span class="doc-icon">&#128506;</span> System Architecture</h3>
+                    <p>Explore the component hierarchy, dependency relationships, and data flow through the VoiceOSCoreNG system.</p>
+                </a>
+                <a href="flowcharts.html" class="doc-link">
+                    <h3><span class="doc-icon">&#128300;</span> Command Flowcharts</h3>
+                    <p>Visualize the command processing pipeline from voice input through handler execution to result.</p>
+                </a>
+                <a href="sequence-diagrams.html" class="doc-link">
+                    <h3><span class="doc-icon">&#128257;</span> Sequence Diagrams</h3>
+                    <p>Step-by-step message flows for processCommand(), initialization, and handler registration.</p>
+                </a>
+                <a href="class-diagrams.html" class="doc-link">
+                    <h3><span class="doc-icon">&#128209;</span> Class Diagrams</h3>
+                    <p>Interface hierarchies, class relationships, and the handler-executor pattern implementation.</p>
+                </a>
+            </div>
+        </section>
+
+        <section class="quick-ref">
+            <h2>Handler Priority Reference</h2>
+            <table class="ref-table">
+                <thead>
+                    <tr>
+                        <th>Priority</th>
+                        <th>Category</th>
+                        <th>Handler</th>
+                        <th>Example Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="priority-badge priority-1">1</span></td>
+                        <td>SYSTEM</td>
+                        <td><code>SystemHandler</code></td>
+                        <td>back, home, recents, notifications, lock screen</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge priority-1">2</span></td>
+                        <td>NAVIGATION</td>
+                        <td><code>NavigationHandler</code></td>
+                        <td>scroll up/down/left/right, swipe, page up/down</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge priority-2">3</span></td>
+                        <td>APP</td>
+                        <td><code>AppHandler</code></td>
+                        <td>open maps, launch youtube, start camera</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge priority-2">4</span></td>
+                        <td>GAZE</td>
+                        <td><code>GazeHandler</code></td>
+                        <td>Eye tracking actions (future)</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge priority-3">5</span></td>
+                        <td>GESTURE</td>
+                        <td><code>GestureHandler</code></td>
+                        <td>pinch, zoom, drag</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge priority-3">6</span></td>
+                        <td>UI</td>
+                        <td><code>UIHandler</code></td>
+                        <td>click, tap, long press, toggle, focus</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge priority-4">7</span></td>
+                        <td>DEVICE</td>
+                        <td><code>DeviceHandler</code></td>
+                        <td>volume up/down, brightness, flashlight</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge priority-4">8</span></td>
+                        <td>INPUT</td>
+                        <td><code>InputHandler</code></td>
+                        <td>type, delete, paste, select all, undo</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge priority-5">9</span></td>
+                        <td>MEDIA</td>
+                        <td><code>MediaHandler</code></td>
+                        <td>play, pause, next, previous</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge priority-5">10</span></td>
+                        <td>ACCESSIBILITY</td>
+                        <td><code>A11yHandler</code></td>
+                        <td>speak, describe</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge priority-5">11</span></td>
+                        <td>CUSTOM</td>
+                        <td><code>CustomHandler</code></td>
+                        <td>User-defined extensions</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="quick-ref" style="margin-top: 2rem;">
+            <h2>Command Execution Priority</h2>
+            <table class="ref-table">
+                <thead>
+                    <tr>
+                        <th>Step</th>
+                        <th>Matching Type</th>
+                        <th>Description</th>
+                        <th>Speed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Dynamic VUID Lookup</td>
+                        <td>Direct element reference via VUID from screen scraping</td>
+                        <td><span class="priority-badge priority-1">Fastest</span></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Dynamic Fuzzy Match</td>
+                        <td>Handles voice variations with 0.7+ confidence threshold</td>
+                        <td><span class="priority-badge priority-1">Fast</span></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Static Handler</td>
+                        <td>System commands registered in HandlerRegistry</td>
+                        <td><span class="priority-badge priority-2">Fast</span></td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>NLU Classification</td>
+                        <td>Semantic matching via BERT-based model</td>
+                        <td><span class="priority-badge priority-4">Medium</span></td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>LLM Interpretation</td>
+                        <td>Natural language fallback using LLM</td>
+                        <td><span class="priority-badge priority-5">Slow</span></td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>Voice Interpreter</td>
+                        <td>Legacy keyword mapping (fallback)</td>
+                        <td><span class="priority-badge priority-4">Medium</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <footer>
+        <p>VoiceOSCoreNG v2.0.0 | Copyright &copy; 2026 Intelligent Devices LLC</p>
+        <p><a href="https://github.com/augmentalis/voiceoscoreng">GitHub</a> | Built with Kotlin Multiplatform</p>
+    </footer>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</body>
+</html>
