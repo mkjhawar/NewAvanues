@@ -7,6 +7,7 @@ import android.net.Uri
 import android.net.http.SslError
 import android.os.Bundle
 import android.util.Base64
+import android.util.Log
 import android.view.ViewGroup
 import android.webkit.*
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -27,6 +28,8 @@ import com.augmentalis.webavanue.platform.SettingsApplicator
 import com.augmentalis.webavanue.platform.webview.WebViewLifecycle
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import com.augmentalis.webavanue.domain.state.SettingsStateMachine
+import com.augmentalis.webavanue.voiceos.VoiceOSWebCallback
+import com.augmentalis.webavanue.voiceos.WebAvanueVoiceOSBridge
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -85,11 +88,17 @@ actual fun WebViewContainer(
     initialScale: Float,
     settings: BrowserSettings?,
     isDesktopMode: Boolean,
+    voiceOSCallback: VoiceOSWebCallback? = null,
     modifier: Modifier
 ) {
     val context = LocalContext.current
     var webView: WebView? by remember(tabId) { mutableStateOf(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    // VoiceOS bridge for DOM scraping (only created if callback is provided)
+    var voiceOSBridge: WebAvanueVoiceOSBridge? by remember(tabId) { mutableStateOf(null) }
+    val voiceOSScope = remember(tabId) { CoroutineScope(SupervisorJob() + kotlinx.coroutines.Dispatchers.Main) }
+
     // FIX L5: Track restored state per unique sessionData, not per tabId
     // Using tabId+sessionData hash ensures we restore once per unique session
     val sessionKey = "$tabId-${sessionData?.hashCode() ?: 0}"
@@ -103,10 +112,13 @@ actual fun WebViewContainer(
     // Observe settings state for UI feedback
     val settingsState by settingsStateMachine.state.collectAsState()
 
-    // Cleanup state machine on dispose
+    // Cleanup state machine and VoiceOS on dispose
     DisposableEffect(tabId) {
         onDispose {
             settingsScope.cancel()
+            voiceOSScope.cancel()
+            voiceOSBridge?.detach()
+            voiceOSBridge = null
         }
     }
 
@@ -271,6 +283,22 @@ actual fun WebViewContainer(
                             canGoBack(it.canGoBack())
                             canGoForward(it.canGoForward())
                             it.title?.let { title -> onTitleChange(title) }
+
+                            // VoiceOS: Scrape DOM for voice commands
+                            if (voiceOSCallback != null && voiceOSBridge != null) {
+                                voiceOSScope.launch {
+                                    try {
+                                        val result = voiceOSBridge?.scrapeDom()
+                                        result?.let { scrapeResult ->
+                                            Log.d("VoiceOS", "DOM scraped: ${scrapeResult.elementCount} elements from ${scrapeResult.url}")
+                                            voiceOSCallback.onDOMScraped(scrapeResult)
+                                        }
+                                        voiceOSCallback.onPageLoadFinished(url ?: "", it.title ?: "")
+                                    } catch (e: Exception) {
+                                        Log.e("VoiceOS", "Failed to scrape DOM", e)
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -787,6 +815,14 @@ actual fun WebViewContainer(
 
                 // Set up controller
                 controller?.setWebView(this)
+
+                // VoiceOS: Attach bridge for DOM scraping
+                if (voiceOSCallback != null) {
+                    val bridge = WebAvanueVoiceOSBridge(this)
+                    bridge.attach()
+                    voiceOSBridge = bridge
+                    Log.d("VoiceOS", "Bridge attached to WebView for tab $tabId")
+                }
                 }
             }.also { view ->
                 // Save reference for lifecycle management

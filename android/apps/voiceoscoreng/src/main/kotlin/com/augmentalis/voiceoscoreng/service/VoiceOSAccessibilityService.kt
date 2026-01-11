@@ -813,7 +813,22 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     /**
      * Collect element signatures for screen hashing.
-     * Uses className, resourceId, and text (normalized) to create stable hash.
+     *
+     * STRUCTURAL HASH: Uses only structural properties to create stable hash.
+     * Does NOT include text content to avoid false rescans from:
+     * - Changing counters ("3 unread" → "4 unread")
+     * - Timestamps ("10:45 AM" → "10:46 AM")
+     * - Dynamic data (user names, messages, etc.)
+     * - Loading states
+     *
+     * What IS included (stable structural properties):
+     * - className: The widget type (TextView, Button, etc.)
+     * - resourceId: Developer-assigned ID (stable across sessions)
+     * - depth: Position in hierarchy
+     * - childCount: Number of children (structural shape)
+     * - isClickable/isScrollable: Interaction flags
+     *
+     * This ensures same screens always produce same hash, regardless of content.
      */
     private fun collectElementSignatures(
         node: AccessibilityNodeInfo,
@@ -823,21 +838,39 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     ) {
         if (depth > maxDepth) return
 
-        // Build signature from stable properties
+        // Build signature from STRUCTURAL properties only (no text content!)
         val className = node.className?.toString()?.substringAfterLast(".") ?: ""
         val resourceId = node.viewIdResourceName?.substringAfterLast("/") ?: ""
-        val text = node.text?.toString()?.take(20)?.replace(Regex("\\d+"), "#") ?: ""
         val isClickable = if (node.isClickable) "C" else ""
         val isScrollable = if (node.isScrollable) "S" else ""
 
-        if (className.isNotEmpty() || resourceId.isNotEmpty()) {
-            signatures.add("$className:$resourceId:$text:$isClickable$isScrollable")
+        // For scrollable containers (RecyclerView, ListView, ScrollView), don't include childCount
+        // as it changes when user scrolls (items are recycled/added)
+        val isScrollableContainer = className in listOf(
+            "RecyclerView", "ListView", "GridView", "ScrollView",
+            "HorizontalScrollView", "NestedScrollView", "ViewPager", "ViewPager2"
+        ) || node.isScrollable
+
+        val childCount = if (isScrollableContainer) {
+            "v"  // "v" for variable - indicates scrollable container
+        } else {
+            "c${node.childCount}"
         }
 
-        // Recurse into children
+        // Only include elements with identifying structure
+        if (className.isNotEmpty() || resourceId.isNotEmpty()) {
+            // Format: "ClassName:resourceId:depth:childCount:flags"
+            // Example: "TextView:message_count:d2:c0:C" (TextView at depth 2, no children, clickable)
+            // Example: "RecyclerView:list:d1:v:S" (RecyclerView at depth 1, variable children, scrollable)
+            signatures.add("$className:$resourceId:d$depth:$childCount:$isClickable$isScrollable")
+        }
+
+        // Recurse into children (but limit depth in scrollable containers to avoid
+        // including recycled item content which changes on scroll)
+        val childDepthLimit = if (isScrollableContainer) depth + 2 else maxDepth
         for (i in 0 until node.childCount) {
             node.getChild(i)?.let { child ->
-                collectElementSignatures(child, signatures, depth + 1, maxDepth)
+                collectElementSignatures(child, signatures, depth + 1, childDepthLimit)
                 child.recycle()
             }
         }
