@@ -23,6 +23,7 @@
 package com.augmentalis.webavanue.util
 
 import com.augmentalis.voiceoscoreng.common.VUIDGenerator
+import com.augmentalis.voiceoscoreng.common.VUIDModule
 
 /**
  * WebAvanue-specific VUID generator using shared KMP library
@@ -37,45 +38,62 @@ import com.augmentalis.voiceoscoreng.common.VUIDGenerator
  */
 object WebAvanueVuidGenerator {
 
+    // WebAvanue-specific type abbreviations
+    private const val TAB = "tab"
+    private const val FAVORITE = "fav"
+    private const val DOWNLOAD = "dwn"
+    private const val HISTORY = "hst"
+    private const val SESSION = "ses"
+    private const val GROUP = "grp"
+
     /**
      * Generate VUID for browser tabs
      * Format: web:tab:xxxxxxxx
      */
-    fun generateTabId(): String = VUIDGenerator.generateTabVuid()
+    fun generateTabId(): String = generateWebVuid(TAB)
 
     /**
      * Generate VUID for favorites/bookmarks
      * Format: web:fav:xxxxxxxx
      */
-    fun generateFavoriteId(): String = VUIDGenerator.generateFavoriteVuid()
+    fun generateFavoriteId(): String = generateWebVuid(FAVORITE)
 
     /**
      * Generate VUID for downloads
      * Format: web:dwn:xxxxxxxx
      */
-    fun generateDownloadId(): String = VUIDGenerator.generateDownloadVuid()
+    fun generateDownloadId(): String = generateWebVuid(DOWNLOAD)
 
     /**
      * Generate VUID for history entries
      * Format: web:hst:xxxxxxxx
      */
-    fun generateHistoryId(): String = VUIDGenerator.generateHistoryVuid()
+    fun generateHistoryId(): String = generateWebVuid(HISTORY)
 
     /**
      * Generate VUID for browser sessions
      * Format: web:ses:xxxxxxxx
      */
-    fun generateSessionId(): String = VUIDGenerator.generateSessionVuid()
+    fun generateSessionId(): String = generateWebVuid(SESSION)
 
     /**
      * Generate VUID for tab groups
      * Format: web:grp:xxxxxxxx
      */
-    fun generateGroupId(): String = VUIDGenerator.generateGroupVuid()
+    fun generateGroupId(): String = generateWebVuid(GROUP)
 
     /**
      * Generate VUID for favorite folders
      * Format: web:grp:xxxxxxxx (reuses group type)
      */
-    fun generateFolderId(): String = VUIDGenerator.generateGroupVuid()
+    fun generateFolderId(): String = generateWebVuid(GROUP)
+
+    /**
+     * Generate a WebAvanue VUID with the specified type abbreviation.
+     * Format: web:{abbrev}:{hash8}
+     */
+    private fun generateWebVuid(abbrev: String): String {
+        val hash = VUIDGenerator.generateRandomHash8()
+        return "${VUIDModule.WEBAVANUE}:$abbrev:$hash"
+    }
 }

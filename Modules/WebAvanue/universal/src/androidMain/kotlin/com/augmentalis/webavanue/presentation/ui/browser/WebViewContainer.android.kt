@@ -105,7 +105,7 @@ actual fun WebViewContainer(
     initialScale: Float,
     settings: BrowserSettings?,
     isDesktopMode: Boolean,
-    voiceOSCallback: VoiceOSWebCallback? = null,
+    voiceOSCallback: VoiceOSWebCallback?,
     modifier: Modifier
 ) {
     val context = LocalContext.current
@@ -301,30 +301,6 @@ actual fun WebViewContainer(
                                     canGoBack(it.canGoBack())
                                     canGoForward(it.canGoForward())
                                     it.title?.let { title -> onTitleChange(title) }
-                                }
-                            }
-
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                request: WebResourceRequest?
-                            ): Boolean {
-                                val newUrl = request?.url?.toString() ?: return false
-
-                                if (browserSettings.openLinksInNewTab && request.isForMainFrame && request.hasGesture()) {
-                                    println("🔗 Opening link in new tab: $newUrl")
-                                    onOpenInNewTab(newUrl)
-                                    return true
-                                }
-
-                                return false
-                            }
-
-                            override fun onPageFinished(view: WebView?, url: String?) {
-                                super.onPageFinished(view, url)
-                                view?.let {
-                                    canGoBack(it.canGoBack())
-                                    canGoForward(it.canGoForward())
-                                    it.title?.let { title -> onTitleChange(title) }
 
                                     // VoiceOS: Scrape DOM for voice commands
                                     if (voiceOSCallback != null && voiceOSBridge != null) {
@@ -342,6 +318,21 @@ actual fun WebViewContainer(
                                         }
                                     }
                                 }
+                            }
+
+                            override fun shouldOverrideUrlLoading(
+                                view: WebView?,
+                                request: WebResourceRequest?
+                            ): Boolean {
+                                val newUrl = request?.url?.toString() ?: return false
+
+                                if (browserSettings.openLinksInNewTab && request.isForMainFrame && request.hasGesture()) {
+                                    println("🔗 Opening link in new tab: $newUrl")
+                                    onOpenInNewTab(newUrl)
+                                    return true
+                                }
+
+                                return false
                             }
 
                             // PHASE 1: SSL Error Handling (CWE-295)
@@ -883,26 +874,18 @@ actual fun WebViewContainer(
                 // The update block only updates controller and navigation state
 
                 // Save reference
-                webView = this
+                webView = view
 
                 // Set up controller
-                controller?.setWebView(this)
+                controller?.setWebView(view)
 
-                // VoiceOS: Attach bridge for DOM scraping
-                if (voiceOSCallback != null) {
-                    val bridge = WebAvanueVoiceOSBridge(this)
+                // VoiceOS: Attach bridge if not already attached
+                if (voiceOSCallback != null && voiceOSBridge == null) {
+                    val bridge = WebAvanueVoiceOSBridge(view)
                     bridge.attach()
                     voiceOSBridge = bridge
                     Log.d("VoiceOS", "Bridge attached to WebView for tab $tabId")
                 }
-            }.also { view ->
-                // Save reference for lifecycle management
-                webView = view
-                // Update controller reference (in case it changed)
-                controller?.setWebView(view)
-                // Update navigation state
-                canGoBack(view.canGoBack())
-                canGoForward(view.canGoForward())
             },
             modifier = modifier
         )
