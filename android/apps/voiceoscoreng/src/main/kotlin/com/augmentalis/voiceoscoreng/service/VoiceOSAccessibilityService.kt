@@ -2,6 +2,10 @@ package com.augmentalis.voiceoscoreng.service
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Rect
 import android.provider.Settings
@@ -52,6 +56,26 @@ private const val SCREEN_CHANGE_DEBOUNCE_MS = 300L
 class VoiceOSAccessibilityService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    /**
+     * Broadcast receiver for controlling numbers overlay via adb commands.
+     * Usage: adb shell am broadcast -a com.augmentalis.voiceoscoreng.SET_NUMBERS_MODE --es mode "ON"
+     */
+    private val modeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == ACTION_SET_NUMBERS_MODE) {
+                val modeStr = intent.getStringExtra(EXTRA_MODE)?.uppercase() ?: return
+                Log.d(TAG, "Received broadcast to set numbers mode: $modeStr")
+                val mode = when (modeStr) {
+                    "ON" -> NumbersOverlayMode.ON
+                    "OFF" -> NumbersOverlayMode.OFF
+                    "AUTO" -> NumbersOverlayMode.AUTO
+                    else -> return
+                }
+                setNumbersOverlayMode(mode)
+            }
+        }
+    }
 
     /**
      * Shared command registry - single source of truth.
@@ -109,6 +133,10 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     companion object {
         private var instance: VoiceOSAccessibilityService? = null
+
+        // Broadcast action for controlling numbers overlay via adb
+        const val ACTION_SET_NUMBERS_MODE = "com.augmentalis.voiceoscoreng.SET_NUMBERS_MODE"
+        const val EXTRA_MODE = "mode"  // "ON", "OFF", or "AUTO"
 
         private val _isConnected = MutableStateFlow(false)
         val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
@@ -178,6 +206,97 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         private val _currentScreenInfo = MutableStateFlow<ScreenInfo?>(null)
         val currentScreenInfo: StateFlow<ScreenInfo?> = _currentScreenInfo.asStateFlow()
+
+        // ===== App Detection for Numbers Overlay =====
+
+        /**
+         * Apps that commonly have list-based UIs where numbers overlay is helpful.
+         * These apps will trigger a first-time prompt asking the user about numbers mode.
+         */
+        val TARGET_APPS = setOf(
+            // Email clients
+            "com.google.android.gm",           // Gmail
+            "com.microsoft.office.outlook",    // Outlook
+            "com.samsung.android.email.provider", // Samsung Mail
+            "com.yahoo.mobile.client.android.mail", // Yahoo Mail
+            "me.bluemail.mail",                // BlueMail
+            "org.mozilla.thunderbird",         // Thunderbird
+            // Messaging apps
+            "com.google.android.apps.messaging", // Google Messages
+            "com.whatsapp",                    // WhatsApp
+            "org.telegram.messenger",          // Telegram
+            "com.discord",                     // Discord
+            "com.Slack",                       // Slack
+            // Social media
+            "com.twitter.android",             // Twitter/X
+            "com.instagram.android",           // Instagram
+            "com.facebook.katana",             // Facebook
+            "com.linkedin.android",            // LinkedIn
+            // Task/Note apps
+            "com.todoist",                     // Todoist
+            "com.google.android.keep",         // Google Keep
+            "com.microsoft.todos",             // Microsoft To Do
+            // Shopping/Lists
+            "com.amazon.mShop.android.shopping", // Amazon
+            "com.google.android.apps.shopping.express" // Google Shopping
+        )
+
+        /**
+         * Preference for per-app numbers mode.
+         * Stored in SharedPreferences with key "app_numbers_mode_{packageName}"
+         */
+        enum class AppNumbersPreference {
+            ASK,       // Not yet decided, show dialog
+            ALWAYS,    // Always show numbers in this app
+            AUTO,      // Use AUTO mode for this app
+            NEVER      // Never show numbers in this app
+        }
+
+        // Dialog control for app detection prompt
+        private val _showAppDetectionDialog = MutableStateFlow<String?>(null) // packageName or null
+        val showAppDetectionDialog: StateFlow<String?> = _showAppDetectionDialog.asStateFlow()
+
+        private val _currentDetectedAppName = MutableStateFlow<String?>(null)
+        val currentDetectedAppName: StateFlow<String?> = _currentDetectedAppName.asStateFlow()
+
+        /**
+         * Show the app detection dialog for a specific package.
+         */
+        fun showAppDetectionDialogFor(packageName: String, appName: String) {
+            _currentDetectedAppName.value = appName
+            _showAppDetectionDialog.value = packageName
+            Log.d(TAG, "Showing app detection dialog for: $appName ($packageName)")
+        }
+
+        /**
+         * Dismiss the app detection dialog.
+         */
+        fun dismissAppDetectionDialog() {
+            _showAppDetectionDialog.value = null
+            _currentDetectedAppName.value = null
+        }
+
+        /**
+         * Handle user response from app detection dialog.
+         */
+        fun handleAppDetectionResponse(packageName: String, preference: AppNumbersPreference) {
+            instance?.saveAppNumbersPreference(packageName, preference)
+            dismissAppDetectionDialog()
+
+            // Apply the preference immediately
+            when (preference) {
+                AppNumbersPreference.ALWAYS -> setNumbersOverlayMode(NumbersOverlayMode.ON)
+                AppNumbersPreference.AUTO -> setNumbersOverlayMode(NumbersOverlayMode.AUTO)
+                AppNumbersPreference.NEVER -> setNumbersOverlayMode(NumbersOverlayMode.OFF)
+                AppNumbersPreference.ASK -> { /* No change, will ask again next time */ }
+            }
+            Log.d(TAG, "App detection response for $packageName: $preference")
+
+            // Refresh the screen to populate overlay items with the new setting
+            if (preference != AppNumbersPreference.NEVER) {
+                exploreAllApps()
+            }
+        }
 
         // ===== Numbers Overlay for Voice Commands =====
 
@@ -415,6 +534,11 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             Log.e(TAG, "Error configuring serviceInfo", e)
         }
 
+        // Register broadcast receiver for adb control of numbers mode
+        val filter = IntentFilter(ACTION_SET_NUMBERS_MODE)
+        registerReceiver(modeReceiver, filter, RECEIVER_EXPORTED)
+        Log.d(TAG, "Registered broadcast receiver for numbers mode control")
+
         // Initialize VoiceOSCoreNG facade for voice command processing
         initializeVoiceOSCore()
 
@@ -535,6 +659,11 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         // Update current package tracking
         currentPackageName = packageName
 
+        // Check if this is a target app that needs the numbers overlay prompt
+        if (packageName != null && TARGET_APPS.contains(packageName)) {
+            checkAndShowAppDetectionDialog(packageName)
+        }
+
         // Check if continuous monitoring is enabled
         if (!continuousScanningEnabled.get()) {
             // Manual mode - just clear registry and wait for user action
@@ -596,6 +725,65 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         } else {
             commandRegistry.clear()
         }
+    }
+
+    // ===== App Detection Helpers =====
+
+    private val PREFS_NAME = "voiceos_app_prefs"
+    private val PREF_KEY_PREFIX = "app_numbers_mode_"
+
+    /**
+     * Check if we should show the app detection dialog for this package.
+     * Only shows if user hasn't made a choice yet.
+     */
+    private fun checkAndShowAppDetectionDialog(packageName: String) {
+        val pref = getAppNumbersPreference(packageName)
+        if (pref == AppNumbersPreference.ASK) {
+            // Get app name for display
+            val appName = try {
+                val appInfo = packageManager.getApplicationInfo(packageName, 0)
+                packageManager.getApplicationLabel(appInfo).toString()
+            } catch (e: Exception) {
+                packageName.substringAfterLast(".")
+            }
+
+            // Show the dialog
+            showAppDetectionDialogFor(packageName, appName)
+        } else {
+            // Apply saved preference
+            when (pref) {
+                AppNumbersPreference.ALWAYS -> setNumbersOverlayMode(NumbersOverlayMode.ON)
+                AppNumbersPreference.AUTO -> setNumbersOverlayMode(NumbersOverlayMode.AUTO)
+                AppNumbersPreference.NEVER -> setNumbersOverlayMode(NumbersOverlayMode.OFF)
+                else -> {}
+            }
+        }
+    }
+
+    /**
+     * Get the user's preference for numbers overlay in a specific app.
+     */
+    private fun getAppNumbersPreference(packageName: String): AppNumbersPreference {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val savedValue = prefs.getString("$PREF_KEY_PREFIX$packageName", null)
+        return savedValue?.let {
+            try {
+                AppNumbersPreference.valueOf(it)
+            } catch (e: Exception) {
+                AppNumbersPreference.ASK
+            }
+        } ?: AppNumbersPreference.ASK
+    }
+
+    /**
+     * Save the user's preference for numbers overlay in a specific app.
+     */
+    internal fun saveAppNumbersPreference(packageName: String, preference: AppNumbersPreference) {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("$PREF_KEY_PREFIX$packageName", preference.name)
+            .apply()
+        Log.d(TAG, "Saved app numbers preference: $packageName -> $preference")
     }
 
     /**
@@ -708,6 +896,13 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         Log.d(TAG, "onDestroy() called")
+
+        // Unregister broadcast receiver
+        try {
+            unregisterReceiver(modeReceiver)
+        } catch (e: Exception) {
+            Log.w(TAG, "Error unregistering receiver", e)
+        }
 
         // Dispose VoiceOSCoreNG facade
         serviceScope.launch {
