@@ -131,6 +131,99 @@ java -version  # Should show 17.x.x
 | `Docs/{App}/Platform/{Platform}/` | Platform-specific |
 | `Docs/Common/{Domain}/` | Shared lib docs |
 | `docs/appstructure/` | Architecture registries (v18) |
+| `Docs/MasterDocs/` | Comprehensive platform documentation |
+
+---
+
+## MASTERDOCS MAINTENANCE (MANDATORY)
+
+### Overview
+
+MasterDocs contains comprehensive platform documentation in TWO formats:
+1. **Human-Readable** - Full prose documentation for developers and marketing
+2. **AI-Readable** - Structured YAML/compact format for AI assistants
+
+**YOU MUST** keep both formats synchronized when making code changes.
+
+### Documentation Structure
+
+```
+Docs/MasterDocs/
+├── AI/                        # AI-readable documentation
+│   ├── PLATFORM-INDEX.ai.md   # Module registry, dependencies, APIs
+│   ├── CLASS-INDEX.ai.md      # All classes with methods/fields
+│   ├── REFACTORING-GUIDE.ai.md # Current refactoring recommendations
+│   └── (future files)
+│
+├── LD/                        # Living Documents (continuously updated)
+│   ├── LD-Platform-Overview-V1.md
+│   ├── LD-Module-Registry-V1.md
+│   └── LD-API-Reference-V1.md
+│
+├── VoiceOSCoreNG/             # Module documentation
+│   ├── README.md              # Human-readable
+│   └── html/                  # Interactive diagrams
+│
+├── VoiceOS/README.md
+├── AVA/README.md
+├── LLM/README.md
+├── NLU/README.md
+├── RAG/README.md
+├── WebAvanue/README.md
+└── Common/README.md
+```
+
+### Update Rules
+
+| Trigger | Action Required |
+|---------|-----------------|
+| New class added | Update AI/CLASS-INDEX.ai.md |
+| New module added | Update AI/PLATFORM-INDEX.ai.md + create README.md |
+| API changed | Update AI/PLATFORM-INDEX.ai.md + LD/LD-API-Reference |
+| Architecture changed | Update module README.md + html diagrams |
+| Refactoring done | Update AI/REFACTORING-GUIDE.ai.md |
+| Major feature complete | Update LD/LD-Platform-Overview |
+
+### AI-Readable Format Guidelines
+
+```yaml
+# Use YAML blocks for structured data
+class_name:
+  package: com.augmentalis.module.class
+  type: class|interface|object|data_class|sealed_class
+  purpose: One-line description
+  methods:
+    - methodName(params): ReturnType
+  dependencies: [list, of, deps]
+```
+
+### Human-Readable Format Guidelines
+
+- Include ASCII diagrams for architecture
+- Include Mermaid diagrams in HTML files
+- Use tables for quick reference
+- Include code examples with comments
+- Write for both novice and expert developers
+
+### Verification
+
+After updating MasterDocs:
+1. Verify AI format is valid YAML
+2. Verify human format renders correctly
+3. Verify cross-references are accurate
+4. Commit both formats together
+
+---
+
+## KEY RULES (Project-Specific)
+
+| Rule | Requirement |
+|------|-------------|
+| Registry First | Check registries before creating files |
+| Database | SQLDelight ONLY (never Room) |
+| Module work | Check module-level CLAUDE.md first |
+| Cross-module | Check CROSS-MODULE-DEPENDENCIES.md |
+| **MasterDocs** | **Update BOTH AI and Human docs on code changes** |
 
 ---
 
@@ -140,4 +233,4 @@ All rules from global CLAUDE.md (v18) apply.
 
 ---
 
-**Updated:** 2026-01-08 | **Version:** 13.0
+**Updated:** 2026-01-11 | **Version:** 14.0
