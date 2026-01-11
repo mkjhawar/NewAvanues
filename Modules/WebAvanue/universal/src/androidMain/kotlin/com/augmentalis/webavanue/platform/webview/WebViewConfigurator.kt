@@ -701,11 +701,12 @@ class WebViewConfigurator {
             // Create DownloadRequest and call callback if provided
             if (onDownloadStart != null) {
                 val downloadRequest = DownloadRequest(
+                    downloadId = "",
                     url = downloadUrl,
                     filename = filename,
                     mimeType = mimeType,
                     expectedSize = contentLength,
-                    userAgent = userAgent
+                    userAgent = userAgent,
                 )
                 onDownloadStart(downloadRequest)
                 println("   ✅ Download request sent to ViewModel")

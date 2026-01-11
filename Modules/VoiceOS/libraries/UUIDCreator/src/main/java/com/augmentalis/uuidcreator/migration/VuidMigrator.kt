@@ -6,29 +6,29 @@
  * Code-Reviewed-By: CCA
  * Created: 2025-12-30
  *
- * Responsibility: Provide utilities to migrate legacy VUIDs to new format
+ * Responsibility: Provide utilities to migrate legacy VUIDs to compact format
  *
  * Features:
  * - Single VUID migration
  * - Batch migration with progress tracking
- * - Lookup table maintenance (legacy → new)
+ * - Lookup table maintenance (legacy → compact)
  * - Format detection and validation
  */
 package com.augmentalis.uuidcreator.migration
 
 import android.util.Log
+import com.augmentalis.vuid.core.VUIDGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Migration utilities for converting legacy VUIDs to new format
+ * Migration utilities for converting legacy VUIDs to compact format
  *
  * Usage:
  * ```kotlin
  * // Single migration
- * val newVuid = VuidMigrator.migrate(legacyVuid)
+ * val compact = VuidMigrator.migrate(legacyVuid, version)
  *
  * // Batch migration
  * val results = VuidMigrator.migrateBatch(legacyVuids) { progress ->
@@ -40,63 +40,50 @@ object VuidMigrator {
     private const val TAG = "VuidMigrator"
 
     /**
-     * In-memory lookup table for legacy → new mappings
+     * In-memory lookup table for legacy → compact mappings
      * Enables fast reverse lookups during transition period
      */
     private val lookupTable = ConcurrentHashMap<String, String>()
-
-    /**
-     * VUID format types
-     */
-    enum class VuidFormat {
-        STANDARD_UUID,
-        PREFIXED_UUID,
-        CONTENT_HASH,
-        SEQUENTIAL,
-        UNKNOWN
-    }
 
     // ========================================================================
     // Single Migration
     // ========================================================================
 
     /**
-     * Migrate a single legacy VUID to new format
+     * Migrate a single legacy VUID to compact format
      *
      * @param legacyVuid Legacy VUID string
-     * @param version App version (optional)
-     * @return New VUID or original if already new format
+     * @param version App version (optional, used if not embedded in legacy format)
+     * @return Compact VUID or original if already compact/cannot migrate
      */
     fun migrate(legacyVuid: String, version: String? = null): String {
         // Check lookup table first
         lookupTable[legacyVuid]?.let { return it }
 
-        // If already a valid format, return as-is
-        if (isValid(legacyVuid)) {
-            return legacyVuid
+        // Use shared VUIDGenerator's migration
+        val compactVuid = VUIDGenerator.migrateToCompact(legacyVuid, version)
+            ?: legacyVuid // Return original if cannot migrate
+
+        // Cache the mapping if migration occurred
+        if (compactVuid != legacyVuid) {
+            lookupTable[legacyVuid] = compactVuid
+            Log.d(TAG, "Migrated: $legacyVuid → $compactVuid")
         }
 
-        // Generate new VUID
-        val newVuid = UUID.randomUUID().toString()
-
-        // Cache the mapping
-        lookupTable[legacyVuid] = newVuid
-        Log.d(TAG, "Migrated: $legacyVuid → $newVuid")
-
-        return newVuid
+        return compactVuid
     }
 
     /**
-     * Migrate if needed, returning null if already new format
+     * Migrate if needed, returning null if already compact
      *
-     * @return New VUID if migration needed, null if already new format
+     * @return Compact VUID if migration needed, null if already compact
      */
     fun migrateIfNeeded(vuid: String, version: String? = null): String? {
-        return if (isValid(vuid)) {
-            null // Already valid, no migration needed
+        return if (VUIDGenerator.isCompact(vuid)) {
+            null // Already compact, no migration needed
         } else {
-            val newVuid = migrate(vuid, version)
-            if (newVuid != vuid) newVuid else null
+            val compact = migrate(vuid, version)
+            if (compact != vuid) compact else null
         }
     }
 
@@ -122,8 +109,8 @@ object VuidMigrator {
      * Batch migration result
      */
     data class MigrationResult(
-        val success: List<Pair<String, String>>,   // legacy → new
-        val skipped: List<String>,                  // Already new format
+        val success: List<Pair<String, String>>,   // legacy → compact
+        val skipped: List<String>,                  // Already compact
         val failed: List<Pair<String, String?>>     // legacy → error message
     )
 
@@ -131,7 +118,7 @@ object VuidMigrator {
      * Migrate a batch of VUIDs with progress tracking
      *
      * @param vuids List of VUIDs to migrate
-     * @param version Default version for VUIDs
+     * @param version Default version for VUIDs without embedded version
      * @param onProgress Progress callback (optional)
      * @return Migration results
      */
@@ -147,15 +134,16 @@ object VuidMigrator {
         vuids.forEachIndexed { index, vuid ->
             try {
                 when {
-                    isValid(vuid) -> {
+                    VUIDGenerator.isCompact(vuid) -> {
                         skipped.add(vuid)
                     }
                     else -> {
-                        val newVuid = migrate(vuid, version)
-                        if (newVuid != vuid) {
-                            success.add(vuid to newVuid)
+                        val compact = VUIDGenerator.migrateToCompact(vuid, version)
+                        if (compact != null && compact != vuid) {
+                            success.add(vuid to compact)
+                            lookupTable[vuid] = compact
                         } else {
-                            failed.add(vuid to "Cannot migrate")
+                            failed.add(vuid to "Cannot determine format")
                         }
                     }
                 }
@@ -183,22 +171,22 @@ object VuidMigrator {
     // ========================================================================
 
     /**
-     * Get new VUID from legacy (from lookup table)
+     * Get compact VUID from legacy (from lookup table)
      */
-    fun lookupNew(legacyVuid: String): String? = lookupTable[legacyVuid]
+    fun lookupCompact(legacyVuid: String): String? = lookupTable[legacyVuid]
 
     /**
-     * Get legacy VUID from new (reverse lookup)
+     * Get legacy VUID from compact (reverse lookup)
      */
-    fun lookupLegacy(newVuid: String): String? {
-        return lookupTable.entries.find { it.value == newVuid }?.key
+    fun lookupLegacy(compactVuid: String): String? {
+        return lookupTable.entries.find { it.value == compactVuid }?.key
     }
 
     /**
      * Add mapping to lookup table
      */
-    fun addMapping(legacyVuid: String, newVuid: String) {
-        lookupTable[legacyVuid] = newVuid
+    fun addMapping(legacyVuid: String, compactVuid: String) {
+        lookupTable[legacyVuid] = compactVuid
     }
 
     /**
@@ -232,52 +220,26 @@ object VuidMigrator {
     /**
      * Detect VUID format
      */
-    fun detectFormat(vuid: String): VuidFormat {
+    fun detectFormat(vuid: String): VUIDGenerator.VuidFormat {
         return when {
-            isStandardUUID(vuid) -> VuidFormat.STANDARD_UUID
-            isPrefixedUUID(vuid) -> VuidFormat.PREFIXED_UUID
-            isContentHash(vuid) -> VuidFormat.CONTENT_HASH
-            isSequential(vuid) -> VuidFormat.SEQUENTIAL
-            else -> VuidFormat.UNKNOWN
+            VUIDGenerator.isCompactApp(vuid) -> VUIDGenerator.VuidFormat.COMPACT_APP
+            VUIDGenerator.isCompactModule(vuid) -> VUIDGenerator.VuidFormat.COMPACT_MODULE
+            VUIDGenerator.isCompactSimple(vuid) -> VUIDGenerator.VuidFormat.COMPACT_SIMPLE
+            VUIDGenerator.isLegacyUuid(vuid) -> VUIDGenerator.VuidFormat.LEGACY_UUID
+            VUIDGenerator.isLegacyVoiceOS(vuid) -> VUIDGenerator.VuidFormat.LEGACY_VOICEOS
+            else -> VUIDGenerator.VuidFormat.UNKNOWN
         }
-    }
-
-    /**
-     * Check if VUID is valid
-     */
-    fun isValid(vuid: String): Boolean {
-        if (vuid.isBlank()) return false
-        return isStandardUUID(vuid) || isPrefixedUUID(vuid) || isContentHash(vuid) || isSequential(vuid)
     }
 
     /**
      * Check if VUID needs migration
      */
     fun needsMigration(vuid: String): Boolean {
-        return !isValid(vuid)
+        return !VUIDGenerator.isCompact(vuid) && VUIDGenerator.isValid(vuid)
     }
 
-    // Private format checks
-    private fun isStandardUUID(vuid: String): Boolean {
-        return try {
-            UUID.fromString(vuid)
-            true
-        } catch (e: IllegalArgumentException) {
-            false
-        }
-    }
-
-    private fun isPrefixedUUID(vuid: String): Boolean {
-        val parts = vuid.split("-", limit = 2)
-        if (parts.size != 2) return false
-        return isStandardUUID(parts[1])
-    }
-
-    private fun isContentHash(vuid: String): Boolean {
-        return vuid.startsWith("content-") && vuid.matches(Regex("^content-[a-f0-9]+-\\d+$"))
-    }
-
-    private fun isSequential(vuid: String): Boolean {
-        return vuid.startsWith("seq-") && vuid.matches(Regex("^seq-\\d+-\\d+$"))
-    }
+    /**
+     * Parse VUID into components
+     */
+    fun parse(vuid: String) = VUIDGenerator.parse(vuid)
 }

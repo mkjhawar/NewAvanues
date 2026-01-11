@@ -1,7 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VoiceOSCoreNG</string>
-    <string name="accessibility_service_description">VoiceOSCoreNG explores app UI elements to test VUID generation, deduplication, hierarchy tracking, and command generation.</string>
-    <string name="overlay_notification_title">VoiceOS Scanner Active</string>
-    <string name="overlay_notification_text">Tap the floating button to scan current app</string>
+    <!-- App Info -->
+    <string name="app_name">VoiceOS</string>
+    <string name="app_version">1.0.0</string>
+
+    <!-- Accessibility Service -->
+    <string name="accessibility_service_description">VoiceOS enables voice control of apps by analyzing UI elements and generating voice commands. Say numbers to select list items, or speak actions to control your device.</string>
+
+    <!-- Notification -->
+    <string name="overlay_notification_title">VoiceOS Active</string>
+    <string name="overlay_notification_text">Voice control is ready</string>
+
+    <!-- Settings Activity -->
+    <string name="settings_title">VoiceOS Settings</string>
+    <string name="settings_service_active">Service Active</string>
+    <string name="settings_service_inactive">Service Inactive</string>
+    <string name="settings_monitoring_apps">Monitoring apps</string>
+    <string name="settings_enable_accessibility">Enable in Accessibility Settings</string>
+
+    <!-- User Settings Section -->
+    <string name="settings_section_user">User Settings</string>
+    <string name="settings_numbers_overlay">Numbers Overlay</string>
+    <string name="settings_numbers_overlay_desc">Show numbered badges on list items</string>
+    <string name="settings_instruction_bar">Instruction Bar</string>
+    <string name="settings_instruction_bar_desc">Show voice command hints</string>
+    <string name="settings_badge_color">Badge Color</string>
+    <string name="settings_badge_color_desc">Customize number badge appearance</string>
+
+    <!-- Developer Settings Section -->
+    <string name="settings_section_developer">Developer Settings</string>
+    <string name="settings_developer_mode_enabled">Developer Mode Enabled</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_tap_to_unlock">(%1$d more taps)</string>
+    <string name="settings_debug_logging">Debug Logging</string>
+    <string name="settings_show_vuids">Show VUIDs</string>
+    <string name="settings_auto_minimize">Auto-minimize</string>
+    <string name="settings_rescan_current">Rescan Current App</string>
+    <string name="settings_rescan_everything">Rescan Everything</string>
+
+    <!-- Rescan Dialog -->
+    <string name="rescan_dialog_title">Rescan Everything?</string>
+    <string name="rescan_dialog_message">This will clear ALL cached screens and force a rescan. This action cannot be undone.</string>
+    <string name="rescan_all">Rescan All</string>
+    <string name="cancel">Cancel</string>
+    <string name="rescan_message_current">Cleared %1$d screens for current app</string>
+    <string name="rescan_message_all">Cleared ALL %1$d cached screens</string>
+
+    <!-- Mode Labels -->
+    <string name="mode_on">ON</string>
+    <string name="mode_off">OFF</string>
+    <string name="mode_auto">AUTO</string>
+
+    <!-- Numbers Overlay -->
+    <string name="numbers_instruction_title">Say a number to select</string>
+    <string name="numbers_instruction_hint">%1$d items: \"first\", \"second\", \"1\", \"2\"…</string>
+
+    <!-- App Detection Dialog -->
+    <string name="app_detection_title">Enable Voice Numbers?</string>
+    <string name="app_detection_message">This app has list items that can be selected by voice. Would you like to enable numbered badges?</string>
+    <string name="app_detection_always">Always Show</string>
+    <string name="app_detection_auto">Auto (Recommended)</string>
+    <string name="app_detection_never">Never</string>
+    <string name="app_detection_ask_later">Ask Later</string>
+
+    <!-- Badge Themes -->
+    <string name="badge_theme_blue">Blue</string>
+    <string name="badge_theme_green">Green</string>
+    <string name="badge_theme_purple">Purple</string>
+    <string name="badge_theme_orange">Orange</string>
+    <string name="badge_theme_red">Red</string>
+
+    <!-- Voice Commands Help -->
+    <string name="voice_numbers_on">\"numbers on\"</string>
+    <string name="voice_numbers_off">\"numbers off\"</string>
+    <string name="voice_numbers_auto">\"numbers auto\"</string>
 </resources>

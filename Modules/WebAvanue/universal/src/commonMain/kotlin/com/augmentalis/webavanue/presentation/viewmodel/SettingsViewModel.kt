@@ -1,8 +1,10 @@
 package com.augmentalis.webavanue.ui.viewmodel
 
+import android.util.Log
 import com.augmentalis.webavanue.domain.model.BrowserSettings
 import com.augmentalis.webavanue.domain.repository.BrowserRepository
 import com.augmentalis.webavanue.domain.repository.SettingsPreset
+import com.augmentalis.webavanue.domain.validation.SettingsValidation
 import com.augmentalis.webavanue.platform.DownloadPathValidator
 import com.augmentalis.webavanue.platform.DownloadValidationResult
 import kotlinx.coroutines.CoroutineScope
@@ -172,14 +174,9 @@ class SettingsViewModel(
 
             // Optional: optimistic UI so Compose updates instantly without waiting DB
             _settings.value = settings
-
             repository.updateSettings(settings)
                 .onSuccess {
                     _saveSuccess.value = true
-
-                    // TODO: Sync download path to SharedPreferences on Android
-                    // For now, manually sync from MainActivity after getting settings
-                    // Platform-specific code would call: syncDownloadPathToPrefs(context, settings.downloadPath)
                 }
                 .onFailure { e ->
                     _error.value = "Failed to save settings: ${e.message}"

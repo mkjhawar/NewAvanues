@@ -52,6 +52,23 @@ actual object WebViewPoolManager {
     actual fun clearAllWebViews() {
         globalWebViewLifecycle.clearAllWebViews()
     }
+
+    actual fun clearCookiesOnExit() {
+        // Clear cookies first (optional but logical here)
+        // Must run on main thread (BrowserApp onDispose is on main)
+        val cm = CookieManager.getInstance()
+
+        // Optional: clear session cookies too (older APIs)
+        cm.removeSessionCookies(null)
+
+        // Clear all cookies
+        cm.removeAllCookies(null)
+
+        // Persist the deletion
+        cm.flush()
+        // Optional but recommended: clear HTML5 storage too (not cookies, but site storage)
+        WebStorage.getInstance().deleteAllData()
+    }
 }
 
 /**
@@ -147,7 +164,7 @@ actual fun WebViewContainer(
     // FIX L3: Apply settings through state machine when settings change
     // LaunchedEffect dependency on 'settings' ensures this only runs when settings actually change
     val latestSettings by rememberUpdatedState(settings)
-    LaunchedEffect(latestSettings) {
+    LaunchedEffect(latestSettings, webView) {
         latestSettings?.let { browserSettings ->
             webView?.let { view ->
                 settingsStateMachine.requestUpdate(browserSettings) { settingsToApply ->
@@ -178,11 +195,13 @@ actual fun WebViewContainer(
                             onSessionDataChange(stateString)
                         }
                     }
+
                     Lifecycle.Event.ON_RESUME -> {
                         // Resume WebView when activity comes to foreground
                         webView?.onResume()
                         webView?.resumeTimers()
                     }
+
                     else -> {}
                 }
             }
@@ -201,614 +220,667 @@ actual fun WebViewContainer(
         }
 
         AndroidView(
-        factory = { factoryContext ->
-            // FIX: Use WebViewLifecycle to get or create WebView for this tab
-            // This preserves navigation history when switching between tabs
-            globalWebViewLifecycle.acquireWebView(tabId, factoryContext) { ctx ->
-                WebView(ctx).apply {
-                    // Set layout params to respect parent constraints
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
+            factory = { factoryContext ->
+                // FIX: Use WebViewLifecycle to get or create WebView for this tab
+                // This preserves navigation history when switching between tabs
+                globalWebViewLifecycle.acquireWebView(tabId, factoryContext) { ctx ->
+                    WebView(ctx).apply {
+                        // Set layout params to respect parent constraints
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
 
-                    // Set black background (Ocean Blue theme)
-                    setBackgroundColor(android.graphics.Color.BLACK)
+                        // Set black background (Ocean Blue theme)
+                        setBackgroundColor(android.graphics.Color.BLACK)
 
-                    // Set initial page scale based on mode and orientation
-                    // Use settings-based scale calculation
-                    val browserSettings = settings ?: BrowserSettings()
-                    val isLandscape = ctx.resources.configuration.orientation ==
-                        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                        // Set initial page scale based on mode and orientation
+                        // Use settings-based scale calculation
+                        val browserSettings = settings ?: BrowserSettings()
+                        val isLandscape = ctx.resources.configuration.orientation ==
+                                android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                        val scale = browserSettings.getScaleForMode(isDesktopMode, isLandscape)
+                        val scalePercent = (scale * 100).toInt()
 
-                    val scale = browserSettings.getScaleForMode(isDesktopMode, isLandscape)
-                    val scalePercent = (scale * 100).toInt()
-
-                    if (scalePercent > 0) {
-                        setInitialScale(scalePercent)
-                        println("🔍 WebView scale: $scalePercent% (desktop=$isDesktopMode, landscape=$isLandscape)")
-                    }
-
-                    // Apply BrowserSettings using SettingsApplicator
-                    // This replaces hardcoded settings with user-configurable values
-                    val settingsApplicator = SettingsApplicator()
-
-                    // Apply all settings (privacy, display, performance, WebXR)
-                    val result = settingsApplicator.applySettings(this, browserSettings)
-
-                    // Log any errors during settings application
-                    result.onFailure { exception ->
-                        println("⚠️ Failed to apply settings: ${exception.message}")
-                        exception.printStackTrace()
-                    }
-
-                    // Security: Always override file access (regardless of settings)
-                    // No action needed - SettingsApplicator already handles this
-
-                // WebViewClient (handles page navigation)
-                webViewClient = object : WebViewClient() {
-                    // FIX ANR: Track page load timeouts to prevent ANR on slow sites
-                    private var loadTimeoutRunnable: Runnable? = null
-                    private val loadTimeoutHandler = android.os.Handler(android.os.Looper.getMainLooper())
-
-                    override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                        super.onPageStarted(view, url, favicon)
-                        onLoadingChange(true)
-                        url?.let { onUrlChange(it) }
-
-                        // FIX ANR: Cancel load if it takes too long (prevents ANR on AOSP devices)
-                        // This is especially important for WebGL sites (Babylon.js, Shadertoy) on HMT-1
-                        loadTimeoutRunnable?.let { loadTimeoutHandler.removeCallbacks(it) }
-                        loadTimeoutRunnable = Runnable {
-                            if (view?.progress ?: 100 < 20) {
-                                view?.stopLoading()
-                                println("⚠️ WebView load timeout after 4s - stopping to prevent ANR")
-                                println("   URL: $url")
-                                println("   Progress: ${view?.progress}%")
-                                onLoadingChange(false)
-                            }
+                        if (scalePercent > 0) {
+                            setInitialScale(scalePercent)
+                            println("🔍 WebView scale: $scalePercent% (desktop=$isDesktopMode, landscape=$isLandscape)")
                         }
-                        loadTimeoutHandler.postDelayed(loadTimeoutRunnable!!, 4000) // 4s (before 5s ANR threshold)
-                    }
 
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        onLoadingChange(false)
+                        // Apply BrowserSettings using SettingsApplicator
+                        // This replaces hardcoded settings with user-configurable values
+                        val settingsApplicator = SettingsApplicator()
 
-                        // Cancel timeout since page finished loading
-                        loadTimeoutRunnable?.let { loadTimeoutHandler.removeCallbacks(it) }
-                        loadTimeoutRunnable = null
+                        // Apply all settings (privacy, display, performance, WebXR)
+                        val result = settingsApplicator.applySettings(this, browserSettings)
 
-                        view?.let {
-                            canGoBack(it.canGoBack())
-                            canGoForward(it.canGoForward())
-                            it.title?.let { title -> onTitleChange(title) }
+                        // Log any errors during settings application
+                        result.onFailure { exception ->
+                            println("⚠️ Failed to apply settings: ${exception.message}")
+                            exception.printStackTrace()
+                        }
 
-                            // VoiceOS: Scrape DOM for voice commands
-                            if (voiceOSCallback != null && voiceOSBridge != null) {
-                                voiceOSScope.launch {
-                                    try {
-                                        val result = voiceOSBridge?.scrapeDom()
-                                        result?.let { scrapeResult ->
-                                            Log.d("VoiceOS", "DOM scraped: ${scrapeResult.elementCount} elements from ${scrapeResult.url}")
-                                            voiceOSCallback.onDOMScraped(scrapeResult)
+                        // Security: Always override file access (regardless of settings)
+                        // No action needed - SettingsApplicator already handles this
+
+                        // WebViewClient (handles page navigation)
+                        webViewClient = object : WebViewClient() {
+                            // FIX ANR: Track page load timeouts to prevent ANR on slow sites
+                            private var loadTimeoutRunnable: Runnable? = null
+                            private val loadTimeoutHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                                super.onPageStarted(view, url, favicon)
+                                onLoadingChange(true)
+                                url?.let { onUrlChange(it) }
+
+                                // FIX ANR: Cancel load if it takes too long (prevents ANR on AOSP devices)
+                                // This is especially important for WebGL sites (Babylon.js, Shadertoy) on HMT-1
+                                loadTimeoutRunnable?.let { loadTimeoutHandler.removeCallbacks(it) }
+                                loadTimeoutRunnable = Runnable {
+                                    if (view?.progress ?: 100 < 20) {
+                                        view?.stopLoading()
+                                        println("⚠️ WebView load timeout after 4s - stopping to prevent ANR")
+                                        println("   URL: $url")
+                                        println("   Progress: ${view?.progress}%")
+                                        onLoadingChange(false)
+                                    }
+                                }
+                                loadTimeoutHandler.postDelayed(loadTimeoutRunnable!!, 4000) // 4s (before 5s ANR threshold)
+                            }
+
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                super.onPageFinished(view, url)
+                                onLoadingChange(false)
+
+                                // Cancel timeout since page finished loading
+                                loadTimeoutRunnable?.let { loadTimeoutHandler.removeCallbacks(it) }
+                                loadTimeoutRunnable = null
+
+                                view?.let {
+                                    canGoBack(it.canGoBack())
+                                    canGoForward(it.canGoForward())
+                                    it.title?.let { title -> onTitleChange(title) }
+                                }
+                            }
+
+                            override fun shouldOverrideUrlLoading(
+                                view: WebView?,
+                                request: WebResourceRequest?
+                            ): Boolean {
+                                val newUrl = request?.url?.toString() ?: return false
+
+                                if (browserSettings.openLinksInNewTab && request.isForMainFrame && request.hasGesture()) {
+                                    println("🔗 Opening link in new tab: $newUrl")
+                                    onOpenInNewTab(newUrl)
+                                    return true
+                                }
+
+                                return false
+                            }
+
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                super.onPageFinished(view, url)
+                                view?.let {
+                                    canGoBack(it.canGoBack())
+                                    canGoForward(it.canGoForward())
+                                    it.title?.let { title -> onTitleChange(title) }
+
+                                    // VoiceOS: Scrape DOM for voice commands
+                                    if (voiceOSCallback != null && voiceOSBridge != null) {
+                                        voiceOSScope.launch {
+                                            try {
+                                                val result = voiceOSBridge?.scrapeDom()
+                                                result?.let { scrapeResult ->
+                                                    Log.d("VoiceOS", "DOM scraped: ${scrapeResult.elementCount} elements from ${scrapeResult.url}")
+                                                    voiceOSCallback.onDOMScraped(scrapeResult)
+                                                }
+                                                voiceOSCallback.onPageLoadFinished(url ?: "", it.title ?: "")
+                                            } catch (e: Exception) {
+                                                Log.e("VoiceOS", "Failed to scrape DOM", e)
+                                            }
                                         }
-                                        voiceOSCallback.onPageLoadFinished(url ?: "", it.title ?: "")
-                                    } catch (e: Exception) {
-                                        Log.e("VoiceOS", "Failed to scrape DOM", e)
                                     }
                                 }
                             }
-                        }
-                    }
 
-                    override fun shouldOverrideUrlLoading(
-                        view: WebView?,
-                        request: WebResourceRequest?
-                    ): Boolean {
-                        val newUrl = request?.url?.toString() ?: return false
+                            // PHASE 1: SSL Error Handling (CWE-295)
+                            // PHASE 3: Integrated with SecurityViewModel and SslErrorDialog
+                            override fun onReceivedSslError(
+                                view: WebView?,
+                                handler: SslErrorHandler?,
+                                error: SslError?
+                            ) {
+                                // SECURITY: Reject invalid certificates by default
+                                if (error == null || handler == null) {
+                                    handler?.cancel()
+                                    return
+                                }
 
-                        if (browserSettings.openLinksInNewTab && request.isForMainFrame && request.hasGesture()) {
-                            println("🔗 Opening link in new tab: $newUrl")
-                            onOpenInNewTab(newUrl)
-                            return true
-                        }
+                                // Convert Android SslError to our SecurityState
+                                val sslErrorInfo = CertificateUtils.convertSslError(error)
 
-                        return false
-                    }
+                                // Log SSL error for debugging
+                                println("🔒 SSL Error detected:")
+                                println("   URL: ${sslErrorInfo.url}")
+                                println("   Type: ${sslErrorInfo.errorType}")
+                                println("   Error: ${sslErrorInfo.primaryError}")
 
-                    // PHASE 1: SSL Error Handling (CWE-295)
-                    // PHASE 3: Integrated with SecurityViewModel and SslErrorDialog
-                    override fun onReceivedSslError(
-                        view: WebView?,
-                        handler: SslErrorHandler?,
-                        error: SslError?
-                    ) {
-                        // SECURITY: Reject invalid certificates by default
-                        if (error == null || handler == null) {
-                            handler?.cancel()
-                            return
-                        }
-
-                        // Convert Android SslError to our SecurityState
-                        val sslErrorInfo = CertificateUtils.convertSslError(error)
-
-                        // Log SSL error for debugging
-                        println("🔒 SSL Error detected:")
-                        println("   URL: ${sslErrorInfo.url}")
-                        println("   Type: ${sslErrorInfo.errorType}")
-                        println("   Error: ${sslErrorInfo.primaryError}")
-
-                        // PHASE 3: Show dialog if SecurityViewModel is available
-                        if (securityViewModel != null) {
-                            securityViewModel.showSslErrorDialog(
-                                sslErrorInfo = sslErrorInfo,
-                                onGoBack = {
+                                // PHASE 3: Show dialog if SecurityViewModel is available
+                                if (securityViewModel != null) {
+                                    securityViewModel.showSslErrorDialog(
+                                        sslErrorInfo = sslErrorInfo,
+                                        onGoBack = {
+                                            handler.cancel()
+                                            println("   → User chose: GO BACK (safe)")
+                                        },
+                                        onProceedAnyway = {
+                                            handler.proceed()
+                                            println("   → User chose: PROCEED ANYWAY (dangerous)")
+                                        }
+                                    )
+                                } else {
+                                    // Fallback: Deny if no ViewModel (shouldn't happen)
+                                    println("   → No SecurityViewModel, denying by default")
                                     handler.cancel()
-                                    println("   → User chose: GO BACK (safe)")
-                                },
-                                onProceedAnyway = {
-                                    handler.proceed()
-                                    println("   → User chose: PROCEED ANYWAY (dangerous)")
                                 }
-                            )
-                        } else {
-                            // Fallback: Deny if no ViewModel (shouldn't happen)
-                            println("   → No SecurityViewModel, denying by default")
-                            handler.cancel()
-                        }
-                    }
+                            }
 
-                    // HTTP Authentication (Basic/Digest)
-                    override fun onReceivedHttpAuthRequest(
-                        view: WebView?,
-                        handler: android.webkit.HttpAuthHandler?,
-                        host: String?,
-                        realm: String?
-                    ) {
-                        // SECURITY: Require user authentication for HTTP Basic/Digest
-                        if (handler == null) {
-                            handler?.cancel()
-                            return
-                        }
+                            // HTTP Authentication (Basic/Digest)
+                            override fun onReceivedHttpAuthRequest(
+                                view: WebView?,
+                                handler: android.webkit.HttpAuthHandler?,
+                                host: String?,
+                                realm: String?
+                            ) {
+                                // SECURITY: Require user authentication for HTTP Basic/Digest
+                                if (handler == null) {
+                                    handler?.cancel()
+                                    return
+                                }
 
-                        val authRequest = HttpAuthRequest(
-                            host = host ?: "Unknown",
-                            realm = realm ?: "",
-                            scheme = "Basic" // Android doesn't distinguish Basic vs Digest
-                        )
+                                val authRequest = HttpAuthRequest(
+                                    host = host ?: "Unknown",
+                                    realm = realm ?: "",
+                                    scheme = "Basic" // Android doesn't distinguish Basic vs Digest
+                                )
 
-                        // Log HTTP auth request
-                        println("🔐 HTTP Authentication requested:")
-                        println("   Host: ${authRequest.host}")
-                        println("   Realm: ${authRequest.realm}")
+                                // Log HTTP auth request
+                                println("🔐 HTTP Authentication requested:")
+                                println("   Host: ${authRequest.host}")
+                                println("   Realm: ${authRequest.realm}")
 
-                        // Show dialog if SecurityViewModel is available
-                        if (securityViewModel != null) {
-                            securityViewModel.showHttpAuthDialog(
-                                authRequest = authRequest,
-                                onAuthenticate = { credentials ->
-                                    handler.proceed(credentials.username, credentials.password)
-                                    println("   → User authenticated")
-                                },
-                                onCancel = {
+                                // Show dialog if SecurityViewModel is available
+                                if (securityViewModel != null) {
+                                    securityViewModel.showHttpAuthDialog(
+                                        authRequest = authRequest,
+                                        onAuthenticate = { credentials ->
+                                            handler.proceed(credentials.username, credentials.password)
+                                            println("   → User authenticated")
+                                        },
+                                        onCancel = {
+                                            handler.cancel()
+                                            println("   → User cancelled authentication")
+                                        }
+                                    )
+                                } else {
+                                    // Fallback: Cancel if no ViewModel
+                                    println("   → No SecurityViewModel, cancelling")
                                     handler.cancel()
-                                    println("   → User cancelled authentication")
                                 }
-                            )
-                        } else {
-                            // Fallback: Cancel if no ViewModel
-                            println("   → No SecurityViewModel, cancelling")
-                            handler.cancel()
-                        }
-                    }
-
-                    // FIX P0-P3: Handle network errors (DNS, connection, timeout)
-                    override fun onReceivedError(
-                        view: WebView?,
-                        request: android.webkit.WebResourceRequest?,
-                        error: android.webkit.WebResourceError?
-                    ) {
-                        super.onReceivedError(view, request, error)
-
-                        val errorCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                            error?.errorCode ?: -1
-                        } else -1
-
-                        val description = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                            error?.description?.toString() ?: "Unknown error"
-                        } else "Unknown error"
-
-                        val url = request?.url?.toString() ?: "Unknown URL"
-                        val isMainFrame = request?.isForMainFrame ?: false
-
-                        // Only log main frame errors (not subresources like images)
-                        if (isMainFrame) {
-                            println("🔴 Page Load Error ($errorCode): $url")
-                            println("   Error: $description")
-
-                            // Map error codes to user-friendly context
-                            val errorContext = when (errorCode) {
-                                WebViewClient.ERROR_UNKNOWN -> "Unknown network error"
-                                WebViewClient.ERROR_HOST_LOOKUP -> "Could not find server (DNS failure)"
-                                WebViewClient.ERROR_UNSUPPORTED_AUTH_SCHEME -> "Unsupported authentication"
-                                WebViewClient.ERROR_AUTHENTICATION -> "Authentication failed"
-                                WebViewClient.ERROR_PROXY_AUTHENTICATION -> "Proxy authentication failed"
-                                WebViewClient.ERROR_CONNECT -> "Could not connect to server"
-                                WebViewClient.ERROR_IO -> "Network I/O error"
-                                WebViewClient.ERROR_TIMEOUT -> "Connection timeout"
-                                WebViewClient.ERROR_REDIRECT_LOOP -> "Too many redirects"
-                                WebViewClient.ERROR_UNSUPPORTED_SCHEME -> "Unsupported URL scheme"
-                                WebViewClient.ERROR_FAILED_SSL_HANDSHAKE -> "SSL handshake failed"
-                                WebViewClient.ERROR_BAD_URL -> "Invalid URL format"
-                                WebViewClient.ERROR_FILE -> "Generic file error"
-                                WebViewClient.ERROR_FILE_NOT_FOUND -> "File not found"
-                                WebViewClient.ERROR_TOO_MANY_REQUESTS -> "Too many requests"
-                                else -> "Network error: $description"
                             }
-                            println("   Context: $errorContext")
-                        }
-                    }
 
-                    // FIX P0-P4: Handle HTTP errors (4xx, 5xx responses)
-                    override fun onReceivedHttpError(
-                        view: WebView?,
-                        request: android.webkit.WebResourceRequest?,
-                        errorResponse: android.webkit.WebResourceResponse?
-                    ) {
-                        super.onReceivedHttpError(view, request, errorResponse)
+                            // FIX P0-P3: Handle network errors (DNS, connection, timeout)
+                            override fun onReceivedError(
+                                view: WebView?,
+                                request: android.webkit.WebResourceRequest?,
+                                error: android.webkit.WebResourceError?
+                            ) {
+                                super.onReceivedError(view, request, error)
 
-                        val statusCode = errorResponse?.statusCode ?: -1
-                        val url = request?.url?.toString() ?: "Unknown URL"
-                        val isMainFrame = request?.isForMainFrame ?: false
+                                val errorCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                                    error?.errorCode ?: -1
+                                } else -1
 
-                        // Only log main frame HTTP errors
-                        if (isMainFrame && statusCode >= 400) {
-                            println("⚠️  HTTP Error $statusCode: $url")
+                                val description = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                                    error?.description?.toString() ?: "Unknown error"
+                                } else "Unknown error"
 
-                            // Log security-relevant errors
-                            when (statusCode) {
-                                401 -> println("   → Unauthorized (authentication required)")
-                                403 -> println("   → Forbidden (access denied)")
-                                404 -> println("   → Not Found")
-                                in 500..599 -> println("   → Server error (may indicate server issues)")
+                                val url = request?.url?.toString() ?: "Unknown URL"
+                                val isMainFrame = request?.isForMainFrame ?: false
+
+                                // Only log main frame errors (not subresources like images)
+                                if (isMainFrame) {
+                                    println("🔴 Page Load Error ($errorCode): $url")
+                                    println("   Error: $description")
+
+                                    // Map error codes to user-friendly context
+                                    val errorContext = when (errorCode) {
+                                        WebViewClient.ERROR_UNKNOWN -> "Unknown network error"
+                                        WebViewClient.ERROR_HOST_LOOKUP -> "Could not find server (DNS failure)"
+                                        WebViewClient.ERROR_UNSUPPORTED_AUTH_SCHEME -> "Unsupported authentication"
+                                        WebViewClient.ERROR_AUTHENTICATION -> "Authentication failed"
+                                        WebViewClient.ERROR_PROXY_AUTHENTICATION -> "Proxy authentication failed"
+                                        WebViewClient.ERROR_CONNECT -> "Could not connect to server"
+                                        WebViewClient.ERROR_IO -> "Network I/O error"
+                                        WebViewClient.ERROR_TIMEOUT -> "Connection timeout"
+                                        WebViewClient.ERROR_REDIRECT_LOOP -> "Too many redirects"
+                                        WebViewClient.ERROR_UNSUPPORTED_SCHEME -> "Unsupported URL scheme"
+                                        WebViewClient.ERROR_FAILED_SSL_HANDSHAKE -> "SSL handshake failed"
+                                        WebViewClient.ERROR_BAD_URL -> "Invalid URL format"
+                                        WebViewClient.ERROR_FILE -> "Generic file error"
+                                        WebViewClient.ERROR_FILE_NOT_FOUND -> "File not found"
+                                        WebViewClient.ERROR_TOO_MANY_REQUESTS -> "Too many requests"
+                                        else -> "Network error: $description"
+                                    }
+                                    println("   Context: $errorContext")
+                                }
+                            }
+
+                            // FIX P0-P4: Handle HTTP errors (4xx, 5xx responses)
+                            override fun onReceivedHttpError(
+                                view: WebView?,
+                                request: android.webkit.WebResourceRequest?,
+                                errorResponse: android.webkit.WebResourceResponse?
+                            ) {
+                                super.onReceivedHttpError(view, request, errorResponse)
+
+                                val statusCode = errorResponse?.statusCode ?: -1
+                                val url = request?.url?.toString() ?: "Unknown URL"
+                                val isMainFrame = request?.isForMainFrame ?: false
+
+                                // Only log main frame HTTP errors
+                                if (isMainFrame && statusCode >= 400) {
+                                    println("⚠️  HTTP Error $statusCode: $url")
+
+                                    // Log security-relevant errors
+                                    when (statusCode) {
+                                        401 -> println("   → Unauthorized (authentication required)")
+                                        403 -> println("   → Forbidden (access denied)")
+                                        404 -> println("   → Not Found")
+                                        in 500..599 -> println("   → Server error (may indicate server issues)")
+                                    }
+                                }
+                            }
+
+                            // FIX P5: Intercept requests for ad/tracker blocking and traffic monitoring
+                            override fun shouldInterceptRequest(
+                                view: WebView?,
+                                request: WebResourceRequest?
+                            ): WebResourceResponse? {
+                                val url = request?.url?.toString() ?: return null
+                                val host = request?.url?.host?.lowercase() ?: return null
+
+                                if (browserSettings.blockAds || browserSettings.blockTrackers) {
+                                    // Basic ad/tracker domain blocklist (can be expanded)
+                                    val blockedDomains = setOf(
+                                        "doubleclick.net",
+                                        "googlesyndication.com",
+                                        "googleadservices.com",
+                                        "google-analytics.com",
+                                        "facebook.com/tr",
+                                        "analytics.google.com",
+                                        "adservice.google.com",
+                                        "pagead2.googlesyndication.com"
+                                    )
+
+                                    // Check if host matches any blocked domain
+                                    val isBlocked = blockedDomains.any { blocked ->
+                                        host.endsWith(blocked) || host == blocked
+                                    }
+
+                                    if (isBlocked) {
+                                        println("🚫 Blocked request: $url")
+                                        // Return empty response to block the request
+                                        return WebResourceResponse(
+                                            "text/plain",
+                                            "UTF-8",
+                                            java.io.ByteArrayInputStream(ByteArray(0))
+                                        )
+                                    }
+                                }
+
+
+                                // Allow the request to proceed normally
+                                return super.shouldInterceptRequest(view, request)
                             }
                         }
-                    }
 
-                    // FIX P5: Intercept requests for ad/tracker blocking and traffic monitoring
-                    override fun shouldInterceptRequest(
-                        view: WebView?,
-                        request: WebResourceRequest?
-                    ): WebResourceResponse? {
-                        val url = request?.url?.toString() ?: return null
-                        val host = request?.url?.host?.lowercase() ?: return null
+                        // WebChromeClient (handles JavaScript dialogs, progress, etc.)
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                super.onProgressChanged(view, newProgress)
+                                onProgressChange(newProgress / 100f)
+                            }
 
-                        // Basic ad/tracker domain blocklist (can be expanded)
-                        val blockedDomains = setOf(
-                            "doubleclick.net",
-                            "googlesyndication.com",
-                            "googleadservices.com",
-                            "google-analytics.com",
-                            "facebook.com/tr",
-                            "analytics.google.com",
-                            "adservice.google.com",
-                            "pagead2.googlesyndication.com"
-                        )
+                            override fun onReceivedTitle(view: WebView?, title: String?) {
+                                super.onReceivedTitle(view, title)
+                                title?.let { onTitleChange(it) }
+                            }
 
-                        // Check if host matches any blocked domain
-                        val isBlocked = blockedDomains.any { blocked ->
-                            host.endsWith(blocked) || host == blocked
-                        }
+                            // PHASE 1: JavaScript Dialog Security (CWE-1021)
+                            // PHASE 3: Integrated with SecurityViewModel and JavaScriptAlertDialog
 
-                        if (isBlocked) {
-                            println("🚫 Blocked request: $url")
-                            // Return empty response to block the request
-                            return WebResourceResponse(
-                                "text/plain",
-                                "UTF-8",
-                                java.io.ByteArrayInputStream(ByteArray(0))
-                            )
-                        }
+                            override fun onJsAlert(
+                                view: WebView?,
+                                url: String?,
+                                message: String?,
+                                result: JsResult?
+                            ): Boolean {
+                                if (result == null) return true
 
-                        // Allow the request to proceed normally
-                        return super.shouldInterceptRequest(view, request)
-                    }
-                }
-
-                // WebChromeClient (handles JavaScript dialogs, progress, etc.)
-                webChromeClient = object : WebChromeClient() {
-                    override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                        super.onProgressChanged(view, newProgress)
-                        onProgressChange(newProgress / 100f)
-                    }
-
-                    override fun onReceivedTitle(view: WebView?, title: String?) {
-                        super.onReceivedTitle(view, title)
-                        title?.let { onTitleChange(it) }
-                    }
-
-                    // PHASE 1: JavaScript Dialog Security (CWE-1021)
-                    // PHASE 3: Integrated with SecurityViewModel and JavaScriptAlertDialog
-
-                    override fun onJsAlert(
-                        view: WebView?,
-                        url: String?,
-                        message: String?,
-                        result: JsResult?
-                    ): Boolean {
-                        if (result == null) return true
-
-                        // Extract domain from URL
-                        val domain = try {
-                            Uri.parse(url).host ?: "Unknown"
-                        } catch (e: Exception) {
-                            "Unknown"
-                        }
-
-                        // Log JavaScript alert
-                        println("⚠️  JavaScript Alert from $domain:")
-                        println("   Message: ${message ?: "(empty)"}")
-
-                        // PHASE 3: Show dialog if SecurityViewModel is available
-                        if (securityViewModel != null) {
-                            securityViewModel.showJsAlertDialog(
-                                domain = domain,
-                                message = message ?: "",
-                                onDismiss = {
-                                    result.confirm()
-                                    println("   → User dismissed alert")
+                                // Extract domain from URL
+                                val domain = try {
+                                    Uri.parse(url).host ?: "Unknown"
+                                } catch (e: Exception) {
+                                    "Unknown"
                                 }
-                            )
-                        } else {
-                            // Fallback: Cancel if no ViewModel
-                            println("   → No SecurityViewModel, cancelling by default")
-                            result.cancel()
-                        }
 
-                        return true
-                    }
+                                // Log JavaScript alert
+                                println("⚠️  JavaScript Alert from $domain:")
+                                println("   Message: ${message ?: "(empty)"}")
 
-                    override fun onJsConfirm(
-                        view: WebView?,
-                        url: String?,
-                        message: String?,
-                        result: JsResult?
-                    ): Boolean {
-                        if (result == null) return true
-
-                        // Extract domain from URL
-                        val domain = try {
-                            Uri.parse(url).host ?: "Unknown"
-                        } catch (e: Exception) {
-                            "Unknown"
-                        }
-
-                        // Log JavaScript confirm
-                        println("⚠️  JavaScript Confirm from $domain:")
-                        println("   Message: ${message ?: "(empty)"}")
-
-                        // PHASE 3: Show dialog if SecurityViewModel is available
-                        if (securityViewModel != null) {
-                            securityViewModel.showJsConfirmDialog(
-                                domain = domain,
-                                message = message ?: "",
-                                onConfirm = {
-                                    result.confirm()
-                                    println("   → User chose: OK")
-                                },
-                                onCancel = {
+                                // PHASE 3: Show dialog if SecurityViewModel is available
+                                if (securityViewModel != null) {
+                                    securityViewModel.showJsAlertDialog(
+                                        domain = domain,
+                                        message = message ?: "",
+                                        onDismiss = {
+                                            result.confirm()
+                                            println("   → User dismissed alert")
+                                        }
+                                    )
+                                } else {
+                                    // Fallback: Cancel if no ViewModel
+                                    println("   → No SecurityViewModel, cancelling by default")
                                     result.cancel()
-                                    println("   → User chose: CANCEL")
                                 }
-                            )
-                        } else {
-                            // Fallback: Cancel if no ViewModel
-                            println("   → No SecurityViewModel, cancelling by default")
-                            result.cancel()
-                        }
 
-                        return true
-                    }
+                                return true
+                            }
 
-                    override fun onJsPrompt(
-                        view: WebView?,
-                        url: String?,
-                        message: String?,
-                        defaultValue: String?,
-                        result: JsPromptResult?
-                    ): Boolean {
-                        if (result == null) return true
+                            override fun onJsConfirm(
+                                view: WebView?,
+                                url: String?,
+                                message: String?,
+                                result: JsResult?
+                            ): Boolean {
+                                if (result == null) return true
 
-                        // Extract domain from URL
-                        val domain = try {
-                            Uri.parse(url).host ?: "Unknown"
-                        } catch (e: Exception) {
-                            "Unknown"
-                        }
+                                // Extract domain from URL
+                                val domain = try {
+                                    Uri.parse(url).host ?: "Unknown"
+                                } catch (e: Exception) {
+                                    "Unknown"
+                                }
 
-                        // Log JavaScript prompt
-                        println("⚠️  JavaScript Prompt from $domain:")
-                        println("   Message: ${message ?: "(empty)"}")
-                        println("   Default: ${defaultValue ?: "(none)"}")
+                                // Log JavaScript confirm
+                                println("⚠️  JavaScript Confirm from $domain:")
+                                println("   Message: ${message ?: "(empty)"}")
 
-                        // PHASE 3: Show dialog if SecurityViewModel is available
-                        if (securityViewModel != null) {
-                            securityViewModel.showJsPromptDialog(
-                                domain = domain,
-                                message = message ?: "",
-                                defaultValue = defaultValue ?: "",
-                                onConfirm = { input ->
-                                    result.confirm(input)
-                                    println("   → User entered: $input")
-                                },
-                                onCancel = {
+                                // PHASE 3: Show dialog if SecurityViewModel is available
+                                if (securityViewModel != null) {
+                                    securityViewModel.showJsConfirmDialog(
+                                        domain = domain,
+                                        message = message ?: "",
+                                        onConfirm = {
+                                            result.confirm()
+                                            println("   → User chose: OK")
+                                        },
+                                        onCancel = {
+                                            result.cancel()
+                                            println("   → User chose: CANCEL")
+                                        }
+                                    )
+                                } else {
+                                    // Fallback: Cancel if no ViewModel
+                                    println("   → No SecurityViewModel, cancelling by default")
                                     result.cancel()
-                                    println("   → User chose: CANCEL")
                                 }
-                            )
-                        } else {
-                            // Fallback: Cancel if no ViewModel
-                            println("   → No SecurityViewModel, cancelling by default")
-                            result.cancel()
-                        }
 
-                        return true
-                    }
+                                return true
+                            }
 
-                    // PHASE 1: Permission Request Handling (CWE-276)
-                    // PHASE 3: Integrated with SecurityViewModel and PermissionRequestDialog
-                    override fun onPermissionRequest(request: PermissionRequest?) {
-                        if (request == null) return
+                            override fun onJsPrompt(
+                                view: WebView?,
+                                url: String?,
+                                message: String?,
+                                defaultValue: String?,
+                                result: JsPromptResult?
+                            ): Boolean {
+                                if (result == null) return true
 
-                        // Extract domain from request origin
-                        val domain = request.origin?.host ?: "Unknown"
+                                // Extract domain from URL
+                                val domain = try {
+                                    Uri.parse(url).host ?: "Unknown"
+                                } catch (e: Exception) {
+                                    "Unknown"
+                                }
 
-                        // Convert Android permission resources to our PermissionType
-                        val permissions = request.resources.mapNotNull { resource ->
-                            PermissionType.fromResourceString(resource)
-                        }
+                                // Log JavaScript prompt
+                                println("⚠️  JavaScript Prompt from $domain:")
+                                println("   Message: ${message ?: "(empty)"}")
+                                println("   Default: ${defaultValue ?: "(none)"}")
 
-                        if (permissions.isEmpty()) {
-                            // Unknown permission type - deny for security
-                            println("⚠️  Permission request from $domain - unknown type, denying")
-                            request.deny()
-                            return
-                        }
+                                // PHASE 3: Show dialog if SecurityViewModel is available
+                                if (securityViewModel != null) {
+                                    securityViewModel.showJsPromptDialog(
+                                        domain = domain,
+                                        message = message ?: "",
+                                        defaultValue = defaultValue ?: "",
+                                        onConfirm = { input ->
+                                            result.confirm(input)
+                                            println("   → User entered: $input")
+                                        },
+                                        onCancel = {
+                                            result.cancel()
+                                            println("   → User chose: CANCEL")
+                                        }
+                                    )
+                                } else {
+                                    // Fallback: Cancel if no ViewModel
+                                    println("   → No SecurityViewModel, cancelling by default")
+                                    result.cancel()
+                                }
 
-                        // Log permission request
-                        println("🔐 Permission request from $domain:")
-                        permissions.forEach { perm ->
-                            println("   - ${perm.getUserFriendlyName()}")
-                        }
+                                return true
+                            }
 
-                        // PHASE 3: Show dialog if SecurityViewModel is available
-                        if (securityViewModel != null) {
-                            securityViewModel.showPermissionRequestDialog(
-                                domain = domain,
-                                permissions = permissions,
-                                onAllow = { remember ->
-                                    request.grant(request.resources)
-                                    println("   → User chose: ALLOW (remember=$remember)")
-                                },
-                                onDeny = {
+                            // PHASE 1: Permission Request Handling (CWE-276)
+                            // PHASE 3: Integrated with SecurityViewModel and PermissionRequestDialog
+                            override fun onPermissionRequest(request: PermissionRequest?) {
+                                if (request == null) return
+
+                                // Extract domain from request origin
+                                val domain = request.origin?.host ?: "Unknown"
+
+                                // Convert Android permission resources to our PermissionType
+                                val permissions = request.resources.mapNotNull { resource ->
+                                    PermissionType.fromResourceString(resource)
+                                }
+
+                                if (permissions.isEmpty()) {
+                                    // Unknown permission type - deny for security
+                                    println("⚠️  Permission request from $domain - unknown type, denying")
                                     request.deny()
-                                    println("   → User chose: DENY")
+                                    return
                                 }
-                            )
+
+                                // Log permission request
+                                println("🔐 Permission request from $domain:")
+                                permissions.forEach { perm ->
+                                    println("   - ${perm.getUserFriendlyName()}")
+                                }
+
+                                // PHASE 3: Show dialog if SecurityViewModel is available
+                                if (securityViewModel != null) {
+                                    securityViewModel.showPermissionRequestDialog(
+                                        domain = domain,
+                                        permissions = permissions,
+                                        onAllow = { remember ->
+                                            request.grant(request.resources)
+                                            println("   → User chose: ALLOW (remember=$remember)")
+                                        },
+                                        onDeny = {
+                                            request.deny()
+                                            println("   → User chose: DENY")
+                                        }
+                                    )
+                                } else {
+                                    // Fallback: Deny if no ViewModel (shouldn't happen)
+                                    println("   → No SecurityViewModel, denying by default")
+                                    request.deny()
+                                }
+                            }
+
+                            // File upload support - onShowFileChooser for <input type="file">
+                            override fun onShowFileChooser(
+                                webView: WebView?,
+                                newFilePathCallback: ValueCallback<Array<Uri>>?,
+                                fileChooserParams: FileChooserParams?
+                            ): Boolean {
+                                if (newFilePathCallback == null) return false
+
+                                // Cancel previous callback if any
+                                filePathCallback?.onReceiveValue(null)
+
+                                // Store callback for file picker result
+                                filePathCallback = newFilePathCallback
+
+                                // Extract MIME types from params
+                                val acceptTypes = fileChooserParams?.acceptTypes?.firstOrNull() ?: "*/*"
+
+                                println("📎 File upload requested:")
+                                println("   Accept types: $acceptTypes")
+                                println("   Multiple: ${fileChooserParams?.mode == FileChooserParams.MODE_OPEN_MULTIPLE}")
+
+                                // Launch file picker with appropriate MIME type
+                                filePickerLauncher.launch(acceptTypes)
+
+                                return true
+                            }
+                        }
+
+                        // FIX BUG #2: Add download listener for file downloads
+                        // Updated to use onDownloadStart callback for integration with DownloadViewModel
+                        setDownloadListener { downloadUrl, userAgent, contentDisposition, mimeType, contentLength ->
+                            println("📥 Download requested:")
+                            println("   URL: $downloadUrl")
+                            println("   MIME: $mimeType")
+                            println("   Size: $contentLength bytes")
+                            println("   Content-Disposition: $contentDisposition")
+
+                            // Extract filename from content disposition or URL
+                            val filename = android.webkit.URLUtil.guessFileName(downloadUrl, contentDisposition, mimeType)
+                            println("   Filename: $filename")
+
+                            // Create DownloadRequest and call callback if provided
+                            if (onDownloadStart != null) {
+                                val downloadRequest = DownloadRequest(
+                                    url = downloadUrl,
+                                    filename = filename,
+                                    mimeType = mimeType,
+                                    contentLength = contentLength,
+                                    userAgent = userAgent,
+                                    contentDisposition = contentDisposition
+                                )
+                                onDownloadStart(downloadRequest)
+                                println("   ✅ Download request sent to ViewModel")
+                            } else {
+                                // Fallback: Direct download if no callback
+                                try {
+                                    val request = android.app.DownloadManager.Request(android.net.Uri.parse(downloadUrl))
+                                        .setTitle(filename)
+                                        .setDescription("Downloading file...")
+                                        .setMimeType(mimeType)
+                                        .setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                        .setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS, filename)
+                                        .addRequestHeader("User-Agent", userAgent)
+
+                                    val downloadManager =
+                                        ctx.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as android.app.DownloadManager
+                                    val downloadId = downloadManager.enqueue(request)
+                                    println("   ✅ Download started (fallback): ID=$downloadId")
+
+                                    android.widget.Toast.makeText(
+                                        ctx,
+                                        "Downloading: $filename",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                } catch (e: Exception) {
+                                    println("   ❌ Download failed: ${e.message}")
+                                    e.printStackTrace()
+
+                                    android.widget.Toast.makeText(
+                                        ctx,
+                                        "Download failed: ${e.message}",
+                                        android.widget.Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                        }
+
+                        // FIX BUG #2 (original): Restore WebView state if available (navigation history)
+                        // Only restore once per tab instance
+                        if (!hasRestoredState && sessionData != null) {
+                            val restored = globalWebViewLifecycle.restoreState(this, sessionData)
+                            if (restored) {
+                                println("WebView: Restored state for tab $tabId (navigation history)")
+                                hasRestoredState = true
+                            } else {
+                                // If restore failed, load initial URL
+                                if (url.isNotBlank()) {
+                                    loadUrl(url)
+                                }
+                                hasRestoredState = true
+                            }
                         } else {
-                            // Fallback: Deny if no ViewModel (shouldn't happen)
-                            println("   → No SecurityViewModel, denying by default")
-                            request.deny()
+                            // Load initial URL (only for new WebViews or if no session data)
+                            if (url.isNotBlank() && this.url == null) {
+                                loadUrl(url)
+                            }
                         }
+
+                        // Save reference
+                        webView = this
+
+                        // Set up controller
+                        controller?.setWebView(this)
                     }
-
-                    // File upload support - onShowFileChooser for <input type="file">
-                    override fun onShowFileChooser(
-                        webView: WebView?,
-                        newFilePathCallback: ValueCallback<Array<Uri>>?,
-                        fileChooserParams: FileChooserParams?
-                    ): Boolean {
-                        if (newFilePathCallback == null) return false
-
-                        // Cancel previous callback if any
-                        filePathCallback?.onReceiveValue(null)
-
-                        // Store callback for file picker result
-                        filePathCallback = newFilePathCallback
-
-                        // Extract MIME types from params
-                        val acceptTypes = fileChooserParams?.acceptTypes?.firstOrNull() ?: "*/*"
-
-                        println("📎 File upload requested:")
-                        println("   Accept types: $acceptTypes")
-                        println("   Multiple: ${fileChooserParams?.mode == FileChooserParams.MODE_OPEN_MULTIPLE}")
-
-                        // Launch file picker with appropriate MIME type
-                        filePickerLauncher.launch(acceptTypes)
-
-                        return true
-                    }
+                }.also { view ->
+                    // Save reference for lifecycle management
+                    webView = view
+                    // Set up controller
+                    controller?.setWebView(view)
+                    // Update navigation state
+                    canGoBack(view.canGoBack())
+                    canGoForward(view.canGoForward())
+                }
+            },
+            update = { view ->
+                // FIX: More robust URL comparison to prevent reload loops
+                // Normalize URLs before comparing (ignore trailing slash, protocol case)
+                fun normalizeUrl(u: String?): String {
+                    if (u.isNullOrBlank()) return ""
+                    return u.lowercase()
+                        .trimEnd('/')
+                        .removePrefix("https://")
+                        .removePrefix("http://")
+                        .removePrefix("www.")
                 }
 
-                // FIX BUG #2: Add download listener for file downloads
-                // Updated to use onDownloadStart callback for integration with DownloadViewModel
-                setDownloadListener { downloadUrl, userAgent, contentDisposition, mimeType, contentLength ->
-                    println("📥 Download requested:")
-                    println("   URL: $downloadUrl")
-                    println("   MIME: $mimeType")
-                    println("   Size: $contentLength bytes")
-                    println("   Content-Disposition: $contentDisposition")
+                val normalizedViewUrl = normalizeUrl(view.url)
+                val normalizedUrl = normalizeUrl(url)
 
-                    // Extract filename from content disposition or URL
-                    val filename = android.webkit.URLUtil.guessFileName(downloadUrl, contentDisposition, mimeType)
-                    println("   Filename: $filename")
-
-                    // Create DownloadRequest and call callback if provided
-                    if (onDownloadStart != null) {
-                        val downloadRequest = DownloadRequest(
-                            url = downloadUrl,
-                            filename = filename,
-                            mimeType = mimeType,
-                            contentLength = contentLength,
-                            userAgent = userAgent,
-                            contentDisposition = contentDisposition
-                        )
-                        onDownloadStart(downloadRequest)
-                        println("   ✅ Download request sent to ViewModel")
-                    } else {
-                        // Fallback: Direct download if no callback
-                        try {
-                            val request = android.app.DownloadManager.Request(android.net.Uri.parse(downloadUrl))
-                                .setTitle(filename)
-                                .setDescription("Downloading file...")
-                                .setMimeType(mimeType)
-                                .setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                                .setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS, filename)
-                                .addRequestHeader("User-Agent", userAgent)
-
-                            val downloadManager = ctx.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as android.app.DownloadManager
-                            val downloadId = downloadManager.enqueue(request)
-                            println("   ✅ Download started (fallback): ID=$downloadId")
-
-                            android.widget.Toast.makeText(
-                                ctx,
-                                "Downloading: $filename",
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
-                        } catch (e: Exception) {
-                            println("   ❌ Download failed: ${e.message}")
-                            e.printStackTrace()
-
-                            android.widget.Toast.makeText(
-                                ctx,
-                                "Download failed: ${e.message}",
-                                android.widget.Toast.LENGTH_LONG
-                            ).show()
-                        }
-                    }
+                // Only reload if URLs are meaningfully different and not during initial load
+                if (url.isNotBlank() && normalizedViewUrl != normalizedUrl && view.url != null) {
+                    println("WebView update: Loading new URL - old='${view.url}' new='$url'")
+                    view.loadUrl(url)
                 }
 
-                // FIX BUG #2 (original): Restore WebView state if available (navigation history)
-                // Only restore once per tab instance
-                if (!hasRestoredState && sessionData != null) {
-                    val restored = globalWebViewLifecycle.restoreState(this, sessionData)
-                    if (restored) {
-                        println("WebView: Restored state for tab $tabId (navigation history)")
-                        hasRestoredState = true
-                    } else {
-                        // If restore failed, load initial URL
-                        if (url.isNotBlank()) {
-                            loadUrl(url)
-                        }
-                        hasRestoredState = true
-                    }
-                } else {
-                    // Load initial URL (only for new WebViews or if no session data)
-                    if (url.isNotBlank() && this.url == null) {
-                        loadUrl(url)
-                    }
-                }
+                // FIX L3: Settings updates handled by LaunchedEffect (see below)
+                // This avoids applying settings twice (once here, once in LaunchedEffect)
+                // The update block only updates controller and navigation state
 
                 // Save reference
                 webView = this
@@ -823,48 +895,15 @@ actual fun WebViewContainer(
                     voiceOSBridge = bridge
                     Log.d("VoiceOS", "Bridge attached to WebView for tab $tabId")
                 }
-                }
             }.also { view ->
                 // Save reference for lifecycle management
                 webView = view
-                // Set up controller
+                // Update controller reference (in case it changed)
                 controller?.setWebView(view)
                 // Update navigation state
                 canGoBack(view.canGoBack())
                 canGoForward(view.canGoForward())
-            }
-        },
-        update = { view ->
-            // FIX: More robust URL comparison to prevent reload loops
-            // Normalize URLs before comparing (ignore trailing slash, protocol case)
-            fun normalizeUrl(u: String?): String {
-                if (u.isNullOrBlank()) return ""
-                return u.lowercase()
-                    .trimEnd('/')
-                    .removePrefix("https://")
-                    .removePrefix("http://")
-                    .removePrefix("www.")
-            }
-
-            val normalizedViewUrl = normalizeUrl(view.url)
-            val normalizedUrl = normalizeUrl(url)
-
-            // Only reload if URLs are meaningfully different and not during initial load
-            if (url.isNotBlank() && normalizedViewUrl != normalizedUrl && view.url != null) {
-                println("WebView update: Loading new URL - old='${view.url}' new='$url'")
-                view.loadUrl(url)
-            }
-
-            // FIX L3: Settings updates handled by LaunchedEffect (see below)
-            // This avoids applying settings twice (once here, once in LaunchedEffect)
-            // The update block only updates controller and navigation state
-
-            // Update controller reference (in case it changed)
-            controller?.setWebView(view)
-            // Update navigation state
-            canGoBack(view.canGoBack())
-            canGoForward(view.canGoForward())
-        },
+            },
             modifier = modifier
         )
     } // End of key(tabId) block
@@ -1114,7 +1153,7 @@ actual class WebViewController {
                         val contentWidth = Regex("contentWidth\"?:\\s*(\\d+)").find(jsonStr)
                             ?.groupValues?.get(1)?.toIntOrNull() ?: 0
                         val hasViewport = jsonStr.contains("hasViewport\":true") ||
-                                          jsonStr.contains("hasViewport\": true")
+                                jsonStr.contains("hasViewport\": true")
 
                         println("AutoFitZoom: Content width=$contentWidth, View width=$viewWidth, Has viewport=$hasViewport")
 

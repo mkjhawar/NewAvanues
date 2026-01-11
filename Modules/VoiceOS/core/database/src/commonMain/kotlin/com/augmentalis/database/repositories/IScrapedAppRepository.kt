@@ -33,6 +33,12 @@ interface IScrapedAppRepository {
     suspend fun getByPackage(packageName: String): ScrapedAppDTO?
 
     /**
+     * Get app by package hash (for compact VUID format lookups).
+     * @param pkgHash 6-char hex hash of reversed package name
+     */
+    suspend fun getByPkgHash(pkgHash: String): ScrapedAppDTO?
+
+    /**
      * Get all scraped apps.
      */
     suspend fun getAll(): List<ScrapedAppDTO>

@@ -39,7 +39,8 @@ class SQLDelightScrapedAppRepository(
             elementCount = app.elementCount,
             commandCount = app.commandCount,
             firstScrapedAt = app.firstScrapedAt,
-            lastScrapedAt = app.lastScrapedAt
+            lastScrapedAt = app.lastScrapedAt,
+            pkg_hash = app.pkgHash
         )
     }
 
@@ -49,6 +50,10 @@ class SQLDelightScrapedAppRepository(
 
     override suspend fun getByPackage(packageName: String): ScrapedAppDTO? = withContext(Dispatchers.Default) {
         queries.getByPackage(packageName).executeAsOneOrNull()?.toScrapedAppDTO()
+    }
+
+    override suspend fun getByPkgHash(pkgHash: String): ScrapedAppDTO? = withContext(Dispatchers.Default) {
+        queries.getByPkgHash(pkgHash).executeAsOneOrNull()?.toScrapedAppDTO()
     }
 
     override suspend fun getAll(): List<ScrapedAppDTO> = withContext(Dispatchers.Default) {

@@ -256,6 +256,8 @@ class MockActionCoordinator(
             ActionCategory.UI -> true // UI actions usually succeed
             ActionCategory.GESTURE -> true // Gesture actions usually succeed
             ActionCategory.GAZE -> Math.random() < 0.9 // 90% success rate for gaze tracking
+            ActionCategory.MEDIA -> true // Media actions usually succeed
+            ActionCategory.ACCESSIBILITY -> true // Accessibility actions usually succeed
             ActionCategory.CUSTOM -> Math.random() < 0.8 // 80% success rate for custom
         }
         

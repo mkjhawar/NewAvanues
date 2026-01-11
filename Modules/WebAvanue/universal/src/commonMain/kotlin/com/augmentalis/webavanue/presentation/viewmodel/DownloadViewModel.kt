@@ -69,10 +69,13 @@ class DownloadViewModel(
                                 downloadedSize = progress.bytesDownloaded,
                                 fileSize = progress.bytesTotal,
                                 status = progress.status,
+                                filepath = progress.localPath, // ✅
+                                completedAt = if (progress.isComplete) kotlinx.datetime.Clock.System.now() else download.completedAt,
                                 lastProgressUpdate = System.currentTimeMillis()
                             )
                         } ?: download
                     }
+                    Logger.warn("DownloadViewModel", "setupProgressMonitoring Download progress : - $updatedDownloads")
                     _downloads.value = updatedDownloads
                     updateActiveDownloads()
                 }
@@ -215,6 +218,7 @@ class DownloadViewModel(
                 // Enqueue actual download to platform download queue
                 downloadQueue?.let { queue ->
                     val request = com.augmentalis.webavanue.feature.download.DownloadRequest(
+                        downloadId = download.id, // ✅ important
                         url = url,
                         filename = sanitizedFilename,
                         mimeType = mimeType,

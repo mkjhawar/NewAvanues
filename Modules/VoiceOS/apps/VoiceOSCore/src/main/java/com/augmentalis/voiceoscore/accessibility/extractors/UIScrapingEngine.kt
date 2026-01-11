@@ -275,6 +275,151 @@ class UIScrapingEngine(
         }
     }
 
+    /**
+     * Extract contextual (non-actionable) text from the screen for NLU enhancement.
+     *
+     * Captures:
+     * - Screen titles and window titles
+     * - Breadcrumb navigation paths
+     * - Section headers
+     * - Non-interactive labels that provide context
+     *
+     * This data helps LLMs understand the current screen context for better navigation.
+     *
+     * @return ScreenContextualText containing extracted contextual information
+     */
+    fun extractContextualText(): ScreenContextualText {
+        var rootNode: AccessibilityNodeInfo? = null
+        try {
+            rootNode = service.rootInActiveWindow ?: return ScreenContextualText.empty()
+
+            val screenTitle = extractScreenTitle(rootNode)
+            val breadcrumbs = mutableListOf<String>()
+            val sectionHeaders = mutableListOf<String>()
+            val visibleLabels = mutableListOf<String>()
+
+            // Extract contextual text recursively
+            extractContextualTextRecursive(
+                node = rootNode,
+                depth = 0,
+                breadcrumbs = breadcrumbs,
+                sectionHeaders = sectionHeaders,
+                visibleLabels = visibleLabels
+            )
+
+            return ScreenContextualText(
+                screenTitle = screenTitle,
+                breadcrumbs = breadcrumbs.take(5),  // Limit breadcrumbs
+                sectionHeaders = sectionHeaders.take(10),  // Limit section headers
+                visibleLabels = visibleLabels.take(20)  // Limit labels for token efficiency
+            )
+        } finally {
+            @Suppress("DEPRECATION")
+            rootNode?.recycle()
+        }
+    }
+
+    /**
+     * Extract the screen title from toolbar, action bar, or window title.
+     */
+    private fun extractScreenTitle(rootNode: AccessibilityNodeInfo): String? {
+        // Try to find title from common toolbar patterns
+        val titleClasses = listOf(
+            "android.widget.Toolbar",
+            "androidx.appcompat.widget.Toolbar",
+            "com.google.android.material.appbar.MaterialToolbar"
+        )
+
+        for (className in titleClasses) {
+            val toolbars = rootNode.findAccessibilityNodeInfosByViewId("$className")
+            if (toolbars.isNotEmpty()) {
+                val toolbar = toolbars[0]
+                toolbar.text?.toString()?.takeIf { it.isNotBlank() }?.let {
+                    @Suppress("DEPRECATION")
+                    toolbar.recycle()
+                    return it
+                }
+                @Suppress("DEPRECATION")
+                toolbar.recycle()
+            }
+        }
+
+        // Fallback: look for title resource IDs
+        val titleIds = listOf("action_bar_title", "toolbar_title", "title")
+        for (titleId in titleIds) {
+            val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/$titleId")
+            if (titleNodes.isNotEmpty()) {
+                val titleNode = titleNodes[0]
+                val title = titleNode.text?.toString()?.takeIf { it.isNotBlank() }
+                @Suppress("DEPRECATION")
+                titleNode.recycle()
+                if (title != null) return title
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * Recursively extract contextual text elements from the UI tree.
+     */
+    private fun extractContextualTextRecursive(
+        node: AccessibilityNodeInfo,
+        depth: Int,
+        breadcrumbs: MutableList<String>,
+        sectionHeaders: MutableList<String>,
+        visibleLabels: MutableList<String>
+    ) {
+        if (depth > 20) return  // Limit depth for performance
+
+        val className = node.className?.toString() ?: ""
+        val text = node.text?.toString()?.trim()
+        val contentDesc = node.contentDescription?.toString()?.trim()
+
+        // Skip interactive elements (they're handled by extractUIElements)
+        val isInteractive = node.isClickable || node.isCheckable || node.isEditable
+
+        if (!isInteractive && !text.isNullOrBlank()) {
+            when {
+                // Section headers (large text views, not in lists)
+                className.contains("TextView") && text.length < 50 && depth < 5 -> {
+                    if (looksLikeHeader(text)) {
+                        sectionHeaders.add(text)
+                    } else {
+                        visibleLabels.add(text)
+                    }
+                }
+                // Breadcrumb-style navigation
+                className.contains("Breadcrumb") || contentDesc?.contains("navigation") == true -> {
+                    breadcrumbs.add(text)
+                }
+            }
+        }
+
+        // Recurse into children
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            try {
+                extractContextualTextRecursive(child, depth + 1, breadcrumbs, sectionHeaders, visibleLabels)
+            } finally {
+                @Suppress("DEPRECATION")
+                child.recycle()
+            }
+        }
+    }
+
+    /**
+     * Heuristic to detect if text looks like a section header.
+     */
+    private fun looksLikeHeader(text: String): Boolean {
+        // Headers are typically short, capitalized, and don't end with punctuation
+        return text.length in 2..40 &&
+               !text.endsWith(".") &&
+               !text.endsWith(",") &&
+               !text.contains("\n") &&
+               (text.first().isUpperCase() || text.all { it.isUpperCase() })
+    }
+
     // ============================================================================
     // SECTION: UI Tree Traversal
     // ============================================================================

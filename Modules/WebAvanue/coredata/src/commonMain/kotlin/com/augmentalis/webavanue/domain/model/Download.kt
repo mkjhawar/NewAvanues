@@ -13,7 +13,8 @@ enum class DownloadStatus {
     PAUSED,
     COMPLETED,
     FAILED,
-    CANCELLED;
+    CANCELLED,
+    UNKNOWN;
 
     companion object {
         fun fromString(value: String): DownloadStatus {

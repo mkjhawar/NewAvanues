@@ -26,6 +26,7 @@ import android.content.Context
 import android.util.Log
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.GeneratedCommandDTO
+import com.augmentalis.uuidcreator.core.VUIDGenerator
 import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
 import com.augmentalis.voiceoscore.learnapp.detection.AppFramework
 import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
@@ -156,7 +157,10 @@ class LearnAppCore(
                 Log.d(TAG, "Generated command: ${command.commandText} for version: ${appVersion}")
             }
 
-            // 4. Store (mode-specific)
+            // 4. Ensure scraped_element exists (FK constraint requirement)
+            ensureElementRecordExists(element, packageName, uuid)
+
+            // 5. Store (mode-specific)
             when (mode) {
                 ProcessingMode.IMMEDIATE -> {
                     // JIT Mode: Insert immediately
@@ -194,26 +198,22 @@ class LearnAppCore(
     }
 
     /**
-     * Generate UUID for element
+     * Generate UUID for element using compact VUID format
      *
-     * Uses third-party UUID generator to create deterministic UUID
-     * based on element properties and package name.
+     * Uses VUIDGenerator to create deterministic VUID based on element properties.
      *
-     * UUID format: {packageName}.v{version}.{type}-{hash}
+     * Compact format: {reversedPackage}:{version}:{typeAbbrev}:{hash8}
+     * Example: android.instagram.com:12.0.0:btn:a7f3e2c1
      *
-     * @param element Element to generate UUID for
+     * @param element Element to generate VUID for
      * @param packageName App package name
-     * @return Generated UUID string
+     * @return Generated VUID string in compact format
      */
     private fun generateUUID(element: ElementInfo, packageName: String): String {
-        // Calculate element hash from properties
-        val elementHash = calculateElementHash(element)
+        // Calculate element hash from properties (8 chars for compact format)
+        val elementHash = calculateElementHash(element).take(8)
 
-        // Generate UUID using ThirdPartyUuidGenerator
-        // Format: packageName.v{version}.{type}-{hash}
-        // For now, we'll use a simplified version
-        // The ThirdPartyUuidGenerator would need an AccessibilityNodeInfo
-        // Since we're working with ElementInfo, we'll create a compatible UUID
+        // Determine element type for abbreviation
         val elementType = when {
             element.isClickable -> "button"
             element.isEditText() -> "input"
@@ -221,18 +221,24 @@ class LearnAppCore(
             else -> "element"
         }
 
-        // Create stable UUID from package + hash + type
-        return "$packageName.$elementType-$elementHash"
+        // Generate compact VUID using shared KMP generator (use FQN for typealias)
+        // Note: version is not available synchronously here, using default
+        return com.augmentalis.vuid.core.VUIDGenerator.generateCompact(
+            packageName = packageName,
+            version = "1.0.0",
+            typeName = elementType,
+            elementHash = elementHash
+        )
     }
 
     /**
      * Calculate element hash
      *
-     * Creates deterministic hash from element properties for UUID generation.
+     * Creates deterministic hash from element properties for VUID generation.
      * Uses MD5 hash of combined properties.
      *
      * @param element Element to hash
-     * @return 12-character hash string
+     * @return 8-character hex hash string (compact format)
      */
     private fun calculateElementHash(element: ElementInfo): String {
         // Combine element properties
@@ -260,12 +266,72 @@ class LearnAppCore(
         return try {
             val md = java.security.MessageDigest.getInstance("MD5")
             val hashBytes = md.digest(fingerprint.toByteArray())
-            // Take first 12 characters of hex string
-            hashBytes.joinToString("") { "%02x".format(it) }.take(12)
+            // Take first 8 characters for compact VUID format
+            hashBytes.joinToString("") { "%02x".format(it) }.take(8)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to calculate hash", e)
-            // Fallback to simple hash
-            fingerprint.hashCode().toString()
+            // Fallback to simple hash (padded to 8 chars)
+            fingerprint.hashCode().toString().take(8).padStart(8, '0')
+        }
+    }
+
+    /**
+     * Ensure scraped_element record exists for FK constraint
+     *
+     * Commands reference scraped_element via elementHash FK.
+     * This method creates the scraped_element if it doesn't exist.
+     * Uses INSERT OR REPLACE to handle existing records gracefully.
+     *
+     * @param element Element to store
+     * @param packageName App package name
+     * @param uuid Generated UUID for this element
+     */
+    private suspend fun ensureElementRecordExists(
+        element: ElementInfo,
+        packageName: String,
+        uuid: String
+    ) {
+        val elementHash = calculateElementHash(element)
+        val currentTime = System.currentTimeMillis()
+        val boundsStr = "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}"
+
+        try {
+            // Use INSERT OR REPLACE to handle existing records
+            database.scrapedElementQueries.insert(
+                elementHash = elementHash,
+                appId = packageName,
+                uuid = uuid,
+                className = element.className,
+                viewIdResourceName = element.resourceId.ifEmpty { null },
+                text = element.text.ifEmpty { null },
+                contentDescription = element.contentDescription.ifEmpty { null },
+                bounds = boundsStr,
+                isClickable = if (element.isClickable) 1L else 0L,
+                isLongClickable = 0L,
+                isEditable = 0L,
+                isScrollable = if (element.isScrollable) 1L else 0L,
+                isCheckable = 0L,
+                isFocusable = 0L,
+                isEnabled = if (element.isEnabled) 1L else 0L,
+                depth = 0L,
+                indexInParent = 0L,
+                scrapedAt = currentTime,
+                semanticRole = null,
+                inputType = null,
+                visualWeight = null,
+                isRequired = 0L,
+                formGroupId = null,
+                placeholderText = null,
+                validationPattern = null,
+                backgroundColor = null,
+                screen_hash = null
+            )
+            if (developerSettings.isVerboseLoggingEnabled()) {
+                Log.d(TAG, "Ensured scraped_element exists: $elementHash")
+            }
+        } catch (e: Exception) {
+            // Element may already exist with same hash - this is OK
+            Log.v(TAG, "scraped_element may already exist: ${e.message}")
         }
     }
 

@@ -47,19 +47,6 @@ data class ScreenContextualText(
     }
 
     /**
-     * Estimates the approximate token count for this contextual text.
-     * Uses a simple heuristic of ~4 characters per token.
-     */
-    fun estimateTokenCount(): Int {
-        val totalChars = (screenTitle?.length ?: 0) +
-            breadcrumbs.sumOf { it.length } +
-            sectionHeaders.sumOf { it.length } +
-            visibleLabels.sumOf { it.length } +
-            (contentSummary?.length ?: 0)
-        return (totalChars / 4).coerceAtLeast(1)
-    }
-
-    /**
      * Returns a compact string representation for token-efficient prompts.
      */
     fun toCompactString(): String {

@@ -38,7 +38,10 @@ val appModule = module {
 
     // HomeViewModel (scoped to activity/fragment lifecycle)
     viewModel {
-        HomeViewModel(databaseManager = get())
+        HomeViewModel(
+            databaseManager = get(),
+            packageManager = androidContext().packageManager
+        )
     }
 
     // SettingsViewModel (scoped to activity/fragment lifecycle)

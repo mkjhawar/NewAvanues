@@ -262,6 +262,7 @@ class CleanupManagerTest {
         coEvery {
             mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), any())
         } returns emptyList()
+        coEvery { mockRepo.deleteDeprecatedCommands(any(), any()) } returns 0
 
         // When: Execute cleanup
         val result = cleanupManager.executeCleanup(gracePeriodDays = 30, dryRun = false)
@@ -448,6 +449,12 @@ class CleanupManagerTest {
             createTestCommand(it.toLong(), isDeprecated = true)
         }
 
+        // previewCleanup uses limit = 10000, returns all 2500
+        coEvery {
+            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 10000)
+        } returns deprecatedCommands
+
+        // Batch deletion uses limit = 1000
         // First call returns batch 1 (1000 commands)
         // Second call returns batch 2 (1000 commands)
         // Third call returns batch 3 (500 commands)
@@ -537,6 +544,12 @@ class CleanupManagerTest {
             createTestCommand(it.toLong(), isDeprecated = true)
         }
 
+        // previewCleanup uses limit = 10000
+        coEvery {
+            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 10000)
+        } returns deprecatedCommands
+
+        // Batch deletion uses limit = 1000
         coEvery {
             mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 1000)
         } returnsMany listOf(
@@ -572,8 +585,15 @@ class CleanupManagerTest {
         val deprecatedCommands = (1..150).map {
             createTestCommand(it.toLong(), isDeprecated = true)
         }
+
+        // previewCleanup uses limit = 10000
         coEvery {
-            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), any())
+            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 10000)
+        } returns deprecatedCommands
+
+        // Batch deletion uses default limit = 1000
+        coEvery {
+            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 1000)
         } returnsMany listOf(deprecatedCommands, emptyList())
 
         coEvery { mockRepo.deleteById(any()) } returns Unit
@@ -600,8 +620,15 @@ class CleanupManagerTest {
         val deprecatedCommands = (1..50).map {
             createTestCommand(it.toLong(), isDeprecated = true)
         }
+
+        // previewCleanup uses limit = 10000
         coEvery {
-            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), any())
+            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 10000)
+        } returns deprecatedCommands
+
+        // Batch deletion uses default limit = 1000
+        coEvery {
+            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 1000)
         } returnsMany listOf(deprecatedCommands, emptyList())
 
         coEvery { mockRepo.deleteById(any()) } returns Unit
@@ -627,8 +654,15 @@ class CleanupManagerTest {
         val deprecatedCommands = (1..100).map {
             createTestCommand(it.toLong(), isDeprecated = true)
         }
+
+        // previewCleanup uses limit = 10000
         coEvery {
-            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), any())
+            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 10000)
+        } returns deprecatedCommands
+
+        // Batch deletion uses default limit = 1000
+        coEvery {
+            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 1000)
         } returnsMany listOf(deprecatedCommands, emptyList())
 
         coEvery { mockRepo.deleteById(any()) } returns Unit
@@ -654,8 +688,15 @@ class CleanupManagerTest {
         val deprecatedCommands = (1..500).map {
             createTestCommand(it.toLong(), isDeprecated = true)
         }
+
+        // previewCleanup uses limit = 10000
         coEvery {
-            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), any())
+            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 10000)
+        } returns deprecatedCommands
+
+        // Batch deletion uses default limit = 1000
+        coEvery {
+            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 1000)
         } returnsMany listOf(deprecatedCommands, emptyList())
 
         coEvery { mockRepo.deleteById(any()) } returns Unit
@@ -680,8 +721,15 @@ class CleanupManagerTest {
         val deprecatedCommands = (1..150).map {
             createTestCommand(it.toLong(), isDeprecated = true)
         }
+
+        // previewCleanup uses limit = 10000
         coEvery {
-            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), any())
+            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 10000)
+        } returns deprecatedCommands
+
+        // Batch deletion uses default limit = 1000
+        coEvery {
+            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 1000)
         } returnsMany listOf(deprecatedCommands, emptyList())
 
         coEvery { mockRepo.deleteById(any()) } returns Unit
@@ -758,8 +806,15 @@ class CleanupManagerTest {
         val deprecatedCommands = (1..10).map {
             createTestCommand(it.toLong(), isDeprecated = true)
         }
+
+        // previewCleanup uses limit = 10000
         coEvery {
-            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), any())
+            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 10000)
+        } returns deprecatedCommands
+
+        // Batch deletion uses default limit = 1000
+        coEvery {
+            mockRepo.getDeprecatedCommandsForCleanup(any(), any(), any(), limit = 1000)
         } returnsMany listOf(deprecatedCommands, emptyList())
 
         // Commands 3, 5, 7 will fail to delete
