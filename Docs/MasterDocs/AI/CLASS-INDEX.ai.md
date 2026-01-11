@@ -1,6 +1,7 @@
 # CLASS-INDEX
 # AI-Readable Class Reference
-# Version: 1.0 | Updated: 2026-01-11
+# Version: 2.0 | Updated: 2026-01-11
+# Note: Includes SOLID-refactored classes from commits cf7fe0ff, 9231c8d9, 5a0353a6
 
 ---
 
@@ -99,6 +100,229 @@ methods:
   - getCommands(locale: String): List<StaticCommand>
   - findCommand(text: String, locale: String): StaticCommand?
   - registerCustomCommand(command: StaticCommand): Unit
+```
+
+---
+
+## SOLID_REFACTORED_CLASSES
+
+### IHandlerRegistry (Interface)
+```yaml
+package: com.augmentalis.voiceoscoreng.handlers
+file: IHandlerRegistry.kt
+type: interface
+lines: 138
+commit: 5a0353a6
+purpose: Abstraction for handler registration (DIP compliance)
+methods:
+  - register(handler: CommandHandler): Unit
+  - unregister(id: String): Boolean
+  - getHandler(category: ActionCategory): CommandHandler?
+  - getHandlerForCommand(command: String): CommandHandler?
+  - getAllHandlers(): List<CommandHandler>
+```
+
+### IMetricsCollector (Interface)
+```yaml
+package: com.augmentalis.voiceoscoreng.handlers
+file: IMetricsCollector.kt
+type: interface
+lines: 81
+commit: 5a0353a6
+purpose: Abstraction for metrics collection (DIP compliance)
+methods:
+  - recordCommandExecution(command: String, duration: Long): Unit
+  - recordHandlerInvocation(handler: String, success: Boolean): Unit
+  - getMetrics(): MetricsSnapshot
+```
+
+### YamlComponentParser (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.common
+file: YamlComponentParser.kt
+type: class
+lines: 433
+commit: 9231c8d9
+purpose: YAML parsing for component definitions (SRP from ComponentFactory)
+methods:
+  - parse(yaml: String): ParseResult<ComponentDefinition>
+  - parseFile(path: String): ParseResult<ComponentDefinition>
+  - validateSyntax(yaml: String): List<SyntaxError>
+```
+
+### ComponentValidator (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.common
+file: ComponentValidator.kt
+type: class
+lines: 167
+commit: 9231c8d9
+purpose: Component validation logic (SRP from ComponentFactory)
+methods:
+  - validate(component: ComponentDefinition): ValidationResult
+  - validateSchema(component: ComponentDefinition): List<SchemaError>
+  - validateDependencies(component: ComponentDefinition): List<DependencyError>
+```
+
+### ComponentLoader (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.common
+file: ComponentLoader.kt
+type: class
+lines: 71
+commit: 9231c8d9
+purpose: Component loading orchestration (SRP from ComponentFactory)
+methods:
+  - load(name: String): Result<Component>
+  - loadAll(): List<Component>
+  - reload(name: String): Result<Component>
+```
+
+### BuiltInComponents (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.common
+file: BuiltInComponents.kt
+type: object
+commit: 9231c8d9
+purpose: Predefined component definitions (SRP from ComponentFactory)
+contents:
+  - SystemComponents
+  - NavigationComponents
+  - UIComponents
+  - InputComponents
+```
+
+### OverlayRegistry (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.features
+file: OverlayRegistry.kt
+type: class
+lines: 125
+commit: 9231c8d9
+purpose: Overlay registration/unregistration (SRP from OverlayManager)
+methods:
+  - register(overlay: Overlay): Unit
+  - unregister(id: String): Boolean
+  - get(id: String): Overlay?
+  - getAll(): List<Overlay>
+```
+
+### OverlayVisibilityManager (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.features
+file: OverlayVisibilityManager.kt
+type: class
+lines: 104
+commit: 9231c8d9
+purpose: Overlay show/hide operations (SRP from OverlayManager)
+methods:
+  - show(id: String): Result<Unit>
+  - hide(id: String): Result<Unit>
+  - showAll(): Unit
+  - hideAll(): Unit
+  - isVisible(id: String): Boolean
+```
+
+### OverlayDisposal (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.features
+file: OverlayDisposal.kt
+type: class
+lines: 66
+commit: 9231c8d9
+purpose: Overlay cleanup operations (SRP from OverlayManager)
+methods:
+  - dispose(id: String): Unit
+  - disposeAll(): Unit
+  - scheduleDisposal(id: String, delay: Long): Unit
+```
+
+### StaticCommandDispatcher (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.handlers
+file: StaticCommandDispatcher.kt
+type: class
+lines: 64
+commit: 9231c8d9
+purpose: Static command handling (SRP from CommandDispatcher)
+methods:
+  - dispatch(command: String): HandlerResult
+  - canHandle(command: String): Boolean
+  - getStaticCommands(): List<StaticCommand>
+```
+
+### DynamicCommandDispatcher (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.handlers
+file: DynamicCommandDispatcher.kt
+type: class
+lines: 126
+commit: 9231c8d9
+purpose: Dynamic command handling (SRP from CommandDispatcher)
+methods:
+  - dispatch(command: String): HandlerResult
+  - canHandle(command: String): Boolean
+  - registerDynamicCommand(command: QuantizedCommand): Unit
+  - clearDynamicCommands(): Unit
+```
+
+### VoiceCommandInterpreter (OCP Compliance)
+```yaml
+package: com.augmentalis.voiceoscoreng.handlers
+file: VoiceCommandInterpreter.kt
+type: class
+lines: 181
+commit: cf7fe0ff
+purpose: Rule-based voice command interpretation (OCP from ActionCoordinator)
+implements: IVoiceCommandInterpreter
+methods:
+  - interpret(utterance: String): InterpretationResult
+  - addRule(rule: InterpretationRule): Unit
+  - removeRule(id: String): Boolean
+  - getRules(): List<InterpretationRule>
+```
+
+### SpeechEngineRegistry (OCP Compliance)
+```yaml
+package: com.augmentalis.voiceoscoreng.features
+file: SpeechEngine.kt
+type: class
+commit: cf7fe0ff
+purpose: Extensible speech engine registration (OCP compliance)
+methods:
+  - register(engine: ISpeechEngine): Unit
+  - unregister(id: String): Boolean
+  - get(id: String): ISpeechEngine?
+  - getDefault(): ISpeechEngine
+  - setDefault(id: String): Unit
+```
+
+### IWakeWordCapable (ISP Compliance)
+```yaml
+package: com.augmentalis.voiceoscoreng.features
+file: ISpeechEngine.kt
+type: interface
+commit: cf7fe0ff
+purpose: Wake word detection capability (ISP from IVivokaEngine)
+methods:
+  - setWakeWord(phrase: String): Result<Unit>
+  - enableWakeWord(): Result<Unit>
+  - disableWakeWord(): Unit
+  - isWakeWordEnabled(): Boolean
+```
+
+### IModelManageable (ISP Compliance)
+```yaml
+package: com.augmentalis.voiceoscoreng.features
+file: ISpeechEngine.kt
+type: interface
+commit: cf7fe0ff
+purpose: Model management capability (ISP from IVivokaEngine)
+methods:
+  - loadModel(path: String): Result<Unit>
+  - unloadModel(): Unit
+  - isModelLoaded(): Boolean
+  - getModelInfo(): ModelInfo?
 ```
 
 ---
