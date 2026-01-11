@@ -61,6 +61,9 @@ kotlin {
                 // Koin for Dependency Injection
                 implementation(libs.koin.core)
                 implementation(libs.koin.compose)
+
+                // VoiceOSCoreNG for VUID generation
+                implementation(project(":Modules:VoiceOSCoreNG"))
             }
         }
 
