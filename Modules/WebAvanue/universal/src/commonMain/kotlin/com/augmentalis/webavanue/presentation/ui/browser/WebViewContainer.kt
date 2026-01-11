@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.augmentalis.webavanue.ui.viewmodel.SecurityViewModel
 import com.augmentalis.webavanue.domain.model.BrowserSettings
+import com.augmentalis.webavanue.voiceos.VoiceOSWebCallback
 
 /**
  * WebViewContainer - Platform-specific WebView wrapper
@@ -72,6 +73,7 @@ expect fun WebViewContainer(
     initialScale: Float = 0.75f,  // DEPRECATED: Initial page scale (use settings instead)
     settings: BrowserSettings? = null,  // Browser settings to apply
     isDesktopMode: Boolean = false,  // Whether tab is in desktop mode
+    voiceOSCallback: VoiceOSWebCallback? = null,  // VoiceOS integration callback
     modifier: Modifier
 )
 
