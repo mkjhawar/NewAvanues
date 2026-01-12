@@ -238,7 +238,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             "com.microsoft.todos",             // Microsoft To Do
             // Shopping/Lists
             "com.amazon.mShop.android.shopping", // Amazon
-            "com.google.android.apps.shopping.express" // Google Shopping
+            "com.google.android.apps.shopping.express", // Google Shopping
+            "com.google.android.deskclock" // google clock
         )
 
         /**

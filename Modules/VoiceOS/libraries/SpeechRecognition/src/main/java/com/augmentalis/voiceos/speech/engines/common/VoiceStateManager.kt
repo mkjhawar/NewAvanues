@@ -39,12 +39,6 @@ class VoiceStateManager(
         private const val DEFAULT_VOICE_TIMEOUT_MINUTES = 5
         private const val DEFAULT_DICTATION_TIMEOUT_MS = 3000L
         private const val STATE_CHANGE_DEBOUNCE_MS = 100L
-        
-        // Persistence keys
-        private const val KEY_VOICE_ENABLED = "voice_enabled"
-        private const val KEY_VOICE_SLEEPING = "voice_sleeping"
-        private const val KEY_DICTATION_ACTIVE = "dictation_active"
-        private const val KEY_LAST_COMMAND_TIME = "last_command_time"
     }
     
     // Thread-safe state variables
@@ -110,9 +104,6 @@ class VoiceStateManager(
     }
     
     init {
-        // Load persisted state if available
-        loadPersistedState()
-        
         // Initialize state flow
         updateStateFlow()
         
@@ -131,7 +122,6 @@ class VoiceStateManager(
             
             _isInitialized.set(true)
             updateStateFlow()
-            persistState()
             
             Log.i(TAG, "[$engineName] Voice system initialized")
             true
@@ -151,7 +141,6 @@ class VoiceStateManager(
         }
         
         updateStateFlow()
-        persistState()
         
         //Log.d(TAG, "[$engineName] Command execution time updated")
     }
@@ -183,7 +172,6 @@ class VoiceStateManager(
             cancelVoiceTimeout()
             
             updateStateFlow()
-            persistState()
             
             // Trigger callback
             onVoiceSleepCallback?.invoke()
@@ -212,7 +200,6 @@ class VoiceStateManager(
             }
             
             updateStateFlow()
-            persistState()
             
             // Trigger callback
             onVoiceWakeCallback?.invoke()
@@ -241,7 +228,6 @@ class VoiceStateManager(
             startDictationTimeout()
             
             updateStateFlow()
-            persistState()
             
             // Trigger callback
             onDictationStartCallback?.invoke()
@@ -265,7 +251,6 @@ class VoiceStateManager(
             cancelDictationTimeout()
             
             updateStateFlow()
-            persistState()
             
             // Trigger callback
             onDictationEndCallback?.invoke()
@@ -300,7 +285,6 @@ class VoiceStateManager(
             }
             
             updateStateFlow()
-            persistState()
             
             Log.i(TAG, "[$engineName] Voice ${if (enabled) "enabled" else "disabled"}")
             true
@@ -327,7 +311,6 @@ class VoiceStateManager(
             }
 
             updateStateFlow()
-            persistState()
             Log.i(TAG, "[$engineName] Voice downloadingModels ${if (isDownloading) "true" else "false"}")
             true
         }
@@ -406,7 +389,6 @@ class VoiceStateManager(
             cancelDictationTimeout()
             
             updateStateFlow()
-            persistState()
             
             Log.i(TAG, "[$engineName] Voice state reset to defaults")
         }
@@ -513,31 +495,5 @@ class VoiceStateManager(
             dictationTimeoutRunnable = null
         }
     }
-    
-    /**
-     * Load persisted state from SharedPreferences
-     */
-    private fun loadPersistedState() {
-        prefs?.let { preferences ->
-            _isVoiceEnabled.set(preferences.getBoolean(KEY_VOICE_ENABLED, true))
-            _isVoiceSleeping.set(preferences.getBoolean(KEY_VOICE_SLEEPING, false))
-            _isDictationActive.set(preferences.getBoolean(KEY_DICTATION_ACTIVE, false))
-            _lastExecutedCommandTime.set(preferences.getLong(KEY_LAST_COMMAND_TIME, 0L))
-            
-            Log.d(TAG, "[$engineName] Loaded persisted state")
-        }
-    }
-    
-    /**
-     * Persist current state to SharedPreferences
-     */
-    private fun persistState() {
-        prefs?.edit()?.apply {
-            putBoolean(KEY_VOICE_ENABLED, _isVoiceEnabled.get())
-            putBoolean(KEY_VOICE_SLEEPING, _isVoiceSleeping.get())
-            putBoolean(KEY_DICTATION_ACTIVE, _isDictationActive.get())
-            putLong(KEY_LAST_COMMAND_TIME, _lastExecutedCommandTime.get())
-            apply()
-        }
-    }
+
 }
