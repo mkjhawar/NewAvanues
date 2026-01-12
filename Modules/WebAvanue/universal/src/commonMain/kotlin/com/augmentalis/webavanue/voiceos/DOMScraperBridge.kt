@@ -226,7 +226,7 @@ object DOMScraperBridge {
             ariaLabel: element.getAttribute('aria-label') || '',
             placeholder: element.placeholder || '',
             value: element.value || '',
-            href: element.href || '',
+            href: (typeof element.href === 'string' ? element.href : (element.href && element.href.baseVal ? element.href.baseVal : '')) || '',
             selector: generateSelector(element),
             xpath: generateXPath(element),
             bounds: bounds,
@@ -234,7 +234,7 @@ object DOMScraperBridge {
             isDisabled: element.disabled || element.getAttribute('aria-disabled') === 'true',
             isChecked: element.checked || element.getAttribute('aria-checked') === 'true',
             isExpanded: element.getAttribute('aria-expanded') === 'true',
-            hasPopup: element.getAttribute('aria-haspopup') || false,
+            hasPopup: element.getAttribute('aria-haspopup') || '',
             inputType: element.type || ''
         };
     }

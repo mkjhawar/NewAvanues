@@ -51,6 +51,7 @@ import com.augmentalis.webavanue.ui.viewmodel.HistoryViewModel
 import com.augmentalis.webavanue.ui.viewmodel.FavoriteViewModel
 import com.augmentalis.webavanue.ui.viewmodel.DownloadViewModel
 import com.augmentalis.webavanue.domain.model.BrowserSettings
+import com.augmentalis.webavanue.voiceos.BrowserVoiceOSCallback
 import kotlinx.coroutines.launch
 
 /**
@@ -144,6 +145,9 @@ fun BrowserScreen(
     val webViewController = remember(activeTab?.tab?.id) {
         WebViewController()
     }
+
+    // VoiceOS callback for DOM scraping and voice command generation
+    val voiceOSCallback = remember { BrowserVoiceOSCallback() }
 
     // Voice-first UI state
     var isListening by rememberSaveable { mutableStateOf(false) }
@@ -547,6 +551,7 @@ fun BrowserScreen(
                         initialScale = 0.75f,  // DEPRECATED: Kept for backward compatibility, actual scale set by WebViewContainer
                         settings = settings,
                         isDesktopMode = tabState.tab.isDesktopMode,
+                        voiceOSCallback = voiceOSCallback,
                         modifier = Modifier.fillMaxSize()
                     )
                 } ?: EmptyBrowserState(
