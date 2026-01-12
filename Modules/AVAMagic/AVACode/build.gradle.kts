@@ -24,12 +24,19 @@ kotlin {
             }
         }
     }
-    
+
     sourceSets {
-        commonMain.dependencies {
-            implementation(project(":Modules:AVAMagic:AVAUI:Core"))
-            implementation(libs.kotlinx.coroutines.core)
-            implementation(libs.kotlinx.serialization.json)
+        val commonMain by getting {
+            kotlin.srcDirs("commonMain/kotlin", "src/commonMain/kotlin")
+            dependencies {
+                implementation(project(":Modules:AVAMagic:AVAUI:Core"))
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.serialization.json)
+            }
+        }
+
+        val androidMain by getting {
+            kotlin.srcDirs("src/androidMain/kotlin")
         }
     }
 }
