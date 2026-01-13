@@ -41,6 +41,9 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
+                // VUID - Voice Unique Identifier (shared KMP module)
+                implementation(project(":Modules:VUID"))
+
                 // Coroutines
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.coroutines}")
 
