@@ -1,9 +1,9 @@
-package com.augmentalis.magiccode.plugins.security
+package com.augmentalis.avacode.plugins.security
 
 import android.app.Activity
 import android.content.Context
 import androidx.appcompat.app.AlertDialog
-import com.augmentalis.magiccode.plugins.core.Permission
+import com.augmentalis.avacode.plugins.core.Permission
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 

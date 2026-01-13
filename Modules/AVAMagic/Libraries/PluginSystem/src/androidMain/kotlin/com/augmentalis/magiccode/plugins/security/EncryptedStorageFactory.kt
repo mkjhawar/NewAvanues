@@ -1,10 +1,10 @@
-package com.augmentalis.magiccode.plugins.security
+package com.augmentalis.avacode.plugins.security
 
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.augmentalis.magiccode.plugins.core.PluginLog
+import com.augmentalis.avacode.plugins.core.PluginLog
 
 /**
  * Factory for creating encrypted SharedPreferences instances.

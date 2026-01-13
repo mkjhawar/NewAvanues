@@ -1,7 +1,7 @@
-package com.augmentalis.magiccode.plugins.core
+package com.augmentalis.avacode.plugins.core
 
-import com.augmentalis.magiccode.plugins.persistence.PluginPersistence
-import com.augmentalis.magiccode.plugins.persistence.InMemoryPluginPersistence
+import com.augmentalis.avacode.plugins.persistence.PluginPersistence
+import com.augmentalis.avacode.plugins.persistence.InMemoryPluginPersistence
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 

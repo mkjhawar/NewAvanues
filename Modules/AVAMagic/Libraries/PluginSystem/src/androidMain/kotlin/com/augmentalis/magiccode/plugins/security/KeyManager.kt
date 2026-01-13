@@ -1,9 +1,9 @@
-package com.augmentalis.magiccode.plugins.security
+package com.augmentalis.avacode.plugins.security
 
 import android.content.Context
 import android.security.keystore.KeyPermanentlyInvalidatedException
 import androidx.security.crypto.MasterKey
-import com.augmentalis.magiccode.plugins.core.PluginLog
+import com.augmentalis.avacode.plugins.core.PluginLog
 
 /**
  * Manages encryption key generation and access for PluginSystem.

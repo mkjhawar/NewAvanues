@@ -1,4 +1,4 @@
-package com.augmentalis.magiccode.plugins.assets
+package com.augmentalis.avacode.plugins.assets
 
 import java.io.File
 import java.io.IOException

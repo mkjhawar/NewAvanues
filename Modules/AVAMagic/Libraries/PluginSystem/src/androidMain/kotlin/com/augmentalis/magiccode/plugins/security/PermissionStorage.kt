@@ -1,8 +1,8 @@
-package com.augmentalis.magiccode.plugins.security
+package com.augmentalis.avacode.plugins.security
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.augmentalis.magiccode.plugins.core.PluginLog
+import com.augmentalis.avacode.plugins.core.PluginLog
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 

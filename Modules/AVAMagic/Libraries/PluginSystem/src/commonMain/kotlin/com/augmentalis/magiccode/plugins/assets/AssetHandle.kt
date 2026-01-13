@@ -1,4 +1,4 @@
-package com.augmentalis.magiccode.plugins.assets
+package com.augmentalis.avacode.plugins.assets
 
 /**
  * Platform-specific handle to a resolved plugin asset.

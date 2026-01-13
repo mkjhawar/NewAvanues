@@ -1,7 +1,7 @@
-package com.augmentalis.magiccode.plugins.transactions
+package com.augmentalis.avacode.plugins.transactions
 
-import com.augmentalis.magiccode.plugins.core.*
-import com.augmentalis.magiccode.plugins.platform.FileIO
+import com.augmentalis.avacode.plugins.core.*
+import com.augmentalis.avacode.plugins.platform.FileIO
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 

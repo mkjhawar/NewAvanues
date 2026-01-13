@@ -1,4 +1,4 @@
-package com.augmentalis.magiccode.plugins.platform
+package com.augmentalis.avacode.plugins.platform
 
 /**
  * Example iOS plugin demonstrating the registration pattern.
@@ -149,7 +149,7 @@ fun listAvailablePlugins(): Set<String> {
  * // IosRegistration.kt (in iosMain source set)
  * package com.example.myplugin
  *
- * import com.augmentalis.magiccode.plugins.platform.PluginClassLoader
+ * import com.augmentalis.avacode.plugins.platform.PluginClassLoader
  *
  * @OptIn(ExperimentalStdlibApi::class)
  * @EagerInitialization

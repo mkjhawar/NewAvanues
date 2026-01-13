@@ -2,7 +2,7 @@ package com.augmentalis.avacode.templates
 
 import com.augmentalis.avanues.avacode.forms.Form
 import com.augmentalis.avanues.avacode.workflows.Workflow
-import com.augmentalis.magicui.ui.core.Component
+import com.augmentalis.avamagic.ui.core.Component
 
 /**
  * Base interface for all app templates.

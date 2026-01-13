@@ -1,4 +1,4 @@
-package com.augmentalis.magiccode.plugins.platform
+package com.augmentalis.avacode.plugins.platform
 
 import dalvik.system.DexClassLoader
 import java.io.File

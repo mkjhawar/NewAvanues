@@ -1,4 +1,4 @@
-package com.augmentalis.magiccode.plugins.assets
+package com.augmentalis.avacode.plugins.assets
 
 /**
  * Calculates checksums for asset integrity verification.

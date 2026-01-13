@@ -1,4 +1,4 @@
-package com.augmentalis.magiccode.plugins.ai
+package com.augmentalis.avacode.plugins.ai
 
 /**
  * Base interface for AI-powered plugins.

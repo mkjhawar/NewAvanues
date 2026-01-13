@@ -1,6 +1,6 @@
-package com.augmentalis.magiccode.plugins.dependencies
+package com.augmentalis.avacode.plugins.dependencies
 
-import com.augmentalis.magiccode.plugins.core.*
+import com.augmentalis.avacode.plugins.core.*
 
 /**
  * Dependency resolver for plugins.
