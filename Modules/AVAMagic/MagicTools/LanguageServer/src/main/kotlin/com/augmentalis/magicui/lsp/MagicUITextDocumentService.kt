@@ -1,4 +1,4 @@
-package com.augmentalis.magicui.lsp
+package com.augmentalis.avaui.lsp
 
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 // TODO: Replace with actual imports when modules are available
-import com.augmentalis.magicui.lsp.stubs.*
+import com.augmentalis.avaui.lsp.stubs.*
 
 /**
  * Text Document Service for MagicUI Language Server

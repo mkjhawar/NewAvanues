@@ -1,6 +1,6 @@
-package com.augmentalis.magiccode.plugins.persistence
+package com.augmentalis.avacode.plugins.persistence
 
-import com.augmentalis.magiccode.plugins.core.PluginRegistry.PluginInfo
+import com.augmentalis.avacode.plugins.core.PluginRegistry.PluginInfo
 
 /**
  * Plugin persistence interface.

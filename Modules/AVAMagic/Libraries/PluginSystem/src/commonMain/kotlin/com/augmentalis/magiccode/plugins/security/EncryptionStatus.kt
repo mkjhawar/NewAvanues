@@ -1,4 +1,4 @@
-package com.augmentalis.magiccode.plugins.security
+package com.augmentalis.avacode.plugins.security
 
 /**
  * Detailed encryption status information for permission storage.

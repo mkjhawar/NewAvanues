@@ -1,4 +1,4 @@
-package com.augmentalis.magiccode.plugins.assets
+package com.augmentalis.avacode.plugins.assets
 
 /**
  * Metadata for a resolved asset with file information and integrity verification.

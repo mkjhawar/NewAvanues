@@ -1,4 +1,4 @@
-package com.augmentalis.magiccode.plugins.assets
+package com.augmentalis.avacode.plugins.assets
 
 import kotlinx.cinterop.*
 import platform.CoreCrypto.*

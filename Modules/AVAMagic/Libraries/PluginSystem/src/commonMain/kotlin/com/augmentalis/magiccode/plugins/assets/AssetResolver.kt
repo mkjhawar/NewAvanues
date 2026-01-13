@@ -1,7 +1,7 @@
-package com.augmentalis.magiccode.plugins.assets
+package com.augmentalis.avacode.plugins.assets
 
-import com.augmentalis.magiccode.plugins.core.*
-import com.augmentalis.magiccode.plugins.platform.FileIO
+import com.augmentalis.avacode.plugins.core.*
+import com.augmentalis.avacode.plugins.platform.FileIO
 
 /**
  * Resolves plugin assets from URI references to accessible handles.

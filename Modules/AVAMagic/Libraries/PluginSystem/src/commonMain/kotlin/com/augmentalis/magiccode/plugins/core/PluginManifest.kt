@@ -1,4 +1,4 @@
-package com.augmentalis.magiccode.plugins.core
+package com.augmentalis.avacode.plugins.core
 
 import kotlinx.serialization.Serializable
 

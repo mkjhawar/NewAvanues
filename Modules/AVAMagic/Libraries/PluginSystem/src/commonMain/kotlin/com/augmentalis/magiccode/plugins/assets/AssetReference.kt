@@ -1,6 +1,6 @@
-package com.augmentalis.magiccode.plugins.assets
+package com.augmentalis.avacode.plugins.assets
 
-import com.augmentalis.magiccode.plugins.core.AssetCategory
+import com.augmentalis.avacode.plugins.core.AssetCategory
 
 /**
  * Reference to a plugin asset with URI parsing and resolution tracking.

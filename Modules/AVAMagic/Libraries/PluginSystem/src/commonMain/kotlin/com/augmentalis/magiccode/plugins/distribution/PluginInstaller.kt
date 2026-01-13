@@ -1,9 +1,9 @@
-package com.augmentalis.magiccode.plugins.distribution
+package com.augmentalis.avacode.plugins.distribution
 
-import com.augmentalis.magiccode.plugins.core.*
-import com.augmentalis.magiccode.plugins.platform.FileIO
-import com.augmentalis.magiccode.plugins.platform.ZipExtractor
-import com.augmentalis.magiccode.plugins.security.*
+import com.augmentalis.avacode.plugins.core.*
+import com.augmentalis.avacode.plugins.platform.FileIO
+import com.augmentalis.avacode.plugins.platform.ZipExtractor
+import com.augmentalis.avacode.plugins.security.*
 import kotlinx.serialization.decodeFromString
 import net.mamoe.yamlkt.Yaml
 
