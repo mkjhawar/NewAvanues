@@ -1,9 +1,9 @@
 package com.augmentalis.webavanue.learnweb
 
-import com.augmentalis.avid.AvidGenerator
-import com.augmentalis.avid.TypeCode
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
+import com.augmentalis.avid.AvidGenerator
+import com.augmentalis.avid.TypeCode
 import com.augmentalis.voiceoscoreng.common.ElementFingerprint
 import com.augmentalis.voiceoscoreng.extraction.ElementParser
 import com.augmentalis.voiceoscoreng.extraction.ExtractionBundle
@@ -231,39 +231,31 @@ class WebAvanuePageExtractorTest {
 
     @Test
     fun avidGenerator_generatesValidAvidForWebElement() {
-        val packageName = "example.com"
-        val typeCode = TypeCode.BUTTON
-        val elementHash = "a1b2c3d4"
-
-        val avid = AvidGenerator.generate(packageName, typeCode, elementHash)
+        // Test basic AVID generation
+        val avid = AvidGenerator.generate()
 
         assertTrue(avid.isNotBlank())
-        assertTrue(AvidGenerator.isValidAvid(avid), "Generated AVID should be valid")
+        assertTrue(AvidGenerator.isValid(avid), "Generated AVID should be valid")
     }
 
     @Test
     fun avidGenerator_parsesGeneratedAvid() {
-        val packageName = "example.com"
-        val typeCode = TypeCode.INPUT
-        val elementHash = "e5f6g7h8"
-
-        val avid = AvidGenerator.generate(packageName, typeCode, elementHash)
-        val parsed = AvidGenerator.parseAvid(avid)
+        val avid = AvidGenerator.generate()
+        val parsed = AvidGenerator.parse(avid)
 
         assertNotNull(parsed, "Should parse generated AVID")
-        assertEquals(typeCode, parsed.typeAbbrev)
     }
 
     @Test
-    fun avidGenerator_generatesConsistentHashForSameContent() {
+    fun elementFingerprint_generatesConsistentHashForSameContent() {
         val hash1 = ElementFingerprint.deterministicHash("example.com", 8)
         val hash2 = ElementFingerprint.deterministicHash("example.com", 8)
 
-        assertEquals(hash1, hash2, "Same package should produce same hash")
+        assertEquals(hash1, hash2, "Same content should produce same hash")
     }
 
     @Test
-    fun avidGenerator_generatesDifferentHashesForDifferentDomains() {
+    fun elementFingerprint_generatesDifferentHashesForDifferentDomains() {
         val hash1 = ElementFingerprint.deterministicHash("example.com", 8)
         val hash2 = ElementFingerprint.deterministicHash("google.com", 8)
 
@@ -271,7 +263,7 @@ class WebAvanuePageExtractorTest {
     }
 
     @Test
-    fun avidGenerator_typeCodeDetection() {
+    fun typeCode_detectsElementTypes() {
         assertEquals(TypeCode.BUTTON, TypeCode.fromTypeName("button"))
         assertEquals(TypeCode.INPUT, TypeCode.fromTypeName("input"))
         assertEquals(TypeCode.TEXT, TypeCode.fromTypeName("span"))
