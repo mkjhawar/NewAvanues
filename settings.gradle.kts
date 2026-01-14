@@ -51,7 +51,8 @@ include(":Modules:RAG")   // Retrieval-augmented generation pipeline
 include(":Modules:NLU")   // Natural language understanding
 
 // Top-level Modules (cross-platform KMP)
-include(":Modules:VUID")                  // Voice Unique Identifier generator (shared across all modules)
+include(":Modules:AVID")                  // Avanues Voice ID - unified identifier system
+include(":Modules:VUID")                  // Voice Unique Identifier generator (deprecated, use AVID)
 
 // VoiceOSCoreNG - Next-generation KMP core for VoiceOS
 include(":Modules:VoiceOSCoreNG")          // KMP types, VUID, features (shared Android/iOS/Desktop)
