@@ -538,7 +538,9 @@ class VivokaEngine(
             // Use only basic commands in degraded mode
             val basicCommands = listOf(
                 speechConfig.muteCommand,
-                speechConfig.unmuteCommand
+                speechConfig.unmuteCommand,
+                speechConfig.startDictationCommand,
+                speechConfig.stopDictationCommand
             )
 
             if (!model.compileModelWithCommands(basicCommands)) {
@@ -741,7 +743,7 @@ class VivokaEngine(
         isFinal: Boolean
     ) {
         coroutineScope.launch {
-            Log.d(TAG, "SPEECH_TEST: onResult result = $result")
+            //Log.d(TAG, "SPEECH_TEST: onResult result = $result")
             processRecognitionResult(result, resultType)
         }
 

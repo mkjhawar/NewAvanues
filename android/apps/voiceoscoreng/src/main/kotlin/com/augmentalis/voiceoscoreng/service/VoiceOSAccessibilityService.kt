@@ -22,6 +22,7 @@ import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.VUIDGenerator
 import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
+import com.augmentalis.voiceoscoreng.common.StaticCommandRegistry
 import com.augmentalis.voiceoscoreng.functions.HashUtils
 import com.augmentalis.voiceoscoreng.handlers.ServiceConfiguration
 import com.augmentalis.voiceoscoreng.persistence.ICommandPersistence
@@ -238,7 +239,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             "com.microsoft.todos",             // Microsoft To Do
             // Shopping/Lists
             "com.amazon.mShop.android.shopping", // Amazon
-            "com.google.android.apps.shopping.express" // Google Shopping
+            "com.google.android.apps.shopping.express", // Google Shopping
+            "com.google.android.deskclock" // google clock
         )
 
         /**
@@ -576,6 +578,15 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 // Initialize the facade
                 voiceOSCore?.initialize()
                 Log.d(TAG, "VoiceOSCoreNG facade initialized successfully")
+
+                // Auto-start voice listening when service connects
+                // This ensures VoiceOS is always listening once accessibility is enabled
+                try {
+                    voiceOSCore?.startListening()
+                    Log.d(TAG, "Voice listening auto-started")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to auto-start voice listening", e)
+                }
 
                 // Observe speech results and process commands
                 voiceOSCore?.speechResults?.collect { speechResult ->
@@ -1491,15 +1502,21 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         }
 
         // Update speech engine grammar (Vivoka SDK) so it recognizes ALL phrases
-        // Includes: element commands, index commands ("first", "second"), and label commands ("Lifemiles")
-        val commandPhrases = allCommands.map { it.phrase } +
+        // CRITICAL: Must include static commands EVERY time, as updateCommands() REPLACES the grammar
+        // Static commands: "go back", "scroll down", "open settings", etc. (always available)
+        // Dynamic commands: element-specific commands from current screen
+        // Index commands: "first", "second", "1", "2", etc. (for lists)
+        // Label commands: specific labels like "Lifemiles" (for disambiguation)
+        val staticPhrases = StaticCommandRegistry.allPhrases()
+        val dynamicPhrases = allCommands.map { it.phrase } +
             indexCommands.map { it.phrase } +
             labelCommands.map { it.phrase }
+        val commandPhrases = staticPhrases + dynamicPhrases
         serviceScope.launch {
             try {
                 voiceOSCore?.updateCommands(commandPhrases)
                 Log.d(TAG, "Updated speech engine with ${commandPhrases.size} command phrases " +
-                    "(${allCommands.size} elements, ${indexCommands.size} index, ${labelCommands.size} labels)")
+                    "(${staticPhrases.size} static, ${allCommands.size} elements, ${indexCommands.size} index, ${labelCommands.size} labels)")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to update speech engine commands", e)
             }
