@@ -34,6 +34,12 @@ package com.augmentalis.avid
 import kotlin.random.Random
 
 /**
+ * Platform-specific current time in milliseconds.
+ * Used for timestamp-based operations.
+ */
+internal expect fun currentTimeMillis(): Long
+
+/**
  * Central AVID generator for the Avanues ecosystem
  */
 object AvidGenerator {
