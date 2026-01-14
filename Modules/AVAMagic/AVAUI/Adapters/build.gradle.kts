@@ -8,6 +8,7 @@ group = "com.augmentalis.avanues.avamagic"
 version = "1.0.0"
 
 kotlin {
+    // NOTE: Android-only until Core module supports multiplatform
     androidTarget {
         compilations.all {
             kotlinOptions {
@@ -16,25 +17,26 @@ kotlin {
         }
     }
 
-    jvm("desktop") {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
-        }
-    }
+    // TODO: Re-enable when Core module supports these targets
+    // jvm("desktop") {
+    //     compilations.all {
+    //         kotlinOptions {
+    //             jvmTarget = "17"
+    //         }
+    //     }
+    // }
 
-    // iOS targets for native rendering
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "IDEAMagicAdapters"
-            isStatic = true
-        }
-    }
+    // iOS targets for native rendering - disabled until Core supports iOS
+    // listOf(
+    //     iosX64(),
+    //     iosArm64(),
+    //     iosSimulatorArm64()
+    // ).forEach { iosTarget ->
+    //     iosTarget.binaries.framework {
+    //         baseName = "IDEAMagicAdapters"
+    //         isStatic = true
+    //     }
+    // }
 
     sourceSets {
         val commonMain by getting {
@@ -68,17 +70,18 @@ kotlin {
         }
 
         val androidMain by getting
-        val desktopMain by getting
 
-        val iosX64Main by getting
-        val iosArm64Main by getting
-        val iosSimulatorArm64Main by getting
-        val iosMain by creating {
-            dependsOn(commonMain)
-            iosX64Main.dependsOn(this)
-            iosArm64Main.dependsOn(this)
-            iosSimulatorArm64Main.dependsOn(this)
-        }
+        // TODO: Re-enable when Core module supports these targets
+        // val desktopMain by getting
+        // val iosX64Main by getting
+        // val iosArm64Main by getting
+        // val iosSimulatorArm64Main by getting
+        // val iosMain by creating {
+        //     dependsOn(commonMain)
+        //     iosX64Main.dependsOn(this)
+        //     iosArm64Main.dependsOn(this)
+        //     iosSimulatorArm64Main.dependsOn(this)
+        // }
     }
 }
 

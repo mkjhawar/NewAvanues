@@ -9,6 +9,7 @@ version = "1.0.0"
 
 kotlin {
     // Target platforms
+    // NOTE: Android-only for consistency with other AVAUI modules
     androidTarget {
         compilations.all {
             kotlinOptions {
@@ -17,11 +18,11 @@ kotlin {
         }
     }
 
-    jvm()
-
-    val iosX64Target = iosX64()
-    val iosArm64Target = iosArm64()
-    val iosSimulatorArm64Target = iosSimulatorArm64()
+    // TODO: Re-enable when AVAUI modules support multiplatform
+    // jvm()
+    // val iosX64Target = iosX64()
+    // val iosArm64Target = iosArm64()
+    // val iosSimulatorArm64Target = iosSimulatorArm64()
 
     sourceSets {
         val commonMain by getting {
@@ -38,21 +39,11 @@ kotlin {
             }
         }
 
-        val iosMain by creating {
-            dependsOn(commonMain)
-        }
-
-        val iosX64Main by getting {
-            dependsOn(iosMain)
-        }
-
-        val iosArm64Main by getting {
-            dependsOn(iosMain)
-        }
-
-        val iosSimulatorArm64Main by getting {
-            dependsOn(iosMain)
-        }
+        // TODO: Re-enable when AVAUI supports multiplatform
+        // val iosMain by creating { dependsOn(commonMain) }
+        // val iosX64Main by getting { dependsOn(iosMain) }
+        // val iosArm64Main by getting { dependsOn(iosMain) }
+        // val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
 
         val commonTest by getting {
             dependencies {
