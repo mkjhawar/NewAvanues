@@ -1,0 +1,184 @@
+name: iOS Tests
+
+on:
+  push:
+    branches: [ main, develop, feature/** ]
+    paths:
+      - 'Universal/Libraries/AvaElements/Renderers/iOS/**'
+      - '.github/workflows/ios-tests.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'Universal/Libraries/AvaElements/Renderers/iOS/**'
+
+jobs:
+  test:
+    name: Run iOS Tests
+    runs-on: macos-13
+
+    strategy:
+      matrix:
+        xcode: ['15.0']
+        ios: ['17.0', '16.0', '15.0']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
+
+    - name: Show Xcode version
+      run: xcodebuild -version
+
+    - name: Install dependencies
+      working-directory: Universal/Libraries/AvaElements/Renderers/iOS
+      run: |
+        swift package resolve
+        swift package update
+
+    - name: Build tests
+      working-directory: Universal/Libraries/AvaElements/Renderers/iOS
+      run: swift build --build-tests
+
+    - name: Run unit tests
+      working-directory: Universal/Libraries/AvaElements/Renderers/iOS
+      run: |
+        swift test \
+          --parallel \
+          --enable-code-coverage \
+          --filter AvaElementsRendererTests
+
+    - name: Generate coverage report
+      working-directory: Universal/Libraries/AvaElements/Renderers/iOS
+      run: |
+        xcrun llvm-cov export \
+          -format="lcov" \
+          .build/debug/AvaElementsRendererPackageTests.xctest/Contents/MacOS/AvaElementsRendererPackageTests \
+          -instr-profile .build/debug/codecov/default.profdata \
+          > coverage.lcov
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./Universal/Libraries/AvaElements/Renderers/iOS/coverage.lcov
+        flags: ios
+        name: ios-coverage
+
+    - name: Archive test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-ios-${{ matrix.ios }}
+        path: |
+          Universal/Libraries/AvaElements/Renderers/iOS/.build/
+          Universal/Libraries/AvaElements/Renderers/iOS/Tests/__Snapshots__/
+
+  snapshot-tests:
+    name: Snapshot Tests
+    runs-on: macos-13
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Select Xcode
+      run: sudo xcode-select -s /Applications/Xcode_15.0.app/Contents/Developer
+
+    - name: Install dependencies
+      working-directory: Universal/Libraries/AvaElements/Renderers/iOS
+      run: swift package resolve
+
+    - name: Run snapshot tests
+      working-directory: Universal/Libraries/AvaElements/Renderers/iOS
+      run: |
+        swift test \
+          --filter SnapshotTests \
+          --parallel
+
+    - name: Upload snapshot failures
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: snapshot-test-failures
+        path: Universal/Libraries/AvaElements/Renderers/iOS/Tests/__Snapshots__/__Failures__/
+
+  performance-tests:
+    name: Performance Tests
+    runs-on: macos-13
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Select Xcode
+      run: sudo xcode-select -s /Applications/Xcode_15.0.app/Contents/Developer
+
+    - name: Install dependencies
+      working-directory: Universal/Libraries/AvaElements/Renderers/iOS
+      run: swift package resolve
+
+    - name: Run performance tests
+      working-directory: Universal/Libraries/AvaElements/Renderers/iOS
+      run: |
+        swift test \
+          --filter PerformanceTests \
+          --enable-code-coverage
+
+    - name: Generate performance report
+      working-directory: Universal/Libraries/AvaElements/Renderers/iOS
+      run: |
+        # Extract performance metrics from test results
+        echo "Performance Test Results" > performance-report.txt
+        echo "========================" >> performance-report.txt
+        swift test --filter PerformanceTests 2>&1 | grep -E "(Test Case|measured)" >> performance-report.txt
+
+    - name: Upload performance report
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-report
+        path: Universal/Libraries/AvaElements/Renderers/iOS/performance-report.txt
+
+  quality-gates:
+    name: Quality Gates
+    runs-on: macos-13
+    needs: [test, snapshot-tests, performance-tests]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Download coverage
+      uses: actions/download-artifact@v3
+      with:
+        name: test-results-ios-17.0
+        path: ./coverage
+
+    - name: Check coverage threshold
+      run: |
+        # Extract coverage percentage
+        COVERAGE=$(xcrun llvm-cov report \
+          coverage/.build/debug/AvaElementsRendererPackageTests.xctest/Contents/MacOS/AvaElementsRendererPackageTests \
+          -instr-profile coverage/.build/debug/codecov/default.profdata \
+          | grep TOTAL | awk '{print $NF}' | sed 's/%//')
+
+        echo "Coverage: ${COVERAGE}%"
+
+        if (( $(echo "$COVERAGE < 90" | bc -l) )); then
+          echo "ERROR: Coverage ${COVERAGE}% is below 90% threshold"
+          exit 1
+        fi
+
+    - name: Check test count
+      run: |
+        # Verify minimum test count (400+ tests expected)
+        TEST_COUNT=$(swift test --list-tests 2>&1 | grep -c "Test")
+        echo "Test count: $TEST_COUNT"
+
+        if [ $TEST_COUNT -lt 400 ]; then
+          echo "ERROR: Test count $TEST_COUNT is below 400 minimum"
+          exit 1
+        fi
+
+    - name: Quality gate passed
+      run: echo "✅ All quality gates passed"

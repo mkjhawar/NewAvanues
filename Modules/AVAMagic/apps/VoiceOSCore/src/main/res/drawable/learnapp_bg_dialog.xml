@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  bg_dialog.xml - Material Design 3 dialog background (light mode)
+  Path: modules/apps/LearnApp/src/main/res/drawable/bg_dialog.xml
+
+  Author: Manoj Jhawar
+  Created: 2025-10-24
+
+  Rounded dialog background with Material Design 3 elevation and shadow.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <!-- Surface color (Material Design 3 light) -->
+    <solid android:color="#FFFFFF" />
+
+    <!-- Rounded corners (16dp for dialogs) -->
+    <corners android:radius="16dp" />
+
+</shape>

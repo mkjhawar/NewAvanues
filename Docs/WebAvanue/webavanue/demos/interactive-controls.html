@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Interactive Element Controls</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --surface: #1e293b;
+            --surface-elevated: #334155;
+            --on-surface: #f1f5f9;
+            --background: #0f172a;
+            --glass-blur: 0px;
+            --glass-opacity: 1;
+            --glass-border-opacity: 0.1;
+            --elevation-2: 0 3px 6px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            --elevation-3: 0 6px 12px rgba(0, 0, 0, 0.4), 0 3px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            --radius-md: 10px;
+            --radius-lg: 14px;
+            --duration-quick: 200ms;
+            --motion-standard: cubic-bezier(0.4, 0, 0.2, 1);
+            --depth-raised: translateZ(2px);
+            --depth-elevated: translateZ(4px);
+        }
+        body.glass-mode { --glass-blur: 40px; --glass-opacity: 0.7; --glass-border-opacity: 0.15; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 40px 20px; gap: 40px; transform: translateZ(0); -webkit-font-smoothing: antialiased;
+        }
+        .phone { width: 390px; height: 844px; background: var(--background); border-radius: 50px; padding: 12px;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.8); transition: all 0.6s; position: relative; }
+        .notch { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 160px; height: 30px;
+            background: var(--background); border-radius: 0 0 20px 20px; z-index: 100; }
+        .screen { width: 100%; height: 100%; background: #000; border-radius: 38px; overflow: hidden;
+            display: flex; flex-direction: column; }
+        .browser-container { width: 100%; height: 100%; display: flex; flex-direction: column;
+            padding: 50px 12px 16px 12px; gap: 12px; }
+        .toolbar { display: flex; flex-direction: column; gap: 8px; }
+        .nav-row { display: flex; gap: 8px; align-items: center; }
+
+        /* Editable elements - unique IDs for selection */
+        .nav-pod {
+            background: rgba(30, 41, 59, var(--glass-opacity));
+            backdrop-filter: blur(var(--glass-blur)) saturate(120%);
+            -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(120%);
+            border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity));
+            box-shadow: var(--elevation-2);
+            display: flex; gap: 4px; padding: 4px; border-radius: var(--radius-md);
+            cursor: pointer; transition: all var(--duration-quick);
+        }
+        .btn {
+            width: 40px; height: 40px; border-radius: 6px; border: none;
+            background: var(--surface-elevated); color: var(--on-surface); font-size: 18px;
+            display: flex; align-items: center; justify-content: center;
+            transform: var(--depth-raised); transition: all var(--duration-quick);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+        }
+        .tab-badge {
+            width: 40px; height: 40px; margin-left: auto; background: var(--primary);
+            border-radius: 6px; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 14px; font-weight: 600;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+            cursor: pointer; transition: all var(--duration-quick);
+        }
+        .address-row { display: flex; gap: 8px; align-items: center; }
+        .address-bar {
+            flex: 1;
+            background: rgba(51, 65, 85, var(--glass-opacity));
+            backdrop-filter: blur(var(--glass-blur)) saturate(120%);
+            -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(120%);
+            border: 1px solid rgba(255, 255, 255, calc(var(--glass-border-opacity) + 0.05));
+            box-shadow: var(--elevation-3);
+            padding: 8px 12px; border-radius: var(--radius-lg);
+            display: flex; align-items: center; gap: 10px; min-height: 48px;
+            transform: var(--depth-elevated); transition: all var(--duration-quick);
+            cursor: pointer;
+        }
+        .url-box {
+            flex: 1; height: 36px; background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md);
+            padding: 0 10px; display: flex; align-items: center; gap: 8px;
+        }
+        .url-input { flex: 1; background: transparent; border: none; color: var(--on-surface);
+            font-size: 14px; outline: none; pointer-events: none; }
+        .menu-btn {
+            width: 40px; height: 40px; background: var(--surface-elevated); border: none;
+            border-radius: 6px; color: var(--on-surface); font-size: 20px;
+            display: flex; align-items: center; justify-content: center; box-shadow: var(--elevation-2);
+            cursor: pointer; transition: all var(--duration-quick);
+        }
+        .webview { flex: 1; border-radius: var(--radius-lg); background: var(--surface);
+            border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+            display: flex; align-items: center; justify-content: center;
+            color: rgba(241, 245, 249, 0.5); }
+
+        /* Selection state */
+        .selected {
+            outline: 3px solid #3b82f6 !important;
+            outline-offset: 2px;
+            position: relative;
+        }
+        .selected::after {
+            content: '●';
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            width: 24px;
+            height: 24px;
+            background: #3b82f6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+        }
+
+        /* Control panel */
+        .control-panel {
+            width: 360px;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+            max-height: 844px;
+            overflow-y: auto;
+        }
+        .control-panel h2 {
+            color: var(--on-surface);
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .element-name {
+            color: #3b82f6;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-group label {
+            display: block;
+            color: rgba(241, 245, 249, 0.9);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .control-row input[type="range"] {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .control-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .control-row input[type="color"] {
+            width: 48px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .control-row input[type="text"] {
+            width: 80px;
+            height: 32px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--on-surface);
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            padding: 0 8px;
+            text-align: center;
+        }
+        .value-display {
+            min-width: 60px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: rgba(241, 245, 249, 0.7);
+            text-align: right;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
+        }
+        .ctrl-btn {
+            flex: 1;
+            padding: 10px;
+            background: rgba(51, 65, 85, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--on-surface);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .ctrl-btn:hover {
+            background: rgba(51, 65, 85, 1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .ctrl-btn.primary {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+        .ctrl-btn.primary:hover {
+            background: #1d4ed8;
+        }
+        .instructions {
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            color: rgba(241, 245, 249, 0.8);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+            <div class="browser-container">
+                <div class="toolbar">
+                    <div class="nav-row">
+                        <div class="nav-pod" id="nav-pod" data-name="Navigation Pod">
+                            <button class="btn" id="btn-back" data-name="Back Button">◀</button>
+                            <button class="btn" id="btn-forward" data-name="Forward Button">▶</button>
+                            <button class="btn" id="btn-reload" data-name="Reload Button">↻</button>
+                        </div>
+                        <div class="tab-badge" id="tab-badge" data-name="Tab Badge">3</div>
+                    </div>
+                    <div class="address-row">
+                        <div class="address-bar" id="address-bar" data-name="Address Bar">
+                            <div class="url-box">
+                                <span style="opacity: 0.6; font-size: 14px;">🔒</span>
+                                <input class="url-input" type="text" value="https://example.com">
+                            </div>
+                        </div>
+                        <button class="menu-btn" id="menu-btn" data-name="Menu Button">☰</button>
+                    </div>
+                </div>
+                <div class="webview" id="webview" data-name="WebView">
+                    Click any element to customize it →
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="control-panel">
+        <div class="instructions">
+            💡 <strong>Click any UI element</strong> to select it and adjust its properties below. Changes apply only to the selected element.
+        </div>
+
+        <h2>Element Controls</h2>
+        <div class="element-name" id="selected-element-name">No element selected</div>
+
+        <div id="controls-container">
+            <div class="control-group">
+                <label>Background Color</label>
+                <div class="control-row">
+                    <input type="color" id="ctrl-bg-color" value="#334155">
+                    <input type="text" id="ctrl-bg-hex" value="#334155" maxlength="7">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Border Radius</label>
+                <div class="control-row">
+                    <input type="range" id="ctrl-radius" min="0" max="30" value="10">
+                    <span class="value-display" id="val-radius">10px</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Opacity</label>
+                <div class="control-row">
+                    <input type="range" id="ctrl-opacity" min="0" max="100" value="100">
+                    <span class="value-display" id="val-opacity">100%</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Blur (Glass Effect)</label>
+                <div class="control-row">
+                    <input type="range" id="ctrl-blur" min="0" max="60" value="0">
+                    <span class="value-display" id="val-blur">0px</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Shadow Intensity</label>
+                <div class="control-row">
+                    <input type="range" id="ctrl-shadow" min="0" max="100" value="50">
+                    <span class="value-display" id="val-shadow">50%</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Border Opacity</label>
+                <div class="control-row">
+                    <input type="range" id="ctrl-border-opacity" min="0" max="100" value="10">
+                    <span class="value-display" id="val-border-opacity">10%</span>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="ctrl-btn" onclick="resetElement()">Reset</button>
+                <button class="ctrl-btn primary" onclick="exportStyles()">Export CSS</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedElement = null;
+        const elementStyles = new Map();
+
+        // Make all interactive elements selectable
+        const selectableElements = [
+            'nav-pod', 'btn-back', 'btn-forward', 'btn-reload',
+            'tab-badge', 'address-bar', 'menu-btn', 'webview'
+        ];
+
+        selectableElements.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectElement(el);
+                });
+                // Store initial styles
+                elementStyles.set(id, {
+                    backgroundColor: window.getComputedStyle(el).backgroundColor,
+                    borderRadius: '10px',
+                    opacity: '100',
+                    blur: '0',
+                    shadow: '50',
+                    borderOpacity: '10'
+                });
+            }
+        });
+
+        function selectElement(element) {
+            // Remove previous selection
+            if (selectedElement) {
+                selectedElement.classList.remove('selected');
+            }
+
+            // Select new element
+            selectedElement = element;
+            element.classList.add('selected');
+
+            // Update control panel
+            const elementName = element.getAttribute('data-name');
+            document.getElementById('selected-element-name').textContent = elementName;
+
+            // Load element's current styles into controls
+            const styles = elementStyles.get(element.id);
+            if (styles) {
+                updateControlsFromStyles(styles);
+            }
+        }
+
+        function updateControlsFromStyles(styles) {
+            const bgColor = rgbToHex(styles.backgroundColor || '#334155');
+            document.getElementById('ctrl-bg-color').value = bgColor;
+            document.getElementById('ctrl-bg-hex').value = bgColor;
+            document.getElementById('ctrl-radius').value = parseInt(styles.borderRadius) || 10;
+            document.getElementById('val-radius').textContent = styles.borderRadius || '10px';
+            document.getElementById('ctrl-opacity').value = styles.opacity || 100;
+            document.getElementById('val-opacity').textContent = (styles.opacity || 100) + '%';
+            document.getElementById('ctrl-blur').value = styles.blur || 0;
+            document.getElementById('val-blur').textContent = (styles.blur || 0) + 'px';
+            document.getElementById('ctrl-shadow').value = styles.shadow || 50;
+            document.getElementById('val-shadow').textContent = (styles.shadow || 50) + '%';
+            document.getElementById('ctrl-border-opacity').value = styles.borderOpacity || 10;
+            document.getElementById('val-border-opacity').textContent = (styles.borderOpacity || 10) + '%';
+        }
+
+        // Background color
+        document.getElementById('ctrl-bg-color').addEventListener('input', (e) => {
+            if (!selectedElement) return;
+            const color = e.target.value;
+            selectedElement.style.backgroundColor = color;
+            document.getElementById('ctrl-bg-hex').value = color;
+            elementStyles.get(selectedElement.id).backgroundColor = color;
+        });
+
+        document.getElementById('ctrl-bg-hex').addEventListener('input', (e) => {
+            if (!selectedElement) return;
+            const color = e.target.value;
+            if (/^#[0-9A-F]{6}$/i.test(color)) {
+                selectedElement.style.backgroundColor = color;
+                document.getElementById('ctrl-bg-color').value = color;
+                elementStyles.get(selectedElement.id).backgroundColor = color;
+            }
+        });
+
+        // Border radius
+        document.getElementById('ctrl-radius').addEventListener('input', (e) => {
+            if (!selectedElement) return;
+            const val = e.target.value + 'px';
+            selectedElement.style.borderRadius = val;
+            document.getElementById('val-radius').textContent = val;
+            elementStyles.get(selectedElement.id).borderRadius = val;
+        });
+
+        // Opacity
+        document.getElementById('ctrl-opacity').addEventListener('input', (e) => {
+            if (!selectedElement) return;
+            const val = e.target.value / 100;
+            selectedElement.style.opacity = val;
+            document.getElementById('val-opacity').textContent = e.target.value + '%';
+            elementStyles.get(selectedElement.id).opacity = e.target.value;
+        });
+
+        // Blur
+        document.getElementById('ctrl-blur').addEventListener('input', (e) => {
+            if (!selectedElement) return;
+            const val = e.target.value + 'px';
+            selectedElement.style.backdropFilter = `blur(${val}) saturate(120%)`;
+            selectedElement.style.webkitBackdropFilter = `blur(${val}) saturate(120%)`;
+            document.getElementById('val-blur').textContent = val;
+            elementStyles.get(selectedElement.id).blur = e.target.value;
+        });
+
+        // Shadow
+        document.getElementById('ctrl-shadow').addEventListener('input', (e) => {
+            if (!selectedElement) return;
+            const intensity = e.target.value / 100;
+            const shadow = `0 ${4 * intensity}px ${8 * intensity}px rgba(0, 0, 0, ${0.3 * intensity}), 0 ${2 * intensity}px ${4 * intensity}px rgba(0, 0, 0, ${0.2 * intensity})`;
+            selectedElement.style.boxShadow = shadow;
+            document.getElementById('val-shadow').textContent = e.target.value + '%';
+            elementStyles.get(selectedElement.id).shadow = e.target.value;
+        });
+
+        // Border opacity
+        document.getElementById('ctrl-border-opacity').addEventListener('input', (e) => {
+            if (!selectedElement) return;
+            const val = e.target.value / 100;
+            selectedElement.style.borderColor = `rgba(255, 255, 255, ${val})`;
+            document.getElementById('val-border-opacity').textContent = e.target.value + '%';
+            elementStyles.get(selectedElement.id).borderOpacity = e.target.value;
+        });
+
+        function resetElement() {
+            if (!selectedElement) return;
+            selectedElement.style.backgroundColor = '';
+            selectedElement.style.borderRadius = '';
+            selectedElement.style.opacity = '';
+            selectedElement.style.backdropFilter = '';
+            selectedElement.style.webkitBackdropFilter = '';
+            selectedElement.style.boxShadow = '';
+            selectedElement.style.borderColor = '';
+
+            // Reset stored styles
+            const id = selectedElement.id;
+            elementStyles.set(id, {
+                backgroundColor: window.getComputedStyle(selectedElement).backgroundColor,
+                borderRadius: '10px',
+                opacity: '100',
+                blur: '0',
+                shadow: '50',
+                borderOpacity: '10'
+            });
+            updateControlsFromStyles(elementStyles.get(id));
+        }
+
+        function exportStyles() {
+            if (!selectedElement) return;
+            const styles = elementStyles.get(selectedElement.id);
+            const css = `#${selectedElement.id} {
+    background-color: ${styles.backgroundColor};
+    border-radius: ${styles.borderRadius};
+    opacity: ${styles.opacity / 100};
+    backdrop-filter: blur(${styles.blur}px) saturate(120%);
+    box-shadow: /* custom shadow */;
+    border-color: rgba(255, 255, 255, ${styles.borderOpacity / 100});
+}`;
+            console.log(css);
+            alert('CSS exported to console');
+        }
+
+        function rgbToHex(rgb) {
+            if (rgb.startsWith('#')) return rgb;
+            const matches = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+            if (!matches) return '#334155';
+            const hex = (r, g, b) => '#' + [r, g, b].map(x => {
+                const hex = parseInt(x).toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            }).join('');
+            return hex(matches[1], matches[2], matches[3]);
+        }
+    </script>
+</body>
+</html>

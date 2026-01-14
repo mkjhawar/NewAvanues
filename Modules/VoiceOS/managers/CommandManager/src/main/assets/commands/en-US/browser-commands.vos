@@ -1,0 +1,219 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "browser-commands.vos",
+    "category": "browser",
+    "display_name": "Browser Control",
+    "description": "Voice commands for web browser control",
+    "command_count": 41
+  },
+  "locale": "en-US",
+  "commands": [
+    {
+      "action": "SCROLL_TOP",
+      "cmd": "scroll to top",
+      "syn": ["top of page", "scroll up all the way", "jump to top", "page top", "go to top", "scroll to beginning", "top please", "page beginning", "start of page", "first line", "scroll all the way up", "jump to start", "page start", "top of the page"]
+    },
+    {
+      "action": "SCROLL_BOTTOM",
+      "cmd": "scroll to bottom",
+      "syn": ["bottom of page", "scroll down all the way", "jump to bottom", "page bottom", "go to bottom", "scroll to end", "bottom please", "page end", "end of page", "last line", "scroll all the way down", "jump to end", "page finish", "bottom of the page"]
+    },
+    {
+      "action": "FREEZE_PAGE",
+      "cmd": "freeze page",
+      "syn": ["lock scroll", "disable scrolling", "freeze scrolling", "stop scroll", "lock page", "hold page", "freeze content", "lock content", "stop scrolling", "disable scroll", "freeze it", "lock it up", "hold scrolling", "page lock"]
+    },
+    {
+      "action": "UNFREEZE_PAGE",
+      "cmd": "unfreeze page",
+      "syn": ["unlock scroll", "enable scrolling", "unfreeze scrolling", "resume scroll", "unlock page", "release page", "unfreeze content", "unlock content", "resume scrolling", "enable scroll", "unfreeze it", "unlock it", "release scrolling", "page unlock"]
+    },
+    {
+      "action": "CLEAR_COOKIES",
+      "cmd": "clear cookies",
+      "syn": ["delete cookies", "remove cookies", "clear browsing data", "erase cookies", "cookies clear", "clear browser data", "delete browsing data", "remove browsing data", "erase browsing data", "clear cache and cookies", "wipe cookies", "cookies delete", "clear web data", "browser data clear"]
+    },
+    {
+      "action": "ZOOM_IN",
+      "cmd": "zoom in",
+      "syn": ["enlarge page", "magnify", "bigger text", "increase zoom", "zoom larger", "make text bigger", "enlarge text", "bigger page", "zoom up", "increase magnification", "larger view", "make bigger", "zoom closer", "magnify page"]
+    },
+    {
+      "action": "ZOOM_OUT",
+      "cmd": "zoom out",
+      "syn": ["shrink page", "reduce zoom", "smaller text", "decrease zoom", "zoom smaller", "make text smaller", "reduce text", "smaller page", "zoom down", "decrease magnification", "smaller view", "make smaller", "zoom back", "reduce page"]
+    },
+    {
+      "action": "DESKTOP_MODE",
+      "cmd": "desktop mode",
+      "syn": ["desktop site", "full site", "desktop version", "request desktop", "desktop view", "full website", "desktop page", "computer version", "desktop browser", "PC mode", "request desktop site", "show desktop version", "switch to desktop", "desktop mode on"]
+    },
+    {
+      "action": "MOBILE_MODE",
+      "cmd": "mobile mode",
+      "syn": ["mobile site", "mobile version", "phone site", "mobile view", "phone mode", "mobile website", "mobile page", "phone version", "mobile browser", "switch to mobile", "request mobile site", "show mobile version", "mobile mode on", "phone view"]
+    },
+    {
+      "action": "RESET_ZOOM",
+      "cmd": "reset zoom",
+      "syn": ["default zoom", "normal zoom", "100 percent zoom", "original size", "zoom reset", "normal size", "default size", "regular zoom", "standard zoom", "zoom to default", "reset size", "normal view", "default view", "original zoom"]
+    },
+    {
+      "action": "SET_ZOOM_LEVEL",
+      "cmd": "set zoom level",
+      "syn": ["zoom level", "adjust zoom", "change zoom", "zoom to", "set zoom", "zoom percentage", "zoom amount", "zoom setting", "zoom adjustment", "change zoom level", "adjust zoom level", "modify zoom", "zoom control", "zoom configuration"]
+    },
+    {
+      "action": "ADD_BOOKMARK",
+      "cmd": "add bookmark",
+      "syn": ["bookmark page", "save bookmark", "add to bookmarks", "bookmark this", "save page", "bookmark current page", "add to favorites", "save to bookmarks", "bookmark it", "create bookmark", "bookmark this page", "save this page", "add favorite", "bookmark now"]
+    },
+    {
+      "action": "NEW_TAB",
+      "cmd": "new tab",
+      "syn": ["open new tab", "create tab", "add tab", "new browser tab", "open tab", "create new tab", "add new tab", "new page", "open new page", "tab new", "make new tab", "start new tab", "open another tab", "new tab please"]
+    },
+    {
+      "action": "CLOSE_TAB",
+      "cmd": "close tab",
+      "syn": ["close this tab", "remove tab", "delete tab", "close current tab", "tab close", "close page", "remove this tab", "delete this tab", "close browser tab", "tab remove", "end tab", "finish tab", "close active tab", "close it"]
+    },
+    {
+      "action": "SWITCH_TAB",
+      "cmd": "switch tab",
+      "syn": ["change tab", "next tab", "previous tab", "go to tab", "tab switch", "switch to tab", "move to tab", "navigate tab", "tab navigation", "cycle tab", "tab cycling"]
+    },
+    {
+      "action": "RELOAD_PAGE",
+      "cmd": "reload page",
+      "syn": ["refresh page", "reload", "refresh", "update page", "page reload", "page refresh", "reload this page", "refresh this page", "reload current page", "refresh current page", "reload it", "refresh it"]
+    },
+    {
+      "action": "STOP_LOADING",
+      "cmd": "stop loading",
+      "syn": ["stop page", "cancel loading", "halt loading", "stop", "cancel", "halt page", "stop load", "cancel load", "halt load", "stop it", "cancel it", "halt it"]
+    },
+    {
+      "action": "GO_BACK",
+      "cmd": "go back",
+      "syn": ["back", "previous page", "go to previous page", "navigate back", "back page", "last page", "return", "go backwards", "backwards", "step back"]
+    },
+    {
+      "action": "GO_FORWARD",
+      "cmd": "go forward",
+      "syn": ["forward", "next page", "go to next page", "navigate forward", "forward page", "advance", "go forwards", "forwards", "step forward"]
+    },
+    {
+      "action": "OPEN_LINK",
+      "cmd": "open link",
+      "syn": ["click link", "follow link", "open URL", "navigate to link", "go to link", "open this link", "click this link", "follow this link", "tap link", "select link"]
+    },
+    {
+      "action": "COPY_LINK",
+      "cmd": "copy link",
+      "syn": ["copy URL", "copy link address", "copy this link", "copy link URL", "copy page link", "save link", "copy link to clipboard", "clipboard link"]
+    },
+    {
+      "action": "SHARE_PAGE",
+      "cmd": "share page",
+      "syn": ["share this page", "share URL", "share link", "share this link", "send page", "send link", "share current page", "share this site", "share website"]
+    },
+    {
+      "action": "FIND_ON_PAGE",
+      "cmd": "find on page",
+      "syn": ["search page", "find text", "search on page", "find in page", "page search", "search this page", "find word", "search for text", "locate text", "find string"]
+    },
+    {
+      "action": "READER_MODE",
+      "cmd": "reader mode",
+      "syn": ["reading mode", "enable reader mode", "turn on reader mode", "reader view", "reading view", "simplified view", "text only mode", "article mode", "clean view"]
+    },
+    {
+      "action": "EXIT_READER_MODE",
+      "cmd": "exit reader mode",
+      "syn": ["disable reader mode", "turn off reader mode", "leave reader mode", "normal view", "standard view", "full view", "exit reading mode", "close reader mode"]
+    },
+    {
+      "action": "FULL_SCREEN",
+      "cmd": "full screen",
+      "syn": ["enter full screen", "fullscreen mode", "maximize browser", "full screen mode", "go full screen", "fullscreen", "maximize page", "full view"]
+    },
+    {
+      "action": "EXIT_FULL_SCREEN",
+      "cmd": "exit full screen",
+      "syn": ["leave full screen", "minimize browser", "exit fullscreen mode", "normal screen", "windowed mode", "restore window", "exit fullscreen"]
+    },
+    {
+      "action": "VIEW_SOURCE",
+      "cmd": "view source",
+      "syn": ["show source", "page source", "view page source", "show page source", "HTML source", "view HTML", "show HTML", "source code"]
+    },
+    {
+      "action": "INCOGNITO_MODE",
+      "cmd": "incognito mode",
+      "syn": ["private mode", "private browsing", "incognito window", "private window", "open incognito", "start private browsing", "new incognito tab", "new private tab"]
+    },
+    {
+      "action": "CLOSE_INCOGNITO",
+      "cmd": "close incognito",
+      "syn": ["exit incognito", "close private mode", "exit private browsing", "close private window", "close incognito window", "leave incognito", "leave private mode"]
+    },
+    {
+      "action": "OPEN_HISTORY",
+      "cmd": "open history",
+      "syn": ["show history", "view history", "browser history", "browsing history", "history page", "open browsing history", "show browsing history"]
+    },
+    {
+      "action": "CLEAR_HISTORY",
+      "cmd": "clear history",
+      "syn": ["delete history", "remove history", "erase history", "clear browsing history", "delete browsing history", "wipe history", "history clear"]
+    },
+    {
+      "action": "OPEN_DOWNLOADS",
+      "cmd": "open downloads",
+      "syn": ["show downloads", "view downloads", "downloads page", "download history", "open download page", "show download page"]
+    },
+    {
+      "action": "SAVE_PAGE",
+      "cmd": "save page",
+      "syn": ["download page", "save webpage", "save this page", "download webpage", "save current page", "save page as", "download current page"]
+    },
+    {
+      "action": "PRINT_PAGE",
+      "cmd": "print page",
+      "syn": ["print this page", "print webpage", "print current page", "page print", "print it", "print this"]
+    },
+    {
+      "action": "OPEN_SETTINGS",
+      "cmd": "open settings",
+      "syn": ["browser settings", "show settings", "settings page", "open browser settings", "show browser settings", "preferences", "options"]
+    },
+    {
+      "action": "SCROLL_UP",
+      "cmd": "scroll up",
+      "syn": ["page up", "scroll page up", "move up", "go up", "scroll upward", "scroll upwards", "up", "scroll a bit up"]
+    },
+    {
+      "action": "SCROLL_DOWN",
+      "cmd": "scroll down",
+      "syn": ["page down", "scroll page down", "move down", "go down", "scroll downward", "scroll downwards", "down", "scroll a bit down"]
+    },
+    {
+      "action": "SCROLL_LEFT",
+      "cmd": "scroll left",
+      "syn": ["page left", "move left", "go left", "scroll to left", "leftward", "left", "scroll a bit left"]
+    },
+    {
+      "action": "SCROLL_RIGHT",
+      "cmd": "scroll right",
+      "syn": ["page right", "move right", "go right", "scroll to right", "rightward", "right", "scroll a bit right"]
+    },
+    {
+      "action": "OPEN_NEW_WINDOW",
+      "cmd": "open new window",
+      "syn": ["new window", "new browser window", "open window", "create window", "add window", "new window please"]
+    }
+  ]
+}

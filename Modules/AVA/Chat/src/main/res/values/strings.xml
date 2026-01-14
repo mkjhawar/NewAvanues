@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Chat Empty State -->
+    <string name="chat_empty_state_title">Start a conversation</string>
+    <string name="chat_empty_state_subtitle">Say hello to AVA or try:</string>
+    <string name="chat_example_time">\"What time is it?\"</string>
+    <string name="chat_example_lights">\"Turn on the lights\"</string>
+    <string name="chat_example_reminder">\"Set a reminder\"</string>
+
+    <!-- Chat Input -->
+    <string name="chat_input_placeholder">Type or say something…</string>
+    <string name="chat_input_rag_placeholder">Ask about your documents…</string>
+
+    <!-- Chat Loading -->
+    <string name="chat_typing_indicator">AVA is thinking…</string>
+
+    <!-- Chat Actions -->
+    <string name="chat_send_button">Send message</string>
+    <string name="chat_voice_input_button">Voice input</string>
+    <string name="chat_clear_button">Clear chat</string>
+
+    <!-- History Overlay -->
+    <string name="chat_history_title">Conversation History</string>
+    <string name="chat_history_empty">No conversations yet</string>
+    <string name="chat_load_more">Load %d more messages</string>
+
+    <!-- Teach AVA -->
+    <string name="teach_ava_button">Teach AVA</string>
+    <string name="teach_ava_title">What should AVA learn?</string>
+    <string name="teach_ava_select_intent">Select the correct intent</string>
+
+    <!-- TTS -->
+    <string name="tts_speak_button">Speak message</string>
+    <string name="tts_stop_button">Stop speaking</string>
+
+    <!-- Errors -->
+    <string name="chat_error_send_failed">Failed to send message</string>
+    <string name="chat_error_nlu_unavailable">NLU is not available</string>
+
+    <!-- Accessibility -->
+    <string name="a11y_message_from_user">Message from you</string>
+    <string name="a11y_message_from_ava">Message from AVA</string>
+    <string name="a11y_confidence_low">Low confidence, tap to teach AVA</string>
+    <string name="a11y_confidence_high">High confidence</string>
+</resources>

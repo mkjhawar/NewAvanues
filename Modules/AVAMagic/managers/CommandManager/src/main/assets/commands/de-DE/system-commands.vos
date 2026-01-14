@@ -1,0 +1,74 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "system-commands.vos",
+    "category": "system",
+    "display_name": "System Control",
+    "description": "Voice commands for system-level control",
+    "command_count": 3
+  },
+  "locale": "de-DE",
+  "commands": [
+    {
+      "action": "SHUT_DOWN",
+      "cmd": "shut runter device",
+      "syn": [
+        "power off",
+        "turn off device",
+        "shutdown",
+        "power runter",
+        "ausschalten",
+        "shut runter",
+        "device off",
+        "power off device",
+        "switch off",
+        "schließen device",
+        "turn off phone",
+        "switch off phone",
+        "power runter phone",
+        "shut runter phone"
+      ]
+    },
+    {
+      "action": "REBOOT",
+      "cmd": "reboot device",
+      "syn": [
+        "restart device",
+        "restart",
+        "reboot",
+        "device restart",
+        "reset device",
+        "power cycle",
+        "restart system",
+        "reboot system",
+        "device reboot",
+        "system restart",
+        "restart phone",
+        "reboot phone",
+        "reset phone",
+        "power cycle phone"
+      ]
+    },
+    {
+      "action": "TURN_OFF_DISPLAY",
+      "cmd": "turn off display",
+      "syn": [
+        "Bildschirm off",
+        "display off",
+        "turn off Bildschirm",
+        "black Bildschirm",
+        "Bildschirm sleep",
+        "display sleep",
+        "Bildschirm dark",
+        "turn Bildschirm off",
+        "Bildschirm blank",
+        "display blank",
+        "switch off Bildschirm",
+        "switch off display",
+        "Bildschirm standby",
+        "display standby"
+      ]
+    }
+  ]
+}

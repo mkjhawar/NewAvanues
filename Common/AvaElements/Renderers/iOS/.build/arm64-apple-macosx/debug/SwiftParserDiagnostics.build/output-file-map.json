@@ -1,0 +1,96 @@
+{
+  "": {
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/master.swiftdeps"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftParserDiagnostics/DiagnosticExtensions.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/DiagnosticExtensions.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/DiagnosticExtensions.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/DiagnosticExtensions~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/DiagnosticExtensions.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/DiagnosticExtensions.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftParserDiagnostics/LexerDiagnosticMessages.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/LexerDiagnosticMessages.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/LexerDiagnosticMessages.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/LexerDiagnosticMessages~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/LexerDiagnosticMessages.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/LexerDiagnosticMessages.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftParserDiagnostics/MissingNodesError.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MissingNodesError.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MissingNodesError.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MissingNodesError~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MissingNodesError.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MissingNodesError.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftParserDiagnostics/MissingTokenError.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MissingTokenError.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MissingTokenError.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MissingTokenError~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MissingTokenError.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MissingTokenError.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftParserDiagnostics/MultiLineStringLiteralDiagnosticsGenerator.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MultiLineStringLiteralDiagnosticsGenerator.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MultiLineStringLiteralDiagnosticsGenerator.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MultiLineStringLiteralDiagnosticsGenerator~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MultiLineStringLiteralDiagnosticsGenerator.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/MultiLineStringLiteralDiagnosticsGenerator.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftParserDiagnostics/ParseDiagnosticsGenerator.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ParseDiagnosticsGenerator.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ParseDiagnosticsGenerator.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ParseDiagnosticsGenerator~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ParseDiagnosticsGenerator.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ParseDiagnosticsGenerator.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftParserDiagnostics/ParserDiagnosticMessages.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ParserDiagnosticMessages.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ParserDiagnosticMessages.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ParserDiagnosticMessages~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ParserDiagnosticMessages.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ParserDiagnosticMessages.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftParserDiagnostics/PresenceUtils.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/PresenceUtils.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/PresenceUtils.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/PresenceUtils~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/PresenceUtils.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/PresenceUtils.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftParserDiagnostics/SyntaxExtensions.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/SyntaxExtensions.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/SyntaxExtensions.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/SyntaxExtensions~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/SyntaxExtensions.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/SyntaxExtensions.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftParserDiagnostics/Utils.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/Utils.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/Utils.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/Utils~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/Utils.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/Utils.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftParserDiagnostics/generated/ChildNameForDiagnostics.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ChildNameForDiagnostics.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ChildNameForDiagnostics.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ChildNameForDiagnostics~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ChildNameForDiagnostics.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/ChildNameForDiagnostics.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftParserDiagnostics/generated/SyntaxKindNameForDiagnostics.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/SyntaxKindNameForDiagnostics.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/SyntaxKindNameForDiagnostics.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/SyntaxKindNameForDiagnostics~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/SyntaxKindNameForDiagnostics.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/SyntaxKindNameForDiagnostics.dia"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/swift-syntax/Sources/SwiftParserDiagnostics/generated/TokenNameForDiagnostics.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/TokenNameForDiagnostics.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/TokenNameForDiagnostics.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/TokenNameForDiagnostics~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/TokenNameForDiagnostics.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/SwiftParserDiagnostics.build/TokenNameForDiagnostics.dia"
+  }
+}

@@ -1,0 +1,363 @@
+{
+  "name": "VoiceOS Custom Theme",
+  "platform": "iOS26_LiquidGlass",
+  "colorScheme": {
+    "mode": "Light",
+    "primary": {
+      "red": 0.0,
+      "green": 0.478,
+      "blue": 1.0,
+      "alpha": 1.0
+    },
+    "onPrimary": {
+      "red": 1.0,
+      "green": 1.0,
+      "blue": 1.0,
+      "alpha": 1.0
+    },
+    "primaryContainer": {
+      "red": 0.898,
+      "green": 0.949,
+      "blue": 1.0,
+      "alpha": 1.0
+    },
+    "onPrimaryContainer": {
+      "red": 0.0,
+      "green": 0.114,
+      "blue": 0.208,
+      "alpha": 1.0
+    },
+    "secondary": {
+      "red": 0.369,
+      "green": 0.361,
+      "blue": 0.902,
+      "alpha": 1.0
+    },
+    "onSecondary": {
+      "red": 1.0,
+      "green": 1.0,
+      "blue": 1.0,
+      "alpha": 1.0
+    },
+    "secondaryContainer": {
+      "red": 0.937,
+      "green": 0.929,
+      "blue": 1.0,
+      "alpha": 1.0
+    },
+    "onSecondaryContainer": {
+      "red": 0.102,
+      "green": 0.102,
+      "blue": 0.302,
+      "alpha": 1.0
+    },
+    "tertiary": {
+      "red": 1.0,
+      "green": 0.584,
+      "blue": 0.0,
+      "alpha": 1.0
+    },
+    "onTertiary": {
+      "red": 1.0,
+      "green": 1.0,
+      "blue": 1.0,
+      "alpha": 1.0
+    },
+    "tertiaryContainer": {
+      "red": 1.0,
+      "green": 0.910,
+      "blue": 0.800,
+      "alpha": 1.0
+    },
+    "onTertiaryContainer": {
+      "red": 0.302,
+      "green": 0.173,
+      "blue": 0.0,
+      "alpha": 1.0
+    },
+    "error": {
+      "red": 1.0,
+      "green": 0.231,
+      "blue": 0.188,
+      "alpha": 1.0
+    },
+    "onError": {
+      "red": 1.0,
+      "green": 1.0,
+      "blue": 1.0,
+      "alpha": 1.0
+    },
+    "errorContainer": {
+      "red": 1.0,
+      "green": 0.898,
+      "blue": 0.898,
+      "alpha": 1.0
+    },
+    "onErrorContainer": {
+      "red": 0.302,
+      "green": 0.0,
+      "blue": 0.0,
+      "alpha": 1.0
+    },
+    "surface": {
+      "red": 1.0,
+      "green": 1.0,
+      "blue": 1.0,
+      "alpha": 0.7
+    },
+    "onSurface": {
+      "red": 0.0,
+      "green": 0.0,
+      "blue": 0.0,
+      "alpha": 1.0
+    },
+    "surfaceVariant": {
+      "red": 0.949,
+      "green": 0.949,
+      "blue": 0.969,
+      "alpha": 1.0
+    },
+    "onSurfaceVariant": {
+      "red": 0.235,
+      "green": 0.235,
+      "blue": 0.263,
+      "alpha": 1.0
+    },
+    "background": {
+      "red": 0.949,
+      "green": 0.949,
+      "blue": 0.969,
+      "alpha": 1.0
+    },
+    "onBackground": {
+      "red": 0.0,
+      "green": 0.0,
+      "blue": 0.0,
+      "alpha": 1.0
+    },
+    "outline": {
+      "red": 0.776,
+      "green": 0.776,
+      "blue": 0.784,
+      "alpha": 1.0
+    },
+    "outlineVariant": {
+      "red": 0.898,
+      "green": 0.898,
+      "blue": 0.918,
+      "alpha": 1.0
+    },
+    "scrim": {
+      "red": 0.0,
+      "green": 0.0,
+      "blue": 0.0,
+      "alpha": 0.32
+    },
+    "surfaceTint": {
+      "red": 0.0,
+      "green": 0.478,
+      "blue": 1.0,
+      "alpha": 0.1
+    }
+  },
+  "typography": {
+    "displayLarge": {
+      "family": "SF Pro Display",
+      "size": 34.0,
+      "weight": "Bold"
+    },
+    "displayMedium": {
+      "size": 45.0,
+      "weight": "Regular"
+    },
+    "displaySmall": {
+      "size": 36.0,
+      "weight": "Regular"
+    },
+    "headlineLarge": {
+      "family": "SF Pro Display",
+      "size": 28.0,
+      "weight": "Bold"
+    },
+    "headlineMedium": {
+      "size": 28.0,
+      "weight": "Regular"
+    },
+    "headlineSmall": {
+      "size": 24.0,
+      "weight": "Regular"
+    },
+    "titleLarge": {
+      "family": "SF Pro Text",
+      "size": 20.0,
+      "weight": "SemiBold"
+    },
+    "titleMedium": {
+      "size": 16.0,
+      "weight": "Medium"
+    },
+    "titleSmall": {
+      "size": 14.0,
+      "weight": "Medium"
+    },
+    "bodyLarge": {
+      "family": "SF Pro Text",
+      "size": 17.0,
+      "weight": "Regular"
+    },
+    "bodyMedium": {
+      "size": 14.0,
+      "weight": "Regular"
+    },
+    "bodySmall": {
+      "size": 12.0,
+      "weight": "Regular"
+    },
+    "labelLarge": {
+      "family": "SF Pro Text",
+      "size": 13.0,
+      "weight": "Regular"
+    },
+    "labelMedium": {
+      "size": 12.0,
+      "weight": "Medium"
+    },
+    "labelSmall": {
+      "size": 11.0,
+      "weight": "Medium"
+    }
+  },
+  "shapes": {
+    "extraSmall": {
+      "topLeft": 6.0,
+      "topRight": 6.0,
+      "bottomRight": 6.0,
+      "bottomLeft": 6.0
+    },
+    "small": {
+      "topLeft": 10.0,
+      "topRight": 10.0,
+      "bottomRight": 10.0,
+      "bottomLeft": 10.0
+    },
+    "medium": {
+      "topLeft": 14.0,
+      "topRight": 14.0,
+      "bottomRight": 14.0,
+      "bottomLeft": 14.0
+    },
+    "large": {
+      "topLeft": 20.0,
+      "topRight": 20.0,
+      "bottomRight": 20.0,
+      "bottomLeft": 20.0
+    },
+    "extraLarge": {
+      "topLeft": 30.0,
+      "topRight": 30.0,
+      "bottomRight": 30.0,
+      "bottomLeft": 30.0
+    }
+  },
+  "spacing": {
+    "xs": 4.0,
+    "sm": 8.0,
+    "md": 16.0,
+    "lg": 24.0,
+    "xl": 32.0,
+    "xxl": 48.0
+  },
+  "elevation": {
+    "level0": {
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "blurRadius": 0.0,
+      "spreadRadius": 0.0,
+      "color": {
+        "red": 0.0,
+        "green": 0.0,
+        "blue": 0.0,
+        "alpha": 0.0
+      }
+    },
+    "level1": {
+      "offsetX": 0.0,
+      "offsetY": 1.0,
+      "blurRadius": 3.0,
+      "spreadRadius": 0.0,
+      "color": {
+        "red": 0.0,
+        "green": 0.0,
+        "blue": 0.0,
+        "alpha": 0.12
+      }
+    },
+    "level2": {
+      "offsetX": 0.0,
+      "offsetY": 2.0,
+      "blurRadius": 6.0,
+      "spreadRadius": 0.0,
+      "color": {
+        "red": 0.0,
+        "green": 0.0,
+        "blue": 0.0,
+        "alpha": 0.12
+      }
+    },
+    "level3": {
+      "offsetX": 0.0,
+      "offsetY": 4.0,
+      "blurRadius": 8.0,
+      "spreadRadius": 0.0,
+      "color": {
+        "red": 0.0,
+        "green": 0.0,
+        "blue": 0.0,
+        "alpha": 0.12
+      }
+    },
+    "level4": {
+      "offsetX": 0.0,
+      "offsetY": 6.0,
+      "blurRadius": 12.0,
+      "spreadRadius": 0.0,
+      "color": {
+        "red": 0.0,
+        "green": 0.0,
+        "blue": 0.0,
+        "alpha": 0.12
+      }
+    },
+    "level5": {
+      "offsetX": 0.0,
+      "offsetY": 8.0,
+      "blurRadius": 16.0,
+      "spreadRadius": 0.0,
+      "color": {
+        "red": 0.0,
+        "green": 0.0,
+        "blue": 0.0,
+        "alpha": 0.12
+      }
+    }
+  },
+  "material": {
+    "glassMaterial": {
+      "blurRadius": 30.0,
+      "tintColor": {
+        "red": 1.0,
+        "green": 1.0,
+        "blue": 1.0,
+        "alpha": 0.15
+      },
+      "thickness": 2.0,
+      "brightness": 1.0
+    }
+  },
+  "animation": {
+    "defaultDuration": 300,
+    "defaultEasing": "EaseInOut",
+    "enableMotion": true,
+    "reduceMotion": false
+  }
+}

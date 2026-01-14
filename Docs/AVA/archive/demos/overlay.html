@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Glasses Overlay Demo - AVA AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #0f172a;
+            font-size: 1.8em;
+        }
+
+        .back-link {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+        }
+
+        .device-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .device-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 700px;
+            position: relative;
+        }
+
+        .device-frame {
+            background: #000;
+            border-radius: 40px;
+            padding: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            width: 400px;
+            height: 711px;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-radius: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Simulated app background */
+        .app-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, #3b82f6 0%, #1e40af 100%);
+            opacity: 0.3;
+        }
+
+        .statusbar {
+            height: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8em;
+            padding: 0 20px;
+            color: white;
+            position: relative;
+            z-index: 10;
+        }
+
+        .voice-orb {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            border-radius: 32px;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255,255,255,0.2);
+            box-shadow: 0 8px 32px rgba(139,92,246,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: move;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .voice-orb.listening {
+            background: rgba(139,92,246,0.3);
+            border-color: rgba(139,92,246,0.5);
+            animation: pulse 1.5s infinite;
+        }
+
+        .voice-orb.processing {
+            background: rgba(236,72,153,0.3);
+            border-color: rgba(236,72,153,0.5);
+            animation: rotate 1s linear infinite;
+        }
+
+        .voice-orb.responding {
+            background: rgba(16,185,129,0.3);
+            border-color: rgba(16,185,129,0.5);
+        }
+
+        .voice-orb.error {
+            background: rgba(239,68,68,0.3);
+            border-color: rgba(239,68,68,0.5);
+            animation: shake 0.5s;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .orb-icon {
+            font-size: 28px;
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.5));
+        }
+
+        .suggestions-panel {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 16px;
+            padding: 15px;
+            width: 90%;
+            max-width: 350px;
+            display: none;
+            z-index: 90;
+        }
+
+        .suggestions-panel.active {
+            display: block;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        .panel-header {
+            color: white;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .suggestion-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .chip {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 16px;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chip:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        .transcript-box {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            max-width: 85%;
+            text-align: center;
+            display: none;
+            z-index: 90;
+        }
+
+        .transcript-box.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+        }
+
+        .control-section h3 {
+            font-size: 1em;
+            color: #0f172a;
+            margin-bottom: 15px;
+        }
+
+        .state-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .state-btn {
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .state-btn:hover {
+            border-color: #2563eb;
+        }
+
+        .state-btn.active {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+            border-color: #2563eb;
+        }
+
+        .app-selector {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 0.95em;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .app-selector:focus {
+            border-color: #2563eb;
+        }
+
+        .context-info {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 0.9em;
+        }
+
+        .context-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .context-row:last-child {
+            border-bottom: none;
+        }
+
+        .context-label {
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .context-value {
+            color: #0f172a;
+        }
+
+        .device-list {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .device-item {
+            padding: 8px 0;
+            font-size: 0.9em;
+            color: #0f172a;
+        }
+
+        .device-item::before {
+            content: "✓ ";
+            color: #34c759;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>👓 Smart Glasses Overlay Demo</h1>
+        <a href="index.html" class="back-link">← Back to Suite</a>
+    </div>
+
+    <div class="main-content">
+        <div class="device-panel">
+            <div class="device-container">
+                <div class="device-frame">
+                    <div class="screen">
+                        <div class="app-background"></div>
+
+                        <div class="statusbar">
+                            <span>9:41</span>
+                            <span>100% ⚡</span>
+                        </div>
+
+                        <div class="voice-orb" id="voiceOrb" style="left: 168px; top: 600px;">
+                            <span class="orb-icon" id="orbIcon">🎤</span>
+                        </div>
+
+                        <div class="transcript-box" id="transcriptBox">
+                            Listening...
+                        </div>
+
+                        <div class="suggestions-panel" id="suggestionsPanel">
+                            <div class="panel-header">
+                                <span>📱</span>
+                                <span id="panelTitle">Browser Suggestions</span>
+                            </div>
+                            <div class="suggestion-chips" id="suggestionChips">
+                                <div class="chip" onclick="useSuggestion('Summarize page')">Summarize page</div>
+                                <div class="chip" onclick="useSuggestion('Translate')">Translate</div>
+                                <div class="chip" onclick="useSuggestion('Read aloud')">Read aloud</div>
+                                <div class="chip" onclick="useSuggestion('Save for later')">Save for later</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="control-section">
+                <h3>🎭 Orb State</h3>
+                <div class="state-buttons">
+                    <button class="state-btn active" onclick="setState('docked')">
+                        <span style="font-size: 20px;">⏸️</span>
+                        <span>Docked</span>
+                    </button>
+                    <button class="state-btn" onclick="setState('listening')">
+                        <span style="font-size: 20px;">🎤</span>
+                        <span>Listening</span>
+                    </button>
+                    <button class="state-btn" onclick="setState('processing')">
+                        <span style="font-size: 20px;">⚙️</span>
+                        <span>Processing</span>
+                    </button>
+                    <button class="state-btn" onclick="setState('responding')">
+                        <span style="font-size: 20px;">💬</span>
+                        <span>Responding</span>
+                    </button>
+                    <button class="state-btn" onclick="setState('error')">
+                        <span style="font-size: 20px;">❌</span>
+                        <span>Error</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>📱 Active App Context</h3>
+                <select class="app-selector" id="appSelector" onchange="changeApp()">
+                    <option value="browser">🌐 Chrome Browser</option>
+                    <option value="messaging">💬 WhatsApp</option>
+                    <option value="email">📧 Gmail</option>
+                    <option value="social">📱 Instagram</option>
+                    <option value="productivity">📝 Google Docs</option>
+                    <option value="maps">🗺️ Google Maps</option>
+                    <option value="shopping">🛒 Amazon</option>
+                    <option value="media">🎵 Spotify</option>
+                </select>
+            </div>
+
+            <div class="control-section">
+                <h3>ℹ️ Context Information</h3>
+                <div class="context-info">
+                    <div class="context-row">
+                        <span class="context-label">Package:</span>
+                        <span class="context-value" id="packageName">com.android.chrome</span>
+                    </div>
+                    <div class="context-row">
+                        <span class="context-label">App Name:</span>
+                        <span class="context-value" id="appName">Chrome</span>
+                    </div>
+                    <div class="context-row">
+                        <span class="context-label">Category:</span>
+                        <span class="context-value" id="appCategory">BROWSER</span>
+                    </div>
+                    <div class="context-row">
+                        <span class="context-label">Detection:</span>
+                        <span class="context-value">&lt;100ms</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>👓 Supported Devices</h3>
+                <div class="device-list">
+                    <div class="device-item">Meta Ray-Ban Smart Glasses</div>
+                    <div class="device-item">Vuzix Blade 2</div>
+                    <div class="device-item">Rokid Air AR Glasses</div>
+                    <div class="device-item">XREAL Air 2</div>
+                    <div class="device-item">TCL NXTWEAR S</div>
+                    <div class="device-item">Xiaomi Smart Glasses</div>
+                    <div class="device-item">Lenovo ThinkReality A3</div>
+                    <div class="device-item">Nreal Light</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+
+        const orb = document.getElementById('voiceOrb');
+
+        // Make orb draggable
+        orb.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+
+        function dragStart(e) {
+            initialX = e.clientX - orb.offsetLeft;
+            initialY = e.clientY - orb.offsetTop;
+            isDragging = true;
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+
+                orb.style.left = currentX + 'px';
+                orb.style.top = currentY + 'px';
+            }
+        }
+
+        function dragEnd() {
+            isDragging = false;
+        }
+
+        const appSuggestions = {
+            browser: {
+                title: 'Browser Suggestions',
+                chips: ['Summarize page', 'Translate', 'Read aloud', 'Save for later']
+            },
+            messaging: {
+                title: 'Messaging Suggestions',
+                chips: ['Reply', 'Translate message', 'Voice message', 'Quick response']
+            },
+            email: {
+                title: 'Email Suggestions',
+                chips: ['Compose reply', 'Summarize email', 'Schedule send', 'Add to calendar']
+            },
+            social: {
+                title: 'Social Media Suggestions',
+                chips: ['Caption this', 'Translate post', 'Reply', 'Share']
+            },
+            productivity: {
+                title: 'Productivity Suggestions',
+                chips: ['Summarize', 'Proofread', 'Translate', 'Continue writing']
+            },
+            maps: {
+                title: 'Maps Suggestions',
+                chips: ['Directions', 'Traffic update', 'Share location', 'Save place']
+            },
+            shopping: {
+                title: 'Shopping Suggestions',
+                chips: ['Compare prices', 'Read reviews', 'Find similar', 'Add to list']
+            },
+            media: {
+                title: 'Media Suggestions',
+                chips: ['What\'s this song?', 'Lyrics', 'Similar content', 'Share']
+            }
+        };
+
+        const appContexts = {
+            browser: { package: 'com.android.chrome', name: 'Chrome', category: 'BROWSER' },
+            messaging: { package: 'com.whatsapp', name: 'WhatsApp', category: 'MESSAGING' },
+            email: { package: 'com.google.android.gm', name: 'Gmail', category: 'EMAIL' },
+            social: { package: 'com.instagram.android', name: 'Instagram', category: 'SOCIAL' },
+            productivity: { package: 'com.google.android.apps.docs', name: 'Google Docs', category: 'PRODUCTIVITY' },
+            maps: { package: 'com.google.android.apps.maps', name: 'Google Maps', category: 'MAPS' },
+            shopping: { package: 'com.amazon.mShop.android.shopping', name: 'Amazon', category: 'SHOPPING' },
+            media: { package: 'com.spotify.music', name: 'Spotify', category: 'MEDIA' }
+        };
+
+        function setState(state) {
+            const orb = document.getElementById('voiceOrb');
+            const icon = document.getElementById('orbIcon');
+            const transcript = document.getElementById('transcriptBox');
+            const suggestions = document.getElementById('suggestionsPanel');
+
+            // Remove all state classes
+            orb.className = 'voice-orb';
+
+            // Update state buttons
+            document.querySelectorAll('.state-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.closest('.state-btn').classList.add('active');
+
+            // Apply state
+            switch(state) {
+                case 'docked':
+                    icon.textContent = '🎤';
+                    transcript.classList.remove('active');
+                    suggestions.classList.remove('active');
+                    break;
+                case 'listening':
+                    orb.classList.add('listening');
+                    icon.textContent = '🎤';
+                    transcript.textContent = 'Listening...';
+                    transcript.classList.add('active');
+                    suggestions.classList.add('active');
+                    break;
+                case 'processing':
+                    orb.classList.add('processing');
+                    icon.textContent = '⚙️';
+                    transcript.textContent = 'Processing your request...';
+                    transcript.classList.add('active');
+                    suggestions.classList.remove('active');
+                    break;
+                case 'responding':
+                    orb.classList.add('responding');
+                    icon.textContent = '💬';
+                    transcript.textContent = 'Here\'s what I found for you...';
+                    transcript.classList.add('active');
+                    suggestions.classList.remove('active');
+                    break;
+                case 'error':
+                    orb.classList.add('error');
+                    icon.textContent = '❌';
+                    transcript.textContent = 'Sorry, I didn\'t catch that';
+                    transcript.classList.add('active');
+                    suggestions.classList.remove('active');
+                    break;
+            }
+        }
+
+        function changeApp() {
+            const app = document.getElementById('appSelector').value;
+            const suggestions = appSuggestions[app];
+            const context = appContexts[app];
+
+            // Update suggestions
+            document.getElementById('panelTitle').textContent = suggestions.title;
+            const chipsContainer = document.getElementById('suggestionChips');
+            chipsContainer.innerHTML = suggestions.chips.map(chip =>
+                `<div class="chip" onclick="useSuggestion('${chip}')">${chip}</div>`
+            ).join('');
+
+            // Update context info
+            document.getElementById('packageName').textContent = context.package;
+            document.getElementById('appName').textContent = context.name;
+            document.getElementById('appCategory').textContent = context.category;
+        }
+
+        function useSuggestion(suggestion) {
+            alert(`Using suggestion: "${suggestion}"\n\nIn the full app, this would activate AVA with the context-aware suggestion.`);
+        }
+    </script>
+</body>
+</html>

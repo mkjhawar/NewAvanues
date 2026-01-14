@@ -1,0 +1,36 @@
+@mel/1.0
+id:com.augmentalis.counter
+name:Counter
+tier:data
+
+state:
+  count:0
+
+reducers:
+  increment: count=$add($count,1)
+  decrement: count=$sub($count,1)
+  reset: count=0
+  addAmount(n): count=$add($count,$n)
+
+ui:Col#main{@p(24),gap(24),alignCenter;
+  Text{text:"Counter";fontSize:32;fontWeight:"bold";color:#333333};
+  Box{@p(32),bg(#f0f0f0),r(16);
+    Text{text:$str($count);fontSize:72;fontWeight:"bold";textAlign:"center";
+      color:$if($lt($count,0),#cc0000,$if($gt($count,0),#00cc00,#666666))}
+  };
+  Row{@gap(12);
+    Btn{label:"-";@tap->decrement;@f(80,80);fontSize:36;variant:"outline"};
+    Btn{label:"Reset";@tap->reset;@f(100,80);variant:"secondary"};
+    Btn{label:"+";@tap->increment;@f(80,80);fontSize:36;variant:"primary"}
+  };
+  Col{@gap(8);
+    Text{text:"Quick Add";fontSize:14;color:#666666;textAlign:"center"};
+    Row{@gap(8);
+      Btn{label:"+5";@tap->addAmount(5);variant:"ghost"};
+      Btn{label:"+10";@tap->addAmount(10);variant:"ghost"};
+      Btn{label:"+25";@tap->addAmount(25);variant:"ghost"};
+      Btn{label:"+100";@tap->addAmount(100);variant:"ghost"}
+    }
+  };
+  Text{text:$if($eq($count,0),"Start counting!",$if($gt($count,0),$cat("You're up by ",$str($count)),$cat("You're down by ",$str($abs($count)))));fontSize:16;color:#999999;fontStyle:"italic"}
+}

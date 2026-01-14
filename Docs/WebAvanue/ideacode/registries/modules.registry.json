@@ -1,0 +1,61 @@
+{
+  "registry_version": "1.0.0",
+  "last_updated": "2025-11-19",
+  "monorepo_root": "/Volumes/M-Drive/Coding/MainAvanues",
+  "description": "Registry of all modules, apps, and packages in MainAvanues monorepo",
+
+  "modules": [
+    {
+      "id": "webavanue",
+      "name": "WebAvanue",
+      "type": "app",
+      "path": "Modules/WebAvanue",
+      "profile": "web-app",
+      "platforms": ["web"],
+      "status": "active",
+      "description": "Web-based Avanues application",
+      "added_date": "2025-11-19",
+      "dependencies": [],
+      "has_ideacode": true,
+      "ideacode_path": "Modules/WebAvanue/.ideacode",
+      "tech_stack": {
+        "primary": "web",
+        "frameworks": [],
+        "languages": []
+      }
+    }
+  ],
+
+  "apps": [],
+
+  "packages": [],
+
+  "shared": [],
+
+  "metadata": {
+    "total_modules": 1,
+    "total_apps": 0,
+    "total_packages": 0,
+    "total_shared": 0,
+    "active_modules": 1,
+    "platforms": ["web"],
+    "module_types": ["app"]
+  },
+
+  "migration": {
+    "enabled": true,
+    "source_projects": [],
+    "pending_migrations": [],
+    "completed_migrations": []
+  },
+
+  "dependency_graph": {
+    "nodes": [
+      {
+        "id": "webavanue",
+        "type": "app"
+      }
+    ],
+    "edges": []
+  }
+}

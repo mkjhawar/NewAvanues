@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  bg_element_info.xml - Element info background
+  Path: modules/apps/LearnApp/src/main/res/drawable/bg_element_info.xml
+
+  Author: Manoj Jhawar
+  Created: 2025-10-13
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/element_preview_background" />
+    <corners android:radius="8dp" />
+    <stroke
+        android:width="1dp"
+        android:color="@color/text_tertiary" />
+</shape>

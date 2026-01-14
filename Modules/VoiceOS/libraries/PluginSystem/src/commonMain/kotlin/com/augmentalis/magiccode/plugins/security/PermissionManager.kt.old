@@ -1,0 +1,561 @@
+package com.augmentalis.magiccode.plugins.security
+
+import com.augmentalis.magiccode.plugins.core.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
+/**
+ * Manages plugin permission requests and enforcement.
+ *
+ * PermissionManager handles the complete permission request lifecycle:
+ * - Requesting permissions from users via platform-specific UI
+ * - Persisting granted/denied permission state across app restarts
+ * - Enforcing permission checks before sensitive operations
+ * - Managing permission revocation and updates
+ *
+ * ## Security Model
+ * Permissions follow the principle of least privilege. Plugins must
+ * explicitly request each permission, and users can grant or deny
+ * individual permissions. Permission state persists across app restarts
+ * and can be modified by users at any time through settings.
+ *
+ * ## Thread Safety
+ * All methods are thread-safe and use internal mutex synchronization
+ * to protect shared state. Methods are suspending functions to allow
+ * UI interactions and persistence operations without blocking.
+ *
+ * ## Permission Flow
+ * 1. Plugin requests permissions via [requestPermissions]
+ * 2. Manager checks cache and persistence for existing grants
+ * 3. If needed, displays UI dialog via [PermissionUIHandler]
+ * 4. User grants/denies permissions
+ * 5. Decisions are cached in memory and persisted to storage
+ * 6. Later checks use [hasPermission] or [enforcePermission]
+ *
+ * ## Usage Example
+ * ```kotlin
+ * val manager = PermissionManager(uiHandler, persistence)
+ * manager.initialize() // Load persisted state on startup
+ *
+ * // Request permissions
+ * val granted = manager.requestPermissions(
+ *     pluginId = "com.example.plugin",
+ *     pluginName = "Example Plugin",
+ *     permissions = setOf(Permission.FILE_READ, Permission.NETWORK),
+ *     rationales = mapOf(
+ *         Permission.FILE_READ to "Read configuration files",
+ *         Permission.NETWORK to "Download updates"
+ *     )
+ * )
+ *
+ * if (granted) {
+ *     // All permissions granted, proceed
+ * } else {
+ *     // Check which permissions were denied
+ *     val denied = manager.getDeniedPermissions("com.example.plugin")
+ * }
+ *
+ * // Later, enforce permission before sensitive operation
+ * manager.enforcePermission("com.example.plugin", Permission.FILE_READ)
+ * // Throws PermissionDeniedException if not granted
+ * ```
+ *
+ * ## "Don't Ask Again" Behavior
+ * If a user selects "Don't ask again" when denying a permission,
+ * subsequent requests for that permission will be automatically denied
+ * without showing the UI dialog. This prevents annoying repeated prompts.
+ *
+ * ## Initialization
+ * Call [initialize] during app startup to load persisted permissions
+ * into the in-memory cache for fast lookups.
+ *
+ * @property uiHandler Handler for showing permission dialogs to user.
+ *                      If null, all permission requests are automatically denied.
+ * @property persistence Storage for permission decisions.
+ *                       If null, permissions are only stored in memory.
+ *
+ * @since 1.0.0
+ * @see Permission
+ * @see PermissionUIHandler
+ * @see PermissionPersistence
+ */
+class PermissionManager(
+    private val uiHandler: PermissionUIHandler? = null,
+    private val persistence: PermissionPersistence? = null
+) {
+    private val mutex = Mutex()
+
+    // In-memory cache of granted permissions for quick access
+    private val permissionCache = mutableMapOf<String, MutableSet<Permission>>()
+
+    companion object {
+        private const val TAG = "PermissionManager"
+    }
+
+    /**
+     * Request permissions for a plugin.
+     *
+     * Requests one or more permissions from the user via a UI dialog.
+     * Automatically handles caching, persistence, and "don't ask again" logic.
+     *
+     * ## Behavior
+     * 1. Checks in-memory cache for already-granted permissions
+     * 2. Checks persistence layer for previously granted permissions
+     * 3. Respects "don't ask again" preferences (auto-denies without UI)
+     * 4. Shows UI dialog only for permissions that need user decision
+     * 5. Stores user decisions in both cache and persistence
+     *
+     * ## UI Handler
+     * If no [uiHandler] is configured, all permission requests are
+     * automatically denied as a security-safe default.
+     *
+     * ## Return Value
+     * Returns `true` only if ALL requested permissions are granted.
+     * Use [getGrantedPermissions] and [getDeniedPermissions] to check
+     * individual permission states.
+     *
+     * @param pluginId Unique plugin identifier (e.g., "com.example.plugin")
+     * @param pluginName Human-readable plugin name shown in UI dialogs
+     * @param permissions Set of permissions to request
+     * @param rationales Map of permission to explanation text. Rationales
+     *                   explain why each permission is needed and are shown
+     *                   to the user in the permission dialog.
+     *
+     * @return `true` if all requested permissions were granted, `false` otherwise
+     *
+     * @see hasPermission
+     * @see enforcePermission
+     * @see getGrantedPermissions
+     */
+    suspend fun requestPermissions(
+        pluginId: String,
+        pluginName: String,
+        permissions: Set<Permission>,
+        rationales: Map<Permission, String> = emptyMap()
+    ): Boolean {
+        PluginLog.i(TAG, "Permission request from $pluginId: $permissions")
+
+        // Filter permissions that need to be requested
+        val permissionsToRequest = filterPermissionsToRequest(pluginId, permissions)
+
+        if (permissionsToRequest.isEmpty()) {
+            // All permissions already granted
+            PluginLog.i(TAG, "All permissions already granted for $pluginId")
+            return true
+        }
+
+        // Show UI dialog if handler is available
+        val result = if (uiHandler != null) {
+            val request = PermissionRequest(
+                pluginId = pluginId,
+                pluginName = pluginName,
+                permissions = permissionsToRequest,
+                rationales = rationales
+            )
+            uiHandler.showPermissionDialog(request)
+        } else {
+            // Fallback: Auto-deny if no UI handler (safe default)
+            PluginLog.w(TAG, "No UI handler available, denying permissions for $pluginId")
+            PermissionResult(
+                granted = emptySet(),
+                denied = permissionsToRequest
+            )
+        }
+
+        // Store results
+        return mutex.withLock {
+            // Save to persistence
+            persistence?.savePermissions(pluginId, pluginName, result)
+
+            // Update cache
+            val cache = permissionCache.getOrPut(pluginId) { mutableSetOf() }
+            cache.addAll(result.granted)
+            cache.removeAll(result.denied)
+
+            // Return true only if all requested permissions were granted
+            result.granted.containsAll(permissions)
+        }
+    }
+
+    /**
+     * Request permissions for a plugin (simplified overload).
+     *
+     * Legacy overload for backward compatibility. Uses the plugin ID
+     * as the display name and provides no rationales to the user.
+     *
+     * Prefer using the full [requestPermissions] method with proper
+     * display name and rationales for better user experience.
+     *
+     * @param pluginId Plugin identifier (also used as display name)
+     * @param permissions Set of permissions to request
+     * @return `true` if all permissions granted, `false` otherwise
+     */
+    suspend fun requestPermissions(pluginId: String, permissions: Set<Permission>): Boolean {
+        return requestPermissions(pluginId, pluginId, permissions, emptyMap())
+    }
+
+    /**
+     * Filter permissions to only those that need to be requested.
+     *
+     * Excludes permissions that:
+     * - Are already granted (checked in cache and persistence)
+     * - Have "don't ask again" set (auto-denied, won't show UI)
+     *
+     * This optimization prevents unnecessary UI dialogs for permissions
+     * that already have a known state.
+     *
+     * @param pluginId Plugin identifier
+     * @param permissions Set of permissions to filter
+     * @return Filtered set of permissions that need user decision
+     */
+    private suspend fun filterPermissionsToRequest(
+        pluginId: String,
+        permissions: Set<Permission>
+    ): Set<Permission> {
+        return permissions.filter { permission ->
+            // Check cache first
+            val cachedGranted = permissionCache[pluginId]?.contains(permission) == true
+            if (cachedGranted) {
+                return@filter false
+            }
+
+            // Check persistence
+            if (persistence != null) {
+                val persistedGranted = persistence.isPermissionGranted(pluginId, permission)
+                if (persistedGranted) {
+                    // Update cache
+                    permissionCache.getOrPut(pluginId) { mutableSetOf() }.add(permission)
+                    return@filter false
+                }
+
+                // Check "don't ask again"
+                val dontAskAgain = persistence.isDontAskAgain(pluginId, permission)
+                if (dontAskAgain) {
+                    PluginLog.i(TAG, "Permission $permission for $pluginId has 'don't ask again' set")
+                    return@filter false
+                }
+            }
+
+            true
+        }.toSet()
+    }
+
+    /**
+     * Check if a plugin has a specific permission.
+     *
+     * Performs a fast permission check by first consulting the in-memory
+     * cache, then falling back to persistence if not found in cache.
+     * Updates the cache if the permission is found in persistence.
+     *
+     * This method does NOT request the permission if not granted.
+     * Use [requestPermissions] to request permissions from the user.
+     *
+     * @param pluginId Plugin identifier
+     * @param permission Permission to check
+     * @return `true` if the permission is granted, `false` otherwise
+     *
+     * @see requestPermissions
+     * @see enforcePermission
+     */
+    suspend fun hasPermission(pluginId: String, permission: Permission): Boolean {
+        return mutex.withLock {
+            // Check cache first
+            val cachedGranted = permissionCache[pluginId]?.contains(permission) == true
+            if (cachedGranted) {
+                return@withLock true
+            }
+
+            // Check persistence
+            if (persistence != null) {
+                val persistedGranted = persistence.isPermissionGranted(pluginId, permission)
+                if (persistedGranted) {
+                    // Update cache
+                    permissionCache.getOrPut(pluginId) { mutableSetOf() }.add(permission)
+                }
+                persistedGranted
+            } else {
+                false
+            }
+        }
+    }
+
+    /**
+     * Get all granted permissions for a plugin.
+     *
+     * Returns the complete set of permissions currently granted to
+     * the specified plugin. Queries persistence layer for authoritative state.
+     *
+     * @param pluginId Plugin identifier
+     * @return Set of granted permissions (empty if none granted)
+     */
+    suspend fun getGrantedPermissions(pluginId: String): Set<Permission> {
+        return mutex.withLock {
+            if (persistence != null) {
+                persistence.getGrantedPermissions(pluginId)
+            } else {
+                permissionCache[pluginId]?.toSet() ?: emptySet()
+            }
+        }
+    }
+
+    /**
+     * Get all denied permissions for a plugin.
+     *
+     * Returns the set of permissions that have been explicitly denied
+     * by the user for the specified plugin.
+     *
+     * @param pluginId Plugin identifier
+     * @return Set of denied permissions (empty if none denied)
+     */
+    suspend fun getDeniedPermissions(pluginId: String): Set<Permission> {
+        return mutex.withLock {
+            persistence?.getDeniedPermissions(pluginId) ?: emptySet()
+        }
+    }
+
+    /**
+     * Enforce that a plugin has a required permission.
+     *
+     * Checks if the plugin has the specified permission and throws
+     * a [PermissionDeniedException] if not granted. Use this method
+     * to guard sensitive operations that require specific permissions.
+     *
+     * ## Example
+     * ```kotlin
+     * try {
+     *     manager.enforcePermission("com.example.plugin", Permission.NETWORK)
+     *     // Permission granted, safe to proceed
+     *     performNetworkOperation()
+     * } catch (e: PermissionDeniedException) {
+     *     // Permission denied, handle error
+     *     showError("Network access denied")
+     * }
+     * ```
+     *
+     * @param pluginId Plugin identifier
+     * @param permission Required permission to enforce
+     *
+     * @throws PermissionDeniedException if permission is not granted
+     *
+     * @see hasPermission
+     * @see requestPermissions
+     */
+    suspend fun enforcePermission(pluginId: String, permission: Permission) {
+        if (!hasPermission(pluginId, permission)) {
+            throw PermissionDeniedException(pluginId, permission)
+        }
+    }
+
+    /**
+     * Revoke a specific permission from a plugin.
+     *
+     * Removes the permission grant and updates both in-memory cache
+     * and persistence. The plugin will need to request the permission
+     * again to regain access.
+     *
+     * ## Security Note
+     * Revoking a permission takes effect immediately. Any ongoing
+     * operations using that permission may fail after revocation.
+     *
+     * @param pluginId Plugin identifier
+     * @param permission Permission to revoke
+     *
+     * @see revokeAllPermissions
+     * @see requestPermissions
+     */
+    suspend fun revokePermission(pluginId: String, permission: Permission) {
+        mutex.withLock {
+            // Remove from cache
+            permissionCache[pluginId]?.remove(permission)
+
+            // Update persistence
+            persistence?.revokePermission(pluginId, permission)
+
+            PluginLog.i(TAG, "Revoked $permission from $pluginId")
+        }
+    }
+
+    /**
+     * Revoke all permissions from a plugin.
+     *
+     * Removes all permission grants for the specified plugin,
+     * updating both in-memory cache and persistence. The plugin
+     * will need to request permissions again to regain any access.
+     *
+     * ## Use Cases
+     * - User uninstalls a plugin
+     * - User resets plugin permissions in settings
+     * - Security incident requires permission reset
+     *
+     * ## Security Note
+     * This is a destructive operation that immediately revokes all
+     * access. Any ongoing operations by the plugin may fail.
+     *
+     * @param pluginId Plugin identifier
+     *
+     * @see revokePermission
+     */
+    suspend fun revokeAllPermissions(pluginId: String) {
+        mutex.withLock {
+            // Clear cache
+            permissionCache.remove(pluginId)
+
+            // Update persistence
+            persistence?.revokeAllPermissions(pluginId)
+
+            PluginLog.i(TAG, "Revoked all permissions from $pluginId")
+        }
+    }
+
+    /**
+     * Show a detailed rationale dialog for a permission.
+     *
+     * Displays an explanation of why a specific permission is needed.
+     * This is useful when:
+     * - A permission was previously denied and needs re-explanation
+     * - User taps "Learn More" in permission settings
+     * - Plugin wants to educate users before requesting sensitive permissions
+     *
+     * ## Platform Support
+     * Returns `false` if no [uiHandler] is configured.
+     *
+     * @param pluginId Plugin identifier
+     * @param pluginName Human-readable plugin name shown in dialog
+     * @param permission Permission to explain
+     * @param rationale Detailed explanation of why this permission is needed
+     *
+     * @return `true` if user wants to grant after seeing rationale, `false` otherwise
+     *
+     * @see requestPermissions
+     */
+    suspend fun showRationale(
+        pluginId: String,
+        pluginName: String,
+        permission: Permission,
+        rationale: String
+    ): Boolean {
+        return uiHandler?.showRationaleDialog(pluginId, pluginName, permission, rationale) ?: false
+    }
+
+    /**
+     * Show permission management settings dialog for a plugin.
+     *
+     * Displays a settings UI where users can view and modify all
+     * permission grants for a specific plugin. Users can toggle
+     * individual permissions on/off.
+     *
+     * ## Use Cases
+     * - User accesses plugin settings to review permissions
+     * - User wants to revoke previously granted permissions
+     * - User wants to grant previously denied permissions
+     *
+     * ## Platform Support
+     * Returns `false` if no [uiHandler] is configured.
+     *
+     * ## Persistence
+     * All changes made in the settings dialog are immediately
+     * persisted and cached.
+     *
+     * @param pluginId Plugin identifier
+     * @param pluginName Human-readable plugin name shown in settings
+     *
+     * @return `true` if any permission changes were made, `false` if
+     *         cancelled or no changes
+     *
+     * @see requestPermissions
+     * @see revokePermission
+     */
+    suspend fun showPermissionSettings(pluginId: String, pluginName: String): Boolean {
+        val uiHandler = this.uiHandler ?: return false
+
+        // Get current permission state
+        val currentPermissions = getAllPermissionsState(pluginId)
+
+        // Show settings dialog
+        val updatedPermissions = uiHandler.showPermissionSettings(
+            pluginId,
+            pluginName,
+            currentPermissions
+        ) ?: return false
+
+        // Apply changes
+        return mutex.withLock {
+            var changed = false
+
+            updatedPermissions.forEach { (permission, granted) ->
+                val wasGranted = currentPermissions[permission] ?: false
+                if (granted != wasGranted) {
+                    if (granted) {
+                        // Grant permission
+                        permissionCache.getOrPut(pluginId) { mutableSetOf() }.add(permission)
+                        persistence?.savePermission(pluginId, pluginName, permission, true)
+                    } else {
+                        // Revoke permission
+                        permissionCache[pluginId]?.remove(permission)
+                        persistence?.revokePermission(pluginId, permission)
+                    }
+                    changed = true
+                }
+            }
+
+            if (changed) {
+                PluginLog.i(TAG, "Permission settings updated for $pluginId")
+            }
+
+            changed
+        }
+    }
+
+    /**
+     * Get the state of all possible permissions for a plugin.
+     *
+     * Returns a map showing which permissions are granted and which
+     * are not for the specified plugin. Includes all permissions from
+     * the [Permission] enum, even if never requested.
+     *
+     * @param pluginId Plugin identifier
+     * @return Map of each permission to its granted state (true/false)
+     */
+    private suspend fun getAllPermissionsState(pluginId: String): Map<Permission, Boolean> {
+        val granted = getGrantedPermissions(pluginId)
+        val denied = getDeniedPermissions(pluginId)
+
+        return Permission.values().associateWith { permission ->
+            permission in granted
+        }
+    }
+
+    /**
+     * Initialize the permission manager.
+     *
+     * Loads all persisted permission states from storage into the
+     * in-memory cache for fast lookups. Should be called once during
+     * application startup before any permission operations.
+     *
+     * ## Performance
+     * Initializing populates the cache with all previously granted
+     * permissions, making subsequent [hasPermission] checks very fast.
+     *
+     * ## Example
+     * ```kotlin
+     * val manager = PermissionManager(uiHandler, persistence)
+     * manager.initialize() // Call once on app startup
+     * ```
+     *
+     * @see hasPermission
+     */
+    suspend fun initialize() {
+        mutex.withLock {
+            persistence?.getAllPermissionStates()?.forEach { (pluginId, state) ->
+                val granted = state.permissions
+                    .filter { it.value.status == GrantStatus.GRANTED }
+                    .map { it.key }
+                    .toSet()
+
+                permissionCache[pluginId] = granted.toMutableSet()
+
+                PluginLog.i(TAG, "Loaded ${granted.size} permissions for $pluginId from persistence")
+            }
+        }
+    }
+}

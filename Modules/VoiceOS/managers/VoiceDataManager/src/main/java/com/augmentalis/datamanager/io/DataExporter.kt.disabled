@@ -1,0 +1,313 @@
+// Author: Manoj Jhawar
+// Code-Reviewed-By: CCA
+// Updated: 2025-01-28 - Implemented with SQLDelight repositories
+
+package com.augmentalis.datamanager.io
+
+import android.content.Context
+import android.os.Build
+import android.provider.Settings
+import android.util.Log
+import com.augmentalis.datamanager.data.*
+import com.augmentalis.database.dto.CommandHistoryDTO
+import com.augmentalis.database.dto.CustomCommandDTO
+import com.augmentalis.database.dto.ErrorReportDTO
+import com.augmentalis.database.dto.UserPreferenceDTO
+import com.augmentalis.database.Device_profile
+import com.augmentalis.database.Touch_gesture
+import com.augmentalis.database.Usage_statistic
+import com.augmentalis.database.Gesture_learning
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+import java.security.MessageDigest
+
+/**
+ * Data Exporter - Exports VoiceOS data to JSON format
+ *
+ * Supports exporting:
+ * - User preferences
+ * - Command history
+ * - Custom commands
+ * - Touch gestures
+ * - Device profiles
+ * - Usage statistics
+ * - Error reports
+ * - Gesture learning data
+ */
+class DataExporter(private val context: Context) {
+
+    companion object {
+        private const val TAG = "DataExporter"
+        private const val EXPORT_VERSION = "2.0.0"
+    }
+
+    // Repository instances
+    private val userPreferenceRepo = UserPreferenceRepo()
+    private val commandHistoryRepo = CommandHistoryRepo()
+    private val customCommandRepo = CustomCommandRepo()
+    private val touchGestureRepo = TouchGestureRepo()
+    private val deviceProfileRepo = DeviceProfileRepo()
+    private val usageStatisticRepo = UsageStatisticRepo()
+    private val errorReportRepo = ErrorReportRepo()
+    private val gestureLearningRepo = GestureLearningRepo()
+
+    /**
+     * Export all data to JSON string
+     *
+     * @param includeAll If true, includes all data types. If false, excludes statistics and error reports.
+     * @return JSON string with all exported data, or null on error
+     */
+    suspend fun exportToJson(includeAll: Boolean = true): String? = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "Starting data export (includeAll=$includeAll)")
+
+            val exportData = JSONObject()
+
+            // Export user preferences
+            val preferences = userPreferenceRepo.getAll()
+            exportData.put("userPreferences", exportUserPreferences(preferences))
+            Log.d(TAG, "Exported ${preferences.size} user preferences")
+
+            // Export command history
+            val history = commandHistoryRepo.getAll()
+            exportData.put("commandHistory", exportCommandHistory(history))
+            Log.d(TAG, "Exported ${history.size} command history entries")
+
+            // Export custom commands
+            val commands = customCommandRepo.getAll()
+            exportData.put("customCommands", exportCustomCommands(commands))
+            Log.d(TAG, "Exported ${commands.size} custom commands")
+
+            // Export touch gestures
+            val gestures = touchGestureRepo.getAll()
+            exportData.put("touchGestures", exportTouchGestures(gestures))
+            Log.d(TAG, "Exported ${gestures.size} touch gestures")
+
+            // Export device profiles
+            val profiles = deviceProfileRepo.getAll()
+            exportData.put("deviceProfiles", exportDeviceProfiles(profiles))
+            Log.d(TAG, "Exported ${profiles.size} device profiles")
+
+            // Export gesture learning data
+            val learningData = gestureLearningRepo.getAll()
+            exportData.put("gestureLearning", exportGestureLearning(learningData))
+            Log.d(TAG, "Exported ${learningData.size} gesture learning entries")
+
+            if (includeAll) {
+                // Export usage statistics
+                val stats = usageStatisticRepo.getAll()
+                exportData.put("usageStatistics", exportUsageStatistics(stats))
+                Log.d(TAG, "Exported ${stats.size} usage statistics")
+
+                // Export error reports
+                val errors = errorReportRepo.getAll()
+                exportData.put("errorReports", exportErrorReports(errors))
+                Log.d(TAG, "Exported ${errors.size} error reports")
+            }
+
+            // Create export wrapper with metadata
+            val dataJson = exportData.toString()
+            val checksum = calculateChecksum(dataJson)
+
+            val wrapper = JSONObject().apply {
+                put("version", EXPORT_VERSION)
+                put("exportDate", System.currentTimeMillis())
+                put("deviceId", getDeviceId())
+                put("dataChecksum", checksum)
+                put("data", exportData)
+            }
+
+            Log.i(TAG, "Data export completed successfully")
+            wrapper.toString(2) // Pretty print with 2-space indent
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to export data", e)
+            null
+        }
+    }
+
+    /**
+     * Export data to a file
+     *
+     * @param fileName Name of the export file
+     * @param includeAll If true, includes all data types
+     * @return The created file, or null on error
+     */
+    suspend fun exportToFile(fileName: String = "vos4_backup.json", includeAll: Boolean = true): File? = withContext(Dispatchers.IO) {
+        try {
+            val jsonData = exportToJson(includeAll) ?: return@withContext null
+
+            val exportDir = context.getExternalFilesDir(null) ?: context.filesDir
+            val file = File(exportDir, fileName)
+
+            file.writeText(jsonData)
+            Log.i(TAG, "Data exported to file: ${file.absolutePath}")
+
+            file
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to export data to file", e)
+            null
+        }
+    }
+
+    // Export helper methods
+
+    private fun exportUserPreferences(preferences: List<UserPreferenceDTO>): JSONArray {
+        return JSONArray().apply {
+            preferences.forEach { pref ->
+                put(JSONObject().apply {
+                    put("key", pref.key)
+                    put("value", pref.value)
+                    put("type", pref.type)
+                    put("updatedAt", pref.updatedAt)
+                })
+            }
+        }
+    }
+
+    private fun exportCommandHistory(history: List<CommandHistoryDTO>): JSONArray {
+        return JSONArray().apply {
+            history.forEach { entry ->
+                put(JSONObject().apply {
+                    put("id", entry.id)
+                    put("originalText", entry.originalText)
+                    put("processedCommand", entry.processedCommand)
+                    put("confidence", entry.confidence)
+                    put("timestamp", entry.timestamp)
+                    put("language", entry.language)
+                    put("engineUsed", entry.engineUsed)
+                    put("success", entry.success)
+                    put("executionTimeMs", entry.executionTimeMs)
+                })
+            }
+        }
+    }
+
+    private fun exportCustomCommands(commands: List<CustomCommandDTO>): JSONArray {
+        return JSONArray().apply {
+            commands.forEach { cmd ->
+                put(JSONObject().apply {
+                    put("id", cmd.id)
+                    put("name", cmd.name)
+                    put("description", cmd.description ?: "")
+                    put("phrases", JSONArray(cmd.phrases))
+                    put("action", cmd.action)
+                    put("parameters", cmd.parameters ?: "")
+                    put("language", cmd.language)
+                    put("isActive", cmd.isActive)
+                    put("usageCount", cmd.usageCount)
+                })
+            }
+        }
+    }
+
+    private fun exportTouchGestures(gestures: List<Touch_gesture>): JSONArray {
+        return JSONArray().apply {
+            gestures.forEach { gesture ->
+                put(JSONObject().apply {
+                    put("id", gesture.id)
+                    put("name", gesture.name)
+                    put("gestureData", gesture.gestureData)
+                    put("usageCount", gesture.usageCount)
+                    put("isSystemGesture", gesture.isSystemGesture == 1L)
+                    put("isActive", gesture.isEnabled == 1L)
+                    put("createdAt", gesture.createdAt)
+                    put("updatedAt", gesture.updatedAt)
+                })
+            }
+        }
+    }
+
+    private fun exportDeviceProfiles(profiles: List<Device_profile>): JSONArray {
+        return JSONArray().apply {
+            profiles.forEach { profile ->
+                put(JSONObject().apply {
+                    put("id", profile.id)
+                    put("deviceType", profile.deviceType)
+                    put("deviceModel", profile.deviceModel)
+                    put("settings", profile.settings)
+                    put("calibrationData", profile.calibrationData ?: "")
+                    put("isActive", profile.isActive == 1L)
+                    put("createdAt", profile.createdAt)
+                    put("updatedAt", profile.updatedAt)
+                })
+            }
+        }
+    }
+
+    private fun exportUsageStatistics(stats: List<Usage_statistic>): JSONArray {
+        return JSONArray().apply {
+            stats.forEach { stat ->
+                put(JSONObject().apply {
+                    put("id", stat.id)
+                    put("metricType", stat.metricType)
+                    put("metricName", stat.metricName)
+                    put("value", stat.value_)
+                    put("count", stat.count)
+                    put("timestamp", stat.timestamp)
+                    put("metadata", stat.metadata ?: "")
+                })
+            }
+        }
+    }
+
+    private fun exportErrorReports(reports: List<ErrorReportDTO>): JSONArray {
+        return JSONArray().apply {
+            reports.forEach { report ->
+                put(JSONObject().apply {
+                    put("id", report.id)
+                    put("errorType", report.errorType)
+                    put("message", report.message)
+                    put("stackTrace", report.stackTrace)
+                    put("context", report.context ?: "")
+                    put("timestamp", report.timestamp)
+                    put("isSent", report.isSent)
+                })
+            }
+        }
+    }
+
+    private fun exportGestureLearning(data: List<Gesture_learning>): JSONArray {
+        return JSONArray().apply {
+            data.forEach { entry ->
+                put(JSONObject().apply {
+                    put("id", entry.id)
+                    put("gestureType", entry.gestureType)
+                    put("sampleData", entry.sampleData)
+                    put("successCount", entry.successCount)
+                    put("failureCount", entry.failureCount)
+                    put("avgConfidence", entry.avgConfidence)
+                    put("createdAt", entry.createdAt)
+                    put("lastUsedAt", entry.lastUsedAt)
+                })
+            }
+        }
+    }
+
+    private fun calculateChecksum(data: String): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hash = digest.digest(data.toByteArray())
+        return hash.joinToString("") { "%02x".format(it) }
+    }
+
+    @Suppress("HardwareIds")
+    private fun getDeviceId(): String {
+        return try {
+            Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+                ?: "${Build.MANUFACTURER}_${Build.MODEL}"
+        } catch (e: Exception) {
+            "${Build.MANUFACTURER}_${Build.MODEL}"
+        }
+    }
+}
+
+data class ExportWrapper(
+    val version: String,
+    val exportDate: Long,
+    val deviceId: String,
+    val dataChecksum: String,
+    val encodedData: String
+)

@@ -1,0 +1,88 @@
+// filename: Universal/AVA/Features/RAG/src/commonTest/kotlin/com/augmentalis/ava/features/rag/domain/BookmarkTest.kt
+// created: 2025-11-22
+// author: AVA AI Team - Agent 3
+// © Augmentalis Inc, Intelligent Devices LLC
+
+package com.augmentalis.ava.features.rag.domain
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+
+class BookmarkTest {
+
+    private val json = Json { ignoreUnknownKeys = true }
+
+    @Test
+    fun `bookmark serialization works correctly`() {
+        val bookmark = Bookmark(
+            id = "bookmark-1",
+            type = BookmarkType.DOCUMENT,
+            targetId = "doc-123",
+            title = "Important Document",
+            description = "Research paper on AI",
+            tags = listOf("AI", "research", "important"),
+            createdAt = "2024-01-01T00:00:00Z",
+            lastAccessedAt = "2024-01-02T00:00:00Z",
+            accessCount = 5,
+            isPinned = true,
+            color = BookmarkColor.BLUE
+        )
+
+        val serialized = json.encodeToString(bookmark)
+        val deserialized = json.decodeFromString<Bookmark>(serialized)
+
+        assertEquals(bookmark, deserialized)
+    }
+
+    @Test
+    fun `bookmark types are distinct`() {
+        val types = BookmarkType.entries
+        assertTrue(types.contains(BookmarkType.DOCUMENT))
+        assertTrue(types.contains(BookmarkType.CHUNK))
+        assertTrue(types.contains(BookmarkType.SEARCH_RESULT))
+    }
+
+    @Test
+    fun `bookmark colors have valid hex codes`() {
+        BookmarkColor.entries.forEach { color ->
+            assertTrue(color.hex.startsWith("#"))
+            assertEquals(7, color.hex.length) // #RRGGBB format
+        }
+    }
+
+    @Test
+    fun `bookmark with no tags serializes correctly`() {
+        val bookmark = Bookmark(
+            id = "bookmark-2",
+            type = BookmarkType.CHUNK,
+            targetId = "chunk-456",
+            title = "Key Passage",
+            createdAt = "2024-01-01T00:00:00Z"
+        )
+
+        val serialized = json.encodeToString(bookmark)
+        val deserialized = json.decodeFromString<Bookmark>(serialized)
+
+        assertEquals(bookmark, deserialized)
+        assertTrue(deserialized.tags.isEmpty())
+    }
+
+    @Test
+    fun `bookmark access count increments`() {
+        val bookmark = Bookmark(
+            id = "bookmark-3",
+            type = BookmarkType.DOCUMENT,
+            targetId = "doc-789",
+            title = "Test Doc",
+            createdAt = "2024-01-01T00:00:00Z",
+            accessCount = 0
+        )
+
+        val updated = bookmark.copy(accessCount = bookmark.accessCount + 1)
+        assertEquals(1, updated.accessCount)
+    }
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AndroidManifest.xml - Vivoka VSDK Wrapper Module
+
+  Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+  Created: 2025-12-23
+
+  Minimal manifest for Vivoka SDK wrapper library.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Wrapper module - no permissions or components needed -->
+</manifest>

@@ -1,0 +1,82 @@
+package com.augmentalis.voiceoscore.accessibility
+
+import android.accessibilityservice.AccessibilityService
+import android.view.accessibility.AccessibilityEvent
+
+/**
+ * Stub implementation of VoiceOSService
+ *
+ * Phase 1 Quick Fix: VoiceOSService temporarily stubbed to unblock compilation
+ * Full implementation disabled pending Room→SQLDelight migration completion
+ */
+class VoiceOSService : AccessibilityService() {
+
+    companion object {
+        @Volatile
+        private var instance: VoiceOSService? = null
+
+        @JvmStatic
+        fun getInstance(): VoiceOSService? = instance
+
+        @JvmStatic
+        fun isServiceRunning(): Boolean = instance != null
+
+        @JvmStatic
+        fun executeCommand(commandText: String): Boolean = false // Stub
+    }
+
+    @JvmField
+    var isServiceReady = false  // Public field for IPC access
+
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+    }
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        // No-op stub
+    }
+
+    override fun onInterrupt() {
+        // No-op stub
+    }
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        isServiceReady = true
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        instance = null
+        isServiceReady = false
+    }
+
+    fun enableFallbackMode() {
+        // No-op stub - fallback mode disabled
+    }
+
+    // Cursor-related stub methods (for DragHandler compatibility)
+    fun isCursorVisible(): Boolean {
+        return false // Stub - cursor disabled
+    }
+
+    fun getCursorPosition(): android.graphics.Point {
+        return android.graphics.Point(0, 0) // Stub - returns origin
+    }
+
+    // App command stub method (for AppHandler compatibility)
+    fun getAppCommands(): Map<String, String> {
+        return emptyMap() // Stub - no app commands (voice name -> package name mapping)
+    }
+
+    // IPC-related stub methods (for VoiceOSServiceBinder compatibility)
+    fun executeAccessibilityActionByType(actionType: String): Boolean = false // Stub
+    fun scrapeScreen(): String = """{"error": "Functionality disabled (stub)"}"""
+    fun startVoiceRecognition(language: String, recognizerType: String): Boolean = false
+    fun stopVoiceRecognition(): Boolean = false
+    fun learnCurrentApp(): String = """{"error": "Functionality disabled (stub)"}"""
+    fun getLearnedApps(): List<String> = emptyList()
+    fun getCommandsForApp(packageName: String): List<String> = emptyList()
+    fun registerDynamicCommand(commandText: String, actionJson: String): Boolean = false
+}

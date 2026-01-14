@@ -1,0 +1,54 @@
+version: "10.2"
+project_name: "NewAvanues"
+project_type: "monorepo"
+profile: "monorepo"
+mcp_enabled: true
+programming_standards_path: "/Volumes/M-Drive/Coding/ideacode/programming-standards"
+
+# Monorepo Structure
+structure:
+  platforms: "android/, ios/, desktop/"
+  common: "Common/"
+  modules: "Modules/"
+  shared: "Shared/"
+  docs: "Docs/"
+  living_docs: "Docs/Project/"
+
+# Registries
+registries:
+  modules: ".ideacode/Registries/Modules.registry.json"
+  docs: ".ideacode/Registries/Docs.registry.json"
+  folders: ".ideacode/Registries/FOLDER-REGISTRY.md"
+
+# Naming Conventions
+naming:
+  gradle_paths: "lowercase"
+  other_folders: "PascalCase"
+  documents: "App-Module-Description-YDDMMHH-V#.md"
+  living_docs: "LD-App-Module-Description-V#.md"
+  specs: "App-Spec-Feature-YDDMM-V#.md"
+  plans: "App-Plan-Feature-YDDMM-V#.md"
+  date_formats:
+    YDDMMHH: "Documents - Y=year last digit, DD=day, MM=month, HH=hour"
+    YDDMM: "Specs/Plans - Y=year last digit, DD=day, MM=month"
+
+# Apps
+apps:
+  - id: VoiceOS
+    platforms: [android, ios, desktop]
+  - id: AVA
+    platforms: [android, ios, macos, windows, linux, web]
+  - id: Avanues
+    platforms: [android]
+  - id: AvaConnect
+    platforms: [android, web]
+  - id: WebAvanue
+    platforms: [android, ios, desktop]
+
+# Enforcement
+enforcement:
+  check_registry_before_write: true
+  check_docs_registry: true
+  check_modules_registry: true
+  pascalcase_non_gradle: true
+  lowercase_gradle: true

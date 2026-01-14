@@ -1,0 +1,486 @@
+/**
+ * WhisperEngineAdapter.kt - Adapter for Whisper.cpp Offline Speech Recognition
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ * Author: VOS4 Development Team
+ * Code-Reviewed-By: CCA
+ * Created: 2025-12-22
+ *
+ * Part of SOLID Refactoring Phase 2: Open/Closed Principle (Factory Pattern)
+ * Plan: VoiceOS-Plan-SOLID-Refactoring-5221222-V1.md
+ *
+ * PURPOSE:
+ * Full adapter implementation for Whisper.cpp offline speech recognition.
+ * Provides ISpeechEngine interface for local Whisper model inference.
+ *
+ * DESIGN PATTERN: Adapter Pattern
+ * - Adapts Whisper.cpp JNI API to match ISpeechEngine interface
+ * - Single Responsibility: Only handles Whisper integration
+ * - Offline recognition using quantized GGML models
+ *
+ * WHISPER.CPP FEATURES:
+ * - OpenAI Whisper models running locally on device
+ * - High accuracy multilingual recognition
+ * - Quantized models (50-1500MB depending on size)
+ * - No API keys or network required
+ * - Supports 100+ languages
+ */
+package com.augmentalis.voiceoscore.accessibility.speech
+
+import android.content.Context
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
+import android.util.Log
+import com.augmentalis.speechrecognition.SpeechConfig
+import com.augmentalis.voiceos.speech.api.RecognitionResult
+import com.whispercpp.whisper.WhisperContext
+import com.whispercpp.whisper.WhisperLib
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import java.io.File
+import kotlin.coroutines.resume
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+
+/**
+ * Adapter for Whisper.cpp offline speech recognition
+ *
+ * Wraps Whisper.cpp JNI library to provide unified ISpeechEngine interface.
+ * Uses pre-downloaded GGML model files for offline recognition.
+ *
+ * REQUIREMENTS:
+ * - Whisper GGML model files in assets/whisper-models/ (e.g., ggml-base.en.bin)
+ * - RECORD_AUDIO permission
+ * - Storage for model files (50MB-1.5GB depending on model size)
+ * - Decent CPU/GPU for real-time performance
+ *
+ * MODEL SIZES:
+ * - tiny: 75MB, fast but less accurate
+ * - base: 142MB, balanced (RECOMMENDED)
+ * - small: 466MB, good accuracy
+ * - medium: 1.5GB, high accuracy but slower
+ *
+ * BENEFITS:
+ * - State-of-the-art accuracy (OpenAI Whisper)
+ * - Fully offline (no network required)
+ * - Multilingual support (100+ languages)
+ * - Automatic punctuation and capitalization
+ *
+ * LIMITATIONS:
+ * - Large model files (50MB-1.5GB)
+ * - Higher CPU/memory usage than Vosk
+ * - Slower than cloud services
+ * - Not real-time for larger models on older devices
+ *
+ * @property context Android application context
+ *
+ * @see ISpeechEngine
+ */
+class WhisperEngineAdapter(
+    private val context: Context
+) : ISpeechEngine {
+
+    companion object {
+        private const val TAG = "WhisperEngineAdapter"
+        private const val MODEL_NAME = "ggml-base.en.bin"  // Base English model
+        private const val SAMPLE_RATE = 16000
+        private const val RECORDING_BUFFER_SIZE = SAMPLE_RATE * 30  // 30 seconds max
+    }
+
+    /**
+     * Whisper context instance
+     */
+    private var whisperContext: WhisperContext? = null
+
+    /**
+     * Audio recorder
+     */
+    private var audioRecord: AudioRecord? = null
+
+    /**
+     * Recording job
+     */
+    private var recordingJob: Job? = null
+
+    /**
+     * Coroutine scope for background operations
+     */
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    /**
+     * Track initialization state
+     */
+    private var isInitialized: Boolean = false
+
+    /**
+     * Track listening state
+     */
+    private var isListening: Boolean = false
+
+    /**
+     * Result callback
+     */
+    private var resultCallback: ((RecognitionResult) -> Unit)? = null
+
+    /**
+     * Error callback
+     */
+    private var errorCallback: ((String) -> Unit)? = null
+
+    /**
+     * Current language code
+     */
+    private var languageCode: String = "en"
+
+    /**
+     * Audio buffer for recording
+     */
+    private val audioBuffer = ShortArray(RECORDING_BUFFER_SIZE)
+
+    /**
+     * Current position in audio buffer
+     */
+    private var audioBufferPosition = 0
+
+    /**
+     * Initialize Whisper speech recognition
+     *
+     * Loads the Whisper GGML model file and creates the context.
+     *
+     * @param config Speech configuration
+     * @return true if initialization succeeded
+     */
+    override suspend fun initialize(config: SpeechConfig): Boolean = suspendCancellableCoroutine { continuation ->
+        try {
+            Log.d(TAG, "Initializing Whisper speech recognition")
+
+            languageCode = extractLanguageCode(config.language)
+
+            // Initialize Whisper in background thread (I/O and model loading is intensive)
+            scope.launch(Dispatchers.IO) {
+                try {
+                    // Copy model from assets to internal storage if needed
+                    val modelFile = copyModelFromAssets()
+
+                    if (!modelFile.exists()) {
+                        Log.e(TAG, "Whisper model file not found: ${modelFile.absolutePath}")
+                        continuation.resume(false)
+                        return@launch
+                    }
+
+                    // Create Whisper context from model file
+                    whisperContext = WhisperContext.createContextFromFile(modelFile.absolutePath)
+
+                    if (whisperContext == null) {
+                        Log.e(TAG, "Failed to create Whisper context")
+                        continuation.resume(false)
+                        return@launch
+                    }
+
+                    // Initialize audio recorder
+                    val bufferSize = AudioRecord.getMinBufferSize(
+                        SAMPLE_RATE,
+                        AudioFormat.CHANNEL_IN_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT
+                    )
+
+                    audioRecord = AudioRecord(
+                        MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                        SAMPLE_RATE,
+                        AudioFormat.CHANNEL_IN_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT,
+                        bufferSize
+                    )
+
+                    if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                        Log.e(TAG, "Failed to initialize AudioRecord")
+                        continuation.resume(false)
+                        return@launch
+                    }
+
+                    isInitialized = true
+                    Log.i(TAG, "Whisper speech recognition initialized successfully")
+                    continuation.resume(true)
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to initialize Whisper", e)
+                    continuation.resume(false)
+                }
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize Whisper speech recognition", e)
+            isInitialized = false
+            continuation.resume(false)
+        }
+    }
+
+    /**
+     * Start listening for speech
+     *
+     * Starts audio recording and buffers audio data for Whisper processing.
+     *
+     * @throws IllegalStateException if engine not initialized
+     */
+    override fun startListening() {
+        checkInitialized()
+
+        try {
+            Log.d(TAG, "Starting Whisper speech recognition")
+
+            // Reset audio buffer
+            audioBufferPosition = 0
+
+            // Start audio recording
+            audioRecord?.startRecording()
+
+            // Start recording job
+            recordingJob = scope.launch {
+                val buffer = ShortArray(1024)
+
+                while (isActive && isListening) {
+                    val readSize = audioRecord?.read(buffer, 0, buffer.size) ?: 0
+
+                    if (readSize > 0) {
+                        // Copy to main buffer
+                        val remaining = audioBuffer.size - audioBufferPosition
+                        val copySize = minOf(readSize, remaining)
+
+                        System.arraycopy(buffer, 0, audioBuffer, audioBufferPosition, copySize)
+                        audioBufferPosition += copySize
+
+                        // Buffer full - stop recording
+                        if (audioBufferPosition >= audioBuffer.size) {
+                            Log.w(TAG, "Audio buffer full (30s max), processing...")
+                            stopListening()
+                            processAudio()
+                        }
+                    }
+                }
+            }
+
+            isListening = true
+            Log.i(TAG, "Whisper listening started")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start Whisper speech recognition", e)
+            isListening = false
+            throw e
+        }
+    }
+
+    /**
+     * Stop listening for speech
+     *
+     * Stops audio recording and processes the captured audio with Whisper.
+     */
+    override fun stopListening() {
+        try {
+            Log.d(TAG, "Stopping Whisper speech recognition")
+
+            isListening = false
+
+            // Stop recording job
+            recordingJob?.cancel()
+            recordingJob = null
+
+            // Stop audio recording
+            audioRecord?.stop()
+
+            // Process captured audio
+            if (audioBufferPosition > 0) {
+                processAudio()
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to stop Whisper speech recognition", e)
+            isListening = false
+        }
+    }
+
+    /**
+     * Update dynamic command vocabulary
+     *
+     * Whisper does not support constrained vocabulary - it performs
+     * free-form transcription. Command matching must be done at a higher level.
+     *
+     * @param commands List of commands (ignored by Whisper)
+     */
+    override suspend fun updateCommands(commands: List<String>) {
+        Log.w(TAG, "Whisper does not support dynamic command vocabulary (free-form transcription)")
+        // No-op: Whisper doesn't support command vocabularies
+    }
+
+    /**
+     * Update engine configuration
+     *
+     * For Whisper, language changes are supported at runtime.
+     *
+     * @param config New configuration data
+     * @throws IllegalStateException if engine not initialized
+     */
+    override fun updateConfiguration(config: SpeechConfigurationData) {
+        checkInitialized()
+
+        Log.d(TAG, "Updating Whisper configuration")
+
+        val newLanguage = extractLanguageCode(config.language)
+        if (newLanguage != languageCode) {
+            Log.i(TAG, "Language changed: $languageCode -> $newLanguage")
+            languageCode = newLanguage
+        }
+    }
+
+    /**
+     * Check if engine is currently recognizing
+     *
+     * @return true if actively listening
+     */
+    override fun isRecognizing(): Boolean {
+        return isInitialized && isListening
+    }
+
+    /**
+     * Get the underlying Whisper context instance
+     *
+     * @return WhisperContext instance
+     */
+    override fun getEngine(): Any? {
+        return whisperContext
+    }
+
+    /**
+     * Set result listener for speech recognition results
+     *
+     * @param listener Callback for recognition results
+     */
+    fun setResultListener(listener: (RecognitionResult) -> Unit) {
+        resultCallback = listener
+    }
+
+    /**
+     * Set error listener for speech recognition errors
+     *
+     * @param listener Callback for errors
+     */
+    fun setErrorListener(listener: (String) -> Unit) {
+        errorCallback = listener
+    }
+
+    /**
+     * Clean up Whisper resources
+     */
+    override fun destroy() {
+        try {
+            Log.d(TAG, "Destroying Whisper speech recognition")
+
+            stopListening()
+
+            audioRecord?.release()
+            audioRecord = null
+
+            whisperContext?.release()
+            whisperContext = null
+
+            isInitialized = false
+            isListening = false
+
+            Log.i(TAG, "Whisper speech recognition destroyed")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error destroying Whisper speech recognition", e)
+        }
+    }
+
+    /**
+     * Process captured audio with Whisper model
+     */
+    private fun processAudio() {
+        scope.launch(Dispatchers.Default) {
+            try {
+                Log.d(TAG, "Processing ${audioBufferPosition} audio samples with Whisper...")
+
+                // Convert short array to float array (Whisper expects float samples)
+                val floatBuffer = FloatArray(audioBufferPosition) { i ->
+                    audioBuffer[i] / 32768.0f  // Normalize to [-1.0, 1.0]
+                }
+
+                // Run Whisper transcription
+                val result = whisperContext?.transcribeData(floatBuffer)
+
+                if (result != null && result.isNotEmpty()) {
+                    Log.d(TAG, "Whisper result: $result")
+
+                    val recognitionResult = RecognitionResult(
+                        text = result.trim(),
+                        confidence = 1.0f  // Whisper doesn't provide confidence scores
+                    )
+
+                    resultCallback?.invoke(recognitionResult)
+                } else {
+                    Log.w(TAG, "Whisper returned empty result")
+                }
+
+            } catch (e: Exception) {
+                val errorMessage = "Whisper transcription failed: ${e.message}"
+                Log.e(TAG, errorMessage, e)
+                errorCallback?.invoke(errorMessage)
+            }
+        }
+    }
+
+    /**
+     * Copy Whisper model from assets to internal storage
+     *
+     * @return Model file in internal storage
+     */
+    private fun copyModelFromAssets(): File {
+        val modelDir = File(context.filesDir, "whisper-models")
+        if (!modelDir.exists()) {
+            modelDir.mkdirs()
+        }
+
+        val modelFile = File(modelDir, MODEL_NAME)
+
+        // Copy from assets if not already present
+        if (!modelFile.exists()) {
+            Log.d(TAG, "Copying Whisper model from assets...")
+            context.assets.open("whisper-models/$MODEL_NAME").use { input ->
+                modelFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            Log.i(TAG, "Whisper model copied successfully")
+        }
+
+        return modelFile
+    }
+
+    /**
+     * Extract language code from full locale string
+     *
+     * Converts "en-US" to "en", "es-ES" to "es", etc.
+     *
+     * @param locale Full locale string
+     * @return Language code
+     */
+    private fun extractLanguageCode(locale: String): String {
+        return locale.split("-", "_").firstOrNull() ?: "en"
+    }
+
+    /**
+     * Check if engine is initialized, throw if not
+     *
+     * @throws IllegalStateException if not initialized
+     */
+    private fun checkInitialized() {
+        if (!isInitialized) {
+            throw IllegalStateException("Whisper speech recognition not initialized")
+        }
+    }
+}

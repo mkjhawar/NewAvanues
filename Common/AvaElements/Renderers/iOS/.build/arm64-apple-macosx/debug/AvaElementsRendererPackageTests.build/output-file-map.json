@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/AvaElementsRendererPackageTests.build/master.swiftdeps"
+  },
+  "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/AvaElementsRendererPackageTests.derived/runner.swift": {
+    "dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/AvaElementsRendererPackageTests.build/runner.d",
+    "object": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/AvaElementsRendererPackageTests.build/runner.swift.o",
+    "swiftmodule": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/AvaElementsRendererPackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/AvaElementsRendererPackageTests.build/runner.swiftdeps",
+    "diagnostics": "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/AvaElementsRendererPackageTests.build/runner.dia"
+  }
+}

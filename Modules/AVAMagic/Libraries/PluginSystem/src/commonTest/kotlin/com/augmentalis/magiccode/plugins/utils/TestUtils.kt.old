@@ -1,0 +1,253 @@
+package com.augmentalis.magiccode.plugins.utils
+
+import com.augmentalis.magiccode.plugins.core.*
+import com.augmentalis.magiccode.plugins.themes.*
+
+/**
+ * Utility functions for tests.
+ */
+object TestUtils {
+    /**
+     * Create a valid test plugin manifest with sensible defaults.
+     */
+    fun createTestManifest(
+        id: String = TestConstants.TEST_PLUGIN_ID,
+        name: String = TestConstants.TEST_PLUGIN_NAME,
+        version: String = TestConstants.TEST_PLUGIN_VERSION,
+        author: String = TestConstants.TEST_PLUGIN_AUTHOR,
+        entrypoint: String = TestConstants.TEST_ENTRYPOINT,
+        capabilities: List<String> = listOf("themes", "ui_components"),
+        dependencies: List<PluginDependency> = emptyList(),
+        permissions: List<String> = listOf("NETWORK", "STORAGE_READ"),
+        source: String = "THIRD_PARTY",
+        verificationLevel: String = "UNVERIFIED",
+        assets: PluginAssets? = PluginAssets(
+            themes = listOf("dark-theme.yaml"),
+            images = listOf("icon.png")
+        )
+    ): PluginManifest {
+        return PluginManifest(
+            id = id,
+            name = name,
+            version = version,
+            author = author,
+            entrypoint = entrypoint,
+            capabilities = capabilities,
+            dependencies = dependencies,
+            permissions = permissions,
+            source = source,
+            verificationLevel = verificationLevel,
+            assets = assets
+        )
+    }
+
+    /**
+     * Create a test plugin dependency.
+     */
+    fun createTestDependency(
+        pluginId: String = TestConstants.TEST_PLUGIN_ID_DEPENDENCY,
+        version: String = TestConstants.CONSTRAINT_CARET_1_0_0,
+        optional: Boolean = false
+    ): PluginDependency {
+        return PluginDependency(
+            pluginId = pluginId,
+            version = version,
+            optional = optional
+        )
+    }
+
+    /**
+     * Create a valid test theme definition.
+     */
+    fun createTestTheme(
+        name: String = "Dark Theme",
+        version: String = TestConstants.TEST_PLUGIN_VERSION,
+        primaryColor: String = TestConstants.TEST_COLOR_PRIMARY,
+        secondaryColor: String = TestConstants.TEST_COLOR_SECONDARY,
+        backgroundColor: String = TestConstants.TEST_COLOR_BACKGROUND,
+        textColor: String = TestConstants.TEST_COLOR_TEXT
+    ): ThemeDefinition {
+        return ThemeDefinition(
+            name = name,
+            version = version,
+            colors = ColorPalette(
+                primary = primaryColor,
+                secondary = secondaryColor,
+                background = backgroundColor,
+                text = textColor
+            ),
+            typography = Typography(
+                fontFamily = "SF Pro",
+                fontSize = FontSizes(
+                    small = TestConstants.TEST_FONT_SIZE_SMALL,
+                    medium = TestConstants.TEST_FONT_SIZE_MEDIUM,
+                    large = TestConstants.TEST_FONT_SIZE_LARGE
+                ),
+                fontWeight = FontWeights(
+                    regular = 400,
+                    bold = 700
+                )
+            ),
+            spacing = Spacing(
+                xs = TestConstants.TEST_SPACING_XS,
+                sm = TestConstants.TEST_SPACING_SM,
+                md = TestConstants.TEST_SPACING_MD,
+                lg = TestConstants.TEST_SPACING_LG,
+                xl = TestConstants.TEST_SPACING_XL
+            )
+        )
+    }
+
+    /**
+     * Create a test namespace.
+     */
+    fun createTestNamespace(
+        pluginId: String = TestConstants.TEST_PLUGIN_ID,
+        baseDir: String = "${TestConstants.TEST_APP_DATA_DIR}/${pluginId}"
+    ): PluginNamespace {
+        return PluginNamespace(
+            pluginId = pluginId,
+            baseDir = baseDir
+        )
+    }
+
+    /**
+     * Create a test plugin info for registry.
+     */
+    fun createTestPluginInfo(
+        manifest: PluginManifest = createTestManifest(),
+        namespace: PluginNamespace = createTestNamespace(manifest.id),
+        state: PluginState = PluginState.INSTALLED
+    ): PluginRegistry.PluginInfo {
+        return PluginRegistry.PluginInfo(
+            manifest = manifest,
+            namespace = namespace,
+            state = state
+        )
+    }
+
+    /**
+     * Assert that a string contains a substring (case-insensitive).
+     */
+    fun assertContains(actual: String, expected: String, message: String? = null) {
+        if (!actual.contains(expected, ignoreCase = true)) {
+            val errorMessage = message ?: "Expected string to contain '$expected' but was '$actual'"
+            throw AssertionError(errorMessage)
+        }
+    }
+
+    /**
+     * Assert that a collection contains an element.
+     */
+    fun <T> assertContains(collection: Collection<T>, element: T, message: String? = null) {
+        if (!collection.contains(element)) {
+            val errorMessage = message ?: "Expected collection to contain $element"
+            throw AssertionError(errorMessage)
+        }
+    }
+
+    /**
+     * Assert that two values are not equal.
+     */
+    fun <T> assertNotEquals(unexpected: T, actual: T, message: String? = null) {
+        if (unexpected == actual) {
+            val errorMessage = message ?: "Expected values to be different but both were $actual"
+            throw AssertionError(errorMessage)
+        }
+    }
+
+    /**
+     * Generate a temporary file path for testing.
+     */
+    fun generateTempPath(filename: String): String {
+        return "/tmp/plugin-test-${System.currentTimeMillis()}-${filename}"
+    }
+
+    /**
+     * Create an invalid theme (for validation testing).
+     */
+    fun createInvalidTheme(
+        invalidField: String
+    ): ThemeDefinition {
+        return when (invalidField) {
+            "name" -> createTestTheme(name = "")
+            "version" -> createTestTheme(version = "invalid")
+            "color" -> ThemeDefinition(
+                name = "Invalid Theme",
+                version = "1.0.0",
+                colors = ColorPalette(
+                    primary = "invalid-color",
+                    secondary = TestConstants.TEST_COLOR_SECONDARY,
+                    background = TestConstants.TEST_COLOR_BACKGROUND,
+                    text = TestConstants.TEST_COLOR_TEXT
+                ),
+                typography = Typography(
+                    fontFamily = "SF Pro",
+                    fontSize = FontSizes(
+                        small = TestConstants.TEST_FONT_SIZE_SMALL,
+                        medium = TestConstants.TEST_FONT_SIZE_MEDIUM,
+                        large = TestConstants.TEST_FONT_SIZE_LARGE
+                    )
+                ),
+                spacing = Spacing(
+                    xs = TestConstants.TEST_SPACING_XS,
+                    sm = TestConstants.TEST_SPACING_SM,
+                    md = TestConstants.TEST_SPACING_MD,
+                    lg = TestConstants.TEST_SPACING_LG,
+                    xl = TestConstants.TEST_SPACING_XL
+                )
+            )
+            "fontSize" -> ThemeDefinition(
+                name = "Invalid Theme",
+                version = "1.0.0",
+                colors = ColorPalette(
+                    primary = TestConstants.TEST_COLOR_PRIMARY,
+                    secondary = TestConstants.TEST_COLOR_SECONDARY,
+                    background = TestConstants.TEST_COLOR_BACKGROUND,
+                    text = TestConstants.TEST_COLOR_TEXT
+                ),
+                typography = Typography(
+                    fontFamily = "SF Pro",
+                    fontSize = FontSizes(
+                        small = 200, // Invalid: too large
+                        medium = TestConstants.TEST_FONT_SIZE_MEDIUM,
+                        large = TestConstants.TEST_FONT_SIZE_LARGE
+                    )
+                ),
+                spacing = Spacing(
+                    xs = TestConstants.TEST_SPACING_XS,
+                    sm = TestConstants.TEST_SPACING_SM,
+                    md = TestConstants.TEST_SPACING_MD,
+                    lg = TestConstants.TEST_SPACING_LG,
+                    xl = TestConstants.TEST_SPACING_XL
+                )
+            )
+            "spacing" -> ThemeDefinition(
+                name = "Invalid Theme",
+                version = "1.0.0",
+                colors = ColorPalette(
+                    primary = TestConstants.TEST_COLOR_PRIMARY,
+                    secondary = TestConstants.TEST_COLOR_SECONDARY,
+                    background = TestConstants.TEST_COLOR_BACKGROUND,
+                    text = TestConstants.TEST_COLOR_TEXT
+                ),
+                typography = Typography(
+                    fontFamily = "SF Pro",
+                    fontSize = FontSizes(
+                        small = TestConstants.TEST_FONT_SIZE_SMALL,
+                        medium = TestConstants.TEST_FONT_SIZE_MEDIUM,
+                        large = TestConstants.TEST_FONT_SIZE_LARGE
+                    )
+                ),
+                spacing = Spacing(
+                    xs = 500, // Invalid: too large
+                    sm = TestConstants.TEST_SPACING_SM,
+                    md = TestConstants.TEST_SPACING_MD,
+                    lg = TestConstants.TEST_SPACING_LG,
+                    xl = TestConstants.TEST_SPACING_XL
+                )
+            )
+            else -> createTestTheme()
+        }
+    }
+}

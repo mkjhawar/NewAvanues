@@ -1,0 +1,489 @@
+/**
+ * AccessibilityScrapingIntegrationFixesSimulationTest.kt
+ *
+ * Simulation tests to verify FK constraint and screen duplication fixes
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ * Author: VOS4 Development Team
+ * Created: 2025-10-31
+ */
+package com.augmentalis.voiceoscore.scraping
+
+import org.junit.Test
+import org.junit.Assert.*
+import java.security.MessageDigest
+
+/**
+ * Simulation test class to verify the two critical fixes:
+ * 1. FK Constraint Fix - Hierarchy cleanup before element insertion
+ * 2. Screen Duplication Fix - Content-based screen hashing
+ *
+ * These are simulation tests that demonstrate the fix logic without requiring
+ * Android runtime or database connections.
+ */
+class AccessibilityScrapingIntegrationFixesSimulationTest {
+
+    // ==================== FK CONSTRAINT FIX SIMULATION ====================
+
+    /**
+     * Simulates the FK constraint violation scenario and verifies the fix
+     */
+    @Test
+    fun `test FK constraint fix - hierarchy cleanup prevents orphaned references`() {
+        println("\n========== FK CONSTRAINT FIX SIMULATION ==========\n")
+
+        // SCENARIO: Same app scraped twice (e.g., user clicks button, screen changes, scrapes again)
+        val appId = "test-app-123"
+
+        // === FIRST SCRAPE ===
+        println("=== FIRST SCRAPE ===")
+        val firstElements = listOf(
+            MockElement(hash = "button-hash-1", text = "Submit"),
+            MockElement(hash = "textview-hash-2", text = "Welcome"),
+            MockElement(hash = "imageview-hash-3", text = null)
+        )
+
+        println("Scraped ${firstElements.size} elements")
+
+        // Simulate database insertion - elements get auto-generated IDs
+        val firstInsertedIds = listOf(100L, 101L, 102L)
+        println("Elements inserted with IDs: $firstInsertedIds")
+
+        // Build hierarchy (parent-child relationships)
+        val firstHierarchy = listOf(
+            MockHierarchy(parentId = 100L, childId = 101L), // Submit contains Welcome
+            MockHierarchy(parentId = 100L, childId = 102L)  // Submit contains ImageView
+        )
+        println("Hierarchy created: ${firstHierarchy.size} relationships")
+        firstHierarchy.forEach { println("  Parent ${it.parentId} -> Child ${it.childId}") }
+
+        // Simulate database state
+        val database = MockDatabase()
+        database.elements.addAll(firstInsertedIds.mapIndexed { i, id ->
+            firstElements[i].copy(dbId = id)
+        })
+        database.hierarchy.addAll(firstHierarchy)
+
+        println("\nDatabase state after first scrape:")
+        println("  Elements: ${database.elements.size}")
+        println("  Hierarchy: ${database.hierarchy.size}")
+
+        // === SECOND SCRAPE (User clicks button, new state) ===
+        println("\n=== SECOND SCRAPE ===")
+        val secondElements = listOf(
+            MockElement(hash = "button-hash-1", text = "Submit"),      // SAME hash!
+            MockElement(hash = "textview-hash-4", text = "Loading..."), // NEW element
+            MockElement(hash = "imageview-hash-3", text = null)        // SAME hash!
+        )
+
+        println("Scraped ${secondElements.size} elements")
+        println("  2 elements have same hash as before (button, imageview)")
+        println("  1 element is new (loading textview)")
+
+        // === WITHOUT FIX: Orphaned references ===
+        println("\n--- WITHOUT FIX (Old Code) ---")
+        println("OnConflictStrategy.REPLACE behavior:")
+        println("  1. Element with hash='button-hash-1' already exists (ID=100)")
+        println("     -> DELETE row with ID=100, INSERT new row with ID=200")
+        println("  2. Element with hash='textview-hash-4' is new")
+        println("     -> INSERT new row with ID=201")
+        println("  3. Element with hash='imageview-hash-3' already exists (ID=102)")
+        println("     -> DELETE row with ID=102, INSERT new row with ID=202")
+
+        val secondInsertedIdsOld = listOf(200L, 201L, 202L)
+        println("\nNew element IDs: $secondInsertedIdsOld")
+
+        // Old hierarchy records still reference deleted IDs!
+        println("\nOLD HIERARCHY RECORDS (not cleaned up):")
+        database.hierarchy.forEach { h ->
+            val parentExists = database.elements.any { it.dbId == h.parentId }
+            val childExists = database.elements.any { it.dbId == h.childId }
+            println("  Parent ${h.parentId} -> Child ${h.childId}")
+            if (!parentExists) println("    ⚠️  Parent ID ${h.parentId} DELETED!")
+            if (!childExists) println("    ⚠️  Child ID ${h.childId} DELETED!")
+        }
+
+        // Try to insert new hierarchy with old orphaned records still present
+        val secondHierarchyOld = listOf(
+            MockHierarchy(parentId = 200L, childId = 201L), // New IDs
+            MockHierarchy(parentId = 200L, childId = 202L)
+        )
+
+        println("\nAttempting to insert NEW HIERARCHY:")
+        secondHierarchyOld.forEach { println("  Parent ${it.parentId} -> Child ${it.childId}") }
+
+        println("\n❌ RESULT: FK CONSTRAINT VIOLATION!")
+        println("   Old hierarchy references deleted element IDs (100, 101, 102)")
+        println("   Database integrity check fails when inserting new hierarchy")
+
+        // === WITH FIX: Clean hierarchy first ===
+        println("\n--- WITH FIX (New Code) ---")
+
+        // Step 1: DELETE all old hierarchy for this app BEFORE inserting elements
+        println("Step 1: deleteHierarchyForApp('$appId')")
+        database.hierarchy.clear()
+        println("  ✅ Cleared ${database.hierarchy.size} old hierarchy records")
+
+        // Step 2: Insert elements (which will replace/update)
+        println("\nStep 2: insertBatchWithIds(elements)")
+        database.elements.clear()
+        database.elements.addAll(secondInsertedIdsOld.mapIndexed { i, id ->
+            secondElements[i].copy(dbId = id)
+        })
+        println("  ✅ Inserted ${secondInsertedIdsOld.size} elements with IDs: $secondInsertedIdsOld")
+
+        // Step 3: Insert new hierarchy with valid references
+        println("\nStep 3: insertBatch(hierarchy)")
+        database.hierarchy.addAll(secondHierarchyOld)
+        println("  ✅ Inserted ${secondHierarchyOld.size} hierarchy relationships")
+        secondHierarchyOld.forEach { h ->
+            val parentExists = database.elements.any { it.dbId == h.parentId }
+            val childExists = database.elements.any { it.dbId == h.childId }
+            println("    Parent ${h.parentId} -> Child ${h.childId}")
+            assert(parentExists) { "Parent ID must exist" }
+            assert(childExists) { "Child ID must exist" }
+        }
+
+        println("\n✅ RESULT: SUCCESS!")
+        println("   All hierarchy references point to valid element IDs")
+        println("   No orphaned foreign keys, no constraint violations")
+
+        // Verification
+        assertTrue("All hierarchy parent IDs should exist in elements",
+            database.hierarchy.all { h -> database.elements.any { it.dbId == h.parentId } })
+        assertTrue("All hierarchy child IDs should exist in elements",
+            database.hierarchy.all { h -> database.elements.any { it.dbId == h.childId } })
+
+        println("\n========== FK CONSTRAINT FIX VERIFIED ✅ ==========\n")
+    }
+
+    // ==================== SCREEN DUPLICATION FIX SIMULATION ====================
+
+    /**
+     * Simulates the screen duplication scenario and verifies the fix
+     */
+    @Test
+    fun `test screen duplication fix - content-based hashing prevents false duplicates`() {
+        println("\n========== SCREEN DUPLICATION FIX SIMULATION ==========\n")
+
+        val packageName = "com.example.testapp"
+        val activityName = "com.example.testapp.MainActivity"
+
+        // SCENARIO: Same activity, 4 different UI states, but empty window titles
+
+        // Screen 1: Welcome screen (TextView, Button, ImageView)
+        val screen1Elements = listOf(
+            MockElement(hash = "tv-1", text = "Welcome to Test App"),
+            MockElement(hash = "btn-1", text = "Start", isClickable = true),
+            MockElement(hash = "img-1", text = null)
+        )
+
+        // Screen 2: Loading screen (ProgressBar, TextView)
+        val screen2Elements = listOf(
+            MockElement(hash = "progress-1", text = null),
+            MockElement(hash = "tv-2", text = "Loading...")
+        )
+
+        // Screen 3: Form screen (EditText, EditText, Button)
+        val screen3Elements = listOf(
+            MockElement(hash = "edit-1", text = null, contentDesc = "Email"),
+            MockElement(hash = "edit-2", text = null, contentDesc = "Password"),
+            MockElement(hash = "btn-2", text = "Submit", isClickable = true)
+        )
+
+        // Screen 4: Results screen (ListView, Button)
+        val screen4Elements = listOf(
+            MockElement(hash = "list-1", text = null, contentDesc = "Results list"),
+            MockElement(hash = "btn-3", text = "Back", isClickable = true)
+        )
+
+        val allScreens = listOf(
+            MockScreen("Screen 1: Welcome", screen1Elements),
+            MockScreen("Screen 2: Loading", screen2Elements),
+            MockScreen("Screen 3: Form", screen3Elements),
+            MockScreen("Screen 4: Results", screen4Elements)
+        )
+
+        println("Testing 4 different screens in same activity:")
+        allScreens.forEach { println("  - ${it.name}: ${it.elements.size} elements") }
+
+        // === WITHOUT FIX: Title-only hashing ===
+        println("\n--- WITHOUT FIX (Old Code) ---")
+        val windowTitle = "" // Empty for all screens!
+
+        val oldHashes = allScreens.map { screen ->
+            val hash = calculateOldScreenHash(packageName, activityName, windowTitle)
+            Pair(screen.name, hash)
+        }
+
+        println("Screen hashes (packageName + className + windowTitle):")
+        oldHashes.forEach { (name, hash) ->
+            println("  $name: ${hash.take(8)}...")
+        }
+
+        val oldUniqueHashes = oldHashes.map { it.second }.toSet()
+        println("\n❌ RESULT: Only ${oldUniqueHashes.size} unique hash(es)!")
+        println("   All screens have IDENTICAL hash because windowTitle is empty")
+        println("   System thinks all 4 screens are the SAME screen")
+        println("   Database would create 4 duplicate screen_context entries")
+
+        assertEquals("Old method should produce identical hashes", 1, oldUniqueHashes.size)
+
+        // === WITH FIX: Content-based hashing ===
+        println("\n--- WITH FIX (New Code) ---")
+
+        val newHashes = allScreens.map { screen ->
+            val contentFingerprint = screen.elements
+                .filter { !it.text.contains("DecorView") && !it.text.contains("Layout") }
+                .sortedBy { it.hash } // Simulate depth sorting
+                .take(10)
+                .joinToString("|") { e ->
+                    "${e.text}:${e.text}:${e.contentDesc}:${e.isClickable}"
+                }
+
+            val hash = calculateNewScreenHash(packageName, activityName, windowTitle, contentFingerprint)
+            Triple(screen.name, hash, contentFingerprint)
+        }
+
+        println("Screen hashes (packageName + className + windowTitle + contentFingerprint):")
+        newHashes.forEach { (name, hash, fingerprint) ->
+            println("  $name: ${hash.take(8)}...")
+            println("    Fingerprint (first 80 chars): ${fingerprint.take(80)}...")
+        }
+
+        val newUniqueHashes = newHashes.map { it.second }.toSet()
+        println("\n✅ RESULT: ${newUniqueHashes.size} unique hashes!")
+        println("   Each screen has UNIQUE hash based on its content")
+        println("   System correctly identifies 4 different screens")
+        println("   Database will create 1 screen_context entry per unique screen")
+
+        assertEquals("New method should produce unique hashes for each screen", 4, newUniqueHashes.size)
+
+        // === TEST: Same screen revisited should produce same hash ===
+        println("\n--- STABILITY TEST ---")
+        println("Revisiting Screen 1 (same content)...")
+
+        val screen1Revisited = MockScreen("Screen 1: Welcome (revisited)", screen1Elements)
+        val screen1FirstHash = newHashes[0].second
+
+        val contentFingerprintRevisit = screen1Revisited.elements
+            .filter { !it.text.contains("DecorView") && !it.text.contains("Layout") }
+            .sortedBy { it.hash }
+            .take(10)
+            .joinToString("|") { e ->
+                "${e.text}:${e.text}:${e.contentDesc}:${e.isClickable}"
+            }
+
+        val screen1RevisitHash = calculateNewScreenHash(packageName, activityName, windowTitle, contentFingerprintRevisit)
+
+        println("  First visit hash:  ${screen1FirstHash.take(16)}...")
+        println("  Revisit hash:      ${screen1RevisitHash.take(16)}...")
+
+        assertEquals("Same screen content should produce same hash", screen1FirstHash, screen1RevisitHash)
+        println("  ✅ Hashes match! Screen will be recognized and visit count incremented")
+
+        println("\n========== SCREEN DUPLICATION FIX VERIFIED ✅ ==========\n")
+    }
+
+    // ==================== INTEGRATION TEST ====================
+
+    /**
+     * Combined test: Both fixes working together
+     */
+    @Test
+    fun `test both fixes together - realistic scraping scenario`() {
+        println("\n========== COMBINED FIXES INTEGRATION TEST ==========\n")
+
+        val appId = "com.example.testapp"
+        val database = MockDatabase()
+
+        println("Simulating realistic Learn App scenario:")
+        println("  - Sample app with 3 UI elements (TextView, Button, ImageView)")
+        println("  - User navigates through app, triggering multiple scrapes")
+
+        // === SCRAPE 1: Initial welcome screen ===
+        println("\n=== SCRAPE 1: Welcome Screen ===")
+        val scrape1Elements = listOf(
+            MockElement(hash = "tv-welcome", text = "Welcome"),
+            MockElement(hash = "btn-start", text = "Start", isClickable = true),
+            MockElement(hash = "img-logo", text = null)
+        )
+
+        val scrape1Ids = listOf(1L, 2L, 3L)
+        database.elements.addAll(scrape1Ids.mapIndexed { i, id -> scrape1Elements[i].copy(dbId = id) })
+
+        val scrape1Hierarchy = listOf(
+            MockHierarchy(1L, 2L),
+            MockHierarchy(1L, 3L)
+        )
+        database.hierarchy.addAll(scrape1Hierarchy)
+
+        val scrape1Screen = calculateNewScreenHash(
+            "com.example.testapp",
+            "MainActivity",
+            "",
+            "Welcome:Welcome::false|Start:Start::true|:null::false"
+        )
+
+        database.screens.add(MockScreenContext(scrape1Screen, "Welcome Screen", 3))
+
+        println("  Elements inserted: ${database.elements.size} with IDs $scrape1Ids")
+        println("  Hierarchy inserted: ${database.hierarchy.size} relationships")
+        println("  Screen context created: ${database.screens.size} screen(s)")
+
+        // === SCRAPE 2: User clicks button, button state changes ===
+        println("\n=== SCRAPE 2: Button Clicked (State Change) ===")
+        val scrape2Elements = listOf(
+            MockElement(hash = "tv-welcome", text = "Welcome"),  // Same
+            MockElement(hash = "btn-start-clicked", text = "Loading..."),  // Changed!
+            MockElement(hash = "img-logo", text = null)  // Same
+        )
+
+        // FIX 1: Clear old hierarchy BEFORE inserting elements
+        println("  Applying Fix 1: deleteHierarchyForApp('$appId')")
+        database.hierarchy.clear()
+        println("    ✅ Cleared old hierarchy")
+
+        // Insert elements (some will be replaced)
+        database.elements.clear()
+        val scrape2Ids = listOf(4L, 5L, 6L)  // New IDs due to replacement
+        database.elements.addAll(scrape2Ids.mapIndexed { i, id -> scrape2Elements[i].copy(dbId = id) })
+        println("  Elements inserted: ${database.elements.size} with NEW IDs $scrape2Ids")
+
+        // Insert hierarchy with valid references
+        val scrape2Hierarchy = listOf(
+            MockHierarchy(4L, 5L),
+            MockHierarchy(4L, 6L)
+        )
+        database.hierarchy.addAll(scrape2Hierarchy)
+        println("  Hierarchy inserted: ${database.hierarchy.size} relationships (no FK errors!)")
+
+        // FIX 2: Content-based screen hash
+        val scrape2Screen = calculateNewScreenHash(
+            "com.example.testapp",
+            "MainActivity",
+            "",
+            "Welcome:Welcome::false|Loading...:Loading...::true|:null::false"
+        )
+
+        println("  Screen hash calculation:")
+        println("    Old hash (without content): Would match scrape 1")
+        println("    New hash (with content): ${scrape2Screen.take(16)}... (different!)")
+
+        if (database.screens.none { it.hash == scrape2Screen }) {
+            database.screens.add(MockScreenContext(scrape2Screen, "Loading State", 3))
+            println("    ✅ Created NEW screen context (different from scrape 1)")
+        }
+
+        // === SCRAPE 3: Same screen as scrape 1 (user goes back) ===
+        println("\n=== SCRAPE 3: Back to Welcome Screen ===")
+        val scrape3Elements = scrape1Elements  // Exact same as scrape 1
+
+        println("  Applying Fix 1: deleteHierarchyForApp('$appId')")
+        database.hierarchy.clear()
+
+        database.elements.clear()
+        val scrape3Ids = listOf(7L, 8L, 9L)
+        database.elements.addAll(scrape3Ids.mapIndexed { i, id -> scrape3Elements[i].copy(dbId = id) })
+
+        val scrape3Hierarchy = listOf(
+            MockHierarchy(7L, 8L),
+            MockHierarchy(7L, 9L)
+        )
+        database.hierarchy.addAll(scrape3Hierarchy)
+
+        val scrape3Screen = calculateNewScreenHash(
+            "com.example.testapp",
+            "MainActivity",
+            "",
+            "Welcome:Welcome::false|Start:Start::true|:null::false"
+        )
+
+        println("  Screen hash: ${scrape3Screen.take(16)}...")
+
+        val existingScreen = database.screens.find { it.hash == scrape3Screen }
+        if (existingScreen != null) {
+            existingScreen.visitCount++
+            println("    ✅ MATCHED scrape 1 screen! Incremented visit count to ${existingScreen.visitCount}")
+        } else {
+            println("    ❌ Would create duplicate (this shouldn't happen)")
+        }
+
+        // === FINAL VERIFICATION ===
+        println("\n=== FINAL STATE ===")
+        println("  Total elements in DB: ${database.elements.size}")
+        println("  Total hierarchy relationships: ${database.hierarchy.size}")
+        println("  Total unique screens: ${database.screens.size}")
+        println("  Screen visit counts:")
+        database.screens.forEach { screen ->
+            println("    ${screen.name}: ${screen.visitCount} visit(s)")
+        }
+
+        // Assertions
+        assertEquals("Should have 2 unique screens (Welcome + Loading)", 2, database.screens.size)
+        assertEquals("Welcome screen should have 2 visits", 2,
+            database.screens.find { it.name == "Welcome Screen" }?.visitCount ?: 0)
+        assertTrue("All hierarchy references should be valid",
+            database.hierarchy.all { h ->
+                database.elements.any { it.dbId == h.parentId } &&
+                database.elements.any { it.dbId == h.childId }
+            })
+
+        println("\n✅ INTEGRATION TEST PASSED!")
+        println("   - No FK constraint violations")
+        println("   - Accurate screen counting (2 unique screens, not 4)")
+        println("   - Correct visit tracking")
+
+        println("\n========== COMBINED FIXES VERIFIED ✅ ==========\n")
+    }
+
+    // ==================== HELPER CLASSES & FUNCTIONS ====================
+
+    data class MockElement(
+        val hash: String,
+        val text: String? = null,
+        val contentDesc: String? = null,
+        val isClickable: Boolean = false,
+        val dbId: Long? = null
+    )
+
+    data class MockHierarchy(
+        val parentId: Long,
+        val childId: Long
+    )
+
+    data class MockScreen(
+        val name: String,
+        val elements: List<MockElement>
+    )
+
+    data class MockScreenContext(
+        val hash: String,
+        val name: String,
+        val elementCount: Int,
+        var visitCount: Int = 1
+    )
+
+    class MockDatabase {
+        val elements = mutableListOf<MockElement>()
+        val hierarchy = mutableListOf<MockHierarchy>()
+        val screens = mutableListOf<MockScreenContext>()
+    }
+
+    private fun calculateOldScreenHash(packageName: String, className: String, windowTitle: String): String {
+        return MessageDigest.getInstance("MD5")
+            .digest("$packageName$className$windowTitle".toByteArray())
+            .joinToString("") { "%02x".format(it) }
+    }
+
+    private fun calculateNewScreenHash(
+        packageName: String,
+        className: String,
+        windowTitle: String,
+        contentFingerprint: String
+    ): String {
+        return MessageDigest.getInstance("MD5")
+            .digest("$packageName$className$windowTitle$contentFingerprint".toByteArray())
+            .joinToString("") { "%02x".format(it) }
+    }
+}

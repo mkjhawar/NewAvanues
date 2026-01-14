@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "locale": "en-US",
+  "fallback": "en-US",
+  "updated": "2025-11-14",
+  "author": "VOS4 Team",
+  "metadata": {
+    "category": "scroll",
+    "display_name": "Scrolling",
+    "description": "Voice commands for scrolling content",
+    "source_file": "scroll-commands.vos",
+    "schema": "4-element: [id, primary, synonyms, description]"
+  },
+  "commands": [
+    [
+      "scroll_up",
+      "scroll up",
+      [
+        "page up",
+        "move up",
+        "upward scroll",
+        "scroll upward",
+        "go up",
+        "scroll upwards",
+        "page upwards",
+        "move upwards",
+        "go upwards",
+        "scroll up the page",
+        "move up the page",
+        "scroll it up",
+        "page up now",
+        "move it up"
+      ],
+      "Scroll Up (Scrolling)"
+    ],
+    [
+      "scroll_down",
+      "scroll down",
+      [
+        "page down",
+        "move down",
+        "downward scroll",
+        "scroll downward",
+        "go down",
+        "scroll downwards",
+        "page downwards",
+        "move downwards",
+        "go downwards",
+        "scroll down the page",
+        "move down the page",
+        "scroll it down",
+        "page down now",
+        "move it down"
+      ],
+      "Scroll Down (Scrolling)"
+    ]
+  ]
+}

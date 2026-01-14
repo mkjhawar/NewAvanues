@@ -1,0 +1,67 @@
+-- Intent Category table for Phase 2 database-driven category lookup
+-- Replaces hardcoded CategoryCapabilityRegistry with dynamic database lookups
+-- Maintains fallback to registry if database empty or intent not found
+
+CREATE TABLE intent_category (
+    intent_name TEXT NOT NULL PRIMARY KEY,
+    category TEXT NOT NULL,
+    requires_accessibility INTEGER AS kotlin.Boolean NOT NULL DEFAULT 0,
+    priority INTEGER NOT NULL DEFAULT 50,
+    last_updated INTEGER NOT NULL
+);
+
+-- Index for fast category lookup
+CREATE INDEX idx_intent_category_category ON intent_category(category);
+
+-- Index for priority-based queries
+CREATE INDEX idx_intent_category_priority ON intent_category(priority DESC);
+
+-- ==================== Queries ====================
+
+-- Select intent by name
+selectByIntent:
+SELECT * FROM intent_category WHERE intent_name = ?;
+
+-- Select all intents by category
+selectByCategory:
+SELECT * FROM intent_category WHERE category = ?
+ORDER BY priority DESC;
+
+-- Select all categories
+selectAll:
+SELECT * FROM intent_category ORDER BY category, priority DESC;
+
+-- Insert or replace intent category
+insert:
+INSERT OR REPLACE INTO intent_category(intent_name, category, requires_accessibility, priority, last_updated)
+VALUES (?, ?, ?, ?, ?);
+
+-- Delete intent category
+deleteByIntent:
+DELETE FROM intent_category WHERE intent_name = ?;
+
+-- Delete all categories for a given category
+deleteByCategory:
+DELETE FROM intent_category WHERE category = ?;
+
+-- Count total entries
+count:
+SELECT COUNT(*) FROM intent_category;
+
+-- Count entries by category
+countByCategory:
+SELECT category, COUNT(*) AS entry_count FROM intent_category
+GROUP BY category
+ORDER BY category;
+
+-- Check if intent exists
+existsIntent:
+SELECT COUNT(*) > 0 FROM intent_category WHERE intent_name = ?;
+
+-- Get unique categories (for stats)
+getCategories:
+SELECT DISTINCT category FROM intent_category ORDER BY category;
+
+-- Delete all (for testing/reset)
+deleteAll:
+DELETE FROM intent_category;

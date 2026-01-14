@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VoiceOS String Resources
+
+  Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+-->
+<resources>
+    <string name="app_name">VoiceOS</string>
+
+    <!-- Setup -->
+    <string name="setup_welcome_title">Welcome to VoiceOS</string>
+    <string name="setup_welcome_description">Control your Android device with voice commands</string>
+    <string name="setup_accessibility_title">Enable Accessibility Service</string>
+    <string name="setup_accessibility_description">VoiceOS needs accessibility permission to control your device</string>
+    <string name="setup_microphone_title">Microphone Permission</string>
+    <string name="setup_microphone_description">VoiceOS needs microphone access for voice commands</string>
+    <string name="setup_complete_title">You\'re All Set!</string>
+    <string name="setup_complete_description">Say \'Hey Ava\' followed by a command</string>
+
+    <!-- Home -->
+    <string name="home_voice_active">Voice Active</string>
+    <string name="home_voice_inactive">Voice Inactive</string>
+    <string name="home_hint">Say \'Hey Ava\' to start</string>
+
+    <!-- Actions -->
+    <string name="action_open_settings">Open Settings</string>
+    <string name="action_open_accessibility">Open Accessibility Settings</string>
+    <string name="action_learn_apps">Learn Apps</string>
+    <string name="action_commands">Commands</string>
+    <string name="action_help">Help</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_voice">Voice</string>
+    <string name="settings_accessibility">Accessibility</string>
+    <string name="settings_feedback">Feedback</string>
+    <string name="settings_about">About</string>
+</resources>

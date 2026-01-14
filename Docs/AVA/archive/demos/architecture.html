@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture Viewer Demo - AVA AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f1f5f9;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #0f172a;
+            font-size: 1.8em;
+        }
+
+        .back-link {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .sidebar h3 {
+            font-size: 1em;
+            color: #0f172a;
+            margin-bottom: 15px;
+        }
+
+        .layer-list {
+            list-style: none;
+        }
+
+        .layer-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .layer-item:hover {
+            border-color: #2563eb;
+            background: #f9fafb;
+        }
+
+        .layer-item.active {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+            border-color: #2563eb;
+        }
+
+        .layer-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .layer-desc {
+            font-size: 0.85em;
+            opacity: 0.8;
+        }
+
+        .main-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .architecture-diagram {
+            margin-bottom: 30px;
+        }
+
+        .layer-box {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .layer-box::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 12px;
+            padding: 2px;
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .layer-box.highlight::before {
+            opacity: 1;
+        }
+
+        .layer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .layer-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .layer-badge {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .module-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.9em;
+        }
+
+        .module-name {
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 5px;
+        }
+
+        .module-desc {
+            color: #64748b;
+            font-size: 0.85em;
+        }
+
+        .arrow {
+            text-align: center;
+            color: #2563eb;
+            font-size: 2em;
+            margin: 10px 0;
+        }
+
+        .patterns-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e5e7eb;
+        }
+
+        .patterns-section h2 {
+            color: #0f172a;
+            margin-bottom: 20px;
+        }
+
+        .patterns-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .pattern-card {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.2s;
+        }
+
+        .pattern-card:hover {
+            border-color: #2563eb;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.1);
+        }
+
+        .pattern-name {
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .pattern-desc {
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: 700;
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏗️ Architecture Viewer Demo</h1>
+        <a href="index.html" class="back-link">← Back to Suite</a>
+    </div>
+
+    <div class="main-content">
+        <div class="sidebar">
+            <h3>📐 Architecture Layers</h3>
+            <ul class="layer-list">
+                <li class="layer-item active" onclick="showLayer('all')">
+                    <div class="layer-name">All Layers</div>
+                    <div class="layer-desc">Complete overview</div>
+                </li>
+                <li class="layer-item" onclick="showLayer('platform')">
+                    <div class="layer-name">Platform Layer</div>
+                    <div class="layer-desc">Android-specific</div>
+                </li>
+                <li class="layer-item" onclick="showLayer('features')">
+                    <div class="layer-name">Features Layer</div>
+                    <div class="layer-desc">UI + Use Cases</div>
+                </li>
+                <li class="layer-item" onclick="showLayer('data')">
+                    <div class="layer-name">Data Layer</div>
+                    <div class="layer-desc">Repositories + DAOs</div>
+                </li>
+                <li class="layer-item" onclick="showLayer('domain')">
+                    <div class="layer-name">Domain Layer</div>
+                    <div class="layer-desc">Business Logic</div>
+                </li>
+                <li class="layer-item" onclick="showLayer('common')">
+                    <div class="layer-name">Common Layer</div>
+                    <div class="layer-desc">Shared Utilities</div>
+                </li>
+            </ul>
+
+            <h3 style="margin-top: 25px;">📊 Module Stats</h3>
+            <div style="background: #f9fafb; border-radius: 8px; padding: 15px;">
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                    <span style="color: #64748b;">Total Modules</span>
+                    <span style="color: #0f172a; font-weight: 600;">95</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                    <span style="color: #64748b;">Repositories</span>
+                    <span style="color: #0f172a; font-weight: 600;">6</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                    <span style="color: #64748b;">Features</span>
+                    <span style="color: #0f172a; font-weight: 600;">5</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                    <span style="color: #64748b;">Test Coverage</span>
+                    <span style="color: #0f172a; font-weight: 600;">92%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-panel">
+            <div class="stats-bar">
+                <div class="stat-box">
+                    <div class="stat-value">5</div>
+                    <div class="stat-label">Layers</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">95</div>
+                    <div class="stat-label">Modules</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">11</div>
+                    <div class="stat-label">Design Patterns</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">92%</div>
+                    <div class="stat-label">Test Coverage</div>
+                </div>
+            </div>
+
+            <div class="architecture-diagram" id="architectureDiagram">
+                <div class="layer-box highlight" data-layer="platform">
+                    <div class="layer-header">
+                        <div class="layer-title">Platform Layer</div>
+                        <div class="layer-badge">Android</div>
+                    </div>
+                    <div style="color: #64748b; margin-bottom: 15px;">
+                        Android-specific implementations and entry points
+                    </div>
+                    <div class="modules-grid">
+                        <div class="module-card">
+                            <div class="module-name">app/</div>
+                            <div class="module-desc">MainActivity, Navigation</div>
+                        </div>
+                        <div class="module-card">
+                            <div class="module-name">database/</div>
+                            <div class="module-desc">Room, Type Converters</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="arrow">↓</div>
+
+                <div class="layer-box" data-layer="features">
+                    <div class="layer-header">
+                        <div class="layer-title">Features Layer</div>
+                        <div class="layer-badge">5 modules</div>
+                    </div>
+                    <div style="color: #64748b; margin-bottom: 15px;">
+                        Feature modules with UI and use cases
+                    </div>
+                    <div class="modules-grid">
+                        <div class="module-card">
+                            <div class="module-name">nlu/</div>
+                            <div class="module-desc">ONNX, IntentClassifier</div>
+                        </div>
+                        <div class="module-card">
+                            <div class="module-name">chat/</div>
+                            <div class="module-desc">ChatScreen, ViewModel</div>
+                        </div>
+                        <div class="module-card">
+                            <div class="module-name">teachava/</div>
+                            <div class="module-desc">Training UI</div>
+                        </div>
+                        <div class="module-card">
+                            <div class="module-name">overlay/</div>
+                            <div class="module-desc">Smart Glasses UI</div>
+                        </div>
+                        <div class="module-card">
+                            <div class="module-name">llm/</div>
+                            <div class="module-desc">ALC Engine</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="arrow">↓</div>
+
+                <div class="layer-box" data-layer="data">
+                    <div class="layer-header">
+                        <div class="layer-title">Data Layer</div>
+                        <div class="layer-badge">6 repositories</div>
+                    </div>
+                    <div style="color: #64748b; margin-bottom: 15px;">
+                        Repository implementations and data access
+                    </div>
+                    <div class="modules-grid">
+                        <div class="module-card">
+                            <div class="module-name">ConversationRepository</div>
+                            <div class="module-desc">Room DAO + Entity</div>
+                        </div>
+                        <div class="module-card">
+                            <div class="module-name">MessageRepository</div>
+                            <div class="module-desc">Room DAO + Entity</div>
+                        </div>
+                        <div class="module-card">
+                            <div class="module-name">TrainExampleRepository</div>
+                            <div class="module-desc">MD5 Deduplication</div>
+                        </div>
+                        <div class="module-card">
+                            <div class="module-name">DecisionRepository</div>
+                            <div class="module-desc">Constitutional AI</div>
+                        </div>
+                        <div class="module-card">
+                            <div class="module-name">LearningRepository</div>
+                            <div class="module-desc">User Feedback</div>
+                        </div>
+                        <div class="module-card">
+                            <div class="module-name">MemoryRepository</div>
+                            <div class="module-desc">RAG Storage</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="arrow">↓</div>
+
+                <div class="layer-box" data-layer="domain">
+                    <div class="layer-header">
+                        <div class="layer-title">Domain Layer</div>
+                        <div class="layer-badge">Pure Kotlin</div>
+                    </div>
+                    <div style="color: #64748b; margin-bottom: 15px;">
+                        Business logic and domain models
+                    </div>
+                    <div class="modules-grid">
+                        <div class="module-card">
+                            <div class="module-name">models/</div>
+                            <div class="module-desc">6 domain entities</div>
+                        </div>
+                        <div class="module-card">
+                            <div class="module-name">repositories/</div>
+                            <div class="module-desc">6 interfaces</div>
+                        </div>
+                        <div class="module-card">
+                            <div class="module-name">use cases/</div>
+                            <div class="module-desc">Business logic</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="arrow">↓</div>
+
+                <div class="layer-box" data-layer="common">
+                    <div class="layer-header">
+                        <div class="layer-title">Common Layer</div>
+                        <div class="layer-badge">Shared</div>
+                    </div>
+                    <div style="color: #64748b; margin-bottom: 15px;">
+                        Shared utilities and base classes
+                    </div>
+                    <div class="modules-grid">
+                        <div class="module-card">
+                            <div class="module-name">Result&lt;T&gt;</div>
+                            <div class="module-desc">Type-safe errors</div>
+                        </div>
+                        <div class="module-card">
+                            <div class="module-name">Extensions</div>
+                            <div class="module-desc">Kotlin helpers</div>
+                        </div>
+                        <div class="module-card">
+                            <div class="module-name">Constants</div>
+                            <div class="module-desc">App-wide values</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="patterns-section">
+                <h2>🎨 Design Patterns</h2>
+                <div class="patterns-grid">
+                    <div class="pattern-card">
+                        <div class="pattern-name">Repository Pattern</div>
+                        <div class="pattern-desc">6 repositories abstract data sources. Each repository interface in domain/, implementations in data/.</div>
+                    </div>
+                    <div class="pattern-card">
+                        <div class="pattern-name">MVVM Pattern</div>
+                        <div class="pattern-desc">ViewModels with StateFlow for reactive UI. All feature screens use this pattern.</div>
+                    </div>
+                    <div class="pattern-card">
+                        <div class="pattern-name">Use Case Pattern</div>
+                        <div class="pattern-desc">Business logic orchestration in domain layer. Each use case is a single responsibility.</div>
+                    </div>
+                    <div class="pattern-card">
+                        <div class="pattern-name">Singleton Pattern</div>
+                        <div class="pattern-desc">IntentClassifier, AVADatabase use thread-safe singletons.</div>
+                    </div>
+                    <div class="pattern-card">
+                        <div class="pattern-name">Factory Pattern</div>
+                        <div class="pattern-desc">Object creation abstraction for complex initialization.</div>
+                    </div>
+                    <div class="pattern-card">
+                        <div class="pattern-name">Observer Pattern</div>
+                        <div class="pattern-desc">Flow-based reactive streams for data updates.</div>
+                    </div>
+                    <div class="pattern-card">
+                        <div class="pattern-name">Strategy Pattern</div>
+                        <div class="pattern-desc">Intent classification with pluggable algorithms.</div>
+                    </div>
+                    <div class="pattern-card">
+                        <div class="pattern-name">Adapter Pattern</div>
+                        <div class="pattern-desc">Entity ↔ Domain model mappers in data layer.</div>
+                    </div>
+                    <div class="pattern-card">
+                        <div class="pattern-name">Builder Pattern</div>
+                        <div class="pattern-desc">Room database builder with configuration.</div>
+                    </div>
+                    <div class="pattern-card">
+                        <div class="pattern-name">Dependency Injection</div>
+                        <div class="pattern-desc">Constructor injection for testability.</div>
+                    </div>
+                    <div class="pattern-card">
+                        <div class="pattern-name">Null Object Pattern</div>
+                        <div class="pattern-desc">Result.Error instead of nullable returns.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showLayer(layer) {
+            // Update sidebar
+            document.querySelectorAll('.layer-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.layer-item').classList.add('active');
+
+            // Update diagram
+            document.querySelectorAll('.layer-box').forEach(box => {
+                box.classList.remove('highlight');
+                if (layer === 'all' || box.dataset.layer === layer) {
+                    box.classList.add('highlight');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors -->
+    <color name="primary">#FF2196F3</color>
+    <color name="primary_dark">#FF1976D2</color>
+    <color name="primary_light">#FFBBDEFB</color>
+    <color name="accent">#FF00BCD4</color>
+    
+    <!-- Base Colors -->
+    <color name="white">#FFFFFFFF</color>
+    <color name="black">#FF000000</color>
+    <color name="transparent">#00000000</color>
+    
+    <!-- Overlay Colors -->
+    <color name="overlay_background">#E6000000</color>
+    <color name="overlay_button">#FF2196F3</color>
+    <color name="overlay_button_pressed">#FF1976D2</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#DE000000</color>
+    <color name="text_secondary">#8A000000</color>
+    <color name="text_disabled">#61000000</color>
+    <color name="text_primary_inverse">#FFFFFF</color>
+    
+    <!-- Status Colors -->
+    <color name="success">#FF4CAF50</color>
+    <color name="warning">#FFFFC107</color>
+    <color name="error">#FFF44336</color>
+    <color name="info">#FF2196F3</color>
+</resources>

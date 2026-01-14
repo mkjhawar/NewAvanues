@@ -1,0 +1,143 @@
+-- RAG Document table for storing indexed documents
+-- Migrated from Room DocumentEntity
+-- Stores document metadata for RAG knowledge base
+-- Issue 5.2: Added status and error_message columns for proper error state tracking
+
+CREATE TABLE rag_document (
+    id TEXT PRIMARY KEY NOT NULL,
+    title TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    document_type TEXT NOT NULL,
+    total_pages INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL DEFAULT 0,
+    added_timestamp TEXT NOT NULL,
+    last_accessed_timestamp TEXT,
+    metadata_json TEXT NOT NULL,
+    content_checksum TEXT,
+    -- Issue 5.2: Status tracking (PENDING, PROCESSING, INDEXED, FAILED, OUTDATED, DELETED)
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    -- Issue 5.2: Error message for FAILED status
+    error_message TEXT
+);
+
+CREATE UNIQUE INDEX idx_rag_document_file_path ON rag_document(file_path);
+CREATE INDEX idx_rag_document_added_timestamp ON rag_document(added_timestamp);
+CREATE INDEX idx_rag_document_size_bytes ON rag_document(size_bytes);
+CREATE INDEX idx_rag_document_document_type ON rag_document(document_type);
+-- Issue 5.2: Index for status-based queries
+CREATE INDEX idx_rag_document_status ON rag_document(status);
+
+-- Get all documents ordered by added timestamp
+selectAll:
+SELECT * FROM rag_document
+ORDER BY added_timestamp DESC;
+
+-- Get document by ID
+selectById:
+SELECT * FROM rag_document
+WHERE id = ?;
+
+-- Get document by file path
+selectByPath:
+SELECT * FROM rag_document
+WHERE file_path = ?;
+
+-- Get documents by type
+selectByType:
+SELECT * FROM rag_document
+WHERE document_type = ?
+ORDER BY added_timestamp DESC;
+
+-- Insert or replace document
+insert:
+INSERT OR REPLACE INTO rag_document (
+    id, title, file_path, document_type, total_pages,
+    size_bytes, added_timestamp, last_accessed_timestamp, metadata_json,
+    content_checksum, status, error_message
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Update document
+update:
+UPDATE rag_document
+SET title = ?,
+    document_type = ?,
+    total_pages = ?,
+    size_bytes = ?,
+    last_accessed_timestamp = ?,
+    metadata_json = ?,
+    content_checksum = ?
+WHERE id = ?;
+
+-- Update last accessed timestamp
+updateLastAccessed:
+UPDATE rag_document
+SET last_accessed_timestamp = ?
+WHERE id = ?;
+
+-- Delete document by ID
+deleteById:
+DELETE FROM rag_document
+WHERE id = ?;
+
+-- Delete all documents
+deleteAll:
+DELETE FROM rag_document;
+
+-- Count all documents
+count:
+SELECT COUNT(*) FROM rag_document;
+
+-- Count by type
+countByType:
+SELECT COUNT(*) FROM rag_document
+WHERE document_type = ?;
+
+-- Issue 5.2: Select documents by status
+selectByStatus:
+SELECT * FROM rag_document
+WHERE status = ?
+ORDER BY added_timestamp DESC;
+
+-- Issue 5.2: Count documents by status
+countByStatus:
+SELECT COUNT(*) FROM rag_document
+WHERE status = ?;
+
+-- Issue 5.2: Update document status
+updateStatus:
+UPDATE rag_document
+SET status = ?, error_message = ?
+WHERE id = ?;
+
+-- Issue 5.2: Mark document as failed with error message
+markFailed:
+UPDATE rag_document
+SET status = 'FAILED', error_message = ?
+WHERE id = ?;
+
+-- Issue 5.2: Mark document as indexed (success)
+markIndexed:
+UPDATE rag_document
+SET status = 'INDEXED', error_message = NULL, last_accessed_timestamp = ?
+WHERE id = ?;
+
+-- Issue 5.2: Mark document as processing
+markProcessing:
+UPDATE rag_document
+SET status = 'PROCESSING', error_message = NULL
+WHERE id = ?;
+
+-- Search documents with filters
+searchWithFilters:
+SELECT * FROM rag_document
+WHERE (:documentType IS NULL OR document_type = :documentType)
+AND (:startDate IS NULL OR added_timestamp >= :startDate)
+AND (:endDate IS NULL OR added_timestamp <= :endDate)
+AND (:minSize IS NULL OR size_bytes >= :minSize)
+AND (:maxSize IS NULL OR size_bytes <= :maxSize)
+ORDER BY added_timestamp DESC
+LIMIT :limitVal;
+
+-- Sum total storage used by documents
+sumSizeBytes:
+SELECT COALESCE(SUM(size_bytes), 0) FROM rag_document;

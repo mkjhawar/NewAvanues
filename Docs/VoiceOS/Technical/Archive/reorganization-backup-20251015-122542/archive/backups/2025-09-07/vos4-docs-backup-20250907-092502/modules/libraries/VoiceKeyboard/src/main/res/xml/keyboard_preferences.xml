@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    
+    <!-- Voice Input Category -->
+    <PreferenceCategory
+        android:title="@string/pref_category_voice">
+        
+        <SwitchPreferenceCompat
+            android:key="pref_voice_input_enabled"
+            android:title="@string/pref_voice_input_title"
+            android:summary="@string/pref_voice_input_summary"
+            android:defaultValue="true" />
+        
+        <SwitchPreferenceCompat
+            android:key="pref_auto_voice_input"
+            android:title="@string/pref_auto_voice_title"
+            android:summary="@string/pref_auto_voice_summary"
+            android:defaultValue="false"
+            android:dependency="pref_voice_input_enabled" />
+        
+        <SeekBarPreference
+            android:key="pref_dictation_timeout"
+            android:title="@string/pref_dictation_timeout_title"
+            android:defaultValue="5"
+            android:max="30"
+            android:dependency="pref_voice_input_enabled" />
+        
+        <EditTextPreference
+            android:key="pref_dictation_start_command"
+            android:title="Dictation start command"
+            android:summary="Default: dictation"
+            android:defaultValue="dictation"
+            android:dependency="pref_voice_input_enabled" />
+        
+        <EditTextPreference
+            android:key="pref_dictation_stop_command"
+            android:title="Dictation stop command"
+            android:summary="Default: end dictation"
+            android:defaultValue="end dictation"
+            android:dependency="pref_voice_input_enabled" />
+        
+    </PreferenceCategory>
+    
+    <!-- Typing Category -->
+    <PreferenceCategory
+        android:title="@string/pref_category_typing">
+        
+        <SwitchPreferenceCompat
+            android:key="pref_gesture_typing_enabled"
+            android:title="@string/pref_gesture_typing_title"
+            android:summary="@string/pref_gesture_typing_summary"
+            android:defaultValue="true" />
+        
+        <SwitchPreferenceCompat
+            android:key="pref_swipe_gestures_enabled"
+            android:title="@string/pref_swipe_gestures_title"
+            android:summary="@string/pref_swipe_gestures_summary"
+            android:defaultValue="true" />
+        
+        <SwitchPreferenceCompat
+            android:key="pref_auto_capitalization"
+            android:title="@string/pref_auto_capitalization_title"
+            android:summary="@string/pref_auto_capitalization_summary"
+            android:defaultValue="true" />
+        
+        <SwitchPreferenceCompat
+            android:key="pref_auto_correction"
+            android:title="@string/pref_auto_correction_title"
+            android:summary="@string/pref_auto_correction_summary"
+            android:defaultValue="true" />
+        
+        <SwitchPreferenceCompat
+            android:key="pref_suggestions_enabled"
+            android:title="@string/pref_suggestions_title"
+            android:summary="@string/pref_suggestions_summary"
+            android:defaultValue="true" />
+        
+        <SwitchPreferenceCompat
+            android:key="pref_sound_on_keypress"
+            android:title="@string/pref_sound_on_keypress_title"
+            android:summary="@string/pref_sound_on_keypress_summary"
+            android:defaultValue="false" />
+        
+        <SwitchPreferenceCompat
+            android:key="pref_vibrate_on_keypress"
+            android:title="@string/pref_vibrate_on_keypress_title"
+            android:summary="@string/pref_vibrate_on_keypress_summary"
+            android:defaultValue="true" />
+        
+        <SwitchPreferenceCompat
+            android:key="pref_key_preview_popup"
+            android:title="@string/pref_key_preview_title"
+            android:summary="@string/pref_key_preview_summary"
+            android:defaultValue="true" />
+        
+    </PreferenceCategory>
+    
+    <!-- Appearance Category -->
+    <PreferenceCategory
+        android:title="@string/pref_category_appearance">
+        
+        <ListPreference
+            android:key="pref_keyboard_theme"
+            android:title="@string/pref_theme_title"
+            android:summary="@string/pref_theme_summary"
+            android:defaultValue="SYSTEM"
+            android:entries="@array/theme_entries"
+            android:entryValues="@array/theme_values" />
+        
+        <SeekBarPreference
+            android:key="pref_key_height"
+            android:title="Key height"
+            android:summary="Adjust keyboard key height"
+            android:defaultValue="60"
+            android:max="100" />
+        
+    </PreferenceCategory>
+    
+</PreferenceScreen>

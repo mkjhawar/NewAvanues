@@ -1,0 +1,54 @@
+{
+  "schema": "vos-1.0",
+  "version": "1.0.0",
+  "file_info": {
+    "filename": "dictation-commands.vos",
+    "category": "dictation",
+    "display_name": "Voice Dictation",
+    "description": "Voice commands for voice-to-text dictation control",
+    "command_count": 2
+  },
+  "locale": "fr-FR",
+  "commands": [
+    {
+      "action": "DICTATION",
+      "cmd": "dictation",
+      "syn": [
+        "voice typing",
+        "speech to text",
+        "démarrer dictation",
+        "voice input",
+        "speak to type",
+        "voice recognition",
+        "speech recognition",
+        "voice-to-text",
+        "speak and type",
+        "vocal input",
+        "talk to type",
+        "voice mode",
+        "speech mode",
+        "dictation mode"
+      ]
+    },
+    {
+      "action": "END_DICTATION",
+      "cmd": "end dictation",
+      "syn": [
+        "arrêter dictation",
+        "finish dictation",
+        "cease dictation",
+        "dictation arrêter",
+        "arrêter voice typing",
+        "end voice input",
+        "finish voice typing",
+        "arrêter speaking",
+        "voice arrêter",
+        "speech arrêter",
+        "arrêter voice mode",
+        "end speech mode",
+        "finish voice mode",
+        "arrêter talking"
+      ]
+    }
+  ]
+}

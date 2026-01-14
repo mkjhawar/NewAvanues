@@ -1,0 +1,58 @@
+/**
+ * build.gradle.kts - Vivoka VSDK Wrapper Module
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ * Created: 2025-12-23
+ *
+ * Purpose: Wrapper module for Vivoka VSDK AAR dependencies
+ * This allows VoiceOSCore (library module) to depend on Vivoka SDK
+ * without violating Gradle's restriction on local AAR dependencies in libraries.
+ */
+
+plugins {
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
+}
+
+android {
+    namespace = "com.augmentalis.vivokasdk"
+    compileSdk = 34
+
+    defaultConfig {
+        minSdk = 26
+        targetSdk = 34
+
+        consumerProguardFiles("consumer-rules.pro")
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
+
+dependencies {
+    // Vivoka VSDK - Unpacked from AARs to avoid AAR-in-AAR issues
+    api(files("libs/vsdk-6.0.0.jar"))
+    api(files("libs/vsdk-csdk-asr-2.0.0.jar"))
+    api(files("libs/vsdk-csdk-core-1.0.1.jar"))
+
+    // Native libraries are in src/main/jniLibs/ (automatically included)
+
+    // AndroidX Core
+    implementation(libs.androidx.core.ktx)
+}

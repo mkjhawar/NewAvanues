@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>WebAvanue Theme Engine + Voice Commands</title>
+    <style>
+        :root {
+            /* Theme colors (set by engine) */
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --surface: #1e293b;
+            --surface-elevated: #334155;
+            --surface-high: #475569;
+            --on-surface: #f1f5f9;
+            --on-surface-variant: #cbd5e1;
+            --accent: #3b82f6;
+            --background: #0f172a;
+
+            /* Universal settings (controlled by engine) */
+            --glass-blur: 0px;
+            --glass-opacity: 1;
+            --glass-border-opacity: 0.1;
+            --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+            --elevation-2: 0 3px 6px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            --elevation-3: 0 6px 12px rgba(0, 0, 0, 0.4), 0 3px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+            --radius-xl: 18px;
+            --motion-emphasized: cubic-bezier(0.2, 0, 0, 1);
+            --motion-standard: cubic-bezier(0.4, 0, 0.2, 1);
+            --duration-quick: 200ms;
+            --duration-medium: 300ms;
+            --depth-base: translateZ(0);
+            --depth-raised: translateZ(2px);
+            --depth-elevated: translateZ(4px);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--background) 0%, var(--surface) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            gap: 40px;
+            transform: translateZ(0);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Phone mockup */
+        .phone {
+            width: 390px;
+            height: 844px;
+            background: var(--background);
+            border-radius: 50px;
+            padding: 12px;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.8);
+            transition: all 0.6s var(--motion-emphasized);
+            position: relative;
+        }
+
+        .notch {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 160px;
+            height: 30px;
+            background: var(--background);
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+            transition: all 0.6s var(--motion-emphasized);
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            border-radius: 38px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .browser-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 50px 12px 16px 12px;
+            gap: 12px;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .nav-pod {
+            background: rgba(30, 41, 59, var(--glass-opacity));
+            backdrop-filter: blur(var(--glass-blur)) saturate(120%);
+            -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(120%);
+            border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity));
+            box-shadow: var(--elevation-2);
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            border-radius: var(--radius-md);
+            transition: all var(--duration-medium);
+        }
+
+        .btn {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-sm);
+            border: none;
+            background: var(--surface-elevated);
+            color: var(--on-surface);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: var(--depth-raised);
+            transition: all var(--duration-quick) var(--motion-standard);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .btn:hover {
+            background: var(--surface-high);
+        }
+
+        .btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .tab-badge {
+            width: 40px;
+            height: 40px;
+            margin-left: auto;
+            background: var(--primary);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: all var(--duration-quick);
+        }
+
+        .tab-badge:hover {
+            transform: scale(1.05);
+        }
+
+        .address-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .address-bar {
+            flex: 1;
+            background: rgba(51, 65, 85, var(--glass-opacity));
+            backdrop-filter: blur(var(--glass-blur)) saturate(120%);
+            -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(120%);
+            border: 1px solid rgba(255, 255, 255, calc(var(--glass-border-opacity) + 0.05));
+            box-shadow: var(--elevation-3);
+            padding: 8px 12px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 48px;
+            transform: var(--depth-elevated);
+            transition: all var(--duration-medium);
+        }
+
+        .url-box {
+            flex: 1;
+            height: 36px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius-md);
+            padding: 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .url-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--on-surface);
+            font-size: 14px;
+            outline: none;
+            pointer-events: none;
+        }
+
+        .menu-btn {
+            width: 40px;
+            height: 40px;
+            background: var(--surface-elevated);
+            border: none;
+            border-radius: var(--radius-sm);
+            color: var(--on-surface);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--elevation-2);
+            transition: all var(--duration-quick);
+        }
+
+        .menu-btn:hover {
+            background: var(--surface-high);
+        }
+
+        .webview {
+            flex: 1;
+            border-radius: var(--radius-lg);
+            background: var(--surface);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--on-surface-variant);
+            padding: 20px;
+            text-align: center;
+            gap: 12px;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            width: 400px;
+            max-height: 844px;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+            overflow-y: auto;
+        }
+
+        .control-panel h2 {
+            color: var(--on-surface);
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .control-panel p {
+            color: rgba(241, 245, 249, 0.6);
+            font-size: 13px;
+            margin-bottom: 24px;
+        }
+
+        .section {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section h3 {
+            color: var(--on-surface);
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+        }
+
+        .control-group {
+            margin-bottom: 16px;
+        }
+
+        .control-group label {
+            display: block;
+            color: rgba(241, 245, 249, 0.9);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .control-row input[type="range"] {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .control-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .value-display {
+            min-width: 50px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: rgba(241, 245, 249, 0.7);
+            text-align: right;
+        }
+
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .theme-chip {
+            padding: 10px;
+            background: rgba(51, 65, 85, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--on-surface);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .theme-chip:hover {
+            background: rgba(51, 65, 85, 0.8);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .theme-chip.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: var(--primary);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            left: 2px;
+            top: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(24px);
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+
+        .action-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+
+        .action-btn.secondary {
+            background: rgba(51, 65, 85, 0.8);
+        }
+
+        .action-btn.secondary:hover {
+            background: rgba(51, 65, 85, 1);
+        }
+
+        .voice-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .voice-status.listening {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .voice-status span {
+            color: var(--on-surface);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .keyboard-hint {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            color: rgba(241, 245, 249, 0.8);
+            font-size: 12px;
+            line-height: 1.6;
+            margin-top: 16px;
+        }
+
+        .keyboard-hint kbd {
+            display: inline-block;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+            <div class="browser-container">
+                <div class="toolbar">
+                    <div class="nav-row">
+                        <div class="nav-pod" id="nav-pod">
+                            <button class="btn disabled" id="btn-back">◀</button>
+                            <button class="btn disabled" id="btn-forward">▶</button>
+                            <button class="btn" id="btn-reload">↻</button>
+                        </div>
+                        <div class="tab-badge" id="tab-badge">3</div>
+                    </div>
+                    <div class="address-row">
+                        <div class="address-bar" id="address-bar">
+                            <div class="url-box">
+                                <span style="opacity: 0.6; font-size: 14px;">🔒</span>
+                                <input class="url-input" type="text" value="https://example.com">
+                            </div>
+                        </div>
+                        <button class="menu-btn" id="menu-btn">☰</button>
+                    </div>
+                </div>
+                <div class="webview" id="webview">
+                    <div style="font-size: 48px; opacity: 0.4; margin-bottom: 12px;">🎨</div>
+                    <div style="font-size: 16px; font-weight: 500; opacity: 0.9;">Universal Theme Engine</div>
+                    <div style="font-size: 13px; opacity: 0.6; margin-top: 8px;">with Voice Commands</div>
+                    <div style="font-size: 11px; opacity: 0.5; margin-top: 16px;">Press <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">V</kbd> for voice hints</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="control-panel">
+        <h2>🎨 Theme Engine</h2>
+        <p>Universal settings control all themes</p>
+
+        <!-- Voice Status -->
+        <div class="voice-status" id="voice-status">
+            <span id="voice-status-text">🎤 Voice Commands Ready</span>
+            <div class="toggle-switch" id="voice-toggle"></div>
+        </div>
+
+        <!-- Theme Selection -->
+        <div class="section">
+            <h3>Theme Selection</h3>
+            <div class="theme-grid" id="theme-grid">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Glass Mode -->
+        <div class="section">
+            <h3>Glass Effects</h3>
+            <div class="control-group">
+                <label>Glass Mode</label>
+                <div class="control-row">
+                    <span style="color: rgba(241, 245, 249, 0.7); font-size: 13px; flex: 1;">Solid / Glass</span>
+                    <div class="toggle-switch" id="glass-toggle"></div>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Blur Intensity</label>
+                <div class="control-row">
+                    <input type="range" id="blur-slider" min="0" max="100" value="40">
+                    <span class="value-display" id="blur-value">40px</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Glass Opacity</label>
+                <div class="control-row">
+                    <input type="range" id="opacity-slider" min="0" max="100" value="70">
+                    <span class="value-display" id="opacity-value">70%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Border Radius -->
+        <div class="section">
+            <h3>Border Radius</h3>
+            <div class="control-group">
+                <label>Small (Buttons)</label>
+                <div class="control-row">
+                    <input type="range" id="radius-sm-slider" min="0" max="20" value="6">
+                    <span class="value-display" id="radius-sm-value">6px</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Medium (Containers)</label>
+                <div class="control-row">
+                    <input type="range" id="radius-md-slider" min="0" max="30" value="10">
+                    <span class="value-display" id="radius-md-value">10px</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Large (Address Bar)</label>
+                <div class="control-row">
+                    <input type="range" id="radius-lg-slider" min="0" max="40" value="14">
+                    <span class="value-display" id="radius-lg-value">14px</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shadows -->
+        <div class="section">
+            <h3>Shadows & Elevation</h3>
+            <div class="control-group">
+                <label>Shadow Intensity</label>
+                <div class="control-row">
+                    <input type="range" id="shadow-slider" min="0" max="200" value="100">
+                    <span class="value-display" id="shadow-value">100%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Motion -->
+        <div class="section">
+            <h3>Motion & Animation</h3>
+            <div class="control-group">
+                <label>Animation Speed</label>
+                <div class="control-row">
+                    <input type="range" id="speed-slider" min="50" max="200" value="100">
+                    <span class="value-display" id="speed-value">1.0x</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Reduced Motion</label>
+                <div class="control-row">
+                    <span style="color: rgba(241, 245, 249, 0.7); font-size: 13px; flex: 1;">For accessibility</span>
+                    <div class="toggle-switch" id="reduced-motion-toggle"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="section">
+            <h3>Actions</h3>
+            <button class="action-btn" id="show-hints-btn">📢 Show Voice Hints</button>
+            <button class="action-btn secondary" id="export-btn">💾 Export Config</button>
+            <button class="action-btn secondary" id="reset-btn">🔄 Reset to Defaults</button>
+        </div>
+
+        <!-- Keyboard Shortcuts -->
+        <div class="keyboard-hint">
+            <strong>Keyboard Shortcuts:</strong><br>
+            <kbd>V</kbd> Toggle voice hints<br>
+            <kbd>Space</kbd> Start/stop voice listening<br>
+            <kbd>G</kbd> Toggle glass mode<br>
+            <kbd>H</kbd> Show help
+        </div>
+    </div>
+
+    <script src="theme-engine.js"></script>
+    <script src="voice-commands.js"></script>
+    <script>
+        // Initialize theme engine
+        const themeEngine = new ThemeEngine();
+
+        // Initialize voice commands
+        const voiceSystem = new VoiceCommandSystem(themeEngine);
+
+        // Register all UI elements with voice commands
+        voiceSystem.registerElement(document.getElementById('btn-back'), {
+            primary: 'go back',
+            alternatives: ['back', 'navigate back', 'previous'],
+            description: 'Navigate to previous page',
+            action: () => alert('Go back'),
+            context: 'navigation'
+        });
+
+        voiceSystem.registerElement(document.getElementById('btn-forward'), {
+            primary: 'go forward',
+            alternatives: ['forward', 'navigate forward', 'next'],
+            description: 'Navigate to next page',
+            action: () => alert('Go forward'),
+            context: 'navigation'
+        });
+
+        voiceSystem.registerElement(document.getElementById('btn-reload'), {
+            primary: 'reload',
+            alternatives: ['refresh', 'reload page', 'refresh page'],
+            description: 'Reload current page',
+            action: () => alert('Reload'),
+            context: 'navigation'
+        });
+
+        voiceSystem.registerElement(document.getElementById('tab-badge'), {
+            primary: 'show tabs',
+            alternatives: ['tabs', 'open tabs', 'switch tabs'],
+            description: 'Open tab switcher',
+            action: () => alert('Show tabs'),
+            context: 'navigation'
+        });
+
+        voiceSystem.registerElement(document.getElementById('address-bar'), {
+            primary: 'address bar',
+            alternatives: ['search', 'url bar', 'navigate to'],
+            description: 'Focus address bar',
+            action: () => document.querySelector('.url-input').focus(),
+            context: 'navigation'
+        });
+
+        voiceSystem.registerElement(document.getElementById('menu-btn'), {
+            primary: 'open menu',
+            alternatives: ['menu', 'show menu', 'options'],
+            description: 'Open browser menu',
+            action: () => alert('Menu'),
+            context: 'navigation'
+        });
+
+        // Populate theme grid
+        const themeGrid = document.getElementById('theme-grid');
+        const themes = themeEngine.getThemes();
+        Object.keys(themes).forEach(key => {
+            const chip = document.createElement('div');
+            chip.className = 'theme-chip';
+            chip.textContent = themes[key].name;
+            chip.dataset.theme = key;
+            if (key === themeEngine.getCurrentTheme()) {
+                chip.classList.add('active');
+            }
+            chip.addEventListener('click', () => {
+                themeEngine.switchTheme(key);
+                document.querySelectorAll('.theme-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+            });
+            themeGrid.appendChild(chip);
+
+            // Register voice command for theme
+            voiceSystem.registerElement(chip, {
+                primary: `switch to ${themes[key].name.toLowerCase()}`,
+                alternatives: [themes[key].name.toLowerCase(), `${key} theme`],
+                description: `Switch to ${themes[key].name} theme`,
+                action: () => {
+                    themeEngine.switchTheme(key);
+                    document.querySelectorAll('.theme-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                },
+                context: 'theme'
+            });
+        });
+
+        // Glass toggle
+        const glassToggle = document.getElementById('glass-toggle');
+        const updateGlassToggle = () => {
+            if (themeEngine.settings.glassMode) {
+                glassToggle.classList.add('active');
+            } else {
+                glassToggle.classList.remove('active');
+            }
+        };
+        updateGlassToggle();
+        glassToggle.addEventListener('click', () => {
+            themeEngine.toggleGlassMode();
+            updateGlassToggle();
+        });
+
+        // Blur slider
+        const blurSlider = document.getElementById('blur-slider');
+        const blurValue = document.getElementById('blur-value');
+        blurSlider.value = themeEngine.settings.glassBlur;
+        blurValue.textContent = themeEngine.settings.glassBlur + 'px';
+        blurSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            blurValue.textContent = val + 'px';
+            themeEngine.updateSetting('glassBlur', val);
+        });
+
+        // Opacity slider
+        const opacitySlider = document.getElementById('opacity-slider');
+        const opacityValue = document.getElementById('opacity-value');
+        opacitySlider.value = themeEngine.settings.glassOpacity * 100;
+        opacityValue.textContent = Math.round(themeEngine.settings.glassOpacity * 100) + '%';
+        opacitySlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value) / 100;
+            opacityValue.textContent = Math.round(val * 100) + '%';
+            themeEngine.updateSetting('glassOpacity', val);
+        });
+
+        // Radius sliders
+        ['sm', 'md', 'lg'].forEach(size => {
+            const slider = document.getElementById(`radius-${size}-slider`);
+            const value = document.getElementById(`radius-${size}-value`);
+            const settingKey = `radius${size.charAt(0).toUpperCase() + size.slice(1)}`;
+            slider.value = themeEngine.settings[settingKey];
+            value.textContent = themeEngine.settings[settingKey] + 'px';
+            slider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                value.textContent = val + 'px';
+                themeEngine.updateSetting(settingKey, val);
+            });
+        });
+
+        // Shadow slider
+        const shadowSlider = document.getElementById('shadow-slider');
+        const shadowValue = document.getElementById('shadow-value');
+        shadowSlider.value = themeEngine.settings.shadowIntensity * 100;
+        shadowValue.textContent = Math.round(themeEngine.settings.shadowIntensity * 100) + '%';
+        shadowSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value) / 100;
+            shadowValue.textContent = Math.round(val * 100) + '%';
+            themeEngine.updateSetting('shadowIntensity', val);
+        });
+
+        // Speed slider
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+        speedSlider.value = themeEngine.settings.motionSpeed * 100;
+        speedValue.textContent = (themeEngine.settings.motionSpeed).toFixed(1) + 'x';
+        speedSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value) / 100;
+            speedValue.textContent = val.toFixed(1) + 'x';
+            themeEngine.updateSetting('motionSpeed', val);
+        });
+
+        // Reduced motion toggle
+        const reducedMotionToggle = document.getElementById('reduced-motion-toggle');
+        const updateReducedMotionToggle = () => {
+            if (themeEngine.settings.reducedMotion) {
+                reducedMotionToggle.classList.add('active');
+            } else {
+                reducedMotionToggle.classList.remove('active');
+            }
+        };
+        updateReducedMotionToggle();
+        reducedMotionToggle.addEventListener('click', () => {
+            themeEngine.updateSetting('reducedMotion', !themeEngine.settings.reducedMotion);
+            updateReducedMotionToggle();
+        });
+
+        // Voice toggle
+        const voiceToggle = document.getElementById('voice-toggle');
+        const voiceStatus = document.getElementById('voice-status');
+        const voiceStatusText = document.getElementById('voice-status-text');
+        voiceToggle.addEventListener('click', () => {
+            if (voiceSystem.isListening) {
+                voiceSystem.stopListening();
+                voiceToggle.classList.remove('active');
+                voiceStatus.classList.remove('listening');
+                voiceStatusText.textContent = '🎤 Voice Commands Ready';
+            } else {
+                voiceSystem.startListening();
+                voiceToggle.classList.add('active');
+                voiceStatus.classList.add('listening');
+                voiceStatusText.textContent = '🔴 Listening for Commands...';
+            }
+        });
+
+        // Show hints button
+        document.getElementById('show-hints-btn').addEventListener('click', () => {
+            voiceSystem.toggleVoiceHints();
+        });
+
+        // Export button
+        document.getElementById('export-btn').addEventListener('click', () => {
+            const config = themeEngine.exportConfig();
+            console.log('Theme Config:', config);
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'webavanue-theme-config.json';
+            a.click();
+        });
+
+        // Reset button
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            if (confirm('Reset all settings to defaults?')) {
+                themeEngine.resetToDefaults();
+                location.reload();
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+
+            switch (e.key.toLowerCase()) {
+                case 'v':
+                    voiceSystem.toggleVoiceHints();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    voiceToggle.click();
+                    break;
+                case 'g':
+                    glassToggle.click();
+                    break;
+                case 'h':
+                    voiceSystem.showVoiceHints();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>

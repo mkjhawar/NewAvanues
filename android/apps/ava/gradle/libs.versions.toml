@@ -1,0 +1,105 @@
+# ⚠️ DEPRECATED - 2025-12-19
+# This catalog has been merged into the root catalog:
+# /Volumes/M-Drive/Coding/NewAvanues/gradle/libs.versions.toml
+#
+# This file is kept for reference only.
+# All modules should now use the root catalog via:
+#   implementation(libs.library.name)
+#
+# DO NOT ADD NEW DEPENDENCIES HERE - Use the root catalog instead.
+
+[versions]
+agp = "8.2.0"
+kotlin = "1.9.21"
+googleServices = "4.4.0"
+firebaseCrashlytics = "2.9.9"
+compose = "1.5.4"
+composeMultiplatform = "1.6.10"
+room = "2.6.1"
+coroutines = "1.7.3"
+serialization = "1.6.2"
+datetime = "0.5.0"
+ktor = "2.3.7"
+sqldelight = "2.0.1"
+onnxruntime = "1.16.3"
+hilt = "2.50"
+androidxHiltNavigationCompose = "1.2.0"
+mockk = "1.13.8"
+robolectric = "4.11.1"
+junit = "4.13.2"
+turbine = "1.1.0"
+
+[libraries]
+# Compose
+compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
+
+# Room (Android-only)
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+
+# Kotlin Multiplatform - Coroutines
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
+
+# Kotlin Multiplatform - Serialization
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+
+# Kotlin Multiplatform - DateTime
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
+
+# Kotlin Multiplatform - Ktor (networking)
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktor" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
+ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
+
+# SQLDelight (KMP database)
+sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
+sqldelight-coroutines-extensions = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+
+# ONNX Runtime (platform-specific)
+onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
+
+# Hilt Dependency Injection
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
+hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }
+androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "androidxHiltNavigationCompose" }
+
+# AndroidX Libraries
+androidx-hilt-common = { module = "androidx.hilt:hilt-common", version = "1.2.0" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version = "1.0.0" }
+androidx-test-core = { module = "androidx.test:core", version = "1.5.0" }
+androidx-test-core-ktx = { module = "androidx.test:core-ktx", version = "1.5.0" }
+androidx-test-ext-junit = { module = "androidx.test.ext:junit", version = "1.1.5" }
+androidx-test-runner = { module = "androidx.test:runner", version = "1.5.2" }
+
+# Testing Libraries
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+junit = { module = "junit:junit", version.ref = "junit" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+mockk-android = { module = "io.mockk:mockk-android", version.ref = "mockk" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
+hilt-android-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+
+kotlin-compose = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+ksp = { id = "com.google.devtools.ksp", version = "1.9.21-1.0.15" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebaseCrashlytics" }

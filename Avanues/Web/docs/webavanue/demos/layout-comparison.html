@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAvanue Layout Comparison</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            font-size: 36px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 40px;
+            font-size: 18px;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .option-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .option-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .option-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .option-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .option-badge {
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-recommended {
+            background: #4caf50;
+            color: white;
+        }
+
+        .badge-modern {
+            background: #ff9800;
+            color: white;
+        }
+
+        .badge-advanced {
+            background: #9c27b0;
+            color: white;
+        }
+
+        .option-description {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .screenshot-placeholder {
+            width: 100%;
+            height: 300px;
+            background: #f5f5f5;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 64px;
+            border: 2px solid #eee;
+        }
+
+        .pros-cons {
+            margin: 20px 0;
+        }
+
+        .pros-cons h4 {
+            font-size: 14px;
+            text-transform: uppercase;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .pros-cons ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .pros-cons li {
+            padding: 6px 0;
+            padding-left: 24px;
+            position: relative;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .pros-cons li::before {
+            position: absolute;
+            left: 0;
+            font-size: 16px;
+        }
+
+        .pros li::before {
+            content: "✓";
+            color: #4caf50;
+        }
+
+        .cons li::before {
+            content: "✗";
+            color: #f44336;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+            padding: 16px;
+            background: #f9f9f9;
+            border-radius: 12px;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: #999;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        .action-button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 12px;
+        }
+
+        .action-button.primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .action-button.primary:hover {
+            background: #5568d3;
+        }
+
+        .action-button.secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .action-button.secondary:hover {
+            background: #eee;
+        }
+
+        .current-issues {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .current-issues h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .issue-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .issue-item {
+            padding: 16px;
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            border-radius: 8px;
+        }
+
+        .issue-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .issue-description {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .recommendation {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .recommendation h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .recommendation p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 24px;
+            font-size: 16px;
+        }
+
+        .recommendation-badge {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+            border-radius: 24px;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 WebAvanue Layout Options Comparison</h1>
+        <p class="subtitle">Interactive prototypes to help you choose the best layout</p>
+
+        <!-- Current Issues -->
+        <div class="current-issues">
+            <h2>🐛 Current Issues to Fix</h2>
+            <div class="issue-list">
+                <div class="issue-item">
+                    <div class="issue-title">1. Tab Bar Auto-Scroll</div>
+                    <div class="issue-description">Top tab bar doesn't automatically scroll to selected/new tabs when they're off-screen</div>
+                </div>
+                <div class="issue-item">
+                    <div class="issue-title">2. Duplicate Favorites</div>
+                    <div class="issue-description">Same URL can be added to favorites multiple times without warning</div>
+                </div>
+                <div class="issue-item">
+                    <div class="issue-title">3. Redundant Tab Bar</div>
+                    <div class="issue-description">Tab bar takes up valuable vertical space (44dp)</div>
+                </div>
+                <div class="issue-item">
+                    <div class="issue-title">4. Landscape Unusable</div>
+                    <div class="issue-description">Too many UI elements stacked vertically in landscape mode (~200dp overhead = only 40% usable space)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison Grid -->
+        <div class="comparison-grid">
+            <!-- Option A -->
+            <div class="option-card">
+                <div class="option-header">
+                    <div class="option-title">Option A</div>
+                    <div class="option-badge badge-recommended">Recommended</div>
+                </div>
+                <h3 style="color: #2196f3; margin-bottom: 12px;">Dropdown Menus</h3>
+                <div class="option-description">
+                    Remove tab bar entirely. Add clickable "Tabs:3 🔽" badge in address bar that opens dropdown list. Favorites also use dropdown from ☆ icon.
+                </div>
+
+                <div class="screenshot-placeholder" style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);">
+                    📱
+                </div>
+
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value" style="color: #4caf50;">104dp</div>
+                        <div class="metric-label">Portrait UI</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" style="color: #4caf50;">52dp</div>
+                        <div class="metric-label">Landscape UI</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" style="color: #4caf50;">+75%</div>
+                        <div class="metric-label">Space Gained</div>
+                    </div>
+                </div>
+
+                <div class="pros-cons">
+                    <h4>Pros</h4>
+                    <ul class="pros">
+                        <li>Maximum screen space (+50% portrait, +120% landscape)</li>
+                        <li>Simple dropdown pattern (familiar UX)</li>
+                        <li>Easy to implement</li>
+                        <li>Auto-scroll in dropdown (solves issue #1)</li>
+                        <li>Works on all screen sizes</li>
+                    </ul>
+                </div>
+
+                <div class="pros-cons">
+                    <h4>Cons</h4>
+                    <ul class="cons">
+                        <li>No visual tab previews</li>
+                        <li>Requires click to see tabs</li>
+                    </ul>
+                </div>
+
+                <button class="action-button primary" onclick="window.open('layout-option-a-dropdown.html', '_blank')">
+                    🎯 View Interactive Demo
+                </button>
+            </div>
+
+            <!-- Option B -->
+            <div class="option-card">
+                <div class="option-header">
+                    <div class="option-title">Option B</div>
+                    <div class="option-badge badge-modern">Modern</div>
+                </div>
+                <h3 style="color: #ff9800; margin-bottom: 12px;">Bottom Sheet Drawer</h3>
+                <div class="option-description">
+                    Chrome-like tab switcher. Swipe up or tap "Tabs:3" to reveal bottom sheet with grid/list view of tabs including previews.
+                </div>
+
+                <div class="screenshot-placeholder" style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);">
+                    📱
+                </div>
+
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value" style="color: #ff9800;">108dp</div>
+                        <div class="metric-label">Portrait UI</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" style="color: #4caf50;">52dp</div>
+                        <div class="metric-label">Landscape UI</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" style="color: #ff9800;">+44%</div>
+                        <div class="metric-label">Space Gained</div>
+                    </div>
+                </div>
+
+                <div class="pros-cons">
+                    <h4>Pros</h4>
+                    <ul class="pros">
+                        <li>Visual tab previews/screenshots</li>
+                        <li>Modern gesture-based UX</li>
+                        <li>Immersive feel</li>
+                        <li>Grid or list view toggle</li>
+                        <li>Familiar to Chrome users</li>
+                    </ul>
+                </div>
+
+                <div class="pros-cons">
+                    <h4>Cons</h4>
+                    <ul class="cons">
+                        <li>Requires gesture learning</li>
+                        <li>Slightly more UI overhead than A</li>
+                        <li>More complex to implement</li>
+                    </ul>
+                </div>
+
+                <button class="action-button primary" onclick="window.open('layout-option-b-bottomsheet.html', '_blank')">
+                    🎯 View Interactive Demo
+                </button>
+            </div>
+
+            <!-- Current Layout (for comparison) -->
+            <div class="option-card" style="opacity: 0.7;">
+                <div class="option-header">
+                    <div class="option-title">Current</div>
+                    <div class="option-badge" style="background: #f44336; color: white;">Issues</div>
+                </div>
+                <h3 style="color: #666; margin-bottom: 12px;">Current Layout</h3>
+                <div class="option-description">
+                    Tab bar + Address bar + Command bar. Multiple rows stacked vertically causing severe space constraints in landscape.
+                </div>
+
+                <div class="screenshot-placeholder" style="background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);">
+                    📱
+                </div>
+
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value" style="color: #f44336;">172dp</div>
+                        <div class="metric-label">Portrait UI</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" style="color: #f44336;">200dp</div>
+                        <div class="metric-label">Landscape UI</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" style="color: #f44336;">Baseline</div>
+                        <div class="metric-label">Reference</div>
+                    </div>
+                </div>
+
+                <div class="pros-cons">
+                    <h4>Issues</h4>
+                    <ul class="cons">
+                        <li>Redundant tab bar (44dp wasted)</li>
+                        <li>No auto-scroll to active tab</li>
+                        <li>Allows duplicate favorites</li>
+                        <li>Landscape nearly unusable (60% UI!)</li>
+                        <li>WebView only gets 40-50% of screen</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendation -->
+        <div class="recommendation">
+            <div class="recommendation-badge">💡 My Recommendation</div>
+            <h2>Choose Option A: Dropdown Menus</h2>
+            <p>
+                <strong>Option A provides the best balance of simplicity, space efficiency, and user familiarity.</strong>
+                It solves all 4 current issues while delivering the maximum screen real estate for web content
+                (+50% in portrait, +120% in landscape). The dropdown pattern is well-understood, requires no
+                gesture learning, and is straightforward to implement.
+            </p>
+            <p>
+                <strong>Option B</strong> is great if you want a more modern, Chrome-like experience with visual
+                tab previews, but it requires more development effort and slightly more UI overhead.
+            </p>
+            <p style="margin-top: 24px; font-size: 14px; color: #999;">
+                💡 <strong>Tip:</strong> Click the demo buttons above to interact with each option in your browser!
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // You can add interactive comparison features here if needed
+    </script>
+</body>
+</html>

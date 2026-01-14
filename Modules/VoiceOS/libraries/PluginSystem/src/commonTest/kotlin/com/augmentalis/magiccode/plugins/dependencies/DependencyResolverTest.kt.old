@@ -1,0 +1,315 @@
+package com.augmentalis.magiccode.plugins.dependencies
+
+import com.augmentalis.magiccode.plugins.core.*
+import com.augmentalis.magiccode.plugins.utils.TestUtils
+import kotlinx.coroutines.test.runTest
+import kotlin.test.*
+
+/**
+ * Unit tests for DependencyResolver.
+ *
+ * Tests:
+ * - Topological sorting
+ * - Circular dependency detection
+ * - Semver constraint validation
+ * - Missing dependencies
+ * - Version conflicts
+ */
+class DependencyResolverTest {
+    private lateinit var registry: PluginRegistry
+    private lateinit var resolver: DependencyResolver
+
+    @BeforeTest
+    fun setup() {
+        registry = PluginRegistry()
+        resolver = DependencyResolver(registry)
+    }
+
+    // Test 1: Topological Sorting (Simple Chain)
+    @Test
+    fun testTopologicalSortingSimpleChain() = runTest {
+        // Create plugins: A depends on B, B depends on C
+        val pluginC = TestUtils.createTestManifest(
+            id = "com.test.plugin-c",
+            version = "1.0.0",
+            dependencies = emptyList()
+        )
+
+        val pluginB = TestUtils.createTestManifest(
+            id = "com.test.plugin-b",
+            version = "1.0.0",
+            dependencies = listOf(
+                PluginDependency("com.test.plugin-c", "^1.0.0")
+            )
+        )
+
+        val pluginA = TestUtils.createTestManifest(
+            id = "com.test.plugin-a",
+            version = "1.0.0",
+            dependencies = listOf(
+                PluginDependency("com.test.plugin-b", "^1.0.0")
+            )
+        )
+
+        val availablePlugins = mapOf(
+            "com.test.plugin-a" to pluginA,
+            "com.test.plugin-b" to pluginB,
+            "com.test.plugin-c" to pluginC
+        )
+
+        val result = resolver.resolveDependencies("com.test.plugin-a", availablePlugins)
+
+        assertTrue(result is DependencyResolver.ResolutionResult.Success)
+        val loadOrder = (result as DependencyResolver.ResolutionResult.Success).loadOrder
+
+        // Load order should be: C, B, A
+        assertEquals(3, loadOrder.size)
+        assertEquals("com.test.plugin-c", loadOrder[0])
+        assertEquals("com.test.plugin-b", loadOrder[1])
+        assertEquals("com.test.plugin-a", loadOrder[2])
+    }
+
+    // Test 2: Circular Dependency Detection
+    @Test
+    fun testCircularDependencyDetection() = runTest {
+        // Create circular dependency: A -> B -> C -> A
+        val pluginA = TestUtils.createTestManifest(
+            id = "com.test.plugin-a",
+            version = "1.0.0",
+            dependencies = listOf(
+                PluginDependency("com.test.plugin-b", "^1.0.0")
+            )
+        )
+
+        val pluginB = TestUtils.createTestManifest(
+            id = "com.test.plugin-b",
+            version = "1.0.0",
+            dependencies = listOf(
+                PluginDependency("com.test.plugin-c", "^1.0.0")
+            )
+        )
+
+        val pluginC = TestUtils.createTestManifest(
+            id = "com.test.plugin-c",
+            version = "1.0.0",
+            dependencies = listOf(
+                PluginDependency("com.test.plugin-a", "^1.0.0")
+            )
+        )
+
+        val availablePlugins = mapOf(
+            "com.test.plugin-a" to pluginA,
+            "com.test.plugin-b" to pluginB,
+            "com.test.plugin-c" to pluginC
+        )
+
+        val result = resolver.resolveDependencies("com.test.plugin-a", availablePlugins)
+
+        assertTrue(result is DependencyResolver.ResolutionResult.Failure)
+        val failure = result as DependencyResolver.ResolutionResult.Failure
+        assertTrue(failure.reason.contains("Circular dependency"))
+        assertTrue(failure.cycle.isNotEmpty())
+    }
+
+    // Test 3: Semver Constraint Validation (Valid)
+    @Test
+    fun testSemverConstraintValidationValid() = runTest {
+        val pluginB = TestUtils.createTestManifest(
+            id = "com.test.plugin-b",
+            version = "1.5.0", // Satisfies ^1.0.0
+            dependencies = emptyList()
+        )
+
+        val pluginA = TestUtils.createTestManifest(
+            id = "com.test.plugin-a",
+            version = "1.0.0",
+            dependencies = listOf(
+                PluginDependency("com.test.plugin-b", "^1.0.0")
+            )
+        )
+
+        val availablePlugins = mapOf(
+            "com.test.plugin-a" to pluginA,
+            "com.test.plugin-b" to pluginB
+        )
+
+        val result = resolver.resolveDependencies("com.test.plugin-a", availablePlugins)
+
+        assertTrue(result is DependencyResolver.ResolutionResult.Success)
+    }
+
+    // Test 4: Semver Constraint Validation (Invalid)
+    @Test
+    fun testSemverConstraintValidationInvalid() = runTest {
+        val pluginB = TestUtils.createTestManifest(
+            id = "com.test.plugin-b",
+            version = "2.0.0", // Does NOT satisfy ^1.0.0
+            dependencies = emptyList()
+        )
+
+        val pluginA = TestUtils.createTestManifest(
+            id = "com.test.plugin-a",
+            version = "1.0.0",
+            dependencies = listOf(
+                PluginDependency("com.test.plugin-b", "^1.0.0")
+            )
+        )
+
+        val availablePlugins = mapOf(
+            "com.test.plugin-a" to pluginA,
+            "com.test.plugin-b" to pluginB
+        )
+
+        // Should throw exception during graph building
+        assertFailsWith<IllegalStateException> {
+            resolver.resolveDependencies("com.test.plugin-a", availablePlugins)
+        }
+    }
+
+    // Test 5: Missing Dependencies
+    @Test
+    fun testMissingDependencies() = runTest {
+        val pluginA = TestUtils.createTestManifest(
+            id = "com.test.plugin-a",
+            version = "1.0.0",
+            dependencies = listOf(
+                PluginDependency("com.test.missing-plugin", "^1.0.0")
+            )
+        )
+
+        val availablePlugins = mapOf(
+            "com.test.plugin-a" to pluginA
+            // plugin-b is missing
+        )
+
+        val result = resolver.resolveDependencies("com.test.plugin-a", availablePlugins)
+
+        // Missing dependencies are silently ignored in graph building
+        // The plugin will just not have that dependency in its list
+        assertTrue(result is DependencyResolver.ResolutionResult.Success)
+    }
+
+    // Test 6: Optional Dependencies
+    @Test
+    fun testOptionalDependencies() = runTest {
+        val pluginA = TestUtils.createTestManifest(
+            id = "com.test.plugin-a",
+            version = "1.0.0",
+            dependencies = listOf(
+                PluginDependency("com.test.optional-plugin", "^1.0.0", optional = true)
+            )
+        )
+
+        val availablePlugins = mapOf(
+            "com.test.plugin-a" to pluginA
+            // optional-plugin is missing, but that's OK
+        )
+
+        val result = resolver.resolveDependencies("com.test.plugin-a", availablePlugins)
+
+        // Optional dependencies should not cause failure
+        assertTrue(result is DependencyResolver.ResolutionResult.Success)
+    }
+
+    // Test 7: Complex Dependency Graph (Diamond)
+    @Test
+    fun testComplexDependencyGraphDiamond() = runTest {
+        // Diamond dependency:
+        //     A
+        //    / \
+        //   B   C
+        //    \ /
+        //     D
+
+        val pluginD = TestUtils.createTestManifest(
+            id = "com.test.plugin-d",
+            version = "1.0.0",
+            dependencies = emptyList()
+        )
+
+        val pluginB = TestUtils.createTestManifest(
+            id = "com.test.plugin-b",
+            version = "1.0.0",
+            dependencies = listOf(
+                PluginDependency("com.test.plugin-d", "^1.0.0")
+            )
+        )
+
+        val pluginC = TestUtils.createTestManifest(
+            id = "com.test.plugin-c",
+            version = "1.0.0",
+            dependencies = listOf(
+                PluginDependency("com.test.plugin-d", "^1.0.0")
+            )
+        )
+
+        val pluginA = TestUtils.createTestManifest(
+            id = "com.test.plugin-a",
+            version = "1.0.0",
+            dependencies = listOf(
+                PluginDependency("com.test.plugin-b", "^1.0.0"),
+                PluginDependency("com.test.plugin-c", "^1.0.0")
+            )
+        )
+
+        val availablePlugins = mapOf(
+            "com.test.plugin-a" to pluginA,
+            "com.test.plugin-b" to pluginB,
+            "com.test.plugin-c" to pluginC,
+            "com.test.plugin-d" to pluginD
+        )
+
+        val result = resolver.resolveDependencies("com.test.plugin-a", availablePlugins)
+
+        assertTrue(result is DependencyResolver.ResolutionResult.Success)
+        val loadOrder = (result as DependencyResolver.ResolutionResult.Success).loadOrder
+
+        // D should be loaded before B and C
+        val indexD = loadOrder.indexOf("com.test.plugin-d")
+        val indexB = loadOrder.indexOf("com.test.plugin-b")
+        val indexC = loadOrder.indexOf("com.test.plugin-c")
+        val indexA = loadOrder.indexOf("com.test.plugin-a")
+
+        assertTrue(indexD < indexB)
+        assertTrue(indexD < indexC)
+        assertTrue(indexB < indexA)
+        assertTrue(indexC < indexA)
+    }
+
+    // Test 8: Plugin Not Found
+    @Test
+    fun testPluginNotFound() = runTest {
+        val result = resolver.resolveDependencies("com.test.nonexistent", emptyMap())
+
+        assertTrue(result is DependencyResolver.ResolutionResult.Failure)
+        assertTrue((result as DependencyResolver.ResolutionResult.Failure).reason.contains("not found"))
+    }
+
+    // Test 9: Invalid Constraint Format
+    @Test
+    fun testInvalidConstraintFormat() = runTest {
+        val pluginB = TestUtils.createTestManifest(
+            id = "com.test.plugin-b",
+            version = "1.0.0",
+            dependencies = emptyList()
+        )
+
+        val pluginA = TestUtils.createTestManifest(
+            id = "com.test.plugin-a",
+            version = "1.0.0",
+            dependencies = listOf(
+                PluginDependency("com.test.plugin-b", "invalid-constraint")
+            )
+        )
+
+        val availablePlugins = mapOf(
+            "com.test.plugin-a" to pluginA,
+            "com.test.plugin-b" to pluginB
+        )
+
+        // Should throw exception for invalid constraint
+        assertFailsWith<IllegalStateException> {
+            resolver.resolveDependencies("com.test.plugin-a", availablePlugins)
+        }
+    }
+}

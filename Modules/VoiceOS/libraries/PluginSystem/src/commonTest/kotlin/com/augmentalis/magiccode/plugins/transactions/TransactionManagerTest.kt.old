@@ -1,0 +1,875 @@
+package com.augmentalis.magiccode.plugins.transactions
+
+import com.augmentalis.magiccode.plugins.core.*
+import com.augmentalis.magiccode.plugins.mocks.MockFileIO
+import com.augmentalis.magiccode.plugins.mocks.MockPluginRegistry
+import com.augmentalis.magiccode.plugins.utils.TestUtils
+import kotlinx.coroutines.test.runTest
+import kotlin.test.*
+
+/**
+ * Comprehensive unit tests for TransactionManager.
+ *
+ * Tests transaction lifecycle, rollback operations, error handling,
+ * and various edge cases to ensure reliable checkpoint-based operations.
+ */
+class TransactionManagerTest {
+    private lateinit var fileIO: MockFileIO
+    private lateinit var registry: MockPluginRegistry
+    private lateinit var manager: TransactionManager
+    private lateinit var pluginDirectory: String
+    private lateinit var backupDirectory: String
+
+    @BeforeTest
+    fun setup() {
+        fileIO = MockFileIO()
+        registry = MockPluginRegistry()
+        pluginDirectory = "/test/plugins"
+        backupDirectory = "/test/backups"
+
+        manager = TransactionManager(
+            fileIO = fileIO,
+            registry = registry,
+            pluginDirectory = pluginDirectory,
+            backupDirectory = backupDirectory
+        )
+
+        // Create base directories
+        fileIO.createDirectory(pluginDirectory)
+        fileIO.createDirectory(backupDirectory)
+    }
+
+    // ========================================
+    // Transaction Creation Tests
+    // ========================================
+
+    @Test
+    fun testCreateCheckpoint_newPlugin() = runTest {
+        val pluginId = "com.test.plugin"
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        assertNotNull(transactionId)
+        assertTrue(transactionId.contains(pluginId))
+        assertTrue(transactionId.contains("INSTALL"))
+        assertTrue(manager.hasCheckpoint(transactionId))
+    }
+
+    @Test
+    fun testCreateCheckpoint_existingPlugin() = runTest {
+        val pluginId = "com.test.existing"
+        val pluginPath = "$pluginDirectory/$pluginId"
+
+        // Create plugin directory with files
+        fileIO.createDirectory(pluginPath)
+        fileIO.addFile("$pluginPath/plugin.yaml", "id: $pluginId")
+        fileIO.addFile("$pluginPath/plugin.jar", "binary data".toByteArray())
+
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.UPDATE,
+            currentState = PluginState.UPDATING
+        )
+
+        assertNotNull(transactionId)
+        assertTrue(manager.hasCheckpoint(transactionId))
+
+        // Verify backup was created
+        val checkpoints = manager.getActiveCheckpoints()
+        assertEquals(1, checkpoints.size)
+        val checkpoint = checkpoints.first()
+        assertNotNull(checkpoint.filesystemSnapshot)
+        assertEquals(2, checkpoint.filesystemSnapshot?.files?.size)
+    }
+
+    @Test
+    fun testCreateCheckpoint_capturesRegistryState() = runTest {
+        val pluginId = "com.test.registered"
+        val manifest = createTestManifest(pluginId)
+        val namespace = createTestNamespace(pluginId)
+
+        // Register plugin first
+        registry.register(manifest, namespace)
+        registry.updateState(pluginId, PluginState.ENABLED)
+
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.UPDATE,
+            currentState = PluginState.UPDATING
+        )
+
+        val checkpoints = manager.getActiveCheckpoints()
+        val checkpoint = checkpoints.first()
+        assertTrue(checkpoint.registrySnapshot.wasRegistered)
+        assertNotNull(checkpoint.registrySnapshot.pluginInfo)
+        assertEquals(PluginState.ENABLED, checkpoint.registrySnapshot.pluginInfo?.state)
+    }
+
+    @Test
+    fun testCreateCheckpoint_multipleTransactions() = runTest {
+        val transactionId1 = manager.createCheckpoint(
+            pluginId = "com.test.plugin1",
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        val transactionId2 = manager.createCheckpoint(
+            pluginId = "com.test.plugin2",
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        val checkpoints = manager.getActiveCheckpoints()
+        assertEquals(2, checkpoints.size)
+        assertTrue(manager.hasCheckpoint(transactionId1))
+        assertTrue(manager.hasCheckpoint(transactionId2))
+    }
+
+    // ========================================
+    // Commit Operations Tests
+    // ========================================
+
+    @Test
+    fun testCommit_removesCheckpoint() = runTest {
+        val transactionId = manager.createCheckpoint(
+            pluginId = "com.test.plugin",
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        assertTrue(manager.hasCheckpoint(transactionId))
+
+        manager.commit(transactionId)
+
+        assertFalse(manager.hasCheckpoint(transactionId))
+        assertEquals(0, manager.getActiveCheckpoints().size)
+    }
+
+    @Test
+    fun testCommit_cleansUpBackup() = runTest {
+        val pluginId = "com.test.plugin"
+        val pluginPath = "$pluginDirectory/$pluginId"
+
+        // Create plugin files
+        fileIO.createDirectory(pluginPath)
+        fileIO.addFile("$pluginPath/data.txt", "test data")
+
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.UPDATE,
+            currentState = PluginState.UPDATING
+        )
+
+        val checkpoints = manager.getActiveCheckpoints()
+        val backupPath = checkpoints.first().filesystemSnapshot?.backupPath
+        assertNotNull(backupPath)
+        assertTrue(fileIO.directoryExists(backupPath))
+
+        manager.commit(transactionId)
+
+        // Backup should be deleted
+        assertFalse(fileIO.directoryExists(backupPath))
+    }
+
+    @Test
+    fun testCommit_nonExistentTransaction() = runTest {
+        // Should not throw exception
+        manager.commit("non-existent-transaction-id")
+
+        // Verify no side effects
+        assertEquals(0, manager.getActiveCheckpoints().size)
+    }
+
+    @Test
+    fun testCommit_multipleTransactions() = runTest {
+        val transactionId1 = manager.createCheckpoint(
+            pluginId = "com.test.plugin1",
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        val transactionId2 = manager.createCheckpoint(
+            pluginId = "com.test.plugin2",
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        manager.commit(transactionId1)
+
+        assertFalse(manager.hasCheckpoint(transactionId1))
+        assertTrue(manager.hasCheckpoint(transactionId2))
+        assertEquals(1, manager.getActiveCheckpoints().size)
+    }
+
+    // ========================================
+    // Rollback Operations Tests
+    // ========================================
+
+    @Test
+    fun testRollback_newPluginInstall() = runTest {
+        val pluginId = "com.test.newplugin"
+        val pluginPath = "$pluginDirectory/$pluginId"
+
+        // Create checkpoint before plugin exists
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        // Simulate plugin installation
+        fileIO.createDirectory(pluginPath)
+        fileIO.addFile("$pluginPath/plugin.jar", "plugin binary")
+        val manifest = createTestManifest(pluginId)
+        val namespace = createTestNamespace(pluginId)
+        registry.register(manifest, namespace)
+
+        // Rollback should remove plugin directory and unregister
+        val result = manager.rollback(transactionId)
+
+        assertTrue(result is TransactionManager.TransactionResult.Success)
+        assertFalse(fileIO.directoryExists(pluginPath))
+        assertNull(registry.getPlugin(pluginId))
+        assertFalse(manager.hasCheckpoint(transactionId))
+    }
+
+    @Test
+    fun testRollback_pluginUpdate() = runTest {
+        val pluginId = "com.test.updateplugin"
+        val pluginPath = "$pluginDirectory/$pluginId"
+
+        // Create initial plugin state
+        fileIO.createDirectory(pluginPath)
+        fileIO.addFile("$pluginPath/plugin.jar", "version 1.0")
+        fileIO.addFile("$pluginPath/config.yaml", "oldConfig: true")
+        val manifest = createTestManifest(pluginId, version = "1.0.0")
+        val namespace = createTestNamespace(pluginId)
+        registry.register(manifest, namespace)
+        registry.updateState(pluginId, PluginState.ENABLED)
+
+        // Create checkpoint
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.UPDATE,
+            currentState = PluginState.UPDATING
+        )
+
+        // Simulate update
+        fileIO.writeFileAsString("$pluginPath/plugin.jar", "version 2.0")
+        fileIO.writeFileAsString("$pluginPath/config.yaml", "newConfig: true")
+        fileIO.addFile("$pluginPath/newfile.txt", "new file")
+        registry.updateState(pluginId, PluginState.INSTALLED)
+
+        // Rollback to version 1.0
+        val result = manager.rollback(transactionId)
+
+        assertTrue(result is TransactionManager.TransactionResult.Success)
+        assertEquals("version 1.0", fileIO.readFileAsString("$pluginPath/plugin.jar"))
+        assertEquals("oldConfig: true", fileIO.readFileAsString("$pluginPath/config.yaml"))
+        assertFalse(fileIO.fileExists("$pluginPath/newfile.txt"))
+        assertEquals(PluginState.ENABLED, registry.getPlugin(pluginId)?.state)
+    }
+
+    @Test
+    fun testRollback_pluginUninstall() = runTest {
+        val pluginId = "com.test.uninstallplugin"
+        val pluginPath = "$pluginDirectory/$pluginId"
+
+        // Create plugin
+        fileIO.createDirectory(pluginPath)
+        fileIO.addFile("$pluginPath/plugin.jar", "plugin data")
+        fileIO.addFile("$pluginPath/resources/icon.png", "icon")
+        val manifest = createTestManifest(pluginId)
+        val namespace = createTestNamespace(pluginId)
+        registry.register(manifest, namespace)
+        registry.updateState(pluginId, PluginState.ENABLED)
+
+        // Create checkpoint
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.UNINSTALL,
+            currentState = PluginState.UNINSTALLING
+        )
+
+        // Simulate uninstall
+        fileIO.delete(pluginPath)
+        registry.unregister(pluginId)
+
+        // Rollback should restore plugin
+        val result = manager.rollback(transactionId)
+
+        assertTrue(result is TransactionManager.TransactionResult.Success)
+        assertTrue(fileIO.directoryExists(pluginPath))
+        assertTrue(fileIO.fileExists("$pluginPath/plugin.jar"))
+        assertTrue(fileIO.fileExists("$pluginPath/resources/icon.png"))
+        assertNotNull(registry.getPlugin(pluginId))
+        assertEquals(PluginState.ENABLED, registry.getPlugin(pluginId)?.state)
+    }
+
+    @Test
+    fun testRollback_nonExistentTransaction() = runTest {
+        val result = manager.rollback("non-existent-transaction")
+
+        assertTrue(result is TransactionManager.TransactionResult.Failure)
+        assertTrue((result as TransactionManager.TransactionResult.Failure).reason.contains("not found"))
+    }
+
+    @Test
+    fun testRollback_missingBackup() = runTest {
+        val pluginId = "com.test.plugin"
+        val pluginPath = "$pluginDirectory/$pluginId"
+
+        // Create plugin
+        fileIO.createDirectory(pluginPath)
+        fileIO.addFile("$pluginPath/plugin.jar", "data")
+
+        // Create checkpoint
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.UPDATE,
+            currentState = PluginState.UPDATING
+        )
+
+        // Delete backup directory manually (simulate corruption)
+        val checkpoints = manager.getActiveCheckpoints()
+        val backupPath = checkpoints.first().filesystemSnapshot?.backupPath
+        assertNotNull(backupPath)
+        fileIO.delete(backupPath)
+
+        // Rollback should fail
+        val result = manager.rollback(transactionId)
+
+        assertTrue(result is TransactionManager.TransactionResult.Failure)
+        assertTrue((result as TransactionManager.TransactionResult.Failure).reason.contains("Backup"))
+    }
+
+    @Test
+    fun testRollback_partialFailure() = runTest {
+        val pluginId = "com.test.plugin"
+        val pluginPath = "$pluginDirectory/$pluginId"
+
+        // Create plugin
+        fileIO.createDirectory(pluginPath)
+        fileIO.addFile("$pluginPath/plugin.jar", "data")
+
+        // Create checkpoint
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.UPDATE,
+            currentState = PluginState.UPDATING
+        )
+
+        // Make delete fail
+        fileIO.shouldFailDeletes = true
+
+        // Rollback should report errors but continue
+        val result = manager.rollback(transactionId)
+
+        // Should still complete (possibly with warnings)
+        assertFalse(manager.hasCheckpoint(transactionId))
+    }
+
+    // ========================================
+    // Nested Transactions Tests
+    // ========================================
+
+    @Test
+    fun testNestedTransactions_independentPlugins() = runTest {
+        val pluginId1 = "com.test.plugin1"
+        val pluginId2 = "com.test.plugin2"
+        val pluginPath1 = "$pluginDirectory/$pluginId1"
+        val pluginPath2 = "$pluginDirectory/$pluginId2"
+
+        // Create both plugins
+        fileIO.createDirectory(pluginPath1)
+        fileIO.addFile("$pluginPath1/data.txt", "plugin1 data")
+        fileIO.createDirectory(pluginPath2)
+        fileIO.addFile("$pluginPath2/data.txt", "plugin2 data")
+
+        // Create checkpoints for both
+        val transactionId1 = manager.createCheckpoint(
+            pluginId = pluginId1,
+            type = TransactionType.UPDATE,
+            currentState = PluginState.UPDATING
+        )
+
+        val transactionId2 = manager.createCheckpoint(
+            pluginId = pluginId2,
+            type = TransactionType.UPDATE,
+            currentState = PluginState.UPDATING
+        )
+
+        // Modify both plugins
+        fileIO.writeFileAsString("$pluginPath1/data.txt", "plugin1 modified")
+        fileIO.writeFileAsString("$pluginPath2/data.txt", "plugin2 modified")
+
+        // Rollback only plugin1
+        manager.rollback(transactionId1)
+
+        // Plugin1 should be restored
+        assertEquals("plugin1 data", fileIO.readFileAsString("$pluginPath1/data.txt"))
+
+        // Plugin2 should still be modified
+        assertEquals("plugin2 modified", fileIO.readFileAsString("$pluginPath2/data.txt"))
+
+        // Commit plugin2
+        manager.commit(transactionId2)
+
+        assertEquals(0, manager.getActiveCheckpoints().size)
+    }
+
+    @Test
+    fun testNestedTransactions_samePlugin() = runTest {
+        val pluginId = "com.test.plugin"
+        val pluginPath = "$pluginDirectory/$pluginId"
+
+        // Create plugin
+        fileIO.createDirectory(pluginPath)
+        fileIO.addFile("$pluginPath/data.txt", "version 1")
+
+        // Create first checkpoint
+        val transactionId1 = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.UPDATE,
+            currentState = PluginState.UPDATING
+        )
+
+        // Modify plugin
+        fileIO.writeFileAsString("$pluginPath/data.txt", "version 2")
+
+        // Create second checkpoint
+        val transactionId2 = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.UPDATE,
+            currentState = PluginState.UPDATING
+        )
+
+        // Modify again
+        fileIO.writeFileAsString("$pluginPath/data.txt", "version 3")
+
+        // Rollback to second checkpoint
+        manager.rollback(transactionId2)
+        assertEquals("version 2", fileIO.readFileAsString("$pluginPath/data.txt"))
+
+        // Rollback to first checkpoint
+        manager.rollback(transactionId1)
+        assertEquals("version 1", fileIO.readFileAsString("$pluginPath/data.txt"))
+    }
+
+    // ========================================
+    // Error Handling Tests
+    // ========================================
+
+    @Test
+    fun testCreateCheckpoint_insufficientDiskSpace() = runTest {
+        val pluginId = "com.test.largeplugin"
+        val pluginPath = "$pluginDirectory/$pluginId"
+
+        // Create large plugin
+        fileIO.createDirectory(pluginPath)
+        fileIO.addFile("$pluginPath/large.dat", ByteArray(1024 * 1024) { 0 })
+
+        // Set insufficient disk space
+        fileIO.availableDiskSpace = 100L
+
+        // Should throw exception
+        assertFailsWith<InsufficientDiskSpaceException> {
+            manager.createCheckpoint(
+                pluginId = pluginId,
+                type = TransactionType.UPDATE,
+                currentState = PluginState.UPDATING
+            )
+        }
+    }
+
+    @Test
+    fun testCreateCheckpoint_backupCreationFails() = runTest {
+        val pluginId = "com.test.plugin"
+        val pluginPath = "$pluginDirectory/$pluginId"
+
+        // Create plugin
+        fileIO.createDirectory(pluginPath)
+        fileIO.addFile("$pluginPath/data.txt", "data")
+
+        // Make copy operations fail
+        fileIO.shouldFailCopies = true
+
+        // Should throw exception
+        assertFailsWith<BackupCreationException> {
+            manager.createCheckpoint(
+                pluginId = pluginId,
+                type = TransactionType.UPDATE,
+                currentState = PluginState.UPDATING
+            )
+        }
+    }
+
+    @Test
+    fun testRollback_registryRestoreFails() = runTest {
+        val pluginId = "com.test.plugin"
+
+        // Create checkpoint with no registry state
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        // Register plugin
+        val manifest = createTestManifest(pluginId)
+        val namespace = createTestNamespace(pluginId)
+        registry.register(manifest, namespace)
+
+        // Rollback should unregister
+        val result = manager.rollback(transactionId)
+
+        assertTrue(result is TransactionManager.TransactionResult.Success)
+        assertNull(registry.getPlugin(pluginId))
+    }
+
+    // ========================================
+    // State Tracking Tests
+    // ========================================
+
+    @Test
+    fun testGetActiveCheckpoints() = runTest {
+        assertEquals(0, manager.getActiveCheckpoints().size)
+
+        val transactionId1 = manager.createCheckpoint(
+            pluginId = "com.test.plugin1",
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        val transactionId2 = manager.createCheckpoint(
+            pluginId = "com.test.plugin2",
+            type = TransactionType.UPDATE,
+            currentState = PluginState.UPDATING
+        )
+
+        val checkpoints = manager.getActiveCheckpoints()
+        assertEquals(2, checkpoints.size)
+
+        val checkpoint1 = checkpoints.find { it.transactionId == transactionId1 }
+        val checkpoint2 = checkpoints.find { it.transactionId == transactionId2 }
+
+        assertNotNull(checkpoint1)
+        assertNotNull(checkpoint2)
+        assertEquals("com.test.plugin1", checkpoint1.pluginId)
+        assertEquals("com.test.plugin2", checkpoint2.pluginId)
+        assertEquals(TransactionType.INSTALL, checkpoint1.type)
+        assertEquals(TransactionType.UPDATE, checkpoint2.type)
+    }
+
+    @Test
+    fun testHasCheckpoint() = runTest {
+        val transactionId = manager.createCheckpoint(
+            pluginId = "com.test.plugin",
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        assertTrue(manager.hasCheckpoint(transactionId))
+        assertFalse(manager.hasCheckpoint("non-existent-id"))
+
+        manager.commit(transactionId)
+        assertFalse(manager.hasCheckpoint(transactionId))
+    }
+
+    @Test
+    fun testCheckpointMetadata() = runTest {
+        val pluginId = "com.test.plugin"
+        val currentState = PluginState.UPDATING
+        val transactionType = TransactionType.UPDATE
+
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = transactionType,
+            currentState = currentState
+        )
+
+        val checkpoints = manager.getActiveCheckpoints()
+        val checkpoint = checkpoints.first()
+
+        assertEquals(transactionId, checkpoint.transactionId)
+        assertEquals(pluginId, checkpoint.pluginId)
+        assertEquals(transactionType, checkpoint.type)
+        assertEquals(currentState, checkpoint.state)
+        assertTrue(checkpoint.timestamp > 0)
+        assertEquals("$pluginDirectory/$pluginId", checkpoint.pluginPath)
+    }
+
+    // ========================================
+    // Cleanup and Maintenance Tests
+    // ========================================
+
+    @Test
+    fun testCleanupStaleCheckpoints() = runTest {
+        // Create old checkpoint
+        val oldTransactionId = manager.createCheckpoint(
+            pluginId = "com.test.old",
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        // Create recent checkpoint
+        val recentTransactionId = manager.createCheckpoint(
+            pluginId = "com.test.recent",
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        // Clean up checkpoints older than 0ms (should clean up all)
+        val cleanedCount = manager.cleanupStaleCheckpoints(maxAgeMs = 0L)
+
+        assertEquals(2, cleanedCount)
+        assertFalse(manager.hasCheckpoint(oldTransactionId))
+        assertFalse(manager.hasCheckpoint(recentTransactionId))
+    }
+
+    @Test
+    fun testCleanupStaleCheckpoints_selectiveCleanup() = runTest {
+        // Create checkpoint
+        val transactionId1 = manager.createCheckpoint(
+            pluginId = "com.test.plugin1",
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        // Wait a bit (simulate time passing)
+        kotlinx.coroutines.delay(10)
+
+        // Create another checkpoint
+        val transactionId2 = manager.createCheckpoint(
+            pluginId = "com.test.plugin2",
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        // Clean up very old checkpoints (should not clean any)
+        val cleanedCount = manager.cleanupStaleCheckpoints(maxAgeMs = 1000000L)
+
+        assertEquals(0, cleanedCount)
+        assertTrue(manager.hasCheckpoint(transactionId1))
+        assertTrue(manager.hasCheckpoint(transactionId2))
+    }
+
+    @Test
+    fun testCleanupStaleCheckpoints_cleansBackups() = runTest {
+        val pluginId = "com.test.plugin"
+        val pluginPath = "$pluginDirectory/$pluginId"
+
+        // Create plugin
+        fileIO.createDirectory(pluginPath)
+        fileIO.addFile("$pluginPath/data.txt", "data")
+
+        // Create checkpoint
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.UPDATE,
+            currentState = PluginState.UPDATING
+        )
+
+        val checkpoints = manager.getActiveCheckpoints()
+        val backupPath = checkpoints.first().filesystemSnapshot?.backupPath
+        assertNotNull(backupPath)
+        assertTrue(fileIO.directoryExists(backupPath))
+
+        // Clean up stale checkpoints
+        manager.cleanupStaleCheckpoints(maxAgeMs = 0L)
+
+        // Backup should be deleted
+        assertFalse(fileIO.directoryExists(backupPath))
+    }
+
+    // ========================================
+    // Edge Cases Tests
+    // ========================================
+
+    @Test
+    fun testEmptyTransaction() = runTest {
+        val pluginId = "com.test.empty"
+
+        // Create checkpoint with no plugin directory
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        val checkpoints = manager.getActiveCheckpoints()
+        assertEquals(1, checkpoints.size)
+        assertNull(checkpoints.first().filesystemSnapshot)
+
+        // Commit should work fine
+        manager.commit(transactionId)
+        assertFalse(manager.hasCheckpoint(transactionId))
+    }
+
+    @Test
+    fun testDoubleCommit() = runTest {
+        val transactionId = manager.createCheckpoint(
+            pluginId = "com.test.plugin",
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        manager.commit(transactionId)
+        assertFalse(manager.hasCheckpoint(transactionId))
+
+        // Second commit should be no-op
+        manager.commit(transactionId)
+        assertFalse(manager.hasCheckpoint(transactionId))
+    }
+
+    @Test
+    fun testDoubleRollback() = runTest {
+        val transactionId = manager.createCheckpoint(
+            pluginId = "com.test.plugin",
+            type = TransactionType.INSTALL,
+            currentState = PluginState.INSTALLING
+        )
+
+        val result1 = manager.rollback(transactionId)
+        assertTrue(result1 is TransactionManager.TransactionResult.Success)
+        assertFalse(manager.hasCheckpoint(transactionId))
+
+        // Second rollback should fail
+        val result2 = manager.rollback(transactionId)
+        assertTrue(result2 is TransactionManager.TransactionResult.Failure)
+    }
+
+    @Test
+    fun testLargeNumberOfFiles() = runTest {
+        val pluginId = "com.test.largeplugin"
+        val pluginPath = "$pluginDirectory/$pluginId"
+
+        // Create plugin with many files
+        fileIO.createDirectory(pluginPath)
+        repeat(100) { i ->
+            fileIO.addFile("$pluginPath/file_$i.txt", "content $i")
+        }
+
+        // Create checkpoint
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.UPDATE,
+            currentState = PluginState.UPDATING
+        )
+
+        val checkpoints = manager.getActiveCheckpoints()
+        val snapshot = checkpoints.first().filesystemSnapshot
+        assertNotNull(snapshot)
+        assertEquals(100, snapshot.files.size)
+
+        // Modify half the files
+        repeat(50) { i ->
+            fileIO.writeFileAsString("$pluginPath/file_$i.txt", "modified $i")
+        }
+
+        // Add new files
+        repeat(20) { i ->
+            fileIO.addFile("$pluginPath/new_file_$i.txt", "new content $i")
+        }
+
+        // Rollback
+        val result = manager.rollback(transactionId)
+
+        assertTrue(result is TransactionManager.TransactionResult.Success)
+
+        // Verify original files restored
+        repeat(100) { i ->
+            assertEquals("content $i", fileIO.readFileAsString("$pluginPath/file_$i.txt"))
+        }
+
+        // Verify new files removed
+        repeat(20) { i ->
+            assertFalse(fileIO.fileExists("$pluginPath/new_file_$i.txt"))
+        }
+    }
+
+    @Test
+    fun testNestedDirectoryStructure() = runTest {
+        val pluginId = "com.test.nested"
+        val pluginPath = "$pluginDirectory/$pluginId"
+
+        // Create nested directory structure
+        fileIO.createDirectory("$pluginPath/level1/level2/level3")
+        fileIO.addFile("$pluginPath/level1/file1.txt", "file1")
+        fileIO.addFile("$pluginPath/level1/level2/file2.txt", "file2")
+        fileIO.addFile("$pluginPath/level1/level2/level3/file3.txt", "file3")
+
+        // Create checkpoint
+        val transactionId = manager.createCheckpoint(
+            pluginId = pluginId,
+            type = TransactionType.UPDATE,
+            currentState = PluginState.UPDATING
+        )
+
+        // Delete everything
+        fileIO.delete(pluginPath)
+
+        // Rollback
+        val result = manager.rollback(transactionId)
+
+        assertTrue(result is TransactionManager.TransactionResult.Success)
+        assertTrue(fileIO.fileExists("$pluginPath/level1/file1.txt"))
+        assertTrue(fileIO.fileExists("$pluginPath/level1/level2/file2.txt"))
+        assertTrue(fileIO.fileExists("$pluginPath/level1/level2/level3/file3.txt"))
+    }
+
+    @Test
+    fun testConcurrentTransactionsDifferentPlugins() = runTest {
+        // This test verifies that multiple transactions for different plugins
+        // can be created and managed independently
+        val transactions = mutableListOf<String>()
+
+        repeat(10) { i ->
+            val pluginId = "com.test.plugin$i"
+            val transactionId = manager.createCheckpoint(
+                pluginId = pluginId,
+                type = TransactionType.INSTALL,
+                currentState = PluginState.INSTALLING
+            )
+            transactions.add(transactionId)
+        }
+
+        assertEquals(10, manager.getActiveCheckpoints().size)
+
+        // Commit every other transaction
+        transactions.filterIndexed { index, _ -> index % 2 == 0 }
+            .forEach { manager.commit(it) }
+
+        assertEquals(5, manager.getActiveCheckpoints().size)
+
+        // Rollback remaining transactions
+        transactions.filterIndexed { index, _ -> index % 2 != 0 }
+            .forEach { manager.rollback(it) }
+
+        assertEquals(0, manager.getActiveCheckpoints().size)
+    }
+
+    // ========================================
+    // Helper Methods
+    // ========================================
+
+    private fun createTestManifest(
+        pluginId: String,
+        version: String = "1.0.0"
+    ): PluginManifest {
+        return TestUtils.createTestManifest(
+            id = pluginId,
+            version = version
+        )
+    }
+
+    private fun createTestNamespace(pluginId: String): PluginNamespace {
+        return PluginNamespace.create(
+            pluginId = pluginId,
+            appDataDir = pluginDirectory
+        )
+    }
+}

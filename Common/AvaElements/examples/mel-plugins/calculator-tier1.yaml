@@ -1,0 +1,219 @@
+# calculator-tier1.yaml
+# Apple-safe calculator demonstrating Tier 1 capabilities
+# Tier: data (fully Apple compliant)
+#
+# Features:
+# - Basic arithmetic operations (+, -, ×, ÷)
+# - Clear function
+# - No history (requires Tier 2)
+# - Demonstrates graceful degradation from full calculator
+
+plugin:
+  id: "com.augmentalis.calculator.tier1"
+  name: "Calculator (Tier 1)"
+  version: "1.0.0"
+  description: "Apple-compliant calculator using Tier 1 only"
+  tier: data  # Explicitly Tier 1 for maximum compatibility
+
+state:
+  display: "0"          # Current display value
+  buffer: ""            # Stored value for operations
+  operator: null        # Current operator (+, -, *, /)
+
+reducers:
+  # Append a digit to the display
+  appendDigit:
+    params: [digit]
+    next_state:
+      display: $logic.if(
+        $logic.equals($state.display, "0"),
+        $string.concat("", $digit),
+        $string.concat($state.display, $digit)
+      )
+
+  # Set the operator and store current display
+  setOperator:
+    params: [op]
+    next_state:
+      buffer: $state.display
+      operator: $op
+      display: "0"
+
+  # Perform calculation
+  calculate:
+    next_state:
+      display: $logic.if(
+        $logic.equals($state.operator, "+"),
+        $string.concat("", $math.add($math.parse($state.buffer), $math.parse($state.display))),
+        $logic.if(
+          $logic.equals($state.operator, "-"),
+          $string.concat("", $math.subtract($math.parse($state.buffer), $math.parse($state.display))),
+          $logic.if(
+            $logic.equals($state.operator, "*"),
+            $string.concat("", $math.multiply($math.parse($state.buffer), $math.parse($state.display))),
+            $logic.if(
+              $logic.equals($state.operator, "/"),
+              $string.concat("", $math.divide($math.parse($state.buffer), $math.parse($state.display))),
+              $state.display
+            )
+          )
+        )
+      )
+      buffer: ""
+      operator: null
+
+  # Clear display and state
+  clear:
+    next_state:
+      display: "0"
+      buffer: ""
+      operator: null
+
+ui:
+  Column:
+    style:
+      padding: 16
+      gap: 12
+    children:
+      # Display
+      - Container:
+          style:
+            backgroundColor: "#f5f5f5"
+            borderRadius: 8
+            padding: 16
+          children:
+            - Text:
+                value: $state.display
+                style:
+                  fontSize: 48
+                  textAlign: "end"
+                  fontFamily: "monospace"
+                  fontWeight: "bold"
+
+      - Divider: {}
+
+      # Row 1: 7 8 9 ÷
+      - Row:
+          style:
+            gap: 8
+          children:
+            - Button:
+                label: "7"
+                onTap: "appendDigit(7)"
+                style:
+                  flex: 1
+                  fontSize: 24
+            - Button:
+                label: "8"
+                onTap: "appendDigit(8)"
+                style:
+                  flex: 1
+                  fontSize: 24
+            - Button:
+                label: "9"
+                onTap: "appendDigit(9)"
+                style:
+                  flex: 1
+                  fontSize: 24
+            - Button:
+                label: "÷"
+                onTap: "setOperator('/')"
+                variant: "secondary"
+                style:
+                  flex: 1
+                  fontSize: 24
+
+      # Row 2: 4 5 6 ×
+      - Row:
+          style:
+            gap: 8
+          children:
+            - Button:
+                label: "4"
+                onTap: "appendDigit(4)"
+                style:
+                  flex: 1
+                  fontSize: 24
+            - Button:
+                label: "5"
+                onTap: "appendDigit(5)"
+                style:
+                  flex: 1
+                  fontSize: 24
+            - Button:
+                label: "6"
+                onTap: "appendDigit(6)"
+                style:
+                  flex: 1
+                  fontSize: 24
+            - Button:
+                label: "×"
+                onTap: "setOperator('*')"
+                variant: "secondary"
+                style:
+                  flex: 1
+                  fontSize: 24
+
+      # Row 3: 1 2 3 −
+      - Row:
+          style:
+            gap: 8
+          children:
+            - Button:
+                label: "1"
+                onTap: "appendDigit(1)"
+                style:
+                  flex: 1
+                  fontSize: 24
+            - Button:
+                label: "2"
+                onTap: "appendDigit(2)"
+                style:
+                  flex: 1
+                  fontSize: 24
+            - Button:
+                label: "3"
+                onTap: "appendDigit(3)"
+                style:
+                  flex: 1
+                  fontSize: 24
+            - Button:
+                label: "−"
+                onTap: "setOperator('-')"
+                variant: "secondary"
+                style:
+                  flex: 1
+                  fontSize: 24
+
+      # Row 4: C 0 = +
+      - Row:
+          style:
+            gap: 8
+          children:
+            - Button:
+                label: "C"
+                onTap: "clear"
+                variant: "danger"
+                style:
+                  flex: 1
+                  fontSize: 20
+            - Button:
+                label: "0"
+                onTap: "appendDigit(0)"
+                style:
+                  flex: 1
+                  fontSize: 24
+            - Button:
+                label: "="
+                onTap: "calculate"
+                variant: "primary"
+                style:
+                  flex: 1
+                  fontSize: 28
+            - Button:
+                label: "+"
+                onTap: "setOperator('+')"
+                variant: "secondary"
+                style:
+                  flex: 1
+                  fontSize: 24

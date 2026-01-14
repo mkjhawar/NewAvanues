@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AVA AI - Interactive Demo Suite</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f1f5f9;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #0f172a;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #0f172a;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .tagline {
+            color: #64748b;
+            font-style: normal;
+            font-size: 0.95em;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 2px solid transparent;
+            border-image: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) 1;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            position: relative;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 10px;
+            padding: 2px;
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9em;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .demo-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+
+        .demo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.15);
+        }
+
+        .demo-icon {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .demo-icon::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 12px;
+            padding: 2px;
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+        }
+
+        .demo-title {
+            font-size: 1.5em;
+            color: #0f172a;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .demo-description {
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .demo-features {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .demo-features li {
+            padding: 5px 0;
+            color: #0f172a;
+            font-size: 0.9em;
+        }
+
+        .demo-features li::before {
+            content: "✓ ";
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .demo-link {
+            display: inline-block;
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .demo-link:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .status-ready {
+            background: #34c759;
+            color: white;
+        }
+
+        .status-beta {
+            background: #ff9500;
+            color: white;
+        }
+
+        footer {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            color: #64748b;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 AVA AI - Interactive Demo Suite</h1>
+            <p class="subtitle">Privacy-First, User-Trainable AI Assistant for Android & Smart Glasses</p>
+            <p class="tagline">95%+ Local Processing • Constitutional AI • VoiceAvenue Integration</p>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value">95%+</div>
+                    <div class="stat-label">Local Processing</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">&lt;50ms</div>
+                    <div class="stat-label">NLU Inference</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">25.5MB</div>
+                    <div class="stat-label">MobileBERT Model</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">8+</div>
+                    <div class="stat-label">Smart Glasses Supported</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="demo-grid">
+            <!-- Chat Interface Demo -->
+            <div class="demo-card" onclick="location.href='chat.html'">
+                <div class="demo-icon">💬</div>
+                <span class="status-badge status-ready">READY</span>
+                <h2 class="demo-title">Chat Interface</h2>
+                <p class="demo-description">
+                    Interactive chat UI with ONNX NLU classification and confidence-based training suggestions.
+                </p>
+                <ul class="demo-features">
+                    <li>Real-time intent classification (&lt;50ms)</li>
+                    <li>Confidence badges (High/Medium/Low)</li>
+                    <li>Auto-trigger Teach-AVA for low confidence</li>
+                    <li>Conversation history with search</li>
+                    <li>Material 3 design system</li>
+                </ul>
+                <a href="chat.html" class="demo-link">Launch Demo →</a>
+            </div>
+
+            <!-- Teach-AVA Training Demo -->
+            <div class="demo-card" onclick="location.href='teach.html'">
+                <div class="demo-icon">🎓</div>
+                <span class="status-badge status-ready">READY</span>
+                <h2 class="demo-title">Teach-AVA Training</h2>
+                <p class="demo-description">
+                    User-driven training interface with MD5 deduplication and intent filtering.
+                </p>
+                <ul class="demo-features">
+                    <li>Add/Edit/Delete training examples</li>
+                    <li>MD5 hash deduplication (prevents duplicates)</li>
+                    <li>Filter by intent and locale</li>
+                    <li>Real-time validation</li>
+                    <li>Export/Import training data</li>
+                </ul>
+                <a href="teach.html" class="demo-link">Launch Demo →</a>
+            </div>
+
+            <!-- Smart Glasses Overlay Demo -->
+            <div class="demo-card" onclick="location.href='overlay.html'">
+                <div class="demo-icon">👓</div>
+                <span class="status-badge status-ready">READY</span>
+                <h2 class="demo-title">Smart Glasses Overlay</h2>
+                <p class="demo-description">
+                    Context-aware voice orb with glassmorphic design for 8+ smart glasses devices.
+                </p>
+                <ul class="demo-features">
+                    <li>Draggable voice orb (64dp glassmorphic)</li>
+                    <li>Context detection (9 app categories)</li>
+                    <li>Smart suggestions based on active app</li>
+                    <li>Voice activation with wake word</li>
+                    <li>5 states: Docked/Listening/Processing/Responding/Error</li>
+                </ul>
+                <a href="overlay.html" class="demo-link">Launch Demo →</a>
+            </div>
+
+            <!-- NLU Classifier Demo -->
+            <div class="demo-card" onclick="location.href='nlu.html'">
+                <div class="demo-icon">🧠</div>
+                <span class="status-badge status-ready">READY</span>
+                <h2 class="demo-title">NLU Classification</h2>
+                <p class="demo-description">
+                    ONNX Runtime with MobileBERT INT8 for on-device intent classification.
+                </p>
+                <ul class="demo-features">
+                    <li>MobileBERT INT8 (25.5 MB model)</li>
+                    <li>WordPiece tokenization (30,522 vocab)</li>
+                    <li>&lt;5ms tokenization, &lt;50ms inference</li>
+                    <li>Confidence scoring (0.0-1.0)</li>
+                    <li>10+ built-in intents + custom training</li>
+                </ul>
+                <a href="nlu.html" class="demo-link">Launch Demo →</a>
+            </div>
+
+            <!-- Architecture Viewer Demo -->
+            <div class="demo-card" onclick="location.href='architecture.html'">
+                <div class="demo-icon">🏗️</div>
+                <span class="status-badge status-beta">BETA</span>
+                <h2 class="demo-title">Architecture Viewer</h2>
+                <p class="demo-description">
+                    Interactive visualization of AVA's Clean Architecture layers and data flow.
+                </p>
+                <ul class="demo-features">
+                    <li>Clean Architecture visualization</li>
+                    <li>6 repositories with VOS4 patterns</li>
+                    <li>Kotlin Multiplatform structure</li>
+                    <li>Module dependencies graph</li>
+                    <li>Design patterns documentation</li>
+                </ul>
+                <a href="architecture.html" class="demo-link">Launch Demo →</a>
+            </div>
+
+            <!-- Performance Dashboard Demo -->
+            <div class="demo-card" onclick="location.href='performance.html'">
+                <div class="demo-icon">⚡</div>
+                <span class="status-badge status-beta">BETA</span>
+                <h2 class="demo-title">Performance Dashboard</h2>
+                <p class="demo-description">
+                    Real-time monitoring of NLU inference, database operations, and memory usage.
+                </p>
+                <ul class="demo-features">
+                    <li>NLU latency tracking (p50/p95/p99)</li>
+                    <li>Database performance metrics</li>
+                    <li>Memory profiling (&lt;512MB target)</li>
+                    <li>Battery usage estimation</li>
+                    <li>Frame rate monitoring</li>
+                </ul>
+                <a href="performance.html" class="demo-link">Launch Demo →</a>
+            </div>
+        </div>
+
+        <footer>
+            <p><strong>AVA AI - Augmentalis Voice Assistant</strong> | Production-Grade Privacy-First AI | 2025</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                Powered by Kotlin Multiplatform • ONNX Runtime • MobileBERT • Room Database • Jetpack Compose
+            </p>
+            <p style="margin-top: 10px; font-size: 0.85em; color: #999;">
+                Created by Manoj Jhawar, manoj@ideahq.net • © Augmentalis Inc, Intelligent Devices LLC
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

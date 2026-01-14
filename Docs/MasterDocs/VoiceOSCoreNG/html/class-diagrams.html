@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Diagrams - VoiceOSCoreNG Documentation</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #e9ecef;
+            --text-primary: #212529;
+            --text-secondary: #495057;
+            --text-muted: #6c757d;
+            --accent-primary: #0d6efd;
+            --accent-secondary: #6610f2;
+            --border-color: #dee2e6;
+            --code-bg: #f1f3f5;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --text-primary: #e9ecef;
+            --text-secondary: #adb5bd;
+            --text-muted: #868e96;
+            --accent-primary: #4dabf7;
+            --accent-secondary: #9775fa;
+            --border-color: #343a40;
+            --code-bg: #2d2d44;
+            --shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo h1 { font-size: 1.25rem; }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.25rem;
+        }
+
+        nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 2rem;
+            position: sticky;
+            top: 64px;
+            z-index: 99;
+        }
+
+        nav ul {
+            max-width: 1200px;
+            margin: 0 auto;
+            list-style: none;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            display: block;
+            padding: 0.5rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        nav a:hover, nav a.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        h2 {
+            color: var(--accent-primary);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        h3 {
+            color: var(--text-primary);
+            margin: 2rem 0 1rem;
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .diagram-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .diagram-container h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: var(--accent-primary);
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+
+        .explanation {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .explanation h4 {
+            color: var(--accent-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .explanation ul {
+            margin-left: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .explanation li {
+            margin-bottom: 0.5rem;
+        }
+
+        code {
+            background: var(--code-bg);
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            color: var(--accent-secondary);
+        }
+
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .class-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .class-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
+        }
+
+        .class-card h4 {
+            color: var(--accent-primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .class-card .type-badge {
+            font-size: 0.75rem;
+            padding: 0.125rem 0.5rem;
+            border-radius: 4px;
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+        }
+
+        .class-card p {
+            font-size: 0.925rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .class-card .methods {
+            font-size: 0.825rem;
+            color: var(--text-muted);
+        }
+
+        footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem;
+            margin-top: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        footer a { color: var(--accent-primary); text-decoration: none; }
+
+        @media (max-width: 768px) {
+            header, nav, main { padding-left: 1rem; padding-right: 1rem; }
+            nav { top: auto; position: relative; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <h1>VoiceOSCoreNG - Class Diagrams</h1>
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()">&#9790;</button>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="architecture.html">Architecture</a></li>
+            <li><a href="flowcharts.html">Flowcharts</a></li>
+            <li><a href="sequence-diagrams.html">Sequences</a></li>
+            <li><a href="class-diagrams.html" class="active">Classes</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <h2>Class Diagrams</h2>
+        <p>
+            These diagrams show the class hierarchies, interface relationships, and the handler-executor
+            pattern implementation in VoiceOSCoreNG.
+        </p>
+
+        <div class="diagram-container">
+            <h3>Handler Interface Hierarchy</h3>
+            <div class="mermaid">
+classDiagram
+    class IHandler {
+        <<interface>>
+        +category: ActionCategory
+        +supportedActions: List~String~
+        +execute(command: QuantizedCommand, params: Map) HandlerResult
+        +execute(action: String, params: Map) HandlerResult
+        +canHandle(action: String) Boolean
+        +canHandle(command: QuantizedCommand) Boolean
+        +initialize() Unit
+        +dispose() Unit
+    }
+
+    class BaseHandler {
+        <<abstract>>
+        +canHandle(action: String) Boolean
+    }
+
+    class SystemHandler {
+        -executor: SystemExecutor
+        +category = SYSTEM
+        +supportedActions: [back, home, recents...]
+        +execute(command, params) HandlerResult
+    }
+
+    class NavigationHandler {
+        -executor: NavigationExecutor
+        +category = NAVIGATION
+        +supportedActions: [scroll up, scroll down...]
+        +execute(command, params) HandlerResult
+    }
+
+    class UIHandler {
+        -executor: UIExecutor
+        -disambiguator: ElementDisambiguator
+        +category = UI
+        +supportedActions: [click, tap, press...]
+        +execute(command, params) HandlerResult
+        +handleNumberSelection(number: Int) HandlerResult
+    }
+
+    class InputHandler {
+        -executor: InputExecutor
+        +category = INPUT
+        +supportedActions: [type, delete, paste...]
+        +execute(command, params) HandlerResult
+    }
+
+    class AppHandler {
+        -appLauncher: IAppLauncher?
+        -appRegistry: Map~String, AppInfo~
+        +category = APP
+        +supportedActions: [open, launch, start...]
+        +findApp(query: String) AppInfo?
+        +registerApp(app: AppInfo) Unit
+        +syncInstalledApps() Unit
+    }
+
+    IHandler <|.. BaseHandler
+    BaseHandler <|-- SystemHandler
+    BaseHandler <|-- NavigationHandler
+    BaseHandler <|-- UIHandler
+    BaseHandler <|-- InputHandler
+    BaseHandler <|-- AppHandler
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h4>Handler Pattern</h4>
+            <ul>
+                <li><strong>IHandler:</strong> Core interface defining handler contract (KMP common)</li>
+                <li><strong>BaseHandler:</strong> Abstract class with default <code>canHandle()</code> using fuzzy matching</li>
+                <li><strong>Concrete Handlers:</strong> Implement <code>execute()</code> and delegate to platform executors</li>
+                <li><strong>Strategy Pattern:</strong> Each handler encapsulates one category of actions</li>
+            </ul>
+        </div>
+
+        <div class="diagram-container">
+            <h3>Executor Interfaces (Platform-Specific)</h3>
+            <div class="mermaid">
+classDiagram
+    class SystemExecutor {
+        <<interface>>
+        +goBack() Boolean
+        +goHome() Boolean
+        +showRecents() Boolean
+        +showNotifications() Boolean
+        +showQuickSettings() Boolean
+        +showPowerMenu() Boolean
+        +lockScreen() Boolean
+    }
+
+    class NavigationExecutor {
+        <<interface>>
+        +scrollUp() Boolean
+        +scrollDown() Boolean
+        +scrollLeft() Boolean
+        +scrollRight() Boolean
+        +next() Boolean
+        +previous() Boolean
+    }
+
+    class UIExecutor {
+        <<interface>>
+        +getScreenElements() List~ElementInfo~
+        +clickElement(element: ElementInfo) Boolean
+        +longClickElement(element: ElementInfo) Boolean
+        +doubleClickElement(element: ElementInfo) Boolean
+        +clickByVuid(vuid: String) Boolean
+        +clickByText(text: String) Boolean
+        +focus(target: String) Boolean
+        +dismiss() Boolean
+    }
+
+    class InputExecutor {
+        <<interface>>
+        +enterText(text: String) Boolean
+        +deleteCharacter() Boolean
+        +clearText() Boolean
+        +selectAll() Boolean
+        +copy() Boolean
+        +cut() Boolean
+        +paste() Boolean
+        +undo() Boolean
+        +redo() Boolean
+    }
+
+    class IAppLauncher {
+        <<interface>>
+        +launchApp(packageName: String) Boolean
+        +getInstalledApps() List~AppInfo~
+    }
+
+    class AndroidSystemExecutor {
+        -service: AccessibilityService
+        +goBack() Boolean
+        +goHome() Boolean
+    }
+
+    class AndroidNavigationExecutor {
+        -service: AccessibilityService
+        +scrollUp() Boolean
+        +scrollDown() Boolean
+    }
+
+    class AndroidUIExecutor {
+        -service: AccessibilityService
+        +clickByVuid(vuid: String) Boolean
+        +getScreenElements() List~ElementInfo~
+    }
+
+    class AndroidAppLauncher {
+        -context: Context
+        +launchApp(packageName: String) Boolean
+        +getInstalledApps() List~AppInfo~
+    }
+
+    SystemExecutor <|.. AndroidSystemExecutor
+    NavigationExecutor <|.. AndroidNavigationExecutor
+    UIExecutor <|.. AndroidUIExecutor
+    IAppLauncher <|.. AndroidAppLauncher
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h4>KMP Strategy</h4>
+            <ul>
+                <li><strong>Executor Interfaces:</strong> Defined in commonMain, implemented per platform</li>
+                <li><strong>Android Executors:</strong> Use AccessibilityService for system actions</li>
+                <li><strong>iOS Executors:</strong> Would use UIAccessibility APIs</li>
+                <li><strong>Desktop Executors:</strong> Would use platform-specific automation APIs</li>
+            </ul>
+        </div>
+
+        <div class="diagram-container">
+            <h3>Command Registry System</h3>
+            <div class="mermaid">
+classDiagram
+    class CommandRegistry {
+        -commandsSnapshot: Map~String, QuantizedCommand~
+        -mutex: Mutex
+        +update(commands: List~QuantizedCommand~) Unit
+        +updateSync(commands: List~QuantizedCommand~) Unit
+        +findByPhrase(phrase: String) QuantizedCommand?
+        +findByVuid(vuid: String) QuantizedCommand?
+        +all() List~QuantizedCommand~
+        +addAll(commands: List~QuantizedCommand~) Unit
+        +clear() Unit
+        +size: Int
+    }
+
+    class StaticCommandRegistry {
+        <<object>>
+        -commands: Map~CommandActionType, StaticCommand~
+        +findByPhrase(phrase: String) StaticCommand?
+        +allAsQuantized() List~QuantizedCommand~
+        +toNluSchema() String
+    }
+
+    class QuantizedCommand {
+        +phrase: String
+        +actionType: CommandActionType
+        +targetVuid: String?
+        +confidence: Float
+        +toCmdLine() String
+    }
+
+    class CommandActionType {
+        <<enumeration>>
+        CLICK
+        TAP
+        LONG_CLICK
+        SCROLL_UP
+        SCROLL_DOWN
+        BACK
+        HOME
+        OPEN_APP
+        TYPE
+        ...
+    }
+
+    class StaticCommand {
+        +actionType: CommandActionType
+        +phrases: List~String~
+        +description: String
+    }
+
+    CommandRegistry --> QuantizedCommand
+    StaticCommandRegistry --> StaticCommand
+    StaticCommand --> CommandActionType
+    QuantizedCommand --> CommandActionType
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h4>Registry Types</h4>
+            <ul>
+                <li><strong>CommandRegistry:</strong> Dynamic commands from screen scraping (VUID-indexed)</li>
+                <li><strong>StaticCommandRegistry:</strong> System-wide static commands (singleton object)</li>
+                <li><strong>QuantizedCommand:</strong> Unified command representation with phrase, action type, and optional VUID</li>
+                <li><strong>Thread Safety:</strong> CommandRegistry uses volatile snapshot + mutex pattern</li>
+            </ul>
+        </div>
+
+        <div class="diagram-container">
+            <h3>Action Coordinator</h3>
+            <div class="mermaid">
+classDiagram
+    class ActionCoordinator {
+        -voiceInterpreter: IVoiceCommandInterpreter
+        -handlerRegistry: IHandlerRegistry
+        -commandRegistry: CommandRegistry
+        -metrics: IMetricsCollector
+        -nluProcessor: INluProcessor?
+        -llmProcessor: ILlmProcessor?
+        -scope: CoroutineScope
+        -_state: MutableStateFlow~CoordinatorState~
+        -_results: MutableSharedFlow~CommandResult~
+        +state: StateFlow~CoordinatorState~
+        +results: SharedFlow~CommandResult~
+        +dynamicCommandCount: Int
+        +initialize(handlers: List~IHandler~) Unit
+        +registerHandler(handler: IHandler) Unit
+        +updateDynamicCommands(commands: List~QuantizedCommand~) Unit
+        +clearDynamicCommands() Unit
+        +processCommand(command: QuantizedCommand) HandlerResult
+        +processVoiceCommand(text: String, confidence: Float) HandlerResult
+        +canHandle(command: String) Boolean
+        +getAllSupportedActions() List~String~
+        +getAllQuantizedCommands() List~QuantizedCommand~
+        +getNluSchema() String
+        +dispose() Unit
+    }
+
+    class IHandlerRegistry {
+        <<interface>>
+        +register(handler: IHandler) Unit
+        +unregister(handler: IHandler) Boolean
+        +findHandler(action: String) IHandler?
+        +findHandler(command: QuantizedCommand) IHandler?
+        +canHandle(action: String) Boolean
+        +getAllSupportedActions() List~String~
+        +initializeAll() Int
+        +disposeAll() Int
+    }
+
+    class HandlerRegistry {
+        -handlers: Map~ActionCategory, List~IHandler~~
+        -mutex: Mutex
+        +register(handler: IHandler) Unit
+        +findHandler(action: String) IHandler?
+        +getDebugInfo() String
+    }
+
+    class CoordinatorState {
+        <<enumeration>>
+        UNINITIALIZED
+        INITIALIZING
+        READY
+        DISPOSING
+        DISPOSED
+        ERROR
+    }
+
+    ActionCoordinator --> IHandlerRegistry
+    ActionCoordinator --> CommandRegistry
+    ActionCoordinator --> CoordinatorState
+    IHandlerRegistry <|.. HandlerRegistry
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h4>Coordinator Responsibilities</h4>
+            <ul>
+                <li><strong>Command Routing:</strong> 5-level priority matching (dynamic, fuzzy, static, NLU, LLM)</li>
+                <li><strong>Lifecycle Management:</strong> Initialize handlers, manage state transitions</li>
+                <li><strong>Metrics Collection:</strong> Track execution times and success rates</li>
+                <li><strong>Reactive Streams:</strong> StateFlow for state, SharedFlow for results</li>
+            </ul>
+        </div>
+
+        <div class="diagram-container">
+            <h3>Speech Engine System</h3>
+            <div class="mermaid">
+classDiagram
+    class ISpeechEngine {
+        <<interface>>
+        +state: StateFlow~EngineState~
+        +results: Flow~SpeechResult~
+        +errors: Flow~SpeechError~
+        +initialize(config: SpeechConfig) Result~Unit~
+        +startListening() Result~Unit~
+        +stopListening() Unit
+        +updateCommands(commands: List~String~) Result~Unit~
+        +updateConfiguration(config: SpeechConfig) Result~Unit~
+        +isRecognizing() Boolean
+        +isInitialized() Boolean
+        +getEngineType() SpeechEngine
+        +getSupportedFeatures() Set~EngineFeature~
+        +destroy() Unit
+    }
+
+    class ISpeechEngineFactory {
+        <<interface>>
+        +create(type: SpeechEngine, context: Any?) ISpeechEngine
+        +isSupported(type: SpeechEngine) Boolean
+    }
+
+    class EngineState {
+        <<sealed>>
+    }
+
+    class Uninitialized {
+    }
+
+    class Initializing {
+    }
+
+    class Ready {
+        +engineType: SpeechEngine
+    }
+
+    class Listening {
+    }
+
+    class Processing {
+    }
+
+    class Error {
+        +message: String
+        +recoverable: Boolean
+    }
+
+    class Destroyed {
+    }
+
+    class SpeechResult {
+        +text: String
+        +confidence: Float
+        +isFinal: Boolean
+        +timestamp: Long
+        +alternatives: List~Alternative~
+    }
+
+    class SpeechConfig {
+        +language: String
+        +mode: SpeechMode
+        +timeout: Long
+        +continuous: Boolean
+    }
+
+    class AndroidSTTEngineImpl {
+        -recognizer: SpeechRecognizer
+        +initialize(config: SpeechConfig) Result~Unit~
+        +startListening() Result~Unit~
+    }
+
+    class VoskEngineImpl {
+        -model: Model
+        -recognizer: VoskRecognizer
+        +initialize(config: SpeechConfig) Result~Unit~
+    }
+
+    ISpeechEngine <|.. AndroidSTTEngineImpl
+    ISpeechEngine <|.. VoskEngineImpl
+    EngineState <|-- Uninitialized
+    EngineState <|-- Initializing
+    EngineState <|-- Ready
+    EngineState <|-- Listening
+    EngineState <|-- Processing
+    EngineState <|-- Error
+    EngineState <|-- Destroyed
+    ISpeechEngine --> EngineState
+    ISpeechEngine --> SpeechResult
+    ISpeechEngine --> SpeechConfig
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h4>Speech Engine Design</h4>
+            <ul>
+                <li><strong>Factory Pattern:</strong> ISpeechEngineFactory creates appropriate engine for platform</li>
+                <li><strong>Sealed States:</strong> EngineState sealed class with data object variants</li>
+                <li><strong>Reactive Results:</strong> Flow-based results for real-time UI updates</li>
+                <li><strong>Offline Support:</strong> Vosk and Vivoka engines work without network</li>
+            </ul>
+        </div>
+
+        <div class="diagram-container">
+            <h3>Handler Result Types</h3>
+            <div class="mermaid">
+classDiagram
+    class HandlerResult {
+        <<sealed>>
+        +isSuccess: Boolean
+        +isFailure: Boolean
+        +isAwaitingSelection: Boolean
+    }
+
+    class Success {
+        +message: String?
+        +data: Map~String, Any?~
+    }
+
+    class Failure {
+        +reason: String
+        +recoverable: Boolean
+        +suggestedAction: String?
+    }
+
+    class NotHandled {
+    }
+
+    class RequiresInput {
+        +prompt: String
+        +inputType: InputType
+    }
+
+    class InProgress {
+        +progress: Int
+        +statusMessage: String
+    }
+
+    class AwaitingSelection {
+        +message: String
+        +matchCount: Int
+        +accessibilityAnnouncement: String
+    }
+
+    class InputType {
+        <<enumeration>>
+        TEXT
+        NUMBER
+        CHOICE
+        CONFIRMATION
+    }
+
+    HandlerResult <|-- Success
+    HandlerResult <|-- Failure
+    HandlerResult <|-- NotHandled
+    HandlerResult <|-- RequiresInput
+    HandlerResult <|-- InProgress
+    HandlerResult <|-- AwaitingSelection
+    RequiresInput --> InputType
+            </div>
+        </div>
+
+        <h3>Key Classes Reference</h3>
+        <div class="class-grid">
+            <div class="class-card">
+                <h4>VoiceOSCoreNG <span class="type-badge">object</span></h4>
+                <p>Main facade for initialization and configuration. Builder pattern for setup.</p>
+                <div class="methods"><code>initialize(tier, isDebug)</code>, <code>enableTestMode()</code>, <code>configureFeatures()</code></div>
+            </div>
+            <div class="class-card">
+                <h4>ActionCoordinator <span class="type-badge">class</span></h4>
+                <p>Central command router with 5-level priority matching. Manages handler lifecycle.</p>
+                <div class="methods"><code>processVoiceCommand(text)</code>, <code>updateDynamicCommands()</code></div>
+            </div>
+            <div class="class-card">
+                <h4>HandlerRegistry <span class="type-badge">class</span></h4>
+                <p>Priority-based handler lookup using ActionCategory ordering. Thread-safe via mutex.</p>
+                <div class="methods"><code>register(handler)</code>, <code>findHandler(action)</code></div>
+            </div>
+            <div class="class-card">
+                <h4>CommandRegistry <span class="type-badge">class</span></h4>
+                <p>In-memory dynamic commands indexed by VUID. Volatile snapshot for thread safety.</p>
+                <div class="methods"><code>update(commands)</code>, <code>findByPhrase()</code>, <code>findByVuid()</code></div>
+            </div>
+            <div class="class-card">
+                <h4>ActionCategory <span class="type-badge">enum</span></h4>
+                <p>Handler priority categories: SYSTEM(1), NAVIGATION(2), APP(3), ..., CUSTOM(11).</p>
+                <div class="methods"><code>PRIORITY_ORDER</code></div>
+            </div>
+            <div class="class-card">
+                <h4>QuantizedCommand <span class="type-badge">data class</span></h4>
+                <p>Voice command representation with phrase, actionType, targetVuid, confidence.</p>
+                <div class="methods"><code>toCmdLine()</code></div>
+            </div>
+        </div>
+
+        <h3>Code Examples</h3>
+
+        <pre><code>// Initialize VoiceOSCoreNG
+VoiceOSCoreNG.initialize(
+    tier = LearnAppDevToggle.Tier.DEV,
+    isDebug = BuildConfig.DEBUG,
+    enableTestMode = true
+)
+
+// Create handlers with platform executors
+val handlers = listOf(
+    SystemHandler(AndroidSystemExecutor(service)),
+    NavigationHandler(AndroidNavigationExecutor(service)),
+    UIHandler(AndroidUIExecutor(service)),
+    InputHandler(AndroidInputExecutor(service)),
+    AppHandler(AndroidAppLauncher(context))
+)
+
+// Initialize ActionCoordinator
+val coordinator = ActionCoordinator()
+coordinator.initialize(handlers)
+
+// Process voice command
+val result = coordinator.processVoiceCommand("click Submit", 0.95f)
+when (result) {
+    is HandlerResult.Success -> println("Executed: ${result.message}")
+    is HandlerResult.Failure -> println("Failed: ${result.reason}")
+    is HandlerResult.AwaitingSelection -> println("Disambiguation: ${result.message}")
+    else -> println("Not handled")
+}</code></pre>
+    </main>
+
+    <footer>
+        <p>VoiceOSCoreNG v2.0.0 | <a href="index.html">Back to Overview</a></p>
+    </footer>
+
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: savedTheme === 'dark' ? 'dark' : 'default'
+        });
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            location.reload();
+        }
+    </script>
+</body>
+</html>

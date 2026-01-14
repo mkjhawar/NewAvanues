@@ -1,0 +1,277 @@
+{
+  "id": "Backgrounds",
+  "name": "Background Image Library",
+  "description": "Collection of high-quality background images including gradients, patterns, and abstract designs",
+  "metadata": {
+    "author": "Augmentalis Design Team",
+    "license": "CC-BY-4.0",
+    "totalImages": "15",
+    "totalSizeBytes": "8450000",
+    "lastUpdated": "2024-01-15"
+  },
+  "images": [
+    {
+      "id": "gradient-blue",
+      "name": "Blue Gradient",
+      "fileName": "gradient-blue.png",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1080,
+      "fileSize": 245678,
+      "hasThumbnail": true,
+      "tags": ["gradient", "blue", "smooth", "modern"],
+      "category": "Gradients",
+      "metadata": {
+        "colorScheme": "blue",
+        "orientation": "landscape",
+        "primaryColor": "#1E3A8A",
+        "secondaryColor": "#3B82F6"
+      }
+    },
+    {
+      "id": "gradient-purple",
+      "name": "Purple Gradient",
+      "fileName": "gradient-purple.png",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1080,
+      "fileSize": 258903,
+      "hasThumbnail": true,
+      "tags": ["gradient", "purple", "elegant", "modern"],
+      "category": "Gradients",
+      "metadata": {
+        "colorScheme": "purple",
+        "orientation": "landscape",
+        "primaryColor": "#7C3AED",
+        "secondaryColor": "#C084FC"
+      }
+    },
+    {
+      "id": "gradient-sunset",
+      "name": "Sunset Gradient",
+      "fileName": "gradient-sunset.png",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1080,
+      "fileSize": 267890,
+      "hasThumbnail": true,
+      "tags": ["gradient", "orange", "red", "warm", "sunset"],
+      "category": "Gradients",
+      "metadata": {
+        "colorScheme": "warm",
+        "orientation": "landscape",
+        "primaryColor": "#FB923C",
+        "secondaryColor": "#EF4444"
+      }
+    },
+    {
+      "id": "pattern-dots",
+      "name": "Dot Pattern",
+      "fileName": "pattern-dots.png",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1080,
+      "fileSize": 189456,
+      "hasThumbnail": true,
+      "tags": ["pattern", "dots", "geometric", "minimal"],
+      "category": "Patterns",
+      "metadata": {
+        "colorScheme": "neutral",
+        "orientation": "landscape",
+        "patternType": "dots",
+        "seamless": "true"
+      }
+    },
+    {
+      "id": "pattern-grid",
+      "name": "Grid Pattern",
+      "fileName": "pattern-grid.png",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1080,
+      "fileSize": 198765,
+      "hasThumbnail": true,
+      "tags": ["pattern", "grid", "geometric", "technical"],
+      "category": "Patterns",
+      "metadata": {
+        "colorScheme": "neutral",
+        "orientation": "landscape",
+        "patternType": "grid",
+        "seamless": "true"
+      }
+    },
+    {
+      "id": "abstract-waves",
+      "name": "Abstract Waves",
+      "fileName": "abstract-waves.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "fileSize": 456789,
+      "hasThumbnail": true,
+      "tags": ["abstract", "waves", "flowing", "modern"],
+      "category": "Abstract",
+      "metadata": {
+        "colorScheme": "blue",
+        "orientation": "landscape",
+        "style": "abstract"
+      }
+    },
+    {
+      "id": "abstract-particles",
+      "name": "Abstract Particles",
+      "fileName": "abstract-particles.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "fileSize": 512000,
+      "hasThumbnail": true,
+      "tags": ["abstract", "particles", "tech", "digital"],
+      "category": "Abstract",
+      "metadata": {
+        "colorScheme": "purple",
+        "orientation": "landscape",
+        "style": "abstract"
+      }
+    },
+    {
+      "id": "texture-concrete",
+      "name": "Concrete Texture",
+      "fileName": "texture-concrete.jpg",
+      "format": "JPEG",
+      "width": 2048,
+      "height": 2048,
+      "fileSize": 387654,
+      "hasThumbnail": true,
+      "tags": ["texture", "concrete", "gray", "rough"],
+      "category": "Textures",
+      "metadata": {
+        "colorScheme": "neutral",
+        "orientation": "square",
+        "seamless": "true",
+        "material": "concrete"
+      }
+    },
+    {
+      "id": "texture-wood",
+      "name": "Wood Texture",
+      "fileName": "texture-wood.jpg",
+      "format": "JPEG",
+      "width": 2048,
+      "height": 2048,
+      "fileSize": 423098,
+      "hasThumbnail": true,
+      "tags": ["texture", "wood", "brown", "natural"],
+      "category": "Textures",
+      "metadata": {
+        "colorScheme": "warm",
+        "orientation": "square",
+        "seamless": "true",
+        "material": "wood"
+      }
+    },
+    {
+      "id": "blur-light",
+      "name": "Light Blur",
+      "fileName": "blur-light.webp",
+      "format": "WEBP",
+      "width": 1920,
+      "height": 1080,
+      "fileSize": 156789,
+      "hasThumbnail": true,
+      "tags": ["blur", "bokeh", "light", "soft"],
+      "category": "Blur",
+      "metadata": {
+        "colorScheme": "light",
+        "orientation": "landscape",
+        "effect": "gaussian-blur"
+      }
+    },
+    {
+      "id": "blur-dark",
+      "name": "Dark Blur",
+      "fileName": "blur-dark.webp",
+      "format": "WEBP",
+      "width": 1920,
+      "height": 1080,
+      "fileSize": 145632,
+      "hasThumbnail": true,
+      "tags": ["blur", "bokeh", "dark", "soft"],
+      "category": "Blur",
+      "metadata": {
+        "colorScheme": "dark",
+        "orientation": "landscape",
+        "effect": "gaussian-blur"
+      }
+    },
+    {
+      "id": "solid-white",
+      "name": "Solid White",
+      "fileName": "solid-white.png",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1080,
+      "fileSize": 12345,
+      "hasThumbnail": true,
+      "tags": ["solid", "white", "plain", "clean"],
+      "category": "Solid Colors",
+      "metadata": {
+        "colorScheme": "light",
+        "orientation": "landscape",
+        "color": "#FFFFFF"
+      }
+    },
+    {
+      "id": "solid-black",
+      "name": "Solid Black",
+      "fileName": "solid-black.png",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1080,
+      "fileSize": 11234,
+      "hasThumbnail": true,
+      "tags": ["solid", "black", "plain", "dark"],
+      "category": "Solid Colors",
+      "metadata": {
+        "colorScheme": "dark",
+        "orientation": "landscape",
+        "color": "#000000"
+      }
+    },
+    {
+      "id": "mesh-gradient",
+      "name": "Mesh Gradient",
+      "fileName": "mesh-gradient.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "fileSize": 678901,
+      "hasThumbnail": true,
+      "tags": ["gradient", "mesh", "colorful", "modern"],
+      "category": "Gradients",
+      "metadata": {
+        "colorScheme": "multicolor",
+        "orientation": "landscape",
+        "gradientType": "mesh"
+      }
+    },
+    {
+      "id": "noise-texture",
+      "name": "Noise Texture",
+      "fileName": "noise-texture.png",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1080,
+      "fileSize": 234567,
+      "hasThumbnail": true,
+      "tags": ["noise", "grain", "texture", "subtle"],
+      "category": "Textures",
+      "metadata": {
+        "colorScheme": "neutral",
+        "orientation": "landscape",
+        "seamless": "true",
+        "noiseType": "perlin"
+      }
+    }
+  ]
+}
