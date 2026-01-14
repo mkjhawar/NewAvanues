@@ -84,10 +84,6 @@ class VoiceOSCoreNG private constructor(
      */
     val commandResults: SharedFlow<CommandResult> = coordinator.results
 
-    /**
-     * static commands list.
-     */
-    val staticCommands = mutableSetOf<String>()
 
     /**
      * Speech recognition results flow.
@@ -195,7 +191,6 @@ class VoiceOSCoreNG private constructor(
                         try {
                             val staticPhrases = staticCommandPersistence?.getAllPhrases() ?: StaticCommandRegistry.allPhrases()
                             if (staticPhrases.isNotEmpty()) {
-                                staticCommands.addAll(staticPhrases)
                                 val updateResult = speechEngine?.updateCommands(staticPhrases)
                                 if (updateResult?.isSuccess == true) {
                                     println("[VoiceOSCoreNG] Registered ${staticPhrases.size} static command phrases with speech engine")
@@ -339,7 +334,7 @@ class VoiceOSCoreNG private constructor(
         val engine = speechEngine ?: return Result.failure(
             IllegalStateException("No speech engine configured")
         )
-        return engine.updateCommands(commands + staticCommands)
+        return engine.updateCommands(commands)
     }
 
     /**
