@@ -21,8 +21,8 @@ import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.FrameworkDetector
 import com.augmentalis.voiceoscoreng.common.FrameworkType
-import com.augmentalis.voiceoscoreng.common.VUIDGenerator
-import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
+import com.augmentalis.voiceoscoreng.common.ElementFingerprint
+import com.augmentalis.avid.TypeCode
 import com.augmentalis.voiceoscoreng.handlers.ActionResult
 import com.augmentalis.voiceoscoreng.handlers.ElementBounds
 import com.augmentalis.voiceoscoreng.handlers.ScrollDirection
@@ -49,7 +49,7 @@ import kotlin.test.assertTrue
  * Comprehensive integration tests for the element processing pipeline.
  *
  * Tests the complete flow from raw UI element data through to action execution:
- * ElementInfo -> VUIDGenerator -> CommandGenerator -> FrameworkHandler -> ActionResult
+ * ElementInfo -> ElementFingerprint -> CommandGenerator -> FrameworkHandler -> ActionResult
  */
 class ElementProcessingIntegrationTest {
 
@@ -90,16 +90,18 @@ class ElementProcessingIntegrationTest {
             packageName = "com.example.app"
         )
 
-        // Step 2: Generate VUID for element
-        val typeCode = VUIDGenerator.getTypeCode(element.className)
-        assertEquals(VUIDTypeCode.BUTTON, typeCode)
+        // Step 2: Generate fingerprint for element
+        val typeCode = ElementFingerprint.getTypeCode(element.className)
+        assertEquals(TypeCode.BUTTON, typeCode)
 
-        val vuid = VUIDGenerator.generate(
+        val fingerprint = ElementFingerprint.generate(
+            className = element.className,
             packageName = element.packageName,
-            typeCode = typeCode,
-            elementHash = element.resourceId
+            resourceId = element.resourceId,
+            text = element.text,
+            contentDesc = element.contentDescription
         )
-        assertTrue(VUIDGenerator.isValidVUID(vuid))
+        assertTrue(ElementFingerprint.isValid(fingerprint))
 
         // Step 3: Generate command from element
         val command = CommandGenerator.fromElement(element, element.packageName)
@@ -142,10 +144,10 @@ class ElementProcessingIntegrationTest {
         assertEquals("type Enter email address", command.phrase)
         assertEquals(CommandActionType.TYPE, command.actionType)
 
-        // Verify VUID type code
-        val parsed = VUIDGenerator.parseVUID(command.targetVuid!!)
+        // Verify fingerprint type code
+        val parsed = ElementFingerprint.parse(command.targetVuid!!)
         assertNotNull(parsed)
-        assertEquals(VUIDTypeCode.INPUT, parsed.typeCode)
+        assertEquals(TypeCode.INPUT, parsed.first)  // first = typeCode
     }
 
     // ==================== Test 2: Valid VUID Command Generation ====================
@@ -154,11 +156,11 @@ class ElementProcessingIntegrationTest {
     fun `test element with valid VUID generates correct command`() {
         // Test multiple element types
         val testCases = listOf(
-            Triple("Button", VUIDTypeCode.BUTTON, CommandActionType.CLICK),
-            Triple("EditText", VUIDTypeCode.INPUT, CommandActionType.TYPE),
-            Triple("MaterialButton", VUIDTypeCode.BUTTON, CommandActionType.CLICK),
-            Triple("TextInputEditText", VUIDTypeCode.INPUT, CommandActionType.TYPE),
-            Triple("ImageButton", VUIDTypeCode.BUTTON, CommandActionType.CLICK)
+            Triple("Button", TypeCode.BUTTON, CommandActionType.CLICK),
+            Triple("EditText", TypeCode.INPUT, CommandActionType.TYPE),
+            Triple("MaterialButton", TypeCode.BUTTON, CommandActionType.CLICK),
+            Triple("TextInputEditText", TypeCode.INPUT, CommandActionType.TYPE),
+            Triple("ImageButton", TypeCode.BUTTON, CommandActionType.CLICK)
         )
 
         for ((className, expectedTypeCode, expectedAction) in testCases) {
@@ -173,12 +175,12 @@ class ElementProcessingIntegrationTest {
             val command = CommandGenerator.fromElement(element, "com.test.app")
             assertNotNull(command, "Command should be generated for $className")
 
-            // Verify VUID type code
-            val vuidComponents = VUIDGenerator.parseVUID(command.targetVuid!!)
-            assertNotNull(vuidComponents, "VUID should be parseable for $className")
+            // Verify fingerprint type code
+            val fingerprintParsed = ElementFingerprint.parse(command.targetVuid!!)
+            assertNotNull(fingerprintParsed, "Fingerprint should be parseable for $className")
             assertEquals(
                 expectedTypeCode,
-                vuidComponents.typeCode,
+                fingerprintParsed.first,  // first = typeCode
                 "Type code should match for $className"
             )
 
@@ -550,7 +552,7 @@ class ElementProcessingIntegrationTest {
         assertNotNull(command.targetVuid)
 
         // VUID should still be valid
-        assertTrue(VUIDGenerator.isValidVUID(command.targetVuid!!))
+        assertTrue(ElementFingerprint.isValid(command.targetVuid!!))
     }
 
     @Test
@@ -622,20 +624,26 @@ class ElementProcessingIntegrationTest {
     // ==================== Additional Integration Tests ====================
 
     @Test
-    fun `test VUID extraction and reconstruction`() {
-        val originalVuid = VUIDGenerator.generate(
+    fun `test fingerprint extraction and reconstruction`() {
+        val originalFingerprint = ElementFingerprint.generate(
+            className = "Button",
             packageName = "com.test.app",
-            typeCode = VUIDTypeCode.BUTTON,
-            elementHash = "my_button_id"
+            resourceId = "my_button_id",
+            text = "",
+            contentDesc = ""
         )
 
         // Parse components
-        val components = VUIDGenerator.parseVUID(originalVuid)
-        assertNotNull(components)
+        val parsed = ElementFingerprint.parse(originalFingerprint)
+        assertNotNull(parsed)
+
+        // Verify components
+        assertEquals(TypeCode.BUTTON, parsed.first)  // typeCode
+        assertTrue(parsed.second.length == 8)  // hash is 8 chars
 
         // Reconstruct
-        val reconstructed = components.toVUID()
-        assertEquals(originalVuid, reconstructed)
+        val reconstructed = "${parsed.first}:${parsed.second}"
+        assertEquals(originalFingerprint, reconstructed)
     }
 
     @Test

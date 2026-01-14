@@ -1,5 +1,7 @@
 package com.augmentalis.voiceoscoreng.common
 
+import com.augmentalis.avid.TypeCode
+
 /**
  * Registry for UI element type patterns.
  *
@@ -13,8 +15,8 @@ interface TypePatternProvider {
     val name: String
     /** Priority - higher = checked first (Compose=90, Native=0) */
     val priority: Int
-    /** Patterns mapped to type codes */
-    val patterns: Map<VUIDTypeCode, Set<String>>
+    /** Patterns mapped to type codes (3-char codes from TypeCode) */
+    val patterns: Map<String, Set<String>>
 }
 
 object TypePatternRegistry {
@@ -34,12 +36,13 @@ object TypePatternRegistry {
     }
 
     /**
-     * Get the VUID type code for a class name.
+     * Get the type code for a class name.
      * Checks providers in priority order (highest first).
+     * Returns 3-char TypeCode string (e.g., "BTN", "INP")
      */
-    fun getTypeCode(className: String): VUIDTypeCode {
+    fun getTypeCode(className: String): String {
         val normalized = className.trim().lowercase()
-        if (normalized.isEmpty()) return VUIDTypeCode.ELEMENT
+        if (normalized.isEmpty()) return TypeCode.ELEMENT
 
         for (provider in providers) {
             for ((typeCode, patternSet) in provider.patterns) {
@@ -48,7 +51,7 @@ object TypePatternRegistry {
                 }
             }
         }
-        return VUIDTypeCode.ELEMENT
+        return TypeCode.ELEMENT
     }
 
     fun getProviders(): List<TypePatternProvider> = providers.toList()
@@ -72,55 +75,55 @@ object NativePatternProvider : TypePatternProvider {
     override val priority = 0
 
     override val patterns = mapOf(
-        VUIDTypeCode.BUTTON to setOf(
+        TypeCode.BUTTON to setOf(
             "button", "appcompatbutton", "materialbutton", "imagebutton",
             "floatingactionbutton", "fab", "extendedfloatingactionbutton"
         ),
-        VUIDTypeCode.INPUT to setOf(
+        TypeCode.INPUT to setOf(
             "edittext", "textinputedittext", "autocompletetextview", "searchview",
             "textfield", "textinputlayout", "searchbar"
         ),
-        VUIDTypeCode.SCROLL to setOf(
+        TypeCode.SCROLL to setOf(
             "scrollview", "horizontalscrollview", "nestedscrollview", "recyclerview",
             "listview", "gridview", "viewpager", "viewpager2"
         ),
-        VUIDTypeCode.TEXT to setOf(
+        TypeCode.TEXT to setOf(
             "textview", "appcompattextview", "materialtextview", "checkedtextview"
         ),
-        VUIDTypeCode.CARD to setOf(
+        TypeCode.CARD to setOf(
             "cardview", "materialcardview", "card"
         ),
-        VUIDTypeCode.LAYOUT to setOf(
+        TypeCode.LAYOUT to setOf(
             "linearlayout", "relativelayout", "framelayout", "constraintlayout",
             "coordinatorlayout", "appbarlayout", "collapsingtoolbarlayout",
             "toolbar", "actionbar"
         ),
-        VUIDTypeCode.MENU to setOf(
+        TypeCode.MENU to setOf(
             "menu", "popupmenu", "contextmenu", "dropdownmenu", "navigationmenu",
             "overflowmenu", "optionsmenu", "spinner", "bottomnavigation",
             "bottomnavigationview"
         ),
-        VUIDTypeCode.DIALOG to setOf(
+        TypeCode.DIALOG to setOf(
             "dialog", "alertdialog", "bottomsheetdialog", "dialogfragment",
             "datepickerdialog", "timepickerdialog"
         ),
-        VUIDTypeCode.IMAGE to setOf(
+        TypeCode.IMAGE to setOf(
             "imageview", "appcompatimageview", "image", "icon",
             "shapeableimageview", "circleimageview"
         ),
-        VUIDTypeCode.CHECKBOX to setOf(
+        TypeCode.CHECKBOX to setOf(
             "checkbox", "appcompatcheckbox", "materialcheckbox"
         ),
-        VUIDTypeCode.SWITCH to setOf(
+        TypeCode.SWITCH to setOf(
             "switch", "switchcompat", "switchmaterial", "togglebutton"
         ),
-        VUIDTypeCode.SLIDER to setOf(
+        TypeCode.SLIDER to setOf(
             "slider", "seekbar", "rangeslider"
         ),
-        VUIDTypeCode.TAB to setOf(
+        TypeCode.TAB to setOf(
             "tablayout", "tabitem"
         ),
-        VUIDTypeCode.LIST to setOf(
+        TypeCode.LIST to setOf(
             "list", "itemlist", "dropdownlist"
         )
     )
@@ -135,7 +138,7 @@ object ComposePatternProvider : TypePatternProvider {
     override val priority = 90
 
     override val patterns = mapOf(
-        VUIDTypeCode.BUTTON to setOf(
+        TypeCode.BUTTON to setOf(
             // M3 Button variants
             "iconbutton", "icontogglebutton", "filledbutton", "filledtonalbutton",
             "outlinedbutton", "elevatedbutton", "textbutton", "segmentedbutton",
@@ -144,41 +147,41 @@ object ComposePatternProvider : TypePatternProvider {
             "chip", "filterchip", "inputchip", "assistchip", "suggestionchip",
             "elevatedfilterchip", "elevatedassistchip", "elevatedsuggestionchip"
         ),
-        VUIDTypeCode.INPUT to setOf(
+        TypeCode.INPUT to setOf(
             "outlinedtextfield", "basictextfield", "decoratedtextfield",
             "outlinedsearchbar", "dockedsearchbar"
         ),
-        VUIDTypeCode.SCROLL to setOf(
+        TypeCode.SCROLL to setOf(
             "lazycolumn", "lazyrow", "lazyverticalgrid", "lazyhorizontalgrid",
             "lazystaggeredgrid"
         ),
-        VUIDTypeCode.LAYOUT to setOf(
+        TypeCode.LAYOUT to setOf(
             "row", "column", "box", "surface", "scaffold",
             "topappbar", "centeralignedtopappbar", "mediumtopappbar", "largetopappbar",
             "bottomappbar"
         ),
-        VUIDTypeCode.MENU to setOf(
+        TypeCode.MENU to setOf(
             "navigationbar", "navigationrail", "navigationdrawer",
             "navigationbaritem", "navigationrailitem", "navigationdraweritem",
             "exposeddropdownmenu", "exposeddropdownmenubox", "dropdownmenuitem"
         ),
-        VUIDTypeCode.TAB to setOf(
+        TypeCode.TAB to setOf(
             "tabrow", "scrollabletabrow", "primarytabrow", "secondarytabrow",
             "tab", "leadingicontab", "texttab"
         ),
-        VUIDTypeCode.DIALOG to setOf(
+        TypeCode.DIALOG to setOf(
             "bottomsheet", "modalbottomsheet", "bottomsheetscaffold"
         ),
-        VUIDTypeCode.CARD to setOf(
+        TypeCode.CARD to setOf(
             "elevatedcard", "outlinedcard", "filledcard"
         ),
-        VUIDTypeCode.CHECKBOX to setOf(
+        TypeCode.CHECKBOX to setOf(
             "tristatecheckbox"
         ),
-        VUIDTypeCode.SWITCH to setOf(
+        TypeCode.SWITCH to setOf(
             "togglegroup"
         ),
-        VUIDTypeCode.SLIDER to setOf(
+        TypeCode.SLIDER to setOf(
             "discreteslider"
         )
     )

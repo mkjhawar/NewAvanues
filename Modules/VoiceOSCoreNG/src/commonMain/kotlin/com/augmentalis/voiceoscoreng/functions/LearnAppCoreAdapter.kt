@@ -24,11 +24,12 @@
  */
 package com.augmentalis.voiceoscoreng.functions
 
+import com.augmentalis.avid.Fingerprint
+import com.augmentalis.avid.TypeCode
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
+import com.augmentalis.voiceoscoreng.common.ElementFingerprint
 import com.augmentalis.voiceoscoreng.common.ProcessingMode
-import com.augmentalis.voiceoscoreng.common.VUIDGenerator
-import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
 
 // ============================================================================
 // Legacy Types (from old LearnAppCore)
@@ -175,27 +176,26 @@ class LearnAppCoreAdapter {
     }
 
     /**
-     * Generate UUID for element using legacy algorithm.
+     * Generate element fingerprint for element using legacy algorithm.
      *
-     * @deprecated Use VUIDGenerator.generate() instead
+     * @deprecated Use ElementFingerprint.generate() instead
      */
     @Deprecated(
-        message = "Use VUIDGenerator.generate() for new code",
+        message = "Use ElementFingerprint.generate() for new code",
         replaceWith = ReplaceWith(
-            "VUIDGenerator.generate(packageName, typeCode, elementHash)",
-            "com.augmentalis.voiceoscoreng.common.VUIDGenerator"
+            "ElementFingerprint.generate(className, packageName, resourceId, text, contentDesc)",
+            "com.augmentalis.voiceoscoreng.common.ElementFingerprint"
         )
     )
     fun generateUUID(element: LegacyElementInfo, packageName: String = ""): String {
-        val elementHash = calculateElementHash(element)
-        val typeCode = VUIDGenerator.getTypeCode(element.className)
-
-        return if (packageName.isNotEmpty()) {
-            VUIDGenerator.generate(packageName, typeCode, elementHash)
-        } else {
-            // Generate without package (uses generic hash)
-            VUIDGenerator.generate("unknown", typeCode, elementHash)
-        }
+        val pkg = packageName.ifEmpty { "unknown" }
+        return ElementFingerprint.generate(
+            className = element.className,
+            packageName = pkg,
+            resourceId = element.resourceId,
+            text = element.text,
+            contentDesc = element.contentDescription
+        )
     }
 
     private fun calculateElementHash(element: LegacyElementInfo): String {
@@ -309,14 +309,14 @@ class LearnAppCoreAdapter {
         // ==================== UUID/VUID Migration ====================
 
         /**
-         * Migrate a legacy UUID to new VUID format.
+         * Migrate a legacy UUID to new element fingerprint format.
          *
          * @param legacyUuid The legacy UUID string
-         * @return VUID string, or null if migration failed
+         * @return Element fingerprint string, or null if migration failed
          */
         fun migrateUuidToVuid(legacyUuid: String): String? {
-            // Check if already a VUID
-            if (VUIDGenerator.isValidVUID(legacyUuid)) {
+            // Check if already in new format (TypeCode:hash)
+            if (ElementFingerprint.isValid(legacyUuid)) {
                 return legacyUuid
             }
 
@@ -325,14 +325,10 @@ class LearnAppCoreAdapter {
                 return migrateSimpleLegacy(legacyUuid)
             }
 
-            // UUID v4 - extract components and generate VUID
+            // UUID v4 - extract components and generate fingerprint
             if (UUID_V4_PATTERN.matches(legacyUuid)) {
                 val hash = legacyUuid.replace("-", "").takeLast(8)
-                return VUIDGenerator.generate(
-                    packageName = "migrated",
-                    typeCode = VUIDTypeCode.ELEMENT,
-                    elementHash = hash
-                )
+                return "${TypeCode.ELEMENT}:$hash"
             }
 
             return null
@@ -351,10 +347,8 @@ class LearnAppCoreAdapter {
             if (lastDotIdx < 0) return null
 
             val typeName = beforeDash.substring(lastDotIdx + 1)
-            val packageName = beforeDash.substring(0, lastDotIdx)
-
-            val typeCode = VUIDGenerator.getTypeCode(typeName)
-            return VUIDGenerator.generate(packageName, typeCode, hash)
+            val typeCode = TypeCode.fromTypeName(typeName)
+            return "$typeCode:$hash"
         }
 
         // ==================== Processing Result Conversion ====================

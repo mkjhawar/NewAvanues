@@ -1,34 +1,34 @@
 package com.augmentalis.ava.core.data.util
 
-import com.augmentalis.vuid.core.VUIDGenerator
+import com.augmentalis.avid.AvidGenerator
 
 /**
- * AVA-specific VUID helper using shared KMP library
+ * AVA-specific AVID helper using shared KMP library
  *
- * Provides convenience methods for generating VUIDs specific to AVA entity types.
- * Delegates to the shared VUIDGenerator from Common:VUID module.
+ * Provides convenience methods for generating AVIDs specific to AVA entity types.
+ * Delegates to the shared AvidGenerator from Modules:AVID.
  *
- * VUID Format: {module}:{typeAbbrev}:{hash8}
- * Example: ava:msg:a7f3e2c1
+ * AVID Format: AVID-{platform}-{sequence}
+ * Example: AVID-A-000001
  */
 object VuidHelper {
-    // Convenience methods using shared generator
-    fun randomMessageVUID(): String = VUIDGenerator.generateMessageVuid()
-    fun randomConversationVUID(): String = VUIDGenerator.generateConversationVuid()
-    fun randomDocumentVUID(): String = VUIDGenerator.generateDocumentVuid()
-    fun randomChunkVUID(): String = VUIDGenerator.generateChunkVuid()
-    fun randomMemoryVUID(): String = VUIDGenerator.generateMemoryVuid()
-    fun randomDecisionVUID(): String = VUIDGenerator.generateDecisionVuid()
-    fun randomLearningVUID(): String = VUIDGenerator.generateLearningVuid()
-    fun randomIntentVUID(): String = VUIDGenerator.generateIntentVuid()
-    fun randomClusterVUID(): String = VUIDGenerator.generateClusterVuid()
-    fun randomBookmarkVUID(): String = VUIDGenerator.generateBookmarkVuid()
-    fun randomAnnotationVUID(): String = VUIDGenerator.generateAnnotationVuid()
-    fun randomFilterPresetVUID(): String = VUIDGenerator.generateFilterPresetVuid()
-    fun randomUtteranceVUID(): String = VUIDGenerator.generateUtteranceVuid()
-    fun randomDialogVUID(): String = VUIDGenerator.generateDialogVuid()
+    // All entity types use the unified AVID format
+    fun randomMessageVUID(): String = AvidGenerator.generateMessageId()
+    fun randomConversationVUID(): String = AvidGenerator.generate()
+    fun randomDocumentVUID(): String = AvidGenerator.generate()
+    fun randomChunkVUID(): String = AvidGenerator.generate()
+    fun randomMemoryVUID(): String = AvidGenerator.generate()
+    fun randomDecisionVUID(): String = AvidGenerator.generate()
+    fun randomLearningVUID(): String = AvidGenerator.generate()
+    fun randomIntentVUID(): String = AvidGenerator.generate()
+    fun randomClusterVUID(): String = AvidGenerator.generate()
+    fun randomBookmarkVUID(): String = AvidGenerator.generate()
+    fun randomAnnotationVUID(): String = AvidGenerator.generate()
+    fun randomFilterPresetVUID(): String = AvidGenerator.generate()
+    fun randomUtteranceVUID(): String = AvidGenerator.generate()
+    fun randomDialogVUID(): String = AvidGenerator.generate()
 
     // Legacy method for backward compatibility
     @Deprecated("Use specific type methods", ReplaceWith("randomMessageVUID()"))
-    fun randomVUID(): String = VUIDGenerator.generate()
+    fun randomVUID(): String = AvidGenerator.generate()
 }

@@ -158,7 +158,7 @@ object LoggingUtils {
         typeCode: Char,
         elementHash: String
     ) {
-        d("Generated VUID: $vuid (pkg=$packageHash, type=$typeCode, elem=$elementHash)", "VUIDGenerator")
+        d("Generated fingerprint: $vuid (pkg=$packageHash, type=$typeCode, elem=$elementHash)", "ElementFingerprint")
     }
 
     /**

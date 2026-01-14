@@ -1,5 +1,6 @@
 package com.augmentalis.voiceoscoreng.common
 
+import com.augmentalis.avid.TypeCode
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,37 +26,37 @@ class TypePatternRegistryTest {
     @Test
     fun `getTypeCode returns BUTTON for IconButton`() {
         val result = TypePatternRegistry.getTypeCode("IconButton")
-        assertEquals(VUIDTypeCode.BUTTON, result)
+        assertEquals(TypeCode.BUTTON, result)
     }
 
     @Test
     fun `getTypeCode returns INPUT for OutlinedTextField`() {
         val result = TypePatternRegistry.getTypeCode("OutlinedTextField")
-        assertEquals(VUIDTypeCode.INPUT, result)
+        assertEquals(TypeCode.INPUT, result)
     }
 
     @Test
     fun `getTypeCode returns SCROLL for LazyColumn`() {
         val result = TypePatternRegistry.getTypeCode("LazyColumn")
-        assertEquals(VUIDTypeCode.SCROLL, result)
+        assertEquals(TypeCode.SCROLL, result)
     }
 
     @Test
     fun `getTypeCode returns TAB for TabRow`() {
         val result = TypePatternRegistry.getTypeCode("TabRow")
-        assertEquals(VUIDTypeCode.TAB, result)
+        assertEquals(TypeCode.TAB, result)
     }
 
     @Test
     fun `getTypeCode returns MENU for NavigationBar`() {
         val result = TypePatternRegistry.getTypeCode("NavigationBar")
-        assertEquals(VUIDTypeCode.MENU, result)
+        assertEquals(TypeCode.MENU, result)
     }
 
     @Test
     fun `getTypeCode returns BUTTON for FilterChip`() {
         val result = TypePatternRegistry.getTypeCode("FilterChip")
-        assertEquals(VUIDTypeCode.BUTTON, result)
+        assertEquals(TypeCode.BUTTON, result)
     }
 
     // ========================================
@@ -65,13 +66,13 @@ class TypePatternRegistryTest {
     @Test
     fun `getTypeCode returns BUTTON for native Button`() {
         val result = TypePatternRegistry.getTypeCode("Button")
-        assertEquals(VUIDTypeCode.BUTTON, result)
+        assertEquals(TypeCode.BUTTON, result)
     }
 
     @Test
     fun `getTypeCode returns INPUT for EditText`() {
         val result = TypePatternRegistry.getTypeCode("EditText")
-        assertEquals(VUIDTypeCode.INPUT, result)
+        assertEquals(TypeCode.INPUT, result)
     }
 
     // ========================================
@@ -81,7 +82,7 @@ class TypePatternRegistryTest {
     @Test
     fun `getTypeCode returns ELEMENT for unknown class`() {
         val result = TypePatternRegistry.getTypeCode("SomeUnknownCustomWidget")
-        assertEquals(VUIDTypeCode.ELEMENT, result)
+        assertEquals(TypeCode.ELEMENT, result)
     }
 
     // ========================================
@@ -140,7 +141,7 @@ class TypePatternRegistryTest {
 
         // Verify getTypeCode returns ELEMENT (default) when no providers
         val result = TypePatternRegistry.getTypeCode("Button")
-        assertEquals(VUIDTypeCode.ELEMENT, result, "Should return ELEMENT when no providers are registered")
+        assertEquals(TypeCode.ELEMENT, result, "Should return ELEMENT when no providers are registered")
     }
 
     // ========================================
@@ -150,28 +151,28 @@ class TypePatternRegistryTest {
     @Test
     fun `getTypeCode handles empty string`() {
         val result = TypePatternRegistry.getTypeCode("")
-        assertEquals(VUIDTypeCode.ELEMENT, result)
+        assertEquals(TypeCode.ELEMENT, result)
     }
 
     @Test
     fun `getTypeCode handles whitespace string`() {
         val result = TypePatternRegistry.getTypeCode("   ")
-        assertEquals(VUIDTypeCode.ELEMENT, result)
+        assertEquals(TypeCode.ELEMENT, result)
     }
 
     @Test
     fun `getTypeCode is case insensitive`() {
         // Test various case combinations
-        assertEquals(VUIDTypeCode.BUTTON, TypePatternRegistry.getTypeCode("ICONBUTTON"))
-        assertEquals(VUIDTypeCode.BUTTON, TypePatternRegistry.getTypeCode("iconbutton"))
-        assertEquals(VUIDTypeCode.BUTTON, TypePatternRegistry.getTypeCode("IconButton"))
-        assertEquals(VUIDTypeCode.BUTTON, TypePatternRegistry.getTypeCode("iCoNbUtToN"))
+        assertEquals(TypeCode.BUTTON, TypePatternRegistry.getTypeCode("ICONBUTTON"))
+        assertEquals(TypeCode.BUTTON, TypePatternRegistry.getTypeCode("iconbutton"))
+        assertEquals(TypeCode.BUTTON, TypePatternRegistry.getTypeCode("IconButton"))
+        assertEquals(TypeCode.BUTTON, TypePatternRegistry.getTypeCode("iCoNbUtToN"))
     }
 
     @Test
     fun `getTypeCode handles class name with package prefix`() {
         // The pattern matching uses contains(), so partial matches work
         val result = TypePatternRegistry.getTypeCode("androidx.compose.material3.IconButton")
-        assertEquals(VUIDTypeCode.BUTTON, result)
+        assertEquals(TypeCode.BUTTON, result)
     }
 }

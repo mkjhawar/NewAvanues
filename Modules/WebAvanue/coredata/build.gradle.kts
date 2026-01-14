@@ -62,8 +62,8 @@ kotlin {
                 implementation(libs.koin.core)
                 implementation(libs.koin.compose)
 
-                // VoiceOSCoreNG for VUID generation
-                implementation(project(":Modules:VoiceOSCoreNG"))
+                // AVID for unified identifier generation
+                implementation(project(":Modules:AVID"))
             }
         }
 

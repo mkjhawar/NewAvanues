@@ -16,8 +16,8 @@ import com.augmentalis.voiceoscoreng.common.CommandGenerator
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.FrameworkType
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
-import com.augmentalis.voiceoscoreng.common.VUIDGenerator
-import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
+import com.augmentalis.voiceoscoreng.common.ElementFingerprint
+import com.augmentalis.avid.TypeCode
 import com.augmentalis.voiceoscoreng.functions.DangerousElementDetector
 import com.augmentalis.voiceoscoreng.handlers.ActionResult
 import kotlinx.datetime.Clock
@@ -359,14 +359,16 @@ class CommandBuilder(private val phrase: String) {
     }
 
     /**
-     * Generate a VUID based on provided parameters
+     * Generate a fingerprint based on provided parameters
      */
-    fun withGeneratedVuid(
+    fun withGeneratedFingerprint(
+        className: String,
         packageName: String,
-        typeCode: VUIDTypeCode,
-        elementHash: String
+        resourceId: String = "",
+        text: String = "",
+        contentDesc: String = ""
     ) = apply {
-        this.targetVuid = VUIDGenerator.generate(packageName, typeCode, elementHash)
+        this.targetVuid = ElementFingerprint.generate(className, packageName, resourceId, text, contentDesc)
     }
 
     fun build() = QuantizedCommand(
@@ -421,14 +423,14 @@ object TestAssertions {
     }
 
     /**
-     * Assert that a VUID is valid
+     * Assert that a fingerprint is valid
      */
-    fun assertValidVuid(vuid: String?, message: String? = null) {
-        if (vuid == null) {
-            throw AssertionError(message ?: "VUID is null")
+    fun assertValidFingerprint(fingerprint: String?, message: String? = null) {
+        if (fingerprint == null) {
+            throw AssertionError(message ?: "Fingerprint is null")
         }
-        if (!VUIDGenerator.isValidVUID(vuid)) {
-            throw AssertionError(message ?: "Invalid VUID format: $vuid")
+        if (!ElementFingerprint.isValid(fingerprint)) {
+            throw AssertionError(message ?: "Invalid fingerprint format: $fingerprint")
         }
     }
 
@@ -473,17 +475,16 @@ fun ElementInfo.toCommand(): QuantizedCommand? {
 }
 
 /**
- * Extension to generate VUID from element
+ * Extension to generate fingerprint from element
  */
-fun ElementInfo.toVuid(): String {
-    val typeCode = VUIDGenerator.getTypeCode(className)
-    val elementHash = when {
-        resourceId.isNotBlank() -> resourceId
-        contentDescription.isNotBlank() -> contentDescription
-        text.isNotBlank() -> text
-        else -> "$className:$bounds"
-    }
-    return VUIDGenerator.generate(packageName, typeCode, elementHash)
+fun ElementInfo.toFingerprint(): String {
+    return ElementFingerprint.generate(
+        className = className,
+        packageName = packageName,
+        resourceId = resourceId,
+        text = text,
+        contentDesc = contentDescription
+    )
 }
 
 /**

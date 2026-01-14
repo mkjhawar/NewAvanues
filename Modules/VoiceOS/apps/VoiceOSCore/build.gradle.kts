@@ -170,7 +170,7 @@ dependencies {
     implementation(project(":Modules:VoiceOS:core:text-utils"))          // Text manipulation and sanitization (KMP - project dependency)
     implementation(project(":Modules:VoiceOS:core:json-utils"))          // JSON manipulation utilities (KMP - project dependency)
     implementation(project(":Modules:VoiceOS:core:database"))            // SQLDelight KMP database (KMP - project dependency) - Phase 3: Migration complete
-    implementation(project(":Modules:VUID"))                             // Compact VUID generation (KMP - cross-platform)
+    implementation(project(":Modules:AVID"))                             // AVID generation (KMP - replaced VUID)
     implementation(project(":Modules:VoiceOSCoreNG"))                     // Next-gen unified core with shared extraction (KMP)
 
     // Lifecycle components
