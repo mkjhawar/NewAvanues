@@ -223,7 +223,7 @@ class LearnAppCore(
 
         // Generate compact VUID using shared KMP generator (use FQN for typealias)
         // Note: version is not available synchronously here, using default
-        return com.augmentalis.vuid.core.VUIDGenerator.generateCompact(
+        return com.augmentalis.avid.core.AvidGenerator.generateCompact(
             packageName = packageName,
             version = "1.0.0",
             typeName = elementType,

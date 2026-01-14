@@ -1,7 +1,6 @@
 # AVANUES-PLATFORM-INDEX
 # AI-Readable Platform Documentation Index
-# Version: 1.1 | Updated: 2026-01-13
-# Changes: Added AVID module, deprecated Common/VUID
+# Version: 1.0 | Updated: 2026-01-11
 
 ---
 
@@ -37,7 +36,7 @@ key_classes:
   - CommandRegistry: Dynamic screen-specific commands
   - StaticCommandRegistry: Predefined system commands
 dependencies:
-  - Modules/AVID
+  - Common/VUID
   - Common/VoiceOS/*
   - Common/Database
 capabilities:
@@ -174,7 +173,7 @@ key_classes:
   - BertTokenizer: BERT tokenization
   - IntentClassifier: Base classifier interface
 dependencies:
-  - Modules/AVID
+  - Common/VUID
 capabilities:
   - bert_classification: MobileBERT, mALBERT
   - 52_languages: via mALBERT
@@ -235,7 +234,6 @@ key_classes:
   - TabManager: Tab management with LRU
 dependencies:
   - VoiceOSCoreNG
-  - AVID
   - Common/*
 capabilities:
   - voice_navigation
@@ -249,43 +247,6 @@ platform_support:
   desktop: phase_2 (JCEF)
 ```
 
-### AVID
-```yaml
-id: avid
-path: /Modules/AVID
-type: kmp-library
-status: production
-version: 1.0.0
-loc: 800+
-purpose: Unified identifier system (Avanues Voice ID)
-key_classes:
-  - AvidGenerator: Cloud/local ID generation with platform encoding
-  - Platform: Platform enum (ANDROID, IOS, WEB, MACOS, WINDOWS, LINUX, UNKNOWN)
-  - TypeCode: 40+ semantic type codes for UI elements
-  - ElementFingerprint: Deterministic hash-based UI element identification
-dependencies:
-  - kotlinx-coroutines-core
-platforms:
-  - Android
-  - iOS (arm64, x64, simulatorArm64)
-  - JVM (Desktop)
-  - JS (Web, conditional)
-capabilities:
-  - cloud_id_generation: AVID-{platform}-{sequence}
-  - local_id_generation: AVIDL-{platform}-{sequence}
-  - id_promotion: AVIDL -> AVID on cloud sync
-  - deterministic_fingerprints: TypeCode:hash8
-  - cross_device_reproducibility
-  - collision_resistant_hashing
-id_formats:
-  cloud: "AVID-{A|I|W|M|X|L}-{sequence}"
-  local: "AVIDL-{A|I|W|M|X|L}-{sequence}"
-  fingerprint: "{TypeCode}:{hash8}"
-migration_status:
-  replaces: Common/VUID
-  consumers_migrated: [VoiceOSCoreNG, WebAvanue]
-```
-
 ---
 
 ## COMMON_LIBRARIES
@@ -294,16 +255,13 @@ migration_status:
 libraries:
   - id: vuid
     path: /Common/VUID
-    status: DEPRECATED
-    deprecated_by: Modules/AVID
-    purpose: Unique ID generation (DEPRECATED - use AVID instead)
+    purpose: Unique ID generation
     key_functions:
       - generateCompact(packageName, version, typeName)
       - generateMessageVuid()
       - generateConversationVuid()
       - isValid(vuid)
       - parse(vuid)
-    migration_note: "Use AvidGenerator for entity IDs, ElementFingerprint for UI elements"
 
   - id: voiceos-result
     path: /Common/VoiceOS/result
@@ -311,25 +269,8 @@ libraries:
     types: [Success, Failure]
     methods: [map, flatMap, mapError]
 
-  - id: voiceos-hash
-    path: /Common/VoiceOS/hash
-    purpose: SHA-256 hashing
-
-  - id: voiceos-constants
-    path: /Common/VoiceOS/constants
-    purpose: Configuration constants
-
-  - id: voiceos-validation
-    path: /Common/VoiceOS/validation
-    purpose: SQL escaping, input validation
-
-  - id: voiceos-exceptions
-    path: /Common/VoiceOS/exceptions
-    purpose: Exception hierarchy
-
-  - id: voiceos-database
-    path: /Common/VoiceOS/database
-    purpose: SQLDelight persistence
+  # DELETED 2026-01-14: voiceos-hash, voiceos-constants, voiceos-validation,
+  # voiceos-exceptions, voiceos-database - duplicate of Modules/VoiceOS/core/*
 
   - id: core-assetmanager
     path: /Common/Core/AssetManager
@@ -363,14 +304,13 @@ libraries:
 ## DEPENDENCY_GRAPH
 
 ```
-VoiceOS_App -> VoiceOSCoreNG -> [Modules/AVID, Common/VoiceOS/*, Common/Database]
+VoiceOS_App -> VoiceOSCoreNG -> [Modules/AVID, Modules/VoiceOS/core/*, Common/Database]
 AVA -> [LLM -> Common/Core, NLU -> Modules/AVID, RAG -> Common/Database, Common/*]
 WebAvanue -> [VoiceOSCoreNG, Modules/AVID, Common/*]
-AVID -> [kotlinx-coroutines-core]
 All_Modules -> Common_Libraries
 ```
 
-**Note:** Common/VUID is deprecated. All consumers should migrate to Modules/AVID.
+**Updated 2026-01-14:** VUID migrated to AVID, Common/VoiceOS deleted (duplicate)
 
 ---
 
@@ -475,7 +415,6 @@ human_readable:
   - /Docs/MasterDocs/NLU/README.md
   - /Docs/MasterDocs/RAG/README.md
   - /Docs/MasterDocs/WebAvanue/README.md
-  - /Docs/MasterDocs/AVID/README.md
   - /Docs/MasterDocs/Common/README.md
   - /Docs/MasterDocs/LD/LD-Platform-Overview-V1.md
   - /Docs/MasterDocs/LD/LD-Module-Registry-V1.md

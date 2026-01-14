@@ -1,8 +1,8 @@
 # CLASS-INDEX
 # AI-Readable Class Reference
-# Version: 2.1 | Updated: 2026-01-13
+# Version: 2.1 | Updated: 2026-01-14
 # Note: Includes SOLID-refactored classes from commits cf7fe0ff, 9231c8d9, 5a0353a6
-# Changes: Added AVID module classes, deprecated VUIDGenerator
+# Note: VUID migrated to AVID (2026-01-14) - Common/VUID deleted, Modules/AVID active
 
 ---
 
@@ -101,173 +101,6 @@ methods:
   - getCommands(locale: String): List<StaticCommand>
   - findCommand(text: String, locale: String): StaticCommand?
   - registerCustomCommand(command: StaticCommand): Unit
-```
-
----
-
-## AVID_CLASSES
-
-### AvidGenerator
-```yaml
-package: com.augmentalis.avid
-file: AvidGenerator.kt
-type: object
-purpose: Cloud and local ID generation with platform encoding
-id_formats:
-  cloud: "AVID-{platform}-{sequence}"
-  local: "AVIDL-{platform}-{sequence}"
-platform_codes:
-  A: Android
-  I: iOS
-  W: Web
-  M: macOS
-  X: Windows
-  L: Linux
-  U: Unknown
-methods:
-  cloud:
-    - generateCloud(platform: Platform = detectPlatform()): String
-    - generateCloudBatch(count: Int, platform: Platform = detectPlatform()): List<String>
-  local:
-    - generateLocal(platform: Platform = detectPlatform()): String
-    - generateLocalBatch(count: Int, platform: Platform = detectPlatform()): List<String>
-  validation:
-    - isCloudId(id: String): Boolean
-    - isLocalId(id: String): Boolean
-    - isValid(id: String): Boolean
-  parsing:
-    - parse(id: String): AvidComponents?
-    - getPlatform(id: String): Platform?
-  promotion:
-    - promoteToCloud(localId: String): String?
-  platform:
-    - detectPlatform(): Platform
-```
-
-### Platform
-```yaml
-package: com.augmentalis.avid
-file: Platform.kt
-type: enum
-purpose: Platform identification for cross-device IDs
-values:
-  - ANDROID: code='A'
-  - IOS: code='I'
-  - WEB: code='W'
-  - MACOS: code='M'
-  - WINDOWS: code='X'
-  - LINUX: code='L'
-  - UNKNOWN: code='U'
-methods:
-  - fromCode(code: Char): Platform
-```
-
-### TypeCode
-```yaml
-package: com.augmentalis.avid
-file: TypeCode.kt
-type: object
-purpose: 40+ semantic type codes for UI element classification
-categories:
-  basic_ui:
-    - ELEMENT: "ELM" (generic fallback)
-    - BUTTON: "BTN"
-    - INPUT: "INP"
-    - TEXT: "TXT"
-    - IMAGE: "IMG"
-    - ICON: "ICN"
-    - LINK: "LNK"
-  selection:
-    - CHECKBOX: "CHK"
-    - RADIO: "RAD"
-    - SWITCH: "SWT"
-    - TOGGLE: "TGL"
-    - DROPDOWN: "DRP"
-    - PICKER: "PKR"
-  containers:
-    - CONTAINER: "CTN"
-    - CARD: "CRD"
-    - LIST: "LST"
-    - GRID: "GRD"
-    - TABLE: "TBL"
-    - ROW: "ROW"
-    - CELL: "CEL"
-  navigation:
-    - MENU: "MNU"
-    - TAB: "TAB"
-    - NAV: "NAV"
-    - TOOLBAR: "TBR"
-    - HEADER: "HDR"
-    - FOOTER: "FTR"
-  interaction:
-    - SCROLL: "SCR"
-    - SLIDER: "SLD"
-    - PROGRESS: "PRG"
-    - SPINNER: "SPN"
-  feedback:
-    - DIALOG: "DLG"
-    - TOAST: "TST"
-    - SNACKBAR: "SNK"
-    - ALERT: "ALT"
-    - TOOLTIP: "TIP"
-  media:
-    - VIDEO: "VID"
-    - AUDIO: "AUD"
-    - CANVAS: "CNV"
-    - MAP: "MAP"
-  messaging:
-    - MESSAGE: "MSG"
-    - CONVERSATION: "CNV"
-    - PARTICIPANT: "PRT"
-methods:
-  - fromClassName(className: String): String
-  - isValid(code: String): Boolean
-  - getCategory(code: String): String?
-```
-
-### ElementFingerprint
-```yaml
-package: com.augmentalis.avid
-file: Fingerprint.kt
-type: object
-purpose: Deterministic hash-based UI element identification
-format: "{TypeCode}:{hash8}"
-features:
-  - Collision-resistant: SHA-256 based
-  - Cross-device reproducibility
-  - Deterministic: same inputs = same output
-  - Human readable: semantic type prefix
-methods:
-  generation:
-    - generate(className: String, packageName: String, resourceId: String, text: String, contentDesc: String): String
-  validation:
-    - isValid(fingerprint: String): Boolean
-  parsing:
-    - parse(fingerprint: String): Pair<String, String>?  # Returns (typeCode, hash)
-  utilities:
-    - getTypeCode(fingerprint: String): String?
-    - getHash(fingerprint: String): String?
-example:
-  input:
-    className: "Button"
-    packageName: "com.example.app"
-    resourceId: "btn_submit"
-    text: "Submit"
-    contentDesc: "Submit button"
-  output: "BTN:a3f8b2c1"
-```
-
-### AvidComponents
-```yaml
-package: com.augmentalis.avid
-file: AvidGenerator.kt
-type: data_class
-purpose: Parsed AVID components
-fields:
-  - prefix: String (AVID or AVIDL)
-  - platform: Platform
-  - sequence: String
-  - isCloud: Boolean
 ```
 
 ---
@@ -798,25 +631,33 @@ methods:
 
 ## COMMON_CLASSES
 
-### VUIDGenerator (DEPRECATED)
+### AvidGenerator
 ```yaml
-package: com.augmentalis.common.vuid
-file: VUIDGenerator.kt
+package: com.augmentalis.avid.core
+file: AvidGenerator.kt
 type: object
-status: DEPRECATED
-deprecated_by: com.augmentalis.avid.AvidGenerator, com.augmentalis.avid.ElementFingerprint
-purpose: Unique identifier generation (DEPRECATED - use AVID module instead)
-migration_guide:
-  entity_ids: "Use AvidGenerator.generateCloud() or AvidGenerator.generateLocal()"
-  ui_fingerprints: "Use ElementFingerprint.generate()"
-  message_ids: "Use AvidGenerator.generateCloud() with platform detection"
-format: Compact, parseable VUIDs
+purpose: Avanues Voice Identifier generation (replaces VUID)
+format: Compact format: {module}:{typeAbbrev}:{hash8}
+status: ACTIVE (migrated 2026-01-14)
 methods:
-  - generateCompact(packageName: String, version: String, typeName: String): String
-  - generateMessageVuid(): String
-  - generateConversationVuid(): String
-  - isValid(vuid: String): Boolean
-  - parse(vuid: String): ParsedVuid?
+  - generateCompact(packageName: String, version: String, typeName: String, elementHash: String?): String
+  - generateCompactSimple(module: String, typeAbbrev: String): String
+  - generateMessageAvid(): String
+  - generateConversationAvid(): String
+  - isValid(avid: String): Boolean
+  - isCompact(avid: String): Boolean
+  - parse(avid: String): ParsedAvid?
+  - migrateToCompact(legacyVuid: String, version: String?): String?
+deprecated_aliases:
+  - generateMessageVuid() -> generateMessageAvid()
+  - generateConversationVuid() -> generateConversationAvid()
+```
+
+### VUIDGenerator (DELETED)
+```yaml
+status: DELETED (2026-01-14)
+replacement: AvidGenerator in com.augmentalis.avid.core
+migration: typealias VUIDGenerator = AvidGenerator for backward compatibility
 ```
 
 ### VoiceOSResult

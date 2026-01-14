@@ -297,7 +297,7 @@ class ThirdPartyUuidGenerator(
             return ThirdPartyUuidComponents(
                 packageName = pkgName,
                 version = ver,
-                elementType = com.augmentalis.vuid.core.VUIDGenerator.TypeAbbrev.toTypeName(parsed.typeAbbrev),
+                elementType = com.augmentalis.avid.core.AvidGenerator.TypeAbbrev.toTypeName(parsed.typeAbbrev),
                 hash = parsed.hash
             )
         }

@@ -27,7 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
-import com.augmentalis.vuid.core.VUIDGenerator
+import com.augmentalis.avid.core.AvidGenerator
 
 /**
  * Configuration for comparison framework
