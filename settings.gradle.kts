@@ -52,6 +52,7 @@ include(":Modules:NLU")   // Natural language understanding
 
 // Top-level Modules (cross-platform KMP)
 include(":Modules:AVID")                  // Avanues Voice ID - unified identifier system
+include(":Modules:Database")              // Unified KMP database - VoiceOS, WebAvanue, AVID persistence
 // include(":Modules:VUID")               // DEPRECATED - replaced by AVID module
 
 // VoiceOSCoreNG - Next-generation KMP core for VoiceOS
