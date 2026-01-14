@@ -16,8 +16,8 @@ kotlin {
         val desktopMain by getting {
             dependencies {
                 // MagicUI Core (updated from legacy Universal paths)
-                implementation(project(":Modules:AVAMagic:AVAUI:Core"))
-                implementation(project(":Modules:AVAMagic:AVAUI:Foundation"))
+                implementation(project(":Modules:AvaMagic:AvaUI:Core"))
+                implementation(project(":Modules:AvaMagic:AvaUI:Foundation"))
 
                 // Compose Desktop
                 implementation(compose.desktop.currentOs)

@@ -1,7 +1,7 @@
 package com.augmentalis.avamagic.yaml
 
-import com.augmentalis.magicelements.core.*
-import com.augmentalis.magicelements.dsl.*
+import com.augmentalis.avamagic.core.*
+import com.augmentalis.avamagic.dsl.*
 import kotlinx.serialization.json.*
 
 /**
@@ -855,7 +855,7 @@ class YamlParser {
             data["actions"]?.jsonArray?.let { actionsArray ->
                 actions = actionsArray.map { actionElement ->
                     val actionObj = actionElement.jsonObject
-                    com.augmentalis.magicelements.components.navigation.AppBarAction(
+                    com.augmentalis.avamagic.components.navigation.AppBarAction(
                         icon = actionObj["icon"]?.jsonPrimitive?.content ?: "",
                         label = actionObj["label"]?.jsonPrimitive?.content,
                         onClick = {}
@@ -869,7 +869,7 @@ class YamlParser {
         val itemsArray = data["items"]?.jsonArray ?: return
         val items = itemsArray.map { itemElement ->
             val itemObj = itemElement.jsonObject
-            com.augmentalis.magicelements.components.navigation.BottomNavItem(
+            com.augmentalis.avamagic.components.navigation.BottomNavItem(
                 icon = itemObj["icon"]?.jsonPrimitive?.content ?: "",
                 label = itemObj["label"]?.jsonPrimitive?.content ?: "",
                 badge = itemObj["badge"]?.jsonPrimitive?.content
@@ -889,7 +889,7 @@ class YamlParser {
         val tabsArray = data["tabs"]?.jsonArray ?: return
         val tabs = tabsArray.map { tabElement ->
             val tabObj = tabElement.jsonObject
-            com.augmentalis.magicelements.components.navigation.Tab(
+            com.augmentalis.avamagic.components.navigation.Tab(
                 label = tabObj["label"]?.jsonPrimitive?.content ?: "",
                 icon = tabObj["icon"]?.jsonPrimitive?.content
             )
@@ -912,14 +912,14 @@ class YamlParser {
         ) {
             data["position"]?.let {
                 position = when (it.jsonPrimitive.content) {
-                    "Right" -> com.augmentalis.magicelements.components.navigation.DrawerPosition.Right
-                    else -> com.augmentalis.magicelements.components.navigation.DrawerPosition.Left
+                    "Right" -> com.augmentalis.avamagic.components.navigation.DrawerPosition.Right
+                    else -> com.augmentalis.avamagic.components.navigation.DrawerPosition.Left
                 }
             }
             data["items"]?.jsonArray?.let { itemsArray ->
                 items = itemsArray.map { itemElement ->
                     val itemObj = itemElement.jsonObject
-                    com.augmentalis.magicelements.components.navigation.DrawerItem(
+                    com.augmentalis.avamagic.components.navigation.DrawerItem(
                         id = itemObj["id"]?.jsonPrimitive?.content ?: "",
                         icon = itemObj["icon"]?.jsonPrimitive?.content,
                         label = itemObj["label"]?.jsonPrimitive?.content ?: "",
@@ -934,7 +934,7 @@ class YamlParser {
         val itemsArray = data["items"]?.jsonArray ?: return
         val items = itemsArray.map { itemElement ->
             val itemObj = itemElement.jsonObject
-            com.augmentalis.magicelements.components.navigation.BreadcrumbItem(
+            com.augmentalis.avamagic.components.navigation.BreadcrumbItem(
                 label = itemObj["label"]?.jsonPrimitive?.content ?: "",
                 href = itemObj["href"]?.jsonPrimitive?.content
             )
@@ -968,7 +968,7 @@ class YamlParser {
         val columnsArray = data["columns"]?.jsonArray ?: return
         val columns = columnsArray.map { columnElement ->
             val columnObj = columnElement.jsonObject
-            com.augmentalis.magicelements.components.data.TableColumn(
+            com.augmentalis.avamagic.components.data.TableColumn(
                 id = columnObj["id"]?.jsonPrimitive?.content ?: "",
                 label = columnObj["label"]?.jsonPrimitive?.content ?: "",
                 sortable = columnObj["sortable"]?.jsonPrimitive?.boolean ?: false
@@ -979,11 +979,11 @@ class YamlParser {
         val rows = rowsArray.map { rowElement ->
             val rowObj = rowElement.jsonObject
             val cells = rowObj.entries.filter { it.key != "id" }.map { (_, value) ->
-                com.augmentalis.magicelements.components.data.TableCell(
+                com.augmentalis.avamagic.components.data.TableCell(
                     content = value.jsonPrimitive.content
                 )
             }
-            com.augmentalis.magicelements.components.data.TableRow(
+            com.augmentalis.avamagic.components.data.TableRow(
                 id = rowObj["id"]?.jsonPrimitive?.content ?: "",
                 cells = cells
             )
@@ -1005,7 +1005,7 @@ class YamlParser {
         val itemsArray = data["items"]?.jsonArray ?: return
         val items = itemsArray.map { itemElement ->
             val itemObj = itemElement.jsonObject
-            com.augmentalis.magicelements.components.data.ListItem(
+            com.augmentalis.avamagic.components.data.ListItem(
                 id = itemObj["id"]?.jsonPrimitive?.content ?: "",
                 primary = itemObj["primary"]?.jsonPrimitive?.content ?: "",
                 secondary = itemObj["secondary"]?.jsonPrimitive?.content,
@@ -1027,7 +1027,7 @@ class YamlParser {
         val itemsArray = data["items"]?.jsonArray ?: return
         val items = itemsArray.map { itemElement ->
             val itemObj = itemElement.jsonObject
-            com.augmentalis.magicelements.components.data.AccordionItem(
+            com.augmentalis.avamagic.components.data.AccordionItem(
                 id = itemObj["id"]?.jsonPrimitive?.content ?: "",
                 title = itemObj["title"]?.jsonPrimitive?.content ?: "",
                 content = TextComponent(
@@ -1057,14 +1057,14 @@ class YamlParser {
         val stepsArray = data["steps"]?.jsonArray ?: return
         val steps = stepsArray.map { stepElement ->
             val stepObj = stepElement.jsonObject
-            com.augmentalis.magicelements.components.data.Step(
+            com.augmentalis.avamagic.components.data.Step(
                 label = stepObj["label"]?.jsonPrimitive?.content ?: "",
                 description = stepObj["description"]?.jsonPrimitive?.content,
                 status = when (stepObj["status"]?.jsonPrimitive?.content) {
-                    "Active" -> com.augmentalis.magicelements.components.data.StepStatus.Active
-                    "Complete" -> com.augmentalis.magicelements.components.data.StepStatus.Complete
-                    "Error" -> com.augmentalis.magicelements.components.data.StepStatus.Error
-                    else -> com.augmentalis.magicelements.components.data.StepStatus.Pending
+                    "Active" -> com.augmentalis.avamagic.components.data.StepStatus.Active
+                    "Complete" -> com.augmentalis.avamagic.components.data.StepStatus.Complete
+                    "Error" -> com.augmentalis.avamagic.components.data.StepStatus.Error
+                    else -> com.augmentalis.avamagic.components.data.StepStatus.Pending
                 }
             )
         }
@@ -1088,7 +1088,7 @@ class YamlParser {
         val itemsArray = data["items"]?.jsonArray ?: return
         val items = itemsArray.map { itemElement ->
             val itemObj = itemElement.jsonObject
-            com.augmentalis.magicelements.components.data.TimelineItem(
+            com.augmentalis.avamagic.components.data.TimelineItem(
                 id = itemObj["id"]?.jsonPrimitive?.content ?: "",
                 timestamp = itemObj["timestamp"]?.jsonPrimitive?.content ?: "",
                 title = itemObj["title"]?.jsonPrimitive?.content ?: "",
@@ -1113,9 +1113,9 @@ class YamlParser {
     }
 
     private fun parseTreeView(scope: MagicUIScope, data: JsonObject) {
-        fun parseNode(nodeObj: JsonObject): com.augmentalis.magicelements.components.data.TreeNode {
+        fun parseNode(nodeObj: JsonObject): com.augmentalis.avamagic.components.data.TreeNode {
             val children = nodeObj["children"]?.jsonArray?.map { parseNode(it.jsonObject) } ?: emptyList()
-            return com.augmentalis.magicelements.components.data.TreeNode(
+            return com.augmentalis.avamagic.components.data.TreeNode(
                 id = nodeObj["id"]?.jsonPrimitive?.content ?: "",
                 label = nodeObj["label"]?.jsonPrimitive?.content ?: "",
                 icon = nodeObj["icon"]?.jsonPrimitive?.content,
@@ -1175,16 +1175,16 @@ class YamlParser {
             data["text"]?.let { text = it.jsonPrimitive.content }
             data["size"]?.let {
                 size = when (it.jsonPrimitive.content) {
-                    "Small" -> com.augmentalis.magicelements.components.data.AvatarSize.Small
-                    "Large" -> com.augmentalis.magicelements.components.data.AvatarSize.Large
-                    else -> com.augmentalis.magicelements.components.data.AvatarSize.Medium
+                    "Small" -> com.augmentalis.avamagic.components.data.AvatarSize.Small
+                    "Large" -> com.augmentalis.avamagic.components.data.AvatarSize.Large
+                    else -> com.augmentalis.avamagic.components.data.AvatarSize.Medium
                 }
             }
             data["shape"]?.let {
                 shape = when (it.jsonPrimitive.content) {
-                    "Square" -> com.augmentalis.magicelements.components.data.AvatarShape.Square
-                    "Rounded" -> com.augmentalis.magicelements.components.data.AvatarShape.Rounded
-                    else -> com.augmentalis.magicelements.components.data.AvatarShape.Circle
+                    "Square" -> com.augmentalis.avamagic.components.data.AvatarShape.Square
+                    "Rounded" -> com.augmentalis.avamagic.components.data.AvatarShape.Rounded
+                    else -> com.augmentalis.avamagic.components.data.AvatarShape.Circle
                 }
             }
         }
@@ -1235,18 +1235,18 @@ class YamlParser {
         ) {
             data["variant"]?.let {
                 variant = when (it.jsonPrimitive.content) {
-                    "Rectangular" -> com.augmentalis.magicelements.components.data.SkeletonVariant.Rectangular
-                    "Circular" -> com.augmentalis.magicelements.components.data.SkeletonVariant.Circular
-                    else -> com.augmentalis.magicelements.components.data.SkeletonVariant.Text
+                    "Rectangular" -> com.augmentalis.avamagic.components.data.SkeletonVariant.Rectangular
+                    "Circular" -> com.augmentalis.avamagic.components.data.SkeletonVariant.Circular
+                    else -> com.augmentalis.avamagic.components.data.SkeletonVariant.Text
                 }
             }
             data["width"]?.let { width = parseSize(it) }
             data["height"]?.let { height = parseSize(it) }
             data["animation"]?.let {
                 animation = when (it.jsonPrimitive.content) {
-                    "Wave" -> com.augmentalis.magicelements.components.data.SkeletonAnimation.Wave
-                    "None" -> com.augmentalis.magicelements.components.data.SkeletonAnimation.None
-                    else -> com.augmentalis.magicelements.components.data.SkeletonAnimation.Pulse
+                    "Wave" -> com.augmentalis.avamagic.components.data.SkeletonAnimation.Wave
+                    "None" -> com.augmentalis.avamagic.components.data.SkeletonAnimation.None
+                    else -> com.augmentalis.avamagic.components.data.SkeletonAnimation.Pulse
                 }
             }
         }
@@ -1267,14 +1267,14 @@ class YamlParser {
         val columnsArray = data["columns"]?.jsonArray ?: return
         val columns = columnsArray.map { columnElement ->
             val columnObj = columnElement.jsonObject
-            com.augmentalis.magicelements.components.data.DataGridColumn(
+            com.augmentalis.avamagic.components.data.DataGridColumn(
                 id = columnObj["id"]?.jsonPrimitive?.content ?: "",
                 label = columnObj["label"]?.jsonPrimitive?.content ?: "",
                 sortable = columnObj["sortable"]?.jsonPrimitive?.boolean ?: true,
                 align = when (columnObj["align"]?.jsonPrimitive?.content) {
-                    "Center" -> com.augmentalis.magicelements.components.data.TextAlign.Center
-                    "End" -> com.augmentalis.magicelements.components.data.TextAlign.End
-                    else -> com.augmentalis.magicelements.components.data.TextAlign.Start
+                    "Center" -> com.augmentalis.avamagic.components.data.TextAlign.Center
+                    "End" -> com.augmentalis.avamagic.components.data.TextAlign.End
+                    else -> com.augmentalis.avamagic.components.data.TextAlign.Start
                 }
             )
         }
@@ -1287,7 +1287,7 @@ class YamlParser {
                 .associate { (key, value) ->
                     key to (value.jsonPrimitive.content as Any)
                 }
-            com.augmentalis.magicelements.components.data.DataGridRow(id = id, cells = cells)
+            com.augmentalis.avamagic.components.data.DataGridRow(id = id, cells = cells)
         }
 
         scope.DataGrid(

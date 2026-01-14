@@ -1,4 +1,4 @@
-package com.augmentalis.avaelements.renderer.desktop.mappers
+package com.augmentalis.avamagic.renderer.desktop.mappers
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
@@ -9,12 +9,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.augmentalis.avaelements.core.Theme
-import com.augmentalis.avaelements.components.phase1.form.*
-import com.augmentalis.avaelements.components.phase1.display.*
-import com.augmentalis.avaelements.components.phase1.layout.*
-import com.augmentalis.avaelements.components.phase1.data.*
-import com.augmentalis.avaelements.components.phase1.navigation.ScrollView
+import com.augmentalis.avamagic.core.Theme
+import com.augmentalis.avamagic.components.phase1.form.*
+import com.augmentalis.avamagic.components.phase1.display.*
+import com.augmentalis.avamagic.components.phase1.layout.*
+import com.augmentalis.avamagic.components.phase1.data.*
+import com.augmentalis.avamagic.components.phase1.navigation.ScrollView
 
 /**
  * Phase 1 Desktop Mappers - Fixed Version
@@ -70,7 +70,7 @@ fun RenderSwitch(c: Switch, theme: Theme) {
 // ============================================================================
 
 @Composable
-fun RenderText(c: com.augmentalis.avaelements.components.phase1.display.Text, theme: Theme) {
+fun RenderText(c: com.augmentalis.avamagic.components.phase1.display.Text, theme: Theme) {
     Text(text = c.content, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(4.dp))
 }
 
@@ -108,7 +108,7 @@ fun RenderContainer(c: Container, theme: Theme) {
 }
 
 @Composable
-fun RenderRow(c: com.augmentalis.avaelements.components.phase1.layout.Row, theme: Theme) {
+fun RenderRow(c: com.augmentalis.avamagic.components.phase1.layout.Row, theme: Theme) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -118,7 +118,7 @@ fun RenderRow(c: com.augmentalis.avaelements.components.phase1.layout.Row, theme
 }
 
 @Composable
-fun RenderColumn(c: com.augmentalis.avaelements.components.phase1.layout.Column, theme: Theme) {
+fun RenderColumn(c: com.augmentalis.avamagic.components.phase1.layout.Column, theme: Theme) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -156,7 +156,7 @@ fun RenderScrollView(c: ScrollView, theme: Theme) {
 }
 
 @Composable
-fun RenderList(c: com.augmentalis.avaelements.components.phase1.data.List, theme: Theme) {
+fun RenderList(c: com.augmentalis.avamagic.components.phase1.data.List, theme: Theme) {
     Column(modifier = Modifier.fillMaxWidth()) {
         repeat(5) { index ->
             Text(text = "List Item ${index + 1}", modifier = Modifier.fillMaxWidth().padding(12.dp))

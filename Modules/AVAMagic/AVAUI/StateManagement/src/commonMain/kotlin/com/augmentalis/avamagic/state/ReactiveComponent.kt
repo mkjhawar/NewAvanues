@@ -1,6 +1,6 @@
 package com.augmentalis.avamagic.state
 
-import com.augmentalis.magicelements.core.*
+import com.augmentalis.avamagic.core.*
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch

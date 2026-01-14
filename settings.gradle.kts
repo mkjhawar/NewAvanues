@@ -113,47 +113,40 @@ include(":Modules:WebAvanue:universal")  // UI layer: ViewModels, screens, platf
 // UniversalRPC - Cross-platform gRPC module
 include(":Modules:UniversalRPC")         // Root module with KMP + Wire
 
-// AVAMagic Modules
-include(":Modules:AVAMagic:MagicTools:LanguageServer")  // AVA Language Server (LSP)
+// AvaMagic Modules
+include(":Modules:AvaMagic:MagicTools:LanguageServer")  // AVA Language Server (LSP)
+include(":Modules:AvaMagic:AVACode")                    // Kotlin Builder Functions (DSL)
+include(":Modules:AvaMagic:AVURuntime")                 // AVU file parsing/processing
 
-// AVAMagic Language & Runtime (at AVAMagic level)
-include(":Modules:AVAMagic:AVACode")                    // Kotlin Builder Functions (DSL)
-include(":Modules:AVAMagic:AVURuntime")                 // AVU file parsing/processing
+// AvaUI Core & Base Types
+include(":Modules:AvaMagic:AvaUI:Core")                 // Base types, interfaces
+include(":Modules:AvaMagic:AvaUI:CoreTypes")            // Shared type definitions
+include(":Modules:AvaMagic:AvaUI:Foundation")           // Foundation components
+include(":Modules:AvaMagic:AvaUI:Theme")                // Theme system
+include(":Modules:AvaMagic:AvaUI:ThemeBridge")          // Theme conversion utilities
+include(":Modules:AvaMagic:AvaUI:DesignSystem")         // Design tokens
+include(":Modules:AvaMagic:AvaUI:StateManagement")      // State management
+include(":Modules:AvaMagic:AvaUI:UIConvertor")          // UI conversion utilities
 
-// AVAUI Core & Base Types
-include(":Modules:AVAMagic:AVAUI:Core")                 // Base types, interfaces
-include(":Modules:AVAMagic:AVAUI:CoreTypes")            // Shared type definitions
-include(":Modules:AVAMagic:AVAUI:Foundation")           // Foundation components
-include(":Modules:AVAMagic:AVAUI:Theme")                // Theme system
-include(":Modules:AVAMagic:AVAUI:ThemeBridge")          // Theme conversion utilities
-include(":Modules:AVAMagic:AVAUI:DesignSystem")         // Design tokens
-include(":Modules:AVAMagic:AVAUI:StateManagement")      // State management
-include(":Modules:AVAMagic:AVAUI:UIConvertor")          // UI conversion utilities
+// AvaUI Component Modules
+include(":Modules:AvaMagic:AvaUI:Input")                // Input components
+include(":Modules:AvaMagic:AvaUI:Display")              // Display components
+include(":Modules:AvaMagic:AvaUI:Feedback")             // Feedback components
+include(":Modules:AvaMagic:AvaUI:Layout")               // Layout components
+include(":Modules:AvaMagic:AvaUI:Navigation")           // Navigation components
+include(":Modules:AvaMagic:AvaUI:Floating")             // Floating components
+include(":Modules:AvaMagic:AvaUI:Data")                 // Data components
 
-// AVAUI Component Modules (DTOs)
-include(":Modules:AVAMagic:AVAUI:Input")                // Input components (Slider, DatePicker, etc.)
-include(":Modules:AVAMagic:AVAUI:Display")              // Display components (Badge, Avatar, etc.)
-include(":Modules:AVAMagic:AVAUI:Feedback")             // Feedback components (Alert, Toast, etc.)
-include(":Modules:AVAMagic:AVAUI:Layout")               // Layout components (Grid, Stack, etc.)
-include(":Modules:AVAMagic:AVAUI:Navigation")           // Navigation components (AppBar, Tabs, etc.)
-include(":Modules:AVAMagic:AVAUI:Floating")             // Floating components (CommandBar)
-include(":Modules:AVAMagic:AVAUI:Data")                 // Data components (Accordion, Carousel, etc.)
+// AvaUI Infrastructure
+include(":Modules:AvaMagic:AvaUI:Adapters")             // Platform adapters
+include(":Modules:AvaMagic:AvaUI:TemplateLibrary")      // Component templates
+include(":Modules:AvaMagic:AvaUI:VoiceCommandRouter")   // Voice command routing
+include(":Modules:AvaMagic:AvaUI:IPCConnector")         // IPC connection layer
+include(":Modules:AvaMagic:AvaUI:ARGScanner")           // ARG scanning utilities
+include(":Modules:AvaMagic:AvaUI:AssetManager")         // Asset management
 
-// AVAUI Infrastructure
-include(":Modules:AVAMagic:AVAUI:Adapters")             // Platform adapters
-include(":Modules:AVAMagic:AVAUI:TemplateLibrary")      // Component templates
-// include(":Modules:AVAMagic:AVAUI:ThemeBuilder")         // Theme builder tools - disabled: JVM desktop, needs Core multiplatform
-include(":Modules:AVAMagic:AVAUI:VoiceCommandRouter")   // Voice command routing
-include(":Modules:AVAMagic:AVAUI:IPCConnector")         // IPC connection layer
-include(":Modules:AVAMagic:AVAUI:ARGScanner")           // ARG scanning utilities
-include(":Modules:AVAMagic:AVAUI:AssetManager")         // Asset management
-
-// AVAUI Platform Renderers
-include(":Modules:AVAMagic:AVAUI:Renderers:Android")    // Android Compose renderer
-// TODO: Re-enable when Core module supports multiplatform targets
-// include(":Modules:AVAMagic:AVAUI:Renderers:iOS")        // iOS SwiftUI renderer (45 views) - disabled: Core is Android-only
-// include(":Modules:AVAMagic:AVAUI:Renderers:Desktop")    // Desktop Compose renderer - disabled: Core is Android-only
-// include(":Modules:AVAMagic:AVAUI:Renderers:Web")        // Web React renderer
+// AvaUI Platform Renderers
+include(":Modules:AvaMagic:AvaUI:Renderers:Android")    // Android Compose renderer
 
 // Android Apps
 include(":android:apps:webavanue")

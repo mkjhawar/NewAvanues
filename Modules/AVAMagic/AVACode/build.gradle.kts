@@ -29,7 +29,7 @@ kotlin {
         val commonMain by getting {
             kotlin.srcDirs("commonMain/kotlin", "src/commonMain/kotlin")
             dependencies {
-                implementation(project(":Modules:AVAMagic:AVAUI:Core"))
+                implementation(project(":Modules:AvaMagic:AvaUI:Core"))
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
             }

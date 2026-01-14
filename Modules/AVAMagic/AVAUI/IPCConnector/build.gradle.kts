@@ -31,10 +31,10 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
                 // ARG Scanner for service/provider discovery
-                implementation(project(":Modules:AVAMagic:AVAUI:ARGScanner"))
+                implementation(project(":Modules:AvaMagic:AvaUI:ARGScanner"))
 
                 // Components Core for base types
-                implementation(project(":Modules:AVAMagic:AVAUI:Core"))
+                implementation(project(":Modules:AvaMagic:AvaUI:Core"))
             }
         }
 

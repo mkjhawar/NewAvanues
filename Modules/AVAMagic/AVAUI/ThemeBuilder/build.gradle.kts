@@ -29,7 +29,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // MagicElements Core dependency
-                implementation(project(":Modules:AVAMagic:AVAUI:Core"))
+                implementation(project(":Modules:AvaMagic:AvaUI:Core"))
 
                 // Kotlin standard library
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
