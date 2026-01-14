@@ -705,6 +705,119 @@ methods:
 
 ---
 
+## DATABASE_CLASSES
+
+### ScrapedWebCommandDTO
+```yaml
+package: com.augmentalis.database.dto
+file: ScrapedWebCommandDTO.kt
+type: data_class
+purpose: DTO for web voice commands extracted from web pages
+fields:
+  - id: Long
+  - elementHash: String
+  - domainId: String
+  - urlPattern: String?
+  - cssSelector: String
+  - xpath: String?
+  - commandText: String
+  - elementText: String?
+  - elementTag: String
+  - elementType: String
+  - allowedActions: List<String>
+  - primaryAction: String
+  - confidence: Float
+  - isUserApproved: Boolean
+  - synonyms: List<String>?
+  - usageCount: Int
+  - boundLeft/Top/Width/Height: Int?
+methods:
+  - allowedActionsJson(): String
+  - synonymsJson(): String?
+  - parseAllowedActions(json): List<String>
+  - parseSynonyms(json): List<String>?
+```
+
+### WebAppWhitelistDTO
+```yaml
+package: com.augmentalis.database.dto
+file: WebAppWhitelistDTO.kt
+type: data_class
+purpose: DTO for user-designated web apps for persistent voice command storage
+fields:
+  - id: Long
+  - domainId: String (e.g., "mail.google.com")
+  - displayName: String (e.g., "Gmail")
+  - baseUrl: String?
+  - category: String? (email, social, productivity, etc.)
+  - isEnabled: Boolean
+  - autoScan: Boolean
+  - saveCommands: Boolean
+  - commandCount: Int
+  - lastVisited: Long?
+  - visitCount: Int
+constants:
+  Categories: [EMAIL, SOCIAL, PRODUCTIVITY, SHOPPING, BANKING, ENTERTAINMENT, NEWS, TRAVEL, EDUCATION, HEALTH, OTHER]
+  POPULAR_APPS: Map of known domains to names/categories
+methods:
+  - suggestMetadata(domainId): Pair<String, String>
+```
+
+### IScrapedWebCommandRepository
+```yaml
+package: com.augmentalis.database.repositories
+file: IScrapedWebCommandRepository.kt
+type: interface
+purpose: Repository interface for scraped web voice commands CRUD
+methods:
+  - insert(command): suspend Long
+  - insertBatch(commands): suspend Unit
+  - getById(id): suspend ScrapedWebCommandDTO?
+  - getByDomain(domainId): suspend List<ScrapedWebCommandDTO>
+  - getByDomainAndUrl(domainId, url): suspend List<ScrapedWebCommandDTO>
+  - getByElementHash(hash, domainId): suspend List<ScrapedWebCommandDTO>
+  - getHighConfidence(domainId, minConfidence): suspend List<ScrapedWebCommandDTO>
+  - getUserApproved(domainId): suspend List<ScrapedWebCommandDTO>
+  - getMostUsed(domainId, limit): suspend List<ScrapedWebCommandDTO>
+  - countByDomain(domainId): suspend Long
+  - updateConfidence(id, confidence, lastVerified): suspend Unit
+  - markApproved(id, approvedAt): suspend Unit
+  - updateSynonyms(id, synonyms): suspend Unit
+  - incrementUsage(id, lastUsed): suspend Unit
+  - markVerified(hash, domainId, lastVerified): suspend Unit
+  - markDeprecated(domainId, olderThan): suspend Unit
+  - deleteDeprecated(olderThan): suspend Unit
+  - deleteByDomain(domainId): suspend Unit
+  - vacuum(olderThan): suspend Unit
+```
+
+### IWebAppWhitelistRepository
+```yaml
+package: com.augmentalis.database.repositories
+file: IWebAppWhitelistRepository.kt
+type: interface
+purpose: Repository interface for web app whitelist management
+methods:
+  - insertOrUpdate(webApp): suspend Long
+  - insert(domainId, displayName, baseUrl, category, createdAt, updatedAt): suspend Long
+  - getAll(): suspend List<WebAppWhitelistDTO>
+  - getEnabled(): suspend List<WebAppWhitelistDTO>
+  - getByCategory(category): suspend List<WebAppWhitelistDTO>
+  - getByDomain(domainId): suspend WebAppWhitelistDTO?
+  - isWhitelisted(domainId): suspend Boolean
+  - getMostVisited(limit): suspend List<WebAppWhitelistDTO>
+  - updateSettings(domainId, isEnabled, autoScan, saveCommands, updatedAt): suspend Unit
+  - updateDisplayName(domainId, displayName, updatedAt): suspend Unit
+  - updateCategory(domainId, category, updatedAt): suspend Unit
+  - recordVisit(domainId, visitedAt): suspend Unit
+  - updateCommandCount(domainId, count, updatedAt): suspend Unit
+  - incrementCommandCount(domainId, updatedAt): suspend Unit
+  - deleteByDomain(domainId): suspend Unit
+  - deleteInactive(olderThan): suspend Unit
+```
+
+---
+
 ## DATA_CLASSES
 
 ### HandlerResult

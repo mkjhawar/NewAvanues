@@ -218,6 +218,38 @@ chunking_strategies:
   - HYBRID
 ```
 
+### DATABASE
+```yaml
+id: database
+path: /Modules/Database
+type: kmp-library
+status: production
+version: 1.0.0
+loc: 2000+
+purpose: Unified cross-platform database persistence
+key_classes:
+  - ScrapedWebCommandDTO: Web voice command data transfer
+  - WebAppWhitelistDTO: Whitelisted web app data transfer
+  - IScrapedWebCommandRepository: Web command CRUD interface
+  - IWebAppWhitelistRepository: Whitelist management interface
+dependencies:
+  - Modules/AVID
+  - SQLDelight
+capabilities:
+  - avid_persistence: element, hierarchy, alias, analytics tables
+  - web_command_storage: scraped commands for whitelisted domains
+  - browser_data: tabs, history, favorites, downloads, sessions
+  - cross_platform: Android, iOS, Desktop
+tables:
+  avid: [avid_element, avid_hierarchy, avid_alias, avid_analytics]
+  web: [scraped_web_command, web_app_whitelist]
+  browser: [tab, tab_group, favorite, history_entry, download, browser_settings, site_permission, session]
+platform_support:
+  android: production (SQLDelight Android driver)
+  ios: production (SQLDelight Native driver)
+  desktop: production (SQLDelight SQLite driver)
+```
+
 ### WEBAVANUE
 ```yaml
 id: webavanue
@@ -234,13 +266,15 @@ key_classes:
   - TabManager: Tab management with LRU
 dependencies:
   - VoiceOSCoreNG
+  - Modules/Database
   - Common/*
 capabilities:
   - voice_navigation
-  - dom_scraping_with_vuids
+  - dom_scraping_with_avids
   - tab_management
   - reader_mode
   - encrypted_storage: AES-256-CBC
+  - web_command_persistence: via Database module
 platform_support:
   android: production (WebView)
   ios: phase_2 (WKWebView)
