@@ -97,7 +97,8 @@ abstract class BaseVoiceOSTest {
      *
      * @param block Test block to execute
      */
-    protected fun runTest(block: suspend TestScope.() -> Unit) {
-        testScope.runTest(block)
-    }
+    protected fun runTest(block: suspend TestScope.() -> Unit) =
+        kotlinx.coroutines.test.runTest(context = testDispatcher) {
+            block()
+        }
 }

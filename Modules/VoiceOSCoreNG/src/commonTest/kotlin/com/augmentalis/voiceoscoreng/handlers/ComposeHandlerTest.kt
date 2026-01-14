@@ -3,7 +3,7 @@ package com.augmentalis.voiceoscoreng.handlers
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.FrameworkType
-import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
+import com.augmentalis.avid.TypeCode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -49,49 +49,49 @@ class ComposeHandlerTest {
     @Test
     fun `getComposeTypeCode returns BUTTON for Button role`() {
         val element = ElementInfo(className = "SemanticsNode")
-        assertEquals(VUIDTypeCode.BUTTON, handler.getComposeTypeCode(element, "Button"))
+        assertEquals(TypeCode.BUTTON, handler.getComposeTypeCode(element, "Button"))
     }
 
     @Test
     fun `getComposeTypeCode returns INPUT for TextField`() {
         val element = ElementInfo(className = "TextField")
-        assertEquals(VUIDTypeCode.INPUT, handler.getComposeTypeCode(element))
+        assertEquals(TypeCode.INPUT, handler.getComposeTypeCode(element))
     }
 
     @Test
     fun `getComposeTypeCode returns SCROLL for LazyColumn`() {
         val element = ElementInfo(className = "LazyColumn")
-        assertEquals(VUIDTypeCode.SCROLL, handler.getComposeTypeCode(element))
+        assertEquals(TypeCode.SCROLL, handler.getComposeTypeCode(element))
     }
 
     @Test
     fun `getComposeTypeCode returns SCROLL for LazyRow`() {
         val element = ElementInfo(className = "LazyRow")
-        assertEquals(VUIDTypeCode.SCROLL, handler.getComposeTypeCode(element))
+        assertEquals(TypeCode.SCROLL, handler.getComposeTypeCode(element))
     }
 
     @Test
     fun `getComposeTypeCode returns SCROLL for LazyGrid`() {
         val element = ElementInfo(className = "LazyGrid")
-        assertEquals(VUIDTypeCode.SCROLL, handler.getComposeTypeCode(element))
+        assertEquals(TypeCode.SCROLL, handler.getComposeTypeCode(element))
     }
 
     @Test
     fun `getComposeTypeCode returns CHECKBOX for Checkbox role`() {
         val element = ElementInfo(className = "SemanticsNode")
-        assertEquals(VUIDTypeCode.CHECKBOX, handler.getComposeTypeCode(element, "Checkbox"))
+        assertEquals(TypeCode.CHECKBOX, handler.getComposeTypeCode(element, "Checkbox"))
     }
 
     @Test
     fun `getComposeTypeCode returns SWITCH for Switch className`() {
         val element = ElementInfo(className = "Switch")
-        assertEquals(VUIDTypeCode.SWITCH, handler.getComposeTypeCode(element))
+        assertEquals(TypeCode.SWITCH, handler.getComposeTypeCode(element))
     }
 
     @Test
     fun `getComposeTypeCode returns ELEMENT for unknown type`() {
         val element = ElementInfo(className = "UnknownWidget")
-        assertEquals(VUIDTypeCode.ELEMENT, handler.getComposeTypeCode(element))
+        assertEquals(TypeCode.ELEMENT, handler.getComposeTypeCode(element))
     }
 
     // ==================== processElements Tests ====================

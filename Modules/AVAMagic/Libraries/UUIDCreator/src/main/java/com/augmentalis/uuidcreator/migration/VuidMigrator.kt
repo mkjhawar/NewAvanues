@@ -17,7 +17,7 @@
 package com.augmentalis.uuidcreator.migration
 
 import android.util.Log
-import com.augmentalis.vuid.core.VUIDGenerator
+import com.augmentalis.avid.core.AvidGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap

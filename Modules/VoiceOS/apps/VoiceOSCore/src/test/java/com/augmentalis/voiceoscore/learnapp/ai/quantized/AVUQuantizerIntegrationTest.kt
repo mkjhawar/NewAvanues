@@ -252,7 +252,8 @@ class AVUQuantizerIntegrationTest : BaseVoiceOSTest() {
         val result = generateHtmlPrompt(context, "test")
 
         // Should limit to 5 screens and 5 elements per screen for HTML format
-        val screenCount = "<screen".toRegex().findAll(result).count()
+        // Use regex with space to match individual <screen tags, not <screens container tag
+        val screenCount = "<screen ".toRegex().findAll(result).count()
         assertTrue("Should limit screens to max 5", screenCount <= 5)
     }
 

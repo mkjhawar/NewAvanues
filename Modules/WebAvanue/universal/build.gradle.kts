@@ -64,6 +64,9 @@ kotlin {
                 // BrowserCoreData - Shared data layer with LRU caching
                 implementation(project(":Modules:WebAvanue:coredata"))
 
+                // Unified Database - Web command persistence (IScrapedWebCommandRepository, etc.)
+                implementation(project(":Modules:Database"))
+
                 // Kotlin
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)

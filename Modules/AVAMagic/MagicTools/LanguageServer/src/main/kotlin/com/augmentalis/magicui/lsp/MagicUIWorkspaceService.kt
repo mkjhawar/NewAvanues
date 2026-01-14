@@ -1,4 +1,4 @@
-package com.augmentalis.magicui.lsp
+package com.augmentalis.avaui.lsp
 
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.services.LanguageClient
@@ -6,8 +6,8 @@ import org.eclipse.lsp4j.services.WorkspaceService
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 // TODO: Replace with actual imports when modules are available
-import com.augmentalis.magicui.lsp.stubs.ThemeCompiler
-import com.augmentalis.magicui.lsp.stubs.ExportFormat
+import com.augmentalis.avaui.lsp.stubs.ThemeCompiler
+import com.augmentalis.avaui.lsp.stubs.ExportFormat
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive

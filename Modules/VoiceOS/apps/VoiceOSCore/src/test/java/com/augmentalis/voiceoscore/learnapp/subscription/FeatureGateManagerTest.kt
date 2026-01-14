@@ -56,22 +56,24 @@ class FeatureGateManagerTest {
     // ==================== JIT Mode Tests ====================
 
     @Test
-    fun `JIT mode is always allowed`() = runBlocking {
+    fun `JIT mode is always allowed`(): Unit = runBlocking {
         // JIT should always be free, regardless of subscription
         every { prefs.getBoolean("dev_override_enabled", true) } returns false
 
         val result = featureGateManager.canUseMode(LearningMode.JIT)
 
         assertIs<FeatureGateResult.Allowed>(result)
+        Unit
     }
 
     @Test
-    fun `JIT mode allowed even with developer override disabled`() = runBlocking {
+    fun `JIT mode allowed even with developer override disabled`(): Unit = runBlocking {
         every { prefs.getBoolean("dev_override_enabled", true) } returns false
 
         val result = featureGateManager.canUseMode(LearningMode.JIT)
 
         assertIs<FeatureGateResult.Allowed>(result)
+        Unit
     }
 
     // ==================== Developer Override Tests ====================
@@ -86,7 +88,7 @@ class FeatureGateManagerTest {
     }
 
     @Test
-    fun `developer override allows all modes`() = runBlocking {
+    fun `developer override allows all modes`(): Unit = runBlocking {
         every { prefs.getBoolean("dev_override_enabled", true) } returns true
 
         // All modes should be allowed with developer override
@@ -97,6 +99,7 @@ class FeatureGateManagerTest {
         assertIs<FeatureGateResult.Allowed>(jitResult)
         assertIs<FeatureGateResult.Allowed>(liteResult)
         assertIs<FeatureGateResult.Allowed>(proResult)
+        Unit
     }
 
     @Test
@@ -111,20 +114,20 @@ class FeatureGateManagerTest {
     // ==================== LearnAppLite Tests ====================
 
     @Test
-    fun `Lite mode blocked without subscription`() = runBlocking {
+    fun `Lite mode blocked without subscription`(): Unit = runBlocking {
         every { prefs.getBoolean("dev_override_enabled", true) } returns false
         coEvery { mockSubscriptionProvider.hasActiveSubscription(SubscriptionTier.LITE) } returns false
         coEvery { mockSubscriptionProvider.hasPermanentLicense(SubscriptionTier.LITE) } returns false
 
         val result = featureGateManager.canUseMode(LearningMode.LITE)
 
-        assertIs<FeatureGateResult.Blocked>(result)
-        assertEquals(SubscriptionTier.LITE, result.tier)
-        assertEquals("$2.99/month", result.monthlyPrice)
+        val blocked = assertIs<FeatureGateResult.Blocked>(result)
+        assertEquals(SubscriptionTier.LITE, blocked.tier)
+        assertEquals("$2.99/month", blocked.monthlyPrice)
     }
 
     @Test
-    fun `Lite mode allowed with active subscription`() = runBlocking {
+    fun `Lite mode allowed with active subscription`(): Unit = runBlocking {
         every { prefs.getBoolean("dev_override_enabled", true) } returns false
         coEvery { mockSubscriptionProvider.hasActiveSubscription(SubscriptionTier.LITE) } returns true
         coEvery { mockSubscriptionProvider.hasPermanentLicense(SubscriptionTier.LITE) } returns false
@@ -132,10 +135,11 @@ class FeatureGateManagerTest {
         val result = featureGateManager.canUseMode(LearningMode.LITE)
 
         assertIs<FeatureGateResult.Allowed>(result)
+        Unit
     }
 
     @Test
-    fun `Lite mode allowed with permanent license`() = runBlocking {
+    fun `Lite mode allowed with permanent license`(): Unit = runBlocking {
         every { prefs.getBoolean("dev_override_enabled", true) } returns false
         coEvery { mockSubscriptionProvider.hasActiveSubscription(SubscriptionTier.LITE) } returns false
         coEvery { mockSubscriptionProvider.hasPermanentLicense(SubscriptionTier.LITE) } returns true
@@ -143,25 +147,26 @@ class FeatureGateManagerTest {
         val result = featureGateManager.canUseMode(LearningMode.LITE)
 
         assertIs<FeatureGateResult.Allowed>(result)
+        Unit
     }
 
     // ==================== LearnAppPro Tests ====================
 
     @Test
-    fun `Pro mode blocked without subscription`() = runBlocking {
+    fun `Pro mode blocked without subscription`(): Unit = runBlocking {
         every { prefs.getBoolean("dev_override_enabled", true) } returns false
         coEvery { mockSubscriptionProvider.hasActiveSubscription(SubscriptionTier.PRO) } returns false
         coEvery { mockSubscriptionProvider.hasPermanentLicense(SubscriptionTier.PRO) } returns false
 
         val result = featureGateManager.canUseMode(LearningMode.PRO)
 
-        assertIs<FeatureGateResult.Blocked>(result)
-        assertEquals(SubscriptionTier.PRO, result.tier)
-        assertEquals("$9.99/month", result.monthlyPrice)
+        val blocked = assertIs<FeatureGateResult.Blocked>(result)
+        assertEquals(SubscriptionTier.PRO, blocked.tier)
+        assertEquals("$9.99/month", blocked.monthlyPrice)
     }
 
     @Test
-    fun `Pro mode allowed with active subscription`() = runBlocking {
+    fun `Pro mode allowed with active subscription`(): Unit = runBlocking {
         every { prefs.getBoolean("dev_override_enabled", true) } returns false
         coEvery { mockSubscriptionProvider.hasActiveSubscription(SubscriptionTier.PRO) } returns true
         coEvery { mockSubscriptionProvider.hasPermanentLicense(SubscriptionTier.PRO) } returns false
@@ -169,10 +174,11 @@ class FeatureGateManagerTest {
         val result = featureGateManager.canUseMode(LearningMode.PRO)
 
         assertIs<FeatureGateResult.Allowed>(result)
+        Unit
     }
 
     @Test
-    fun `Pro mode allowed with permanent license`() = runBlocking {
+    fun `Pro mode allowed with permanent license`(): Unit = runBlocking {
         every { prefs.getBoolean("dev_override_enabled", true) } returns false
         coEvery { mockSubscriptionProvider.hasActiveSubscription(SubscriptionTier.PRO) } returns false
         coEvery { mockSubscriptionProvider.hasPermanentLicense(SubscriptionTier.PRO) } returns true
@@ -180,6 +186,7 @@ class FeatureGateManagerTest {
         val result = featureGateManager.canUseMode(LearningMode.PRO)
 
         assertIs<FeatureGateResult.Allowed>(result)
+        Unit
     }
 
     // ==================== Subscription Expiry Tests ====================
@@ -250,7 +257,7 @@ class FeatureGateManagerTest {
     // ==================== Edge Cases ====================
 
     @Test
-    fun `developer override overrides lack of subscription`() = runBlocking {
+    fun `developer override overrides lack of subscription`(): Unit = runBlocking {
         every { prefs.getBoolean("dev_override_enabled", true) } returns true
         coEvery { mockSubscriptionProvider.hasActiveSubscription(any()) } returns false
         coEvery { mockSubscriptionProvider.hasPermanentLicense(any()) } returns false
@@ -260,10 +267,11 @@ class FeatureGateManagerTest {
 
         assertIs<FeatureGateResult.Allowed>(liteResult)
         assertIs<FeatureGateResult.Allowed>(proResult)
+        Unit
     }
 
     @Test
-    fun `both subscription and permanent license is allowed`() = runBlocking {
+    fun `both subscription and permanent license is allowed`(): Unit = runBlocking {
         every { prefs.getBoolean("dev_override_enabled", true) } returns false
         coEvery { mockSubscriptionProvider.hasActiveSubscription(SubscriptionTier.PRO) } returns true
         coEvery { mockSubscriptionProvider.hasPermanentLicense(SubscriptionTier.PRO) } returns true
@@ -271,5 +279,6 @@ class FeatureGateManagerTest {
         val result = featureGateManager.canUseMode(LearningMode.PRO)
 
         assertIs<FeatureGateResult.Allowed>(result)
+        Unit
     }
 }

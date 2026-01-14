@@ -71,7 +71,7 @@ class WebAvanueApp : Application() {
         // Read encryption setting from bootstrap preferences
         // This is stored separately from BrowserSettings to avoid chicken-and-egg problem
         val bootstrapPrefs = applicationContext.getSharedPreferences("webavanue_bootstrap", Context.MODE_PRIVATE)
-        val useEncryption = bootstrapPrefs.getBoolean("database_encryption", true) // Default: ENCRYPTED
+        val useEncryption = bootstrapPrefs.getBoolean("database_encryption", false) // Default: ENCRYPTED
 
         val driver = createAndroidDriver(applicationContext, useEncryption)
         BrowserDatabase(driver)

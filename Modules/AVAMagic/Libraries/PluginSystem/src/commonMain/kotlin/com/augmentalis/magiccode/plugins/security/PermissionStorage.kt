@@ -1,4 +1,4 @@
-package com.augmentalis.magiccode.plugins.security
+package com.augmentalis.avacode.plugins.security
 
 import android.content.Context
 

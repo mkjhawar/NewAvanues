@@ -1,5 +1,7 @@
 package com.augmentalis.webavanue.ui.screen.download
 
+import android.R.attr.contentDescription
+import android.text.format.Formatter.formatFileSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -65,7 +67,7 @@ fun DownloadItem(
                     imageVector = when (download.status) {
                         DownloadStatus.DOWNLOADING -> Icons.Default.Refresh
                         DownloadStatus.COMPLETED -> Icons.Default.CheckCircle
-                        DownloadStatus.FAILED -> Icons.Default.Warning
+                        DownloadStatus.FAILED, DownloadStatus.UNKNOWN -> Icons.Default.Warning
                         DownloadStatus.PAUSED -> Icons.Default.Refresh
                         DownloadStatus.PENDING -> Icons.Default.Close
                         DownloadStatus.CANCELLED -> Icons.Default.Close
@@ -296,7 +298,7 @@ private fun formatStatus(status: DownloadStatus): String {
         DownloadStatus.DOWNLOADING -> "Downloading"
         DownloadStatus.PAUSED -> "Paused"
         DownloadStatus.COMPLETED -> "Completed"
-        DownloadStatus.FAILED -> "Failed"
+        DownloadStatus.FAILED, DownloadStatus.UNKNOWN -> "Failed"
         DownloadStatus.CANCELLED -> "Cancelled"
     }
 }

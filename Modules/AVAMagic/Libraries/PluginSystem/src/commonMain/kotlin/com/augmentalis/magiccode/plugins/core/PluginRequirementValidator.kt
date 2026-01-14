@@ -1,6 +1,6 @@
-package com.augmentalis.magiccode.plugins.core
+package com.augmentalis.avacode.plugins.core
 
-import com.augmentalis.magiccode.plugins.platform.FileIO
+import com.augmentalis.avacode.plugins.platform.FileIO
 
 /**
  * Validator for plugin functional requirements.

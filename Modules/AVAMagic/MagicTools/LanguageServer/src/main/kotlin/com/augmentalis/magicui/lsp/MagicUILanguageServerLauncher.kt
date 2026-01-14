@@ -1,4 +1,4 @@
-package com.augmentalis.magicui.lsp
+package com.augmentalis.avaui.lsp
 
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.services.LanguageClient

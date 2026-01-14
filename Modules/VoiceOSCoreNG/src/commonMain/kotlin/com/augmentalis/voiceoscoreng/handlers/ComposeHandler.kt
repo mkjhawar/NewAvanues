@@ -1,8 +1,8 @@
 package com.augmentalis.voiceoscoreng.handlers
 
+import com.augmentalis.avid.TypeCode
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.FrameworkType
-import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
 
 /**
  * Handler for Jetpack Compose applications.
@@ -31,15 +31,15 @@ class ComposeHandler : FrameworkHandler {
     )
 
     private val roleToTypeCode = mapOf(
-        "Button" to VUIDTypeCode.BUTTON,
-        "Checkbox" to VUIDTypeCode.CHECKBOX,
-        "Switch" to VUIDTypeCode.SWITCH,
-        "RadioButton" to VUIDTypeCode.CHECKBOX,
-        "Tab" to VUIDTypeCode.TAB,
-        "Slider" to VUIDTypeCode.SLIDER,
-        "Image" to VUIDTypeCode.IMAGE,
-        "DropdownList" to VUIDTypeCode.MENU,
-        "ProgressBar" to VUIDTypeCode.ELEMENT
+        "Button" to TypeCode.BUTTON,
+        "Checkbox" to TypeCode.CHECKBOX,
+        "Switch" to TypeCode.SWITCH,
+        "RadioButton" to TypeCode.CHECKBOX,
+        "Tab" to TypeCode.TAB,
+        "Slider" to TypeCode.SLIDER,
+        "Image" to TypeCode.IMAGE,
+        "DropdownList" to TypeCode.MENU,
+        "ProgressBar" to TypeCode.ELEMENT
     )
 
     override fun canHandle(elements: List<ElementInfo>): Boolean {
@@ -69,7 +69,7 @@ class ComposeHandler : FrameworkHandler {
 
     override fun getPriority(): Int = 90
 
-    fun getComposeTypeCode(element: ElementInfo, role: String = ""): VUIDTypeCode {
+    fun getComposeTypeCode(element: ElementInfo, role: String = ""): String {
         // Check provided role parameter first
         if (role.isNotBlank()) {
             roleToTypeCode[role]?.let { return it }
@@ -81,21 +81,21 @@ class ComposeHandler : FrameworkHandler {
 
         val className = element.className.lowercase()
         return when {
-            className.contains("button") -> VUIDTypeCode.BUTTON
-            className.contains("textfield") -> VUIDTypeCode.INPUT
-            className.contains("checkbox") -> VUIDTypeCode.CHECKBOX
-            className.contains("switch") -> VUIDTypeCode.SWITCH
-            className.contains("slider") -> VUIDTypeCode.SLIDER
-            className.contains("lazycolumn") || className.contains("lazyrow") -> VUIDTypeCode.SCROLL
-            className.contains("lazygrid") -> VUIDTypeCode.SCROLL
-            className.contains("navigationbar") -> VUIDTypeCode.MENU
-            className.contains("tabrow") -> VUIDTypeCode.TAB
-            className.contains("dialog") || className.contains("bottomsheet") -> VUIDTypeCode.DIALOG
-            className.contains("card") -> VUIDTypeCode.CARD
-            className.contains("image") || className.contains("icon") -> VUIDTypeCode.IMAGE
-            className.contains("column") || className.contains("row") -> VUIDTypeCode.LAYOUT
-            className.contains("box") || className.contains("scaffold") -> VUIDTypeCode.LAYOUT
-            else -> VUIDTypeCode.ELEMENT
+            className.contains("button") -> TypeCode.BUTTON
+            className.contains("textfield") -> TypeCode.INPUT
+            className.contains("checkbox") -> TypeCode.CHECKBOX
+            className.contains("switch") -> TypeCode.SWITCH
+            className.contains("slider") -> TypeCode.SLIDER
+            className.contains("lazycolumn") || className.contains("lazyrow") -> TypeCode.SCROLL
+            className.contains("lazygrid") -> TypeCode.SCROLL
+            className.contains("navigationbar") -> TypeCode.MENU
+            className.contains("tabrow") -> TypeCode.TAB
+            className.contains("dialog") || className.contains("bottomsheet") -> TypeCode.DIALOG
+            className.contains("card") -> TypeCode.CARD
+            className.contains("image") || className.contains("icon") -> TypeCode.IMAGE
+            className.contains("column") || className.contains("row") -> TypeCode.LAYOUT
+            className.contains("box") || className.contains("scaffold") -> TypeCode.LAYOUT
+            else -> TypeCode.ELEMENT
         }
     }
 

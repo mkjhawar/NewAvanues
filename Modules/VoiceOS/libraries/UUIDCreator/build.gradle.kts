@@ -60,6 +60,9 @@ android {
 }
 
 dependencies {
+    // Cross-platform AVID generation (shared KMP module) - Replaced VUID with AVID
+    implementation(project(":Modules:AVID"))
+
     // SQLDelight KMP Database (replaces Room)
     implementation(project(":Modules:VoiceOS:core:database"))
 

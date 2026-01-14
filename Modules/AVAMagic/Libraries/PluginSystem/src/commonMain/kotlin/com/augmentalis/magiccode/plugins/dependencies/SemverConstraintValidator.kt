@@ -1,4 +1,4 @@
-package com.augmentalis.magiccode.plugins.dependencies
+package com.augmentalis.avacode.plugins.dependencies
 
 import io.github.z4kn4fein.semver.Version
 import io.github.z4kn4fein.semver.toVersion

@@ -1,4 +1,4 @@
-package com.augmentalis.magicui.lsp.stubs
+package com.augmentalis.avaui.lsp.stubs
 
 /**
  * Temporary stub implementations until modules are added to build

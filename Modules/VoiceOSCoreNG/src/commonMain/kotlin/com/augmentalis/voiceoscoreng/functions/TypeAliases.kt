@@ -26,11 +26,11 @@
 
 package com.augmentalis.voiceoscoreng.functions
 
+import com.augmentalis.avid.TypeCode
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
+import com.augmentalis.voiceoscoreng.common.ElementFingerprint
 import com.augmentalis.voiceoscoreng.common.ProcessingMode
-import com.augmentalis.voiceoscoreng.common.VUIDGenerator
-import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
 import com.augmentalis.voiceoscoreng.functions.ElementParser
 
 // ============================================================================
@@ -89,52 +89,45 @@ typealias LearnAppProcessingMode = ProcessingMode
 typealias ElementBounds = Bounds
 
 // ============================================================================
-// OLD UUID Types -> NEW VUID Types
+// OLD UUID/VUID Types -> NEW AVID Types
 // ============================================================================
 
 /**
- * Old: java.util.UUID (standard UUID v4)
- * New: VUID string format
+ * Old: java.util.UUID (standard UUID v4) / VUID string format
+ * New: AVID element fingerprint format
  *
- * VUID is a compact 16-character identifier optimized for voice accessibility.
- * Format: {pkgHash6}-{typeCode}{hash8}
- * Example: a3f2e1-b917cc9dc
+ * Element fingerprints use the AVID module's Fingerprint class.
+ * Format: {TypeCode}:{hash8}
+ * Example: BTN:a3f2e1c9
  *
- * This typealias represents the VUID as a String since VUIDs are compact strings.
+ * This typealias represents the element fingerprint as a String.
  */
-typealias VUID = String
+typealias ElementId = String
 
 /**
- * Old: ThirdPartyUuidGenerator
- * New: VUIDGenerator
+ * Old: ThirdPartyUuidGenerator / VUIDGenerator
+ * New: ElementFingerprint (wrapper around AVID module)
  *
- * @deprecated Use [VUIDGenerator] directly. This alias will be removed in v2.0.
+ * @deprecated Use [ElementFingerprint] directly. This alias will be removed in v2.0.
  */
 @Deprecated(
-    message = "Use VUIDGenerator object directly",
+    message = "Use ElementFingerprint object directly",
     replaceWith = ReplaceWith(
-        "VUIDGenerator",
-        "com.augmentalis.voiceoscoreng.common.VUIDGenerator"
+        "ElementFingerprint",
+        "com.augmentalis.voiceoscoreng.common.ElementFingerprint"
     ),
     level = DeprecationLevel.WARNING
 )
-typealias UuidCreator = VUIDGenerator
+typealias UuidCreator = ElementFingerprint
 
 /**
- * Old: Element type classification (string-based)
- * New: VUIDTypeCode enum
+ * Old: Element type classification (VUIDTypeCode enum)
+ * New: TypeCode constants (3-char strings)
  *
- * @deprecated Use [VUIDTypeCode] directly. This alias will be removed in v2.0.
+ * TypeCode provides 3-character type codes like "BTN", "INP", "TXT".
+ * Access via TypeCode.BUTTON, TypeCode.INPUT, etc.
  */
-@Deprecated(
-    message = "Use VUIDTypeCode enum directly",
-    replaceWith = ReplaceWith(
-        "VUIDTypeCode",
-        "com.augmentalis.voiceoscoreng.common.VUIDTypeCode"
-    ),
-    level = DeprecationLevel.WARNING
-)
-typealias ElementTypeCode = VUIDTypeCode
+typealias ElementTypeCode = String
 
 // ============================================================================
 // OLD JITLearning Types -> NEW VoiceOSCoreNG Types
@@ -189,9 +182,10 @@ fun String.toBounds(): Bounds? = Bounds.fromString(this)
  *
  * Usage:
  * ```kotlin
- * val typeCode = "android.widget.Button".toVUIDTypeCode()
+ * val typeCode = "android.widget.Button".toTypeCode()
+ * // Returns "BTN"
  * ```
  */
-fun String.toVUIDTypeCode(): VUIDTypeCode {
-    return VUIDGenerator.getTypeCode(this)
+fun String.toTypeCode(): String {
+    return TypeCode.fromTypeName(this)
 }

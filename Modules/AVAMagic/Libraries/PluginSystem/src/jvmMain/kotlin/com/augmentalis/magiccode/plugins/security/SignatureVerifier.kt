@@ -1,6 +1,6 @@
-package com.augmentalis.magiccode.plugins.security
+package com.augmentalis.avacode.plugins.security
 
-import com.augmentalis.magiccode.plugins.core.PluginLog
+import com.augmentalis.avacode.plugins.core.PluginLog
 import java.io.File
 import java.security.KeyFactory
 import java.security.PublicKey

@@ -1,6 +1,6 @@
-package com.augmentalis.magiccode.plugins.security
+package com.augmentalis.avacode.plugins.security
 
-import com.augmentalis.magiccode.plugins.core.PluginLog
+import com.augmentalis.avacode.plugins.core.PluginLog
 
 /**
  * Digital signature verifier for plugin packages.

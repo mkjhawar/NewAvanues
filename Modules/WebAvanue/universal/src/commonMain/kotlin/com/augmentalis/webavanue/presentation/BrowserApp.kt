@@ -7,6 +7,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import cafe.adriel.voyager.navigator.Navigator
 import com.augmentalis.webavanue.ui.screen.browser.WebViewPoolManager
 import cafe.adriel.voyager.transitions.SlideTransition
@@ -20,6 +21,7 @@ import com.augmentalis.webavanue.ui.viewmodel.SecureStorageProvider
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * BrowserApp - Main composable for WebAvanue browser
@@ -76,47 +78,74 @@ fun BrowserApp(
     // ViewModels should only be cleared when BrowserApp is disposed (app termination)
     val viewModels = remember { ViewModelHolder.create(repository, secureStorage, downloadQueue) }
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val didCleanup = remember { AtomicBoolean(false) }
+
     // FIX BUG #3: Observe settings for theme changes
     val settings by viewModels.settingsViewModel.settings.collectAsState()
     val systemDarkTheme = isSystemInDarkTheme()
 
+    fun runExitCleanup(reason: String) {
+        if (!didCleanup.compareAndSet(false, true)) return
+        println("BrowserApp: runExitCleanup reason ($reason)")
+        // FIX Issue #3: Check if "Clear History on Exit" is enabled
+        // CRITICAL: Must be done BEFORE onCleared() to ensure the coroutine scope is still active
+        val currentSettings = viewModels.settingsViewModel.settings.value
+        if (currentSettings?.clearHistoryOnExit == true) {
+            println("BrowserApp: Clearing history on exit (setting enabled)")
+            viewModels.historyViewModel.clearHistory()
+        }
+
+        // FIX: Check if "Clear Cookies on Exit" is enabled
+        if (currentSettings?.clearCookiesOnExit == true) {
+            println("BrowserApp: Clearing cookies on exit (setting enabled)")
+            // Cookies are cleared via WebView - handled in WebViewPoolManager
+            WebViewPoolManager.clearCookiesOnExit()
+        }
+
+        // Clear WebView pool
+        WebViewPoolManager.clearAllWebViews()
+        println("BrowserApp: WebViewPool cleared on dispose")
+
+        // FIX C3: Clear ViewModels - cancels coroutine scopes to prevent memory leaks
+        // CRITICAL: This MUST be called LAST, after all coroutine operations complete
+        viewModels.tabViewModel.onCleared()
+        viewModels.settingsViewModel.onCleared()
+        viewModels.historyViewModel.onCleared()
+        viewModels.favoriteViewModel.onCleared()
+        viewModels.securityViewModel.onCleared()
+        viewModels.downloadViewModel.onCleared()
+        println("BrowserApp: All ViewModels cleared on dispose")
+
+        // Cleanup repository resources
+        repository.cleanup()
+        println("BrowserApp: Repository cleaned up on dispose")
+    }
+
     // FIX C3: Cleanup ALL resources when BrowserApp is disposed (Activity.onDestroy)
     // This is the ONLY place where ViewModels should be cleared - not in individual screens!
     // CRITICAL: clearHistory() MUST be called BEFORE onCleared() because it uses viewModelScope
-    DisposableEffect(Unit) {
-        onDispose {
-            // FIX Issue #3: Check if "Clear History on Exit" is enabled
-            // CRITICAL: Must be done BEFORE onCleared() to ensure the coroutine scope is still active
-            val currentSettings = viewModels.settingsViewModel.settings.value
-            if (currentSettings?.clearHistoryOnExit == true) {
-                println("BrowserApp: Clearing history on exit (setting enabled)")
-                viewModels.historyViewModel.clearHistory()
+    // 1) Handle "exit app" semantics via lifecycle (Home/Recents => ON_STOP)
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> {
+                    // Treat background as exit if your setting says “on exit”
+                    runExitCleanup("ON_STOP")
+                }
+                androidx.lifecycle.Lifecycle.Event.ON_DESTROY -> {
+                    runExitCleanup("ON_DESTROY")
+                }
+                else -> Unit
             }
-
-            // FIX: Check if "Clear Cookies on Exit" is enabled
-            if (currentSettings?.clearCookiesOnExit == true) {
-                println("BrowserApp: Clearing cookies on exit (setting enabled)")
-                // Cookies are cleared via WebView - handled in WebViewPoolManager
-            }
-
-            // Clear WebView pool
-            WebViewPoolManager.clearAllWebViews()
-            println("BrowserApp: WebViewPool cleared on dispose")
-
-            // FIX C3: Clear ViewModels - cancels coroutine scopes to prevent memory leaks
-            // CRITICAL: This MUST be called LAST, after all coroutine operations complete
-            viewModels.tabViewModel.onCleared()
-            viewModels.settingsViewModel.onCleared()
-            viewModels.historyViewModel.onCleared()
-            viewModels.favoriteViewModel.onCleared()
-            viewModels.securityViewModel.onCleared()
-            viewModels.downloadViewModel.onCleared()
-            println("BrowserApp: All ViewModels cleared on dispose")
-
-            // Cleanup repository resources
-            repository.cleanup()
-            println("BrowserApp: Repository cleaned up on dispose")
         }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // 2) Keep your onDispose as a final fallback (won’t hurt, but not sufficient alone)
+    DisposableEffect(Unit) {
+        onDispose { runExitCleanup("COMPOSE_DISPOSE") }
     }
 
     // FIX BUG #3: Determine dark theme based on settings

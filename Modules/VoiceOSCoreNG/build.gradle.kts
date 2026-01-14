@@ -41,6 +41,9 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
+                // AVID - Avanues Voice ID (unified identifier system)
+                implementation(project(":Modules:AVID"))
+
                 // Coroutines
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.coroutines}")
 

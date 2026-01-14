@@ -50,8 +50,10 @@ include(":Modules:LLM")   // Language model providers and on-device inference
 include(":Modules:RAG")   // Retrieval-augmented generation pipeline
 include(":Modules:NLU")   // Natural language understanding
 
-// Common Libraries (cross-platform KMP)
-include(":Common:VUID")                   // Voice Unique Identifier generator (shared across all modules)
+// Top-level Modules (cross-platform KMP)
+include(":Modules:AVID")                  // Avanues Voice ID - unified identifier system
+include(":Modules:Database")              // Unified KMP database - VoiceOS, WebAvanue, AVID persistence
+// include(":Modules:VUID")               // DEPRECATED - replaced by AVID module
 
 // VoiceOSCoreNG - Next-generation KMP core for VoiceOS
 include(":Modules:VoiceOSCoreNG")          // KMP types, VUID, features (shared Android/iOS/Desktop)

@@ -7,10 +7,10 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Created: 2025-10-26
  */
-package com.augmentalis.magiccode.plugins.vos4
+package com.augmentalis.avacode.plugins.vos4
 
 import android.graphics.Point
-import com.augmentalis.magiccode.plugins.core.PluginManifest
+import com.augmentalis.avacode.plugins.core.PluginManifest
 
 /**
  * Plugin interface for cursor control features

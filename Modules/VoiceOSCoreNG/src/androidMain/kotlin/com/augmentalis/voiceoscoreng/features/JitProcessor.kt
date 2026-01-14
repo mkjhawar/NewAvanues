@@ -2,8 +2,8 @@ package com.augmentalis.voiceoscoreng.features
 
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import com.augmentalis.voiceoscoreng.common.ElementProcessingResult
+import com.augmentalis.voiceoscoreng.common.ElementFingerprint
 import com.augmentalis.voiceoscoreng.common.ProcessingMode
-import com.augmentalis.voiceoscoreng.common.VUIDGenerator
 import com.augmentalis.voiceoscoreng.features.LearnAppDevToggle
 
 /**
@@ -117,17 +117,12 @@ class JitProcessor {
     }
 
     /**
-     * Generate a VUID for the element.
+     * Generate an element fingerprint for the element.
+     * Format: {TypeCode}:{hash8} e.g., "BTN:a3f2e1c9"
      */
     private fun generateVUID(element: ElementInfo): String {
-        val typeCode = VUIDGenerator.getTypeCode(element.className)
-        val elementIdentifier = element.resourceId.ifEmpty { element.text }
-
-        return VUIDGenerator.generate(
-            packageName = "com.augmentalis.voiceoscoreng", // Default package
-            typeCode = typeCode,
-            elementHash = elementIdentifier
-        )
+        val packageName = element.packageName.ifBlank { "com.augmentalis.voiceoscoreng" }
+        return ElementFingerprint.fromElementInfo(element, packageName)
     }
 }
 

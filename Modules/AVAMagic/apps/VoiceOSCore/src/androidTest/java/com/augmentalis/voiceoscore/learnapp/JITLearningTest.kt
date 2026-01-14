@@ -359,7 +359,7 @@ class JITLearningTest {
         val elementHash = "a7f3e2c1"
 
         // When: Creating compact VUID format
-        val vuid = com.augmentalis.vuid.core.VUIDGenerator.generateCompact(
+        val vuid = com.augmentalis.avid.core.AvidGenerator.generateCompact(
             packageName = packageName,
             version = version,
             typeName = elementType,

@@ -1,4 +1,4 @@
-package com.augmentalis.magiccode.plugins.platform
+package com.augmentalis.avacode.plugins.platform
 
 import java.io.File
 import java.net.URLClassLoader

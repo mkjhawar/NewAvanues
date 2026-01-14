@@ -1,6 +1,6 @@
-package com.augmentalis.magiccode.plugins.assets
+package com.augmentalis.avacode.plugins.assets
 
-import com.augmentalis.magiccode.plugins.core.PluginLog
+import com.augmentalis.avacode.plugins.core.PluginLog
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 

@@ -27,7 +27,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
-import com.augmentalis.vuid.core.VUIDGenerator
 
 /**
  * LearnApp Repository
@@ -424,8 +423,8 @@ class LearnAppRepository(
                     metadataSource = null
                 }
 
-                // Generate session ID (VUID for session tracking)
-                val sessionId = VUIDGenerator.generateSessionVuid()
+                // Generate session ID (random UUID for session tracking)
+                val sessionId = java.util.UUID.randomUUID().toString()
 
                 // Create exploration session
                 val session = ExplorationSessionEntity(
@@ -465,8 +464,8 @@ class LearnAppRepository(
         getLearnedApp(packageName)
             ?: throw LearnedAppNotFoundException(packageName)
 
-        // Generate session ID (VUID for session tracking)
-        val sessionId = VUIDGenerator.generateSessionVuid()
+        // Generate session ID (random UUID for session tracking)
+        val sessionId = java.util.UUID.randomUUID().toString()
 
         // Create exploration session
         val session = ExplorationSessionEntity(
@@ -579,8 +578,8 @@ class LearnAppRepository(
 
                 insertLearnedApp(app) // Uses REPLACE strategy
 
-                // Generate session ID (VUID for session tracking)
-                val sessionId = VUIDGenerator.generateSessionVuid()
+                // Generate session ID (random UUID for session tracking)
+                val sessionId = java.util.UUID.randomUUID().toString()
 
                 // Create exploration session
                 val session = ExplorationSessionEntity(
@@ -671,7 +670,7 @@ class LearnAppRepository(
         toScreenHash: String
     ) = withContext(Dispatchers.IO) {
         databaseManager.navigationEdgeQueries.insertNavigationEdge(
-            edge_id = VUIDGenerator.generateCompactSimple(VUIDGenerator.Module.VOICEOS, "element"),
+            edge_id = java.util.UUID.randomUUID().toString(),
             package_name = packageName,
             session_id = sessionId,
             from_screen_hash = fromScreenHash,

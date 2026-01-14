@@ -18,8 +18,8 @@ package com.augmentalis.voiceoscoreng.integration
 
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.common.CommandActionType
-import com.augmentalis.voiceoscoreng.common.VUIDGenerator
-import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
+import com.augmentalis.voiceoscoreng.common.ElementFingerprint
+import com.augmentalis.avid.TypeCode
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -85,7 +85,7 @@ class DatabaseFKChainIntegrationTest {
 
     private fun createTestElement(
         appId: String,
-        vuid: String = VUIDGenerator.generate(appId, VUIDTypeCode.BUTTON, "elem-${System.nanoTime()}")
+        vuid: String = ElementFingerprint.generate("Button", appId, "", "elem-${System.nanoTime()}", "")
     ): TestVuidEntry {
         return TestVuidEntry(
             vuid = vuid,
@@ -249,7 +249,7 @@ class DatabaseFKChainIntegrationTest {
         vuidRepository.registerApp(app)
 
         // Create first element with specific VUID
-        val vuid = VUIDGenerator.generate("com.example.unique", VUIDTypeCode.BUTTON, "unique-elem")
+        val vuid = ElementFingerprint.generate("Button", "com.example.unique", "", "unique-elem", "")
         val element1 = createTestElement(appId = "com.example.unique", vuid = vuid)
         val result1 = vuidRepository.saveWithFKValidation(element1)
         assertTrue(result1.isSuccess, "First element should save successfully")
@@ -291,9 +291,9 @@ class DatabaseFKChainIntegrationTest {
         vuidRepository.registerApp(app)
 
         // Create multiple elements with different VUIDs
-        val vuid1 = VUIDGenerator.generate("com.example.lookup", VUIDTypeCode.BUTTON, "button-1")
-        val vuid2 = VUIDGenerator.generate("com.example.lookup", VUIDTypeCode.INPUT, "input-1")
-        val vuid3 = VUIDGenerator.generate("com.example.lookup", VUIDTypeCode.TEXT, "text-1")
+        val vuid1 = ElementFingerprint.generate("Button", "com.example.lookup", "", "button-1", "")
+        val vuid2 = ElementFingerprint.generate("EditText", "com.example.lookup", "", "input-1", "")
+        val vuid3 = ElementFingerprint.generate("TextView", "com.example.lookup", "", "text-1", "")
 
         val element1 = createTestElement("com.example.lookup", vuid1).copy(text = "Button 1")
         val element2 = createTestElement("com.example.lookup", vuid2).copy(text = "Input 1", elementType = "EditText")
@@ -335,7 +335,7 @@ class DatabaseFKChainIntegrationTest {
         vuidRepository.registerApp(app)
 
         // Create element
-        val elementVuid = VUIDGenerator.generate("com.example.linking", VUIDTypeCode.BUTTON, "link-elem")
+        val elementVuid = ElementFingerprint.generate("Button", "com.example.linking", "", "link-elem", "")
         val element = createTestElement("com.example.linking", elementVuid)
         vuidRepository.saveWithFKValidation(element)
 
@@ -440,7 +440,7 @@ class DatabaseFKChainIntegrationTest {
 
         // Create multiple elements
         val elements = (1..5).map { i ->
-            createTestElement(appId, VUIDGenerator.generate(appId, VUIDTypeCode.BUTTON, "batch-elem-$i"))
+            createTestElement(appId, ElementFingerprint.generate("Button", appId, "", "batch-elem-$i", ""))
                 .copy(text = "Element $i")
         }
 
@@ -525,8 +525,8 @@ class DatabaseFKChainIntegrationTest {
         vuidRepository.registerApp(app)
 
         // Create two elements
-        val element1 = createTestElement(appId, VUIDGenerator.generate(appId, VUIDTypeCode.BUTTON, "elem-1"))
-        val element2 = createTestElement(appId, VUIDGenerator.generate(appId, VUIDTypeCode.BUTTON, "elem-2"))
+        val element1 = createTestElement(appId, ElementFingerprint.generate("Button", appId, "", "elem-1", ""))
+        val element2 = createTestElement(appId, ElementFingerprint.generate("Button", appId, "", "elem-2", ""))
         vuidRepository.saveWithFKValidation(element1)
         vuidRepository.saveWithFKValidation(element2)
 

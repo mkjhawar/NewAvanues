@@ -3,8 +3,7 @@ package com.augmentalis.voiceoscoreng.common
 import com.augmentalis.voiceoscoreng.common.CommandActionType
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.common.ElementInfo
-import com.augmentalis.voiceoscoreng.common.VUIDGenerator
-import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
+import com.augmentalis.voiceoscoreng.common.ElementFingerprint
 import com.augmentalis.voiceoscoreng.features.currentTimeMillis
 
 /**
@@ -264,24 +263,11 @@ object CommandGenerator {
     }
 
     /**
-     * Generate VUID for element.
+     * Generate element fingerprint for targeting.
+     * Format: {TypeCode}:{hash8} e.g., "BTN:a3f2e1c9"
      */
     private fun generateVuid(element: ElementInfo, packageName: String): String {
-        val typeCode = VUIDGenerator.getTypeCode(element.className)
-
-        // Create element hash from most stable identifier
-        val elementHash = when {
-            element.resourceId.isNotBlank() -> element.resourceId
-            element.contentDescription.isNotBlank() -> element.contentDescription
-            element.text.isNotBlank() -> element.text
-            else -> "${element.className}:${element.bounds}"
-        }
-
-        return VUIDGenerator.generate(
-            packageName = packageName,
-            typeCode = typeCode,
-            elementHash = elementHash
-        )
+        return ElementFingerprint.fromElementInfo(element, packageName)
     }
 
     /**

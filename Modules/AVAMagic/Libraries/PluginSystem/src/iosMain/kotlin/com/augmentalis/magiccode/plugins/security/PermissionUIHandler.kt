@@ -1,6 +1,6 @@
-package com.augmentalis.magiccode.plugins.security
+package com.augmentalis.avacode.plugins.security
 
-import com.augmentalis.magiccode.plugins.core.Permission
+import com.augmentalis.avacode.plugins.core.Permission
 import kotlinx.cinterop.*
 import platform.Foundation.*
 import platform.UIKit.*

@@ -13,7 +13,7 @@ import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
-import com.augmentalis.voiceoscoreng.common.VUIDGenerator
+import com.augmentalis.voiceoscoreng.common.ElementFingerprint
 import kotlinx.coroutines.delay
 
 /**
@@ -354,35 +354,23 @@ class AndroidUIExecutor(
     }
 
     /**
-     * Generate VUID for an AccessibilityNodeInfo using same algorithm as CommandGenerator.
+     * Generate element fingerprint for an AccessibilityNodeInfo using same algorithm as CommandGenerator.
      *
-     * VUID format: {pkgHash6}-{typeCode}{hash8}
-     * Example: a3f2e1-b917cc9dc
+     * Fingerprint format: {TypeCode}:{hash8}
+     * Example: BTN:a3f2e1c9
      */
     private fun generateVuidForNode(node: AccessibilityNodeInfo, packageName: String): String {
         val className = node.className?.toString() ?: ""
         val resourceId = node.viewIdResourceName ?: ""
         val contentDescription = node.contentDescription?.toString() ?: ""
         val text = node.text?.toString() ?: ""
-        val rect = android.graphics.Rect()
-        node.getBoundsInScreen(rect)
-        val bounds = "${rect.left},${rect.top},${rect.right},${rect.bottom}"
 
-        // Get type code from class name (same as VUIDGenerator.getTypeCode)
-        val typeCode = VUIDGenerator.getTypeCode(className)
-
-        // Create element hash from most stable identifier (same priority as CommandGenerator)
-        val elementHash = when {
-            resourceId.isNotBlank() -> resourceId
-            contentDescription.isNotBlank() -> contentDescription
-            text.isNotBlank() -> text
-            else -> "$className:$bounds"
-        }
-
-        return VUIDGenerator.generate(
+        return ElementFingerprint.generate(
+            className = className,
             packageName = packageName,
-            typeCode = typeCode,
-            elementHash = elementHash
+            resourceId = resourceId,
+            text = text,
+            contentDesc = contentDescription
         )
     }
 }

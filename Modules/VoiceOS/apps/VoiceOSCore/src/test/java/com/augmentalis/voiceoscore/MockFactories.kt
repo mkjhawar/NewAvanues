@@ -16,6 +16,7 @@ import com.augmentalis.database.dto.*
 import com.augmentalis.database.repositories.*
 import com.augmentalis.voiceoscore.learnapp.models.AppEntity
 import com.augmentalis.voiceoscore.scraping.entities.*
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 
@@ -59,8 +60,9 @@ object MockFactories {
             every { screenTransitions } returns mockk(relaxed = true)
             every { userInteractions } returns mockk(relaxed = true)
             every { elementStateHistory } returns mockk(relaxed = true)
-            every { transaction(any()) } answers {
-                val block = firstArg<() -> Unit>()
+            coEvery { transaction<Any?>(any()) } coAnswers {
+                @Suppress("UNCHECKED_CAST")
+                val block = firstArg<() -> Any?>()
                 block()
             }
         }
@@ -160,7 +162,7 @@ object MockFactories {
         text: String? = "Button"
     ): ScrapedElementDTO {
         return ScrapedElementDTO(
-            id = null,
+            id = 0L,
             elementHash = elementHash,
             appId = appId,
             uuid = "uuid_$elementHash",
@@ -181,7 +183,7 @@ object MockFactories {
             scrapedAt = System.currentTimeMillis(),
             semanticRole = "button",
             inputType = null,
-            visualWeight = 1.0,
+            visualWeight = "1.0",
             isRequired = 0L,
             formGroupId = null,
             placeholderText = null,
@@ -205,7 +207,7 @@ object MockFactories {
         text: String? = "Button"
     ): ScrapedElementEntity {
         return ScrapedElementEntity(
-            id = null,
+            id = 0L,
             elementHash = elementHash,
             appId = appId,
             uuid = "uuid_$elementHash",
@@ -226,7 +228,7 @@ object MockFactories {
             scrapedAt = System.currentTimeMillis(),
             semanticRole = "button",
             inputType = null,
-            visualWeight = 1.0,
+            visualWeight = "1.0",
             isRequired = 0L,
             formGroupId = null,
             placeholderText = null,
@@ -249,7 +251,7 @@ object MockFactories {
         appId: String = "com.example.test"
     ): GeneratedCommandDTO {
         return GeneratedCommandDTO(
-            id = null,
+            id = 0L,
             elementHash = elementHash,
             commandText = commandText,
             actionType = "CLICK",
@@ -276,10 +278,11 @@ object MockFactories {
      */
     fun createScreenContextDTO(
         screenHash: String = "screen_${System.currentTimeMillis()}",
-        packageName: String = "com.example.test"
+        packageName: String = "com.example.test",
+        contextualText: String? = null
     ): ScreenContextDTO {
         return ScreenContextDTO(
-            id = null,
+            id = 0L,
             screenHash = screenHash,
             appId = packageName,
             packageName = packageName,
@@ -293,7 +296,8 @@ object MockFactories {
             hasBackButton = 1L,
             firstScraped = System.currentTimeMillis(),
             lastScraped = System.currentTimeMillis(),
-            visitCount = 1L
+            visitCount = 1L,
+            contextualText = contextualText
         )
     }
 

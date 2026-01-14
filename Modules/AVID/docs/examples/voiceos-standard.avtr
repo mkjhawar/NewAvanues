@@ -1,0 +1,230 @@
+# AVID Type Registry v1.0
+# Type: AVTR
+# Extension: .avtr
+#
+# VoiceOS Standard Type Registry
+# Maps generic type codes to platform-specific UI classes
+---
+schema: avtr-1.0
+version: 1.0.0
+name: VoiceOS Standard Types
+description: Standard UI element type mappings for the Avanues ecosystem
+metadata:
+  types: 28
+  platforms: [and, ios, web, mac, win, lnx]
+  updated: 2026-01-13T11:00:00Z
+---
+# ============================================================================
+# BUTTON TYPES
+# ============================================================================
+TYP:BTN:Button:Clickable action elements that trigger operations
+AND:BTN:Button,ImageButton,MaterialButton,FloatingActionButton,ExtendedFloatingActionButton,AppCompatButton,IconButton,TextButton,OutlinedButton,ElevatedButton,FilledTonalButton
+IOS:BTN:UIButton,UIBarButtonItem,Button,BorderlessButton
+WEB:BTN:button,input[type=submit],input[type=button],a.btn,.button,[role=button]
+DSK:BTN:Button,IconButton,TextButton,OutlinedButton,JButton
+
+TYP:FAB:FAB:Floating action buttons for primary actions
+AND:FAB:FloatingActionButton,ExtendedFloatingActionButton,SmallFloatingActionButton,LargeFloatingActionButton
+IOS:FAB:
+WEB:FAB:button.fab,.floating-action-button,[data-fab]
+DSK:FAB:FloatingActionButton,ExtendedFloatingActionButton
+
+# ============================================================================
+# INPUT TYPES
+# ============================================================================
+TYP:INP:Input:Text entry and input fields
+AND:INP:EditText,TextInputEditText,AutoCompleteTextView,MultiAutoCompleteTextView,SearchView,TextField,OutlinedTextField,BasicTextField
+IOS:INP:UITextField,UITextView,UISearchBar,TextField,TextEditor,SecureField
+WEB:INP:input[type=text],input[type=email],input[type=password],input[type=search],input[type=tel],input[type=url],input[type=number],textarea,.input-field
+DSK:INP:TextField,OutlinedTextField,BasicTextField,JTextField,JTextArea
+
+TYP:CHK:Checkbox:Checkable selection elements
+AND:CHK:CheckBox,AppCompatCheckBox,MaterialCheckBox,Checkbox,TriStateCheckbox
+IOS:CHK:UISwitch,Toggle
+WEB:CHK:input[type=checkbox],.checkbox,[role=checkbox]
+DSK:CHK:Checkbox,TriStateCheckbox,JCheckBox
+
+TYP:RDO:Radio:Radio button selection elements
+AND:RDO:RadioButton,AppCompatRadioButton,MaterialRadioButton,RadioButton
+IOS:RDO:
+WEB:RDO:input[type=radio],.radio,[role=radio]
+DSK:RDO:RadioButton,JRadioButton
+
+TYP:SWT:Switch:Toggle switch elements
+AND:SWT:Switch,SwitchCompat,SwitchMaterial,Switch
+IOS:SWT:UISwitch,Toggle
+WEB:SWT:input[type=checkbox].switch,.toggle-switch,[role=switch]
+DSK:SWT:Switch
+
+TYP:SLR:Slider:Range selection sliders
+AND:SLR:SeekBar,Slider,RangeSlider,AppCompatSeekBar
+IOS:SLR:UISlider,Slider
+WEB:SLR:input[type=range],.slider,[role=slider]
+DSK:SLR:Slider,RangeSlider
+
+TYP:SEL:Select:Dropdown and picker elements
+AND:SEL:Spinner,AppCompatSpinner,MaterialSpinner,DropdownMenu,ExposedDropdownMenu
+IOS:SEL:UIPickerView,Picker,UISegmentedControl
+WEB:SEL:select,.dropdown,.picker,[role=listbox],[role=combobox]
+DSK:SEL:DropdownMenu,ExposedDropdownMenu,JComboBox
+
+# ============================================================================
+# TEXT & DISPLAY TYPES
+# ============================================================================
+TYP:TXT:Text:Static text and label elements
+AND:TXT:TextView,AppCompatTextView,MaterialTextView,Text
+IOS:TXT:UILabel,Text
+WEB:TXT:p,span,label,h1,h2,h3,h4,h5,h6,.text,[role=text]
+DSK:TXT:Text,JLabel
+
+TYP:HDR:Header:Section header elements
+AND:HDR:Toolbar,ActionBar,TopAppBar,AppBarLayout
+IOS:HDR:UINavigationBar
+WEB:HDR:header,h1,h2,.header,[role=banner]
+DSK:HDR:TopAppBar
+
+TYP:FTR:Footer:Section footer elements
+AND:FTR:
+IOS:FTR:
+WEB:FTR:footer,.footer,[role=contentinfo]
+DSK:FTR:
+
+TYP:IMG:Image:Image and icon elements
+AND:IMG:ImageView,AppCompatImageView,ShapeableImageView,Icon,Image
+IOS:IMG:UIImageView,Image
+WEB:IMG:img,svg,picture,.image,[role=img]
+DSK:IMG:Image,Icon
+
+TYP:LNK:Link:Hyperlink elements
+AND:LNK:
+IOS:LNK:UITextView,Link
+WEB:LNK:a,[role=link]
+DSK:LNK:
+
+# ============================================================================
+# CONTAINER TYPES
+# ============================================================================
+TYP:LST:List:Scrollable list containers
+AND:LST:RecyclerView,ListView,LazyColumn,LazyRow,LazyVerticalGrid,LazyHorizontalGrid
+IOS:LST:UITableView,UICollectionView,List,ScrollView,LazyVStack,LazyHStack
+WEB:LST:ul,ol,.list,[role=list],[role=listbox]
+DSK:LST:LazyColumn,LazyRow,JList
+
+TYP:ITM:Item:List item elements
+AND:ITM:~.*ViewHolder.*,ListItem,LazyListScope
+IOS:ITM:UITableViewCell,UICollectionViewCell
+WEB:ITM:li,.list-item,[role=listitem],[role=option]
+DSK:ITM:ListItem
+
+TYP:CRD:Card:Card container elements
+AND:CRD:CardView,MaterialCardView,Card,ElevatedCard,OutlinedCard
+IOS:CRD:
+WEB:CRD:.card,article,[role=article]
+DSK:CRD:Card,ElevatedCard,OutlinedCard
+
+TYP:SCR:Screen:Full screen containers
+AND:SCR:Activity,Fragment,Scaffold,Surface,ComposeView
+IOS:SCR:UIViewController,UINavigationController,UITabBarController,View
+WEB:SCR:body,main,.page,[role=main]
+DSK:SCR:Window,Scaffold,Surface
+
+TYP:DIA:Dialog:Modal dialog elements
+AND:DIA:AlertDialog,BottomSheetDialog,DialogFragment,Dialog,AlertDialog
+IOS:DIA:UIAlertController,UIActionSheet,Alert,.sheet
+WEB:DIA:dialog,.modal,[role=dialog],[role=alertdialog]
+DSK:DIA:AlertDialog,Dialog
+
+TYP:MNU:Menu:Menu and popup elements
+AND:MNU:PopupMenu,ContextMenu,DropdownMenu,Menu
+IOS:MNU:UIMenu,UIContextMenuInteraction,Menu
+WEB:MNU:menu,nav,.menu,[role=menu]
+DSK:MNU:DropdownMenu,ContextMenu
+
+# ============================================================================
+# NAVIGATION TYPES
+# ============================================================================
+TYP:NAV:Navigation:Navigation container elements
+AND:NAV:NavigationView,NavigationRailView,BottomNavigationView,NavigationBar,NavigationRail
+IOS:NAV:UINavigationBar,UITabBar,TabView,NavigationView
+WEB:NAV:nav,.navigation,[role=navigation]
+DSK:NAV:NavigationBar,NavigationRail
+
+TYP:TAB:Tab:Tab navigation elements
+AND:TAB:TabLayout,TabItem,Tab,TabRow
+IOS:TAB:UITabBarItem,TabView
+WEB:TAB:.tab,[role=tab],[role=tablist]
+DSK:TAB:Tab,TabRow
+
+# ============================================================================
+# MEDIA TYPES
+# ============================================================================
+TYP:VID:Video:Video player elements
+AND:VID:VideoView,PlayerView,ExoPlayerView
+IOS:VID:AVPlayerViewController,VideoPlayer
+WEB:VID:video,.video-player,[role=video]
+DSK:VID:VideoPlayer
+
+TYP:AUD:Audio:Audio player elements
+AND:AUD:
+IOS:AUD:
+WEB:AUD:audio,.audio-player
+DSK:AUD:
+
+TYP:MAP:Map:Map view elements
+AND:MAP:MapView,GoogleMap,MapboxMapView
+IOS:MAP:MKMapView,Map
+WEB:MAP:.map,[role=application].map
+DSK:MAP:
+
+TYP:CAM:Camera:Camera view elements
+AND:CAM:PreviewView,CameraView,SurfaceView
+IOS:CAM:AVCaptureVideoPreviewLayer
+WEB:CAM:video.camera
+DSK:CAM:
+
+# ============================================================================
+# INDICATOR TYPES
+# ============================================================================
+TYP:PRG:Progress:Progress indicator elements
+AND:PRG:ProgressBar,CircularProgressIndicator,LinearProgressIndicator
+IOS:PRG:UIActivityIndicatorView,UIProgressView,ProgressView
+WEB:PRG:progress,.spinner,.loading,[role=progressbar]
+DSK:PRG:CircularProgressIndicator,LinearProgressIndicator
+
+TYP:CHT:Chart:Chart and graph elements
+AND:CHT:
+IOS:CHT:Chart
+WEB:CHT:canvas.chart,.chart,[role=img].chart
+DSK:CHT:
+
+TYP:WBV:WebView:Embedded web content
+AND:WBV:WebView,WebViewCompat
+IOS:WBV:WKWebView,SFSafariViewController
+WEB:WBV:iframe
+DSK:WBV:
+
+# ============================================================================
+# ACTION DEFINITIONS
+# ============================================================================
+ACT:click:Click:Tap or click element:*
+ACT:focus:Focus:Set input focus:*
+ACT:scroll:Scroll:Scroll in direction:*
+ACT:type:Type:Enter text:*
+ACT:long_press:Long Press:Press and hold:and,ios,dsk
+ACT:double_tap:Double Tap:Tap twice quickly:and,ios
+ACT:swipe:Swipe:Swipe gesture:and,ios
+ACT:pinch:Pinch:Pinch zoom gesture:and,ios
+ACT:hover:Hover:Mouse hover:web,dsk
+ACT:right_click:Right Click:Context menu click:web,dsk
+ACT:drag:Drag:Drag and drop:*
+ACT:select:Select:Select from options:*
+ACT:clear:Clear:Clear input content:*
+ACT:submit:Submit:Submit form:*
+---
+aliases:
+  typ: [type, kind, category, element]
+  and: [android, droid, kotlin, java]
+  ios: [apple, iphone, ipad, swift, swiftui, uikit]
+  web: [browser, html, dom, css, javascript]
+  dsk: [desktop, jvm, compose, swing, javafx]
+  act: [action, verb, operation, gesture]

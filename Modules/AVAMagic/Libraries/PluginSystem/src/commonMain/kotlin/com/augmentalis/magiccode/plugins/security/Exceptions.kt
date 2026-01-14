@@ -1,4 +1,4 @@
-package com.augmentalis.magiccode.plugins.security
+package com.augmentalis.avacode.plugins.security
 
 /**
  * Exception thrown when encryption operation fails.

@@ -17,7 +17,7 @@
  * ## New APIs (VoiceOSCoreNG):
  * - ElementParser: Element extraction (platform-independent)
  * - ExplorationBridge: Exploration coordination
- * - VUIDGenerator: VUID generation (replaces ThirdPartyUuidGenerator)
+ * - ElementFingerprint: Element ID generation (replaces ThirdPartyUuidGenerator)
  *
  * @see MigrationGuide for complete migration instructions
  */
@@ -25,8 +25,7 @@ package com.augmentalis.voiceoscoreng.functions
 
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
-import com.augmentalis.voiceoscoreng.common.VUIDGenerator
-import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
+import com.augmentalis.voiceoscoreng.common.ElementFingerprint
 
 // ============================================================================
 // Legacy Types (from JITLearning / JitElementCapture)
@@ -400,18 +399,19 @@ class JITLearningAdapter {
         }
 
         /**
-         * Generate VUID for a captured element.
+         * Generate fingerprint for a captured element.
          *
          * @param element The captured element
          * @param packageName The app package name
-         * @return Generated VUID
+         * @return Generated element fingerprint
          */
         fun generateVuid(element: LegacyJitCapturedElement, packageName: String): String {
-            val typeCode = VUIDGenerator.getTypeCode(element.className)
-            return VUIDGenerator.generate(
+            return ElementFingerprint.generate(
+                className = element.className,
                 packageName = packageName,
-                typeCode = typeCode,
-                elementHash = element.elementHash.take(8)
+                resourceId = element.viewIdResourceName ?: "",
+                text = element.text ?: "",
+                contentDesc = element.contentDescription ?: ""
             )
         }
     }

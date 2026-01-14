@@ -1,7 +1,7 @@
-package com.augmentalis.magiccode.plugins.assets
+package com.augmentalis.avacode.plugins.assets
 
-import com.augmentalis.magiccode.plugins.core.AssetCategory
-import com.augmentalis.magiccode.plugins.core.PluginLog
+import com.augmentalis.avacode.plugins.core.AssetCategory
+import com.augmentalis.avacode.plugins.core.PluginLog
 
 /**
  * Fallback asset provider for default assets.

@@ -263,12 +263,28 @@ class UIStateManager {
 
     fun restoreState(savedState: Map<String, Any>): Boolean {
         return try {
-            val isOverlayVisible = savedState["isOverlayVisible"] as? Boolean ?: false
-            val selectedElement = savedState["selectedElement"] as? Int ?: 0
-            val currentMode = savedState["currentMode"] as? String ?: "none"
+            // Track if any type coercion failed (corrupted data)
+            var hadCorruptedData = false
+
+            val isOverlayVisible = when (val value = savedState["isOverlayVisible"]) {
+                is Boolean -> value
+                null -> false
+                else -> { hadCorruptedData = true; false }
+            }
+            val selectedElement = when (val value = savedState["selectedElement"]) {
+                is Int -> value
+                is Number -> value.toInt()
+                null -> 0
+                else -> { hadCorruptedData = true; 0 }
+            }
+            val currentMode = when (val value = savedState["currentMode"]) {
+                is String -> value
+                null -> "none"
+                else -> { hadCorruptedData = true; "none" }
+            }
 
             _stateFlow.value = UIState(isOverlayVisible, selectedElement, currentMode)
-            true
+            !hadCorruptedData // Return false if any data was corrupted
         } catch (e: Exception) {
             false
         }

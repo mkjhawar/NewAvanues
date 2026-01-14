@@ -1,6 +1,6 @@
-package com.augmentalis.magiccode.plugins.persistence
+package com.augmentalis.avacode.plugins.persistence
 
-import com.augmentalis.magiccode.plugins.core.*
+import com.augmentalis.avacode.plugins.core.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString

@@ -61,6 +61,9 @@ kotlin {
                 // Koin for Dependency Injection
                 implementation(libs.koin.core)
                 implementation(libs.koin.compose)
+
+                // AVID for unified identifier generation
+                implementation(project(":Modules:AVID"))
             }
         }
 

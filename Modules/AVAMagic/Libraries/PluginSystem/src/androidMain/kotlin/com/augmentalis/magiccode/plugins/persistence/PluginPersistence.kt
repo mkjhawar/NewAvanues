@@ -1,6 +1,6 @@
-package com.augmentalis.magiccode.plugins.persistence
+package com.augmentalis.avacode.plugins.persistence
 
-import com.augmentalis.magiccode.plugins.core.PluginLog
+import com.augmentalis.avacode.plugins.core.PluginLog
 
 /**
  * Android plugin persistence implementation.

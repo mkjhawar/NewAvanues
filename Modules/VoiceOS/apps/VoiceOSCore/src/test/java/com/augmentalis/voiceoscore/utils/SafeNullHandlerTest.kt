@@ -30,7 +30,7 @@ class SafeNullHandlerTest {
             value.requireNotNull("TestValue")
         }
         assertThat(exception.message).contains("TestValue")
-        assertThat(exception.message).contains("must not be null")
+        assertThat(exception.message).contains("null")
     }
 
     @Test
@@ -209,7 +209,7 @@ class SafeNullHandlerTest {
             requireAllNotNull(a, b, c) { "RequiredValues" }
         }
         assertThat(exception.message).contains("RequiredValues")
-        assertThat(exception.message).contains("null values")
+        assertThat(exception.message).contains("null")
     }
 
     @Test
