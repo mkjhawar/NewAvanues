@@ -1,9 +1,10 @@
 package com.augmentalis.webavanue.learnweb
 
+import com.augmentalis.avid.AvidGenerator
+import com.augmentalis.avid.TypeCode
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
-import com.augmentalis.voiceoscoreng.common.VUIDGenerator
-import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
+import com.augmentalis.voiceoscoreng.common.ElementFingerprint
 import com.augmentalis.voiceoscoreng.extraction.ElementParser
 import com.augmentalis.voiceoscoreng.extraction.ExtractionBundle
 import kotlin.test.Test
@@ -225,56 +226,56 @@ class WebAvanuePageExtractorTest {
     }
 
     // ==========================================================================
-    // VUID Generation Tests (compact voice IDs for web elements)
+    // AVID Generation Tests (compact voice IDs for web elements)
     // ==========================================================================
 
     @Test
-    fun vuidGenerator_generatesValidVuidForWebElement() {
+    fun avidGenerator_generatesValidAvidForWebElement() {
         val packageName = "example.com"
-        val typeCode = VUIDTypeCode.BUTTON
+        val typeCode = TypeCode.BUTTON
         val elementHash = "a1b2c3d4"
 
-        val vuid = VUIDGenerator.generate(packageName, typeCode, elementHash)
+        val avid = AvidGenerator.generate(packageName, typeCode, elementHash)
 
-        assertTrue(vuid.isNotBlank())
-        assertTrue(VUIDGenerator.isValidVUID(vuid), "Generated VUID should be valid")
+        assertTrue(avid.isNotBlank())
+        assertTrue(AvidGenerator.isValidAvid(avid), "Generated AVID should be valid")
     }
 
     @Test
-    fun vuidGenerator_parsesGeneratedVuid() {
+    fun avidGenerator_parsesGeneratedAvid() {
         val packageName = "example.com"
-        val typeCode = VUIDTypeCode.INPUT
+        val typeCode = TypeCode.INPUT
         val elementHash = "e5f6g7h8"
 
-        val vuid = VUIDGenerator.generate(packageName, typeCode, elementHash)
-        val parsed = VUIDGenerator.parseVUID(vuid)
+        val avid = AvidGenerator.generate(packageName, typeCode, elementHash)
+        val parsed = AvidGenerator.parseAvid(avid)
 
-        assertNotNull(parsed, "Should parse generated VUID")
-        assertEquals(typeCode, parsed.typeCode)
+        assertNotNull(parsed, "Should parse generated AVID")
+        assertEquals(typeCode, parsed.typeAbbrev)
     }
 
     @Test
-    fun vuidGenerator_generatesConsistentHashForSameContent() {
-        val hash1 = VUIDGenerator.generatePackageHash("example.com")
-        val hash2 = VUIDGenerator.generatePackageHash("example.com")
+    fun avidGenerator_generatesConsistentHashForSameContent() {
+        val hash1 = ElementFingerprint.deterministicHash("example.com", 8)
+        val hash2 = ElementFingerprint.deterministicHash("example.com", 8)
 
         assertEquals(hash1, hash2, "Same package should produce same hash")
     }
 
     @Test
-    fun vuidGenerator_generatesDifferentHashesForDifferentDomains() {
-        val hash1 = VUIDGenerator.generatePackageHash("example.com")
-        val hash2 = VUIDGenerator.generatePackageHash("google.com")
+    fun avidGenerator_generatesDifferentHashesForDifferentDomains() {
+        val hash1 = ElementFingerprint.deterministicHash("example.com", 8)
+        val hash2 = ElementFingerprint.deterministicHash("google.com", 8)
 
         assertTrue(hash1 != hash2, "Different domains should produce different hashes")
     }
 
     @Test
-    fun vuidGenerator_typeCodeDetection() {
-        assertEquals(VUIDTypeCode.BUTTON, VUIDGenerator.getTypeCode("button"))
-        assertEquals(VUIDTypeCode.INPUT, VUIDGenerator.getTypeCode("input"))
-        assertEquals(VUIDTypeCode.TEXT, VUIDGenerator.getTypeCode("span"))
-        assertEquals(VUIDTypeCode.ELEMENT, VUIDGenerator.getTypeCode("div"))
+    fun avidGenerator_typeCodeDetection() {
+        assertEquals(TypeCode.BUTTON, TypeCode.fromTypeName("button"))
+        assertEquals(TypeCode.INPUT, TypeCode.fromTypeName("input"))
+        assertEquals(TypeCode.TEXT, TypeCode.fromTypeName("span"))
+        assertEquals(TypeCode.ELEMENT, TypeCode.fromTypeName("div"))
     }
 
     // ==========================================================================

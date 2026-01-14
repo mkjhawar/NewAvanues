@@ -142,7 +142,7 @@ include(":Modules:AVAMagic:AVAUI:Data")                 // Data components (Acco
 // AVAUI Infrastructure
 include(":Modules:AVAMagic:AVAUI:Adapters")             // Platform adapters
 include(":Modules:AVAMagic:AVAUI:TemplateLibrary")      // Component templates
-include(":Modules:AVAMagic:AVAUI:ThemeBuilder")         // Theme builder tools
+// include(":Modules:AVAMagic:AVAUI:ThemeBuilder")         // Theme builder tools - disabled: JVM desktop, needs Core multiplatform
 include(":Modules:AVAMagic:AVAUI:VoiceCommandRouter")   // Voice command routing
 include(":Modules:AVAMagic:AVAUI:IPCConnector")         // IPC connection layer
 include(":Modules:AVAMagic:AVAUI:ARGScanner")           // ARG scanning utilities
@@ -150,9 +150,10 @@ include(":Modules:AVAMagic:AVAUI:AssetManager")         // Asset management
 
 // AVAUI Platform Renderers
 include(":Modules:AVAMagic:AVAUI:Renderers:Android")    // Android Compose renderer
-include(":Modules:AVAMagic:AVAUI:Renderers:iOS")        // iOS SwiftUI renderer (45 views)
-include(":Modules:AVAMagic:AVAUI:Renderers:Desktop")    // Desktop Compose renderer
-include(":Modules:AVAMagic:AVAUI:Renderers:Web")        // Web React renderer
+// TODO: Re-enable when Core module supports multiplatform targets
+// include(":Modules:AVAMagic:AVAUI:Renderers:iOS")        // iOS SwiftUI renderer (45 views) - disabled: Core is Android-only
+// include(":Modules:AVAMagic:AVAUI:Renderers:Desktop")    // Desktop Compose renderer - disabled: Core is Android-only
+// include(":Modules:AVAMagic:AVAUI:Renderers:Web")        // Web React renderer
 
 // Android Apps
 include(":android:apps:webavanue")

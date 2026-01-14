@@ -23,7 +23,7 @@ import kotlinx.datetime.Instant
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import com.augmentalis.ava.core.data.util.VuidHelper
+import com.augmentalis.ava.core.data.util.AvidHelper
 
 /**
  * DocumentIngestionHandler - Single Responsibility: Document Ingestion
