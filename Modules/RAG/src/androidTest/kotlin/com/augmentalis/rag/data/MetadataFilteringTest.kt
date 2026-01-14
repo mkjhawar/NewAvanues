@@ -19,7 +19,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import com.augmentalis.ava.core.data.util.VuidHelper
+import com.augmentalis.ava.core.data.util.AvidHelper
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 
