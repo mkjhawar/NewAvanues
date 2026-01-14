@@ -1,6 +1,8 @@
 # CLASS-INDEX
 # AI-Readable Class Reference
-# Version: 1.0 | Updated: 2026-01-11
+# Version: 2.1 | Updated: 2026-01-13
+# Note: Includes SOLID-refactored classes from commits cf7fe0ff, 9231c8d9, 5a0353a6
+# Changes: Added AVID module classes, deprecated VUIDGenerator
 
 ---
 
@@ -99,6 +101,396 @@ methods:
   - getCommands(locale: String): List<StaticCommand>
   - findCommand(text: String, locale: String): StaticCommand?
   - registerCustomCommand(command: StaticCommand): Unit
+```
+
+---
+
+## AVID_CLASSES
+
+### AvidGenerator
+```yaml
+package: com.augmentalis.avid
+file: AvidGenerator.kt
+type: object
+purpose: Cloud and local ID generation with platform encoding
+id_formats:
+  cloud: "AVID-{platform}-{sequence}"
+  local: "AVIDL-{platform}-{sequence}"
+platform_codes:
+  A: Android
+  I: iOS
+  W: Web
+  M: macOS
+  X: Windows
+  L: Linux
+  U: Unknown
+methods:
+  cloud:
+    - generateCloud(platform: Platform = detectPlatform()): String
+    - generateCloudBatch(count: Int, platform: Platform = detectPlatform()): List<String>
+  local:
+    - generateLocal(platform: Platform = detectPlatform()): String
+    - generateLocalBatch(count: Int, platform: Platform = detectPlatform()): List<String>
+  validation:
+    - isCloudId(id: String): Boolean
+    - isLocalId(id: String): Boolean
+    - isValid(id: String): Boolean
+  parsing:
+    - parse(id: String): AvidComponents?
+    - getPlatform(id: String): Platform?
+  promotion:
+    - promoteToCloud(localId: String): String?
+  platform:
+    - detectPlatform(): Platform
+```
+
+### Platform
+```yaml
+package: com.augmentalis.avid
+file: Platform.kt
+type: enum
+purpose: Platform identification for cross-device IDs
+values:
+  - ANDROID: code='A'
+  - IOS: code='I'
+  - WEB: code='W'
+  - MACOS: code='M'
+  - WINDOWS: code='X'
+  - LINUX: code='L'
+  - UNKNOWN: code='U'
+methods:
+  - fromCode(code: Char): Platform
+```
+
+### TypeCode
+```yaml
+package: com.augmentalis.avid
+file: TypeCode.kt
+type: object
+purpose: 40+ semantic type codes for UI element classification
+categories:
+  basic_ui:
+    - ELEMENT: "ELM" (generic fallback)
+    - BUTTON: "BTN"
+    - INPUT: "INP"
+    - TEXT: "TXT"
+    - IMAGE: "IMG"
+    - ICON: "ICN"
+    - LINK: "LNK"
+  selection:
+    - CHECKBOX: "CHK"
+    - RADIO: "RAD"
+    - SWITCH: "SWT"
+    - TOGGLE: "TGL"
+    - DROPDOWN: "DRP"
+    - PICKER: "PKR"
+  containers:
+    - CONTAINER: "CTN"
+    - CARD: "CRD"
+    - LIST: "LST"
+    - GRID: "GRD"
+    - TABLE: "TBL"
+    - ROW: "ROW"
+    - CELL: "CEL"
+  navigation:
+    - MENU: "MNU"
+    - TAB: "TAB"
+    - NAV: "NAV"
+    - TOOLBAR: "TBR"
+    - HEADER: "HDR"
+    - FOOTER: "FTR"
+  interaction:
+    - SCROLL: "SCR"
+    - SLIDER: "SLD"
+    - PROGRESS: "PRG"
+    - SPINNER: "SPN"
+  feedback:
+    - DIALOG: "DLG"
+    - TOAST: "TST"
+    - SNACKBAR: "SNK"
+    - ALERT: "ALT"
+    - TOOLTIP: "TIP"
+  media:
+    - VIDEO: "VID"
+    - AUDIO: "AUD"
+    - CANVAS: "CNV"
+    - MAP: "MAP"
+  messaging:
+    - MESSAGE: "MSG"
+    - CONVERSATION: "CNV"
+    - PARTICIPANT: "PRT"
+methods:
+  - fromClassName(className: String): String
+  - isValid(code: String): Boolean
+  - getCategory(code: String): String?
+```
+
+### ElementFingerprint
+```yaml
+package: com.augmentalis.avid
+file: Fingerprint.kt
+type: object
+purpose: Deterministic hash-based UI element identification
+format: "{TypeCode}:{hash8}"
+features:
+  - Collision-resistant: SHA-256 based
+  - Cross-device reproducibility
+  - Deterministic: same inputs = same output
+  - Human readable: semantic type prefix
+methods:
+  generation:
+    - generate(className: String, packageName: String, resourceId: String, text: String, contentDesc: String): String
+  validation:
+    - isValid(fingerprint: String): Boolean
+  parsing:
+    - parse(fingerprint: String): Pair<String, String>?  # Returns (typeCode, hash)
+  utilities:
+    - getTypeCode(fingerprint: String): String?
+    - getHash(fingerprint: String): String?
+example:
+  input:
+    className: "Button"
+    packageName: "com.example.app"
+    resourceId: "btn_submit"
+    text: "Submit"
+    contentDesc: "Submit button"
+  output: "BTN:a3f8b2c1"
+```
+
+### AvidComponents
+```yaml
+package: com.augmentalis.avid
+file: AvidGenerator.kt
+type: data_class
+purpose: Parsed AVID components
+fields:
+  - prefix: String (AVID or AVIDL)
+  - platform: Platform
+  - sequence: String
+  - isCloud: Boolean
+```
+
+---
+
+## SOLID_REFACTORED_CLASSES
+
+### IHandlerRegistry (Interface)
+```yaml
+package: com.augmentalis.voiceoscoreng.handlers
+file: IHandlerRegistry.kt
+type: interface
+lines: 138
+commit: 5a0353a6
+purpose: Abstraction for handler registration (DIP compliance)
+methods:
+  - register(handler: CommandHandler): Unit
+  - unregister(id: String): Boolean
+  - getHandler(category: ActionCategory): CommandHandler?
+  - getHandlerForCommand(command: String): CommandHandler?
+  - getAllHandlers(): List<CommandHandler>
+```
+
+### IMetricsCollector (Interface)
+```yaml
+package: com.augmentalis.voiceoscoreng.handlers
+file: IMetricsCollector.kt
+type: interface
+lines: 81
+commit: 5a0353a6
+purpose: Abstraction for metrics collection (DIP compliance)
+methods:
+  - recordCommandExecution(command: String, duration: Long): Unit
+  - recordHandlerInvocation(handler: String, success: Boolean): Unit
+  - getMetrics(): MetricsSnapshot
+```
+
+### YamlComponentParser (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.common
+file: YamlComponentParser.kt
+type: class
+lines: 433
+commit: 9231c8d9
+purpose: YAML parsing for component definitions (SRP from ComponentFactory)
+methods:
+  - parse(yaml: String): ParseResult<ComponentDefinition>
+  - parseFile(path: String): ParseResult<ComponentDefinition>
+  - validateSyntax(yaml: String): List<SyntaxError>
+```
+
+### ComponentValidator (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.common
+file: ComponentValidator.kt
+type: class
+lines: 167
+commit: 9231c8d9
+purpose: Component validation logic (SRP from ComponentFactory)
+methods:
+  - validate(component: ComponentDefinition): ValidationResult
+  - validateSchema(component: ComponentDefinition): List<SchemaError>
+  - validateDependencies(component: ComponentDefinition): List<DependencyError>
+```
+
+### ComponentLoader (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.common
+file: ComponentLoader.kt
+type: class
+lines: 71
+commit: 9231c8d9
+purpose: Component loading orchestration (SRP from ComponentFactory)
+methods:
+  - load(name: String): Result<Component>
+  - loadAll(): List<Component>
+  - reload(name: String): Result<Component>
+```
+
+### BuiltInComponents (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.common
+file: BuiltInComponents.kt
+type: object
+commit: 9231c8d9
+purpose: Predefined component definitions (SRP from ComponentFactory)
+contents:
+  - SystemComponents
+  - NavigationComponents
+  - UIComponents
+  - InputComponents
+```
+
+### OverlayRegistry (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.features
+file: OverlayRegistry.kt
+type: class
+lines: 125
+commit: 9231c8d9
+purpose: Overlay registration/unregistration (SRP from OverlayManager)
+methods:
+  - register(overlay: Overlay): Unit
+  - unregister(id: String): Boolean
+  - get(id: String): Overlay?
+  - getAll(): List<Overlay>
+```
+
+### OverlayVisibilityManager (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.features
+file: OverlayVisibilityManager.kt
+type: class
+lines: 104
+commit: 9231c8d9
+purpose: Overlay show/hide operations (SRP from OverlayManager)
+methods:
+  - show(id: String): Result<Unit>
+  - hide(id: String): Result<Unit>
+  - showAll(): Unit
+  - hideAll(): Unit
+  - isVisible(id: String): Boolean
+```
+
+### OverlayDisposal (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.features
+file: OverlayDisposal.kt
+type: class
+lines: 66
+commit: 9231c8d9
+purpose: Overlay cleanup operations (SRP from OverlayManager)
+methods:
+  - dispose(id: String): Unit
+  - disposeAll(): Unit
+  - scheduleDisposal(id: String, delay: Long): Unit
+```
+
+### StaticCommandDispatcher (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.handlers
+file: StaticCommandDispatcher.kt
+type: class
+lines: 64
+commit: 9231c8d9
+purpose: Static command handling (SRP from CommandDispatcher)
+methods:
+  - dispatch(command: String): HandlerResult
+  - canHandle(command: String): Boolean
+  - getStaticCommands(): List<StaticCommand>
+```
+
+### DynamicCommandDispatcher (SRP Split)
+```yaml
+package: com.augmentalis.voiceoscoreng.handlers
+file: DynamicCommandDispatcher.kt
+type: class
+lines: 126
+commit: 9231c8d9
+purpose: Dynamic command handling (SRP from CommandDispatcher)
+methods:
+  - dispatch(command: String): HandlerResult
+  - canHandle(command: String): Boolean
+  - registerDynamicCommand(command: QuantizedCommand): Unit
+  - clearDynamicCommands(): Unit
+```
+
+### VoiceCommandInterpreter (OCP Compliance)
+```yaml
+package: com.augmentalis.voiceoscoreng.handlers
+file: VoiceCommandInterpreter.kt
+type: class
+lines: 181
+commit: cf7fe0ff
+purpose: Rule-based voice command interpretation (OCP from ActionCoordinator)
+implements: IVoiceCommandInterpreter
+methods:
+  - interpret(utterance: String): InterpretationResult
+  - addRule(rule: InterpretationRule): Unit
+  - removeRule(id: String): Boolean
+  - getRules(): List<InterpretationRule>
+```
+
+### SpeechEngineRegistry (OCP Compliance)
+```yaml
+package: com.augmentalis.voiceoscoreng.features
+file: SpeechEngine.kt
+type: class
+commit: cf7fe0ff
+purpose: Extensible speech engine registration (OCP compliance)
+methods:
+  - register(engine: ISpeechEngine): Unit
+  - unregister(id: String): Boolean
+  - get(id: String): ISpeechEngine?
+  - getDefault(): ISpeechEngine
+  - setDefault(id: String): Unit
+```
+
+### IWakeWordCapable (ISP Compliance)
+```yaml
+package: com.augmentalis.voiceoscoreng.features
+file: ISpeechEngine.kt
+type: interface
+commit: cf7fe0ff
+purpose: Wake word detection capability (ISP from IVivokaEngine)
+methods:
+  - setWakeWord(phrase: String): Result<Unit>
+  - enableWakeWord(): Result<Unit>
+  - disableWakeWord(): Unit
+  - isWakeWordEnabled(): Boolean
+```
+
+### IModelManageable (ISP Compliance)
+```yaml
+package: com.augmentalis.voiceoscoreng.features
+file: ISpeechEngine.kt
+type: interface
+commit: cf7fe0ff
+purpose: Model management capability (ISP from IVivokaEngine)
+methods:
+  - loadModel(path: String): Result<Unit>
+  - unloadModel(): Unit
+  - isModelLoaded(): Boolean
+  - getModelInfo(): ModelInfo?
 ```
 
 ---
@@ -406,12 +798,18 @@ methods:
 
 ## COMMON_CLASSES
 
-### VUIDGenerator
+### VUIDGenerator (DEPRECATED)
 ```yaml
 package: com.augmentalis.common.vuid
 file: VUIDGenerator.kt
 type: object
-purpose: Unique identifier generation
+status: DEPRECATED
+deprecated_by: com.augmentalis.avid.AvidGenerator, com.augmentalis.avid.ElementFingerprint
+purpose: Unique identifier generation (DEPRECATED - use AVID module instead)
+migration_guide:
+  entity_ids: "Use AvidGenerator.generateCloud() or AvidGenerator.generateLocal()"
+  ui_fingerprints: "Use ElementFingerprint.generate()"
+  message_ids: "Use AvidGenerator.generateCloud() with platform detection"
 format: Compact, parseable VUIDs
 methods:
   - generateCompact(packageName: String, version: String, typeName: String): String
