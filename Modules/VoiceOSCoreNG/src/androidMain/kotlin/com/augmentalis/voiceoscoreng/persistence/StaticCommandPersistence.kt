@@ -93,11 +93,22 @@ class StaticCommandPersistence(
      * @return Number of commands inserted
      */
     override suspend fun refresh(): Int {
+        var deletedCount = 0
+
         // Delete existing static commands by category
+        // Only delete commands with "static__" prefix to preserve user-defined commands
         CommandCategory.entries.forEach { category ->
-            // Note: This deletes by category, which includes static commands
-            // A better approach would be to delete by source="static" if tracked
+            val commands = repository.getByCategory(category.name)
+            commands.forEach { cmd ->
+                // Only delete static commands (commandId starts with "static__")
+                if (cmd.commandId.startsWith("static__")) {
+                    repository.deleteByCommandId(cmd.commandId)
+                    deletedCount++
+                }
+            }
         }
+
+        println("[StaticCommandPersistence] Deleted $deletedCount existing static commands")
 
         return populateStaticCommands()
     }

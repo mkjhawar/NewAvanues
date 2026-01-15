@@ -84,6 +84,62 @@ data class QuantizedCommand(
 
     companion object {
         /**
+         * Create a QuantizedCommand with required packageName validation.
+         *
+         * This is the recommended factory method for creating commands as it
+         * enforces that packageName is always present in metadata.
+         *
+         * @param avid Command unique identifier (AVID format)
+         * @param phrase Voice phrase that triggers this command
+         * @param actionType Type of action to perform
+         * @param packageName Package name of the app (required)
+         * @param targetAvid Target element AVID fingerprint (nullable for navigation)
+         * @param confidence Confidence score (0.0 - 1.0)
+         * @param screenId Optional screen ID
+         * @param appVersion Optional app version
+         * @param additionalMetadata Additional metadata entries
+         * @return QuantizedCommand with validated metadata
+         * @throws IllegalArgumentException if packageName is blank
+         */
+        fun create(
+            avid: String,
+            phrase: String,
+            actionType: CommandActionType,
+            packageName: String,
+            targetAvid: String? = null,
+            confidence: Float = 1.0f,
+            screenId: String? = null,
+            appVersion: String? = null,
+            additionalMetadata: Map<String, String> = emptyMap()
+        ): QuantizedCommand {
+            require(packageName.isNotBlank()) {
+                "packageName is required for QuantizedCommand creation"
+            }
+            require(phrase.isNotBlank()) {
+                "phrase cannot be blank"
+            }
+            require(confidence in 0.0f..1.0f) {
+                "confidence must be between 0.0 and 1.0"
+            }
+
+            val metadata = buildMap {
+                put("packageName", packageName)
+                screenId?.let { put("screenId", it) }
+                appVersion?.let { put("appVersion", it) }
+                putAll(additionalMetadata)
+            }
+
+            return QuantizedCommand(
+                avid = avid,
+                phrase = phrase,
+                actionType = actionType,
+                targetAvid = targetAvid,
+                confidence = confidence,
+                metadata = metadata
+            )
+        }
+
+        /**
          * Parse CMD line to QuantizedCommand.
          *
          * @param line CMD line (e.g., "CMD:avid:phrase:CLICK:target_avid:0.95")
@@ -106,5 +162,35 @@ data class QuantizedCommand(
                 null
             }
         }
+
+        /**
+         * Parse CMD line to QuantizedCommand with packageName.
+         *
+         * @param line CMD line (e.g., "CMD:avid:phrase:CLICK:target_avid:0.95")
+         * @param packageName Package name to attach to the command
+         * @return QuantizedCommand or null if invalid
+         */
+        fun fromCmdLine(line: String, packageName: String): QuantizedCommand? {
+            val command = fromCmdLine(line) ?: return null
+            return command.withMetadata("packageName", packageName)
+        }
+    }
+
+    /**
+     * Validates that this command has required metadata.
+     *
+     * @return true if packageName is present
+     */
+    fun isValid(): Boolean = !packageName.isNullOrBlank()
+
+    /**
+     * Returns validation errors for this command.
+     *
+     * @return List of validation error messages, empty if valid
+     */
+    fun validationErrors(): List<String> = buildList {
+        if (packageName.isNullOrBlank()) add("Missing packageName in metadata")
+        if (phrase.isBlank()) add("Phrase cannot be blank")
+        if (avid.isBlank()) add("AVID cannot be blank")
     }
 }

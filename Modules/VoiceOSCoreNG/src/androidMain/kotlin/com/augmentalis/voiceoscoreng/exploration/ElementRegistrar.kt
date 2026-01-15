@@ -14,7 +14,9 @@ package com.augmentalis.voiceoscoreng.exploration
 import android.content.Context
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.avid.AvidGenerator
+import com.augmentalis.voiceoscoreng.common.CommandGenerator
 import com.augmentalis.voiceoscoreng.common.ElementInfo
+import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 
 /**
  * Android implementation of element registration.
@@ -22,17 +24,20 @@ import com.augmentalis.voiceoscoreng.common.ElementInfo
  * Handles:
  * - AVID generation via AvidGenerator
  * - Alias generation and deduplication
- * - Voice command generation via LearnAppCore
+ * - Voice command generation via KMP CommandGenerator
  *
  * @property context Android context
  * @property config Exploration configuration
+ * @property onCommandGenerated Optional callback when commands are generated
  */
 class ElementRegistrar(
     private val context: Context,
-    private val config: ExplorationConfig = ExplorationConfig.DEFAULT
+    private val config: ExplorationConfig = ExplorationConfig.DEFAULT,
+    private val onCommandGenerated: ((QuantizedCommand) -> Unit)? = null
 ) : IElementRegistrar {
 
     private val genericAliasCounters = mutableMapOf<String, Int>()
+    private val generatedCommands = mutableListOf<QuantizedCommand>()
 
     override suspend fun preGenerateAvids(
         elements: List<ElementInfo>,
@@ -82,9 +87,13 @@ class ElementRegistrar(
                 alreadyRegistered?.add(stableId)
                 registered++
 
-                // Registration complete - AVID is used for UUID generation
-                // TODO: Integrate LearnAppCore for voice command generation
-                commands++
+                // Generate voice command using KMP CommandGenerator
+                val commandResult = CommandGenerator.fromElementWithPersistence(element, packageName)
+                if (commandResult != null) {
+                    generatedCommands.add(commandResult.command)
+                    onCommandGenerated?.invoke(commandResult.command)
+                    commands++
+                }
 
             } catch (e: Exception) {
                 errors.add("Failed to register ${element.className}: ${e.message}")
@@ -162,7 +171,14 @@ class ElementRegistrar(
 
     override fun clearCounters() {
         genericAliasCounters.clear()
+        generatedCommands.clear()
     }
+
+    /**
+     * Get all commands generated during the last registration.
+     * Call clearCounters() to reset for next batch.
+     */
+    fun getGeneratedCommands(): List<QuantizedCommand> = generatedCommands.toList()
 
     private fun generateSimpleAvid(element: ElementInfo, packageName: String): String {
         // Use AVID generator for consistent element IDs across the ecosystem
