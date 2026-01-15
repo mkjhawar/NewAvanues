@@ -1,6 +1,6 @@
 /**
  * ScrollExecutor.kt - Executes scrolling and collects elements
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/scrolling/ScrollExecutor.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/scrolling/ScrollExecutor.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

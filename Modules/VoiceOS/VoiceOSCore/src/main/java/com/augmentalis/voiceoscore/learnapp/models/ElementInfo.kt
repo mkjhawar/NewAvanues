@@ -1,6 +1,6 @@
 /**
  * ElementInfo.kt - UI element information model
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/models/ElementInfo.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/models/ElementInfo.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

@@ -38,7 +38,7 @@ import com.augmentalis.learnappcore.core.LearnAppCore
 import com.augmentalis.learnappcore.core.ProcessingMode
 import com.augmentalis.learnappcore.detection.AppFramework
 import com.augmentalis.learnappcore.models.ElementInfo
-import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
+import com.augmentalis.avidcreator.thirdparty.ThirdPartyAvidGenerator
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -80,7 +80,7 @@ class IntegrationTest {
     private lateinit var context: Context
     private lateinit var database: VoiceOSDatabaseManager
     private lateinit var learnAppCore: LearnAppCore
-    private lateinit var uuidGenerator: ThirdPartyUuidGenerator
+    private lateinit var uuidGenerator: ThirdPartyAvidGenerator
     private var serviceBinder: IElementCaptureService? = null
     private var mockProvider: JITLearnerProvider? = null
 
@@ -97,7 +97,7 @@ class IntegrationTest {
         database.screenContexts.deleteAll()
 
         // Initialize UUID generator
-        uuidGenerator = ThirdPartyUuidGenerator()
+        uuidGenerator = ThirdPartyAvidGenerator()
 
         // Initialize LearnAppCore
         learnAppCore = LearnAppCore(

@@ -1,6 +1,6 @@
 /**
  * ExplorationState.kt - Sealed class representing exploration states
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/models/ExplorationState.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/models/ExplorationState.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

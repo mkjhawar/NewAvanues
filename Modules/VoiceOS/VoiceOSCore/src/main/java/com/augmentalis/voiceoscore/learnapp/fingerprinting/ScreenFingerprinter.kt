@@ -1,6 +1,6 @@
 /**
  * ScreenFingerprinter.kt - Calculates SHA-256 fingerprints for screens
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/fingerprinting/ScreenFingerprinter.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/fingerprinting/ScreenFingerprinter.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

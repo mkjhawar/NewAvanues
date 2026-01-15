@@ -187,11 +187,11 @@ class ElementMatcher {
         // We'll implement a simplified version here for standalone use
         return findNodeRecursive(rootNode) { node ->
             // Calculate hash and compare
-            // Note: This requires AccessibilityFingerprint, which we have access to
+            // Note: This requires AvidFingerprint, which we have access to
             try {
                 val packageName = node.packageName?.toString() ?: "unknown"
                 val appVersion = "0" // Would need to be passed from context
-                val nodeHash = com.augmentalis.uuidcreator.thirdparty.AccessibilityFingerprint
+                val nodeHash = com.augmentalis.uuidcreator.thirdparty.AvidFingerprint
                     .fromNode(node, packageName, appVersion)
                     .generateHash()
                 nodeHash == targetHash

@@ -14,7 +14,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import com.augmentalis.avidcreator.ui.AvidViewModel
-import com.augmentalis.avidcreator.ui.VUIDUiState
+import com.augmentalis.avidcreator.ui.AvidUiState
 import com.augmentalis.avidcreator.ui.AvidElementInfo
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -82,7 +82,7 @@ fun AvidManagerTheme(content: @Composable () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AvidManagerScreen(viewModel: AvidViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
-    val uiState by viewModel.uiState.observeAsState(VUIDUiState())
+    val uiState by viewModel.uiState.observeAsState(AvidUiState())
     var showRegisterDialog by remember { mutableStateOf(false) }
     var showCommandDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }

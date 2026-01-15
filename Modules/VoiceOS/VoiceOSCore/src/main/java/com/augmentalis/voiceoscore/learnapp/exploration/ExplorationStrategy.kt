@@ -1,6 +1,6 @@
 /**
  * ExplorationStrategy.kt - Defines exploration strategy
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/exploration/ExplorationStrategy.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/exploration/ExplorationStrategy.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

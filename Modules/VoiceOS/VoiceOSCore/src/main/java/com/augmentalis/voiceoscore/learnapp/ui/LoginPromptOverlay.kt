@@ -1,6 +1,6 @@
 /**
  * LoginPromptOverlay.kt - Login prompt overlay UI
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/ui/LoginPromptOverlay.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/ui/LoginPromptOverlay.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

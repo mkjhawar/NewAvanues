@@ -1,6 +1,6 @@
 /**
  * ProgressTracker.kt - Exploration progress and coverage tracking
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/tracking/ProgressTracker.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/tracking/ProgressTracker.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

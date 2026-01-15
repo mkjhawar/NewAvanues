@@ -29,7 +29,7 @@ import com.augmentalis.database.repositories.IGeneratedCommandRepository
 import com.augmentalis.learnappcore.core.LearnAppCore
 import com.augmentalis.learnappcore.core.ProcessingMode
 import com.augmentalis.learnappcore.models.ElementInfo
-import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
+import com.augmentalis.avidcreator.thirdparty.ThirdPartyAvidGenerator
 import io.mockk.*
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -66,7 +66,7 @@ class ErrorHandlingTest {
     private var mockProvider: JITLearnerProvider? = null
     private lateinit var mockDatabase: VoiceOSDatabaseManager
     private lateinit var mockCommandsRepository: IGeneratedCommandRepository
-    private lateinit var mockUuidGenerator: ThirdPartyUuidGenerator
+    private lateinit var mockUuidGenerator: ThirdPartyAvidGenerator
 
     @Before
     fun setup() {

@@ -26,8 +26,8 @@ import android.content.Context
 import android.util.Log
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.GeneratedCommandDTO
-import com.augmentalis.uuidcreator.core.VUIDGenerator
-import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
+import com.augmentalis.avidcreator.core.AvidGenerator
+import com.augmentalis.avidcreator.thirdparty.ThirdPartyAvidGenerator
 import com.augmentalis.voiceoscore.learnapp.detection.AppFramework
 import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
@@ -82,7 +82,7 @@ import kotlinx.coroutines.withContext
 class LearnAppCore(
     private val context: Context,
     private val database: VoiceOSDatabaseManager,
-    private val uuidGenerator: ThirdPartyUuidGenerator,
+    private val uuidGenerator: ThirdPartyAvidGenerator,
     private val versionDetector: AppVersionDetector? = null
 ) {
     companion object {
@@ -200,7 +200,7 @@ class LearnAppCore(
     /**
      * Generate UUID for element using compact VUID format
      *
-     * Uses VUIDGenerator to create deterministic VUID based on element properties.
+     * Uses AvidGenerator to create deterministic VUID based on element properties.
      *
      * Compact format: {reversedPackage}:{version}:{typeAbbrev}:{hash8}
      * Example: android.instagram.com:12.0.0:btn:a7f3e2c1

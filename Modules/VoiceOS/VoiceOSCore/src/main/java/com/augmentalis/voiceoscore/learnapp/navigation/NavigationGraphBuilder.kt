@@ -1,6 +1,6 @@
 /**
  * NavigationGraphBuilder.kt - Builds navigation graph during exploration
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/navigation/NavigationGraphBuilder.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/navigation/NavigationGraphBuilder.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

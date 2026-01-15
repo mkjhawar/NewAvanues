@@ -25,18 +25,18 @@ import java.security.MessageDigest
  * - Fast O(1) lookup of scraped elements by hash
  * - Avoid re-scraping unchanged app versions
  *
- * @deprecated Use AccessibilityFingerprint from UUIDCreator library instead.
+ * @deprecated Use AvidFingerprint from AvidCreator library instead.
  *   AppHashCalculator uses basic MD5 hashing without hierarchy path awareness,
  *   which can lead to hash collisions when multiple identical elements exist.
- *   AccessibilityFingerprint provides version-scoped SHA-256 hashing with
+ *   AvidFingerprint provides version-scoped SHA-256 hashing with
  *   collision prevention via hierarchy paths.
  *   Removal planned for v3.0.0.
  */
 @Deprecated(
-    message = "Use AccessibilityFingerprint from UUIDCreator library for more robust element hashing with collision prevention",
+    message = "Use AvidFingerprint from AvidCreator library for more robust element hashing with collision prevention",
     replaceWith = ReplaceWith(
-        "AccessibilityFingerprint.fromNode(node, packageName, appVersion).generateHash()",
-        "com.augmentalis.uuidcreator.thirdparty.AccessibilityFingerprint"
+        "AvidFingerprint.fromNode(node, packageName, appVersion).generateHash()",
+        "com.augmentalis.uuidcreator.thirdparty.AvidFingerprint"
     ),
     level = DeprecationLevel.ERROR
 )
@@ -199,9 +199,9 @@ object AppHashCalculator {
 /**
  * Extension function to calculate hash directly from AccessibilityNodeInfo
  *
- * @deprecated Use AccessibilityFingerprint instead
+ * @deprecated Use AvidFingerprint instead
  */
-@Deprecated("Use AccessibilityFingerprint.fromNode()", level = DeprecationLevel.ERROR)
+@Deprecated("Use AvidFingerprint.fromNode()", level = DeprecationLevel.ERROR)
 @Suppress("DEPRECATION_ERROR")
 fun AccessibilityNodeInfo.toHash(): String {
     return AppHashCalculator.calculateElementHash(this)

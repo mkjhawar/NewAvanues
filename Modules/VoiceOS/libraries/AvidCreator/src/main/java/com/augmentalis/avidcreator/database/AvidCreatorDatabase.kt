@@ -1,48 +1,48 @@
 /**
- * AvidCreatorDatabase.kt - VUID database access (IVUIDRepository implementation)
- * Path: modules/libraries/AvidCreator/src/main/java/com/augmentalis/uuidcreator/database/AvidCreatorDatabase.kt
+ * AvidCreatorDatabase.kt - AVID database access (IAvidRepository implementation)
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/avidcreator/database/AvidCreatorDatabase.kt
  *
  * Author: VoiceOS Restoration Team
  * Created: 2025-11-27
- * Modified: 2025-12-24 (UUID→VUID migration: updated all type references)
+ * Modified: 2025-12-24 (UUID→AVID migration: updated all type references)
  *
- * Implementation of IVUIDRepository that provides in-memory storage
- * for VUID elements, hierarchies, analytics, and aliases.
+ * Implementation of IAvidRepository that provides in-memory storage
+ * for AVID elements, hierarchies, analytics, and aliases.
  */
 
 package com.augmentalis.avidcreator.database
 
 import android.content.Context
-import com.augmentalis.database.dto.VUIDAliasDTO
-import com.augmentalis.database.dto.VUIDAnalyticsDTO
+import com.augmentalis.database.dto.AvidAliasDTO
+import com.augmentalis.database.dto.AvidAnalyticsDTO
 import com.augmentalis.database.dto.AvidElementDTO
-import com.augmentalis.database.dto.VUIDHierarchyDTO
-import com.augmentalis.database.repositories.IVUIDRepository
+import com.augmentalis.database.dto.AvidHierarchyDTO
+import com.augmentalis.database.repositories.IAvidRepository
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * VUID Creator Database
+ * AVID Creator Database
  *
- * Implements IVUIDRepository with in-memory storage for VUID management.
+ * Implements IAvidRepository with in-memory storage for AVID management.
  * Provides alias management, element storage, hierarchy tracking, and analytics.
  *
  * **Features:**
- * - Implements IVUIDRepository interface
+ * - Implements IAvidRepository interface
  * - In-memory storage for fast access
  * - Thread-safe via ConcurrentHashMap
  * - Compatible with AvidAliasManager
  *
  * **Usage:**
  * ```kotlin
- * val vuidDb = AvidCreatorDatabase.getInstance(context)
- * val aliasManager = AvidAliasManager(vuidDb)
+ * val avidDb = AvidCreatorDatabase.getInstance(context)
+ * val aliasManager = AvidAliasManager(avidDb)
  * ```
  *
  * @property context Application context
  */
 class AvidCreatorDatabase private constructor(
     private val context: Context
-) : IVUIDRepository {
+) : IAvidRepository {
 
     companion object {
         @Volatile
@@ -65,10 +65,10 @@ class AvidCreatorDatabase private constructor(
 
     // In-memory storage
     private val elements = ConcurrentHashMap<String, AvidElementDTO>()
-    private val hierarchies = ConcurrentHashMap<String, MutableList<VUIDHierarchyDTO>>()
-    private val analytics = ConcurrentHashMap<String, VUIDAnalyticsDTO>()
-    private val aliases = ConcurrentHashMap<String, VUIDAliasDTO>()
-    private val aliasesByUuid = ConcurrentHashMap<String, MutableList<VUIDAliasDTO>>()
+    private val hierarchies = ConcurrentHashMap<String, MutableList<AvidHierarchyDTO>>()
+    private val analytics = ConcurrentHashMap<String, AvidAnalyticsDTO>()
+    private val aliases = ConcurrentHashMap<String, AvidAliasDTO>()
+    private val aliasesByUuid = ConcurrentHashMap<String, MutableList<AvidAliasDTO>>()
 
     // ==================== Element Operations ====================
 
@@ -122,7 +122,7 @@ class AvidCreatorDatabase private constructor(
 
     // ==================== Hierarchy Operations ====================
 
-    override suspend fun insertHierarchy(hierarchy: VUIDHierarchyDTO) {
+    override suspend fun insertHierarchy(hierarchy: AvidHierarchyDTO) {
         val list = hierarchies.getOrPut(hierarchy.parentUuid) { mutableListOf() }
         list.add(hierarchy)
     }
@@ -131,37 +131,37 @@ class AvidCreatorDatabase private constructor(
         hierarchies.remove(parentUuid)
     }
 
-    override suspend fun getHierarchyByParent(parentUuid: String): List<VUIDHierarchyDTO> {
+    override suspend fun getHierarchyByParent(parentUuid: String): List<AvidHierarchyDTO> {
         return hierarchies[parentUuid] ?: emptyList()
     }
 
-    override suspend fun getAllHierarchy(): List<VUIDHierarchyDTO> {
+    override suspend fun getAllHierarchy(): List<AvidHierarchyDTO> {
         return hierarchies.values.flatten()
     }
 
     // ==================== Analytics Operations ====================
 
-    override suspend fun insertAnalytics(analytics: VUIDAnalyticsDTO) {
+    override suspend fun insertAnalytics(analytics: AvidAnalyticsDTO) {
         this.analytics[analytics.uuid] = analytics
     }
 
-    override suspend fun updateAnalytics(analytics: VUIDAnalyticsDTO) {
+    override suspend fun updateAnalytics(analytics: AvidAnalyticsDTO) {
         this.analytics[analytics.uuid] = analytics
     }
 
-    override suspend fun getAnalyticsByUuid(uuid: String): VUIDAnalyticsDTO? {
+    override suspend fun getAnalyticsByUuid(uuid: String): AvidAnalyticsDTO? {
         return analytics[uuid]
     }
 
-    override suspend fun getAllAnalytics(): List<VUIDAnalyticsDTO> {
+    override suspend fun getAllAnalytics(): List<AvidAnalyticsDTO> {
         return analytics.values.toList()
     }
 
-    override suspend fun getMostAccessed(limit: Int): List<VUIDAnalyticsDTO> {
+    override suspend fun getMostAccessed(limit: Int): List<AvidAnalyticsDTO> {
         return analytics.values.sortedByDescending { it.accessCount }.take(limit)
     }
 
-    override suspend fun getRecentlyAccessed(limit: Int): List<VUIDAnalyticsDTO> {
+    override suspend fun getRecentlyAccessed(limit: Int): List<AvidAnalyticsDTO> {
         return analytics.values.sortedByDescending { it.lastAccessed }.take(limit)
     }
 
@@ -173,7 +173,7 @@ class AvidCreatorDatabase private constructor(
                 lastAccessed = timestamp
             )
         } else {
-            analytics[uuid] = VUIDAnalyticsDTO(
+            analytics[uuid] = AvidAnalyticsDTO(
                 uuid = uuid,
                 accessCount = 1,
                 firstAccessed = timestamp,
@@ -199,7 +199,7 @@ class AvidCreatorDatabase private constructor(
                 lastAccessed = timestamp
             )
         } else {
-            analytics[uuid] = VUIDAnalyticsDTO(
+            analytics[uuid] = AvidAnalyticsDTO(
                 uuid = uuid,
                 accessCount = 0,
                 firstAccessed = timestamp,
@@ -214,7 +214,7 @@ class AvidCreatorDatabase private constructor(
 
     // ==================== Alias Operations ====================
 
-    override suspend fun insertAlias(alias: VUIDAliasDTO) {
+    override suspend fun insertAlias(alias: AvidAliasDTO) {
         aliases[alias.alias] = alias
         val list = aliasesByUuid.getOrPut(alias.uuid) { mutableListOf() }
         list.add(alias)
@@ -232,11 +232,11 @@ class AvidCreatorDatabase private constructor(
         list.forEach { aliases.remove(it.alias) }
     }
 
-    override suspend fun getAliasByName(alias: String): VUIDAliasDTO? {
+    override suspend fun getAliasByName(alias: String): AvidAliasDTO? {
         return aliases[alias]
     }
 
-    override suspend fun getAliasesForUuid(uuid: String): List<VUIDAliasDTO> {
+    override suspend fun getAliasesForUuid(uuid: String): List<AvidAliasDTO> {
         return aliasesByUuid[uuid] ?: emptyList()
     }
 
@@ -248,11 +248,11 @@ class AvidCreatorDatabase private constructor(
         return aliases.containsKey(alias)
     }
 
-    override suspend fun getAllAliases(): List<VUIDAliasDTO> {
+    override suspend fun getAllAliases(): List<AvidAliasDTO> {
         return aliases.values.toList()
     }
 
-    override suspend fun insertAliasesBatch(aliases: List<VUIDAliasDTO>) {
+    override suspend fun insertAliasesBatch(aliases: List<AvidAliasDTO>) {
         aliases.forEach { alias ->
             this.aliases[alias.alias] = alias
             val list = aliasesByUuid.getOrPut(alias.uuid) { mutableListOf() }

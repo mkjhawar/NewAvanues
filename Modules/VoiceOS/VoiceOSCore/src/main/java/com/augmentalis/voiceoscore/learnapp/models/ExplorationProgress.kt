@@ -1,6 +1,6 @@
 /**
  * ExplorationProgress.kt - Real-time exploration progress tracking
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/models/ExplorationProgress.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/models/ExplorationProgress.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

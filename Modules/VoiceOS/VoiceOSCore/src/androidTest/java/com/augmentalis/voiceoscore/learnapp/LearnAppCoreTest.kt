@@ -18,7 +18,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.GeneratedCommandDTO
-import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
+import com.augmentalis.avidcreator.thirdparty.ThirdPartyAvidGenerator
 import com.augmentalis.voiceoscore.learnapp.core.LearnAppCore
 import com.augmentalis.voiceoscore.learnapp.core.ProcessingMode
 import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
@@ -46,7 +46,7 @@ class LearnAppCoreTest {
     private lateinit var context: Context
     private lateinit var databaseManager: VoiceOSDatabaseManager
     private lateinit var learnAppCore: LearnAppCore
-    private lateinit var uuidGenerator: ThirdPartyUuidGenerator
+    private lateinit var uuidGenerator: ThirdPartyAvidGenerator
 
     companion object {
         private const val TEST_PACKAGE_NAME = "com.test.learnapp.core"
@@ -64,7 +64,7 @@ class LearnAppCoreTest {
         databaseManager = VoiceOSDatabaseManager.getInstance(driverFactory)
 
         // Initialize UUID generator
-        uuidGenerator = ThirdPartyUuidGenerator(context)
+        uuidGenerator = ThirdPartyAvidGenerator(context)
 
         // Initialize LearnAppCore
         learnAppCore = LearnAppCore(

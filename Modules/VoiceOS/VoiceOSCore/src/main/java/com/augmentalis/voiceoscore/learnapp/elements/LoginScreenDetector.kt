@@ -1,6 +1,6 @@
 /**
  * LoginScreenDetector.kt - Detects login screens
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/elements/LoginScreenDetector.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/elements/LoginScreenDetector.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

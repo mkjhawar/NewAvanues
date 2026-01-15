@@ -1,6 +1,6 @@
 /**
  * ScreenExplorer.kt - Explores single screen and collects elements
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/exploration/ScreenExplorer.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/exploration/ScreenExplorer.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

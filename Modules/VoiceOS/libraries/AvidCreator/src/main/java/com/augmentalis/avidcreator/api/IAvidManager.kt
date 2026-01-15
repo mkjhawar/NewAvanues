@@ -56,7 +56,7 @@ interface IAvidManager {
     /**
      * Process voice command
      */
-    suspend fun processVoiceCommand(command: String): UUIDCommandResult
+    suspend fun processVoiceCommand(command: String): AvidCommandResult
 
     /**
      * Get all registered elements

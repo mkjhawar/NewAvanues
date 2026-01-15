@@ -5,12 +5,12 @@
  * Created: 2025-01-03
  *
  * Manages human-readable aliases for VUIDs.
- * Uses IVUIDRepository for persistence.
+ * Uses IAvidRepository for persistence.
  */
 package com.augmentalis.avidcreator.alias
 
-import com.augmentalis.database.dto.VUIDAliasDTO
-import com.augmentalis.database.repositories.IVUIDRepository
+import com.augmentalis.database.dto.AvidAliasDTO
+import com.augmentalis.database.repositories.IAvidRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -20,10 +20,10 @@ import kotlinx.coroutines.withContext
  * Creates and manages human-readable aliases for VUIDs.
  * Aliases provide smaller footprint and easier voice command integration.
  *
- * @property repository IVUIDRepository for persistence
+ * @property repository IAvidRepository for persistence
  */
 class AvidAliasManager(
-    private val repository: IVUIDRepository
+    private val repository: IAvidRepository
 ) {
     /**
      * In-memory cache for fast lookups
@@ -119,7 +119,7 @@ class AvidAliasManager(
         vuidToAliases.getOrPut(vuid) { mutableSetOf() }.add(alias)
 
         repository.insertAlias(
-            VUIDAliasDTO(
+            AvidAliasDTO(
                 id = 0,
                 alias = alias,
                 vuid = vuid,

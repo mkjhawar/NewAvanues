@@ -1,6 +1,6 @@
 /**
  * ScrollDetector.kt - Detects scrollable containers
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/scrolling/ScrollDetector.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/scrolling/ScrollDetector.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

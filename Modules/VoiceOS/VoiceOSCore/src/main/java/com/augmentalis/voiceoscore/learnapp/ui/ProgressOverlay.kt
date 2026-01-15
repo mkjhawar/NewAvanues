@@ -1,6 +1,6 @@
 /**
  * ProgressOverlay.kt - Progress overlay Compose UI
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/ui/ProgressOverlay.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/ui/ProgressOverlay.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

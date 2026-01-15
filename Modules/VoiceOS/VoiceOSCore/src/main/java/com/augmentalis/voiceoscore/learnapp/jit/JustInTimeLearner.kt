@@ -183,13 +183,13 @@ class JustInTimeLearner(
      * Must be called when service is available
      *
      * FIX (2025-12-02): Also initializes ScreenStateManager for unified hashing
-     * Phase 4 (2025-12-02): Initializes ThirdPartyUuidGenerator for UUID generation
+     * Phase 4 (2025-12-02): Initializes ThirdPartyAvidGenerator for UUID generation
      */
     fun initializeElementCapture(accessibilityService: AccessibilityService) {
         this.accessibilityService = accessibilityService
 
         // Phase 4: Initialize UUID generator for element identification
-        val thirdPartyUuidGenerator = com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator(context)
+        val thirdPartyUuidGenerator = com.augmentalis.uuidcreator.thirdparty.ThirdPartyAvidGenerator(context)
 
         elementCapture = JitElementCapture(accessibilityService, databaseManager, thirdPartyUuidGenerator)
 

@@ -23,7 +23,7 @@ import java.util.*
 /**
  * UI state for VUID Manager
  */
-data class VUIDUiState(
+data class AvidUiState(
     val registeredElements: List<AvidElementInfo> = emptyList(),
     val selectedElement: AvidElementInfo? = null,
     val commandHistory: List<CommandHistoryItem> = emptyList(),
@@ -46,7 +46,7 @@ data class AvidElementInfo(
     val vuid: String,
     val name: String?,
     val type: String,
-    val position: VUIDPosition?,
+    val position: AvidPosition?,
     val isEnabled: Boolean,
     val isVisible: Boolean,
     val parentVUID: String?,
@@ -122,8 +122,8 @@ class AvidViewModel(
 ) : ViewModel() {
     private val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     
-    private val _uiState = MutableLiveData(VUIDUiState())
-    val uiState: LiveData<VUIDUiState> = _uiState
+    private val _uiState = MutableLiveData(AvidUiState())
+    val uiState: LiveData<AvidUiState> = _uiState
 
     // Mock data for demonstration
     private val mockElements = mutableListOf<AvidElementInfo>()
@@ -146,7 +146,7 @@ class AvidViewModel(
                 vuid = vuidManager.generateVUID(),
                 name = names.random(),
                 type = types.random(),
-                position = VUIDPosition(
+                position = AvidPosition(
                     x = (index % 4) * 100f,
                     y = (index / 4) * 100f,
                     z = 0f,
@@ -240,7 +240,7 @@ class AvidViewModel(
             val vuid = vuidManager.registerWithAutoVUID(
                 name = name,
                 type = type,
-                position = VUIDPosition(0f, 0f, 0f, 100f, 50f),
+                position = AvidPosition(0f, 0f, 0f, 100f, 50f),
                 actions = mapOf(
                     "click" to { _ -> println("Clicked: $name") },
                     "focus" to { _ -> println("Focused: $name") }
@@ -252,7 +252,7 @@ class AvidViewModel(
                 vuid = vuid,
                 name = name,
                 type = type,
-                position = VUIDPosition(0f, 0f, 0f, 100f, 50f),
+                position = AvidPosition(0f, 0f, 0f, 100f, 50f),
                 isEnabled = true,
                 isVisible = true,
                 parentVUID = null,

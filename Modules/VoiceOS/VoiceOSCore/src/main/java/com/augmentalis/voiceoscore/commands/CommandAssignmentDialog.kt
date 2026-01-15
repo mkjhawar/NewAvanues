@@ -67,7 +67,7 @@ import kotlinx.coroutines.launch
  *
  * Show dialog for recording and assigning voice commands to an element.
  *
- * @param elementUuid Element UUID (from ThirdPartyUuidGenerator)
+ * @param elementUuid Element UUID (from ThirdPartyAvidGenerator)
  * @param appId Package name
  * @param onDismiss Called when dialog is dismissed
  * @param onCommandSaved Called when command is successfully saved

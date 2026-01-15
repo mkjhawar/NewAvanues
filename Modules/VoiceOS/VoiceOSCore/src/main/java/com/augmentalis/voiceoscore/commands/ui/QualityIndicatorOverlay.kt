@@ -85,7 +85,7 @@ class QualityIndicatorOverlay(
         )
 
         // Generate a pseudo-UUID from node properties (for demo purposes)
-        // In production, use actual UUIDCreator integration
+        // In production, use actual AvidCreator integration
         val nodeId = generateNodeId(node)
         elementQualityScores[nodeId] = qualityScore
 
@@ -100,7 +100,7 @@ class QualityIndicatorOverlay(
 
     private fun generateNodeId(node: AccessibilityNodeInfo): String {
         // Simple ID generation for demo
-        // In production, integrate with UUIDCreator
+        // In production, integrate with AvidCreator
         val text = node.text?.toString() ?: ""
         val contentDesc = node.contentDescription?.toString() ?: ""
         val resourceId = node.viewIdResourceName ?: ""

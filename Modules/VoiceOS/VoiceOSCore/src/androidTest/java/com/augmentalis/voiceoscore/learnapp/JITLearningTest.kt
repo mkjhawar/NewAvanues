@@ -18,7 +18,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.ScrapedElementDTO
-import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
+import com.augmentalis.avidcreator.thirdparty.ThirdPartyAvidGenerator
 import com.augmentalis.voiceoscore.learnapp.jit.JitCapturedElement
 import com.augmentalis.voiceoscore.learnapp.jit.JustInTimeLearner
 import kotlinx.coroutines.runBlocking
@@ -44,7 +44,7 @@ class JITLearningTest {
 
     private lateinit var context: Context
     private lateinit var databaseManager: VoiceOSDatabaseManager
-    private lateinit var uuidGenerator: ThirdPartyUuidGenerator
+    private lateinit var uuidGenerator: ThirdPartyAvidGenerator
 
     companion object {
         private const val TEST_PACKAGE_NAME = "com.test.jit.learning"
@@ -63,7 +63,7 @@ class JITLearningTest {
         databaseManager = VoiceOSDatabaseManager.getInstance(driverFactory)
 
         // Initialize UUID generator
-        uuidGenerator = ThirdPartyUuidGenerator(context)
+        uuidGenerator = ThirdPartyAvidGenerator(context)
 
         // Clean up any existing test data
         cleanupTestData()

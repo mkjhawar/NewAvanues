@@ -33,10 +33,10 @@ import com.augmentalis.voiceoscore.learnapp.overlays.LoginPromptConfig
 import com.augmentalis.voiceoscore.learnapp.overlays.LoginPromptOverlay
 import com.augmentalis.voiceoscore.learnapp.ui.ConsentDialogManager
 import com.augmentalis.voiceoscore.learnapp.ui.ProgressOverlayManager
-import com.augmentalis.uuidcreator.UUIDCreator
-import com.augmentalis.uuidcreator.alias.UuidAliasManager
-import com.augmentalis.uuidcreator.database.UUIDCreatorDatabase
-import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
+import com.augmentalis.avidcreator.AvidCreator
+import com.augmentalis.avidcreator.alias.AvidAliasManager
+import com.augmentalis.avidcreator.database.AvidCreatorDatabase
+import com.augmentalis.avidcreator.thirdparty.ThirdPartyAvidGenerator
 import com.augmentalis.jitlearning.ExplorationProgress
 import com.augmentalis.jitlearning.ExplorationProgressCallback
 import com.augmentalis.jitlearning.JITEventCallback
@@ -119,11 +119,11 @@ class LearnAppIntegration private constructor(
     private var loginPromptOverlay: LoginPromptOverlay? = null
 
     /**
-     * UUIDCreator components
+     * AvidCreator components
      */
-    private val uuidCreator: UUIDCreator
-    private val thirdPartyGenerator: ThirdPartyUuidGenerator
-    private val aliasManager: UuidAliasManager
+    private val uuidCreator: AvidCreator
+    private val thirdPartyGenerator: ThirdPartyAvidGenerator
+    private val aliasManager: AvidAliasManager
 
     /**
      * Exploration strategy
@@ -140,11 +140,11 @@ class LearnAppIntegration private constructor(
         repository = LearnAppRepository(databaseManager, context)
         metadataProvider = AppMetadataProvider(context)
 
-        // Initialize UUIDCreator components
-        uuidCreator = UUIDCreator.getInstance()
-        thirdPartyGenerator = ThirdPartyUuidGenerator(context)
-        val uuidCreatorDatabase = UUIDCreatorDatabase.getInstance(context)
-        aliasManager = UuidAliasManager(uuidCreatorDatabase)
+        // Initialize AvidCreator components
+        uuidCreator = AvidCreator.getInstance()
+        thirdPartyGenerator = ThirdPartyAvidGenerator(context)
+        val uuidCreatorDatabase = AvidCreatorDatabase.getInstance(context)
+        aliasManager = AvidAliasManager(uuidCreatorDatabase)
 
         // Initialize LearnApp components
         learnedAppTracker = LearnedAppTracker(context)

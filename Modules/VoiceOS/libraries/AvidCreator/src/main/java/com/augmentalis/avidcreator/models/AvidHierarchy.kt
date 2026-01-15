@@ -18,6 +18,3 @@ data class AvidHierarchy(
     val isLeaf: Boolean = children.isEmpty()
 )
 
-// Backward compatibility alias
-@Deprecated("Use AvidHierarchy instead", ReplaceWith("AvidHierarchy"))
-typealias VUIDHierarchy = AvidHierarchy

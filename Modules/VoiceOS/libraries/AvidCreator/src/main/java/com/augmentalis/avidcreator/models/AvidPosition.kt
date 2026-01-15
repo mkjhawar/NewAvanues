@@ -36,9 +36,3 @@ data class AvidBounds(
     val height: Float get() = bottom - top
 }
 
-// Backward compatibility aliases
-@Deprecated("Use AvidPosition instead", ReplaceWith("AvidPosition"))
-typealias VUIDPosition = AvidPosition
-
-@Deprecated("Use AvidBounds instead", ReplaceWith("AvidBounds"))
-typealias VUIDBounds = AvidBounds

@@ -15,8 +15,8 @@ import android.util.Log
 import android.util.LruCache
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.uuidcreator.flutter.FlutterIdentifier
-import com.augmentalis.uuidcreator.flutter.FlutterIdentifierExtractor
+import com.augmentalis.avidcreator.flutter.FlutterAvidIdentifier
+import com.augmentalis.avidcreator.flutter.FlutterAvidIdentifierExtractor
 import com.augmentalis.voiceoscore.utils.ConditionalLogger
 import com.augmentalis.voiceos.logging.PIILoggingWrapper
 import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine.Companion.FORBIDDEN_DESCRIPTIONS
@@ -171,7 +171,7 @@ class UIScrapingEngine(
         val isInheritedClickable: Boolean = false, // Enhanced: Inherited clickability
         val targetNodeRef: WeakReference<AccessibilityNodeInfo>? = null, // Enhanced: Target node for action
         val confidence: Float = 0.5f, // Enhanced: Confidence score
-        val flutterIdentifier: FlutterIdentifier? = null, // Flutter 3.19+ stable identifier
+        val flutterIdentifier: FlutterAvidIdentifier? = null, // Flutter 3.19+ stable identifier
         val resourceId: String? = null // Android resource ID (viewIdResourceName)
     )
 
@@ -691,7 +691,7 @@ class UIScrapingEngine(
         val resourceId = node.viewIdResourceName
 
         // Extract Flutter 3.19+ identifier if available
-        val flutterIdentifier = FlutterIdentifierExtractor.extract(node)
+        val flutterIdentifier = FlutterAvidIdentifierExtractor.extract(node)
 
         // Generate hash - prefer Flutter identifier for stability
         val hash = if (flutterIdentifier?.isStable == true) {

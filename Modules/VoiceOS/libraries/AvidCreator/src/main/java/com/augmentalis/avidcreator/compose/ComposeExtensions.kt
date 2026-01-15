@@ -17,8 +17,8 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.platform.debugInspectorInfo
 import com.augmentalis.avidcreator.AvidCreator
 import com.augmentalis.avidcreator.models.AvidElement
-import com.augmentalis.avidcreator.models.VUIDPosition
-import com.augmentalis.avidcreator.models.VUIDMetadata
+import com.augmentalis.avidcreator.models.AvidPosition
+import com.augmentalis.avidcreator.models.AvidMetadata
 import java.util.UUID
 
 /**
@@ -42,10 +42,10 @@ fun Modifier.withUUID(
     type: String = "composable",
     description: String? = null,
     parent: String? = null,
-    position: VUIDPosition? = null,
+    position: AvidPosition? = null,
     actions: Map<String, (Map<String, Any>) -> Unit> = emptyMap(),
     priority: Int = 0,
-    metadata: VUIDMetadata? = null
+    metadata: AvidMetadata? = null
 ): Modifier = composed(
     inspectorInfo = debugInspectorInfo {
         this.name = "withUUID"
@@ -144,7 +144,7 @@ fun Modifier.uuidNavigable(
 ): Modifier = withUUID(
     name = name,
     type = type,
-    position = VUIDPosition(
+    position = AvidPosition(
         row = row,
         column = column,
         index = index
@@ -191,7 +191,7 @@ fun rememberUUID(
  * Composable function to register elements in the composition tree
  */
 @Composable
-fun VUIDScope(
+fun AvidScope(
     manager: AvidCreator = AvidCreator.getInstance(),
     name: String? = null,
     type: String = "scope",
@@ -216,14 +216,14 @@ fun VUIDScope(
 }
 
 @Suppress("DEPRECATION")
-@Deprecated("Use VUIDScope instead", ReplaceWith("VUIDScope(manager, name, type, content)"))
+@Deprecated("Use AvidScope instead", ReplaceWith("AvidScope(manager, name, type, content)"))
 @Composable
 fun UUIDScope(
     manager: AvidCreator = AvidCreator.getInstance(),
     name: String? = null,
     type: String = "scope",
     content: @Composable () -> Unit
-) = VUIDScope(manager, name, type, content)
+) = AvidScope(manager, name, type, content)
 
 /**
  * Voice command integration for Compose elements

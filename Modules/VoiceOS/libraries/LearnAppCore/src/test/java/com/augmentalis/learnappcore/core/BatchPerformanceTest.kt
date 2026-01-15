@@ -20,7 +20,7 @@ import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.database.repositories.IGeneratedCommandRepository
 import com.augmentalis.learnappcore.models.ElementInfo
-import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
+import com.augmentalis.avidcreator.thirdparty.ThirdPartyAvidGenerator
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -53,7 +53,7 @@ class BatchPerformanceTest {
     private lateinit var mockContext: Context
     private lateinit var mockDatabase: VoiceOSDatabaseManager
     private lateinit var mockCommandsRepository: IGeneratedCommandRepository
-    private lateinit var mockUuidGenerator: ThirdPartyUuidGenerator
+    private lateinit var mockUuidGenerator: ThirdPartyAvidGenerator
     private lateinit var learnAppCore: LearnAppCore
 
     @Before

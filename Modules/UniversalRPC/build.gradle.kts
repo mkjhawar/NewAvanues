@@ -12,7 +12,7 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
-    id("com.squareup.wire") version "5.1.0"
+    id("com.squareup.wire") version "5.4.0"
 }
 
 group = "com.augmentalis.universalrpc"

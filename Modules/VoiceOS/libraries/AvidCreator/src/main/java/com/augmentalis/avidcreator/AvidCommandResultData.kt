@@ -177,9 +177,3 @@ data class AvidCommandResultData(
     }
 }
 
-// Backward compatibility aliases
-@Deprecated("Use AvidCommandResultData instead", ReplaceWith("AvidCommandResultData"))
-typealias VUIDCommandResultData = AvidCommandResultData
-
-@Deprecated("Use AvidCommandResultData instead", ReplaceWith("AvidCommandResultData"))
-typealias UUIDCommandResultData = AvidCommandResultData

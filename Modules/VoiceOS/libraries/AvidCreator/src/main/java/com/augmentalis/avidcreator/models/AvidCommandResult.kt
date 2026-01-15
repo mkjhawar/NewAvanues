@@ -18,6 +18,3 @@ data class AvidCommandResult(
     val error: String? = null
 )
 
-// Backward compatibility alias
-@Deprecated("Use AvidCommandResult instead", ReplaceWith("AvidCommandResult"))
-typealias VUIDCommandResult = AvidCommandResult

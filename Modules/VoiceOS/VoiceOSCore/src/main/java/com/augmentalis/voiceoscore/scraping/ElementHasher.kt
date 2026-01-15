@@ -35,17 +35,17 @@ import java.security.MessageDigest
  * // Result: "a1b2c3d4e5f6..." (MD5 hex string)
  * ```
  *
- * @deprecated Use AccessibilityFingerprint from UUIDCreator library instead.
+ * @deprecated Use AvidFingerprint from AvidCreator library instead.
  *   ElementHasher lacks hierarchy path awareness and version scoping, which can
- *   lead to hash collisions and cross-version conflicts. AccessibilityFingerprint
+ *   lead to hash collisions and cross-version conflicts. AvidFingerprint
  *   provides more robust hashing with collision prevention.
  *   Removal planned for v3.0.0.
  */
 @Deprecated(
-    message = "Use AccessibilityFingerprint from UUIDCreator library for more robust element hashing",
+    message = "Use AvidFingerprint from AvidCreator library for more robust element hashing",
     replaceWith = ReplaceWith(
-        "AccessibilityFingerprint.fromNode(node, packageName, appVersion).generateHash()",
-        "com.augmentalis.uuidcreator.thirdparty.AccessibilityFingerprint"
+        "AvidFingerprint.fromNode(node, packageName, appVersion).generateHash()",
+        "com.augmentalis.uuidcreator.thirdparty.AvidFingerprint"
     ),
     level = DeprecationLevel.ERROR
 )

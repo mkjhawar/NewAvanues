@@ -11,10 +11,10 @@ package com.augmentalis.database.repositories
 
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabaseManager
-import com.augmentalis.database.dto.UUIDElementDTO
-import com.augmentalis.database.dto.UUIDHierarchyDTO
-import com.augmentalis.database.dto.UUIDAnalyticsDTO
-import com.augmentalis.database.dto.UUIDAliasDTO
+import com.augmentalis.database.dto.AvidElementDTO
+import com.augmentalis.database.dto.AvidHierarchyDTO
+import com.augmentalis.database.dto.AvidAnalyticsDTO
+import com.augmentalis.database.dto.AvidAliasDTO
 import com.augmentalis.database.dto.ScrapedAppDTO
 import com.augmentalis.database.dto.VoiceCommandDTO
 import com.augmentalis.database.dto.plugin.PluginDTO
@@ -50,7 +50,7 @@ class RepositoryIntegrationTest {
     @Test
     fun testUuidElementCRUD() = runTest {
         val repo = databaseManager.uuids
-        val element = UUIDElementDTO(
+        val element = AvidElementDTO(
             uuid = "elem-001",
             name = "Test Button",
             type = "BUTTON",
@@ -86,10 +86,10 @@ class RepositoryIntegrationTest {
         val repo = databaseManager.uuids
 
         // Insert element first
-        repo.insertElement(UUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(AvidElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
 
         // Insert alias
-        val alias = UUIDAliasDTO(0, "my-alias", "elem-001", true, now())
+        val alias = AvidAliasDTO(0, "my-alias", "elem-001", true, now())
         repo.insertAlias(alias)
 
         // Get alias
@@ -106,10 +106,10 @@ class RepositoryIntegrationTest {
         val repo = databaseManager.uuids
 
         // Insert element
-        repo.insertElement(UUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(AvidElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
 
         // Insert analytics
-        val analytics = UUIDAnalyticsDTO("elem-001", 0, now(), now(), 100, 0, 0, "ACTIVE")
+        val analytics = AvidAnalyticsDTO("elem-001", 0, now(), now(), 100, 0, 0, "ACTIVE")
         repo.insertAnalytics(analytics)
 
         // Increment access
@@ -124,11 +124,11 @@ class RepositoryIntegrationTest {
         val repo = databaseManager.uuids
 
         // Insert parent and child elements
-        repo.insertElement(UUIDElementDTO("parent", "Parent", "CONTAINER", null, null, true, 0, now(), null, null))
-        repo.insertElement(UUIDElementDTO("child", "Child", "BUTTON", null, "parent", true, 0, now(), null, null))
+        repo.insertElement(AvidElementDTO("parent", "Parent", "CONTAINER", null, null, true, 0, now(), null, null))
+        repo.insertElement(AvidElementDTO("child", "Child", "BUTTON", null, "parent", true, 0, now(), null, null))
 
         // Insert hierarchy
-        val hierarchy = UUIDHierarchyDTO(0, "parent", "child", 1, "/parent/child", 0)
+        val hierarchy = AvidHierarchyDTO(0, "parent", "child", 1, "/parent/child", 0)
         repo.insertHierarchy(hierarchy)
 
         val children = repo.getHierarchyByParent("parent")

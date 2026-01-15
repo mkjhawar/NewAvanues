@@ -97,7 +97,7 @@ class ComparisonFramework(
         captureState: (suspend () -> Pair<ServiceStateSnapshot, ServiceStateSnapshot>)? = null,
         ignoredStateFields: Set<String> = StateComparator.DEFAULT_IGNORED_FIELDS
     ): ComparisonResult = withContext(Dispatchers.Default) {
-        val executionId = VUIDGenerator.generateCompactSimple(VUIDGenerator.Module.VOICEOS, "element")
+        val executionId = AvidGenerator.generateCompactSimple(AvidGenerator.Module.VOICEOS, "element")
         val comparisonStart = System.currentTimeMillis()
 
         Log.d(TAG, "Starting comparison: $methodName (id: $executionId)")

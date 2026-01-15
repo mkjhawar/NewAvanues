@@ -1,6 +1,6 @@
 /**
  * NavigationEdge.kt - Navigation edge data model
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/models/NavigationEdge.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/models/NavigationEdge.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

@@ -42,7 +42,7 @@ import com.augmentalis.voiceoscore.learnapp.commands.RenameCommandHandler
 import com.augmentalis.voiceoscore.learnapp.commands.RenameResult
 import com.augmentalis.speechrecognition.SpeechEngine
 import com.augmentalis.speechrecognition.SpeechMode
-import com.augmentalis.uuidcreator.UUIDCreator
+import com.augmentalis.avidcreator.AvidCreator
 import com.augmentalis.voiceos.command.Command
 import com.augmentalis.voiceos.command.CommandContext
 import com.augmentalis.voiceos.command.CommandSource
@@ -1473,12 +1473,12 @@ class VoiceOSService : AccessibilityService(), IVoiceOSServiceLocal, IVoiceOSSer
                     Log.i(TAG, "LEARNAPP_DEBUG: ========================================")
                     Log.i(TAG, "=== LearnApp Integration Initialization Start ===")
 
-                    // Initialize UUIDCreator first (required dependency)
-                    Log.d(TAG, "LEARNAPP_DEBUG: About to initialize UUIDCreator...")
-                    Log.d(TAG, "Initializing UUIDCreator...")
-                    UUIDCreator.initialize(applicationContext)
-                    Log.d(TAG, "✓ UUIDCreator initialized")
-                    Log.d(TAG, "LEARNAPP_DEBUG: UUIDCreator done")
+                    // Initialize AvidCreator first (required dependency)
+                    Log.d(TAG, "LEARNAPP_DEBUG: About to initialize AvidCreator...")
+                    Log.d(TAG, "Initializing AvidCreator...")
+                    AvidCreator.initialize(applicationContext)
+                    Log.d(TAG, "✓ AvidCreator initialized")
+                    Log.d(TAG, "LEARNAPP_DEBUG: AvidCreator done")
 
                     Log.d(TAG, "LEARNAPP_DEBUG: About to call LearnAppIntegration.initialize()...")
                     Log.d(TAG, "Attempting to initialize LearnAppIntegration...")

@@ -1,6 +1,6 @@
 /**
  * ScreenStateManager.kt - Manages screen states and visited tracking
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/fingerprinting/ScreenStateManager.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/fingerprinting/ScreenStateManager.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

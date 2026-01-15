@@ -14,8 +14,8 @@
 
 package com.augmentalis.avidcreator.alias
 
-import com.augmentalis.database.dto.UUIDAliasDTO
-import com.augmentalis.database.repositories.IUUIDRepository
+import com.augmentalis.database.dto.AvidAliasDTO
+import com.augmentalis.database.repositories.IAvidRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Before
@@ -32,13 +32,13 @@ import org.mockito.kotlin.*
  */
 class BatchDeduplicationPerformanceTest {
 
-    private lateinit var mockRepository: IUUIDRepository
-    private lateinit var aliasManager: UuidAliasManager
+    private lateinit var mockRepository: IAvidRepository
+    private lateinit var aliasManager: AvidAliasManager
 
     @Before
     fun setup() {
         mockRepository = mock()
-        aliasManager = UuidAliasManager(mockRepository)
+        aliasManager = AvidAliasManager(mockRepository)
     }
 
     /**
@@ -87,7 +87,7 @@ class BatchDeduplicationPerformanceTest {
     fun `batch deduplication should make only 2 database calls`() = runBlocking {
         // Setup: Mock repository to track calls
         val existingAliases = listOf(
-            UUIDAliasDTO(1, "button", "existing-uuid-1", true, System.currentTimeMillis())
+            AvidAliasDTO(1, "button", "existing-uuid-1", true, System.currentTimeMillis())
         )
         whenever(mockRepository.getAllAliases()).thenReturn(existingAliases)
         whenever(mockRepository.insertAliasesBatch(any())).thenReturn(Unit)
@@ -158,8 +158,8 @@ class BatchDeduplicationPerformanceTest {
     fun `deduplication should respect existing database aliases`() = runBlocking {
         // Setup: Database has existing aliases
         val existingAliases = listOf(
-            UUIDAliasDTO(1, "button", "existing-uuid-1", true, System.currentTimeMillis()),
-            UUIDAliasDTO(2, "button-1", "existing-uuid-2", true, System.currentTimeMillis())
+            AvidAliasDTO(1, "button", "existing-uuid-1", true, System.currentTimeMillis()),
+            AvidAliasDTO(2, "button-1", "existing-uuid-2", true, System.currentTimeMillis())
         )
         whenever(mockRepository.getAllAliases()).thenReturn(existingAliases)
         whenever(mockRepository.insertAliasesBatch(any())).thenReturn(Unit)
@@ -201,7 +201,7 @@ class BatchDeduplicationPerformanceTest {
         whenever(mockRepository.getAllAliases()).thenReturn(emptyList())
 
         // Capture the aliases being inserted
-        val capturedAliases = argumentCaptor<List<UUIDAliasDTO>>()
+        val capturedAliases = argumentCaptor<List<AvidAliasDTO>>()
         whenever(mockRepository.insertAliasesBatch(capturedAliases.capture())).thenReturn(Unit)
 
         // Create batch with duplicates

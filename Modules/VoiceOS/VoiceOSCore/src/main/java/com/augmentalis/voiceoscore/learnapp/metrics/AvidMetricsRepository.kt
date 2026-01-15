@@ -106,7 +106,7 @@ class AvidMetricsRepository {
      */
     fun saveMetrics(metrics: AvidCreationMetrics) {
         _metricsFlow.value = AvidMetrics(
-            totalCreated = metrics.vuidsCreated.toLong(),
+            totalCreated = metrics.avidsCreated.toLong(),
             totalElementsDetected = metrics.elementsDetected.toLong(),
             totalFiltered = metrics.filteredCount.toLong(),
             lastCreatedAt = metrics.explorationTimestamp

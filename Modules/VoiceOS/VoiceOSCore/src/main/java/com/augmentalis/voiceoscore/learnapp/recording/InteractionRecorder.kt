@@ -1,6 +1,6 @@
 /**
  * InteractionRecorder.kt - UI interaction recording and playback
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/recording/InteractionRecorder.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/recording/InteractionRecorder.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

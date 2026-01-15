@@ -1,25 +1,25 @@
 /**
  * SQLDelightAvidRepositoryAdapter.kt - SQLDelight-based repository adapter
- * Path: libraries/AvidCreator/src/main/java/com/augmentalis/uuidcreator/database/repository/SQLDelightAvidRepositoryAdapter.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/avidcreator/database/repository/SQLDelightAvidRepositoryAdapter.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
  * Created: 2025-11-25
  *
  * Repository adapter that bridges AvidCreator models to SQLDelight database.
- * Replaces Room-based UUIDRepository.
+ * Replaces Room-based AvidRepository.
  */
 
 package com.augmentalis.avidcreator.database.repository
 
 import com.augmentalis.database.dto.AvidElementDTO
-import com.augmentalis.database.dto.UUIDHierarchyDTO
-import com.augmentalis.database.dto.UUIDAnalyticsDTO
-import com.augmentalis.database.dto.UUIDAliasDTO
-import com.augmentalis.database.repositories.IUUIDRepository
+import com.augmentalis.database.dto.AvidHierarchyDTO
+import com.augmentalis.database.dto.AvidAnalyticsDTO
+import com.augmentalis.database.dto.AvidAliasDTO
+import com.augmentalis.database.repositories.IAvidRepository
 import com.augmentalis.avidcreator.models.AvidElement
-import com.augmentalis.avidcreator.models.VUIDMetadata
-import com.augmentalis.avidcreator.models.VUIDPosition
+import com.augmentalis.avidcreator.models.AvidMetadata
+import com.augmentalis.avidcreator.models.AvidPosition
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +27,7 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Repository adapter for UUID elements using SQLDelight.
+ * Repository adapter for AVID elements using SQLDelight.
  *
  * Implements hybrid storage pattern:
  * - In-memory cache (ConcurrentHashMap) for O(1) lookups
@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Thread-safe: All operations use ConcurrentHashMap and suspend functions
  */
 class SQLDelightAvidRepositoryAdapter(
-    private val repository: IUUIDRepository,
+    private val repository: IAvidRepository,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
@@ -61,12 +61,12 @@ class SQLDelightAvidRepositoryAdapter(
     private val typeIndex = ConcurrentHashMap<String, MutableSet<String>>()
 
     /**
-     * Index by parent UUID for fast hierarchy lookups
+     * Index by parent AVID for fast hierarchy lookups
      */
     private val hierarchyIndex = ConcurrentHashMap<String, MutableSet<String>>()
 
     /**
-     * Index by alias for fast alias→UUID lookups
+     * Index by alias for fast alias-to-AVID lookups
      */
     private val aliasIndex = ConcurrentHashMap<String, String>()
 
@@ -131,7 +131,7 @@ class SQLDelightAvidRepositoryAdapter(
     // ==================== CREATE ====================
 
     /**
-     * Insert a new UUID element
+     * Insert a new AVID element
      */
     suspend fun insert(element: AvidElement) = withContext(dispatcher) {
         // Save to SQLDelight database
@@ -140,7 +140,7 @@ class SQLDelightAvidRepositoryAdapter(
         // Save hierarchy relationships
         element.children.forEachIndexed { index, childUuid ->
             repository.insertHierarchy(
-                UUIDHierarchyDTO(
+                AvidHierarchyDTO(
                     id = 0,
                     parentUuid = element.vuid,
                     childUuid = childUuid,
@@ -154,7 +154,7 @@ class SQLDelightAvidRepositoryAdapter(
         // Create analytics record
         val now = System.currentTimeMillis()
         repository.insertAnalytics(
-            UUIDAnalyticsDTO(
+            AvidAnalyticsDTO(
                 uuid = element.vuid,
                 accessCount = 0,
                 firstAccessed = now,
@@ -184,7 +184,7 @@ class SQLDelightAvidRepositoryAdapter(
             if (alias.isNotEmpty() && !repository.aliasExists(alias)) {
                 try {
                     repository.insertAlias(
-                        UUIDAliasDTO(
+                        AvidAliasDTO(
                             id = 0,
                             alias = alias,
                             uuid = element.vuid,
@@ -212,7 +212,7 @@ class SQLDelightAvidRepositoryAdapter(
     // ==================== READ ====================
 
     /**
-     * Get element by UUID (O(1) from cache)
+     * Get element by AVID (O(1) from cache)
      */
     fun getByVuid(uuid: String): AvidElement? {
         return elementsCache[uuid]
@@ -257,14 +257,14 @@ class SQLDelightAvidRepositoryAdapter(
     }
 
     /**
-     * Check if UUID exists
+     * Check if AVID exists
      */
     fun exists(uuid: String): Boolean {
         return elementsCache.containsKey(uuid)
     }
 
     /**
-     * Get UUID by alias (O(1) from index)
+     * Get element by alias (O(1) from index)
      */
     fun getByAlias(alias: String): AvidElement? {
         val uuid = aliasIndex[alias] ?: return null
@@ -272,16 +272,16 @@ class SQLDelightAvidRepositoryAdapter(
     }
 
     /**
-     * Get UUID string by alias (O(1) from index)
+     * Get AVID string by alias (O(1) from index)
      */
     fun getUuidByAlias(alias: String): String? {
         return aliasIndex[alias]
     }
 
     /**
-     * Get all aliases for UUID
+     * Get all aliases for AVID
      */
-    suspend fun getAliasesByUuid(uuid: String): List<UUIDAliasDTO> = withContext(dispatcher) {
+    suspend fun getAliasesByUuid(uuid: String): List<AvidAliasDTO> = withContext(dispatcher) {
         repository.getAliasesForUuid(uuid)
     }
 
@@ -304,7 +304,7 @@ class SQLDelightAvidRepositoryAdapter(
             // Insert new relationships
             element.children.forEachIndexed { index, childUuid ->
                 repository.insertHierarchy(
-                    UUIDHierarchyDTO(
+                    AvidHierarchyDTO(
                         id = 0,
                         parentUuid = element.vuid,
                         childUuid = childUuid,
@@ -345,7 +345,7 @@ class SQLDelightAvidRepositoryAdapter(
     // ==================== DELETE ====================
 
     /**
-     * Delete element by UUID
+     * Delete element by AVID
      */
     suspend fun deleteByVuid(uuid: String): Boolean = withContext(dispatcher) {
         val element = elementsCache.remove(uuid) ?: return@withContext false
@@ -436,14 +436,14 @@ class SQLDelightAvidRepositoryAdapter(
     // ==================== Alias Management ====================
 
     /**
-     * Register a custom alias for a UUID
+     * Register a custom alias for an AVID
      */
     suspend fun registerAlias(
         uuid: String,
         alias: String,
         isPrimary: Boolean = false
     ): Boolean = withContext(dispatcher) {
-        // Verify UUID exists
+        // Verify AVID exists
         if (!elementsCache.containsKey(uuid)) return@withContext false
 
         // Sanitize alias
@@ -455,7 +455,7 @@ class SQLDelightAvidRepositoryAdapter(
 
         try {
             repository.insertAlias(
-                UUIDAliasDTO(
+                AvidAliasDTO(
                     id = 0,
                     alias = sanitized,
                     uuid = uuid,
@@ -526,11 +526,11 @@ class SQLDelightAvidRepositoryAdapter(
             description = this.description,
             parent = this.parentUuid,
             children = children,
-            position = this.positionJson?.let { gson.fromJson(it, VUIDPosition::class.java) },
+            position = this.positionJson?.let { gson.fromJson(it, AvidPosition::class.java) },
             actions = actions,
             isEnabled = this.isEnabled,
             priority = this.priority,
-            metadata = this.metadataJson?.let { gson.fromJson(it, VUIDMetadata::class.java) },
+            metadata = this.metadataJson?.let { gson.fromJson(it, AvidMetadata::class.java) },
             timestamp = this.timestamp
         )
     }

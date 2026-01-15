@@ -101,7 +101,7 @@ class SpatialNavigator(private val registry: AvidRegistry) {
     /**
      * Navigate left
      */
-    private fun navigateLeft(sourcePos: VUIDPosition): NavigationResult {
+    private fun navigateLeft(sourcePos: AvidPosition): NavigationResult {
         val candidates = registry.getEnabledElements()
             .filter { element -> element.position?.let { it.x < sourcePos.x } == true }
 
@@ -119,7 +119,7 @@ class SpatialNavigator(private val registry: AvidRegistry) {
     /**
      * Navigate right
      */
-    private fun navigateRight(sourcePos: VUIDPosition): NavigationResult {
+    private fun navigateRight(sourcePos: AvidPosition): NavigationResult {
         val candidates = registry.getEnabledElements()
             .filter { element -> element.position?.let { it.x > sourcePos.x } == true }
 
@@ -137,7 +137,7 @@ class SpatialNavigator(private val registry: AvidRegistry) {
     /**
      * Navigate up
      */
-    private fun navigateUp(sourcePos: VUIDPosition): NavigationResult {
+    private fun navigateUp(sourcePos: AvidPosition): NavigationResult {
         val candidates = registry.getEnabledElements()
             .filter { element -> element.position?.let { it.y < sourcePos.y } == true }
 
@@ -155,7 +155,7 @@ class SpatialNavigator(private val registry: AvidRegistry) {
     /**
      * Navigate down
      */
-    private fun navigateDown(sourcePos: VUIDPosition): NavigationResult {
+    private fun navigateDown(sourcePos: AvidPosition): NavigationResult {
         val candidates = registry.getEnabledElements()
             .filter { element -> element.position?.let { it.y > sourcePos.y } == true }
 
@@ -173,7 +173,7 @@ class SpatialNavigator(private val registry: AvidRegistry) {
     /**
      * Navigate forward (Z-axis)
      */
-    private fun navigateForward(sourcePos: VUIDPosition): NavigationResult {
+    private fun navigateForward(sourcePos: AvidPosition): NavigationResult {
         val candidates = registry.getEnabledElements()
             .filter { element -> element.position?.let { it.z > sourcePos.z } == true }
 
@@ -189,7 +189,7 @@ class SpatialNavigator(private val registry: AvidRegistry) {
     /**
      * Navigate backward (Z-axis)
      */
-    private fun navigateBackward(sourcePos: VUIDPosition): NavigationResult {
+    private fun navigateBackward(sourcePos: AvidPosition): NavigationResult {
         val candidates = registry.getEnabledElements()
             .filter { element -> element.position?.let { it.z < sourcePos.z } == true }
 
@@ -257,7 +257,7 @@ class SpatialNavigator(private val registry: AvidRegistry) {
      */
     private fun findBestCandidate(
         candidates: List<AvidElement>,
-        scoreFunction: (VUIDPosition) -> Float
+        scoreFunction: (AvidPosition) -> Float
     ): AvidElement? {
         return candidates.minByOrNull { element ->
             element.position?.let { scoreFunction(it) } ?: Float.MAX_VALUE
@@ -267,7 +267,7 @@ class SpatialNavigator(private val registry: AvidRegistry) {
     /**
      * Calculate distance between two positions
      */
-    private fun calculateDistance(pos1: VUIDPosition, pos2: VUIDPosition): Float {
+    private fun calculateDistance(pos1: AvidPosition, pos2: AvidPosition): Float {
         val dx = pos1.x - pos2.x
         val dy = pos1.y - pos2.y
         val dz = pos1.z - pos2.z
@@ -277,7 +277,7 @@ class SpatialNavigator(private val registry: AvidRegistry) {
     /**
      * Calculate primary direction between two positions
      */
-    private fun calculateDirection(from: VUIDPosition, to: VUIDPosition): Direction {
+    private fun calculateDirection(from: AvidPosition, to: AvidPosition): Direction {
         val dx = to.x - from.x
         val dy = to.y - from.y
         val dz = to.z - from.z

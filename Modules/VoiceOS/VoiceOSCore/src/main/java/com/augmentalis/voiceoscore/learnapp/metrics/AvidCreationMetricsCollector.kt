@@ -15,7 +15,7 @@ import com.augmentalis.voiceoscore.learnapp.models.ElementInfo
  */
 class AvidCreationMetricsCollector {
 
-    private var vuidsCreated: Int = 0
+    private var avidsCreated: Int = 0
     private var elementsDetected: Int = 0
     private var filteredCount: Int = 0
     private var errorCount: Int = 0
@@ -40,7 +40,7 @@ class AvidCreationMetricsCollector {
      */
     fun getMetrics(): Map<String, Any> {
         return mapOf(
-            "vuidsCreated" to vuidsCreated,
+            "avidsCreated" to avidsCreated,
             "elementsDetected" to elementsDetected,
             "filteredCount" to filteredCount,
             "errorCount" to errorCount
@@ -55,7 +55,7 @@ class AvidCreationMetricsCollector {
      */
     fun buildMetrics(packageName: String): AvidCreationMetrics {
         return AvidCreationMetrics(
-            vuidsCreated = vuidsCreated,
+            avidsCreated = avidsCreated,
             elementsDetected = elementsDetected,
             filteredCount = filteredCount,
             errorCount = errorCount,
@@ -67,7 +67,7 @@ class AvidCreationMetricsCollector {
      * Reset metrics
      */
     fun reset() {
-        vuidsCreated = 0
+        avidsCreated = 0
         elementsDetected = 0
         filteredCount = 0
         errorCount = 0
@@ -85,7 +85,7 @@ class AvidCreationMetricsCollector {
      * Callback when Avid is created
      */
     fun onAvidCreated() {
-        vuidsCreated++
+        avidsCreated++
     }
 
     /**

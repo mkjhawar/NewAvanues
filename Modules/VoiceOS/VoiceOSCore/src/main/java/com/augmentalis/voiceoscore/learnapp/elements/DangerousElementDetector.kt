@@ -1,6 +1,6 @@
 /**
  * DangerousElementDetector.kt - Detects dangerous UI elements
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/elements/DangerousElementDetector.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/elements/DangerousElementDetector.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

@@ -1,5 +1,5 @@
 /**
- * UUIDCreatorIntegrationTest.kt - Comprehensive tests for UUIDCreator integration
+ * AvidCreatorIntegrationTest.kt - Comprehensive tests for AvidCreator integration
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Test Framework
@@ -13,9 +13,9 @@ import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import com.augmentalis.uuidcreator.UUIDCreator
-import com.augmentalis.uuidcreator.database.UUIDCreatorDatabase
-import com.augmentalis.uuidcreator.models.*
+import com.augmentalis.avidcreator.AvidCreator
+import com.augmentalis.avidcreator.database.AvidCreatorDatabase
+import com.augmentalis.avidcreator.models.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.*
 import org.junit.After
@@ -27,24 +27,24 @@ import org.robolectric.annotation.Config
 import kotlin.test.*
 
 /**
- * Comprehensive test suite for UUIDCreator integration with VoiceAccessibility
+ * Comprehensive test suite for AvidCreator integration with VoiceAccessibility
  *
  * Uses Robolectric for Android framework components and Room in-memory database for testing
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28, 29, 30, 31, 32, 33, 34])
 @OptIn(ExperimentalCoroutinesApi::class)
-class UUIDCreatorIntegrationTest {
+class AvidCreatorIntegrationTest {
 
     companion object {
-        private const val TAG = "UUIDCreatorIntegrationTest"
+        private const val TAG = "AvidCreatorIntegrationTest"
         private const val TEST_PACKAGE = "com.example.testapp"
         private const val TEST_TIMEOUT_MS = 5000L
     }
 
     private lateinit var context: Context
-    private lateinit var database: UUIDCreatorDatabase
-    private lateinit var uuidCreator: UUIDCreator
+    private lateinit var database: AvidCreatorDatabase
+    private lateinit var uuidCreator: AvidCreator
     private lateinit var testDispatcher: TestDispatcher
 
     @Before
@@ -58,13 +58,13 @@ class UUIDCreatorIntegrationTest {
         // Create in-memory database for testing
         database = Room.inMemoryDatabaseBuilder(
             context,
-            UUIDCreatorDatabase::class.java
+            AvidCreatorDatabase::class.java
         )
         .allowMainThreadQueries()  // OK for tests
         .build()
 
         // Reset singleton before each test
-        resetUUIDCreatorSingleton()
+        resetAvidCreatorSingleton()
     }
 
     @After
@@ -73,23 +73,23 @@ class UUIDCreatorIntegrationTest {
         database.close()
 
         // Reset singleton after each test
-        resetUUIDCreatorSingleton()
+        resetAvidCreatorSingleton()
 
         Dispatchers.resetMain()
     }
 
     /**
-     * Reset UUIDCreator singleton using reflection
+     * Reset AvidCreator singleton using reflection
      * Required for test isolation
      */
-    private fun resetUUIDCreatorSingleton() {
+    private fun resetAvidCreatorSingleton() {
         try {
-            val instanceField = UUIDCreator::class.java.getDeclaredField("INSTANCE")
+            val instanceField = AvidCreator::class.java.getDeclaredField("INSTANCE")
             instanceField.isAccessible = true
             instanceField.set(null, null)
 
             // Also reset database singleton
-            val dbInstanceField = UUIDCreatorDatabase::class.java.getDeclaredField("INSTANCE")
+            val dbInstanceField = AvidCreatorDatabase::class.java.getDeclaredField("INSTANCE")
             dbInstanceField.isAccessible = true
             dbInstanceField.set(null, null)
         } catch (e: Exception) {
@@ -104,18 +104,18 @@ class UUIDCreatorIntegrationTest {
     @Test
     fun `initialize should create singleton instance successfully`() {
         // When
-        val instance = UUIDCreator.initialize(context)
+        val instance = AvidCreator.initialize(context)
 
         // Then
         assertNotNull(instance, "Instance should not be null")
-        assertSame(instance, UUIDCreator.getInstance(), "getInstance should return same instance")
+        assertSame(instance, AvidCreator.getInstance(), "getInstance should return same instance")
     }
 
     @Test
     fun `initialize should be idempotent`() {
         // When
-        val instance1 = UUIDCreator.initialize(context)
-        val instance2 = UUIDCreator.initialize(context)
+        val instance1 = AvidCreator.initialize(context)
+        val instance2 = AvidCreator.initialize(context)
 
         // Then
         assertSame(instance1, instance2, "Multiple initializations should return same instance")
@@ -127,7 +127,7 @@ class UUIDCreatorIntegrationTest {
 
         // When/Then
         val exception = assertFailsWith<IllegalStateException> {
-                UUIDCreator.getInstance()
+                AvidCreator.getInstance()
             }
 
         assertTrue(
@@ -141,7 +141,7 @@ class UUIDCreatorIntegrationTest {
         // Given
 
         // When
-            UUIDCreator.initialize(context)
+            AvidCreator.initialize(context)
 
         // Then
     }
@@ -149,7 +149,7 @@ class UUIDCreatorIntegrationTest {
     @Test
     fun `initialize should trigger background loading`() = runTest {
         // When
-        val instance = UUIDCreator.initialize(context)
+        val instance = AvidCreator.initialize(context)
 
         // Then - background loading should start (non-blocking)
         assertNotNull(instance, "Instance should be created immediately")
@@ -511,14 +511,14 @@ class UUIDCreatorIntegrationTest {
         // When/Then
         assertFailsWith<NullPointerException> {
                 @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
-                UUIDCreator.initialize(nullContext!!)
+                AvidCreator.initialize(nullContext!!)
             }
     }
 
     @Test
     fun `should handle concurrent registrations safely`() = runTest {
         // Given
-        uuidCreator = UUIDCreator.initialize(context)
+        uuidCreator = AvidCreator.initialize(context)
         val elements = (1..100).map { createTestElement("Element$it") }
 
         // When - register elements concurrently
@@ -536,7 +536,7 @@ class UUIDCreatorIntegrationTest {
     @Test
     fun `should handle empty element name`() = runTest {
         // Given
-        uuidCreator = UUIDCreator.initialize(context)
+        uuidCreator = AvidCreator.initialize(context)
         val element = createTestElement("")
 
         // When
@@ -550,7 +550,7 @@ class UUIDCreatorIntegrationTest {
     @Test
     fun `should handle elements with special characters in names`() = runTest {
         // Given
-        uuidCreator = UUIDCreator.initialize(context)
+        uuidCreator = AvidCreator.initialize(context)
         val specialNames = listOf(
                 "Button@123",
                 "Text#Field$1",
@@ -606,7 +606,7 @@ class UUIDCreatorIntegrationTest {
     // Helper functions
 
     /**
-     * Create test element matching actual UUIDElement API
+     * Create test element matching actual AvidElement API
      *
      * Properties are stored in:
      * - position.bounds for spatial bounds
@@ -620,7 +620,7 @@ class UUIDCreatorIntegrationTest {
         bounds: Rect = Rect(0, 0, 100, 100),
         isClickable: Boolean = true,
         isEnabled: Boolean = true
-    ): UUIDElement {
+    ): AvidElement {
         // Create bounds from Rect
         val uuidBounds = UUIDBounds(
             left = bounds.left.toFloat(),
@@ -639,7 +639,7 @@ class UUIDCreatorIntegrationTest {
         )
 
         // Create accessibility metadata
-        val accessibility = UUIDAccessibility(
+        val accessibility = AvidAccessibility(
             isClickable = isClickable,
             isFocusable = isClickable,  // Usually clickable elements are focusable
             isScrollable = false,
@@ -647,7 +647,7 @@ class UUIDCreatorIntegrationTest {
         )
 
         // Create metadata with accessibility and package info
-        val metadata = UUIDMetadata(
+        val metadata = AvidMetadata(
             accessibility = accessibility,
             attributes = mapOf("packageName" to TEST_PACKAGE),
             state = mapOf(
@@ -666,7 +666,7 @@ class UUIDCreatorIntegrationTest {
             emptyMap()
         }
 
-        return UUIDElement(
+        return AvidElement(
             name = name,
             type = type,
             position = position,

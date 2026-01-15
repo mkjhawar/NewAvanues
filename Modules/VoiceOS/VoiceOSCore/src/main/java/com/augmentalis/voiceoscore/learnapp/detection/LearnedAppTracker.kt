@@ -1,6 +1,6 @@
 /**
  * LearnedAppTracker.kt - Tracks which apps have been learned
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/detection/LearnedAppTracker.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/detection/LearnedAppTracker.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

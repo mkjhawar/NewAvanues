@@ -31,9 +31,3 @@ data class AvidAccessibility(
     val liveRegion: String? = null
 )
 
-// Backward compatibility aliases
-@Deprecated("Use AvidMetadata instead", ReplaceWith("AvidMetadata"))
-typealias VUIDMetadata = AvidMetadata
-
-@Deprecated("Use AvidAccessibility instead", ReplaceWith("AvidAccessibility"))
-typealias VUIDAccessibility = AvidAccessibility

@@ -17,7 +17,7 @@ import android.content.Context
 import android.util.Log
 import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.database.repositories.IGeneratedCommandRepository
-import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
+import com.augmentalis.avidcreator.thirdparty.ThirdPartyAvidGenerator
 import com.augmentalis.learnappcore.detection.AppFramework
 import com.augmentalis.learnappcore.detection.CrossPlatformDetector
 import com.augmentalis.learnappcore.models.ElementInfo
@@ -64,7 +64,7 @@ import kotlinx.coroutines.withContext
 class LearnAppCore(
     context: Context,
     private val commandRepository: IGeneratedCommandRepository,
-    private val uuidGenerator: ThirdPartyUuidGenerator
+    private val uuidGenerator: ThirdPartyAvidGenerator
 ) : IElementProcessorInterface, IBatchManagerInterface {
     companion object {
         private const val TAG = "LearnAppCore"
@@ -196,10 +196,10 @@ class LearnAppCore(
         // Calculate element hash from properties
         val elementHash = calculateElementHash(element)
 
-        // Generate UUID using ThirdPartyUuidGenerator
+        // Generate UUID using ThirdPartyAvidGenerator
         // Format: packageName.v{version}.{type}-{hash}
         // For now, we'll use a simplified version
-        // The ThirdPartyUuidGenerator would need an AccessibilityNodeInfo
+        // The ThirdPartyAvidGenerator would need an AccessibilityNodeInfo
         // Since we're working with ElementInfo, we'll create a compatible UUID
         val elementType = when {
             element.isClickable -> "button"

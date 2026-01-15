@@ -63,9 +63,9 @@ package com.augmentalis.voiceoscore.learnapp.memory
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import com.augmentalis.database.VoiceOSDatabaseManager
-import com.augmentalis.uuidcreator.UUIDCreator
-import com.augmentalis.uuidcreator.alias.UuidAliasManager
-import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
+import com.augmentalis.avidcreator.AvidCreator
+import com.augmentalis.avidcreator.alias.AvidAliasManager
+import com.augmentalis.avidcreator.thirdparty.ThirdPartyAvidGenerator
 import com.augmentalis.voiceoscore.learnapp.database.repository.LearnAppRepository
 import com.augmentalis.voiceoscore.learnapp.exploration.ExplorationEngine
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -103,13 +103,13 @@ class MemoryLeakTest {
     private lateinit var accessibilityService: AccessibilityService
 
     @Mock
-    private lateinit var uuidCreator: UUIDCreator
+    private lateinit var uuidCreator: AvidCreator
 
     @Mock
-    private lateinit var thirdPartyGenerator: ThirdPartyUuidGenerator
+    private lateinit var thirdPartyGenerator: ThirdPartyAvidGenerator
 
     @Mock
-    private lateinit var aliasManager: UuidAliasManager
+    private lateinit var aliasManager: AvidAliasManager
 
     @Mock
     private lateinit var repository: LearnAppRepository

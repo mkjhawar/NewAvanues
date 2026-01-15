@@ -24,7 +24,7 @@ import android.graphics.Rect
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.dto.ScrapedElementDTO
 import com.augmentalis.database.repositories.IScrapedElementRepository
-import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
+import com.augmentalis.avidcreator.thirdparty.ThirdPartyAvidGenerator
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -58,7 +58,7 @@ class JitElementCaptureTest {
     private lateinit var mockRepository: IScrapedElementRepository
 
     @Mock
-    private lateinit var mockUuidGenerator: ThirdPartyUuidGenerator
+    private lateinit var mockUuidGenerator: ThirdPartyAvidGenerator
 
     // System under test
     private lateinit var jitElementCapture: JitElementCapture

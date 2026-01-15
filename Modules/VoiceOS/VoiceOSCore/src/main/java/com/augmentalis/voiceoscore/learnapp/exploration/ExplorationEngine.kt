@@ -1,6 +1,6 @@
 /**
  * ExplorationEngine.kt - Main exploration engine (DFS orchestration)
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/exploration/ExplorationEngine.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/exploration/ExplorationEngine.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
@@ -41,12 +41,12 @@ import com.augmentalis.voiceoscore.learnapp.ui.ChecklistManager
 import com.augmentalis.voiceoscore.learnapp.window.WindowManager
 import com.augmentalis.voiceoscore.learnapp.scrolling.ScrollDetector
 import com.augmentalis.voiceoscore.learnapp.scrolling.ScrollExecutor
-import com.augmentalis.uuidcreator.UUIDCreator
-import com.augmentalis.uuidcreator.alias.UuidAliasManager
-import com.augmentalis.uuidcreator.models.UUIDElement
-import com.augmentalis.uuidcreator.models.UUIDMetadata
-import com.augmentalis.uuidcreator.models.UUIDAccessibility
-import com.augmentalis.uuidcreator.thirdparty.ThirdPartyUuidGenerator
+import com.augmentalis.avidcreator.AvidCreator
+import com.augmentalis.avidcreator.alias.AvidAliasManager
+import com.augmentalis.avidcreator.models.AvidElement
+import com.augmentalis.avidcreator.models.AvidMetadata
+import com.augmentalis.avidcreator.models.AvidAccessibility
+import com.augmentalis.avidcreator.thirdparty.ThirdPartyAvidGenerator
 // Phase 3 (2025-12-04): LearnAppCore integration for voice command generation
 import com.augmentalis.voiceoscore.learnapp.core.LearnAppCore
 import com.augmentalis.voiceoscore.learnapp.core.ProcessingMode
@@ -175,9 +175,9 @@ interface ExplorationDebugCallback {
 class ExplorationEngine(
     private val context: android.content.Context,
     private val accessibilityService: AccessibilityService,
-    private val uuidCreator: UUIDCreator,
-    private val thirdPartyGenerator: ThirdPartyUuidGenerator,
-    private val aliasManager: UuidAliasManager,
+    private val uuidCreator: AvidCreator,
+    private val thirdPartyGenerator: ThirdPartyAvidGenerator,
+    private val aliasManager: AvidAliasManager,
     private val repository: com.augmentalis.voiceoscore.learnapp.database.repository.LearnAppRepository,
     private val databaseManager: com.augmentalis.database.VoiceOSDatabaseManager,
     private val strategy: ExplorationStrategy = DFSExplorationStrategy(),
@@ -2725,26 +2725,26 @@ class ExplorationEngine(
                 // Mark as registered
                 registeredUuids?.add(stableId)
 
-                // Create UUIDElement
-                val uuidElement = UUIDElement(
+                // Create AvidElement
+                val uuidElement = AvidElement(
                     vuid = uuid,
                     name = element.getDisplayName(),
                     type = element.extractElementType(),
-                    metadata = UUIDMetadata(
+                    metadata = AvidMetadata(
                         attributes = mapOf(
                             "thirdPartyApp" to "true",
                             "packageName" to packageName,
                             "className" to element.className,
                             "resourceId" to element.resourceId
                         ),
-                        accessibility = UUIDAccessibility(
+                        accessibility = AvidAccessibility(
                             isClickable = element.isClickable,
                             isFocusable = element.isEnabled
                         )
                     )
                 )
 
-                // Register with UUIDCreator (no DB yet)
+                // Register with AvidCreator (no DB yet)
                 uuidCreator.registerElement(uuidElement)
 
                 // Store UUID in element

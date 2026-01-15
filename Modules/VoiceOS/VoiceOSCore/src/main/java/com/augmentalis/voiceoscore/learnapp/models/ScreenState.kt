@@ -1,6 +1,6 @@
 /**
  * ScreenState.kt - Screen state data model
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/models/ScreenState.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/models/ScreenState.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

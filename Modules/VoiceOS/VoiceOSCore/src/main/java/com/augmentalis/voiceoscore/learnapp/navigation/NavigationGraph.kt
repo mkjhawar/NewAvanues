@@ -1,6 +1,6 @@
 /**
  * NavigationGraph.kt - App navigation graph data structure
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/navigation/NavigationGraph.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/navigation/NavigationGraph.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

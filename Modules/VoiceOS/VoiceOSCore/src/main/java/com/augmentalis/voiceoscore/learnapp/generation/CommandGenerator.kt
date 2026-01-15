@@ -1,6 +1,6 @@
 /**
  * CommandGenerator.kt - Voice command generation from learned UI elements
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/generation/CommandGenerator.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/generation/CommandGenerator.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA

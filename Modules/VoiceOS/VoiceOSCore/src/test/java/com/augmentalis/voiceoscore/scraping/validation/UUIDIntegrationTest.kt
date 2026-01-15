@@ -118,7 +118,7 @@ class UUIDIntegrationTest {
         println("\n========== TEST: UUID Registration - Low Rate Detection ==========\n")
 
         val elementsWithUuid = 100
-        val registeredCount = 85  // 85% success (some UUIDCreator failures)
+        val registeredCount = 85  // 85% success (some AvidCreator failures)
 
         println("Elements with UUID: $elementsWithUuid")
         println("Successfully registered: $registeredCount")

@@ -22,7 +22,7 @@ package com.augmentalis.voiceoscore.scraping.entities
  * @property id Auto-generated primary key
  * @property elementHash MD5 hash of unique identifier (className + viewId + text + contentDesc)
  * @property appId Foreign key to ScrapedAppEntity
- * @property uuid Universal unique identifier from UUIDCreator (enables cross-system element identification)
+ * @property uuid Universal unique identifier from AvidCreator (enables cross-system element identification)
  * @property className Android view class name (e.g., "android.widget.Button")
  * @property viewIdResourceName Resource ID if available (e.g., "com.example:id/submit_button")
  * @property text Visible text content

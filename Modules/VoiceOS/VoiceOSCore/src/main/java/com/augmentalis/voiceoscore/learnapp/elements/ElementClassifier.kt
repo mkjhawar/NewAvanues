@@ -1,6 +1,6 @@
 /**
  * ElementClassifier.kt - Classifies UI elements for exploration
- * Path: libraries/UUIDCreator/src/main/java/com/augmentalis/learnapp/elements/ElementClassifier.kt
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/learnapp/elements/ElementClassifier.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
