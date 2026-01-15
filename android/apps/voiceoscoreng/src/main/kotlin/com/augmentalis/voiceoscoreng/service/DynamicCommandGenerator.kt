@@ -120,11 +120,17 @@ class DynamicCommandGenerator(
 
         // Update speech engine grammar (Vivoka SDK) so it recognizes ALL phrases
         // CRITICAL: Must include static commands EVERY time, as updateCommands() REPLACES the grammar
+        // IMPORTANT: Deduplicate phrases to prevent multiple identical commands in grammar
         val staticPhrases = StaticCommandRegistry.allPhrases()
         val dynamicPhrases = allCommands.map { it.phrase } +
             indexCommands.map { it.phrase } +
             labelCommands.map { it.phrase }
-        val commandPhrases = staticPhrases + dynamicPhrases
+
+        // Deduplicate while preserving order (static commands first)
+        val commandPhrases = (staticPhrases + dynamicPhrases).distinct()
+
+        Log.d(TAG, "Updated speech engine with ${commandPhrases.size} command phrases " +
+            "(${staticPhrases.size} static, ${allCommands.size} elements, ${indexCommands.size} index, ${labelCommands.size} labels)")
 
         updateSpeechEngine?.invoke(commandPhrases)
 

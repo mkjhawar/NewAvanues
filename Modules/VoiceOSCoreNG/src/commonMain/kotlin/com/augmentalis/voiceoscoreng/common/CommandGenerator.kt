@@ -105,6 +105,10 @@ object CommandGenerator {
      * Generate index-based commands for list items.
      * Creates commands like "first", "second", "item 3" for dynamic list navigation.
      *
+     * IMPORTANT: Generates exactly ONE command per unique listIndex to prevent duplicates.
+     * When multiple elements share the same listIndex (e.g., a row and its children),
+     * we keep the best representative element (prefer clickable, in dynamic container).
+     *
      * @param listItems Elements that are list items (have listIndex >= 0)
      * @param packageName Host application package name
      * @return List of index commands (in-memory only, never persisted)
@@ -116,7 +120,26 @@ object CommandGenerator {
         val ordinals = listOf("first", "second", "third", "fourth", "fifth",
             "sixth", "seventh", "eighth", "ninth", "tenth")
 
-        return listItems.filter { it.listIndex >= 0 }.mapNotNull { element ->
+        // Group by listIndex and keep only the best element per index
+        // This prevents duplicates when multiple elements share the same listIndex
+        val bestElementPerIndex = listItems
+            .filter { it.listIndex >= 0 }
+            .groupBy { it.listIndex }
+            .mapValues { (_, elements) ->
+                // Prefer: clickable > has content > in dynamic container > first
+                elements.maxByOrNull { element ->
+                    var score = 0
+                    if (element.isClickable) score += 100
+                    if (element.isInDynamicContainer) score += 50
+                    if (element.text.isNotBlank() || element.contentDescription.isNotBlank()) score += 25
+                    if (element.resourceId.isNotBlank()) score += 10
+                    score
+                }
+            }
+            .values
+            .filterNotNull()
+
+        return bestElementPerIndex.map { element ->
             val index = element.listIndex
             val phrase = when {
                 index < ordinals.size -> ordinals[index]
