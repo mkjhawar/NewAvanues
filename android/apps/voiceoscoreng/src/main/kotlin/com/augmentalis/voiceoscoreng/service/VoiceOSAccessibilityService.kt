@@ -20,8 +20,7 @@ import com.augmentalis.voiceoscoreng.common.CommandGenerator
 import com.augmentalis.voiceoscoreng.common.CommandRegistry
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
-import com.augmentalis.voiceoscoreng.common.VUIDGenerator
-import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
+import com.augmentalis.voiceoscoreng.common.ElementFingerprint
 import com.augmentalis.voiceoscoreng.common.StaticCommandRegistry
 import com.augmentalis.voiceoscoreng.functions.HashUtils
 import com.augmentalis.voiceoscoreng.handlers.ServiceConfiguration
@@ -1032,21 +1031,22 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         extractElements(rootNode, elements, hierarchy, seenHashes, duplicates, depth = 0)
 
-        // Generate VUIDs for all elements
+        // Generate fingerprints (AVIDs) for all elements
         val packageName = rootNode.packageName?.toString() ?: "unknown"
         val vuids = elements.map { element ->
-            val typeCode = VUIDGenerator.getTypeCode(element.className)
-            val elementIdentifier = buildString {
-                append(element.className)
-                if (element.resourceId.isNotBlank()) append(":${element.resourceId}")
-                if (element.text.isNotBlank()) append(":${element.text.take(20)}")
-            }
-            val elemHash = HashUtils.generateHash(elementIdentifier, 8)
-            val vuid = VUIDGenerator.generate(packageName, typeCode, elemHash)
+            val fingerprint = ElementFingerprint.generate(
+                className = element.className,
+                packageName = packageName,
+                resourceId = element.resourceId,
+                text = element.text,
+                contentDesc = element.contentDescription
+            )
+            // Parse fingerprint to get the hash portion (format: "BTN:a3f2e1c9")
+            val elemHash = ElementFingerprint.parse(fingerprint)?.second ?: ""
 
             VUIDInfo(
                 element = element,
-                vuid = vuid,
+                vuid = fingerprint,
                 hash = elemHash
             )
         }
@@ -1363,11 +1363,11 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             // Elements section with derived labels
             appendLine("@elements:")
             elements.forEachIndexed { index, element ->
-                val typeCode = VUIDGenerator.getTypeCode(element.className)
+                val typeCode = ElementFingerprint.getTypeCode(element.className)
                 val label = elementLabels[index] ?: element.className.substringAfterLast(".")
                 val clickable = if (element.isClickable) "T" else "F"
                 val scrollable = if (element.isScrollable) "T" else "F"
-                appendLine("  - idx:$index type:${typeCode.abbrev} label:\"$label\" click:$clickable scroll:$scrollable")
+                appendLine("  - idx:$index type:$typeCode label:\"$label\" click:$clickable scroll:$scrollable")
             }
             appendLine()
 
@@ -1465,15 +1465,14 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         val overlayItems = rowElements.mapIndexed { index, element ->
             val label = CommandGenerator.extractShortLabel(element) ?: ""
 
-            // Use consistent VUID generation matching CommandGenerator.generateVuid()
-            val typeCode = VUIDGenerator.getTypeCode(element.className)
-            val elementHash = when {
-                element.resourceId.isNotBlank() -> element.resourceId
-                element.contentDescription.isNotBlank() -> element.contentDescription
-                element.text.isNotBlank() -> element.text
-                else -> "${element.className}:${element.bounds}"
-            }
-            val vuid = VUIDGenerator.generate(packageName, typeCode, elementHash)
+            // Use consistent fingerprint generation matching CommandGenerator
+            val fingerprint = ElementFingerprint.generate(
+                className = element.className,
+                packageName = packageName,
+                resourceId = element.resourceId,
+                text = element.text,
+                contentDesc = element.contentDescription
+            )
 
             NumberOverlayItem(
                 number = index + 1,  // Sequential 1-based numbering by screen position
@@ -1482,7 +1481,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 top = element.bounds.top,
                 right = element.bounds.right,
                 bottom = element.bounds.bottom,
-                vuid = vuid
+                vuid = fingerprint
             )
         }
 
@@ -1654,9 +1653,13 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     else -> "interact"
                 }
 
-                val typeCode = VUIDGenerator.getTypeCode(element.className)
-                val elemHash = HashUtils.generateHash(element.resourceId.ifEmpty { label }, 8)
-                val vuid = VUIDGenerator.generate(packageName, typeCode, elemHash)
+                val fingerprint = ElementFingerprint.generate(
+                    className = element.className,
+                    packageName = packageName,
+                    resourceId = element.resourceId,
+                    text = element.text,
+                    contentDesc = element.contentDescription
+                )
 
                 GeneratedCommand(
                     phrase = "$actionType $label",  // Full voice phrase: "tap Reset"
@@ -1665,7 +1668,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                         "select $label",
                         label  // Just the label also works
                     ),
-                    targetVuid = vuid,
+                    targetVuid = fingerprint,
                     action = actionType,  // Action type for execution
                     element = element,
                     derivedLabel = label  // The clean label without action prefix
