@@ -1,51 +1,51 @@
 package com.augmentalis.voiceui.core
 
 import androidx.compose.runtime.*
-import com.augmentalis.uuidcreator.VUIDCreator
-import com.augmentalis.uuidcreator.models.VUIDElement
-import com.augmentalis.uuidcreator.models.VUIDPosition
-import com.augmentalis.uuidcreator.models.VUIDMetadata
+import com.augmentalis.avidcreator.AvidElementManager
+import com.augmentalis.avidcreator.models.AvidElement
+import com.augmentalis.avidcreator.models.AvidPosition
+import com.augmentalis.avidcreator.models.AvidMetadata
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * MagicVUIDIntegration - Seamless VUID tracking for all VoiceUI components
+ * AvaMagicAVIDIntegration - Seamless AVID tracking for all VoiceUI components
  *
  * Features:
- * - Automatic VUID generation for all components
- * - Voice command registration with VUIDs
+ * - Automatic AVID generation for all components
+ * - Voice command registration with AVIDs
  * - Spatial navigation support
- * - Component discovery by VUID/name/type
+ * - Component discovery by AVID/name/type
  * - Hierarchy tracking (parent/child relationships)
  *
- * Note: Migrated from UUID to VUID (VoiceUniqueID) for universal identification.
+ * Note: Migrated from UUID to AVID (Augmentalis Voice ID) for universal identification.
  */
-object MagicVUIDIntegration {
+object AvaMagicAVIDIntegration {
 
-    private val vuidCreator = VUIDCreator.getInstance()
+    private val avidManager = AvidElementManager.getInstance()
     private val scope = CoroutineScope(Dispatchers.Default)
-    
+
     // Track component metadata
     private val componentMetadata = ConcurrentHashMap<String, ComponentMetadata>()
-    
+
     // Track screen hierarchy
     private val screenHierarchy = ConcurrentHashMap<String, ScreenInfo>()
-    
+
     // Track voice commands
     private val voiceCommandMap = ConcurrentHashMap<String, VoiceCommandInfo>()
-    
+
     /**
-     * Generate UUID for a screen
+     * Generate AVID for a screen
      */
     fun generateScreenUUID(screenName: String): String {
-        val uuid = vuidCreator.generateUUID()
-        val element = VUIDElement(
-            vuid = uuid,
+        val avid = avidManager.generateAvid()
+        val element = AvidElement(
+            avid = avid,
             name = screenName,
             type = "magic_screen",
-            metadata = VUIDMetadata(
+            metadata = AvidMetadata(
                 state = mapOf(
                     "screenName" to screenName,
                     "createdAt" to System.currentTimeMillis()
@@ -53,20 +53,20 @@ object MagicVUIDIntegration {
             )
         )
 
-        vuidCreator.registerElement(element)
-        
-        screenHierarchy[uuid] = ScreenInfo(
-            uuid = uuid,
+        avidManager.registerElement(element)
+
+        screenHierarchy[avid] = ScreenInfo(
+            uuid = avid,
             name = screenName,
             components = mutableSetOf(),
             childScreens = mutableSetOf()
         )
-        
-        return uuid
+
+        return avid
     }
-    
+
     /**
-     * Generate UUID for a component
+     * Generate AVID for a component
      */
     fun generateComponentUUID(
         componentType: String,
@@ -74,10 +74,10 @@ object MagicVUIDIntegration {
         name: String? = null,
         position: ComponentPosition? = null
     ): String {
-        val uuid = vuidCreator.generateUUID()
-        
-        val uuidPosition = position?.let {
-            VUIDPosition(
+        val avid = avidManager.generateAvid()
+
+        val avidPosition = position?.let {
+            AvidPosition(
                 x = it.x,
                 y = it.y,
                 z = it.z,
@@ -86,14 +86,14 @@ object MagicVUIDIntegration {
                 index = it.index ?: 0
             )
         }
-        
-        val element = VUIDElement(
-            vuid = uuid,
-            name = name ?: "$componentType-$uuid",
+
+        val element = AvidElement(
+            avid = avid,
+            name = name ?: "$componentType-$avid",
             type = "magic_component_$componentType",
-            position = uuidPosition,
+            position = avidPosition,
             parent = screenUUID,
-            metadata = VUIDMetadata(
+            metadata = AvidMetadata(
                 state = mapOf(
                     "componentType" to componentType,
                     "screenUUID" to (screenUUID ?: ""),
@@ -103,27 +103,27 @@ object MagicVUIDIntegration {
             actions = createComponentActions(componentType)
         )
 
-        vuidCreator.registerElement(element)
-        
+        avidManager.registerElement(element)
+
         // Track metadata
-        componentMetadata[uuid] = ComponentMetadata(
-            uuid = uuid,
+        componentMetadata[avid] = ComponentMetadata(
+            uuid = avid,
             type = componentType,
             screenUUID = screenUUID,
             name = name,
             position = position
         )
-        
+
         // Update screen hierarchy
         screenUUID?.let {
-            screenHierarchy[it]?.components?.add(uuid)
+            screenHierarchy[it]?.components?.add(avid)
         }
-        
-        return uuid
+
+        return avid
     }
-    
+
     /**
-     * Generate UUID for a voice command
+     * Generate AVID for a voice command
      */
     fun generateVoiceCommandUUID(
         command: String,
@@ -131,13 +131,13 @@ object MagicVUIDIntegration {
         action: String,
         context: String? = null
     ): String {
-        val uuid = vuidCreator.generateUUID()
-        
-        val element = VUIDElement(
-            vuid = uuid,
+        val avid = avidManager.generateAvid()
+
+        val element = AvidElement(
+            avid = avid,
             name = "voice_command_$command",
             type = "voice_command",
-            metadata = VUIDMetadata(
+            metadata = AvidMetadata(
                 state = mapOf(
                     "command" to command,
                     "targetUUID" to targetUUID,
@@ -146,27 +146,27 @@ object MagicVUIDIntegration {
                 )
             ),
             actions = mapOf(
-                "execute" to { params ->
+                "execute" to { params: Map<String, Any> ->
                     executeVoiceCommand(targetUUID, action, params)
                 }
             )
         )
 
-        vuidCreator.registerElement(element)
-        
-        voiceCommandMap[uuid] = VoiceCommandInfo(
-            uuid = uuid,
+        avidManager.registerElement(element)
+
+        voiceCommandMap[avid] = VoiceCommandInfo(
+            uuid = avid,
             command = command,
             targetUUID = targetUUID,
             action = action,
             context = context
         )
-        
-        return uuid
+
+        return avid
     }
-    
+
     /**
-     * Register a composable component with UUID tracking
+     * Register a composable component with AVID tracking
      */
     @Composable
     fun rememberComponentUUID(
@@ -176,31 +176,31 @@ object MagicVUIDIntegration {
     ): String {
         return remember {
             generateComponentUUID(componentType, screenUUID, name)
-        }.also { uuid ->
-            DisposableEffect(uuid) {
+        }.also { avid ->
+            DisposableEffect(avid) {
                 onDispose {
-                    unregisterComponent(uuid)
+                    unregisterComponent(avid)
                 }
             }
         }
     }
-    
+
     /**
-     * Register a screen with UUID tracking
+     * Register a screen with AVID tracking
      */
     @Composable
     fun rememberScreenUUID(screenName: String): String {
         return remember {
             generateScreenUUID(screenName)
-        }.also { uuid ->
-            DisposableEffect(uuid) {
+        }.also { avid ->
+            DisposableEffect(avid) {
                 onDispose {
-                    unregisterScreen(uuid)
+                    unregisterScreen(avid)
                 }
             }
         }
     }
-    
+
     /**
      * Find component by various criteria
      */
@@ -213,12 +213,12 @@ object MagicVUIDIntegration {
         return when {
             uuid != null -> componentMetadata[uuid]
             name != null -> {
-                val elements = vuidCreator.findByName(name)
-                elements.firstOrNull()?.uuid?.let { componentMetadata[it] }
+                val elements = avidManager.findByName(name)
+                elements.firstOrNull()?.avid?.let { foundAvid -> componentMetadata[foundAvid] }
             }
             type != null -> {
-                val elements = vuidCreator.findByType("magic_component_$type")
-                elements.firstOrNull()?.uuid?.let { componentMetadata[it] }
+                val elements = avidManager.findByType("magic_component_$type")
+                elements.firstOrNull()?.avid?.let { foundAvid -> componentMetadata[foundAvid] }
             }
             screenUUID != null -> {
                 screenHierarchy[screenUUID]?.components
@@ -228,7 +228,7 @@ object MagicVUIDIntegration {
             else -> null
         }
     }
-    
+
     /**
      * Navigate spatially between components
      */
@@ -247,9 +247,9 @@ object MagicVUIDIntegration {
             NavigationDirection.LAST -> "last"
         }
 
-        return vuidCreator.findInDirection(fromUUID, directionString)?.uuid
+        return avidManager.findInDirection(fromUUID, directionString)?.avid
     }
-    
+
     /**
      * Execute voice command on component
      */
@@ -259,55 +259,55 @@ object MagicVUIDIntegration {
         parameters: Map<String, Any> = emptyMap()
     ) {
         scope.launch {
-            vuidCreator.executeAction(targetUUID, action, parameters)
+            avidManager.executeAction(targetUUID, action, parameters)
         }
     }
-    
+
     /**
      * Process natural language voice command
      */
     fun processVoiceCommand(command: String) {
         scope.launch {
-            val result = vuidCreator.processVoiceCommand(command)
-            
+            val result = avidManager.processVoiceCommand(command)
+
             // Log or handle result
             if (result.success) {
                 // Successfully executed
-                result.targetUUID?.let { uuid ->
-                    componentMetadata[uuid]?.let { _ ->
+                result.targetAvid?.let { avid ->
+                    componentMetadata[avid]?.let { _ ->
                         // Update component state if needed
                     }
                 }
             }
         }
     }
-    
+
     /**
      * Unregister component
      */
-    private fun unregisterComponent(uuid: String) {
-        vuidCreator.unregisterElement(uuid)
-        componentMetadata.remove(uuid)
-        
+    private fun unregisterComponent(avid: String) {
+        avidManager.unregisterElement(avid)
+        componentMetadata.remove(avid)
+
         // Remove from screen hierarchy
         screenHierarchy.values.forEach { screen ->
-            screen.components.remove(uuid)
+            screen.components.remove(avid)
         }
     }
-    
+
     /**
      * Unregister screen and all its components
      */
-    private fun unregisterScreen(uuid: String) {
-        val screen = screenHierarchy[uuid]
-        screen?.components?.forEach { componentUUID ->
-            unregisterComponent(componentUUID)
+    private fun unregisterScreen(avid: String) {
+        val screen = screenHierarchy[avid]
+        screen?.components?.forEach { componentAvid ->
+            unregisterComponent(componentAvid)
         }
 
-        vuidCreator.unregisterElement(uuid)
-        screenHierarchy.remove(uuid)
+        avidManager.unregisterElement(avid)
+        screenHierarchy.remove(avid)
     }
-    
+
     /**
      * Create component-specific actions
      */
@@ -321,7 +321,7 @@ object MagicVUIDIntegration {
             "input", "email", "password" -> mapOf(
                 "focus" to { _ -> /* Handle focus */ },
                 "clear" to { _ -> /* Clear input */ },
-                "setValue" to { params -> 
+                "setValue" to { params ->
                     params["value"] as? String
                     // Set input value
                 }
@@ -336,12 +336,12 @@ object MagicVUIDIntegration {
             )
         }
     }
-    
+
     /**
      * Get statistics about registered components
      */
     fun getStatistics(): UUIDStatistics {
-        val stats = vuidCreator.getStats()
+        val stats = avidManager.getStats()
         return UUIDStatistics(
             totalComponents = componentMetadata.size,
             totalScreens = screenHierarchy.size,
@@ -352,7 +352,7 @@ object MagicVUIDIntegration {
             registryStats = stats
         )
     }
-    
+
     /**
      * Clear all registrations (use with caution)
      */
@@ -360,7 +360,7 @@ object MagicVUIDIntegration {
         componentMetadata.clear()
         screenHierarchy.clear()
         voiceCommandMap.clear()
-        vuidCreator.clearAll()
+        avidManager.clearAll()
     }
 }
 
@@ -407,7 +407,7 @@ data class UUIDStatistics(
     val totalScreens: Int,
     val totalVoiceCommands: Int,
     val componentsByType: Map<String, Int>,
-    val registryStats: Any? // RegistryStats from UUIDCreator
+    val registryStats: Any? // RegistryStats from AvidElementManager
 )
 
 /**
@@ -416,12 +416,12 @@ data class UUIDStatistics(
 
 @Composable
 fun rememberMagicVUID(type: String, name: String? = null): String {
-    return MagicVUIDIntegration.rememberComponentUUID(type, name = name)
+    return AvaMagicAVIDIntegration.rememberComponentUUID(type, name = name)
 }
 
 @Composable
 fun rememberScreenVUID(name: String): String {
-    return MagicVUIDIntegration.rememberScreenUUID(name)
+    return AvaMagicAVIDIntegration.rememberScreenUUID(name)
 }
 
 // Deprecated aliases for backwards compatibility
@@ -432,3 +432,7 @@ fun rememberMagicUUID(type: String, name: String? = null): String = rememberMagi
 @Deprecated("Use rememberScreenVUID instead", ReplaceWith("rememberScreenVUID(name)"))
 @Composable
 fun rememberScreenUUID(name: String): String = rememberScreenVUID(name)
+
+// Backward compatibility typealias
+@Deprecated("Use AvaMagicAVIDIntegration instead", ReplaceWith("AvaMagicAVIDIntegration"))
+typealias MagicVUIDIntegration = AvaMagicAVIDIntegration

@@ -84,6 +84,7 @@ dependencies {
     implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))
     implementation(project(":Modules:AVID"))
     implementation(project(":Modules:VoiceOS:libraries:DeviceManager")) // GPU capabilities
+    implementation(project(":Modules:VoiceOS:libraries:AvidCreator")) // AVID element management
 
     // Performance Monitoring
     implementation("androidx.metrics:metrics-performance:1.0.0-alpha04")
