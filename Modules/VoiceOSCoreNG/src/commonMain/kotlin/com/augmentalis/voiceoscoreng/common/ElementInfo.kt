@@ -59,6 +59,10 @@ data class ElementInfo(
     val isScrollable: Boolean = false,
     val isEnabled: Boolean = true,
     val packageName: String = "",
+    // Voice UUID (for tracking across sessions)
+    val uuid: String? = null,
+    // Platform-specific node reference (Any? for KMP compatibility)
+    val node: Any? = null,
     // Compose semantics support (P2)
     val semanticsRole: String = "",           // e.g., "Button", "Checkbox", "Tab"
     val stateDescription: String = "",        // e.g., "Checked", "Unchecked", "Selected"
@@ -70,6 +74,38 @@ data class ElementInfo(
     val containerType: String = "",           // Container class (RecyclerView, ListView, etc.)
     val listIndex: Int = -1                   // Position in list (-1 if not in list)
 ) {
+    /**
+     * Generate a stable identifier for this element across scrapes.
+     * Uses structural properties that don't change (class, resourceId, position).
+     */
+    fun stableId(): String {
+        return "$className|$resourceId|${bounds.left},${bounds.top}".hashCode().toString(16)
+    }
+
+    /**
+     * Calculate stability score for prioritizing click order.
+     * Higher score = more stable/reliable element.
+     */
+    fun stabilityScore(): Int {
+        var score = 0
+
+        // Resource ID is most stable
+        if (resourceId.isNotBlank()) score += 30
+
+        // Text is fairly stable
+        if (text.isNotBlank()) score += 20
+
+        // Content description
+        if (contentDescription.isNotBlank()) score += 15
+
+        // Elements in dynamic containers are less stable
+        if (isInDynamicContainer) score -= 20
+
+        // Large bounds usually means main content (less stable)
+        if (bounds.width > 500 && bounds.height > 500) score -= 10
+
+        return score
+    }
     /**
      * Get the best available label for voice recognition
      * Priority: text > contentDescription > resourceId simple name
