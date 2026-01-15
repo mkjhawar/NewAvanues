@@ -75,7 +75,7 @@ include(":Modules:VoiceOS:managers:HUDManager")
 // Shared Libraries (Moved to monorepo Modules/)
 // MagicUI and MagicElements moved to /Coding/magicui-deprecated (2025-10-23)
 include(":Modules:VoiceOS:libraries:VoiceUIElements")
-include(":Modules:VoiceOS:libraries:UUIDCreator")
+include(":Modules:AVID")  // Migrated from UUIDCreator
 include(":Modules:VoiceOS:libraries:DeviceManager")  // Device management library
 include(":Modules:VoiceOS:libraries:SpeechRecognition")  // Unified speech recognition module (LearningSystem stubbed)
 // include(":Modules:VoiceOS:libraries:VoiceKeyboard")  // DISABLED: Depends on VoiceDataManager (Phase 4)
@@ -125,7 +125,7 @@ project(":Modules:VoiceOS:managers:LicenseManager").projectDir = file("../../../
 project(":Modules:VoiceOS:managers:HUDManager").projectDir = file("../../../Modules/VoiceOS/managers/HUDManager")
 
 project(":Modules:VoiceOS:libraries:VoiceUIElements").projectDir = file("../../../Modules/VoiceOS/libraries/VoiceUIElements")
-project(":Modules:VoiceOS:libraries:UUIDCreator").projectDir = file("../../../Modules/VoiceOS/libraries/UUIDCreator")
+project(":Modules:AVID").projectDir = file("../../../Modules/AVID")
 project(":Modules:VoiceOS:libraries:DeviceManager").projectDir = file("../../../Modules/VoiceOS/libraries/DeviceManager")
 project(":Modules:VoiceOS:libraries:SpeechRecognition").projectDir = file("../../../Modules/VoiceOS/libraries/SpeechRecognition")
 project(":Modules:VoiceOS:libraries:VoiceOsLogging").projectDir = file("../../../Modules/VoiceOS/libraries/VoiceOsLogging")

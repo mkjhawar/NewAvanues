@@ -96,7 +96,7 @@ dependencies {
     implementation(project(":Modules:VoiceOS:libraries:VoiceUIElements"))
     implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))
     implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))  // LearningSystem stubbed
-    implementation(project(":Modules:VoiceOS:libraries:UUIDCreator"))
+    implementation(project(":Modules:AVID"))
     implementation(project(":Modules:VoiceOS:libraries:VoiceOsLogging"))  // Phase 3: Timber replacement
     
     // Android core

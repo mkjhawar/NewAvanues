@@ -238,7 +238,7 @@ dependencies {
     implementation(project(":Modules:VoiceOS:managers:CommandManager"))  // RE-ENABLED: Agent Swarm Task 2.1 - CommandManager restoration
     // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // Unified database for coordination - DISABLED: Depends on SQLDelight
     implementation(project(":android:apps:VoiceCursor"))
-    implementation(project(":Modules:VoiceOS:libraries:UUIDCreator"))
+    implementation(project(":Modules:AVID"))
 
     // VoiceOSCoreNG - Next-gen unified core (KMP)
     // Consolidates JITLearning + LearnAppCore + learnapp/ into single cross-platform module

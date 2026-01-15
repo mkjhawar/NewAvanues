@@ -82,7 +82,7 @@ dependencies {
     
     // VOS4 Dependencies
     implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))
-    implementation(project(":Modules:VoiceOS:libraries:UUIDCreator"))
+    implementation(project(":Modules:AVID"))
     implementation(project(":Modules:VoiceOS:libraries:DeviceManager")) // GPU capabilities
 
     // Performance Monitoring
