@@ -12,7 +12,14 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
-    id("com.squareup.wire") version "5.4.0"
+    id("com.squareup.wire") version "5.1.0"  // 5.4.0 has KotlinPoet compatibility issue
+}
+
+// Force KotlinPoet version compatible with Wire
+configurations.all {
+    resolutionStrategy {
+        force("com.squareup:kotlinpoet:1.15.3")
+    }
 }
 
 group = "com.augmentalis.universalrpc"

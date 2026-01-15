@@ -60,19 +60,19 @@ class OverlayThemeTest {
     // ==================== Badge Color Tests ====================
 
     @Test
-    fun `default theme has correct badge enabled with name color (green)`() {
+    fun `default theme has correct badge enabled with name color - green`() {
         val theme = OverlayTheme()
         assertEquals(0xFF4CAF50, theme.badgeEnabledWithNameColor)
     }
 
     @Test
-    fun `default theme has correct badge enabled no name color (orange)`() {
+    fun `default theme has correct badge enabled no name color - orange`() {
         val theme = OverlayTheme()
         assertEquals(0xFFFF9800, theme.badgeEnabledNoNameColor)
     }
 
     @Test
-    fun `default theme has correct badge disabled color (grey)`() {
+    fun `default theme has correct badge disabled color - grey`() {
         val theme = OverlayTheme()
         assertEquals(0xFF9E9E9E, theme.badgeDisabledColor)
     }
@@ -80,25 +80,25 @@ class OverlayThemeTest {
     // ==================== Status Color Tests ====================
 
     @Test
-    fun `default theme has correct status listening color (blue)`() {
+    fun `default theme has correct status listening color - blue`() {
         val theme = OverlayTheme()
         assertEquals(0xFF2196F3, theme.statusListeningColor)
     }
 
     @Test
-    fun `default theme has correct status processing color (orange)`() {
+    fun `default theme has correct status processing color - orange`() {
         val theme = OverlayTheme()
         assertEquals(0xFFFF9800, theme.statusProcessingColor)
     }
 
     @Test
-    fun `default theme has correct status success color (green)`() {
+    fun `default theme has correct status success color - green`() {
         val theme = OverlayTheme()
         assertEquals(0xFF4CAF50, theme.statusSuccessColor)
     }
 
     @Test
-    fun `default theme has correct status error color (red)`() {
+    fun `default theme has correct status error color - red`() {
         val theme = OverlayTheme()
         assertEquals(0xFFF44336, theme.statusErrorColor)
     }

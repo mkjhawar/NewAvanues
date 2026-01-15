@@ -343,15 +343,15 @@ class ElementBuilder(private val className: String) {
  */
 class CommandBuilder(private val phrase: String) {
 
-    private var uuid: String = ""
+    private var avid: String = ""
     private var actionType: CommandActionType = CommandActionType.CLICK
-    private var targetVuid: String? = null
+    private var targetAvid: String? = null
     private var confidence: Float = 0.8f
     private var metadata: Map<String, String> = emptyMap()
 
-    fun withUuid(uuid: String) = apply { this.uuid = uuid }
+    fun withAvid(avid: String) = apply { this.avid = avid }
     fun withActionType(type: CommandActionType) = apply { this.actionType = type }
-    fun withTargetVuid(vuid: String?) = apply { this.targetVuid = vuid }
+    fun withTargetAvid(avid: String?) = apply { this.targetAvid = avid }
     fun withConfidence(confidence: Float) = apply { this.confidence = confidence }
     fun withMetadata(metadata: Map<String, String>) = apply { this.metadata = metadata }
     fun addMetadata(key: String, value: String) = apply {
@@ -368,14 +368,14 @@ class CommandBuilder(private val phrase: String) {
         text: String = "",
         contentDesc: String = ""
     ) = apply {
-        this.targetVuid = ElementFingerprint.generate(className, packageName, resourceId, text, contentDesc)
+        this.targetAvid = ElementFingerprint.generate(className, packageName, resourceId, text, contentDesc)
     }
 
     fun build() = QuantizedCommand(
-        uuid = uuid,
+        avid = avid,
         phrase = phrase,
         actionType = actionType,
-        targetVuid = targetVuid,
+        targetAvid = targetAvid,
         confidence = confidence,
         metadata = metadata
     )
