@@ -6,25 +6,38 @@ package com.augmentalis.voiceoscoreng.common
  * Represents a learned voice command that triggers an action
  * on a UI element.
  *
- * @property uuid Command unique identifier (same as vuid for consistency)
+ * @property avid Command unique identifier (AVID format)
  * @property phrase Voice phrase that triggers this command
  * @property actionType Type of action to perform
- * @property targetVuid Target element VUID (nullable for navigation)
+ * @property targetAvid Target element AVID fingerprint (nullable for navigation)
  * @property confidence Confidence score (0.0 - 1.0)
  * @property metadata Additional data (packageName, screenId, appVersion, etc.)
  */
 data class QuantizedCommand(
-    val uuid: String = "",
+    val avid: String = "",
     val phrase: String,
     val actionType: CommandActionType,
-    val targetVuid: String?,
+    val targetAvid: String?,
     val confidence: Float,
     val metadata: Map<String, String> = emptyMap()
 ) {
     /**
-     * VUID alias for uuid (for repository consistency).
+     * Legacy alias for avid (deprecated, use avid directly).
      */
-    val vuid: String get() = uuid
+    @Deprecated("Use avid instead", ReplaceWith("avid"))
+    val uuid: String get() = avid
+
+    /**
+     * Legacy alias for avid (deprecated, use avid directly).
+     */
+    @Deprecated("Use avid instead", ReplaceWith("avid"))
+    val vuid: String get() = avid
+
+    /**
+     * Legacy alias for targetAvid (deprecated, use targetAvid directly).
+     */
+    @Deprecated("Use targetAvid instead", ReplaceWith("targetAvid"))
+    val targetVuid: String? get() = targetAvid
 
     /**
      * Package name from metadata.
@@ -55,11 +68,11 @@ data class QuantizedCommand(
     /**
      * Generate AVU CMD line format.
      *
-     * Format: CMD:uuid:trigger:action:element_uuid:confidence
+     * Format: CMD:avid:trigger:action:element_avid:confidence
      */
     fun toCmdLine(): String {
         val formattedConfidence = formatFloat(confidence)
-        return "CMD:$uuid:$phrase:${actionType.name}:${targetVuid ?: ""}:$formattedConfidence"
+        return "CMD:$avid:$phrase:${actionType.name}:${targetAvid ?: ""}:$formattedConfidence"
     }
 
     private fun formatFloat(value: Float): String {
@@ -73,7 +86,7 @@ data class QuantizedCommand(
         /**
          * Parse CMD line to QuantizedCommand.
          *
-         * @param line CMD line (e.g., "CMD:uuid:phrase:CLICK:vuid:0.95")
+         * @param line CMD line (e.g., "CMD:avid:phrase:CLICK:target_avid:0.95")
          * @return QuantizedCommand or null if invalid
          */
         fun fromCmdLine(line: String): QuantizedCommand? {
@@ -83,10 +96,10 @@ data class QuantizedCommand(
 
             return try {
                 QuantizedCommand(
-                    uuid = parts[0],
+                    avid = parts[0],
                     phrase = parts[1],
                     actionType = CommandActionType.fromString(parts[2]),
-                    targetVuid = parts[3].takeIf { it.isNotBlank() },
+                    targetAvid = parts[3].takeIf { it.isNotBlank() },
                     confidence = parts[4].toFloat()
                 )
             } catch (e: Exception) {

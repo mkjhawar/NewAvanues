@@ -93,7 +93,7 @@ class ExplorationNotifier(
         }
     }
 
-    override fun notifyGenericAlias(uuid: String, genericAlias: String, element: ElementInfo) {
+    override fun notifyGenericAlias(avid: String, genericAlias: String, element: ElementInfo) {
         try {
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
@@ -108,7 +108,7 @@ class ExplorationNotifier(
                 .setAutoCancel(true)
                 .build()
 
-            notificationManager?.notify(uuid.hashCode(), notification)
+            notificationManager?.notify(avid.hashCode(), notification)
 
             Log.d(TAG, "Notified user about generic alias: $genericAlias")
 

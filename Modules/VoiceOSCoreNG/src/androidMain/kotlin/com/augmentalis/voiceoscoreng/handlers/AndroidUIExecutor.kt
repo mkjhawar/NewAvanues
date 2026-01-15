@@ -4,6 +4,7 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2026-01-06
+ * Updated: 2026-01-15 - Migrated from VUID to AVID nomenclature
  *
  * Android implementation of UIExecutor using AccessibilityService.
  */
@@ -22,11 +23,11 @@ import kotlinx.coroutines.delay
  * Uses AccessibilityService to perform UI interactions.
  *
  * @param accessibilityServiceProvider Provider for the accessibility service instance
- * @param vuidLookup Function to lookup element by VUID
+ * @param avidLookup Function to lookup element by AVID fingerprint
  */
 class AndroidUIExecutor(
     private val accessibilityServiceProvider: () -> AccessibilityService?,
-    private val vuidLookup: (String) -> AccessibilityNodeInfo? = { null }
+    private val avidLookup: (String) -> AccessibilityNodeInfo? = { null }
 ) : UIExecutor {
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -140,7 +141,33 @@ class AndroidUIExecutor(
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Legacy Text/VUID Actions
+    // AVID-based Actions (primary path for dynamic commands)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    override suspend fun clickByAvid(avid: String): Boolean {
+        // Try provided lookup first (if caller has a cache)
+        var node = avidLookup(avid)
+
+        // Fallback: search accessibility tree by regenerating AVID fingerprints
+        if (node == null) {
+            node = findNodeByAvidSearch(avid)
+        }
+
+        if (node == null) return false
+        return node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+    }
+
+    override suspend fun longClickByAvid(avid: String): Boolean {
+        var node = avidLookup(avid)
+        if (node == null) {
+            node = findNodeByAvidSearch(avid)
+        }
+        if (node == null) return false
+        return node.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Text-based Actions (fallback path)
     // ═══════════════════════════════════════════════════════════════════════════
 
     override suspend fun clickByText(text: String): Boolean {
@@ -148,30 +175,8 @@ class AndroidUIExecutor(
         return node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
     }
 
-    override suspend fun clickByVuid(vuid: String): Boolean {
-        // Try provided lookup first (if caller has a cache)
-        var node = vuidLookup(vuid)
-
-        // Fallback: search accessibility tree by regenerating VUIDs
-        if (node == null) {
-            node = findNodeByVuidSearch(vuid)
-        }
-
-        if (node == null) return false
-        return node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-    }
-
     override suspend fun longClickByText(text: String): Boolean {
         val node = findNodeByText(text) ?: findNodeByDescription(text) ?: return false
-        return node.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
-    }
-
-    override suspend fun longClickByVuid(vuid: String): Boolean {
-        var node = vuidLookup(vuid)
-        if (node == null) {
-            node = findNodeByVuidSearch(vuid)
-        }
-        if (node == null) return false
         return node.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
     }
 
@@ -301,43 +306,44 @@ class AndroidUIExecutor(
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // VUID Search - Find element by regenerating VUID from accessibility tree
+    // AVID Search - Find element by regenerating AVID fingerprint from accessibility tree
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Find a node by searching the accessibility tree and matching VUIDs.
+     * Find a node by searching the accessibility tree and matching AVID fingerprints.
      *
-     * VUIDs are deterministic hashes generated from:
-     * - Package name (first 6 hex chars)
-     * - Type code (single char for element type)
-     * - Element hash (8 hex chars from resourceId/contentDescription/text/bounds)
+     * AVID fingerprints are deterministic hashes generated from:
+     * - TypeCode (3-char code for element type, e.g., BTN, TXT, IMG)
+     * - Element hash (8 hex chars from resourceId/contentDescription/text)
      *
-     * This method regenerates VUIDs for visible elements and finds the match.
+     * Format: {TypeCode}:{hash8} (e.g., "BTN:a3f2e1c9")
      *
-     * @param targetVuid The VUID to search for
+     * This method regenerates fingerprints for visible elements and finds the match.
+     *
+     * @param targetAvid The AVID fingerprint to search for
      * @return AccessibilityNodeInfo if found, null otherwise
      */
-    private fun findNodeByVuidSearch(targetVuid: String): AccessibilityNodeInfo? {
+    private fun findNodeByAvidSearch(targetAvid: String): AccessibilityNodeInfo? {
         val service = accessibilityServiceProvider() ?: return null
         val rootNode = service.rootInActiveWindow ?: return null
         val packageName = rootNode.packageName?.toString() ?: return null
 
-        return findNodeByVuidRecursive(rootNode, targetVuid, packageName)
+        return findNodeByAvidRecursive(rootNode, targetAvid, packageName)
     }
 
     /**
-     * Recursively search for node matching the target VUID.
+     * Recursively search for node matching the target AVID fingerprint.
      */
-    private fun findNodeByVuidRecursive(
+    private fun findNodeByAvidRecursive(
         node: AccessibilityNodeInfo,
-        targetVuid: String,
+        targetAvid: String,
         packageName: String
     ): AccessibilityNodeInfo? {
         // Only check actionable elements (same filter as command generation)
         if (node.isClickable || node.isLongClickable || node.isScrollable) {
-            // Generate VUID for this node using same algorithm as CommandGenerator
-            val nodeVuid = generateVuidForNode(node, packageName)
-            if (nodeVuid == targetVuid) {
+            // Generate AVID fingerprint for this node using same algorithm as CommandGenerator
+            val nodeAvid = generateAvidForNode(node, packageName)
+            if (nodeAvid == targetAvid) {
                 return node
             }
         }
@@ -345,7 +351,7 @@ class AndroidUIExecutor(
         // Recurse into children
         for (i in 0 until node.childCount) {
             node.getChild(i)?.let { child ->
-                val result = findNodeByVuidRecursive(child, targetVuid, packageName)
+                val result = findNodeByAvidRecursive(child, targetAvid, packageName)
                 if (result != null) return result
             }
         }
@@ -354,12 +360,12 @@ class AndroidUIExecutor(
     }
 
     /**
-     * Generate element fingerprint for an AccessibilityNodeInfo using same algorithm as CommandGenerator.
+     * Generate AVID fingerprint for an AccessibilityNodeInfo using ElementFingerprint.
      *
      * Fingerprint format: {TypeCode}:{hash8}
      * Example: BTN:a3f2e1c9
      */
-    private fun generateVuidForNode(node: AccessibilityNodeInfo, packageName: String): String {
+    private fun generateAvidForNode(node: AccessibilityNodeInfo, packageName: String): String {
         val className = node.className?.toString() ?: ""
         val resourceId = node.viewIdResourceName ?: ""
         val contentDescription = node.contentDescription?.toString() ?: ""

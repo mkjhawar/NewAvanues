@@ -31,7 +31,7 @@ object DynamicPackageConfig {
     private const val PREF_CUSTOM_PACKAGES = "custom_window_change_packages"
 
     /**
-     * Default packages for window content change events
+     * Default packages for window content change events (LEGACY - now using exclusion list)
      *
      * These packages typically have dynamic content that benefits from
      * accessibility event monitoring.
@@ -43,6 +43,17 @@ object DynamicPackageConfig {
         // Standard Android packages
         "com.android.systemui",
         "com.android.settings"
+    )
+
+    /**
+     * Excluded packages that should NOT receive overlay/monitoring
+     *
+     * This is an exclusion list - ALL packages are monitored EXCEPT these.
+     * This enables voice commands in all apps by default.
+     */
+    private val EXCLUDED_PACKAGES = setOf(
+        // Only exclude packages that cause issues with overlays
+        "com.android.systemui"  // System UI overlays can cause conflicts
     )
 
     /**
@@ -160,11 +171,34 @@ object DynamicPackageConfig {
     /**
      * Check if a package should monitor window content change events
      *
+     * UPDATED: Now uses exclusion list approach - ALL packages are monitored
+     * EXCEPT those in the exclusion list. This enables voice commands in all apps.
+     *
      * @param context Android context
      * @param packageName Package name to check
      * @return true if package should be monitored
      */
     fun shouldMonitorPackage(context: Context, packageName: String): Boolean {
-        return getValidWindowChangePackages(context).contains(packageName)
+        // NEW: Use exclusion list approach - monitor ALL packages except excluded ones
+        // This enables voice commands and overlays in all apps by default
+        return !isExcludedPackage(packageName)
     }
+
+    /**
+     * Check if a package is explicitly excluded from monitoring
+     *
+     * Only packages that cause issues with overlays should be excluded.
+     * All other packages will receive voice command support.
+     *
+     * @param packageName Package name to check
+     * @return true if package should NOT be monitored (is excluded)
+     */
+    fun isExcludedPackage(packageName: String): Boolean {
+        return EXCLUDED_PACKAGES.contains(packageName)
+    }
+
+    /**
+     * Get the list of excluded packages (for debugging/settings UI)
+     */
+    fun getExcludedPackages(): Set<String> = EXCLUDED_PACKAGES
 }

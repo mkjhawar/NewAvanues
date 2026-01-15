@@ -1,11 +1,12 @@
 /**
  * IElementRegistrar.kt - Element registration interface
  *
- * Defines the contract for registering UI elements with UUIDs and aliases.
- * Platform implementations handle the actual UUID generation and persistence.
+ * Defines the contract for registering UI elements with AVIDs and aliases.
+ * Platform implementations handle the actual AVID generation and persistence.
  *
  * @author Manoj Jhawar
  * @since 2026-01-15
+ * Updated: 2026-01-15 - Migrated from UUID to AVID nomenclature
  */
 
 package com.augmentalis.voiceoscoreng.exploration
@@ -27,7 +28,7 @@ data class RegistrationResult(
  * Interface for element registration during exploration.
  *
  * Implementations handle:
- * - UUID generation for elements
+ * - AVID generation for elements
  * - Alias generation and deduplication
  * - Voice command generation
  * - Persistence to database
@@ -35,25 +36,34 @@ data class RegistrationResult(
 interface IElementRegistrar {
 
     /**
-     * Pre-generate UUIDs for elements (before clicking).
+     * Pre-generate AVIDs for elements (before clicking).
      *
-     * This is called before the click loop to ensure UUIDs are available
+     * This is called before the click loop to ensure AVIDs are available
      * while nodes are still fresh. Does NOT persist to database.
      *
-     * @param elements Elements to generate UUIDs for
+     * @param elements Elements to generate AVIDs for
      * @param packageName Target app package name
-     * @return Elements with UUIDs populated
+     * @return Elements with AVIDs populated
      */
-    suspend fun preGenerateUuids(
+    suspend fun preGenerateAvids(
         elements: List<ElementInfo>,
         packageName: String
     ): List<ElementInfo>
 
     /**
+     * Legacy method - use preGenerateAvids instead.
+     */
+    @Deprecated("Use preGenerateAvids instead", ReplaceWith("preGenerateAvids(elements, packageName)"))
+    suspend fun preGenerateUuids(
+        elements: List<ElementInfo>,
+        packageName: String
+    ): List<ElementInfo> = preGenerateAvids(elements, packageName)
+
+    /**
      * Register elements with batch deduplication.
      *
      * This is called after exploring a screen to:
-     * 1. Generate UUIDs
+     * 1. Generate AVIDs
      * 2. Create and deduplicate aliases
      * 3. Generate voice commands
      * 4. Persist to database

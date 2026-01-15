@@ -95,7 +95,7 @@ class DFSExplorer(
         val rootElements = extractClickableElements(rootNode, packageName)
 
         // Pre-generate UUIDs for root elements
-        val rootElementsWithUuids = registrar.preGenerateUuids(rootElements, packageName)
+        val rootElementsWithUuids = registrar.preGenerateAvids(rootElements, packageName)
 
         val rootFrame = ExplorationFrame(
             screenHash = rootScreenHash,
@@ -112,13 +112,13 @@ class DFSExplorer(
         // Register clickable elements (exclude critical dangerous)
         val criticalElements = rootElementsWithUuids.filter { dangerDetector.isCriticalDangerous(it) }
         val clickableElements = rootElementsWithUuids.filter { !dangerDetector.isCriticalDangerous(it) }
-        val clickableUuids = clickableElements.mapNotNull { it.uuid }
+        val clickableAvids = clickableElements.mapNotNull { it.avid }
 
-        cumulativeTracking.addAllDiscovered(clickableUuids)
+        cumulativeTracking.addAllDiscovered(clickableAvids)
 
         // Track blocked VUIDs separately
-        val blockedUuids = criticalElements.mapNotNull { it.uuid }
-        cumulativeTracking.addAllBlocked(blockedUuids)
+        val blockedAvids = criticalElements.mapNotNull { it.avid }
+        cumulativeTracking.addAllBlocked(blockedAvids)
 
         // Notify debug callback
         debugCallback?.onExplorationStarted(packageName)
@@ -245,9 +245,9 @@ class DFSExplorer(
                     consecutiveFailures = 0
 
                     // Track clicked VUID
-                    element.uuid?.let { vuid ->
-                        cumulativeTracking.addClicked(vuid)
-                        debugCallback?.onElementClicked(stableId, screenStartHash, vuid)
+                    element.avid?.let { avid ->
+                        cumulativeTracking.addClicked(avid)
+                        debugCallback?.onElementClicked(stableId, screenStartHash, avid)
                     }
 
                     // Wait for UI settle
@@ -318,7 +318,7 @@ class DFSExplorer(
         // Get fresh root and elements
         val rootNode = clicker.getRootNode() ?: return false
         val newElements = extractClickableElements(rootNode, packageName)
-        val newElementsWithUuids = registrar.preGenerateUuids(newElements, packageName)
+        val newElementsWithUuids = registrar.preGenerateAvids(newElements, packageName)
 
         val newFrame = ExplorationFrame(
             screenHash = newScreenHash,
@@ -333,11 +333,11 @@ class DFSExplorer(
         state.visitedScreens.add(newScreenHash)
 
         // Register clickable VUIDs
-        val clickableUuids = newElementsWithUuids
+        val clickableAvids = newElementsWithUuids
             .filter { !dangerDetector.isCriticalDangerous(it) }
-            .mapNotNull { it.uuid }
+            .mapNotNull { it.avid }
 
-        cumulativeTracking.addAllDiscovered(clickableUuids)
+        cumulativeTracking.addAllDiscovered(clickableAvids)
 
         debugCallback?.onStackPush(newScreenHash, newFrame.depth, newElementsWithUuids.size)
 
@@ -399,37 +399,92 @@ class DFSExplorer(
         return elements
     }
 
+    /**
+     * Recursively extract elements from accessibility tree with list index tracking.
+     *
+     * @param node Current accessibility node
+     * @param elements List to accumulate elements into
+     * @param packageName Target package name
+     * @param parentIsListContainer Whether the parent is a list container (RecyclerView, ListView, etc.)
+     * @param indexInParent Index of this node in parent's children (for list index)
+     * @param parentContainerType Type of parent container (for isInDynamicContainer)
+     */
     private fun extractElementsRecursive(
         node: AccessibilityNodeInfo,
         elements: MutableList<ElementInfo>,
-        packageName: String
+        packageName: String,
+        parentIsListContainer: Boolean = false,
+        indexInParent: Int = -1,
+        parentContainerType: String = ""
     ) {
         val rect = Rect()
         node.getBoundsInScreen(rect)
 
         // Convert Android Rect to KMP Bounds
         val bounds = Bounds(rect.left, rect.top, rect.right, rect.bottom)
+        val className = node.className?.toString() ?: "Unknown"
+
+        // Detect if this node is a list container
+        val isListContainer = isListContainerClass(className)
+        val containerType = if (isListContainer) className else parentContainerType
+
+        // Determine listIndex for this element
+        // Only set listIndex for direct children of list containers
+        val listIndex = when {
+            parentIsListContainer && indexInParent >= 0 -> indexInParent
+            else -> -1
+        }
+
+        // Determine if element is in a dynamic container
+        val isInDynamicContainer = parentIsListContainer || isListContainer || parentContainerType.isNotEmpty()
 
         val element = ElementInfo(
             text = node.text?.toString() ?: "",
             contentDescription = node.contentDescription?.toString() ?: "",
-            className = node.className?.toString() ?: "Unknown",
+            className = className,
             resourceId = node.viewIdResourceName ?: "",
             bounds = bounds,
             isClickable = node.isClickable,
             isEnabled = node.isEnabled,
             isScrollable = node.isScrollable,
+            isLongClickable = node.isLongClickable,
             packageName = packageName,
-            node = node
+            node = node,
+            listIndex = listIndex,
+            isInDynamicContainer = isInDynamicContainer,
+            containerType = containerType
         )
 
         elements.add(element)
         metrics?.onElementDetected()
 
+        // Recurse into children
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            extractElementsRecursive(child, elements, packageName)
+            extractElementsRecursive(
+                node = child,
+                elements = elements,
+                packageName = packageName,
+                parentIsListContainer = isListContainer,
+                indexInParent = i,
+                parentContainerType = containerType
+            )
         }
+    }
+
+    /**
+     * Check if a class name represents a list container (RecyclerView, ListView, etc.)
+     */
+    private fun isListContainerClass(className: String): Boolean {
+        val lowerName = className.lowercase()
+        return lowerName.contains("recyclerview") ||
+               lowerName.contains("listview") ||
+               lowerName.contains("gridview") ||
+               lowerName.contains("viewpager") ||
+               // Compose lists
+               lowerName.contains("lazycolumn") ||
+               lowerName.contains("lazyrow") ||
+               lowerName.contains("lazygrid")
     }
 
     private fun getActivityName(node: AccessibilityNodeInfo): String? {

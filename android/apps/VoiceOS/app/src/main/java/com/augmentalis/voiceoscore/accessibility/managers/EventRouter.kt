@@ -138,6 +138,31 @@ class EventRouter(
         windowStateChangeListener = listener
     }
 
+    // Screen change callback for overlay clearing
+    private var screenChangeCallback: ScreenChangeCallback? = null
+
+    /**
+     * Callback interface for screen change events (overlay clearing)
+     */
+    interface ScreenChangeCallback {
+        /**
+         * Called when screen changes (app switch, activity change)
+         * Use this to clear stale overlay badges
+         */
+        fun onScreenChanged()
+    }
+
+    /**
+     * Set screen change callback for overlay management
+     *
+     * This callback is invoked on TYPE_WINDOW_STATE_CHANGED to allow
+     * overlay managers to clear stale badges when the screen changes.
+     */
+    fun setScreenChangeCallback(callback: ScreenChangeCallback?) {
+        screenChangeCallback = callback
+        Log.d(TAG, "Screen change callback ${if (callback != null) "set" else "cleared"}")
+    }
+
     /**
      * Set LearnApp initializer callback
      * Called on first event to initialize LearnApp after FLAG_RETRIEVE_INTERACTIVE_WINDOWS
@@ -308,6 +333,17 @@ class EventRouter(
      * Handle TYPE_WINDOW_STATE_CHANGED events
      */
     private fun handleWindowStateChanged(event: AccessibilityEvent, packageName: String) {
+        // FIRST: Clear overlays on screen change (fixes stale badge issue)
+        // This must happen BEFORE updating UI cache to ensure clean slate
+        commandScope.launch {
+            try {
+                screenChangeCallback?.onScreenChanged()
+                Log.d(TAG, "Screen change callback invoked for overlay clearing")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in screen change callback", e)
+            }
+        }
+
         // Notify window state change listener (ScreenActivityDetector)
         commandScope.launch {
             try {

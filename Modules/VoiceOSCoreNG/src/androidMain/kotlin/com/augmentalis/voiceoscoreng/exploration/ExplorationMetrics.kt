@@ -1,11 +1,12 @@
 /**
  * ExplorationMetrics.kt - Android exploration metrics
  *
- * Manages VUID creation metrics, debug overlay updates,
+ * Manages AVID creation metrics, debug overlay updates,
  * and exploration statistics collection.
  *
  * @author Manoj Jhawar
  * @since 2026-01-15
+ * Updated: 2026-01-15 - Migrated from VUID to AVID nomenclature
  */
 
 package com.augmentalis.voiceoscoreng.exploration
@@ -20,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * Tracks:
  * - Element detection counts
- * - VUID creation counts
+ * - AVID creation counts
  * - Filter reasons
  *
  * @property context Android context for overlays
@@ -35,7 +36,7 @@ class ExplorationMetrics(
     private var sessionStartTime: Long = 0L
 
     private val elementsDetected = AtomicInteger(0)
-    private val vuidsCreated = AtomicInteger(0)
+    private val avidsCreated = AtomicInteger(0)
     private val elementsFiltered = AtomicInteger(0)
     private val filterReasons = mutableMapOf<String, Int>()
 
@@ -45,7 +46,7 @@ class ExplorationMetrics(
 
         // Reset counters
         elementsDetected.set(0)
-        vuidsCreated.set(0)
+        avidsCreated.set(0)
         elementsFiltered.set(0)
         filterReasons.clear()
 
@@ -56,9 +57,12 @@ class ExplorationMetrics(
         elementsDetected.incrementAndGet()
     }
 
-    override fun onVUIDCreated() {
-        vuidsCreated.incrementAndGet()
+    override fun onAvidCreated() {
+        avidsCreated.incrementAndGet()
     }
+
+    @Deprecated("Use onAvidCreated instead", ReplaceWith("onAvidCreated()"))
+    override fun onVUIDCreated() = onAvidCreated()
 
     override fun onElementFiltered(element: ElementInfo, reason: String) {
         elementsFiltered.incrementAndGet()
@@ -81,7 +85,7 @@ class ExplorationMetrics(
             appendLine("Package: $packageName")
             appendLine("Duration: ${duration / 1000}s")
             appendLine("Elements Detected: ${elementsDetected.get()}")
-            appendLine("VUIDs Created: ${vuidsCreated.get()}")
+            appendLine("AVIDs Created: ${avidsCreated.get()}")
             appendLine("Elements Filtered: ${elementsFiltered.get()}")
             if (filterReasons.isNotEmpty()) {
                 appendLine("Filter Reasons:")
@@ -113,7 +117,7 @@ class ExplorationMetrics(
             packageName = currentPackage ?: "",
             durationMs = if (sessionStartTime > 0) System.currentTimeMillis() - sessionStartTime else 0,
             elementsDetected = elementsDetected.get(),
-            vuidsCreated = vuidsCreated.get(),
+            avidsCreated = avidsCreated.get(),
             elementsFiltered = elementsFiltered.get(),
             filterReasons = filterReasons.toMap()
         )
@@ -131,7 +135,7 @@ data class MetricsSnapshot(
     val packageName: String,
     val durationMs: Long,
     val elementsDetected: Int,
-    val vuidsCreated: Int,
+    val avidsCreated: Int,
     val elementsFiltered: Int,
     val filterReasons: Map<String, Int>
 )

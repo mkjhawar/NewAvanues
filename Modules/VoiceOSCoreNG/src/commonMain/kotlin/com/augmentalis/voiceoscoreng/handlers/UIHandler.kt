@@ -5,15 +5,16 @@
  * Author: VOS4 Development Team
  * Created: 2026-01-06
  * Updated: 2026-01-08 - Added disambiguation for duplicate elements
- * Updated: 2026-01-08 - Integrated with dynamic command system (VUID priority)
+ * Updated: 2026-01-08 - Integrated with dynamic command system (AVID priority)
+ * Updated: 2026-01-15 - Migrated from VUID to AVID nomenclature
  *
  * KMP handler for UI element interactions (click, tap, press, etc.).
  *
  * ## Execution Priority:
  *
- * 1. **VUID path (fastest)**: If command.targetVuid is set (from dynamic commands),
- *    execute directly via clickByVuid() - no tree search needed.
- * 2. **Text search path**: If no VUID, fall back to UI tree search with disambiguation.
+ * 1. **AVID path (fastest)**: If command.targetAvid is set (from dynamic commands),
+ *    execute directly via clickByAvid() - no tree search needed.
+ * 2. **Text search path**: If no AVID, fall back to UI tree search with disambiguation.
  *
  * ## Disambiguation Flow
  *
@@ -96,13 +97,13 @@ class UIHandler(
                     .removePrefix("press ")
                     .trim()
 
-                // Check if target is a VUID (direct reference, no disambiguation needed)
-                val vuid = command.targetVuid ?: extractVuid(target)
-                if (vuid != null) {
-                    if (executor.clickByVuid(vuid)) {
+                // Check if target is an AVID (direct reference, no disambiguation needed)
+                val avid = command.targetAvid ?: extractAvid(target)
+                if (avid != null) {
+                    if (executor.clickByAvid(avid)) {
                         HandlerResult.success("Clicked element")
                     } else {
-                        HandlerResult.failure("Could not click element with VUID: $vuid")
+                        HandlerResult.failure("Could not click element with AVID: $avid")
                     }
                 } else {
                     // Find matching elements for disambiguation
@@ -118,12 +119,12 @@ class UIHandler(
                     .removePrefix("long press ")
                     .trim()
 
-                val vuid = command.targetVuid ?: extractVuid(target)
-                if (vuid != null) {
-                    if (executor.longClickByVuid(vuid)) {
+                val avid = command.targetAvid ?: extractAvid(target)
+                if (avid != null) {
+                    if (executor.longClickByAvid(avid)) {
                         HandlerResult.success("Long clicked element")
                     } else {
-                        HandlerResult.failure("Could not long click element with VUID: $vuid")
+                        HandlerResult.failure("Could not long click element with AVID: $avid")
                     }
                 } else if (executor.longClickByText(target)) {
                     HandlerResult.success("Long clicked $target")
@@ -218,12 +219,17 @@ class UIHandler(
     }
 
     /**
-     * Extract VUID from target string.
-     * VUIDs start with "vuid:" or are 8-character hex strings.
+     * Extract AVID fingerprint from target string.
+     * AVIDs are in format "{TypeCode}:{hash8}" (e.g., "BTN:a3f2e1c9")
+     * or legacy formats like "avid:" prefix or 8-character hex strings.
      */
-    private fun extractVuid(target: String): String? {
+    private fun extractAvid(target: String): String? {
         return when {
-            target.startsWith("vuid:") -> target.removePrefix("vuid:")
+            // New AVID format: BTN:a3f2e1c9
+            target.matches(Regex("^[A-Z]{3}:[a-f0-9]{8}$")) -> target
+            // Legacy prefix format
+            target.startsWith("avid:") -> target.removePrefix("avid:")
+            // Legacy 8-char hex format
             target.matches(Regex("^[a-f0-9]{8}$")) -> target
             else -> null
         }
@@ -414,13 +420,26 @@ interface UIExecutor {
     suspend fun doubleClickElement(element: ElementInfo): Boolean
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Legacy Text/VUID Actions (kept for compatibility)
+    // AVID-based Actions (primary path for dynamic commands)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Click element by AVID fingerprint.
+     * AVID format: {TypeCode}:{hash8} (e.g., "BTN:a3f2e1c9")
+     */
+    suspend fun clickByAvid(avid: String): Boolean
+
+    /**
+     * Long click element by AVID fingerprint.
+     */
+    suspend fun longClickByAvid(avid: String): Boolean
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Text-based Actions (fallback path)
     // ═══════════════════════════════════════════════════════════════════════════
 
     suspend fun clickByText(text: String): Boolean
-    suspend fun clickByVuid(vuid: String): Boolean
     suspend fun longClickByText(text: String): Boolean
-    suspend fun longClickByVuid(vuid: String): Boolean
     suspend fun doubleClickByText(text: String): Boolean
     suspend fun expand(target: String): Boolean
     suspend fun collapse(target: String): Boolean

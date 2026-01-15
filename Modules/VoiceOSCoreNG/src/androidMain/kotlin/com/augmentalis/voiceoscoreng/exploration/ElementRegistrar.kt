@@ -1,11 +1,12 @@
 /**
  * ElementRegistrar.kt - Android element registration
  *
- * Handles UUID generation, alias management, and voice command creation
+ * Handles AVID generation, alias management, and voice command creation
  * for UI elements discovered during exploration.
  *
  * @author Manoj Jhawar
  * @since 2026-01-15
+ * Updated: 2026-01-15 - Migrated from UUID to AVID nomenclature
  */
 
 package com.augmentalis.voiceoscoreng.exploration
@@ -19,7 +20,7 @@ import com.augmentalis.voiceoscoreng.common.ElementInfo
  * Android implementation of element registration.
  *
  * Handles:
- * - UUID generation via third-party generator
+ * - AVID generation via AvidGenerator
  * - Alias generation and deduplication
  * - Voice command generation via LearnAppCore
  *
@@ -33,16 +34,22 @@ class ElementRegistrar(
 
     private val genericAliasCounters = mutableMapOf<String, Int>()
 
-    override suspend fun preGenerateUuids(
+    override suspend fun preGenerateAvids(
         elements: List<ElementInfo>,
         packageName: String
     ): List<ElementInfo> {
         // Uses AvidGenerator for consistent element IDs across the Avanues ecosystem
         return elements.map { element ->
-            val uuid = generateSimpleUuid(element, packageName)
-            element.copy(uuid = uuid)
+            val avid = generateSimpleAvid(element, packageName)
+            element.copy(avid = avid)
         }
     }
+
+    @Deprecated("Use preGenerateAvids instead", ReplaceWith("preGenerateAvids(elements, packageName)"))
+    override suspend fun preGenerateUuids(
+        elements: List<ElementInfo>,
+        packageName: String
+    ): List<ElementInfo> = preGenerateAvids(elements, packageName)
 
     override suspend fun registerElements(
         elements: List<ElementInfo>,
@@ -65,8 +72,8 @@ class ElementRegistrar(
             }
 
             try {
-                // Generate UUID if not already present
-                val uuid = element.uuid ?: generateSimpleUuid(element, packageName)
+                // Generate AVID if not already present
+                val avid = element.avid ?: generateSimpleAvid(element, packageName)
 
                 // Generate alias
                 val alias = generateAliasFromElement(element)
@@ -157,7 +164,7 @@ class ElementRegistrar(
         genericAliasCounters.clear()
     }
 
-    private fun generateSimpleUuid(element: ElementInfo, packageName: String): String {
+    private fun generateSimpleAvid(element: ElementInfo, packageName: String): String {
         // Use AVID generator for consistent element IDs across the ecosystem
         return AvidGenerator.generateElementId()
     }

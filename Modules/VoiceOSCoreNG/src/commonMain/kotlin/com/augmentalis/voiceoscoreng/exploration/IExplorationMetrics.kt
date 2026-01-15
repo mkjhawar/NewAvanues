@@ -6,6 +6,7 @@
  *
  * @author Manoj Jhawar
  * @since 2026-01-15
+ * Updated: 2026-01-15 - Migrated from VUID to AVID nomenclature
  */
 
 package com.augmentalis.voiceoscoreng.exploration
@@ -17,7 +18,7 @@ import com.augmentalis.voiceoscoreng.common.ElementInfo
  *
  * Implementations track:
  * - Element detection counts
- * - VUID creation counts
+ * - AVID creation counts
  * - Filter reasons
  * - Debug overlay display
  */
@@ -36,9 +37,15 @@ interface IExplorationMetrics {
     fun onElementDetected()
 
     /**
-     * Track VUID creation event.
+     * Track AVID creation event.
      */
-    fun onVUIDCreated()
+    fun onAvidCreated()
+
+    /**
+     * Legacy method - use onAvidCreated instead.
+     */
+    @Deprecated("Use onAvidCreated instead", ReplaceWith("onAvidCreated()"))
+    fun onVUIDCreated() = onAvidCreated()
 
     /**
      * Track element filtering event.

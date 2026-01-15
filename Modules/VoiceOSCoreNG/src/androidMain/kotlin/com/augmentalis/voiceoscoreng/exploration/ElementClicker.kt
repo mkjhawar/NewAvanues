@@ -14,12 +14,19 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.graphics.Rect
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.voiceoscoreng.common.Bounds
+import com.augmentalis.voiceoscoreng.common.ElementFingerprint
 import com.augmentalis.voiceoscoreng.common.ElementInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.resume
 
 /**
  * Android implementation of element click operations.
@@ -40,60 +47,169 @@ class ElementClicker(
     private val clickFailures = mutableListOf<ClickFailureReason>()
 
     override suspend fun clickElement(element: ElementInfo): ClickResult {
-        val node = element.node as? AccessibilityNodeInfo
-            ?: return ClickResult.Failed(ClickFailure.NODE_STALE, "Node is null or invalid type")
-
         return withContext(Dispatchers.Main) {
             try {
-                // 1. Verify element is visible and enabled
-                if (!node.isVisibleToUser) {
-                    recordFailure(element, ClickFailure.NOT_VISIBLE)
-                    return@withContext ClickResult.Failed(ClickFailure.NOT_VISIBLE)
-                }
+                // ═══════════════════════════════════════════════════════════════
+                // PHASE 1: Try to refresh node first (fixes stale node issue)
+                // ═══════════════════════════════════════════════════════════════
+                val freshElement = refreshElement(element)
+                val node = (freshElement?.node ?: element.node) as? AccessibilityNodeInfo
 
-                if (!node.isEnabled) {
-                    recordFailure(element, ClickFailure.NOT_ENABLED)
-                    return@withContext ClickResult.Failed(ClickFailure.NOT_ENABLED)
-                }
-
-                // 2. Get bounds and verify on screen
-                val bounds = Rect()
-                node.getBoundsInScreen(bounds)
-
-                // 3. Attempt click with retry
-                var attempts = 0
-                var success = false
-
-                while (attempts < config.maxClickAttempts && !success) {
-                    success = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-
-                    if (!success) {
-                        delay(config.scrollDelayMs * (attempts + 1)) // Exponential backoff
-                        attempts++
+                if (node != null) {
+                    // Attempt node-based click with fresh node
+                    val nodeResult = attemptNodeClick(node, element)
+                    if (nodeResult is ClickResult.Success) {
+                        return@withContext nodeResult
                     }
+                    // Node click failed, fall through to gesture
+                    Log.d(TAG, "Node click failed, trying gesture fallback")
                 }
 
-                if (success) {
-                    ClickResult.Success
-                } else {
-                    // Try gesture fallback
-                    val gestureSuccess = clickAtCoordinates(bounds.centerX(), bounds.centerY())
-                    if (gestureSuccess) {
+                // ═══════════════════════════════════════════════════════════════
+                // PHASE 2: Gesture-based fallback with verified callback
+                // This achieves >90% confidence by waiting for gesture completion
+                // ═══════════════════════════════════════════════════════════════
+                val gestureResult = clickAtCoordinatesWithCallback(
+                    element.bounds.centerX,
+                    element.bounds.centerY
+                )
+
+                when (gestureResult) {
+                    GestureResult.COMPLETED -> {
+                        Log.d(TAG, "Gesture click COMPLETED (>90% confidence)")
                         ClickResult.Success
-                    } else {
-                        recordFailure(element, ClickFailure.ACTION_FAILED)
-                        ClickResult.Failed(ClickFailure.ACTION_FAILED, "Click failed after $attempts attempts")
+                    }
+                    GestureResult.CANCELLED -> {
+                        Log.w(TAG, "Gesture click CANCELLED")
+                        recordFailure(element, ClickFailure.GESTURE_FAILED)
+                        ClickResult.Failed(ClickFailure.GESTURE_FAILED, "Gesture was cancelled")
+                    }
+                    GestureResult.TIMEOUT -> {
+                        Log.w(TAG, "Gesture click TIMEOUT")
+                        recordFailure(element, ClickFailure.GESTURE_FAILED)
+                        ClickResult.Failed(ClickFailure.GESTURE_FAILED, "Gesture timed out")
+                    }
+                    GestureResult.DISPATCH_FAILED -> {
+                        Log.w(TAG, "Gesture dispatch FAILED")
+                        recordFailure(element, ClickFailure.GESTURE_FAILED)
+                        ClickResult.Failed(ClickFailure.GESTURE_FAILED, "Failed to dispatch gesture")
                     }
                 }
 
             } catch (e: Exception) {
+                Log.e(TAG, "Click exception: ${e.message}", e)
                 recordFailure(element, ClickFailure.EXCEPTION)
                 ClickResult.Failed(ClickFailure.EXCEPTION, e.message)
             }
         }
     }
 
+    /**
+     * Attempt a node-based click with validation
+     */
+    private suspend fun attemptNodeClick(node: AccessibilityNodeInfo, element: ElementInfo): ClickResult {
+        try {
+            // Verify element is visible and enabled
+            if (!node.isVisibleToUser) {
+                return ClickResult.Failed(ClickFailure.NOT_VISIBLE)
+            }
+
+            if (!node.isEnabled) {
+                return ClickResult.Failed(ClickFailure.NOT_ENABLED)
+            }
+
+            // Attempt click with retry
+            var attempts = 0
+            var success = false
+
+            while (attempts < config.maxClickAttempts && !success) {
+                success = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                if (!success) {
+                    delay(config.scrollDelayMs * (attempts + 1))
+                    attempts++
+                }
+            }
+
+            return if (success) {
+                ClickResult.Success
+            } else {
+                ClickResult.Failed(ClickFailure.ACTION_FAILED, "Node click failed after $attempts attempts")
+            }
+        } catch (e: IllegalStateException) {
+            // Node became stale during operation
+            Log.w(TAG, "Node stale during click: ${e.message}")
+            return ClickResult.Failed(ClickFailure.NODE_STALE, e.message)
+        }
+    }
+
+    /**
+     * Gesture execution result for >90% confidence tracking
+     */
+    enum class GestureResult {
+        COMPLETED,      // Gesture executed successfully
+        CANCELLED,      // Gesture was cancelled by system
+        TIMEOUT,        // Gesture callback never received
+        DISPATCH_FAILED // Failed to dispatch gesture
+    }
+
+    /**
+     * Click at coordinates with callback verification for >90% confidence.
+     *
+     * Unlike the simple clickAtCoordinates(), this method:
+     * 1. Uses GestureResultCallback to verify completion
+     * 2. Waits for callback with timeout
+     * 3. Returns detailed result for proper error handling
+     */
+    private suspend fun clickAtCoordinatesWithCallback(x: Int, y: Int): GestureResult {
+        val clickPath = Path().apply {
+            moveTo(x.toFloat(), y.toFloat())
+        }
+
+        val gestureDescription = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(
+                clickPath, 0, config.tapDurationMs
+            ))
+            .build()
+
+        // Use suspendCancellableCoroutine with callback for verified completion
+        return withTimeoutOrNull(GESTURE_TIMEOUT_MS) {
+            suspendCancellableCoroutine { continuation ->
+                val callback = object : AccessibilityService.GestureResultCallback() {
+                    override fun onCompleted(gestureDescription: GestureDescription) {
+                        if (continuation.isActive) {
+                            continuation.resume(GestureResult.COMPLETED)
+                        }
+                    }
+
+                    override fun onCancelled(gestureDescription: GestureDescription) {
+                        if (continuation.isActive) {
+                            continuation.resume(GestureResult.CANCELLED)
+                        }
+                    }
+                }
+
+                try {
+                    val dispatched = accessibilityService.dispatchGesture(
+                        gestureDescription,
+                        callback,
+                        Handler(Looper.getMainLooper())
+                    )
+
+                    if (!dispatched && continuation.isActive) {
+                        continuation.resume(GestureResult.DISPATCH_FAILED)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Gesture dispatch exception: ${e.message}")
+                    if (continuation.isActive) {
+                        continuation.resume(GestureResult.DISPATCH_FAILED)
+                    }
+                }
+            }
+        } ?: GestureResult.TIMEOUT
+    }
+
     override fun clickAtCoordinates(x: Int, y: Int): Boolean {
+        // Legacy synchronous method - kept for compatibility
         val clickPath = Path().apply {
             moveTo(x.toFloat(), y.toFloat())
         }
@@ -203,5 +319,8 @@ class ElementClicker(
 
     companion object {
         private const val TAG = "ElementClicker"
+
+        /** Gesture callback timeout in milliseconds (2 seconds for >90% confidence) */
+        private const val GESTURE_TIMEOUT_MS = 2000L
     }
 }

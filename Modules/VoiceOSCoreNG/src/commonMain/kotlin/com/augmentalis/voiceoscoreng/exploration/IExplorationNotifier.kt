@@ -6,6 +6,7 @@
  *
  * @author Manoj Jhawar
  * @since 2026-01-15
+ * Updated: 2026-01-15 - Migrated from UUID to AVID nomenclature
  */
 
 package com.augmentalis.voiceoscoreng.exploration
@@ -39,11 +40,11 @@ interface IExplorationNotifier {
      * Shows notification when an element has no metadata (text/contentDesc/resourceId)
      * and a generic alias was assigned.
      *
-     * @param uuid The UUID of the element
+     * @param avid The AVID of the element
      * @param genericAlias The generic alias that was assigned
      * @param element The element info for display purposes
      */
-    fun notifyGenericAlias(uuid: String, genericAlias: String, element: ElementInfo)
+    fun notifyGenericAlias(avid: String, genericAlias: String, element: ElementInfo)
 
     /**
      * Notify user about exploration progress.

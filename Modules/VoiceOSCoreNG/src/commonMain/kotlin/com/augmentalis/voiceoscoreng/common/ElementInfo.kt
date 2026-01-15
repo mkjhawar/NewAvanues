@@ -59,8 +59,8 @@ data class ElementInfo(
     val isScrollable: Boolean = false,
     val isEnabled: Boolean = true,
     val packageName: String = "",
-    // Voice UUID (for tracking across sessions)
-    val uuid: String? = null,
+    // AVID fingerprint for tracking across sessions (format: {TypeCode}:{hash8})
+    val avid: String? = null,
     // Platform-specific node reference (Any? for KMP compatibility)
     val node: Any? = null,
     // Compose semantics support (P2)
@@ -74,6 +74,12 @@ data class ElementInfo(
     val containerType: String = "",           // Container class (RecyclerView, ListView, etc.)
     val listIndex: Int = -1                   // Position in list (-1 if not in list)
 ) {
+    /**
+     * Legacy alias for avid (deprecated, use avid directly).
+     */
+    @Deprecated("Use avid instead", ReplaceWith("avid"))
+    val uuid: String? get() = avid
+
     /**
      * Generate a stable identifier for this element across scrapes.
      * Uses structural properties that don't change (class, resourceId, position).
