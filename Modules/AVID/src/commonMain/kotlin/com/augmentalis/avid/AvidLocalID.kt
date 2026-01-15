@@ -30,6 +30,8 @@
  */
 package com.augmentalis.avid
 
+import kotlinx.atomicfu.atomic
+
 /**
  * Local AVID generator for pending-sync identifiers
  *
@@ -41,9 +43,8 @@ object AvidLocalID {
     private const val GLOBAL_PREFIX = "AVID"
     private const val SEQUENCE_PADDING = 6
 
-    // Thread-safe sequence counter
-    private var sequence: Long = 0L
-    private val sequenceLock = Any()
+    // Thread-safe atomic sequence counter
+    private val sequence = atomic(0L)
 
     // Current platform (set by platform-specific initialization)
     private var currentPlatform: Platform = Platform.ANDROID
@@ -76,7 +77,7 @@ object AvidLocalID {
      * @return AVIDL string (e.g., "AVIDL-A-000047")
      */
     fun generate(platform: Platform, seq: Long? = null): String {
-        val seqNum = seq ?: synchronized(sequenceLock) { ++sequence }
+        val seqNum = seq ?: sequence.incrementAndGet()
         val paddedSeq = seqNum.toString().padStart(SEQUENCE_PADDING, '0')
         return "$PREFIX-${platform.code}-$paddedSeq"
     }
@@ -190,22 +191,18 @@ object AvidLocalID {
      * Set the sequence counter
      */
     fun setSequence(value: Long) {
-        synchronized(sequenceLock) {
-            sequence = value
-        }
+        sequence.value = value
     }
 
     /**
      * Get current sequence value
      */
-    fun getSequence(): Long = synchronized(sequenceLock) { sequence }
+    fun getSequence(): Long = sequence.value
 
     /**
      * Reset sequence (for testing)
      */
     fun reset() {
-        synchronized(sequenceLock) {
-            sequence = 0L
-        }
+        sequence.value = 0L
     }
 }

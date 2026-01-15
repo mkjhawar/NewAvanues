@@ -41,6 +41,7 @@
 package com.augmentalis.avid.core
 
 import kotlin.random.Random
+import kotlinx.atomicfu.atomic
 
 /**
  * Cross-platform AVID generator
@@ -49,9 +50,8 @@ import kotlin.random.Random
  */
 object AvidGenerator {
 
-    // Thread-safe sequence counter using AtomicLong-like pattern
-    private var sequenceCounter: Long = 0L
-    private val sequenceLock = Any()
+    // Thread-safe atomic sequence counter
+    private val sequenceCounter = atomic(0L)
 
     // ========================================================================
     // Module Names (for internal entities)
@@ -412,7 +412,7 @@ object AvidGenerator {
      * Generate sequential AVID for predictable ordering
      */
     fun generateSequential(prefix: String = "seq"): String {
-        val sequence = synchronized(sequenceLock) { ++sequenceCounter }
+        val sequence = sequenceCounter.incrementAndGet()
         val timestamp = currentTimeMillis()
         return "$prefix-$sequence-$timestamp"
     }
