@@ -17,11 +17,6 @@ kotlin {
     iosArm64()
     iosSimulatorArm64()
 
-    js(IR) {
-        browser()
-        nodejs()
-    }
-
     jvm("desktop")
 
     sourceSets {

@@ -143,7 +143,7 @@ include(":Modules:AvaMagic:AvaUI:Data")                 // Data components
 include(":Modules:AvaMagic:AvaUI:Adapters")             // Platform adapters
 include(":Modules:AvaMagic:AvaUI:TemplateLibrary")      // Component templates
 include(":Modules:AvaMagic:AvaUI:VoiceCommandRouter")   // Voice command routing
-include(":Modules:AvaMagic:AvaUI:IPCConnector")         // IPC connection layer
+include(":Modules:AvaMagic:IPC")                         // Unified AVU IPC Protocol
 include(":Modules:AvaMagic:AvaUI:ARGScanner")           // ARG scanning utilities
 include(":Modules:AvaMagic:AvaUI:AssetManager")         // Asset management
 

@@ -132,12 +132,11 @@ interface IPCManager {
      */
     fun getMetrics(): IPCMetrics
 
-    companion object {
-        /**
-         * Create platform-specific IPC manager
-         *
-         * @return Platform IPC manager instance
-         */
-        expect fun create(): IPCManager
-    }
 }
+
+/**
+ * Create platform-specific IPC manager
+ *
+ * @return Platform IPC manager instance
+ */
+expect fun createIPCManager(): IPCManager

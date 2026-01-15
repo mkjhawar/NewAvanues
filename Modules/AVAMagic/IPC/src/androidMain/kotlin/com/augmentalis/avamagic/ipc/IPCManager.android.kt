@@ -5,7 +5,6 @@ import android.content.Intent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.map
 
 /**
@@ -69,9 +68,10 @@ class AndroidIPCManager(
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : UniversalMessage> subscribe(): Flow<T> {
+        // Note: Type filtering happens at call site since reified types
+        // are not available in interface implementations
         return messageFlow
-            .map { it.second }
-            .filterIsInstance<T>()
+            .map { it.second } as Flow<T>
     }
 
     override fun subscribe(filter: MessageFilter): Flow<UniversalMessage> {
@@ -281,11 +281,13 @@ class AndroidIPCManager(
 }
 
 /**
- * Create Android IPC Manager factory method
+ * Create Android IPC Manager factory method.
+ *
+ * Note: This throws on Android since Context is required.
+ * Use createIPCManager(context) instead.
  */
-actual fun IPCManager.Companion.create(): IPCManager {
-    // TODO: Get Context from DI or Application class
-    throw NotImplementedError("Use create(context: Context) for Android")
+actual fun createIPCManager(): IPCManager {
+    throw NotImplementedError("Use createIPCManager(context: Context) for Android")
 }
 
 /**
@@ -294,6 +296,6 @@ actual fun IPCManager.Companion.create(): IPCManager {
  * @param context Android application or activity context
  * @return AndroidIPCManager instance
  */
-fun IPCManager.Companion.create(context: Context): IPCManager {
+fun createIPCManager(context: Context): IPCManager {
     return AndroidIPCManager(context)
 }

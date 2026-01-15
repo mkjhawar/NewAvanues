@@ -1,5 +1,6 @@
 package com.augmentalis.avamagic.ipc
 
+import kotlin.math.pow
 import kotlinx.serialization.Serializable
 
 /**
@@ -121,15 +122,17 @@ enum class IPCProtocol {
  */
 sealed class ConnectionResult {
     /**
+     * Serialize to AVU format.
+     * @return AVU line representation
+     */
+    abstract fun toAvuLine(): String
+
+    /**
      * Connection established successfully.
      * @property connection The active connection handle
      */
     data class Success(val connection: Connection) : ConnectionResult() {
-        /**
-         * Serialize to AVU format.
-         * @return AVU line representation
-         */
-        fun toAvuLine(): String = "result.success(${connection.toAvuLine()})"
+        override fun toAvuLine(): String = "result.success(${connection.toAvuLine()})"
     }
 
     /**
@@ -137,11 +140,7 @@ sealed class ConnectionResult {
      * @property error The error that occurred
      */
     data class Error(val error: IPCError) : ConnectionResult() {
-        /**
-         * Serialize to AVU format.
-         * @return AVU line representation
-         */
-        fun toAvuLine(): String = "result.error(${error.toAvuLine()})"
+        override fun toAvuLine(): String = "result.error(${error.toAvuLine()})"
     }
 
     /**
@@ -149,21 +148,7 @@ sealed class ConnectionResult {
      * @property progress Progress from 0.0 to 1.0
      */
     data class Pending(val progress: Float) : ConnectionResult() {
-        /**
-         * Serialize to AVU format.
-         * @return AVU line representation
-         */
-        fun toAvuLine(): String = "result.pending(progress=$progress)"
-    }
-
-    /**
-     * Serialize to AVU format.
-     * @return AVU line representation
-     */
-    fun toAvuLine(): String = when (this) {
-        is Success -> (this as Success).toAvuLine()
-        is Error -> (this as Error).toAvuLine()
-        is Pending -> (this as Pending).toAvuLine()
+        override fun toAvuLine(): String = "result.pending(progress=$progress)"
     }
 }
 
@@ -203,7 +188,7 @@ data class ReconnectionPolicy(
      */
     fun getDelay(attempt: Int): Long {
         if (attempt <= 0) return initialDelayMs
-        val delay = (initialDelayMs * kotlin.math.pow(backoffMultiplier.toDouble(), (attempt - 1).toDouble())).toLong()
+        val delay = (initialDelayMs * backoffMultiplier.toDouble().pow((attempt - 1).toDouble())).toLong()
         return minOf(delay, maxDelayMs)
     }
 
@@ -365,15 +350,17 @@ data class MethodInvocation(
  */
 sealed class MethodResult {
     /**
+     * Serialize to AVU format.
+     * @return AVU line representation
+     */
+    abstract fun toAvuLine(): String
+
+    /**
      * Method executed successfully.
      * @property value Return value (may be null for void methods)
      */
     data class Success(val value: Any?) : MethodResult() {
-        /**
-         * Serialize to AVU format.
-         * @return AVU line representation
-         */
-        fun toAvuLine(): String = "method_result.success(value=$value)"
+        override fun toAvuLine(): String = "method_result.success(value=$value)"
     }
 
     /**
@@ -381,20 +368,7 @@ sealed class MethodResult {
      * @property error The error that occurred
      */
     data class Error(val error: IPCError) : MethodResult() {
-        /**
-         * Serialize to AVU format.
-         * @return AVU line representation
-         */
-        fun toAvuLine(): String = "method_result.error(${error.toAvuLine()})"
-    }
-
-    /**
-     * Serialize to AVU format.
-     * @return AVU line representation
-     */
-    fun toAvuLine(): String = when (this) {
-        is Success -> (this as Success).toAvuLine()
-        is Error -> (this as Error).toAvuLine()
+        override fun toAvuLine(): String = "method_result.error(${error.toAvuLine()})"
     }
 }
 
