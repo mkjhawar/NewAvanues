@@ -13,14 +13,14 @@ class CommandRegistryTest {
 
     private fun createCommand(
         phrase: String,
-        targetVuid: String,
+        targetAvid: String,
         actionType: CommandActionType = CommandActionType.CLICK,
         confidence: Float = 0.8f
     ) = QuantizedCommand(
-        uuid = "",
+        avid = "",
         phrase = phrase,
         actionType = actionType,
-        targetVuid = targetVuid,
+        targetAvid = targetAvid,
         confidence = confidence
     )
 
@@ -55,7 +55,7 @@ class CommandRegistryTest {
         val found = registry.findByPhrase("click Submit")
 
         assertNotNull(found)
-        assertEquals("vuid1", found.targetVuid)
+        assertEquals("vuid1", found.targetAvid)
     }
 
     @Test
@@ -68,7 +68,7 @@ class CommandRegistryTest {
         val found = registry.findByPhrase("CLICK SUBMIT")
 
         assertNotNull(found)
-        assertEquals("vuid1", found.targetVuid)
+        assertEquals("vuid1", found.targetAvid)
     }
 
     @Test
@@ -81,7 +81,7 @@ class CommandRegistryTest {
         val found = registry.findByPhrase("submit")
 
         assertNotNull(found)
-        assertEquals("vuid1", found.targetVuid)
+        assertEquals("vuid1", found.targetAvid)
     }
 
     @Test
@@ -137,19 +137,19 @@ class CommandRegistryTest {
     }
 
     @Test
-    fun `update handles commands with null targetVuid`() {
+    fun `update handles commands with null targetAvid`() {
         val registry = CommandRegistry()
         registry.updateSync(listOf(
             QuantizedCommand(
-                uuid = "",
+                avid = "",
                 phrase = "go back",
                 actionType = CommandActionType.NAVIGATE,
-                targetVuid = null,
+                targetAvid = null,
                 confidence = 0.9f
             )
         ))
 
-        // Commands with null VUID should not be indexed by VUID
+        // Commands with null AVID should not be indexed by AVID
         assertEquals(0, registry.size)
     }
 

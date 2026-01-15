@@ -12,14 +12,9 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
-    id("com.squareup.wire") version "5.1.0"  // 5.4.0 has KotlinPoet compatibility issue
-}
-
-// Force KotlinPoet version compatible with Wire
-configurations.all {
-    resolutionStrategy {
-        force("com.squareup:kotlinpoet:1.15.3")
-    }
+    // Wire plugin disabled - proto files already generated in src/commonMain/kotlin
+    // Re-enable when KotlinPoet compatibility issue is resolved
+    // id("com.squareup.wire") version "5.1.0"
 }
 
 group = "com.augmentalis.universalrpc"
@@ -111,15 +106,16 @@ android {
     }
 }
 
-wire {
-    kotlin {
-        out = "src/commonMain/kotlin"
-        rpcRole = "client"
-        rpcCallStyle = "suspending"
-        singleMethodServices = false
-    }
-
-    sourcePath {
-        srcDir("Common/proto")
-    }
-}
+// Wire configuration disabled - proto files already generated
+// Re-enable when KotlinPoet compatibility issue is resolved
+// wire {
+//     kotlin {
+//         out = "src/commonMain/kotlin"
+//         rpcRole = "client"
+//         rpcCallStyle = "suspending"
+//         singleMethodServices = false
+//     }
+//     sourcePath {
+//         srcDir("Common/proto")
+//     }
+// }

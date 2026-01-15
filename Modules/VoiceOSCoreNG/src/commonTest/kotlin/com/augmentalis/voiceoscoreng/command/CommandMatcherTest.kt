@@ -13,14 +13,14 @@ class CommandMatcherTest {
 
     private fun createCommand(
         phrase: String,
-        targetVuid: String,
+        targetAvid: String,
         actionType: CommandActionType = CommandActionType.CLICK,
         confidence: Float = 0.8f
     ) = QuantizedCommand(
-        uuid = "",
+        avid = "",
         phrase = phrase,
         actionType = actionType,
-        targetVuid = targetVuid,
+        targetAvid = targetAvid,
         confidence = confidence
     )
 
@@ -40,7 +40,7 @@ class CommandMatcherTest {
         val result = CommandMatcher.match("click Submit", registry)
 
         assertIs<CommandMatcher.MatchResult.Exact>(result)
-        assertEquals("vuid1", result.command.targetVuid)
+        assertEquals("vuid1", result.command.targetAvid)
     }
 
     @Test
@@ -77,7 +77,7 @@ class CommandMatcherTest {
         val result = CommandMatcher.match("click Submit", registry, threshold = 0.5f)
 
         assertIs<CommandMatcher.MatchResult.Fuzzy>(result)
-        assertEquals("vuid1", result.command.targetVuid)
+        assertEquals("vuid1", result.command.targetAvid)
         assertTrue(result.confidence >= 0.5f)
     }
 
@@ -91,7 +91,7 @@ class CommandMatcherTest {
         val result = CommandMatcher.match("Submit", registry, threshold = 0.4f)
 
         assertIs<CommandMatcher.MatchResult.Fuzzy>(result)
-        assertEquals("vuid1", result.command.targetVuid)
+        assertEquals("vuid1", result.command.targetAvid)
     }
 
     // ==================== Ambiguous Match Tests ====================

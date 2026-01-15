@@ -11,10 +11,6 @@ buildscript {
         google()
         mavenCentral()
     }
-    dependencies {
-        // Force KotlinPoet version compatible with Wire plugin
-        classpath("com.squareup:kotlinpoet:1.15.3")
-    }
 }
 
 plugins {

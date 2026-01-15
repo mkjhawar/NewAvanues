@@ -19,6 +19,7 @@ package com.augmentalis.voiceoscoreng.integration
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.common.CommandActionType
 import com.augmentalis.voiceoscoreng.common.ElementFingerprint
+import com.augmentalis.voiceoscoreng.functions.getCurrentTimeMillis
 import com.augmentalis.avid.TypeCode
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -61,14 +62,21 @@ class DatabaseFKChainIntegrationTest {
     private lateinit var vuidRepository: TestVuidRepository
     private lateinit var commandRepository: TestCommandRepository
 
+    // Counter for generating unique IDs in tests
+    private var idCounter = 0L
+
     private fun setup() {
         vuidRepository = TestVuidRepository()
         commandRepository = TestCommandRepository(vuidRepository)
+        idCounter = 0L
     }
+
+    // Generate unique ID for tests
+    private fun uniqueId(): Long = getCurrentTimeMillis() + (idCounter++)
 
     // ==================== Helper Methods ====================
 
-    private fun now(): Long = System.currentTimeMillis()
+    private fun now(): Long = getCurrentTimeMillis()
 
     private fun createTestApp(appId: String = "com.example.test"): ScrapedAppEntity {
         return ScrapedAppEntity(
@@ -85,7 +93,7 @@ class DatabaseFKChainIntegrationTest {
 
     private fun createTestElement(
         appId: String,
-        vuid: String = ElementFingerprint.generate("Button", appId, "", "elem-${System.nanoTime()}", "")
+        vuid: String = ElementFingerprint.generate("Button", appId, "", "elem-${uniqueId()}", "")
     ): TestVuidEntry {
         return TestVuidEntry(
             vuid = vuid,
@@ -107,10 +115,10 @@ class DatabaseFKChainIntegrationTest {
         phrase: String = "click button"
     ): QuantizedCommand {
         return QuantizedCommand(
-            uuid = "cmd_${System.nanoTime()}",
+            avid = "cmd_${uniqueId()}",
             phrase = phrase,
             actionType = CommandActionType.CLICK,
-            targetVuid = vuid,
+            targetAvid = vuid,
             confidence = 0.9f,
             metadata = mapOf(
                 "packageName" to packageName,
@@ -350,13 +358,13 @@ class DatabaseFKChainIntegrationTest {
         // Verify command is linked to correct element
         val retrievedCommand = commandRepository.getByVuid(elementVuid)
         assertNotNull(retrievedCommand, "Command should be retrievable by element VUID")
-        assertEquals(elementVuid, retrievedCommand.targetVuid)
+        assertEquals(elementVuid, retrievedCommand.targetAvid)
         assertEquals("tap the button", retrievedCommand.phrase)
 
         // Verify we can traverse from element to its commands
         val elementCommands = commandRepository.getByVuid(element.vuid)
         assertNotNull(elementCommands)
-        assertEquals(elementVuid, elementCommands.targetVuid)
+        assertEquals(elementVuid, elementCommands.targetAvid)
     }
 
     // ==================== Test 7: FK violation error handling ====================
@@ -367,10 +375,10 @@ class DatabaseFKChainIntegrationTest {
 
         // Try to insert command with invalid element reference
         val invalidCommand = QuantizedCommand(
-            uuid = "cmd_invalid",
+            avid = "cmd_invalid",
             phrase = "invalid command",
             actionType = CommandActionType.CLICK,
-            targetVuid = "invalid-element-vuid-that-does-not-exist",
+            targetAvid = "invalid-element-vuid-that-does-not-exist",
             confidence = 0.8f,
             metadata = mapOf(
                 "packageName" to "com.example.fkviolation",
@@ -509,7 +517,7 @@ class DatabaseFKChainIntegrationTest {
         // Command should still be retrievable and linked
         val commandAfterUpdate = commandRepository.getByVuid(element.vuid)
         assertNotNull(commandAfterUpdate, "Command should still be linked after element update")
-        assertEquals(element.vuid, commandAfterUpdate.targetVuid)
+        assertEquals(element.vuid, commandAfterUpdate.targetAvid)
 
         // Verify element was actually updated
         val retrievedElement = vuidRepository.getById(element.vuid)
@@ -535,7 +543,7 @@ class DatabaseFKChainIntegrationTest {
         commandRepository.saveWithFKValidation(command)
 
         // Update command to reference element2 (valid FK change)
-        val updatedCommand = command.copy(targetVuid = element2.vuid)
+        val updatedCommand = command.copy(targetAvid = element2.vuid)
         val result = commandRepository.updateWithFKValidation(updatedCommand)
 
         assertTrue(result.isSuccess, "Updating command to reference different valid element should succeed")
@@ -543,7 +551,7 @@ class DatabaseFKChainIntegrationTest {
         // Verify the link changed
         val retrieved = commandRepository.getByVuid(element2.vuid)
         assertNotNull(retrieved)
-        assertEquals(element2.vuid, retrieved.targetVuid)
+        assertEquals(element2.vuid, retrieved.targetAvid)
     }
 
     @Test
@@ -561,7 +569,7 @@ class DatabaseFKChainIntegrationTest {
         commandRepository.saveWithFKValidation(command)
 
         // Try to update command to reference non-existent element
-        val updatedCommand = command.copy(targetVuid = "nonexistent-vuid")
+        val updatedCommand = command.copy(targetAvid = "nonexistent-vuid")
         val result = commandRepository.updateWithFKValidation(updatedCommand)
 
         assertTrue(result.isFailure, "Updating command to reference invalid element should fail")
@@ -685,7 +693,7 @@ class TestVuidRepository {
 
     suspend fun updateAlias(vuid: String, alias: String): Result<Unit> {
         entries[vuid]?.let {
-            entries[vuid] = it.copy(alias = alias, updatedAt = System.currentTimeMillis())
+            entries[vuid] = it.copy(alias = alias, updatedAt = getCurrentTimeMillis())
         }
         return Result.success(Unit)
     }
@@ -733,8 +741,8 @@ class TestCommandRepository(
      * Save with FK validation - ensures element exists.
      */
     suspend fun saveWithFKValidation(command: QuantizedCommand): Result<Unit> {
-        val elementVuid = command.targetVuid ?: return Result.failure(
-            ForeignKeyConstraintException("FK constraint violation: targetVuid is null")
+        val elementVuid = command.targetAvid ?: return Result.failure(
+            ForeignKeyConstraintException("FK constraint violation: targetAvid is null")
         )
 
         if (!vuidRepository.exists(elementVuid)) {
@@ -742,7 +750,7 @@ class TestCommandRepository(
                 "FK constraint violation: element '$elementVuid' not found"
             ))
         }
-        commands[command.vuid] = command
+        commands[command.avid] = command
         return Result.success(Unit)
     }
 
@@ -752,8 +760,8 @@ class TestCommandRepository(
     suspend fun saveAllWithFKValidation(commands: List<QuantizedCommand>): Result<Unit> {
         // Validate all FKs first
         for (command in commands) {
-            val vuid = command.targetVuid ?: return Result.failure(
-                ForeignKeyConstraintException("FK constraint violation: targetVuid is null")
+            val vuid = command.targetAvid ?: return Result.failure(
+                ForeignKeyConstraintException("FK constraint violation: targetAvid is null")
             )
             if (!vuidRepository.exists(vuid)) {
                 return Result.failure(ForeignKeyConstraintException(
@@ -762,7 +770,7 @@ class TestCommandRepository(
             }
         }
         // All valid, save them
-        commands.forEach { this.commands[it.vuid] = it }
+        commands.forEach { this.commands[it.avid] = it }
         return Result.success(Unit)
     }
 
@@ -770,8 +778,8 @@ class TestCommandRepository(
      * Update with FK validation.
      */
     suspend fun updateWithFKValidation(command: QuantizedCommand): Result<Unit> {
-        val elementVuid = command.targetVuid ?: return Result.failure(
-            ForeignKeyConstraintException("FK constraint violation: targetVuid is null")
+        val elementVuid = command.targetAvid ?: return Result.failure(
+            ForeignKeyConstraintException("FK constraint violation: targetAvid is null")
         )
 
         if (!vuidRepository.exists(elementVuid)) {
@@ -779,19 +787,19 @@ class TestCommandRepository(
                 "FK constraint violation: element '$elementVuid' not found"
             ))
         }
-        commands[command.vuid] = command
+        commands[command.avid] = command
         return Result.success(Unit)
     }
 
     // Repository methods using QuantizedCommand
 
     suspend fun save(command: QuantizedCommand): Result<Unit> {
-        commands[command.vuid] = command
+        commands[command.avid] = command
         return Result.success(Unit)
     }
 
     suspend fun saveAll(commands: List<QuantizedCommand>): Result<Unit> {
-        commands.forEach { this.commands[it.vuid] = it }
+        commands.forEach { this.commands[it.avid] = it }
         return Result.success(Unit)
     }
 
@@ -807,7 +815,7 @@ class TestCommandRepository(
     }
 
     suspend fun getByVuid(vuid: String): QuantizedCommand? {
-        return commands.values.find { it.targetVuid == vuid }
+        return commands.values.find { it.targetAvid == vuid }
     }
 
     suspend fun deleteByScreen(packageName: String, screenId: String): Result<Unit> {
@@ -859,8 +867,8 @@ data class TestVuidEntry(
     val contentDescription: String? = null,
     val alias: String? = null,
     val bounds: IntArray? = null,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val createdAt: Long = getCurrentTimeMillis(),
+    val updatedAt: Long = getCurrentTimeMillis()
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

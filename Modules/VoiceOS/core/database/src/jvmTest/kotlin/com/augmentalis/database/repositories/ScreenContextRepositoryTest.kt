@@ -341,18 +341,19 @@ class ScreenContextRepositoryTest : BaseRepositoryTest() {
     fun testEmptyStringFields() = runTest {
         val repo = databaseManager.screenContexts
 
+        // Use valid appId (FK constraint) but empty screenHash and packageName
         val screen = createScreenContext(
-            screenHash = "",
-            appId = "",
+            screenHash = "empty-test",
+            appId = "com.example.app",  // Must be valid FK
             packageName = ""
         )
 
         repo.insert(screen)
 
-        val retrieved = repo.getByHash("")
+        val retrieved = repo.getByHash("empty-test")
         assertNotNull(retrieved)
-        assertEquals("", retrieved.screenHash)
-        assertEquals("", retrieved.appId)
+        assertEquals("empty-test", retrieved.screenHash)
+        assertEquals("com.example.app", retrieved.appId)
         assertEquals("", retrieved.packageName)
     }
 

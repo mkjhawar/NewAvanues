@@ -166,23 +166,23 @@ class AVUModelsTest {
         val command = QuantizedCommand(
             phrase = "tap submit",
             actionType = CommandActionType.CLICK,
-            targetVuid = "a3f2e1-b917cc9dc",
+            targetAvid = "a3f2e1-b917cc9dc",
             confidence = 0.95f
         )
 
         assertEquals("tap submit", command.phrase)
         assertEquals(CommandActionType.CLICK, command.actionType)
-        assertEquals("a3f2e1-b917cc9dc", command.targetVuid)
+        assertEquals("a3f2e1-b917cc9dc", command.targetAvid)
         assertEquals(0.95f, command.confidence)
     }
 
     @Test
     fun `QuantizedCommand toCmdLine generates correct format`() {
         val command = QuantizedCommand(
-            uuid = "cmd-123",
+            avid = "cmd-123",
             phrase = "tap submit",
             actionType = CommandActionType.CLICK,
-            targetVuid = "a3f2e1-b917cc9dc",
+            targetAvid = "a3f2e1-b917cc9dc",
             confidence = 0.95f
         )
 

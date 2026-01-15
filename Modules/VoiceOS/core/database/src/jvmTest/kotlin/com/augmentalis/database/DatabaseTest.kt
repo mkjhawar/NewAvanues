@@ -169,13 +169,37 @@ class DatabaseTest {
 
     // ==================== GeneratedCommand Tests ====================
 
+    private fun ensureScrapedAppAndElement(appId: String, elementHash: String) {
+        val now = System.currentTimeMillis()
+        // Insert scraped_app first (FK for scraped_element)
+        database.scrapedAppQueries.insert(
+            appId, "com.test.package", 1, "1.0.0", "apphash123", 0, null,
+            "DYNAMIC", 1, 50, 10, now, now, "pkghash123"
+        )
+        // Insert scraped_element (FK for commands_generated)
+        database.scrapedElementQueries.insert(
+            elementHash, appId, null, "android.widget.Button", null, "Submit", null,
+            "0,0,100,50", 1, 0, 0, 0, 0, 1, 1, 0, 0, now, null, null, null, null, null, null, null, null, null
+        )
+    }
+
     @Test
     fun testGeneratedCommandInsertAndSearch() {
         val queries = database.generatedCommandQueries
         val now = System.currentTimeMillis()
 
-        queries.insert("hash1", "click submit button", "click", 0.85, null, 0, 0, null, now)
-        queries.insert("hash2", "scroll down page", "scroll", 0.9, null, 0, 0, null, now)
+        // Setup required FK dependencies
+        ensureScrapedAppAndElement("com.test.app", "hash1")
+        // Insert second element for second command
+        database.scrapedElementQueries.insert(
+            "hash2", "com.test.app", null, "android.widget.ScrollView", null, "Page", null,
+            "0,0,100,50", 0, 0, 0, 1, 0, 1, 1, 0, 1, now, null, null, null, null, null, null, null, null, null
+        )
+
+        // Insert with all 14 parameters: elementHash, commandText, actionType, confidence, synonyms,
+        // isUserApproved, usageCount, lastUsed, createdAt, appId, appVersion, versionCode, lastVerified, isDeprecated
+        queries.insert("hash1", "click submit button", "click", 0.85, null, 0, 0, null, now, "com.test.app", "1.0.0", 100, now, 0)
+        queries.insert("hash2", "scroll down page", "scroll", 0.9, null, 0, 0, null, now, "com.test.app", "1.0.0", 100, now, 0)
 
         val results = queries.fuzzySearch("submit").executeAsList()
         assertEquals(1, results.size)
@@ -187,7 +211,11 @@ class DatabaseTest {
         val queries = database.generatedCommandQueries
         val now = System.currentTimeMillis()
 
-        queries.insert("hash1", "test command", "click", 0.8, null, 0, 0, null, now)
+        // Setup required FK dependencies
+        ensureScrapedAppAndElement("com.test.app2", "hash1")
+
+        // Insert with all 14 parameters
+        queries.insert("hash1", "test command", "click", 0.8, null, 0, 0, null, now, "com.test.app2", "1.0.0", 100, now, 0)
         val id = queries.getAll().executeAsList()[0].id
 
         queries.markApproved(id)
@@ -203,9 +231,12 @@ class DatabaseTest {
         val queries = database.scrapedAppQueries
         val now = System.currentTimeMillis()
 
+        // Insert with all 14 parameters: appId, packageName, versionCode, versionName, appHash,
+        // isFullyLearned, learnCompletedAt, scrapingMode, scrapeCount, elementCount, commandCount,
+        // firstScrapedAt, lastScrapedAt, pkg_hash
         queries.insert(
             "app1", "com.example.app", 1, "1.0.0", "abc123",
-            0, null, "DYNAMIC", 1, 50, 10, now, now
+            0, null, "DYNAMIC", 1, 50, 10, now, now, "a1b2c3"
         )
 
         val app = queries.getById("app1").executeAsOne()
@@ -218,7 +249,8 @@ class DatabaseTest {
         val queries = database.scrapedAppQueries
         val now = System.currentTimeMillis()
 
-        queries.insert("app1", "com.test", 1, "1.0", "hash", 0, null, "LEARN_APP", 0, 0, 0, now, now)
+        // Insert with all 14 parameters including pkg_hash
+        queries.insert("app1", "com.test", 1, "1.0", "hash", 0, null, "LEARN_APP", 0, 0, 0, now, now, "d4e5f6")
 
         queries.markFullyLearned(now + 1000, "app1")
 
