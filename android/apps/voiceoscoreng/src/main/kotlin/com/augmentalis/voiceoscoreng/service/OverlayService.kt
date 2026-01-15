@@ -329,7 +329,7 @@ private fun NumbersOverlayContent() {
     }
 
     // For AUTO mode, also check if there are items
-    if (mode == VoiceOSAccessibilityService.Companion.NumbersOverlayMode.AUTO && items.isEmpty()) {
+    if (mode == OverlayStateManager.NumbersOverlayMode.AUTO && items.isEmpty()) {
         return
     }
 
@@ -448,7 +448,7 @@ private fun AppDetectionDialog(
                     onClick = {
                         VoiceOSAccessibilityService.handleAppDetectionResponse(
                             packageName,
-                            VoiceOSAccessibilityService.Companion.AppNumbersPreference.AUTO
+                            OverlayStateManager.AppNumbersPreference.AUTO
                         )
                     }
                 )
@@ -460,7 +460,7 @@ private fun AppDetectionDialog(
                     onClick = {
                         VoiceOSAccessibilityService.handleAppDetectionResponse(
                             packageName,
-                            VoiceOSAccessibilityService.Companion.AppNumbersPreference.ALWAYS
+                            OverlayStateManager.AppNumbersPreference.ALWAYS
                         )
                     }
                 )
@@ -472,7 +472,7 @@ private fun AppDetectionDialog(
                     onClick = {
                         VoiceOSAccessibilityService.handleAppDetectionResponse(
                             packageName,
-                            VoiceOSAccessibilityService.Companion.AppNumbersPreference.NEVER
+                            OverlayStateManager.AppNumbersPreference.NEVER
                         )
                     }
                 )
@@ -531,7 +531,7 @@ private fun DialogButton(
  * Uses theme colors from settings.
  */
 @Composable
-private fun NumberBadge(item: VoiceOSAccessibilityService.Companion.NumberOverlayItem) {
+private fun NumberBadge(item: OverlayStateManager.NumberOverlayItem) {
     // Get theme from settings
     val theme by VoiceOSAccessibilityService.badgeTheme.collectAsState()
     val density = LocalDensity.current
@@ -601,7 +601,7 @@ private fun NumbersInstructionPanel(
     val mode by VoiceOSAccessibilityService.instructionBarMode.collectAsState()
 
     // Don't show if mode is OFF
-    if (mode == VoiceOSAccessibilityService.Companion.InstructionBarMode.OFF) {
+    if (mode == OverlayStateManager.InstructionBarMode.OFF) {
         return
     }
 
@@ -615,7 +615,7 @@ private fun NumbersInstructionPanel(
 
     // Trigger fade after delay in AUTO mode
     LaunchedEffect(mode, itemCount) {
-        if (mode == VoiceOSAccessibilityService.Companion.InstructionBarMode.AUTO) {
+        if (mode == OverlayStateManager.InstructionBarMode.AUTO) {
             visible = true
             kotlinx.coroutines.delay(3000)  // Show for 3 seconds
             visible = false

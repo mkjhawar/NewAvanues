@@ -37,13 +37,6 @@ private const val TAG = "VoiceOSA11yService"
 /** Debounce delay for screen change events (ms) */
 private const val SCREEN_CHANGE_DEBOUNCE_MS = 300L
 
-// Type aliases for backward compatibility (must be at file level)
-typealias AppNumbersPreference = OverlayStateManager.AppNumbersPreference
-typealias NumbersOverlayMode = OverlayStateManager.NumbersOverlayMode
-typealias NumberOverlayItem = OverlayStateManager.NumberOverlayItem
-typealias InstructionBarMode = OverlayStateManager.InstructionBarMode
-typealias BadgeTheme = OverlayStateManager.BadgeTheme
-
 /**
  * Accessibility Service for VoiceOSCoreNG testing.
  *
