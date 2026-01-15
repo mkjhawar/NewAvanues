@@ -79,7 +79,7 @@ dependencies {
     api(project(":Modules:VoiceOS:core:database"))  // SQLDelight database for VoiceOS
 
     // Standalone Apps
-    implementation(project(":Modules:VoiceOS:apps:VoiceUI"))
+    implementation(project(":android:apps:VoiceUI"))
 
     // Input Method Libraries
     // implementation(project(":Modules:VoiceOS:libraries:VoiceKeyboard"))  // DISABLED: Depends on VoiceDataManager
@@ -91,8 +91,8 @@ dependencies {
     implementation(project(":Modules:VoiceOS:managers:LicenseManager"))
 
     // Shared Libraries
-    implementation(project(":Modules:VoiceOS:apps:VoiceOSCore"))  // RE-ENABLED: Room→SQLDelight migration complete
-    implementation(project(":Modules:VoiceOS:apps:VoiceCursor"))
+    implementation(project(":Modules:VoiceOS:VoiceOSCore"))  // RE-ENABLED: Room→SQLDelight migration complete
+    implementation(project(":android:apps:VoiceCursor"))
     implementation(project(":Modules:VoiceOS:libraries:VoiceUIElements"))
     implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))
     implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))  // LearningSystem stubbed

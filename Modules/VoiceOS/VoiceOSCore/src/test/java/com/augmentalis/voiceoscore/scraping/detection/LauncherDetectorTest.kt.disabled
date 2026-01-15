@@ -1,0 +1,484 @@
+package com.augmentalis.voiceoscore.scraping.detection
+
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
+import io.mockk.*
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+
+/**
+ * Unit tests for LauncherDetector.
+ *
+ * Tests device-agnostic launcher detection, caching behavior, error handling,
+ * and edge cases.
+ */
+class LauncherDetectorTest {
+
+    private lateinit var mockContext: Context
+    private lateinit var mockPackageManager: PackageManager
+    private lateinit var detector: LauncherDetector
+
+    @Before
+    fun setup() {
+        mockContext = mockk(relaxed = true)
+        mockPackageManager = mockk(relaxed = true)
+        every { mockContext.packageManager } returns mockPackageManager
+
+        // Create detector instance
+        detector = LauncherDetector(mockContext)
+    }
+
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
+
+    // ========================================
+    // Basic Detection Tests
+    // ========================================
+
+    @Test
+    fun `detectLauncherPackages returns launcher packages on success`() {
+        // Arrange
+        val expectedLaunchers = listOf(
+            createResolveInfo("com.google.android.apps.nexuslauncher"),
+            createResolveInfo("com.realwear.launcher")
+        )
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns expectedLaunchers
+
+        // Act
+        val result = detector.detectLauncherPackages()
+
+        // Assert
+        assertEquals(2, result.size)
+        assertTrue(result.contains("com.google.android.apps.nexuslauncher"))
+        assertTrue(result.contains("com.realwear.launcher"))
+    }
+
+    @Test
+    fun `detectLauncherPackages queries HOME intent with correct flags`() {
+        // Arrange
+        val capturedIntent = slot<Intent>()
+        every {
+            mockPackageManager.queryIntentActivities(capture(capturedIntent), any())
+        } returns emptyList()
+
+        // Act
+        detector.detectLauncherPackages()
+
+        // Assert
+        assertEquals(Intent.ACTION_MAIN, capturedIntent.captured.action)
+        assertTrue(capturedIntent.captured.categories.contains(Intent.CATEGORY_HOME))
+    }
+
+    @Test
+    fun `detectLauncherPackages uses MATCH_DEFAULT_ONLY flag`() {
+        // Arrange
+        val capturedFlags = slot<Int>()
+        every {
+            mockPackageManager.queryIntentActivities(any(), capture(capturedFlags))
+        } returns emptyList()
+
+        // Act
+        detector.detectLauncherPackages()
+
+        // Assert
+        assertEquals(PackageManager.MATCH_DEFAULT_ONLY, capturedFlags.captured)
+    }
+
+    @Test
+    fun `detectLauncherPackages handles single launcher`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns listOf(createResolveInfo("com.android.launcher3"))
+
+        // Act
+        val result = detector.detectLauncherPackages()
+
+        // Assert
+        assertEquals(1, result.size)
+        assertEquals("com.android.launcher3", result.first())
+    }
+
+    @Test
+    fun `detectLauncherPackages handles multiple launchers`() {
+        // Arrange (user has custom launcher + system launcher)
+        val launchers = listOf(
+            createResolveInfo("com.teslacoilsw.launcher"), // Nova Launcher
+            createResolveInfo("com.google.android.apps.nexuslauncher"),
+            createResolveInfo("com.microsoft.launcher")
+        )
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns launchers
+
+        // Act
+        val result = detector.detectLauncherPackages()
+
+        // Assert
+        assertEquals(3, result.size)
+        assertTrue(result.contains("com.teslacoilsw.launcher"))
+        assertTrue(result.contains("com.google.android.apps.nexuslauncher"))
+        assertTrue(result.contains("com.microsoft.launcher"))
+    }
+
+    // ========================================
+    // Caching Tests
+    // ========================================
+
+    @Test
+    fun `detectLauncherPackages caches results for subsequent calls`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns listOf(createResolveInfo("com.realwear.launcher"))
+
+        // Act
+        val result1 = detector.detectLauncherPackages()
+        val result2 = detector.detectLauncherPackages()
+        val result3 = detector.detectLauncherPackages()
+
+        // Assert
+        verify(exactly = 1) { mockPackageManager.queryIntentActivities(any(), any()) }
+        assertEquals(result1, result2)
+        assertEquals(result2, result3)
+    }
+
+    @Test
+    fun `isCached returns false before first detection`() {
+        // Assert
+        assertFalse(detector.isCached())
+    }
+
+    @Test
+    fun `isCached returns true after detection`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns listOf(createResolveInfo("com.android.launcher"))
+
+        // Act
+        detector.detectLauncherPackages()
+
+        // Assert
+        assertTrue(detector.isCached())
+    }
+
+    @Test
+    fun `clearCache forces re-detection on next call`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns listOf(createResolveInfo("com.android.launcher"))
+
+        // Act
+        detector.detectLauncherPackages() // First call (queries PM)
+        detector.clearCache()
+        detector.detectLauncherPackages() // Second call (should query PM again)
+
+        // Assert
+        verify(exactly = 2) { mockPackageManager.queryIntentActivities(any(), any()) }
+    }
+
+    @Test
+    fun `clearCache resets isCached to false`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns listOf(createResolveInfo("com.android.launcher"))
+
+        // Act
+        detector.detectLauncherPackages()
+        assertTrue(detector.isCached())
+        detector.clearCache()
+
+        // Assert
+        assertFalse(detector.isCached())
+    }
+
+    // ========================================
+    // Error Handling Tests
+    // ========================================
+
+    @Test
+    fun `detectLauncherPackages returns empty set on SecurityException`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } throws SecurityException("Permission denied")
+
+        // Act
+        val result = detector.detectLauncherPackages()
+
+        // Assert
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `detectLauncherPackages returns empty set on RuntimeException`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } throws RuntimeException("PackageManager unavailable")
+
+        // Act
+        val result = detector.detectLauncherPackages()
+
+        // Assert
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `detectLauncherPackages returns empty set on generic Exception`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } throws Exception("Unexpected error")
+
+        // Act
+        val result = detector.detectLauncherPackages()
+
+        // Assert
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `detectLauncherPackages returns empty set when no launchers found`() {
+        // Arrange (shouldn't happen on real devices, but test edge case)
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns emptyList()
+
+        // Act
+        val result = detector.detectLauncherPackages()
+
+        // Assert
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `error during detection does not cache failed result`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } throws SecurityException("First call fails") andThen
+                listOf(createResolveInfo("com.android.launcher")) // Second call succeeds
+
+        // Act
+        val result1 = detector.detectLauncherPackages() // Fails
+        val result2 = detector.detectLauncherPackages() // Should retry, succeed
+
+        // Assert
+        assertTrue(result1.isEmpty())
+        assertEquals(1, result2.size)
+        verify(exactly = 2) { mockPackageManager.queryIntentActivities(any(), any()) }
+    }
+
+    // ========================================
+    // isLauncher() Tests
+    // ========================================
+
+    @Test
+    fun `isLauncher returns true for detected launcher`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns listOf(
+            createResolveInfo("com.realwear.launcher"),
+            createResolveInfo("com.google.android.apps.nexuslauncher")
+        )
+
+        // Act & Assert
+        assertTrue(detector.isLauncher("com.realwear.launcher"))
+        assertTrue(detector.isLauncher("com.google.android.apps.nexuslauncher"))
+    }
+
+    @Test
+    fun `isLauncher returns false for non-launcher package`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns listOf(createResolveInfo("com.android.launcher"))
+
+        // Act & Assert
+        assertFalse(detector.isLauncher("com.microsoft.teams"))
+        assertFalse(detector.isLauncher("com.augmentalis.voiceoscore"))
+    }
+
+    @Test
+    fun `isLauncher returns false when no launchers detected`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns emptyList()
+
+        // Act & Assert
+        assertFalse(detector.isLauncher("com.android.launcher"))
+    }
+
+    @Test
+    fun `isLauncher uses cached results`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns listOf(createResolveInfo("com.android.launcher"))
+
+        // Act
+        detector.isLauncher("com.android.launcher")
+        detector.isLauncher("com.microsoft.teams")
+        detector.isLauncher("com.android.launcher")
+
+        // Assert - should only query once (cached)
+        verify(exactly = 1) { mockPackageManager.queryIntentActivities(any(), any()) }
+    }
+
+    // ========================================
+    // Diagnostics Tests
+    // ========================================
+
+    @Test
+    fun `getDiagnostics returns uncached state before detection`() {
+        // Act
+        val diagnostics = detector.getDiagnostics()
+
+        // Assert
+        assertEquals(false, diagnostics["cached"])
+        assertEquals(-1, diagnostics["launcherCount"])
+        assertEquals(emptyList<String>(), diagnostics["launchers"])
+    }
+
+    @Test
+    fun `getDiagnostics returns cached state after detection`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns listOf(
+            createResolveInfo("com.android.launcher"),
+            createResolveInfo("com.realwear.launcher")
+        )
+
+        // Act
+        detector.detectLauncherPackages()
+        val diagnostics = detector.getDiagnostics()
+
+        // Assert
+        assertEquals(true, diagnostics["cached"])
+        assertEquals(2, diagnostics["launcherCount"])
+        val launchers = diagnostics["launchers"] as List<*>
+        assertEquals(2, launchers.size)
+        assertTrue(launchers.contains("com.android.launcher"))
+        assertTrue(launchers.contains("com.realwear.launcher"))
+    }
+
+    // ========================================
+    // Companion Object Tests
+    // ========================================
+
+    @Test
+    fun `SYSTEM_UI_PACKAGES contains expected packages`() {
+        // Assert
+        assertTrue(LauncherDetector.SYSTEM_UI_PACKAGES.contains("com.android.systemui"))
+    }
+
+    @Test
+    fun `shouldExcludeFromScraping returns true for launcher packages`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns listOf(createResolveInfo("com.android.launcher"))
+
+        // Act & Assert
+        assertTrue(LauncherDetector.shouldExcludeFromScraping(detector, "com.android.launcher"))
+    }
+
+    @Test
+    fun `shouldExcludeFromScraping returns true for system UI packages`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns emptyList()
+
+        // Act & Assert
+        assertTrue(LauncherDetector.shouldExcludeFromScraping(detector, "com.android.systemui"))
+    }
+
+    @Test
+    fun `shouldExcludeFromScraping returns false for regular app packages`() {
+        // Arrange
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns listOf(createResolveInfo("com.android.launcher"))
+
+        // Act & Assert
+        assertFalse(LauncherDetector.shouldExcludeFromScraping(detector, "com.microsoft.teams"))
+        assertFalse(LauncherDetector.shouldExcludeFromScraping(detector, "com.augmentalis.learnapp"))
+    }
+
+    // ========================================
+    // Edge Cases and Data Integrity Tests
+    // ========================================
+
+    @Test
+    fun `detectLauncherPackages handles duplicate package names in ResolveInfo list`() {
+        // Arrange (shouldn't happen, but test defensive behavior)
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns listOf(
+            createResolveInfo("com.android.launcher"),
+            createResolveInfo("com.android.launcher"), // Duplicate
+            createResolveInfo("com.realwear.launcher")
+        )
+
+        // Act
+        val result = detector.detectLauncherPackages()
+
+        // Assert - Set should deduplicate
+        assertEquals(2, result.size)
+        assertTrue(result.contains("com.android.launcher"))
+        assertTrue(result.contains("com.realwear.launcher"))
+    }
+
+    @Test
+    fun `detectLauncherPackages handles null package names gracefully`() {
+        // Arrange
+        val resolveInfoWithNullPackage = mockk<ResolveInfo>(relaxed = true)
+        val activityInfoWithNullPackage = mockk<ActivityInfo>(relaxed = true)
+        every { activityInfoWithNullPackage.packageName } returns null
+        every { resolveInfoWithNullPackage.activityInfo } returns activityInfoWithNullPackage
+
+        every {
+            mockPackageManager.queryIntentActivities(any(), any())
+        } returns listOf(
+            resolveInfoWithNullPackage,
+            createResolveInfo("com.android.launcher")
+        )
+
+        // Act & Assert - Should not crash, should filter out null
+        val result = detector.detectLauncherPackages()
+        // Note: Implementation will need to handle nulls if this test fails
+        assertTrue(result.isNotEmpty())
+    }
+
+    // ========================================
+    // Helper Methods
+    // ========================================
+
+    /**
+     * Creates a mock ResolveInfo with the specified package name.
+     */
+    private fun createResolveInfo(packageName: String): ResolveInfo {
+        val resolveInfo = ResolveInfo()
+        val activityInfo = ActivityInfo()
+        activityInfo.packageName = packageName
+        resolveInfo.activityInfo = activityInfo
+        return resolveInfo
+    }
+}

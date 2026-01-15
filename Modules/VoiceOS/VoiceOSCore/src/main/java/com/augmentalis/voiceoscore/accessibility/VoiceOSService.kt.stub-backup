@@ -1,0 +1,44 @@
+package com.augmentalis.voiceoscore.accessibility
+
+import android.accessibilityservice.AccessibilityService
+import android.view.accessibility.AccessibilityEvent
+
+/**
+ * Stub implementation of VoiceOSService
+ *
+ * Phase 1 Quick Fix: VoiceOSService temporarily stubbed to unblock compilation
+ * Full implementation disabled pending Room→SQLDelight migration completion
+ */
+class VoiceOSService : AccessibilityService() {
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        // No-op stub
+    }
+
+    override fun onInterrupt() {
+        // No-op stub
+    }
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        // No-op stub
+    }
+
+    fun enableFallbackMode() {
+        // No-op stub - fallback mode disabled
+    }
+
+    // Cursor-related stub methods (for DragHandler compatibility)
+    fun isCursorVisible(): Boolean {
+        return false // Stub - cursor disabled
+    }
+
+    fun getCursorPosition(): android.graphics.Point {
+        return android.graphics.Point(0, 0) // Stub - returns origin
+    }
+
+    // App command stub method (for AppHandler compatibility)
+    fun getAppCommands(): Map<String, String> {
+        return emptyMap() // Stub - no app commands (voice name -> package name mapping)
+    }
+}

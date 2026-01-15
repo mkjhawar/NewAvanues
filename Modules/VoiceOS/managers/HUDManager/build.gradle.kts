@@ -87,7 +87,7 @@ dependencies {
     // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight       // For data persistence
     implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))  // For localization support
     // implementation(project(":apps:SpeechRecognition"))        // For voice command data - TEMP: Has compilation errors
-    // implementation(project(":Modules:VoiceOS:apps:VoiceOSCore")) // VoiceOSCore is now application - cannot depend on it
+    // implementation(project(":Modules:VoiceOS:VoiceOSCore")) // VoiceOSCore is now application - cannot depend on it
     // implementation(project(":apps:VoiceUI"))                  // For HUD rendering - TEMP: Has compilation errors
     
     // Testing

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  bg_rounded_card.xml - Rounded card background drawable
+  Path: modules/apps/LearnApp/src/main/res/drawable/bg_rounded_card.xml
+
+  Material Design 3 styled card background with rounded corners and elevation.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <!-- Card background color (Material Design surface) -->
+    <solid android:color="@android:color/white" />
+
+    <!-- Rounded corners (8dp) -->
+    <corners android:radius="8dp" />
+
+    <!-- Subtle stroke for definition -->
+    <stroke
+        android:width="1dp"
+        android:color="#E0E0E0" />
+
+</shape>

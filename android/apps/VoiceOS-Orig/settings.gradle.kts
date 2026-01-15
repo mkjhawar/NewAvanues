@@ -56,12 +56,14 @@ include(":app")
 include(":android:apps:cockpit-mvp")
 include(":Common:Cockpit")
 
-// Standalone Apps (Moved to monorepo Modules/)
-include(":Modules:VoiceOS:apps:VoiceOSCore")  // RE-ENABLED for Agent Swarm migration
-include(":Modules:VoiceOS:apps:VoiceUI")  // Voice UI with Magic components
-include(":Modules:VoiceOS:apps:VoiceCursor")
-include(":Modules:VoiceOS:apps:VoiceRecognition")  // Voice Recognition test app with VoiceCursor UI
-include(":Modules:VoiceOS:apps:VoiceOSIPCTest")  // IPC test client (Phase 3f)
+// VoiceOS Core Module (moved from apps/ to module root)
+include(":Modules:VoiceOS:VoiceOSCore")  // RE-ENABLED for Agent Swarm migration
+
+// Standalone Apps (Moved from Modules/VoiceOS/apps/ to android/apps/)
+include(":android:apps:VoiceUI")  // Voice UI with Magic components
+include(":android:apps:VoiceCursor")
+include(":android:apps:VoiceRecognition")  // Voice Recognition test app with VoiceCursor UI
+include(":android:apps:VoiceOSIPCTest")  // IPC test client (Phase 3f)
 
 // System Managers (Moved to monorepo Modules/)
 include(":Modules:VoiceOS:managers:CommandManager")  // RE-ENABLED: Agent Swarm Task 2.1 - CommandManager restoration
@@ -110,11 +112,11 @@ include(":tests:voiceoscore-unit-tests")  // Pure JVM unit tests for VoiceOSCore
 project(":android:apps:cockpit-mvp").projectDir = file("../cockpit-mvp")
 project(":Common:Cockpit").projectDir = file("../../../Common/Cockpit")
 
-project(":Modules:VoiceOS:apps:VoiceOSCore").projectDir = file("../../../Modules/VoiceOS/apps/VoiceOSCore")
-project(":Modules:VoiceOS:apps:VoiceUI").projectDir = file("../../../Modules/VoiceOS/apps/VoiceUI")
-project(":Modules:VoiceOS:apps:VoiceCursor").projectDir = file("../../../Modules/VoiceOS/apps/VoiceCursor")
-project(":Modules:VoiceOS:apps:VoiceRecognition").projectDir = file("../../../Modules/VoiceOS/apps/VoiceRecognition")
-project(":Modules:VoiceOS:apps:VoiceOSIPCTest").projectDir = file("../../../Modules/VoiceOS/apps/VoiceOSIPCTest")
+project(":Modules:VoiceOS:VoiceOSCore").projectDir = file("../../../Modules/VoiceOS/VoiceOSCore")
+project(":android:apps:VoiceUI").projectDir = file("../VoiceUI")
+project(":android:apps:VoiceCursor").projectDir = file("../VoiceCursor")
+project(":android:apps:VoiceRecognition").projectDir = file("../VoiceRecognition")
+project(":android:apps:VoiceOSIPCTest").projectDir = file("../VoiceOSIPCTest")
 
 project(":Modules:VoiceOS:managers:CommandManager").projectDir = file("../../../Modules/VoiceOS/managers/CommandManager")
 project(":Modules:VoiceOS:managers:VoiceDataManager").projectDir = file("../../../Modules/VoiceOS/managers/VoiceDataManager")

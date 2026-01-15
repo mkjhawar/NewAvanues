@@ -76,14 +76,16 @@ include(":Modules:VoiceOS:core:exceptions")
 include(":Modules:VoiceOS:core:text-utils")
 include(":Modules:VoiceOS:core:validation")
 
-// VoiceOS Apps
+// VoiceOS Core Module (moved from apps/ to module root)
+include(":Modules:VoiceOS:VoiceOSCore")
+
+// VoiceOS Apps (moved from Modules/VoiceOS/apps/ to android/apps/)
 // LearnApp and LearnAppDev removed - functionality integrated into VoiceOSCore (2025-12-23)
-include(":Modules:VoiceOS:apps:VoiceRecognition")
-include(":Modules:VoiceOS:apps:VoiceOSCore")
+include(":android:apps:VoiceRecognition")
 include(":Modules:VoiceOS:apps:VoiceOS")  // Main launcher app with onboarding
-include(":Modules:VoiceOS:apps:VoiceCursor")
-include(":Modules:VoiceOS:apps:VoiceOSIPCTest")
-include(":Modules:VoiceOS:apps:VoiceUI")
+include(":android:apps:VoiceCursor")
+include(":android:apps:VoiceOSIPCTest")
+include(":android:apps:VoiceUI")
 
 // VoiceOS Managers
 include(":Modules:VoiceOS:managers:LicenseManager")
