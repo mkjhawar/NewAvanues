@@ -32,6 +32,7 @@ kotlin {
                 implementation(project(":Modules:AvaMagic:AvaUI:Core"))
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
+                implementation("net.mamoe.yamlkt:yamlkt:0.13.0")
             }
         }
 

@@ -1,7 +1,7 @@
 package com.augmentalis.avacode.templates
 
-import com.augmentalis.avanues.avacode.forms.Form
-import com.augmentalis.avanues.avacode.workflows.Workflow
+import com.augmentalis.avacode.forms.Form
+import com.augmentalis.avacode.workflows.Workflow
 import com.augmentalis.avamagic.ui.core.Component
 
 /**

@@ -1,7 +1,7 @@
 package com.augmentalis.avacode.workflows
 
-import com.augmentalis.avanues.avacode.forms.FormDefinition
-import com.augmentalis.avanues.avacode.forms.ValidationResult
+import com.augmentalis.avacode.forms.FormDefinition
+import com.augmentalis.avacode.forms.ValidationResult
 
 /**
  * Step definition within a workflow.

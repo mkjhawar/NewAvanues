@@ -1,6 +1,6 @@
 package com.augmentalis.avacode.workflows
 
-import com.augmentalis.avanues.avacode.forms.ValidationResult
+import com.augmentalis.avacode.forms.ValidationResult
 
 /**
  * Active workflow instance with state management.

@@ -1,6 +1,6 @@
 package com.augmentalis.avacode.workflows
 
-import com.augmentalis.avanues.avacode.forms.FormDefinition
+import com.augmentalis.avacode.forms.FormDefinition
 
 /**
  * Workflow definition for multi-step processes.
