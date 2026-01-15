@@ -6,7 +6,7 @@
 |-----------|-------|
 | Version | 1.0.0 |
 | Updated | 2026-01-15 |
-| Total Prefixes | 47 |
+| Total Prefixes | 58 |
 
 ---
 
@@ -97,6 +97,26 @@ Schema: `avu-sta-1.0`
 | `ELM` | Element state | `ELM:id:type:enabled:value` | 1.0.0 | active |
 | `NAV` | Navigation state | `NAV:screen:from:to` | 1.0.0 | active |
 | `FCS` | Focus state | `FCS:element_id:focused` | 1.0.0 | active |
+
+---
+
+## Layout Prefixes (AVU:LAYOUT)
+
+Schema: `avu-lyt-1.0`
+
+| Prefix | Purpose | Format | Since | Status |
+|--------|---------|--------|-------|--------|
+| `LYT` | Layout metadata | `LYT:name:version` | 1.0.0 | active |
+| `COL` | Column container | `COL:id:weight:align` | 1.0.0 | active |
+| `ROW` | Row container | `ROW:id:weight:align` | 1.0.0 | active |
+| `TXT` | Text component | `TXT:id:text:style` | 1.0.0 | active |
+| `BTN` | Button component | `BTN:id:label:action` | 1.0.0 | active |
+| `IMG` | Image component | `IMG:id:src:fit` | 1.0.0 | active |
+| `CNT` | Generic container | `CNT:id:weight:align` | 1.0.0 | active |
+| `STK` | Stack container | `STK:id:weight:align` | 1.0.0 | active |
+| `SCR` | Scroll container | `SCR:id:direction:align` | 1.0.0 | active |
+| `GRD` | Grid container | `GRD:id:columns:gap` | 1.0.0 | active |
+| `END` | Close container | `END:id` | 1.0.0 | active |
 
 ---
 

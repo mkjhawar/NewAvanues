@@ -34,6 +34,7 @@ The **AVU (Avanues Universal)** format is a unified, line-based data format desi
 | IDEACODE Config | `.idc` | `AVU:CONFIG` | Supported |
 | VoiceOS Commands | `.vos` | `AVU:VOICE` | Supported |
 | AVAMagic Theme | `.amf` | `AVU:THEME` | Supported |
+| AVAMagic Layout | `.amf` | `AVU:LAYOUT` | Supported |
 | State Exchange | (new) | `AVU:STATE` | New |
 | Data Exchange | (new) | `AVU:DATA` | New |
 
@@ -298,7 +299,44 @@ CMP:button:radius:8:padding:12:minHeight:44
 ANI:fade:300:easeInOut
 ```
 
-### 5.4 State Exchange File (.avu)
+### 5.4 Layout File (.avu / .amf)
+
+```
+# AVU Format v1.0
+# Type: LAYOUT
+---
+schema: avu-lyt-1.0
+version: 1.0.0
+metadata:
+  name: Settings Screen
+  platform: android
+---
+LYT:SettingsScreen:1.0.0
+COL:root:1.0:start
+  ROW:header:0:center
+    IMG:logo:ic_settings:contain
+    TXT:title:Settings:h1
+  END:header
+  SCR:content:vertical:start
+    ROW:theme_row:0:spaceBetween
+      TXT:theme_label:Theme:body
+      BTN:theme_toggle:Dark:toggle_theme
+    END:theme_row
+    ROW:volume_row:0:spaceBetween
+      TXT:volume_label:Volume:body
+      TXT:volume_value:75%:body
+    END:volume_row
+    GRD:quick_settings:2:8
+      BTN:wifi:WiFi:toggle_wifi
+      BTN:bluetooth:Bluetooth:toggle_bt
+      BTN:airplane:Airplane:toggle_airplane
+      BTN:dnd:Do Not Disturb:toggle_dnd
+    END:quick_settings
+  END:content
+END:root
+```
+
+### 5.5 State Exchange File (.avu)
 
 ```
 # AVU Format v1.0
@@ -322,7 +360,7 @@ CTX:mode:edit
 CTX:user:authenticated
 ```
 
-### 5.5 Handover File (.avu / .hov)
+### 5.6 Handover File (.avu / .hov)
 
 ```
 # AVU Format v1.0

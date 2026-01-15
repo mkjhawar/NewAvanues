@@ -470,4 +470,43 @@ html_diagrams:
 
 ---
 
+## PROJECT_RULES
+
+```yaml
+app_placement:
+  critical_rules:
+    - "NEVER create apps inside Modules/ folders"
+    - "NEVER place Android apps anywhere except android/apps/"
+    - "NEVER place iOS apps anywhere except ios/apps/"
+    - "ALWAYS: Modules contain ONLY shared KMP libraries"
+    - "ALWAYS: Platform-specific code goes in platform root folders"
+
+  folder_semantics:
+    Modules/{Name}/: "Shared KMP libraries ONLY - no runnable apps"
+    android/apps/: "Android apps"
+    ios/apps/: "iOS apps"
+    web/apps/: "Web apps"
+    desktop/apps/: "Desktop apps"
+
+  module_purposes:
+    AVA: "Core AVA library - shared utilities, data models, APIs"
+    AvaMagic: "UI generation - parsers, generators, DSL tools"
+    VoiceOS: "Voice processing - KMP voice logic, command processing"
+    WebAvanue: "Web components - shared web utilities"
+    NLU: "Natural language - language processing libraries"
+    Shared: "Common utilities - cross-module shared code"
+
+  modules_must_not_contain:
+    - "Android Manifest files"
+    - "iOS Info.plist files"
+    - "Platform-specific MainActivity/AppDelegate"
+    - "Application class definitions"
+    - "Platform-specific app build.gradle configurations"
+
+  verification_command: "find Modules -type d -name 'apps' 2>/dev/null"
+  expected_output: "(nothing - no apps folders should exist in Modules)"
+```
+
+---
+
 # END PLATFORM-INDEX
