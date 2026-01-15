@@ -59,7 +59,6 @@ include(":Modules:Database")              // Unified KMP database - VoiceOS, Web
 include(":Modules:VoiceOSCoreNG")          // KMP types, VUID, features (shared Android/iOS/Desktop)
 
 // Shared Modules (cross-platform KMP libraries)
-include(":Modules:Shared:NLU")
 include(":Modules:Shared:Platform")
 include(":Modules:Shared:LaasSDK")
 
