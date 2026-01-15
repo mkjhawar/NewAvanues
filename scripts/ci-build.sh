@@ -40,7 +40,7 @@ echo "📦 Task 1: Clean Build"
 echo "-------------------"
 cd "${PROJECT_ROOT}"
 
-if ./gradlew clean --no-daemon; then
+if ./gradlew clean --no-daemon --console=plain; then
     echo -e "${GREEN}✓ Clean successful${NC}"
 else
     echo -e "${RED}✗ Clean failed${NC}"
@@ -54,7 +54,7 @@ echo ""
 echo "🔨 Task 2: Compile Production Code"
 echo "-----------------------------------"
 
-if ./gradlew :Modules:VoiceOS:apps:VoiceOSCore:assembleDebug --no-daemon; then
+if ./gradlew :Modules:VoiceOS:apps:VoiceOSCore:assembleDebug --no-daemon --console=plain; then
     echo -e "${GREEN}✓ Production build successful${NC}"
 
     # Get APK size
@@ -80,9 +80,12 @@ echo ""
 echo "🧪 Task 3: Run Unit Tests"
 echo "-------------------------"
 
-if ./gradlew :Modules:VoiceOS:apps:VoiceOSCore:testDebugUnitTest --no-daemon 2>&1 | tee "${BUILD_DIR}/${TIMESTAMP}/test-output.log"; then
+# Use file redirect instead of pipe for reliable output capture
+if ./gradlew :Modules:VoiceOS:apps:VoiceOSCore:testDebugUnitTest --no-daemon --console=plain > "${BUILD_DIR}/${TIMESTAMP}/test-output.log" 2>&1; then
+    cat "${BUILD_DIR}/${TIMESTAMP}/test-output.log"
     echo -e "${GREEN}✓ Unit tests passed${NC}"
 else
+    cat "${BUILD_DIR}/${TIMESTAMP}/test-output.log"
     echo -e "${YELLOW}⚠ Unit tests failed (Phase 3 WIP - expected)${NC}"
     # Don't fail build - tests are being fixed
 fi
@@ -94,7 +97,7 @@ echo ""
 echo "🔍 Task 4: Lint Analysis"
 echo "------------------------"
 
-if ./gradlew :Modules:VoiceOS:apps:VoiceOSCore:lintDebug --no-daemon; then
+if ./gradlew :Modules:VoiceOS:apps:VoiceOSCore:lintDebug --no-daemon --console=plain; then
     echo -e "${GREEN}✓ Lint analysis complete${NC}"
 
     # Copy lint reports
@@ -115,7 +118,7 @@ echo "📚 Task 5: Dependency Analysis"
 echo "------------------------------"
 
 echo "Analyzing dependencies..."
-./gradlew :Modules:VoiceOS:apps:VoiceOSCore:dependencies --configuration debugRuntimeClasspath --no-daemon > "${BUILD_DIR}/${TIMESTAMP}/dependencies.txt" 2>&1
+./gradlew :Modules:VoiceOS:apps:VoiceOSCore:dependencies --configuration debugRuntimeClasspath --no-daemon --console=plain > "${BUILD_DIR}/${TIMESTAMP}/dependencies.txt" 2>&1
 
 # Count dependencies
 TOTAL_DEPS=$(grep -c "^+" "${BUILD_DIR}/${TIMESTAMP}/dependencies.txt" || echo "0")
