@@ -102,7 +102,7 @@ kotlin {
                 // ==========================================================
                 // Provides: IntentClassifier, BertTokenizer, OnnxSessionManager
                 // Uses ONNX Runtime for BERT inference with semantic embeddings
-                implementation(project(":Modules:Shared:NLU"))
+                implementation(project(":Modules:NLU"))
 
                 // ==========================================================
                 // LLM (Local language model for natural language fallback)

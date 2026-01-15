@@ -451,7 +451,7 @@ class ActionCoordinator(
         }
 
         // ═══════════════════════════════════════════════════════════════════
-        // Step 5: Try voice interpreter (legacy natural language fallback)
+        // Step 5: Try voice interpreter (keyword fallback)
         // ═══════════════════════════════════════════════════════════════════
         val interpretedAction = interpretVoiceCommand(normalizedText)
         if (interpretedAction != null) {

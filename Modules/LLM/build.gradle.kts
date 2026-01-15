@@ -46,8 +46,8 @@ dependencies {
     implementation(project(":Modules:AVA:core:Utils"))
     implementation(project(":Modules:AVA:core:Data"))
 
-    // Shared NLU - needed for IntentClassification
-    implementation(project(":Modules:Shared:NLU"))
+    // NLU module - needed for IntentClassification
+    implementation(project(":Modules:NLU"))
 
     // Hilt Dependency Injection
     implementation(libs.hilt.android)

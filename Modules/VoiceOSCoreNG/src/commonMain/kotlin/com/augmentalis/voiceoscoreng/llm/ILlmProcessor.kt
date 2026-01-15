@@ -41,6 +41,21 @@ interface ILlmProcessor {
     ): LlmResult
 
     /**
+     * Clarify a command by choosing between candidates.
+     *
+     * Used when NLU finds multiple possible matches with medium confidence.
+     * LLM should determine which candidate best matches the user's intent.
+     *
+     * @param utterance The original voice input text
+     * @param candidates List of candidate command phrases to choose from
+     * @return LlmResult with the best matching command or NoMatch
+     */
+    suspend fun clarifyCommand(
+        utterance: String,
+        candidates: List<String>
+    ): LlmResult
+
+    /**
      * Check if the LLM processor is available and initialized.
      */
     fun isAvailable(): Boolean
