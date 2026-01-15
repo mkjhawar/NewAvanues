@@ -1,0 +1,35 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: keyboard-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: fr-FR
+project: voiceos
+metadata:
+  category: keyboard
+  display_name: Keyboard Control
+  description: Voice commands for on-screen keyboard control
+  command_count: 9
+---
+CAT:keyboard:Keyboard Control:Voice commands for on-screen keyboard control
+CMD:HIDE_KEYBOARD:masquer clavier
+CMD:DISMISS_KEYBOARD:dismiss clavier
+CMD:OPEN_KEYBOARD:ouvrir clavier
+CMD:CLOSE_KEYBOARD:fermer clavier
+CMD:CHANGE_KEYBOARD:change clavier
+CMD:SWITCH_KEYBOARD:switch clavier
+CMD:KEYBOARD_MODE_CHANGE:clavier mode change
+CMD:KEYBOARD_CHANGE:clavier change
+CMD:KEYBOARD_MODE:clavier mode
+---
+SYN:HIDE_KEYBOARD:[clavier masquer,fermer clavier,dismiss clavier,clavier away,remove clavier,clavier bas,clavier off,clavier invisible,minimize clavier,clavier gone,put clavier away,fermer bas clavier,get rid of clavier,clavier out of the way]
+SYN:DISMISS_KEYBOARD:[masquer clavier,fermer clavier,clavier dismiss,clavier away,remove clavier,send clavier away,clavier gone,clavier invisible,put away clavier,fermer bas clavier,get rid of clavier,clavier off,minimize clavier,clavier out of sight]
+SYN:OPEN_KEYBOARD:[afficher clavier,clavier ouvrir,display clavier,clavier haut,clavier visible,bring clavier,clavier on,activate clavier,clavier appear,call clavier,summon clavier,bring haut clavier,get clavier,clavier s'il vous plaît]
+SYN:CLOSE_KEYBOARD:[masquer clavier,clavier fermer,dismiss clavier,clavier bas,clavier off,remove clavier,clavier away,clavier invisible,clavier gone,send clavier away,put clavier away,fermer bas clavier,get rid of clavier,minimize clavier]
+SYN:CHANGE_KEYBOARD:[switch clavier,clavier change,different clavier,other clavier,new clavier,swap clavier,alternate clavier,modify clavier,clavier mode,clavier type,change the clavier,switch to different clavier,use different clavier,another clavier]
+SYN:SWITCH_KEYBOARD:[change clavier,clavier switch,different clavier,other clavier,alternate clavier,swap clavier,new clavier,modify clavier,clavier mode,clavier type,switch to different clavier,change to another clavier,use different clavier,another clavier s'il vous plaît]
+SYN:KEYBOARD_MODE_CHANGE:[change clavier mode,clavier mode switch,switch clavier mode,different clavier mode,new clavier mode,clavier setting change,input mode change,typing mode change,clavier style change,clavier configuration change,clavier mode adjustment,clavier setup change,input method change,typing style change]
+SYN:KEYBOARD_CHANGE:[change clavier,switch clavier,clavier switch,different clavier,new clavier,swap clavier,other clavier,alternate clavier,modify clavier,clavier mode,clavier type,clavier adjustment,clavier modification,clavier alteration]
+SYN:KEYBOARD_MODE:[change clavier mode,clavier mode change,switch clavier mode,clavier type,input mode,clavier setting,clavier configuration,clavier option,clavier style,clavier format,typing mode,input method,clavier preference,clavier layout]

@@ -1,0 +1,27 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: gesture-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: fr-FR
+project: voiceos
+metadata:
+  category: gesture
+  display_name: Gesture Control
+  description: Voice commands for gesture-based interactions
+  command_count: 5
+---
+CAT:gesture:Gesture Control:Voice commands for gesture-based interactions
+CMD:PINCH_OPEN:pinch ouvrir
+CMD:PINCH_CLOSE:pinch fermer
+CMD:SINGLE_CLICK:single cliquer
+CMD:DOUBLE_CLICK:double cliquer
+CMD:LONG_PRESS:long appuyer
+---
+SYN:PINCH_OPEN:[zoom in,expand view,pinch to zoom,zoom in gesture,ouvrir pinch,pinch expand,make bigger,expand écran,zoom bigger,enlarge view,make it bigger,zoom in maintenant,bigger view,expand this]
+SYN:PINCH_CLOSE:[zoom out,shrink view,pinch to shrink,zoom out gesture,fermer pinch,pinch shrink,make smaller,shrink écran,zoom smaller,reduce view,make it smaller,zoom out maintenant,smaller view,shrink this]
+SYN:SINGLE_CLICK:[single tap,mouse cliquer,tap item,sélectionner item,cliquer,one cliquer,tap once,single crick,one crick,tap one time,appuyer once,touch once,give it a cliquer,cliquer it once]
+SYN:DOUBLE_CLICK:[double tap,double-click,twin cliquer,twice cliquer,two clicks,cliquer twice,tap twice,double appuyer,double crick,two cricks,crick twice,tap two times,appuyer twice,cliquer it twice]
+SYN:LONG_PRESS:[appuyer and maintenir,maintenir bas,long tap,extended appuyer,maintenir appuyer,long touch,appuyer long time,maintenir button,keep pressing,extended touch,maintenir it bas,appuyer and maintenir it,long maintenir,sustained appuyer]

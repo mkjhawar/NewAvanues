@@ -1,0 +1,21 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: notifications-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: es-ES
+project: voiceos
+metadata:
+  category: notifications
+  display_name: Notifications
+  description: Voice commands for managing system notifications
+  command_count: 2
+---
+CAT:notifications:Notifications:Voice commands for managing system notifications
+CMD:SHOW_NOTIFICATIONS:mostrar notificación
+CMD:HIDE_NOTIFICATIONS:ocultar notificación
+---
+SYN:SHOW_NOTIFICATIONS:[notificación,display notifications,abrir notifications,notifications visible,reveal notifications,mostrar notifications,display messages,mostrar messages,abrir messages,view alerts,mostrar alerts,notifications ahora,mostrar notifs,display notifs]
+SYN:HIDE_NOTIFICATIONS:[ocultar notifications,cerrar notifications,dismiss notifications,notifications hidden,conceal notifications,clear notifications,remove notifications,cerrar messages,ocultar messages,dismiss alerts,notifications away,ocultar notifs,cerrar notifs,get rid of notifications]

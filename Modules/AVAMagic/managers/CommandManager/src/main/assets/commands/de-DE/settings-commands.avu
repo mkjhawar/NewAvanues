@@ -1,0 +1,29 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: settings-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: de-DE
+project: voiceos
+metadata:
+  category: settings
+  display_name: Settings
+  description: Voice commands for quick access to settings screens
+  command_count: 6
+---
+CAT:settings:Settings:Voice commands for quick access to settings screens
+CMD:OPEN_CONNECTION:öffnen connections
+CMD:OPEN_SOUND:öffnen sound
+CMD:OPEN_DISPLAY:öffnen display
+CMD:OPEN_SECURITY:öffnen security
+CMD:OPEN_ABOUT:öffnen about
+CMD:OPEN_SETTINGS:öffnen Einstellungen
+---
+SYN:OPEN_CONNECTION:[connections,network Einstellungen,connectivity,connection Einstellungen,network options,wireless Einstellungen,internet Einstellungen,network Menü,connection Menü,connectivity Einstellungen,network configuration,wireless configuration,internet configuration,connection options]
+SYN:OPEN_SOUND:[sound Einstellungen,audio Einstellungen,Lautstärke Einstellungen,sound options,audio options,sound Menü,audio Menü,sound preferences,audio preferences,sound control,audio control,Lautstärke control,sound configuration,audio configuration]
+SYN:OPEN_DISPLAY:[display Einstellungen,Bildschirm Einstellungen,display options,Bildschirm options,display Menü,Bildschirm Menü,display preferences,Bildschirm preferences,visual Einstellungen,display control,Bildschirm control,display configuration,Bildschirm configuration,Helligkeit Einstellungen]
+SYN:OPEN_SECURITY:[security Einstellungen,privacy Einstellungen,security options,privacy options,security Menü,privacy Menü,security preferences,privacy preferences,protection Einstellungen,safety Einstellungen,security control,privacy control,security configuration,privacy configuration]
+SYN:OPEN_ABOUT:[about device,device info,system info,about phone,device information,system information,about system,phone info,about Menü,device details,system details,phone details,device specifications,system specifications]
+SYN:OPEN_SETTINGS:[Einstellungen,preferences,configuration,options,system Einstellungen,device Einstellungen,setup,control panel,Einstellungen Menü,preferences Menü,öffnen preferences,öffnen configuration,öffnen options,zeigen Einstellungen]

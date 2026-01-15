@@ -902,4 +902,89 @@ values: [FIXED_SIZE, SEMANTIC, HYBRID]
 
 ---
 
+## AVU_FORMAT_CLASSES
+
+### UniversalAvuParser
+```yaml
+package: com.augmentalis.avamagic.ipc.universal
+file: UniversalAvuParser.kt
+type: object
+purpose: Universal parser for AVU format with auto-detection
+added: 2026-01-15
+methods:
+  - parse(content: String): AvuFile
+  - parseAs<T>(content: String): T
+  - parseVoiceCommands(file: AvuFile): AvuVoiceCommands
+  - parseConfig(file: AvuFile): AvuConfig
+  - parseTheme(file: AvuFile): AvuTheme
+```
+
+### VosToAvuConverter
+```yaml
+package: com.augmentalis.avamagic.ipc.universal
+file: VosToAvuConverter.kt
+type: object
+purpose: Converts VOS JSON files to AVU format (~52% size reduction)
+added: 2026-01-15
+methods:
+  - convert(vosJson: String): String
+  - convertBatch(vosFiles: Map<String, String>): Map<String, String>
+  - calculateSizeReduction(vosJson: String, avuContent: String): SizeComparison
+```
+
+### AvuWriter
+```yaml
+package: com.augmentalis.avamagic.ipc.universal
+file: VosToAvuConverter.kt
+type: class
+purpose: Programmatic AVU content builder
+added: 2026-01-15
+methods:
+  - metadata(key: String, value: String): AvuWriter
+  - entry(prefix: String, data: String): AvuWriter
+  - command(action: String, primaryText: String, syns: List<String>): AvuWriter
+  - config(key: String, value: Any, type: String?): AvuWriter
+  - build(): String
+```
+
+### UnifiedCommandParser
+```yaml
+package: com.augmentalis.commandmanager.loader
+file: UnifiedCommandParser.kt
+type: class
+purpose: Unified parser supporting both .vos (JSON) and .avu formats
+added: 2026-01-15
+methods:
+  - parseCommandFile(assetPath: String): Result<CommandFileResult>
+  - parseAllCommandFiles(): Result<List<CommandFileResult>>
+  - convertToEntities(result: CommandFileResult): List<VoiceCommandEntity>
+```
+
+### AvuType
+```yaml
+package: com.augmentalis.avamagic.ipc.universal
+file: UniversalAvuParser.kt
+type: enum
+values: [CONFIG, VOICE, THEME, STATE, IPC, HANDOVER, DATA]
+purpose: AVU file type enumeration
+```
+
+### AvuFile
+```yaml
+package: com.augmentalis.avamagic.ipc.universal
+file: UniversalAvuParser.kt
+type: data_class
+fields:
+  - type: AvuType
+  - schema: String
+  - version: String
+  - locale: String
+  - project: String
+  - metadata: Map<String, String>
+  - entries: List<AvuEntry>
+  - synonyms: Map<String, List<String>>
+```
+
+---
+
 # END CLASS-INDEX

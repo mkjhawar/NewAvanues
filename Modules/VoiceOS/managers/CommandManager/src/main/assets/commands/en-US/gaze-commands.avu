@@ -1,0 +1,21 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: gaze-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: en-US
+project: voiceos
+metadata:
+  category: gaze
+  display_name: Gaze Tracking
+  description: Voice commands for eye gaze tracking control
+  command_count: 2
+---
+CAT:gaze:Gaze Tracking:Voice commands for eye gaze tracking control
+CMD:GAZE_ON:gaze on
+CMD:GAZE_OFF:gaze off
+---
+SYN:GAZE_ON:[eye tracking on,gaze tracking on,start gaze,enable gaze,gaze mode on,gaze tracking start,eye track on,look tracking on,gaze enable,start eye track,turn on gaze,switch on gaze,activate gaze,eye tracking active]
+SYN:GAZE_OFF:[eye tracking off,gaze tracking off,stop gaze,disable gaze,gaze mode off,gaze tracking stop,eye track off,look tracking off,gaze disable,stop eye track,turn off gaze,switch off gaze,deactivate gaze,eye tracking inactive]

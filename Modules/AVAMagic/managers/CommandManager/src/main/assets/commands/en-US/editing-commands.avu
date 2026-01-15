@@ -1,0 +1,23 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: editing-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: en-US
+project: voiceos
+metadata:
+  category: editing
+  display_name: Text Editing
+  description: Voice commands for text editing operations
+  command_count: 3
+---
+CAT:editing:Text Editing:Voice commands for text editing operations
+CMD:BACKSPACE:backspace
+CMD:CLEAR_TEXT:clear text
+CMD:ENTER:enter
+---
+SYN:BACKSPACE:[delete,erase,remove character,delete character,back delete,delete back,remove letter,erase letter,delete previous,remove previous,backspace key,delete key,rub out,wipe out]
+SYN:CLEAR_TEXT:[delete all,erase all,remove all text,clear all,delete everything,erase everything,text clear,all delete,remove everything,clean text,wipe text,clear everything,delete all text,wipe everything]
+SYN:ENTER:[return,new line,line break,next line,go,submit,confirm,okay,done,send,enter key,return key,press enter,hit enter]

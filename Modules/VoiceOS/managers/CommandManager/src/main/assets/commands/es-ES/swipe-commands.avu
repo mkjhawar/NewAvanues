@@ -1,0 +1,25 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: swipe-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: es-ES
+project: voiceos
+metadata:
+  category: swipe
+  display_name: Swipe Gestures
+  description: Voice commands for swipe gestures in all directions
+  command_count: 4
+---
+CAT:swipe:Swipe Gestures:Voice commands for swipe gestures in all directions
+CMD:SWIPE_UP:deslizar arriba
+CMD:SWIPE_DOWN:deslizar abajo
+CMD:SWIPE_LEFT:deslizar izquierda
+CMD:SWIPE_RIGHT:deslizar derecha
+---
+SYN:SWIPE_UP:[flick arriba,slide arriba,upward deslizar,deslizar upward,gesture arriba,sweep arriba,brush arriba,move arriba fast,quick arriba,fast arriba,deslizar upwards,flick upwards,slide upwards,deslizar it arriba]
+SYN:SWIPE_DOWN:[flick abajo,slide abajo,downward deslizar,deslizar downward,gesture abajo,sweep abajo,brush abajo,move abajo fast,quick abajo,fast abajo,deslizar downwards,flick downwards,slide downwards,deslizar it abajo]
+SYN:SWIPE_LEFT:[flick izquierda,slide izquierda,leftward deslizar,deslizar leftward,gesture izquierda,sweep izquierda,brush izquierda,move izquierda fast,quick izquierda,fast izquierda,deslizar to the izquierda,flick to the izquierda,slide to the izquierda,deslizar it izquierda]
+SYN:SWIPE_RIGHT:[flick derecha,slide derecha,rightward deslizar,deslizar rightward,gesture derecha,sweep derecha,brush derecha,move derecha fast,quick derecha,fast derecha,deslizar to the derecha,flick to the derecha,slide to the derecha,deslizar it derecha]

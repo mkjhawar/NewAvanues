@@ -1,0 +1,31 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: cursor-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: fr-FR
+project: voiceos
+metadata:
+  category: cursor
+  display_name: Cursor Control
+  description: Voice commands for cursor control and manipulation
+  command_count: 7
+---
+CAT:cursor:Cursor Control:Voice commands for cursor control and manipulation
+CMD:SELECT:sélectionner
+CMD:HAND_CURSOR:hand curseur
+CMD:NORMAL_CURSOR:normal curseur
+CMD:CHANGE_CURSOR:change curseur
+CMD:CENTER_CURSOR:center curseur
+CMD:SHOW_CURSOR:afficher curseur
+CMD:HIDE_CURSOR:masquer curseur
+---
+SYN:SELECT:[choose,pick,highlight,mark,elect,sélectionner item,choose this,pick this,choose this one,pick this item,take this,aller with this,sélectionner this thing,pick out this one,choose that there]
+SYN:HAND_CURSOR:[hand pointer,pointing hand,finger pointer,pointer curseur,finger curseur,pointing curseur,hand curser,pointer mode,finger mode,hand mode,point curseur,hand type curseur,pointing finger,finger point]
+SYN:NORMAL_CURSOR:[standard curseur,regular curseur,default curseur,ordinary curseur,basic curseur,normal curser,standard curser,regular curser,default curser,basic curser,plain curseur,usual curseur,standard pointer,regular pointer]
+SYN:CHANGE_CURSOR:[switch curseur,modify curseur,alter curseur,curseur change,curseur switch,change curser,switch curser,modify curser,alter curser,curser change,swap curseur,change the curseur,switch the curseur,modify the curseur]
+SYN:CENTER_CURSOR:[curseur center,center pointer,middle curseur,center curser,curser center,middle curser,curseur middle,center the curseur,put curseur in center,curseur to center,center that curseur,middle of curseur,curseur dead center,center it haut]
+SYN:SHOW_CURSOR:[display curseur,curseur visible,make curseur visible,curseur afficher,reveal curseur,afficher curser,display curser,curser visible,make curser visible,reveal curser,afficher the curseur,display the curseur,make curseur appear,bring haut curseur]
+SYN:HIDE_CURSOR:[curseur masquer,make curseur invisible,curseur invisible,conceal curseur,remove curseur,masquer curser,curser masquer,make curser invisible,conceal curser,remove curser,masquer the curseur,conceal the curseur,make curseur disappear,curseur away]

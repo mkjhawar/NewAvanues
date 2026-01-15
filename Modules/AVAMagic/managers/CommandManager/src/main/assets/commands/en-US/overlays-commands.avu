@@ -1,0 +1,31 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: overlays-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: en-US
+project: voiceos
+metadata:
+  category: overlays
+  display_name: Overlay Controls
+  description: Voice commands for managing screen overlays and hints
+  command_count: 7
+---
+CAT:overlays:Overlay Controls:Voice commands for managing screen overlays and hints
+CMD:SHOW_NUMBER:show number
+CMD:HIDE_NUMBER:hide number
+CMD:SHOW_HELP:show help
+CMD:HIDE_HELP:hide help
+CMD:SHOW_COMMAND:show commands
+CMD:HIDE_COMMAND:hide commands
+CMD:SCAN_COMMANDS:scan commands
+---
+SYN:SHOW_NUMBER:[show numbers,show hint,display numbers,numbers visible,reveal numbers,show hints,display hints,hints visible,reveal hints,number overlay,display number overlay,show number overlay,numbers on,hints on]
+SYN:HIDE_NUMBER:[hide numbers,hide hint,conceal numbers,numbers hidden,remove numbers,hide hints,conceal hints,hints hidden,remove hints,clear overlay,numbers off,hints off,remove overlay,number overlay off]
+SYN:SHOW_HELP:[display help,help,assistance,support,guide,tutorial,instructions,help menu,user guide,manual,how to,show assistance,display support,get help]
+SYN:HIDE_HELP:[close help,dismiss help,assistance close,support hide,exit help,help away,remove help,help off,help invisible,help gone,close guide,exit tutorial,close assistance,dismiss support]
+SYN:SHOW_COMMAND:[show command,display commands,command list,commands visible,reveal commands,command menu,voice commands,available commands,command help,command guide,show voice commands,display voice commands,list commands,command options]
+SYN:HIDE_COMMAND:[hide command,conceal commands,commands hidden,remove commands,command away,commands off,commands invisible,commands gone,close commands,dismiss commands,command menu off,voice commands off,hide command list,close command menu]
+SYN:SCAN_COMMANDS:[search commands,find commands,look for commands,command search,command scan,detect commands,identify commands,discover commands,explore commands,review commands,browse commands,examine commands,check commands,locate commands]
