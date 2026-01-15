@@ -72,7 +72,7 @@ class CommandRegistryTest {
     }
 
     @Test
-    fun `findByPhrase matches partial phrase (label only)`() {
+    fun `findByPhrase matches partial phrase with label only`() {
         val registry = CommandRegistry()
         registry.updateSync(listOf(
             createCommand("click Submit", "vuid1")

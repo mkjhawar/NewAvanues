@@ -92,7 +92,7 @@ class DocumentIngestionHandler(
                     )
 
                 // Create document
-                val documentId = VuidHelper.randomVUID()
+                val documentId = AvidHelper.randomVUID()
                 val now = Clock.System.now()
 
                 // Insert document using SQLDelight
