@@ -43,7 +43,7 @@ import com.augmentalis.avamagic.layout.LayoutConfig
  */
 object AmfLayoutSerializer {
 
-    private const val SCHEMA_VERSION = "amf-lyt-1.0"
+    private const val SCHEMA_VERSION = "avu-lyt-1.0"
     private const val INDENT = "  "
 
     /**

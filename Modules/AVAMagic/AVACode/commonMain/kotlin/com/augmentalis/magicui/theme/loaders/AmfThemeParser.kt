@@ -1,37 +1,38 @@
 package com.augmentalis.avamagic.theme.loaders
 
-import com.augmentalis.avamagic.theme.*
+import com.augmentalis.avamagic.theme.AnimationConfig
+import com.augmentalis.avamagic.theme.ComponentStyle
+import com.augmentalis.avamagic.theme.TextStyle
+import com.augmentalis.avamagic.theme.ThemeConfig
+import com.augmentalis.avamagic.theme.ThemeEffects
+import com.augmentalis.avamagic.theme.ThemePalette
+import com.augmentalis.avamagic.theme.ThemeSpacing
+import com.augmentalis.avamagic.theme.ThemeTypography
 
 /**
- * Parser for AMF (AvaMagic Format) theme files.
+ * Parser for AVU/AMF theme files (unified format).
  *
- * AMF is a line-based compact format that provides ~50% reduction in file size
- * compared to YAML/JSON while being faster to parse.
+ * Supports the unified AVU (Avanues Universal) format and legacy AMF (AvaMagic Format).
+ * Provides ~50% size reduction vs YAML/JSON with fast line-based parsing.
  *
- * ## AMF Theme Format (.amf)
+ * ## AVU Theme Format (.avu / .amf)
  *
  * ```
- * # AvaMagic Theme Format v1.0
+ * # AVU Format v1.0
+ * # Type: THEME
  * ---
- * schema: amf-thm-1.0
+ * schema: avu-thm-1.0
  * ---
  * THM:Dark Theme:1.0.0
  * PAL:primary:#007AFF
  * PAL:secondary:#5AC8FA
  * PAL:background:#000000
- * PAL:surface:#1C1C1E
- * PAL:error:#FF3B30
- * PAL:onPrimary:#FFFFFF
- * PAL:onSecondary:#FFFFFF
- * PAL:onBackground:#FFFFFF
- * PAL:onSurface:#FFFFFF
- * PAL:onError:#FFFFFF
  * TYP:h1:28:bold:system
- * TYP:h2:22:bold:system
  * TYP:body:16:regular:system
- * TYP:caption:12:regular:system
  * SPC:xs:4:sm:8:md:16:lg:24:xl:32
  * EFX:shadow:true:blur:8:elevation:4
+ * CMP:button:radius:8:padding:12
+ * ANI:fade:300:easeInOut
  * ```
  *
  * ## Record Types
@@ -43,14 +44,18 @@ import com.augmentalis.avamagic.theme.*
  * | `TYP:` | Typography | `TYP:style:size:weight:family` |
  * | `SPC:` | Spacing | `SPC:xs:val:sm:val:md:val:lg:val:xl:val` |
  * | `EFX:` | Effects | `EFX:shadow:bool:blur:val:elevation:val` |
+ * | `CMP:` | Component style | `CMP:name:k1:v1:k2:v2` |
+ * | `ANI:` | Animation | `ANI:name:duration:easing` |
  *
  * @since 3.2.0
+ * @see <a href="AVU-Format-Specification-V1.md">AVU Format Specification</a>
  */
 object AmfThemeParser {
 
     private const val HEADER_DELIMITER = "---"
     private const val SCHEMA_PREFIX = "schema:"
-    private const val THEME_SCHEMA = "amf-thm"
+    // Support both AVU (new) and AMF (legacy) schema prefixes
+    private val THEME_SCHEMAS = listOf("avu-thm", "amf-thm")
 
     /**
      * Parse AMF format theme content.
@@ -73,10 +78,13 @@ object AmfThemeParser {
             throw AmfParseException("Invalid AMF format: missing header delimiters (---)")
         }
 
-        // Validate schema
+        // Validate schema (supports both avu-thm and amf-thm)
         val headerLines = lines.subList(delimiterIndices[0] + 1, delimiterIndices[1])
-        if (!headerLines.any { it.startsWith(SCHEMA_PREFIX) && it.contains(THEME_SCHEMA) }) {
-            throw AmfParseException("Invalid schema: expected 'schema: amf-thm-*'")
+        val hasValidSchema = headerLines.any { line ->
+            line.startsWith(SCHEMA_PREFIX) && THEME_SCHEMAS.any { schema -> line.contains(schema) }
+        }
+        if (!hasValidSchema) {
+            throw AmfParseException("Invalid schema: expected 'schema: avu-thm-*' or 'schema: amf-thm-*'")
         }
 
         // Parse content records
@@ -93,6 +101,8 @@ object AmfThemeParser {
         val typography = mutableMapOf<String, TextStyle>()
         var spacing: ThemeSpacing? = null
         var effects: ThemeEffects? = null
+        val componentStyles = mutableMapOf<String, Map<String, String>>()
+        val animations = mutableMapOf<String, AnimationConfig>()
 
         for (line in lines) {
             val parts = line.split(":")
@@ -134,6 +144,25 @@ object AmfThemeParser {
                     // EFX:shadow:true:blur:8:elevation:4
                     effects = parseEffects(parts.drop(1))
                 }
+
+                "CMP" -> {
+                    // CMP:button:radius:8:padding:12:minHeight:44
+                    if (parts.size >= 4) {
+                        val componentName = parts[1]
+                        val props = parseKeyValuePairs(parts.drop(2))
+                        componentStyles[componentName] = props
+                    }
+                }
+
+                "ANI" -> {
+                    // ANI:fade:300:easeInOut
+                    if (parts.size >= 4) {
+                        val animName = parts[1]
+                        val duration = parts[2].toIntOrNull() ?: 300
+                        val easing = parts[3]
+                        animations[animName] = AnimationConfig(duration, easing)
+                    }
+                }
             }
         }
 
@@ -142,7 +171,9 @@ object AmfThemeParser {
             palette = buildPalette(palette),
             typography = buildTypography(typography),
             spacing = spacing ?: ThemeSpacing(),
-            effects = effects ?: ThemeEffects()
+            effects = effects ?: ThemeEffects(),
+            components = componentStyles.mapValues { ComponentStyle(it.value) },
+            animations = animations
         )
     }
 

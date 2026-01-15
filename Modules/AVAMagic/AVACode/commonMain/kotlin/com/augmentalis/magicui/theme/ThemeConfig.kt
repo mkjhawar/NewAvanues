@@ -10,6 +10,8 @@ import kotlinx.serialization.Serializable
  * - **Typography**: Text styles
  * - **Spacing**: Layout spacing rules
  * - **Effects**: Visual effects (shadows, blur, etc.)
+ * - **Components**: Component-specific styles (AVU format)
+ * - **Animations**: Animation configurations (AVU format)
  *
  * ## Example Usage
  *
@@ -38,7 +40,9 @@ data class ThemeConfig(
     val palette: ThemePalette,
     val typography: ThemeTypography = ThemeTypography(),
     val spacing: ThemeSpacing = ThemeSpacing(),
-    val effects: ThemeEffects = ThemeEffects()
+    val effects: ThemeEffects = ThemeEffects(),
+    val components: Map<String, ComponentStyle> = emptyMap(),
+    val animations: Map<String, AnimationConfig> = emptyMap()
 )
 
 /**
@@ -101,4 +105,39 @@ data class ThemeEffects(
     val shadowEnabled: Boolean = true,
     val blurRadius: Float = 8f,
     val elevation: Float = 4f
+)
+
+/**
+ * Component-specific style overrides.
+ *
+ * Used for AVU CMP: prefix entries.
+ * Example: `CMP:button:radius:8:padding:12:minHeight:44`
+ */
+@Serializable
+data class ComponentStyle(
+    val properties: Map<String, String> = emptyMap()
+) {
+    /** Get property as Int or default */
+    fun getInt(key: String, default: Int = 0): Int =
+        properties[key]?.toIntOrNull() ?: default
+
+    /** Get property as Float or default */
+    fun getFloat(key: String, default: Float = 0f): Float =
+        properties[key]?.toFloatOrNull() ?: default
+
+    /** Get property as String or default */
+    fun getString(key: String, default: String = ""): String =
+        properties[key] ?: default
+}
+
+/**
+ * Animation configuration.
+ *
+ * Used for AVU ANI: prefix entries.
+ * Example: `ANI:fade:300:easeInOut`
+ */
+@Serializable
+data class AnimationConfig(
+    val duration: Int = 300,
+    val easing: String = "easeInOut"
 )

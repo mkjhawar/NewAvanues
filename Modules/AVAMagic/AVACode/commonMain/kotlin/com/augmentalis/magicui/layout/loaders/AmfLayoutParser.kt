@@ -3,28 +3,28 @@ package com.augmentalis.avamagic.layout.loaders
 import com.augmentalis.avamagic.layout.*
 
 /**
- * Parser for AMF (AvaMagic Format) layout files.
+ * Parser for AVU/AMF layout files (unified format).
  *
- * AMF is a line-based compact format that provides ~50% reduction in file size
- * compared to YAML/JSON while being faster to parse.
+ * Supports the unified AVU (Avanues Universal) format and legacy AMF (AvaMagic Format).
+ * Provides ~50% size reduction vs YAML/JSON with fast line-based parsing.
  *
- * ## AMF Layout Format (.amf)
+ * ## AVU Layout Format (.avu / .amf)
  *
  * ```
- * # AvaMagic Layout Format v1.0
+ * # AVU Format v1.0
+ * # Type: LAYOUT
  * ---
- * schema: amf-lyt-1.0
+ * schema: avu-lyt-1.0
  * ---
  * LYT:MainScreen:1.0.0
  * COL:root:1:center
  *   ROW:header:0:space-between
  *     TXT:title:Welcome:h1
  *     BTN:menu:Menu:openMenu
+ *   END:header
  *   SPC:spacer1:16
  *   TXT:content:Hello World:body
- *   ROW:actions:0:center
- *     BTN:save:Save:onSave
- *     BTN:cancel:Cancel:onCancel
+ * END:root
  * ```
  *
  * ## Record Types
@@ -42,23 +42,23 @@ import com.augmentalis.avamagic.layout.*
  * | `STK:` | Stack container | `STK:id:weight:align` |
  * | `SCR:` | Scroll container | `SCR:id:direction:align` |
  * | `GRD:` | Grid container | `GRD:id:columns:gap` |
+ * | `END:` | Close container | `END:id` (optional, indentation also works) |
  *
  * ## Nesting
  *
- * Nesting is indicated by indentation (2 spaces per level):
- * ```
- * COL:parent:1:center
- *   TXT:child1:Hello:body
- *   TXT:child2:World:body
- * ```
+ * Nesting can be indicated by:
+ * 1. Indentation (2 spaces per level) - preferred for human editing
+ * 2. END: closers - preferred for machine generation
  *
  * @since 3.2.0
+ * @see <a href="AVU-Format-Specification-V1.md">AVU Format Specification</a>
  */
 object AmfLayoutParser {
 
     private const val HEADER_DELIMITER = "---"
     private const val SCHEMA_PREFIX = "schema:"
-    private const val LAYOUT_SCHEMA = "amf-lyt"
+    // Support both AVU (new) and AMF (legacy) schema prefixes
+    private val LAYOUT_SCHEMAS = listOf("avu-lyt", "amf-lyt")
     private const val INDENT_SPACES = 2
 
     /**
@@ -84,10 +84,14 @@ object AmfLayoutParser {
             throw AmfLayoutParseException("Invalid AMF format: missing header delimiters (---)")
         }
 
-        // Validate schema
+        // Validate schema (supports both avu-lyt and amf-lyt)
         val headerLines = trimmedWithIndex.subList(delimiterIndices[0] + 1, delimiterIndices[1])
-        if (!headerLines.any { it.content.trim().startsWith(SCHEMA_PREFIX) && it.content.contains(LAYOUT_SCHEMA) }) {
-            throw AmfLayoutParseException("Invalid schema: expected 'schema: amf-lyt-*'")
+        val hasValidSchema = headerLines.any { line ->
+            line.content.trim().startsWith(SCHEMA_PREFIX) &&
+                LAYOUT_SCHEMAS.any { schema -> line.content.contains(schema) }
+        }
+        if (!hasValidSchema) {
+            throw AmfLayoutParseException("Invalid schema: expected 'schema: avu-lyt-*' or 'schema: amf-lyt-*'")
         }
 
         // Parse content records
@@ -130,6 +134,22 @@ object AmfLayoutParser {
                         if (parts.size >= 2) name = parts[1]
                         if (parts.size >= 3) version = parts[2]
                         if (parts.size >= 4) description = parts.drop(3).joinToString(":")
+                    }
+
+                    "END" -> {
+                        // END:id - explicit container closer (AVU format)
+                        // Pop the matching container from stack
+                        val targetId = if (parts.size >= 2) parts[1] else null
+                        if (componentStack.isNotEmpty()) {
+                            val (_, completedComponent) = componentStack.removeLast()
+                            // Verify ID matches if provided
+                            if (targetId != null && completedComponent.id != targetId) {
+                                throw AmfLayoutParseException(
+                                    "Line $lineNumber: END:$targetId doesn't match open container ${completedComponent.id}"
+                                )
+                            }
+                            addToParentOrRoot(componentStack, rootComponents, completedComponent)
+                        }
                     }
 
                     else -> {
@@ -271,12 +291,13 @@ object AmfLayoutParser {
             errors.add("Missing header delimiters (---): found $delimiterCount, expected at least 2")
         }
 
-        // Check for schema
-        val hasSchema = lines.any {
-            it.trim().startsWith(SCHEMA_PREFIX) && it.contains(LAYOUT_SCHEMA)
+        // Check for schema (supports both avu-lyt and amf-lyt)
+        val hasSchema = lines.any { line ->
+            line.trim().startsWith(SCHEMA_PREFIX) &&
+                LAYOUT_SCHEMAS.any { schema -> line.contains(schema) }
         }
         if (!hasSchema) {
-            errors.add("Missing or invalid schema: expected 'schema: amf-lyt-*'")
+            errors.add("Missing or invalid schema: expected 'schema: avu-lyt-*' or 'schema: amf-lyt-*'")
         }
 
         // Check for LYT record

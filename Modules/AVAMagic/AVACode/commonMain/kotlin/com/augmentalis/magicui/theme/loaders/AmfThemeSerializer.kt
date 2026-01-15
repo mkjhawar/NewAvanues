@@ -35,7 +35,7 @@ import com.augmentalis.avamagic.theme.*
  */
 object AmfThemeSerializer {
 
-    private const val SCHEMA_VERSION = "amf-thm-1.0"
+    private const val SCHEMA_VERSION = "avu-thm-1.0"
     private const val THEME_VERSION = "1.0.0"
 
     /**
