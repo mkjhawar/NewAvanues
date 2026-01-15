@@ -83,7 +83,7 @@ dependencies {
     
     // VOS4 Dependencies - Direct integration with existing systems
     implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))       // For IMU integration
-    implementation(project(":Modules:VoiceOS:libraries:UUIDCreator"))         // For unique identifiers
+    implementation(project(":Modules:AVID"))                                  // For unique identifiers
     // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight       // For data persistence
     implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))  // For localization support
     // implementation(project(":apps:SpeechRecognition"))        // For voice command data - TEMP: Has compilation errors

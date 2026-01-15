@@ -330,10 +330,10 @@ object AVUSerializer {
                 if (parts.size >= 5) {
                     ParsedCommand(
                         QuantizedCommand(
-                            uuid = parts[0],
+                            avid = parts[0],
                             phrase = parts[1],
                             actionType = CommandActionType.fromString(parts[2]),
-                            targetVuid = parts[3].takeIf { it.isNotBlank() },
+                            targetAvid = parts[3].takeIf { it.isNotBlank() },
                             confidence = parts[4].toFloatOrNull() ?: 0f
                         )
                     )

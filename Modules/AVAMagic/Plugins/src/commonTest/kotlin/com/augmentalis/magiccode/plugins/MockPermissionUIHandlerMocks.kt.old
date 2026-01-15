@@ -1,0 +1,153 @@
+package com.augmentalis.magiccode.plugins
+
+import com.augmentalis.magiccode.plugins.core.Permission
+import com.augmentalis.magiccode.plugins.security.PermissionRequest
+import com.augmentalis.magiccode.plugins.security.PermissionResult
+import com.augmentalis.magiccode.plugins.security.PermissionUIHandler
+
+/**
+ * Mock implementation of PermissionUIHandler for testing.
+ *
+ * Allows tests to control user responses and verify UI interactions.
+ */
+class MockPermissionUIHandler : PermissionUIHandler {
+    // Tracking for verification
+    var lastRequest: PermissionRequest? = null
+    var lastRationaleRequest: RationaleRequest? = null
+    var lastSettingsRequest: SettingsRequest? = null
+
+    var requestCount = 0
+    var rationaleCount = 0
+    var settingsCount = 0
+
+    // Behavior configuration
+    var permissionDialogResult: PermissionResult? = null
+    var rationaleDialogResult: Boolean = false
+    var settingsDialogResult: Map<Permission, Boolean>? = null
+
+    // Auto-grant/deny modes for convenience
+    var autoGrantAll = false
+    var autoDenyAll = false
+
+    // Permission-specific responses
+    private val specificResponses = mutableMapOf<Permission, Boolean>()
+
+    override suspend fun showPermissionDialog(request: PermissionRequest): PermissionResult {
+        lastRequest = request
+        requestCount++
+
+        // Use pre-configured result if available
+        if (permissionDialogResult != null) {
+            return permissionDialogResult!!
+        }
+
+        // Auto modes
+        if (autoGrantAll) {
+            return PermissionResult(
+                granted = request.permissions,
+                denied = emptySet()
+            )
+        }
+
+        if (autoDenyAll) {
+            return PermissionResult(
+                granted = emptySet(),
+                denied = request.permissions
+            )
+        }
+
+        // Use specific responses if available
+        if (specificResponses.isNotEmpty()) {
+            val granted = mutableSetOf<Permission>()
+            val denied = mutableSetOf<Permission>()
+
+            request.permissions.forEach { permission ->
+                if (specificResponses[permission] == true) {
+                    granted.add(permission)
+                } else {
+                    denied.add(permission)
+                }
+            }
+
+            return PermissionResult(granted = granted, denied = denied)
+        }
+
+        // Default: deny all
+        return PermissionResult(
+            granted = emptySet(),
+            denied = request.permissions
+        )
+    }
+
+    override suspend fun showRationaleDialog(
+        pluginId: String,
+        pluginName: String,
+        permission: Permission,
+        rationale: String
+    ): Boolean {
+        lastRationaleRequest = RationaleRequest(pluginId, pluginName, permission, rationale)
+        rationaleCount++
+        return rationaleDialogResult
+    }
+
+    override suspend fun showPermissionSettings(
+        pluginId: String,
+        pluginName: String,
+        currentPermissions: Map<Permission, Boolean>
+    ): Map<Permission, Boolean>? {
+        lastSettingsRequest = SettingsRequest(pluginId, pluginName, currentPermissions)
+        settingsCount++
+        return settingsDialogResult
+    }
+
+    /**
+     * Configure specific response for a permission.
+     */
+    fun setPermissionResponse(permission: Permission, granted: Boolean) {
+        specificResponses[permission] = granted
+    }
+
+    /**
+     * Configure response for multiple permissions.
+     */
+    fun setPermissionResponses(responses: Map<Permission, Boolean>) {
+        specificResponses.putAll(responses)
+    }
+
+    /**
+     * Clear all configuration and tracking.
+     */
+    fun reset() {
+        lastRequest = null
+        lastRationaleRequest = null
+        lastSettingsRequest = null
+        requestCount = 0
+        rationaleCount = 0
+        settingsCount = 0
+        permissionDialogResult = null
+        rationaleDialogResult = false
+        settingsDialogResult = null
+        autoGrantAll = false
+        autoDenyAll = false
+        specificResponses.clear()
+    }
+
+    /**
+     * Data class for tracking rationale requests.
+     */
+    data class RationaleRequest(
+        val pluginId: String,
+        val pluginName: String,
+        val permission: Permission,
+        val rationale: String
+    )
+
+    /**
+     * Data class for tracking settings requests.
+     */
+    data class SettingsRequest(
+        val pluginId: String,
+        val pluginName: String,
+        val currentPermissions: Map<Permission, Boolean>
+    )
+}

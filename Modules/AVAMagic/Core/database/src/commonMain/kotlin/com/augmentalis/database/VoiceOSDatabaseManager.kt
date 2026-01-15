@@ -15,7 +15,7 @@ import com.augmentalis.database.repositories.ICommandRepository
 import com.augmentalis.database.repositories.ICommandHistoryRepository
 import com.augmentalis.database.repositories.IUserPreferenceRepository
 import com.augmentalis.database.repositories.IErrorReportRepository
-import com.augmentalis.database.repositories.IUUIDRepository
+import com.augmentalis.database.repositories.IAvidRepository
 import com.augmentalis.database.repositories.IVoiceCommandRepository
 import com.augmentalis.database.repositories.ICommandUsageRepository
 import com.augmentalis.database.repositories.IContextPreferenceRepository
@@ -36,7 +36,7 @@ import com.augmentalis.database.repositories.SQLDelightCommandRepository
 import com.augmentalis.database.repositories.SQLDelightCommandHistoryRepository
 import com.augmentalis.database.repositories.SQLDelightUserPreferenceRepository
 import com.augmentalis.database.repositories.SQLDelightErrorReportRepository
-import com.augmentalis.database.repositories.SQLDelightUUIDRepository
+import com.augmentalis.database.repositories.SQLDelightAvidRepository
 import com.augmentalis.database.repositories.SQLDelightVoiceCommandRepository
 import com.augmentalis.database.repositories.SQLDelightCommandUsageRepository
 import com.augmentalis.database.repositories.SQLDelightContextPreferenceRepository
@@ -163,7 +163,7 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
     val commandHistory: ICommandHistoryRepository = SQLDelightCommandHistoryRepository(database)
     val userPreferences: IUserPreferenceRepository = SQLDelightUserPreferenceRepository(database)
     val errorReports: IErrorReportRepository = SQLDelightErrorReportRepository(database)
-    val uuids: IUUIDRepository = SQLDelightUUIDRepository(database)
+    val avids: IAvidRepository = SQLDelightAvidRepository(database)
     val plugins: IPluginRepository = SQLDelightPluginRepository(database)
 
     // CommandManager repositories
@@ -213,11 +213,11 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
     val screenContextQueries get() = database.screenContextQueries
     val screenTransitionQueries get() = database.screenTransitionQueries
     val userSequenceQueries get() = database.userSequenceQueries
-    // UUID queries for UUIDCreator module
-    val uuidElementQueries get() = database.uUIDElementQueries
-    val uuidHierarchyQueries get() = database.uUIDHierarchyQueries
-    val uuidAnalyticsQueries get() = database.uUIDAnalyticsQueries
-    val uuidAliasQueries get() = database.uUIDAliasQueries
+    // AVID queries for AvidCreator module (backed by UUID tables)
+    val avidElementQueries get() = database.uUIDElementQueries
+    val avidHierarchyQueries get() = database.uUIDHierarchyQueries
+    val avidAnalyticsQueries get() = database.uUIDAnalyticsQueries
+    val avidAliasQueries get() = database.uUIDAliasQueries
     // Analytics and Retention settings are accessed via settingsQueries
     // Use: settingsQueries.getAnalyticsSettings() and settingsQueries.getRetentionSettings()
 

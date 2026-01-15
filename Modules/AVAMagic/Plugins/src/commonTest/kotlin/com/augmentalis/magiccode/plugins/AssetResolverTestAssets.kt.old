@@ -1,0 +1,710 @@
+package com.augmentalis.magiccode.plugins
+
+import com.augmentalis.magiccode.plugins.core.*
+import com.augmentalis.magiccode.plugins.mocks.MockFileIO
+import com.augmentalis.magiccode.plugins.utils.TestConstants
+import kotlinx.coroutines.test.runTest
+import kotlin.test.*
+
+/**
+ * Unit tests for AssetResolver.
+ *
+ * Tests:
+ * - Asset resolution with valid references
+ * - Path resolution (relative/absolute)
+ * - Asset type support (images, fonts, icons, themes)
+ * - Fallback mechanisms
+ * - Cache integration
+ * - Validation (invalid references, missing files)
+ * - Access logging
+ * - Plugin context resolution
+ * - Edge cases (null references, empty paths)
+ *
+ * Total: 30+ comprehensive tests
+ * Coverage: 80%+ of AssetResolver component
+ */
+class AssetResolverTest {
+    private lateinit var registry: PluginRegistry
+    private lateinit var cache: AssetCache
+    private lateinit var fallbackProvider: FallbackAssetProvider
+    private lateinit var mockFileIO: MockFileIO
+    private lateinit var resolver: AssetResolver
+    private lateinit var accessLogger: AssetAccessLogger
+
+    @BeforeTest
+    fun setup() {
+        registry = PluginRegistry()
+        cache = AssetCache(maxCapacity = TestConstants.TEST_CACHE_CAPACITY)
+        fallbackProvider = FallbackAssetProvider()
+        mockFileIO = MockFileIO()
+        accessLogger = AssetAccessLogger()
+
+        // Create mock checksum calculator that returns fixed checksums
+        val checksumCalculator = MockChecksumCalculator()
+
+        resolver = AssetResolver(
+            registry = registry,
+            cache = cache,
+            fallbackProvider = fallbackProvider,
+            fileIO = mockFileIO,
+            checksumCalculator = checksumCalculator,
+            checksumAlgorithm = ChecksumAlgorithm.SHA256,
+            accessLogger = accessLogger
+        )
+    }
+
+    // ========================================
+    // SUCCESSFUL RESOLUTION TESTS
+    // ========================================
+
+    @Test
+    fun testResolveImageAsset() = runTest {
+        // Test 1: Resolve valid image asset
+        val pluginId = "com.test.plugin"
+        val uri = "plugin://$pluginId/images/icon.png"
+        val assetPath = "/test/plugins/$pluginId/assets/images/icon.png"
+
+        setupPluginWithAsset(pluginId, assetPath, "PNG_IMAGE_DATA".toByteArray())
+
+        val result = resolver.resolveAsset(uri)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Success)
+        val handle = (result as AssetResolver.ResolutionResult.Success).assetHandle
+
+        assertEquals(pluginId, handle.reference.pluginId)
+        assertEquals(AssetCategory.IMAGES, handle.reference.category)
+        assertEquals("icon.png", handle.reference.filename)
+        assertEquals(assetPath, handle.absolutePath)
+        assertEquals("image/png", handle.metadata.mimeType)
+    }
+
+    @Test
+    fun testResolveFontAsset() = runTest {
+        // Test 2: Resolve valid font asset
+        val pluginId = "com.test.fonts"
+        val uri = "plugin://$pluginId/fonts/custom-font.ttf"
+        val assetPath = "/test/plugins/$pluginId/assets/fonts/custom-font.ttf"
+
+        setupPluginWithAsset(pluginId, assetPath, "TTF_FONT_DATA".toByteArray())
+
+        val result = resolver.resolveAsset(uri)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Success)
+        val handle = (result as AssetResolver.ResolutionResult.Success).assetHandle
+
+        assertEquals(AssetCategory.FONTS, handle.reference.category)
+        assertEquals("font/ttf", handle.metadata.mimeType)
+    }
+
+    @Test
+    fun testResolveIconAsset() = runTest {
+        // Test 3: Resolve valid icon asset
+        val pluginId = "com.test.icons"
+        val uri = "plugin://$pluginId/icons/app-icon.svg"
+        val assetPath = "/test/plugins/$pluginId/assets/icons/app-icon.svg"
+
+        setupPluginWithAsset(pluginId, assetPath, "<svg></svg>".toByteArray())
+
+        val result = resolver.resolveAsset(uri)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Success)
+        val handle = (result as AssetResolver.ResolutionResult.Success).assetHandle
+
+        assertEquals(AssetCategory.ICONS, handle.reference.category)
+        assertEquals("image/svg+xml", handle.metadata.mimeType)
+    }
+
+    @Test
+    fun testResolveThemeAsset() = runTest {
+        // Test 4: Resolve valid theme asset
+        val pluginId = "com.test.themes"
+        val uri = "plugin://$pluginId/themes/dark-theme.yaml"
+        val assetPath = "/test/plugins/$pluginId/themes/dark-theme.yaml"
+
+        setupPluginWithAsset(pluginId, assetPath, TestConstants.TEST_THEME_YAML.toByteArray())
+
+        val result = resolver.resolveAsset(uri)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Success)
+        val handle = (result as AssetResolver.ResolutionResult.Success).assetHandle
+
+        assertEquals(AssetCategory.THEMES, handle.reference.category)
+        assertEquals("application/x-yaml", handle.metadata.mimeType)
+    }
+
+    @Test
+    fun testResolveAssetWithNestedPath() = runTest {
+        // Test 5: Resolve asset with nested directory structure
+        val pluginId = "com.test.plugin"
+        val uri = "plugin://$pluginId/images/subdirectory/nested/icon.png"
+        val assetPath = "/test/plugins/$pluginId/assets/images/subdirectory/nested/icon.png"
+
+        setupPluginWithAsset(pluginId, assetPath, "IMAGE_DATA".toByteArray())
+
+        val result = resolver.resolveAsset(uri)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Success)
+        val handle = (result as AssetResolver.ResolutionResult.Success).assetHandle
+
+        assertEquals("subdirectory/nested/icon.png", handle.reference.filename)
+    }
+
+    // ========================================
+    // CACHE INTEGRATION TESTS
+    // ========================================
+
+    @Test
+    fun testCacheHitOnSecondResolution() = runTest {
+        // Test 6: Verify cache hit on second resolution
+        val pluginId = "com.test.plugin"
+        val uri = "plugin://$pluginId/images/icon.png"
+        val assetPath = "/test/plugins/$pluginId/assets/images/icon.png"
+
+        setupPluginWithAsset(pluginId, assetPath, "IMAGE_DATA".toByteArray())
+
+        // First resolution - cache miss
+        val result1 = resolver.resolveAsset(uri)
+        assertTrue(result1 is AssetResolver.ResolutionResult.Success)
+
+        // Second resolution - should be cache hit
+        val result2 = resolver.resolveAsset(uri)
+        assertTrue(result2 is AssetResolver.ResolutionResult.Success)
+
+        // Verify access logger shows cache hit
+        val logs = accessLogger.getRecentLogs(10)
+        assertTrue(logs.any { it.status == AssetAccessLogger.AccessStatus.CACHE_HIT })
+    }
+
+    @Test
+    fun testCacheClearRemovesEntries() = runTest {
+        // Test 7: Verify cache clear removes cached entries
+        val pluginId = "com.test.plugin"
+        val uri = "plugin://$pluginId/images/icon.png"
+        val assetPath = "/test/plugins/$pluginId/assets/images/icon.png"
+
+        setupPluginWithAsset(pluginId, assetPath, "IMAGE_DATA".toByteArray())
+
+        // Resolve and cache
+        resolver.resolveAsset(uri)
+
+        // Clear cache
+        resolver.clearCache()
+
+        // Verify cache is empty
+        val stats = resolver.getCacheStats()
+        assertEquals(0, stats["size"])
+    }
+
+    @Test
+    fun testBatchResolution() = runTest {
+        // Test 8: Batch resolve multiple assets
+        val pluginId = "com.test.plugin"
+        val uris = listOf(
+            "plugin://$pluginId/images/icon1.png",
+            "plugin://$pluginId/images/icon2.png",
+            "plugin://$pluginId/themes/theme.yaml"
+        )
+
+        // Setup plugin and assets
+        setupPluginWithAsset(pluginId, "/test/plugins/$pluginId/assets/images/icon1.png", "DATA1".toByteArray())
+        setupPluginWithAsset(pluginId, "/test/plugins/$pluginId/assets/images/icon2.png", "DATA2".toByteArray())
+        setupPluginWithAsset(pluginId, "/test/plugins/$pluginId/themes/theme.yaml", "THEME".toByteArray())
+
+        val results = resolver.resolveAssetsBatch(uris)
+
+        assertEquals(3, results.size)
+        assertTrue(results.all { it.value is AssetResolver.ResolutionResult.Success })
+    }
+
+    // ========================================
+    // FALLBACK MECHANISM TESTS
+    // ========================================
+
+    @Test
+    fun testFallbackForMissingAsset() = runTest {
+        // Test 9: Use fallback when asset not found
+        val pluginId = "com.test.plugin"
+        val uri = "plugin://$pluginId/images/missing.png"
+        val assetPath = "/test/plugins/$pluginId/assets/images/missing.png"
+
+        // Setup plugin but NOT the asset file
+        setupPlugin(pluginId)
+
+        // Setup fallback asset
+        val fallbackPath = "/system/fallback-assets/assets/images/placeholder-image.png"
+        mockFileIO.addFile(fallbackPath, "FALLBACK_IMAGE".toByteArray())
+
+        val result = resolver.resolveAsset(uri, useFallback = true)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Success)
+        val handle = (result as AssetResolver.ResolutionResult.Success).assetHandle
+
+        assertTrue(handle.metadata.isFallback)
+        assertEquals(fallbackPath, handle.absolutePath)
+
+        // Verify access logger shows fallback success
+        val logs = accessLogger.getRecentLogs(10)
+        assertTrue(logs.any { it.status == AssetAccessLogger.AccessStatus.FALLBACK_SUCCESS })
+    }
+
+    @Test
+    fun testNoFallbackWhenDisabled() = runTest {
+        // Test 10: Fail when fallback disabled and asset missing
+        val pluginId = "com.test.plugin"
+        val uri = "plugin://$pluginId/images/missing.png"
+
+        setupPlugin(pluginId)
+
+        val result = resolver.resolveAsset(uri, useFallback = false)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Failure)
+    }
+
+    @Test
+    fun testFallbackForMissingFallbackAsset() = runTest {
+        // Test 11: Fail when both asset and fallback are missing
+        val pluginId = "com.test.plugin"
+        val uri = "plugin://$pluginId/images/missing.png"
+
+        setupPlugin(pluginId)
+        // Don't setup fallback asset
+
+        val result = resolver.resolveAsset(uri, useFallback = true)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Failure)
+
+        // Verify access logger shows fallback missing
+        val logs = accessLogger.getRecentLogs(10)
+        assertTrue(logs.any {
+            it.status == AssetAccessLogger.AccessStatus.FALLBACK_MISSING ||
+            it.status == AssetAccessLogger.AccessStatus.FILE_NOT_FOUND
+        })
+    }
+
+    // ========================================
+    // VALIDATION TESTS
+    // ========================================
+
+    @Test
+    fun testInvalidUriFormat() = runTest {
+        // Test 12: Invalid URI format
+        val result = resolver.resolveAsset("invalid://uri")
+
+        assertTrue(result is AssetResolver.ResolutionResult.Failure)
+
+        // Verify access logger shows invalid URI
+        val logs = accessLogger.getRecentLogs(10)
+        assertTrue(logs.any { it.status == AssetAccessLogger.AccessStatus.INVALID_URI })
+    }
+
+    @Test
+    fun testMissingPluginPrefix() = runTest {
+        // Test 13: URI without plugin:// prefix
+        val result = resolver.resolveAsset("com.test.plugin/images/icon.png")
+
+        assertTrue(result is AssetResolver.ResolutionResult.Failure)
+    }
+
+    @Test
+    fun testInvalidCategory() = runTest {
+        // Test 14: Invalid asset category
+        val result = resolver.resolveAsset("plugin://com.test.plugin/invalidcategory/file.png")
+
+        assertTrue(result is AssetResolver.ResolutionResult.Failure)
+    }
+
+    @Test
+    fun testPluginNotFound() = runTest {
+        // Test 15: Plugin not registered
+        val uri = "plugin://com.missing.plugin/images/icon.png"
+
+        val result = resolver.resolveAsset(uri, useFallback = false)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Failure)
+
+        // Verify access logger shows plugin not found
+        val logs = accessLogger.getRecentLogs(10)
+        assertTrue(logs.any { it.status == AssetAccessLogger.AccessStatus.PLUGIN_NOT_FOUND })
+    }
+
+    @Test
+    fun testAssetFileNotFound() = runTest {
+        // Test 16: Plugin exists but asset file doesn't
+        val pluginId = "com.test.plugin"
+        val uri = "plugin://$pluginId/images/missing.png"
+
+        setupPlugin(pluginId)
+
+        val result = resolver.resolveAsset(uri, useFallback = false)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Failure)
+
+        // Verify access logger shows file not found
+        val logs = accessLogger.getRecentLogs(10)
+        assertTrue(logs.any { it.status == AssetAccessLogger.AccessStatus.FILE_NOT_FOUND })
+    }
+
+    @Test
+    fun testSecurityViolationOutsideNamespace() = runTest {
+        // Test 17: Asset path outside plugin namespace
+        val pluginId = "com.test.plugin"
+        val uri = "plugin://$pluginId/images/../../etc/passwd"
+
+        setupPlugin(pluginId)
+
+        val result = resolver.resolveAsset(uri)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Failure)
+
+        // Verify access logger shows security violation
+        val logs = accessLogger.getRecentLogs(10)
+        assertTrue(logs.any { it.status == AssetAccessLogger.AccessStatus.SECURITY_VIOLATION })
+    }
+
+    // ========================================
+    // ASSET METADATA TESTS
+    // ========================================
+
+    @Test
+    fun testMetadataExtraction() = runTest {
+        // Test 18: Verify metadata extraction
+        val pluginId = "com.test.plugin"
+        val uri = "plugin://$pluginId/images/icon.png"
+        val assetPath = "/test/plugins/$pluginId/assets/images/icon.png"
+        val imageData = "PNG_IMAGE_DATA".toByteArray()
+
+        setupPluginWithAsset(pluginId, assetPath, imageData)
+
+        val result = resolver.resolveAsset(uri)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Success)
+        val handle = (result as AssetResolver.ResolutionResult.Success).assetHandle
+        val metadata = handle.metadata
+
+        assertEquals("image/png", metadata.mimeType)
+        assertEquals(imageData.size.toLong(), metadata.sizeBytes)
+        assertNotNull(metadata.checksum)
+        assertFalse(metadata.isFallback)
+    }
+
+    @Test
+    fun testMimeTypeInference() = runTest {
+        // Test 19: Verify MIME type inference for different extensions
+        val testCases = listOf(
+            Triple("icon.png", "image/png", AssetCategory.IMAGES),
+            Triple("photo.jpg", "image/jpeg", AssetCategory.IMAGES),
+            Triple("vector.svg", "image/svg+xml", AssetCategory.ICONS),
+            Triple("font.ttf", "font/ttf", AssetCategory.FONTS),
+            Triple("font.woff2", "font/woff2", AssetCategory.FONTS),
+            Triple("theme.yaml", "application/x-yaml", AssetCategory.THEMES),
+            Triple("config.json", "application/json", AssetCategory.THEMES)
+        )
+
+        for ((filename, expectedMime, category) in testCases) {
+            val pluginId = "com.test.plugin"
+            val uri = "plugin://$pluginId/${category.name.lowercase()}/$filename"
+            val assetPath = "/test/plugins/$pluginId/${category.getSubdirectoryPath()}/$filename"
+
+            setupPluginWithAsset(pluginId, assetPath, "DATA".toByteArray())
+
+            val result = resolver.resolveAsset(uri)
+            assertTrue(result is AssetResolver.ResolutionResult.Success)
+
+            val handle = (result as AssetResolver.ResolutionResult.Success).assetHandle
+            assertEquals(expectedMime, handle.metadata.mimeType, "MIME type for $filename")
+
+            cache.clear()
+        }
+    }
+
+    @Test
+    fun testChecksumCalculation() = runTest {
+        // Test 20: Verify checksum calculation
+        val pluginId = "com.test.plugin"
+        val uri = "plugin://$pluginId/images/icon.png"
+        val assetPath = "/test/plugins/$pluginId/assets/images/icon.png"
+
+        setupPluginWithAsset(pluginId, assetPath, "IMAGE_DATA".toByteArray())
+
+        val result = resolver.resolveAsset(uri)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Success)
+        val handle = (result as AssetResolver.ResolutionResult.Success).assetHandle
+
+        assertNotNull(handle.metadata.checksum)
+        assertEquals(TestConstants.TEST_CHECKSUM_SHA256, handle.metadata.checksum)
+    }
+
+    // ========================================
+    // ACCESS LOGGING TESTS
+    // ========================================
+
+    @Test
+    fun testAccessLogging() = runTest {
+        // Test 21: Verify access logging
+        val pluginId = "com.test.plugin"
+        val uri = "plugin://$pluginId/images/icon.png"
+        val assetPath = "/test/plugins/$pluginId/assets/images/icon.png"
+
+        setupPluginWithAsset(pluginId, assetPath, "IMAGE_DATA".toByteArray())
+
+        resolver.resolveAsset(uri)
+
+        val logs = accessLogger.getRecentLogs(10)
+        assertTrue(logs.isNotEmpty())
+        assertTrue(logs.any { it.uri == uri && it.status == AssetAccessLogger.AccessStatus.SUCCESS })
+    }
+
+    @Test
+    fun testAccessLoggerRetrieval() = runTest {
+        // Test 22: Verify access logger retrieval
+        val logger = resolver.getAccessLogger()
+        assertNotNull(logger)
+        assertSame(accessLogger, logger)
+    }
+
+    @Test
+    fun testAccessStatistics() = runTest {
+        // Test 23: Verify access statistics tracking
+        val pluginId = "com.test.plugin"
+        val uri1 = "plugin://$pluginId/images/icon1.png"
+        val uri2 = "plugin://$pluginId/images/icon2.png"
+
+        setupPluginWithAsset(pluginId, "/test/plugins/$pluginId/assets/images/icon1.png", "DATA1".toByteArray())
+        setupPluginWithAsset(pluginId, "/test/plugins/$pluginId/assets/images/icon2.png", "DATA2".toByteArray())
+
+        // Successful resolutions
+        resolver.resolveAsset(uri1)
+        resolver.resolveAsset(uri2)
+
+        // Failed resolution
+        resolver.resolveAsset("plugin://$pluginId/images/missing.png", useFallback = false)
+
+        val stats = accessLogger.getStatistics()
+        val totalAccesses = stats["totalAccesses"] as Int
+        val successfulAccesses = stats["successfulAccesses"] as Int
+        val failures = stats["failures"] as Int
+
+        assertTrue(totalAccesses >= 3)
+        assertTrue(successfulAccesses >= 2)
+        assertTrue(failures >= 1)
+    }
+
+    // ========================================
+    // PLUGIN CONTEXT TESTS
+    // ========================================
+
+    @Test
+    fun testMultiplePluginsWithSameAssetName() = runTest {
+        // Test 24: Multiple plugins with same asset filename
+        val plugin1 = "com.test.plugin1"
+        val plugin2 = "com.test.plugin2"
+        val filename = "icon.png"
+
+        val path1 = "/test/plugins/$plugin1/assets/images/$filename"
+        val path2 = "/test/plugins/$plugin2/assets/images/$filename"
+
+        setupPluginWithAsset(plugin1, path1, "PLUGIN1_DATA".toByteArray())
+        setupPluginWithAsset(plugin2, path2, "PLUGIN2_DATA".toByteArray())
+
+        val result1 = resolver.resolveAsset("plugin://$plugin1/images/$filename")
+        val result2 = resolver.resolveAsset("plugin://$plugin2/images/$filename")
+
+        assertTrue(result1 is AssetResolver.ResolutionResult.Success)
+        assertTrue(result2 is AssetResolver.ResolutionResult.Success)
+
+        val handle1 = (result1 as AssetResolver.ResolutionResult.Success).assetHandle
+        val handle2 = (result2 as AssetResolver.ResolutionResult.Success).assetHandle
+
+        assertEquals(path1, handle1.absolutePath)
+        assertEquals(path2, handle2.absolutePath)
+        assertNotEquals(handle1.absolutePath, handle2.absolutePath)
+    }
+
+    @Test
+    fun testPluginNamespaceIsolation() = runTest {
+        // Test 25: Verify plugin namespace isolation
+        val plugin1 = "com.test.plugin1"
+        val plugin2 = "com.test.plugin2"
+
+        setupPlugin(plugin1)
+        setupPlugin(plugin2)
+
+        // Plugin1 cannot access Plugin2's assets
+        val uri = "plugin://$plugin1/images/../../../$plugin2/images/icon.png"
+
+        val result = resolver.resolveAsset(uri)
+
+        // Should fail due to namespace violation
+        assertTrue(result is AssetResolver.ResolutionResult.Failure)
+    }
+
+    // ========================================
+    // EDGE CASES TESTS
+    // ========================================
+
+    @Test
+    fun testEmptyPluginId() = runTest {
+        // Test 26: Empty plugin ID in URI
+        val result = resolver.resolveAsset("plugin:///images/icon.png")
+
+        assertTrue(result is AssetResolver.ResolutionResult.Failure)
+    }
+
+    @Test
+    fun testEmptyFilename() = runTest {
+        // Test 27: Empty filename in URI
+        val result = resolver.resolveAsset("plugin://com.test.plugin/images/")
+
+        assertTrue(result is AssetResolver.ResolutionResult.Failure)
+    }
+
+    @Test
+    fun testVeryLongFilename() = runTest {
+        // Test 28: Very long filename
+        val pluginId = "com.test.plugin"
+        val longFilename = "a".repeat(255) + ".png"
+        val uri = "plugin://$pluginId/images/$longFilename"
+        val assetPath = "/test/plugins/$pluginId/assets/images/$longFilename"
+
+        setupPluginWithAsset(pluginId, assetPath, "IMAGE_DATA".toByteArray())
+
+        val result = resolver.resolveAsset(uri)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Success)
+    }
+
+    @Test
+    fun testSpecialCharactersInFilename() = runTest {
+        // Test 29: Special characters in filename
+        val pluginId = "com.test.plugin"
+        val filename = "icon with spaces & special-chars_123.png"
+        val uri = "plugin://$pluginId/images/$filename"
+        val assetPath = "/test/plugins/$pluginId/assets/images/$filename"
+
+        setupPluginWithAsset(pluginId, assetPath, "IMAGE_DATA".toByteArray())
+
+        val result = resolver.resolveAsset(uri)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Success)
+    }
+
+    @Test
+    fun testUnicodeFilename() = runTest {
+        // Test 30: Unicode characters in filename
+        val pluginId = "com.test.plugin"
+        val filename = "图标-アイコン-아이콘.png"
+        val uri = "plugin://$pluginId/images/$filename"
+        val assetPath = "/test/plugins/$pluginId/assets/images/$filename"
+
+        setupPluginWithAsset(pluginId, assetPath, "IMAGE_DATA".toByteArray())
+
+        val result = resolver.resolveAsset(uri)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Success)
+    }
+
+    @Test
+    fun testCacheStatistics() = runTest {
+        // Test 31: Verify cache statistics
+        val pluginId = "com.test.plugin"
+        val uri = "plugin://$pluginId/images/icon.png"
+        val assetPath = "/test/plugins/$pluginId/assets/images/icon.png"
+
+        setupPluginWithAsset(pluginId, assetPath, "IMAGE_DATA".toByteArray())
+
+        resolver.resolveAsset(uri)
+
+        val stats = resolver.getCacheStats()
+        assertNotNull(stats["size"])
+        assertNotNull(stats["capacity"])
+        assertEquals(TestConstants.TEST_CACHE_CAPACITY, stats["capacity"])
+    }
+
+    @Test
+    fun testAssetWithoutExtension() = runTest {
+        // Test 32: Asset without file extension
+        val pluginId = "com.test.plugin"
+        val uri = "plugin://$pluginId/custom/data-file"
+        val assetPath = "/test/plugins/$pluginId/assets/custom/data-file"
+
+        setupPluginWithAsset(pluginId, assetPath, "RAW_DATA".toByteArray())
+
+        val result = resolver.resolveAsset(uri)
+
+        assertTrue(result is AssetResolver.ResolutionResult.Success)
+        val handle = (result as AssetResolver.ResolutionResult.Success).assetHandle
+        assertEquals("application/octet-stream", handle.metadata.mimeType)
+    }
+
+    @Test
+    fun testBatchResolutionWithMixedResults() = runTest {
+        // Test 33: Batch resolution with some successes and failures
+        val pluginId = "com.test.plugin"
+        val uris = listOf(
+            "plugin://$pluginId/images/exists.png",
+            "plugin://$pluginId/images/missing.png",
+            "plugin://missing.plugin/images/icon.png"
+        )
+
+        setupPluginWithAsset(pluginId, "/test/plugins/$pluginId/assets/images/exists.png", "DATA".toByteArray())
+
+        val results = resolver.resolveAssetsBatch(uris, useFallback = false)
+
+        assertEquals(3, results.size)
+        assertTrue(results[uris[0]] is AssetResolver.ResolutionResult.Success)
+        assertTrue(results[uris[1]] is AssetResolver.ResolutionResult.Failure)
+        assertTrue(results[uris[2]] is AssetResolver.ResolutionResult.Failure)
+    }
+
+    // ========================================
+    // HELPER METHODS
+    // ========================================
+
+    /**
+     * Setup a plugin in the registry with a given asset.
+     */
+    private suspend fun setupPluginWithAsset(pluginId: String, assetPath: String, data: ByteArray) {
+        setupPlugin(pluginId)
+        mockFileIO.addFile(assetPath, data)
+    }
+
+    /**
+     * Setup a plugin in the registry without assets.
+     */
+    private suspend fun setupPlugin(pluginId: String) {
+        val manifest = PluginManifest(
+            id = pluginId,
+            name = "Test Plugin",
+            version = "1.0.0",
+            author = "Test Author",
+            description = "Test plugin",
+            entrypoint = "com.test.Plugin",
+            capabilities = listOf("themes"),
+            dependencies = emptyList(),
+            permissions = emptyList(),
+            source = PluginSource.THIRD_PARTY,
+            verificationLevel = DeveloperVerificationLevel.UNVERIFIED
+        )
+
+        val namespace = PluginNamespace(
+            pluginId = pluginId,
+            baseDir = "/test/plugins/$pluginId"
+        )
+
+        registry.register(manifest, namespace)
+    }
+
+    /**
+     * Mock checksum calculator for testing.
+     */
+    private class MockChecksumCalculator : ChecksumCalculator() {
+        override fun calculateMD5(data: ByteArray): String {
+            return TestConstants.TEST_CHECKSUM_MD5
+        }
+
+        override fun calculateSHA256(data: ByteArray): String {
+            return TestConstants.TEST_CHECKSUM_SHA256
+        }
+    }
+}

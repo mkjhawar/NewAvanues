@@ -2,13 +2,16 @@
  * CumulativeTracking.kt - Thread-safe exploration progress tracking
  *
  * Tracks VUID discovery, clicks, and blocks across the entire exploration session.
- * Uses synchronized blocks for thread-safe access from multiple coroutines.
+ * Uses kotlinx.atomicfu synchronized blocks for thread-safe access from multiple coroutines.
  *
  * @author Manoj Jhawar
  * @since 2026-01-15
  */
 
 package com.augmentalis.voiceoscoreng.exploration
+
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 
 /**
  * Cumulative VUID tracking for exploration progress.
@@ -18,11 +21,9 @@ package com.augmentalis.voiceoscoreng.exploration
  * - Clicked VUIDs (elements successfully clicked)
  * - Blocked VUIDs (critical dangerous elements skipped)
  *
- * Uses synchronized blocks for thread-safe set operations since KMP doesn't have
- * ConcurrentHashMap.newKeySet().
+ * Uses kotlinx.atomicfu synchronized blocks for KMP-compatible thread-safe operations.
  */
-class CumulativeTracking {
-    private val lock = Any()
+class CumulativeTracking : SynchronizedObject() {
 
     /**
      * Set of all discovered VUIDs
@@ -47,25 +48,25 @@ class CumulativeTracking {
      * Add a discovered VUID
      */
     fun addDiscovered(vuid: String) {
-        synchronized(lock) { _discoveredVuids.add(vuid) }
+        synchronized(this) { _discoveredVuids.add(vuid) }
     }
 
     /**
      * Add multiple discovered VUIDs
      */
     fun addAllDiscovered(vuids: Collection<String>) {
-        synchronized(lock) { _discoveredVuids.addAll(vuids) }
+        synchronized(this) { _discoveredVuids.addAll(vuids) }
     }
 
     /**
      * Get count of discovered VUIDs
      */
-    fun discoveredCount(): Int = synchronized(lock) { _discoveredVuids.size }
+    fun discoveredCount(): Int = synchronized(this) { _discoveredVuids.size }
 
     /**
      * Get copy of discovered VUIDs
      */
-    fun getDiscoveredVuids(): Set<String> = synchronized(lock) { _discoveredVuids.toSet() }
+    fun getDiscoveredVuids(): Set<String> = synchronized(this) { _discoveredVuids.toSet() }
 
     // ═══════════════════════════════════════════════════════════════════
     // CLICKED VUIDs
@@ -75,18 +76,18 @@ class CumulativeTracking {
      * Add a clicked VUID
      */
     fun addClicked(vuid: String) {
-        synchronized(lock) { _clickedVuids.add(vuid) }
+        synchronized(this) { _clickedVuids.add(vuid) }
     }
 
     /**
      * Get count of clicked VUIDs
      */
-    fun clickedCount(): Int = synchronized(lock) { _clickedVuids.size }
+    fun clickedCount(): Int = synchronized(this) { _clickedVuids.size }
 
     /**
      * Get copy of clicked VUIDs
      */
-    fun getClickedVuids(): Set<String> = synchronized(lock) { _clickedVuids.toSet() }
+    fun getClickedVuids(): Set<String> = synchronized(this) { _clickedVuids.toSet() }
 
     // ═══════════════════════════════════════════════════════════════════
     // BLOCKED VUIDs
@@ -96,25 +97,25 @@ class CumulativeTracking {
      * Add a blocked VUID
      */
     fun addBlocked(vuid: String) {
-        synchronized(lock) { _blockedVuids.add(vuid) }
+        synchronized(this) { _blockedVuids.add(vuid) }
     }
 
     /**
      * Add multiple blocked VUIDs
      */
     fun addAllBlocked(vuids: Collection<String>) {
-        synchronized(lock) { _blockedVuids.addAll(vuids) }
+        synchronized(this) { _blockedVuids.addAll(vuids) }
     }
 
     /**
      * Get count of blocked VUIDs
      */
-    fun blockedCount(): Int = synchronized(lock) { _blockedVuids.size }
+    fun blockedCount(): Int = synchronized(this) { _blockedVuids.size }
 
     /**
      * Get copy of blocked VUIDs
      */
-    fun getBlockedVuids(): Set<String> = synchronized(lock) { _blockedVuids.toSet() }
+    fun getBlockedVuids(): Set<String> = synchronized(this) { _blockedVuids.toSet() }
 
     // ═══════════════════════════════════════════════════════════════════
     // METRICS
@@ -129,7 +130,7 @@ class CumulativeTracking {
      * @return Percentage from 0.0 to 100.0
      */
     fun getCompleteness(): Float {
-        return synchronized(lock) {
+        return synchronized(this) {
             if (_discoveredVuids.isEmpty()) {
                 0f
             } else {
@@ -142,7 +143,7 @@ class CumulativeTracking {
      * Get summary statistics
      */
     fun getStats(): TrackingStats {
-        return synchronized(lock) {
+        return synchronized(this) {
             TrackingStats(
                 discovered = _discoveredVuids.size,
                 clicked = _clickedVuids.size,
@@ -156,7 +157,7 @@ class CumulativeTracking {
      * Clear all tracking data for a new session
      */
     fun clear() {
-        synchronized(lock) {
+        synchronized(this) {
             _discoveredVuids.clear()
             _clickedVuids.clear()
             _blockedVuids.clear()

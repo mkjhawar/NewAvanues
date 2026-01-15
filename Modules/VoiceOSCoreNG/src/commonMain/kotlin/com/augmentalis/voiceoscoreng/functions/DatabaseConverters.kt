@@ -53,10 +53,10 @@ data class CommandRecord(
  */
 fun QuantizedCommand.toCommandRecord(): CommandRecord {
     return CommandRecord(
-        uuid = uuid,
+        uuid = avid,
         phrase = phrase,
         actionType = actionType.name,
-        targetVuid = targetVuid,
+        targetVuid = targetAvid,
         confidence = confidence,
         packageName = metadata["packageName"] ?: "",
         appVersion = metadata["appVersion"] ?: "",
@@ -73,10 +73,10 @@ fun QuantizedCommand.toCommandRecord(): CommandRecord {
  */
 fun CommandRecord.toQuantizedCommand(): QuantizedCommand {
     return QuantizedCommand(
-        uuid = uuid,
+        avid = uuid,
         phrase = phrase,
         actionType = CommandActionType.fromString(actionType),
-        targetVuid = targetVuid,
+        targetAvid = targetVuid,
         confidence = confidence,
         metadata = buildMap {
             if (packageName.isNotEmpty()) put("packageName", packageName)

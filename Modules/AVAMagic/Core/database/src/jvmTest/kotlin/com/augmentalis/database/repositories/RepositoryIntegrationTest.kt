@@ -11,10 +11,10 @@ package com.augmentalis.database.repositories
 
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabaseManager
-import com.augmentalis.database.dto.UUIDElementDTO
-import com.augmentalis.database.dto.UUIDHierarchyDTO
-import com.augmentalis.database.dto.UUIDAnalyticsDTO
-import com.augmentalis.database.dto.UUIDAliasDTO
+import com.augmentalis.database.dto.AvidElementDTO
+import com.augmentalis.database.dto.AvidHierarchyDTO
+import com.augmentalis.database.dto.AvidAnalyticsDTO
+import com.augmentalis.database.dto.AvidAliasDTO
 import com.augmentalis.database.dto.ScrapedAppDTO
 import com.augmentalis.database.dto.VoiceCommandDTO
 import com.augmentalis.database.dto.PluginDTO
@@ -27,7 +27,7 @@ import kotlin.test.*
 
 /**
  * Comprehensive integration tests for all four repositories:
- * - IUUIDRepository
+ * - IAvidRepository
  * - IScrapedAppRepository
  * - IVoiceCommandRepository
  * - IPluginRepository
@@ -45,17 +45,17 @@ class RepositoryIntegrationTest {
     private fun now() = System.currentTimeMillis()
     private fun past(millis: Long) = now() - millis
 
-    // ==================== UUID Repository Tests ====================
+    // ==================== AVID Repository Tests ====================
 
     @Test
-    fun testUuidElementCRUD() = runTest {
-        val repo = databaseManager.uuids
-        val element = UUIDElementDTO(
-            uuid = "elem-001",
+    fun testAvidElementCRUD() = runTest {
+        val repo = databaseManager.avids
+        val element = AvidElementDTO(
+            avid = "elem-001",
             name = "Test Button",
             type = "BUTTON",
             description = "Test",
-            parentUuid = null,
+            parentAvid = null,
             isEnabled = true,
             priority = 0,
             timestamp = now(),
@@ -67,34 +67,34 @@ class RepositoryIntegrationTest {
         repo.insertElement(element)
 
         // Get
-        val retrieved = repo.getElementByUuid("elem-001")
+        val retrieved = repo.getElementByAvid("elem-001")
         assertNotNull(retrieved)
         assertEquals("Test Button", retrieved.name)
 
         // Update
         repo.updateElement(element.copy(name = "Updated"))
-        val updated = repo.getElementByUuid("elem-001")
+        val updated = repo.getElementByAvid("elem-001")
         assertEquals("Updated", updated?.name)
 
         // Delete
         repo.deleteElement("elem-001")
-        assertNull(repo.getElementByUuid("elem-001"))
+        assertNull(repo.getElementByAvid("elem-001"))
     }
 
     @Test
-    fun testUuidAliaOperations() = runTest {
-        val repo = databaseManager.uuids
+    fun testAvidAliasOperations() = runTest {
+        val repo = databaseManager.avids
 
         // Insert element first
-        repo.insertElement(UUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(AvidElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
 
         // Insert alias
-        val alias = UUIDAliasDTO(0, "my-alias", "elem-001", true, now())
+        val alias = AvidAliasDTO(0, "my-alias", "elem-001", true, now())
         repo.insertAlias(alias)
 
         // Get alias
         assertTrue(repo.aliasExists("my-alias"))
-        assertEquals("elem-001", repo.getUuidByAlias("my-alias"))
+        assertEquals("elem-001", repo.getAvidByAlias("my-alias"))
 
         // Delete alias
         repo.deleteAliasByName("my-alias")
@@ -102,38 +102,38 @@ class RepositoryIntegrationTest {
     }
 
     @Test
-    fun testUuidAnalyticsTracking() = runTest {
-        val repo = databaseManager.uuids
+    fun testAvidAnalyticsTracking() = runTest {
+        val repo = databaseManager.avids
 
         // Insert element
-        repo.insertElement(UUIDElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
+        repo.insertElement(AvidElementDTO("elem-001", "Test", "BUTTON", null, null, true, 0, now(), null, null))
 
         // Insert analytics
-        val analytics = UUIDAnalyticsDTO("elem-001", 0, now(), now(), 100, 0, 0, "ACTIVE")
+        val analytics = AvidAnalyticsDTO("elem-001", 0, now(), now(), 100, 0, 0, "ACTIVE")
         repo.insertAnalytics(analytics)
 
         // Increment access
         repo.incrementAccessCount("elem-001", now())
 
-        val retrieved = repo.getAnalyticsByUuid("elem-001")
+        val retrieved = repo.getAnalyticsByAvid("elem-001")
         assertEquals(1, retrieved?.accessCount)
     }
 
     @Test
-    fun testUuidHierarchyManagement() = runTest {
-        val repo = databaseManager.uuids
+    fun testAvidHierarchyManagement() = runTest {
+        val repo = databaseManager.avids
 
         // Insert parent and child elements
-        repo.insertElement(UUIDElementDTO("parent", "Parent", "CONTAINER", null, null, true, 0, now(), null, null))
-        repo.insertElement(UUIDElementDTO("child", "Child", "BUTTON", null, "parent", true, 0, now(), null, null))
+        repo.insertElement(AvidElementDTO("parent", "Parent", "CONTAINER", null, null, true, 0, now(), null, null))
+        repo.insertElement(AvidElementDTO("child", "Child", "BUTTON", null, "parent", true, 0, now(), null, null))
 
         // Insert hierarchy
-        val hierarchy = UUIDHierarchyDTO(0, "parent", "child", 1, "/parent/child", 0)
+        val hierarchy = AvidHierarchyDTO(0, "parent", "child", 1, "/parent/child", 0)
         repo.insertHierarchy(hierarchy)
 
         val children = repo.getHierarchyByParent("parent")
         assertEquals(1, children.size)
-        assertEquals("child", children[0].childUuid)
+        assertEquals("child", children[0].childAvid)
     }
 
     // ==================== ScrapedApp Repository Tests ====================

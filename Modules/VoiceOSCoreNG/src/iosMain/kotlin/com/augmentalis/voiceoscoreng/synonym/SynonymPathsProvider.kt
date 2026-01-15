@@ -5,6 +5,7 @@
  * Author: VOS4 Development Team
  * Created: 2026-01-08
  */
+@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
 package com.augmentalis.voiceoscoreng.synonym
 
 import kotlinx.cinterop.*

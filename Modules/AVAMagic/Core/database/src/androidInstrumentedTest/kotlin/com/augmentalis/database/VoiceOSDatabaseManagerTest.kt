@@ -119,7 +119,7 @@ class VoiceOSDatabaseManagerTest {
         assertNotNull("commandHistory repository should be initialized", instance.commandHistory)
         assertNotNull("userPreferences repository should be initialized", instance.userPreferences)
         assertNotNull("errorReports repository should be initialized", instance.errorReports)
-        assertNotNull("uuids repository should be initialized", instance.uuids)
+        assertNotNull("avids repository should be initialized", instance.avids)
         assertNotNull("scrapedApps repository should be initialized", instance.scrapedApps)
         assertNotNull("scrapedElements repository should be initialized", instance.scrapedElements)
         assertNotNull("scrapedHierarchies repository should be initialized", instance.scrapedHierarchies)

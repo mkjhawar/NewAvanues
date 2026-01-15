@@ -379,7 +379,7 @@ class ActionCoordinator(
         val directCommand = QuantizedCommand(
             phrase = normalizedText,
             actionType = CommandActionType.EXECUTE,
-            targetVuid = null,
+            targetAvid = null,
             confidence = confidence
         )
 
@@ -434,7 +434,7 @@ class ActionCoordinator(
                         val llmCommand = QuantizedCommand(
                             phrase = llmResult.matchedCommand,
                             actionType = CommandActionType.EXECUTE,
-                            targetVuid = null,
+                            targetAvid = null,
                             confidence = llmResult.confidence
                         )
                         return processCommand(llmCommand)

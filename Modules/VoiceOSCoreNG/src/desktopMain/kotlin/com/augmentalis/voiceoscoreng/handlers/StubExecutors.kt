@@ -38,11 +38,11 @@ class DesktopUIExecutor : UIExecutor {
     override suspend fun longClickElement(element: ElementInfo): Boolean = false
     override suspend fun doubleClickElement(element: ElementInfo): Boolean = false
 
-    // Legacy text/VUID actions
+    // Legacy text/AVID actions
     override suspend fun clickByText(text: String): Boolean = false
-    override suspend fun clickByVuid(vuid: String): Boolean = false
+    override suspend fun clickByAvid(avid: String): Boolean = false
     override suspend fun longClickByText(text: String): Boolean = false
-    override suspend fun longClickByVuid(vuid: String): Boolean = false
+    override suspend fun longClickByAvid(avid: String): Boolean = false
     override suspend fun doubleClickByText(text: String): Boolean = false
     override suspend fun expand(target: String): Boolean = false
     override suspend fun collapse(target: String): Boolean = false

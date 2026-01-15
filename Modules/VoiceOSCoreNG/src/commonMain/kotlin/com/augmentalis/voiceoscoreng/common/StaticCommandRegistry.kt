@@ -463,13 +463,13 @@ data class StaticCommand(
     fun toQuantizedCommands(): List<QuantizedCommand> {
         return phrases.map { phrase ->
             val normalizedPhrase = phrase.lowercase().replace(" ", "_")
-            val uuid = "static__${category.name.lowercase()}__$normalizedPhrase"
+            val commandAvid = "static__${category.name.lowercase()}__$normalizedPhrase"
 
             QuantizedCommand(
-                uuid = uuid,
+                avid = commandAvid,
                 phrase = phrase,
                 actionType = actionType,
-                targetVuid = null, // Static commands have no target element
+                targetAvid = null, // Static commands have no target element
                 confidence = 1.0f, // Static commands are always available
                 metadata = metadata + mapOf(
                     "source" to "static",
@@ -488,13 +488,13 @@ data class StaticCommand(
      */
     fun toQuantizedCommand(): QuantizedCommand {
         val normalizedPhrase = primaryPhrase.lowercase().replace(" ", "_")
-        val uuid = "static__${category.name.lowercase()}__$normalizedPhrase"
+        val commandAvid = "static__${category.name.lowercase()}__$normalizedPhrase"
 
         return QuantizedCommand(
-            uuid = uuid,
+            avid = commandAvid,
             phrase = primaryPhrase,
             actionType = actionType,
-            targetVuid = null,
+            targetAvid = null,
             confidence = 1.0f,
             metadata = metadata + mapOf(
                 "source" to "static",

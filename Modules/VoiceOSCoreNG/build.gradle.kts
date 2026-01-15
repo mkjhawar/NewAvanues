@@ -47,6 +47,9 @@ kotlin {
                 // Coroutines
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.coroutines}")
 
+                // Atomicfu - Thread-safe atomic operations for KMP
+                implementation(libs.kotlinx.atomicfu)
+
                 // Serialization
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${Versions.serialization}")
 

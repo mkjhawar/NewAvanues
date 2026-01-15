@@ -1,0 +1,219 @@
+package com.augmentalis.magiccode.plugins
+
+import com.augmentalis.magiccode.plugins.utils.TestConstants
+import kotlin.test.*
+
+/**
+ * Unit tests for SemverConstraintValidator.
+ *
+ * Tests semantic versioning constraint validation including:
+ * - Caret constraints (^1.0.0)
+ * - Tilde constraints (~2.3.0)
+ * - Range constraints (>=1.5.0 <2.0.0)
+ * - Exact versions
+ * - Wildcard patterns
+ * - Invalid constraint formats
+ */
+class SemverConstraintValidatorTest {
+    private lateinit var validator: SemverConstraintValidator
+
+    @BeforeTest
+    fun setup() {
+        validator = SemverConstraintValidator()
+    }
+
+    // Test 1: Caret Constraints
+    @Test
+    fun testCaretConstraints() {
+        // ^1.0.0 should match 1.x.x but not 2.0.0
+        assertTrue(validator.satisfies("1.0.0", "^1.0.0"))
+        assertTrue(validator.satisfies("1.2.3", "^1.0.0"))
+        assertTrue(validator.satisfies("1.9.9", "^1.0.0"))
+        assertFalse(validator.satisfies("2.0.0", "^1.0.0"))
+        assertFalse(validator.satisfies("0.9.9", "^1.0.0"))
+
+        // ^0.1.0 should match 0.1.x but not 0.2.0 (special case for 0.x.x)
+        assertTrue(validator.satisfies("0.1.0", "^0.1.0"))
+        assertTrue(validator.satisfies("0.1.5", "^0.1.0"))
+        assertFalse(validator.satisfies("0.2.0", "^0.1.0"))
+        assertFalse(validator.satisfies("1.0.0", "^0.1.0"))
+
+        // ^0.0.1 should match only 0.0.1 exactly
+        assertTrue(validator.satisfies("0.0.1", "^0.0.1"))
+        assertFalse(validator.satisfies("0.0.2", "^0.0.1"))
+    }
+
+    // Test 2: Tilde Constraints
+    @Test
+    fun testTildeConstraints() {
+        // ~2.3.0 should match 2.3.x but not 2.4.0
+        assertTrue(validator.satisfies("2.3.0", "~2.3.0"))
+        assertTrue(validator.satisfies("2.3.1", "~2.3.0"))
+        assertTrue(validator.satisfies("2.3.9", "~2.3.0"))
+        assertFalse(validator.satisfies("2.4.0", "~2.3.0"))
+        assertFalse(validator.satisfies("2.2.9", "~2.3.0"))
+        assertFalse(validator.satisfies("3.0.0", "~2.3.0"))
+
+        // ~1.0.0 should match 1.0.x
+        assertTrue(validator.satisfies("1.0.0", "~1.0.0"))
+        assertTrue(validator.satisfies("1.0.5", "~1.0.0"))
+        assertFalse(validator.satisfies("1.1.0", "~1.0.0"))
+    }
+
+    // Test 3: Range Constraints
+    @Test
+    fun testRangeConstraints() {
+        // >=1.5.0 <2.0.0
+        assertTrue(validator.satisfies("1.5.0", ">=1.5.0 <2.0.0"))
+        assertTrue(validator.satisfies("1.7.3", ">=1.5.0 <2.0.0"))
+        assertTrue(validator.satisfies("1.9.9", ">=1.5.0 <2.0.0"))
+        assertFalse(validator.satisfies("1.4.9", ">=1.5.0 <2.0.0"))
+        assertFalse(validator.satisfies("2.0.0", ">=1.5.0 <2.0.0"))
+
+        // >1.0.0 <=2.0.0 (exclusive lower, inclusive upper)
+        assertFalse(validator.satisfies("1.0.0", ">1.0.0 <=2.0.0"))
+        assertTrue(validator.satisfies("1.0.1", ">1.0.0 <=2.0.0"))
+        assertTrue(validator.satisfies("2.0.0", ">1.0.0 <=2.0.0"))
+        assertFalse(validator.satisfies("2.0.1", ">1.0.0 <=2.0.0"))
+
+        // >=1.0.0 (lower bound only)
+        assertTrue(validator.satisfies("1.0.0", ">=1.0.0"))
+        assertTrue(validator.satisfies("2.5.0", ">=1.0.0"))
+        assertFalse(validator.satisfies("0.9.9", ">=1.0.0"))
+
+        // <2.0.0 (upper bound only)
+        assertTrue(validator.satisfies("1.9.9", "<2.0.0"))
+        assertFalse(validator.satisfies("2.0.0", "<2.0.0"))
+    }
+
+    // Test 4: Exact Version Constraints
+    @Test
+    fun testExactVersionConstraints() {
+        // Exact match
+        assertTrue(validator.satisfies("1.2.3", "1.2.3"))
+        assertFalse(validator.satisfies("1.2.4", "1.2.3"))
+        assertFalse(validator.satisfies("1.2.2", "1.2.3"))
+
+        // Different exact versions
+        assertTrue(validator.satisfies("2.0.0", "2.0.0"))
+        assertFalse(validator.satisfies("2.0.1", "2.0.0"))
+    }
+
+    // Test 5: Wildcard Patterns
+    @Test
+    fun testWildcardPatterns() {
+        // 1.*.0 should match any 1.x.0
+        assertTrue(validator.satisfies("1.0.0", "1.*.0"))
+        assertTrue(validator.satisfies("1.5.0", "1.*.0"))
+        assertTrue(validator.satisfies("1.99.0", "1.*.0"))
+        assertFalse(validator.satisfies("1.0.1", "1.*.0"))
+        assertFalse(validator.satisfies("2.0.0", "1.*.0"))
+
+        // *.2.3 should match any x.2.3
+        assertTrue(validator.satisfies("0.2.3", "*.2.3"))
+        assertTrue(validator.satisfies("1.2.3", "*.2.3"))
+        assertTrue(validator.satisfies("99.2.3", "*.2.3"))
+        assertFalse(validator.satisfies("1.2.4", "*.2.3"))
+
+        // 1.*.* should match any 1.x.x
+        assertTrue(validator.satisfies("1.0.0", "1.*.*"))
+        assertTrue(validator.satisfies("1.5.3", "1.*.*"))
+        assertFalse(validator.satisfies("2.0.0", "1.*.*"))
+    }
+
+    // Test 6: Invalid Constraint Formats
+    @Test
+    fun testInvalidConstraintFormats() {
+        // Invalid constraints should throw or return false
+        assertFalse(validator.isValidConstraint("not-a-version"))
+        assertFalse(validator.isValidConstraint("^invalid"))
+        assertFalse(validator.isValidConstraint("~not.valid"))
+        assertFalse(validator.isValidConstraint(">="))
+        assertFalse(validator.isValidConstraint(""))
+
+        // Valid constraint format checks
+        assertTrue(validator.isValidConstraint("^1.0.0"))
+        assertTrue(validator.isValidConstraint("~2.3.0"))
+        assertTrue(validator.isValidConstraint(">=1.5.0 <2.0.0"))
+        assertTrue(validator.isValidConstraint("1.2.3"))
+        assertTrue(validator.isValidConstraint("1.*.0"))
+    }
+
+    // Test 7: Find Best Match
+    @Test
+    fun testFindBestMatch() {
+        val versions = listOf("1.0.0", "1.5.0", "1.9.0", "2.0.0", "2.3.0")
+
+        // ^1.0.0 should match highest 1.x.x
+        assertEquals("1.9.0", validator.findBestMatch(versions, "^1.0.0"))
+
+        // ~1.5.0 should match highest 1.5.x
+        assertEquals("1.5.0", validator.findBestMatch(versions, "~1.5.0"))
+
+        // >=1.5.0 <2.0.0 should match 1.9.0
+        assertEquals("1.9.0", validator.findBestMatch(versions, ">=1.5.0 <2.0.0"))
+
+        // >=2.0.0 should match 2.3.0
+        assertEquals("2.3.0", validator.findBestMatch(versions, ">=2.0.0"))
+
+        // No match should return null
+        assertNull(validator.findBestMatch(versions, ">=3.0.0"))
+    }
+
+    // Test 8: Version Validation
+    @Test
+    fun testVersionValidation() {
+        // Valid versions
+        assertTrue(validator.isValidVersion("1.0.0"))
+        assertTrue(validator.isValidVersion("1.2.3"))
+        assertTrue(validator.isValidVersion("0.0.1"))
+        assertTrue(validator.isValidVersion("10.20.30"))
+
+        // Invalid versions
+        assertFalse(validator.isValidVersion("not-a-version"))
+        assertFalse(validator.isValidVersion("1.0"))
+        assertFalse(validator.isValidVersion("1.0.0.0"))
+        assertFalse(validator.isValidVersion(""))
+    }
+
+    // Test 9: Parse Constraint
+    @Test
+    fun testParseConstraint() {
+        // Caret constraint
+        val caret = validator.parseConstraint("^1.0.0")
+        assertTrue(caret is SemverConstraintValidator.VersionConstraint.Caret)
+
+        // Tilde constraint
+        val tilde = validator.parseConstraint("~2.3.0")
+        assertTrue(tilde is SemverConstraintValidator.VersionConstraint.Tilde)
+
+        // Range constraint
+        val range = validator.parseConstraint(">=1.5.0 <2.0.0")
+        assertTrue(range is SemverConstraintValidator.VersionConstraint.Range)
+
+        // Exact constraint
+        val exact = validator.parseConstraint("1.2.3")
+        assertTrue(exact is SemverConstraintValidator.VersionConstraint.Exact)
+
+        // Wildcard constraint
+        val wildcard = validator.parseConstraint("1.*.0")
+        assertTrue(wildcard is SemverConstraintValidator.VersionConstraint.Wildcard)
+    }
+
+    // Test 10: Edge Cases
+    @Test
+    fun testEdgeCases() {
+        // Whitespace handling
+        assertTrue(validator.satisfies("1.2.3", " ^1.0.0 "))
+        assertTrue(validator.satisfies("1.5.0", ">=1.5.0  <2.0.0"))
+
+        // Pre-release versions (if supported)
+        // Note: These tests depend on semver library support
+        val preReleaseVersions = listOf("1.0.0-alpha", "1.0.0-beta", "1.0.0")
+        val bestMatch = validator.findBestMatch(preReleaseVersions, "^1.0.0")
+        assertNotNull(bestMatch)
+
+        // Build metadata (if supported)
+        assertTrue(validator.isValidVersion("1.0.0+build123"))
+    }
+}

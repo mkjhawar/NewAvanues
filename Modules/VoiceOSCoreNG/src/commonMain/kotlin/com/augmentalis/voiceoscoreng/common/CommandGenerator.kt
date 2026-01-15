@@ -77,10 +77,10 @@ object CommandGenerator {
         val isDynamic = element.isDynamicContent
 
         val command = QuantizedCommand(
-            uuid = "", // Generated on persist if needed
+            avid = "", // Generated on persist if needed
             phrase = label,  // No verb - just the element label
             actionType = actionType,
-            targetVuid = vuid,
+            targetAvid = vuid,
             confidence = calculateConfidence(element),
             metadata = mapOf(
                 "packageName" to packageName,
@@ -149,10 +149,10 @@ object CommandGenerator {
             val vuid = generateVuid(element, packageName)
 
             QuantizedCommand(
-                uuid = "",
+                avid = "",
                 phrase = phrase,
                 actionType = CommandActionType.CLICK,
-                targetVuid = vuid,
+                targetAvid = vuid,
                 confidence = 0.7f,
                 metadata = mapOf(
                     "packageName" to packageName,
@@ -222,10 +222,10 @@ object CommandGenerator {
             val vuid = generateVuid(element, packageName)
 
             QuantizedCommand(
-                uuid = "",
+                avid = "",
                 phrase = label,  // The sender name/title as command
                 actionType = CommandActionType.CLICK,
-                targetVuid = vuid,
+                targetAvid = vuid,
                 confidence = 0.8f,  // Higher confidence for label matches
                 metadata = mapOf(
                     "packageName" to packageName,

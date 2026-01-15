@@ -1,0 +1,244 @@
+package com.augmentalis.magiccode.plugins
+
+import com.augmentalis.magiccode.plugins.platform.FileIO
+
+/**
+ * Mock implementation of FileIO for testing.
+ *
+ * Maintains an in-memory file system for testing without disk I/O.
+ */
+class MockFileIO : FileIO() {
+    private val files = mutableMapOf<String, ByteArray>()
+    private val directories = mutableSetOf<String>()
+    private val fileTimes = mutableMapOf<String, Long>()
+
+    var shouldFailReads = false
+    var shouldFailWrites = false
+    var shouldFailDeletes = false
+    var shouldFailCopies = false
+    var availableDiskSpace = Long.MAX_VALUE
+
+    init {
+        // Add root directory
+        directories.add("/")
+    }
+
+    override fun readFileAsString(path: String): String {
+        if (shouldFailReads) throw RuntimeException("Mock read failure")
+        return String(readFileAsBytes(path))
+    }
+
+    override fun readFileAsBytes(path: String): ByteArray {
+        if (shouldFailReads) throw RuntimeException("Mock read failure")
+        return files[path] ?: throw RuntimeException("File not found: $path")
+    }
+
+    override fun fileExists(path: String): Boolean {
+        return files.containsKey(path)
+    }
+
+    override fun directoryExists(path: String): Boolean {
+        return directories.contains(path) || directories.any { it.startsWith("$path/") }
+    }
+
+    override fun getParentDirectory(path: String): String {
+        val lastSlash = path.lastIndexOf('/')
+        return if (lastSlash > 0) path.substring(0, lastSlash) else "/"
+    }
+
+    override fun listFiles(path: String): List<String> {
+        val normalizedPath = if (path.endsWith("/")) path else "$path/"
+
+        val immediateChildren = mutableSetOf<String>()
+
+        // Find files in this directory
+        files.keys.filter { it.startsWith(normalizedPath) }.forEach { fullPath ->
+            val relativePath = fullPath.substring(normalizedPath.length)
+            val firstComponent = relativePath.substringBefore('/')
+            if (firstComponent.isNotEmpty()) {
+                immediateChildren.add(firstComponent)
+            }
+        }
+
+        // Find subdirectories
+        directories.filter { it.startsWith(normalizedPath) && it != path }.forEach { fullPath ->
+            val relativePath = fullPath.substring(normalizedPath.length)
+            val firstComponent = relativePath.substringBefore('/')
+            if (firstComponent.isNotEmpty()) {
+                immediateChildren.add(firstComponent)
+            }
+        }
+
+        return immediateChildren.toList()
+    }
+
+    override fun createDirectory(path: String): Boolean {
+        directories.add(path)
+
+        // Create parent directories
+        var parent = getParentDirectory(path)
+        while (parent != "/" && !directories.contains(parent)) {
+            directories.add(parent)
+            parent = getParentDirectory(parent)
+        }
+
+        return true
+    }
+
+    override fun getFileSize(path: String): Long {
+        return files[path]?.size?.toLong() ?: -1L
+    }
+
+    override fun delete(path: String): Boolean {
+        if (shouldFailDeletes) return false
+
+        // Delete file
+        if (files.remove(path) != null) {
+            fileTimes.remove(path)
+            return true
+        }
+
+        // Delete directory and all contents
+        if (directories.contains(path)) {
+            directories.remove(path)
+
+            // Delete all files in directory
+            val filesToRemove = files.keys.filter { it.startsWith("$path/") }
+            filesToRemove.forEach {
+                files.remove(it)
+                fileTimes.remove(it)
+            }
+
+            // Delete all subdirectories
+            val dirsToRemove = directories.filter { it.startsWith("$path/") }
+            directories.removeAll(dirsToRemove.toSet())
+
+            return true
+        }
+
+        return false
+    }
+
+    override fun writeFileAsString(path: String, content: String) {
+        if (shouldFailWrites) throw RuntimeException("Mock write failure")
+        writeFileAsBytes(path, content.toByteArray())
+    }
+
+    override fun writeFileAsBytes(path: String, content: ByteArray) {
+        if (shouldFailWrites) throw RuntimeException("Mock write failure")
+
+        // Create parent directory if needed
+        val parent = getParentDirectory(path)
+        if (!directories.contains(parent)) {
+            createDirectory(parent)
+        }
+
+        files[path] = content
+        fileTimes[path] = System.currentTimeMillis()
+    }
+
+    override fun copy(sourcePath: String, destPath: String): Boolean {
+        if (shouldFailCopies) return false
+
+        // Copy file
+        if (files.containsKey(sourcePath)) {
+            val sourceContent = files[sourcePath]
+                ?: throw IllegalStateException("Source file exists in keys but content is null: $sourcePath")
+            files[destPath] = sourceContent.copyOf()
+            fileTimes[destPath] = System.currentTimeMillis()
+            return true
+        }
+
+        // Copy directory
+        if (directories.contains(sourcePath)) {
+            createDirectory(destPath)
+
+            // Copy all files in directory
+            files.keys.filter { it.startsWith("$sourcePath/") }.forEach { srcFile ->
+                val relativePath = srcFile.substring(sourcePath.length)
+                val destFile = "$destPath$relativePath"
+                val srcContent = files[srcFile]
+                    ?: throw IllegalStateException("Source file exists in keys but content is null: $srcFile")
+                files[destFile] = srcContent.copyOf()
+                fileTimes[destFile] = System.currentTimeMillis()
+            }
+
+            // Copy all subdirectories
+            directories.filter { it.startsWith("$sourcePath/") }.forEach { srcDir ->
+                val relativePath = srcDir.substring(sourcePath.length)
+                val destDir = "$destPath$relativePath"
+                directories.add(destDir)
+            }
+
+            return true
+        }
+
+        return false
+    }
+
+    override fun getLastModified(path: String): Long {
+        return fileTimes[path] ?: -1L
+    }
+
+    override fun listFilesRecursive(path: String): List<String> {
+        val normalizedPath = if (path.endsWith("/")) path else "$path/"
+
+        return files.keys
+            .filter { it.startsWith(normalizedPath) }
+            .map { it.substring(normalizedPath.length) }
+    }
+
+    override fun getAvailableDiskSpace(path: String): Long {
+        return availableDiskSpace
+    }
+
+    /**
+     * Add a file to the mock file system.
+     */
+    fun addFile(path: String, content: String) {
+        addFile(path, content.toByteArray())
+    }
+
+    /**
+     * Add a file to the mock file system.
+     */
+    fun addFile(path: String, content: ByteArray) {
+        val parent = getParentDirectory(path)
+        if (!directories.contains(parent)) {
+            createDirectory(parent)
+        }
+        files[path] = content
+        fileTimes[path] = System.currentTimeMillis()
+    }
+
+    /**
+     * Add a directory to the mock file system.
+     */
+    fun addDirectory(path: String) {
+        createDirectory(path)
+    }
+
+    /**
+     * Clear all files and directories.
+     */
+    fun clear() {
+        files.clear()
+        directories.clear()
+        directories.add("/")
+        fileTimes.clear()
+    }
+
+    /**
+     * Get all files in the mock file system.
+     */
+    fun getAllFiles(): Map<String, ByteArray> {
+        return files.toMap()
+    }
+
+    /**
+     * Get all directories in the mock file system.
+     */
+    fun getAllDirectories(): Set<String> {
+        return directories.toSet()
+    }
+}

@@ -69,7 +69,7 @@ interface IHandler {
         command = QuantizedCommand(
             phrase = action,
             actionType = CommandActionType.EXECUTE,
-            targetVuid = null,
+            targetAvid = null,
             confidence = 1.0f
         ),
         params = params

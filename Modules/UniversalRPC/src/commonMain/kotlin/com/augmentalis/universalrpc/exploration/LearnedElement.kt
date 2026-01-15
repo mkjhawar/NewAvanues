@@ -7,7 +7,7 @@
 
 package com.augmentalis.universalrpc.exploration
 
-import com.augmentalis.universalrpc.vuid.Bounds
+import com.augmentalis.universalrpc.avid.Bounds
 import com.squareup.wire.FieldEncoding
 import com.squareup.wire.Message
 import com.squareup.wire.ProtoAdapter
@@ -69,7 +69,7 @@ public class LearnedElement(
   public val content_desc: String = "",
   @field:WireField(
     tag = 5,
-    adapter = "com.augmentalis.universalrpc.vuid.Bounds#ADAPTER",
+    adapter = "com.augmentalis.universalrpc.avid.Bounds#ADAPTER",
     label = WireField.Label.OMIT_IDENTITY,
     schemaIndex = 4,
   )

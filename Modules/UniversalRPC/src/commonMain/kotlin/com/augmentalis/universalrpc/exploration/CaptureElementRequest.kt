@@ -7,7 +7,7 @@
 
 package com.augmentalis.universalrpc.exploration
 
-import com.augmentalis.universalrpc.vuid.Bounds
+import com.augmentalis.universalrpc.avid.Bounds
 import com.squareup.wire.FieldEncoding
 import com.squareup.wire.Message
 import com.squareup.wire.ProtoAdapter
@@ -44,7 +44,7 @@ public class CaptureElementRequest(
   public val request_id: String = "",
   @field:WireField(
     tag = 2,
-    adapter = "com.augmentalis.universalrpc.vuid.Bounds#ADAPTER",
+    adapter = "com.augmentalis.universalrpc.avid.Bounds#ADAPTER",
     label = WireField.Label.OMIT_IDENTITY,
     schemaIndex = 1,
   )

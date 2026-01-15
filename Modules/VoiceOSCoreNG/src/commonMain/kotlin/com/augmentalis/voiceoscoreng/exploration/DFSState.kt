@@ -114,7 +114,7 @@ data class DFSState(
      */
     fun recordNavigation(sourceHash: String, destHash: String): Int {
         val key = "${sourceHash.take(8)}->${destHash.take(8)}"
-        val count = navigationPaths.getOrDefault(key, 0) + 1
+        val count = (navigationPaths[key] ?: 0) + 1
         navigationPaths[key] = count
         return count
     }
@@ -124,7 +124,7 @@ data class DFSState(
      */
     fun getPathVisitCount(sourceHash: String, destHash: String): Int {
         val key = "${sourceHash.take(8)}->${destHash.take(8)}"
-        return navigationPaths.getOrDefault(key, 0)
+        return navigationPaths[key] ?: 0
     }
 
     // ═══════════════════════════════════════════════════════════════════

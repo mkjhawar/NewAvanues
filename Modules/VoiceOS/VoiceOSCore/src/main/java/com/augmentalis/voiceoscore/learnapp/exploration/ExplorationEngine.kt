@@ -52,9 +52,9 @@ import com.augmentalis.voiceoscore.learnapp.core.LearnAppCore
 import com.augmentalis.voiceoscore.learnapp.core.ProcessingMode
 import com.augmentalis.voiceoscore.learnapp.settings.LearnAppDeveloperSettings
 // Phase 3 (2025-12-08): VUIDMetrics integration for observability
-import com.augmentalis.voiceoscore.learnapp.metrics.VUIDCreationMetricsCollector
-import com.augmentalis.voiceoscore.learnapp.metrics.VUIDCreationDebugOverlay
-import com.augmentalis.voiceoscore.learnapp.metrics.VUIDMetricsRepository
+import com.augmentalis.voiceoscore.learnapp.metrics.AvidCreationMetricsCollector
+import com.augmentalis.voiceoscore.learnapp.metrics.AvidCreationDebugOverlay
+import com.augmentalis.voiceoscore.learnapp.metrics.AvidMetricsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -261,10 +261,10 @@ class ExplorationEngine(
      *
      * Tracks real-time VUID creation stats, displays debug overlay, and persists metrics to database.
      */
-    private val metricsCollector = VUIDCreationMetricsCollector()
-    private val metricsRepository = VUIDMetricsRepository()
+    private val metricsCollector = AvidCreationMetricsCollector()
+    private val metricsRepository = AvidMetricsRepository()
     private val debugOverlay by lazy {
-        VUIDCreationDebugOverlay(
+        AvidCreationDebugOverlay(
             context,
             context.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
         )

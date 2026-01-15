@@ -325,10 +325,10 @@ class JITLearner(
         if (element.text.isNotBlank()) {
             commands.add(
                 QuantizedCommand(
-                    uuid = "$vuid-text",
+                    avid = "$vuid-text",
                     phrase = element.text.lowercase(),  // No verb - just the label
                     actionType = CommandActionType.CLICK,
-                    targetVuid = vuid,
+                    targetAvid = vuid,
                     confidence = 0.95f,
                     metadata = mapOf(
                         "packageName" to element.packageName,
@@ -344,10 +344,10 @@ class JITLearner(
         if (element.contentDescription.isNotBlank()) {
             commands.add(
                 QuantizedCommand(
-                    uuid = "$vuid-desc",
+                    avid = "$vuid-desc",
                     phrase = element.contentDescription.lowercase(),  // No verb - just the label
                     actionType = CommandActionType.CLICK,
-                    targetVuid = vuid,
+                    targetAvid = vuid,
                     confidence = 0.90f, // Slightly lower since contentDescription may be less precise
                     metadata = mapOf(
                         "packageName" to element.packageName,
@@ -362,10 +362,10 @@ class JITLearner(
         if (element.isScrollable) {
             commands.add(
                 QuantizedCommand(
-                    uuid = "$vuid-scroll",
+                    avid = "$vuid-scroll",
                     phrase = "scroll ${element.text.ifBlank { element.contentDescription }.lowercase()}",
                     actionType = CommandActionType.SCROLL,
-                    targetVuid = vuid,
+                    targetAvid = vuid,
                     confidence = 0.85f,
                     metadata = mapOf(
                         "packageName" to element.packageName,
