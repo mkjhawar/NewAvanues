@@ -12,7 +12,7 @@ package com.augmentalis.database
 import com.augmentalis.database.repositories.ICommandUsageRepository
 import com.augmentalis.database.repositories.IContextPreferenceRepository
 import com.augmentalis.database.repositories.IVoiceCommandRepository
-import com.augmentalis.database.repositories.IVUIDRepository
+import com.augmentalis.database.repositories.IAvidRepository
 import com.augmentalis.database.repositories.IScrapedAppRepository
 import com.augmentalis.database.repositories.IScrapedElementRepository
 import com.augmentalis.database.repositories.IScrapedHierarchyRepository
@@ -30,7 +30,7 @@ import com.augmentalis.database.repositories.IQualityMetricRepository
 import com.augmentalis.database.repositories.impl.SQLDelightCommandUsageRepository
 import com.augmentalis.database.repositories.impl.SQLDelightContextPreferenceRepository
 import com.augmentalis.database.repositories.impl.SQLDelightVoiceCommandRepository
-import com.augmentalis.database.repositories.impl.SQLDelightVUIDRepository
+import com.augmentalis.database.repositories.impl.SQLDelightAvidRepository
 import com.augmentalis.database.repositories.impl.SQLDelightScrapedAppRepository
 import com.augmentalis.database.repositories.impl.SQLDelightScrapedElementRepository
 import com.augmentalis.database.repositories.impl.SQLDelightScrapedHierarchyRepository
@@ -127,13 +127,13 @@ class VoiceOSDatabaseManager private constructor(
         SQLDelightGeneratedCommandRepository(_database)
     }
 
-    // ==================== VUID Repositories ====================
+    // ==================== AVID Repositories ====================
 
     /**
-     * Repository for VUID elements (voice-unique identifiers).
+     * Repository for AVID elements (Avanues Voice Identifiers).
      */
-    val vuidRepository: IVUIDRepository by lazy {
-        SQLDelightVUIDRepository(_database)
+    val avidRepository: IAvidRepository by lazy {
+        SQLDelightAvidRepository(_database)
     }
 
     // ==================== Scraping Repositories ====================
@@ -319,17 +319,17 @@ class VoiceOSDatabaseManager private constructor(
     /** Raw queries for ScrapedWebElement table */
     val scrapedWebElementQueries get() = _database.scrapedWebElementQueries
 
-    /** Raw queries for VUIDElement table */
-    val vuidElementQueries get() = _database.vUIDElementQueries
+    /** Raw queries for AvidElement table */
+    val avidElementQueries get() = _database.avidElementQueries
 
-    /** Raw queries for VUIDAlias table */
-    val vuidAliasQueries get() = _database.vUIDAliasQueries
+    /** Raw queries for AvidAlias table */
+    val avidAliasQueries get() = _database.avidAliasQueries
 
-    /** Raw queries for VUIDAnalytics table */
-    val vuidAnalyticsQueries get() = _database.vUIDAnalyticsQueries
+    /** Raw queries for AvidAnalytics table */
+    val avidAnalyticsQueries get() = _database.avidAnalyticsQueries
 
-    /** Raw queries for VUIDHierarchy table */
-    val vuidHierarchyQueries get() = _database.vUIDHierarchyQueries
+    /** Raw queries for AvidHierarchy table */
+    val avidHierarchyQueries get() = _database.avidHierarchyQueries
 
     /** Raw queries for ScrapedElement table */
     val scrapedElementQueries get() = _database.scrapedElementQueries
