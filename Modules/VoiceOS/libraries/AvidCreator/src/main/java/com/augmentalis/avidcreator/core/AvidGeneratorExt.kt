@@ -135,4 +135,4 @@ object AvidGeneratorExt {
 
 // Legacy alias for backward compatibility
 @Deprecated("Use AvidGeneratorExt instead", ReplaceWith("AvidGeneratorExt"))
-typealias AvidGeneratorExt = AvidGeneratorExt
+typealias VuidGeneratorExt = AvidGeneratorExt

@@ -28,8 +28,8 @@ class AvidAliasManager(
     /**
      * In-memory cache for fast lookups
      */
-    private val aliasToVuid = mutableMapOf<String, String>()
-    private val vuidToAliases = mutableMapOf<String, MutableSet<String>>()
+    private val aliasToAvid = mutableMapOf<String, String>()
+    private val avidToAliases = mutableMapOf<String, MutableSet<String>>()
 
     @Volatile
     private var isLoaded = false
@@ -41,8 +41,8 @@ class AvidAliasManager(
         if (!isLoaded) {
             val aliases = repository.getAllAliases()
             aliases.forEach { dto ->
-                aliasToVuid[dto.alias] = dto.vuid
-                vuidToAliases.getOrPut(dto.vuid) { mutableSetOf() }.add(dto.alias)
+                aliasToAvid[dto.alias] = dto.avid
+                avidToAliases.getOrPut(dto.avid) { mutableSetOf() }.add(dto.alias)
             }
             isLoaded = true
         }
@@ -72,14 +72,14 @@ class AvidAliasManager(
      * Create auto-generated alias
      */
     suspend fun createAutoAlias(
-        vuid: String,
+        avid: String,
         elementName: String?,
         elementType: String,
         useAbbreviation: Boolean = true
     ): String = withContext(Dispatchers.Default) {
         ensureLoaded()
 
-        val appName = extractAppNameFromVuid(vuid)
+        val appName = extractAppNameFromAvid(avid)
         val appPart = if (useAbbreviation) {
             appAbbreviations[appName.lowercase()] ?: appName
         } else {
@@ -96,33 +96,33 @@ class AvidAliasManager(
         var alias = "${appPart}_${namePart}_$typePart"
         alias = ensureUniqueAlias(alias)
 
-        setAlias(vuid, alias, isPrimary = true)
+        setAlias(avid, alias, isPrimary = true)
         alias
     }
 
     /**
      * Set manual alias
      */
-    suspend fun setAlias(vuid: String, alias: String, isPrimary: Boolean = false) = withContext(Dispatchers.IO) {
+    suspend fun setAlias(avid: String, alias: String, isPrimary: Boolean = false) = withContext(Dispatchers.IO) {
         ensureLoaded()
         validateAlias(alias)
 
-        if (aliasToVuid.containsKey(alias)) {
-            val existingVuid = aliasToVuid[alias]
-            if (existingVuid != vuid) {
-                throw IllegalArgumentException("Alias '$alias' already exists for VUID: $existingVuid")
+        if (aliasToAvid.containsKey(alias)) {
+            val existingAvid = aliasToAvid[alias]
+            if (existingAvid != avid) {
+                throw IllegalArgumentException("Alias '$alias' already exists for AVID: $existingAvid")
             }
             return@withContext
         }
 
-        aliasToVuid[alias] = vuid
-        vuidToAliases.getOrPut(vuid) { mutableSetOf() }.add(alias)
+        aliasToAvid[alias] = avid
+        avidToAliases.getOrPut(avid) { mutableSetOf() }.add(alias)
 
         repository.insertAlias(
             AvidAliasDTO(
                 id = 0,
                 alias = alias,
-                vuid = vuid,
+                avid = avid,
                 isPrimary = isPrimary,
                 createdAt = System.currentTimeMillis()
             )
@@ -130,25 +130,25 @@ class AvidAliasManager(
     }
 
     /**
-     * Resolve alias to VUID
+     * Resolve alias to AVID
      */
     suspend fun resolveAlias(alias: String): String? = withContext(Dispatchers.IO) {
         ensureLoaded()
-        aliasToVuid[alias]
+        aliasToAvid[alias]
     }
 
     /**
-     * Get aliases for VUID
+     * Get aliases for AVID
      */
-    fun getAliases(vuid: String): Set<String> {
-        return vuidToAliases[vuid] ?: emptySet()
+    fun getAliases(avid: String): Set<String> {
+        return avidToAliases[avid] ?: emptySet()
     }
 
     /**
      * Get primary alias
      */
-    fun getPrimaryAlias(vuid: String): String? {
-        return vuidToAliases[vuid]?.firstOrNull()
+    fun getPrimaryAlias(avid: String): String? {
+        return avidToAliases[avid]?.firstOrNull()
     }
 
     /**
@@ -156,14 +156,14 @@ class AvidAliasManager(
      */
     suspend fun removeAlias(alias: String): Boolean = withContext(Dispatchers.IO) {
         ensureLoaded()
-        val vuid = aliasToVuid.remove(alias) ?: return@withContext false
-        vuidToAliases[vuid]?.remove(alias)
+        val avid = aliasToAvid.remove(alias) ?: return@withContext false
+        avidToAliases[avid]?.remove(alias)
         repository.deleteAliasByName(alias)
         true
     }
 
-    private fun extractAppNameFromVuid(vuid: String): String {
-        val parts = vuid.split('.')
+    private fun extractAppNameFromAvid(avid: String): String {
+        val parts = avid.split('.')
         return when {
             parts.size >= 3 -> parts.getOrNull(1) ?: "app"
             else -> "app"
@@ -188,9 +188,9 @@ class AvidAliasManager(
     }
 
     private fun ensureUniqueAlias(baseAlias: String): String {
-        if (!aliasToVuid.containsKey(baseAlias)) return baseAlias
+        if (!aliasToAvid.containsKey(baseAlias)) return baseAlias
         var counter = 2
-        while (aliasToVuid.containsKey("${baseAlias}_$counter")) {
+        while (aliasToAvid.containsKey("${baseAlias}_$counter")) {
             counter++
         }
         return "${baseAlias}_$counter"
@@ -231,10 +231,10 @@ class AvidAliasManager(
      */
     fun getStats(): AliasStats {
         return AliasStats(
-            totalAliases = aliasToVuid.size,
-            totalVuidsWithAliases = vuidToAliases.size,
-            averageAliasesPerVuid = if (vuidToAliases.isNotEmpty()) {
-                vuidToAliases.values.map { it.size }.average().toFloat()
+            totalAliases = aliasToAvid.size,
+            totalVuidsWithAliases = avidToAliases.size,
+            averageAliasesPerVuid = if (avidToAliases.isNotEmpty()) {
+                avidToAliases.values.map { it.size }.average().toFloat()
             } else {
                 0f
             }

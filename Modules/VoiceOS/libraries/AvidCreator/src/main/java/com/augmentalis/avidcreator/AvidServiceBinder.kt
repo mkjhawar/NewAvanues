@@ -375,9 +375,6 @@ class AvidServiceBinder(
     }
 }
 
-// Backward compatibility aliases
+// Backward compatibility alias
 @Deprecated("Use AvidServiceBinder instead", ReplaceWith("AvidServiceBinder"))
-typealias AvidCreatorServiceBinder = AvidServiceBinder
-
-@Deprecated("Use AvidServiceBinder instead", ReplaceWith("AvidServiceBinder"))
-typealias AvidCreatorServiceBinder = AvidServiceBinder
+typealias VuidServiceBinder = AvidServiceBinder

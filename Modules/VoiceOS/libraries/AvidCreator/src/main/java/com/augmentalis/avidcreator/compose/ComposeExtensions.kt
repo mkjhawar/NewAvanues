@@ -58,7 +58,7 @@ fun Modifier.withUUID(
     
     DisposableEffect(elementUuid) {
         val element = AvidElement(
-            vuid = elementUuid,
+            avid = elementUuid,
             name = name,
             type = type,
             description = description,
@@ -197,18 +197,18 @@ fun AvidScope(
     type: String = "scope",
     content: @Composable () -> Unit
 ) {
-    val scopeVuid = remember { UUID.randomUUID().toString() }
+    val scopeAvid = remember { UUID.randomUUID().toString() }
 
-    DisposableEffect(scopeVuid) {
+    DisposableEffect(scopeAvid) {
         val element = AvidElement(
-            vuid = scopeVuid,
+            avid = scopeAvid,
             name = name,
             type = type
         )
         manager.registerElement(element)
 
         onDispose {
-            manager.unregisterElement(scopeVuid)
+            manager.unregisterElement(scopeAvid)
         }
     }
 

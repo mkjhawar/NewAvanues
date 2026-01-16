@@ -176,9 +176,6 @@ data class Quadruple<out A, out B, out C, out D>(
     val fourth: D
 )
 
-// Backward compatibility aliases
+// Backward compatibility alias
 @Deprecated("Use AvidElementData instead", ReplaceWith("AvidElementData"))
-typealias AvidElementData = AvidElementData
-
-@Deprecated("Use AvidElementData instead", ReplaceWith("AvidElementData"))
-typealias AvidElementData = AvidElementData
+typealias VuidElementData = AvidElementData

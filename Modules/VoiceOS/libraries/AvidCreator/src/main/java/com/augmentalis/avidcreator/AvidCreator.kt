@@ -452,9 +452,9 @@ class AvidElementManager private constructor() {
     }
 }
 
-// Backward compatibility aliases
-@Deprecated("Use AvidElementManager instead", ReplaceWith("AvidElementManager"))
+// Public API alias - AvidCreator is the standard name
 typealias AvidCreator = AvidElementManager
 
-@Deprecated("Use AvidElementManager instead", ReplaceWith("AvidElementManager"))
-typealias AvidCreator = AvidElementManager
+// Backward compatibility alias
+@Deprecated("Use AvidCreator instead", ReplaceWith("AvidCreator"))
+typealias VuidCreator = AvidElementManager

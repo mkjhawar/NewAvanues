@@ -90,33 +90,33 @@ class SQLDelightAvidRepositoryAdapter(
 
             // Build children map from hierarchy relationships
             val childrenMap = hierarchyDTOs
-                .groupBy { it.parentUuid }
+                .groupBy { it.parentAvid }
                 .mapValues { (_, hierarchies) ->
                     hierarchies.sortedBy { it.orderIndex }
-                        .map { it.childUuid }
+                        .map { it.childAvid }
                         .toMutableList()
                 }
 
             // Convert DTOs to models and populate cache
             elementDTOs.forEach { dto ->
                 val element = dto.toModel(
-                    children = childrenMap[dto.uuid] ?: mutableListOf()
+                    children = childrenMap[dto.avid] ?: mutableListOf()
                 )
-                elementsCache[element.vuid] = element
+                elementsCache[element.avid] = element
 
                 // Build indexes
                 element.name?.let { name ->
-                    nameIndex.getOrPut(name.lowercase()) { mutableSetOf() }.add(element.vuid)
+                    nameIndex.getOrPut(name.lowercase()) { mutableSetOf() }.add(element.avid)
                 }
-                typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.vuid)
+                typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.avid)
                 element.parent?.let { parent ->
-                    hierarchyIndex.getOrPut(parent) { mutableSetOf() }.add(element.vuid)
+                    hierarchyIndex.getOrPut(parent) { mutableSetOf() }.add(element.avid)
                 }
             }
 
             // Build alias index
             aliasDTOs.forEach { aliasDTO ->
-                aliasIndex[aliasDTO.alias] = aliasDTO.uuid
+                aliasIndex[aliasDTO.alias] = aliasDTO.avid
             }
 
             isLoaded = true
@@ -138,14 +138,14 @@ class SQLDelightAvidRepositoryAdapter(
         repository.insertElement(element.toDTO())
 
         // Save hierarchy relationships
-        element.children.forEachIndexed { index, childUuid ->
+        element.children.forEachIndexed { index, childAvid ->
             repository.insertHierarchy(
                 AvidHierarchyDTO(
                     id = 0,
-                    parentUuid = element.vuid,
-                    childUuid = childUuid,
+                    parentAvid = element.avid,
+                    childAvid = childAvid,
                     depth = 0,
-                    path = "/${element.vuid}/$childUuid",
+                    path = "/${element.avid}/$childAvid",
                     orderIndex = index
                 )
             )
@@ -155,7 +155,7 @@ class SQLDelightAvidRepositoryAdapter(
         val now = System.currentTimeMillis()
         repository.insertAnalytics(
             AvidAnalyticsDTO(
-                uuid = element.vuid,
+                avid = element.avid,
                 accessCount = 0,
                 firstAccessed = now,
                 lastAccessed = now,
@@ -167,15 +167,15 @@ class SQLDelightAvidRepositoryAdapter(
         )
 
         // Update in-memory cache
-        elementsCache[element.vuid] = element
+        elementsCache[element.avid] = element
 
         // Update indexes
         element.name?.let { name ->
-            nameIndex.getOrPut(name.lowercase()) { mutableSetOf() }.add(element.vuid)
+            nameIndex.getOrPut(name.lowercase()) { mutableSetOf() }.add(element.avid)
         }
-        typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.vuid)
+        typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.avid)
         element.parent?.let { parent ->
-            hierarchyIndex.getOrPut(parent) { mutableSetOf() }.add(element.vuid)
+            hierarchyIndex.getOrPut(parent) { mutableSetOf() }.add(element.avid)
         }
 
         // Auto-create primary alias from element name
@@ -187,12 +187,12 @@ class SQLDelightAvidRepositoryAdapter(
                         AvidAliasDTO(
                             id = 0,
                             alias = alias,
-                            uuid = element.vuid,
+                            avid = element.avid,
                             isPrimary = true,
                             createdAt = System.currentTimeMillis()
                         )
                     )
-                    aliasIndex[alias] = element.vuid
+                    aliasIndex[alias] = element.avid
                 } catch (e: Exception) {
                     // Alias conflict - skip
                 }
@@ -214,8 +214,8 @@ class SQLDelightAvidRepositoryAdapter(
     /**
      * Get element by AVID (O(1) from cache)
      */
-    fun getByVuid(uuid: String): AvidElement? {
-        return elementsCache[uuid]
+    fun getByAvid(avid: String): AvidElement? {
+        return elementsCache[avid]
     }
 
     /**
@@ -244,8 +244,8 @@ class SQLDelightAvidRepositoryAdapter(
     /**
      * Get direct children of parent (O(1) from index)
      */
-    fun getChildren(parentUuid: String): List<AvidElement> {
-        val uuids = hierarchyIndex[parentUuid] ?: return emptyList()
+    fun getChildren(parentAvid: String): List<AvidElement> {
+        val uuids = hierarchyIndex[parentAvid] ?: return emptyList()
         return uuids.mapNotNull { elementsCache[it] }
     }
 
@@ -259,30 +259,30 @@ class SQLDelightAvidRepositoryAdapter(
     /**
      * Check if AVID exists
      */
-    fun exists(uuid: String): Boolean {
-        return elementsCache.containsKey(uuid)
+    fun exists(avid: String): Boolean {
+        return elementsCache.containsKey(avid)
     }
 
     /**
      * Get element by alias (O(1) from index)
      */
     fun getByAlias(alias: String): AvidElement? {
-        val uuid = aliasIndex[alias] ?: return null
-        return elementsCache[uuid]
+        val avid = aliasIndex[alias] ?: return null
+        return elementsCache[avid]
     }
 
     /**
      * Get AVID string by alias (O(1) from index)
      */
-    fun getUuidByAlias(alias: String): String? {
+    fun getAvidByAlias(alias: String): String? {
         return aliasIndex[alias]
     }
 
     /**
      * Get all aliases for AVID
      */
-    suspend fun getAliasesByUuid(uuid: String): List<AvidAliasDTO> = withContext(dispatcher) {
-        repository.getAliasesForUuid(uuid)
+    suspend fun getAliasesByAvid(avid: String): List<AvidAliasDTO> = withContext(dispatcher) {
+        repository.getAliasesForAvid(avid)
     }
 
     // ==================== UPDATE ====================
@@ -291,7 +291,7 @@ class SQLDelightAvidRepositoryAdapter(
      * Update an existing element
      */
     suspend fun update(element: AvidElement) = withContext(dispatcher) {
-        val existing = elementsCache[element.vuid] ?: return@withContext
+        val existing = elementsCache[element.avid] ?: return@withContext
 
         // Update SQLDelight database
         repository.updateElement(element.toDTO())
@@ -299,46 +299,46 @@ class SQLDelightAvidRepositoryAdapter(
         // Update hierarchy if children changed
         if (existing.children != element.children) {
             // Delete old hierarchy relationships
-            repository.deleteHierarchyByParent(element.vuid)
+            repository.deleteHierarchyByParent(element.avid)
 
             // Insert new relationships
-            element.children.forEachIndexed { index, childUuid ->
+            element.children.forEachIndexed { index, childAvid ->
                 repository.insertHierarchy(
                     AvidHierarchyDTO(
                         id = 0,
-                        parentUuid = element.vuid,
-                        childUuid = childUuid,
+                        parentAvid = element.avid,
+                        childAvid = childAvid,
                         depth = 0,
-                        path = "/${element.vuid}/$childUuid",
+                        path = "/${element.avid}/$childAvid",
                         orderIndex = index
                     )
                 )
             }
 
             // Update hierarchy index
-            hierarchyIndex.remove(element.vuid)
+            hierarchyIndex.remove(element.avid)
             if (element.children.isNotEmpty()) {
-                hierarchyIndex[element.vuid] = element.children.toMutableSet()
+                hierarchyIndex[element.avid] = element.children.toMutableSet()
             }
         }
 
         // Update in-memory cache
-        elementsCache[element.vuid] = element
+        elementsCache[element.avid] = element
 
         // Update name index if changed
         if (existing.name != element.name) {
             existing.name?.let { oldName ->
-                nameIndex[oldName.lowercase()]?.remove(element.vuid)
+                nameIndex[oldName.lowercase()]?.remove(element.avid)
             }
             element.name?.let { newName ->
-                nameIndex.getOrPut(newName.lowercase()) { mutableSetOf() }.add(element.vuid)
+                nameIndex.getOrPut(newName.lowercase()) { mutableSetOf() }.add(element.avid)
             }
         }
 
         // Update type index if changed
         if (existing.type != element.type) {
-            typeIndex[existing.type.lowercase()]?.remove(element.vuid)
-            typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.vuid)
+            typeIndex[existing.type.lowercase()]?.remove(element.avid)
+            typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.avid)
         }
     }
 
@@ -347,38 +347,38 @@ class SQLDelightAvidRepositoryAdapter(
     /**
      * Delete element by AVID
      */
-    suspend fun deleteByVuid(uuid: String): Boolean = withContext(dispatcher) {
-        val element = elementsCache.remove(uuid) ?: return@withContext false
+    suspend fun deleteByAvid(avid: String): Boolean = withContext(dispatcher) {
+        val element = elementsCache.remove(avid) ?: return@withContext false
 
         // Delete from SQLDelight database (CASCADE handles hierarchy, analytics, aliases)
-        repository.deleteElement(uuid)
+        repository.deleteElement(avid)
 
         // Clean up indexes
         element.name?.let { name ->
-            nameIndex[name.lowercase()]?.remove(uuid)
+            nameIndex[name.lowercase()]?.remove(avid)
             if (nameIndex[name.lowercase()]?.isEmpty() == true) {
                 nameIndex.remove(name.lowercase())
             }
         }
 
-        typeIndex[element.type.lowercase()]?.remove(uuid)
+        typeIndex[element.type.lowercase()]?.remove(avid)
         if (typeIndex[element.type.lowercase()]?.isEmpty() == true) {
             typeIndex.remove(element.type.lowercase())
         }
 
         element.parent?.let { parent ->
-            hierarchyIndex[parent]?.remove(uuid)
+            hierarchyIndex[parent]?.remove(avid)
             if (hierarchyIndex[parent]?.isEmpty() == true) {
                 hierarchyIndex.remove(parent)
             }
         }
 
         // Clean up alias index
-        aliasIndex.entries.removeIf { it.value == uuid }
+        aliasIndex.entries.removeIf { it.value == avid }
 
         // Remove from parent's children list in cache
-        element.parent?.let { parentUuid ->
-            elementsCache[parentUuid]?.removeChild(uuid)
+        element.parent?.let { parentAvid ->
+            elementsCache[parentAvid]?.removeChild(avid)
         }
 
         return@withContext true
@@ -405,12 +405,12 @@ class SQLDelightAvidRepositoryAdapter(
      * Record element access for analytics
      */
     suspend fun recordAccess(
-        uuid: String,
+        avid: String,
         executionTimeMs: Long = 0,
         success: Boolean = true
     ) = withContext(dispatcher) {
         repository.recordExecution(
-            uuid = uuid,
+            avid = avid,
             executionTimeMs = executionTimeMs,
             success = success,
             timestamp = System.currentTimeMillis()
@@ -422,7 +422,7 @@ class SQLDelightAvidRepositoryAdapter(
      */
     suspend fun getMostUsed(limit: Int = 10): List<AvidElement> = withContext(dispatcher) {
         val analytics = repository.getMostAccessed(limit)
-        analytics.mapNotNull { elementsCache[it.uuid] }
+        analytics.mapNotNull { elementsCache[it.avid] }
     }
 
     /**
@@ -430,7 +430,7 @@ class SQLDelightAvidRepositoryAdapter(
      */
     suspend fun getRecentlyUsed(limit: Int = 10): List<AvidElement> = withContext(dispatcher) {
         val analytics = repository.getRecentlyAccessed(limit)
-        analytics.mapNotNull { elementsCache[it.uuid] }
+        analytics.mapNotNull { elementsCache[it.avid] }
     }
 
     // ==================== Alias Management ====================
@@ -439,12 +439,12 @@ class SQLDelightAvidRepositoryAdapter(
      * Register a custom alias for an AVID
      */
     suspend fun registerAlias(
-        uuid: String,
+        avid: String,
         alias: String,
         isPrimary: Boolean = false
     ): Boolean = withContext(dispatcher) {
         // Verify AVID exists
-        if (!elementsCache.containsKey(uuid)) return@withContext false
+        if (!elementsCache.containsKey(avid)) return@withContext false
 
         // Sanitize alias
         val sanitized = sanitizeAlias(alias)
@@ -458,12 +458,12 @@ class SQLDelightAvidRepositoryAdapter(
                 AvidAliasDTO(
                     id = 0,
                     alias = sanitized,
-                    uuid = uuid,
+                    avid = avid,
                     isPrimary = isPrimary,
                     createdAt = System.currentTimeMillis()
                 )
             )
-            aliasIndex[sanitized] = uuid
+            aliasIndex[sanitized] = avid
             true
         } catch (e: Exception) {
             false
@@ -499,11 +499,11 @@ class SQLDelightAvidRepositoryAdapter(
      */
     private fun AvidElement.toDTO(): AvidElementDTO {
         return AvidElementDTO(
-            uuid = this.vuid,
+            avid = this.avid,
             name = this.name,
             type = this.type,
             description = this.description,
-            parentUuid = this.parent,
+            parentAvid = this.parent,
             isEnabled = this.isEnabled,
             priority = this.priority,
             timestamp = this.timestamp,
@@ -520,11 +520,11 @@ class SQLDelightAvidRepositoryAdapter(
         actions: Map<String, (Map<String, Any>) -> Unit> = emptyMap()
     ): AvidElement {
         return AvidElement(
-            vuid = this.uuid,
+            avid = this.avid,
             name = this.name,
             type = this.type,
             description = this.description,
-            parent = this.parentUuid,
+            parent = this.parentAvid,
             children = children,
             position = this.positionJson?.let { gson.fromJson(it, AvidPosition::class.java) },
             actions = actions,

@@ -68,23 +68,23 @@ class AvidCreatorDatabase private constructor(
     private val hierarchies = ConcurrentHashMap<String, MutableList<AvidHierarchyDTO>>()
     private val analytics = ConcurrentHashMap<String, AvidAnalyticsDTO>()
     private val aliases = ConcurrentHashMap<String, AvidAliasDTO>()
-    private val aliasesByUuid = ConcurrentHashMap<String, MutableList<AvidAliasDTO>>()
+    private val aliasesByAvid = ConcurrentHashMap<String, MutableList<AvidAliasDTO>>()
 
     // ==================== Element Operations ====================
 
     override suspend fun insertElement(element: AvidElementDTO) {
-        elements[element.uuid] = element
+        elements[element.avid] = element
     }
 
     override suspend fun updateElement(element: AvidElementDTO) {
-        elements[element.uuid] = element
+        elements[element.avid] = element
     }
 
     override suspend fun deleteElement(uuid: String) {
         elements.remove(uuid)
     }
 
-    override suspend fun getElementByUuid(uuid: String): AvidElementDTO? {
+    override suspend fun getElementByAvid(uuid: String): AvidElementDTO? {
         return elements[uuid]
     }
 
@@ -96,8 +96,8 @@ class AvidCreatorDatabase private constructor(
         return elements.values.filter { it.type == type }
     }
 
-    override suspend fun getChildrenOfParent(parentUuid: String): List<AvidElementDTO> {
-        return elements.values.filter { it.parentUuid == parentUuid }
+    override suspend fun getChildrenOfParent(parentAvid: String): List<AvidElementDTO> {
+        return elements.values.filter { it.parentAvid == parentAvid }
     }
 
     override suspend fun getEnabledElements(): List<AvidElementDTO> {
@@ -123,16 +123,16 @@ class AvidCreatorDatabase private constructor(
     // ==================== Hierarchy Operations ====================
 
     override suspend fun insertHierarchy(hierarchy: AvidHierarchyDTO) {
-        val list = hierarchies.getOrPut(hierarchy.parentUuid) { mutableListOf() }
+        val list = hierarchies.getOrPut(hierarchy.parentAvid) { mutableListOf() }
         list.add(hierarchy)
     }
 
-    override suspend fun deleteHierarchyByParent(parentUuid: String) {
-        hierarchies.remove(parentUuid)
+    override suspend fun deleteHierarchyByParent(parentAvid: String) {
+        hierarchies.remove(parentAvid)
     }
 
-    override suspend fun getHierarchyByParent(parentUuid: String): List<AvidHierarchyDTO> {
-        return hierarchies[parentUuid] ?: emptyList()
+    override suspend fun getHierarchyByParent(parentAvid: String): List<AvidHierarchyDTO> {
+        return hierarchies[parentAvid] ?: emptyList()
     }
 
     override suspend fun getAllHierarchy(): List<AvidHierarchyDTO> {
@@ -142,14 +142,14 @@ class AvidCreatorDatabase private constructor(
     // ==================== Analytics Operations ====================
 
     override suspend fun insertAnalytics(analytics: AvidAnalyticsDTO) {
-        this.analytics[analytics.uuid] = analytics
+        this.analytics[analytics.avid] = analytics
     }
 
     override suspend fun updateAnalytics(analytics: AvidAnalyticsDTO) {
-        this.analytics[analytics.uuid] = analytics
+        this.analytics[analytics.avid] = analytics
     }
 
-    override suspend fun getAnalyticsByUuid(uuid: String): AvidAnalyticsDTO? {
+    override suspend fun getAnalyticsByAvid(uuid: String): AvidAnalyticsDTO? {
         return analytics[uuid]
     }
 
@@ -165,16 +165,16 @@ class AvidCreatorDatabase private constructor(
         return analytics.values.sortedByDescending { it.lastAccessed }.take(limit)
     }
 
-    override suspend fun incrementAccessCount(uuid: String, timestamp: Long) {
-        val existing = analytics[uuid]
+    override suspend fun incrementAccessCount(avid: String, timestamp: Long) {
+        val existing = analytics[avid]
         if (existing != null) {
-            analytics[uuid] = existing.copy(
+            analytics[avid] = existing.copy(
                 accessCount = existing.accessCount + 1,
                 lastAccessed = timestamp
             )
         } else {
-            analytics[uuid] = AvidAnalyticsDTO(
-                uuid = uuid,
+            analytics[avid] = AvidAnalyticsDTO(
+                avid = avid,
                 accessCount = 1,
                 firstAccessed = timestamp,
                 lastAccessed = timestamp,
@@ -186,21 +186,21 @@ class AvidCreatorDatabase private constructor(
         }
     }
 
-    override suspend fun recordExecution(uuid: String, executionTimeMs: Long, success: Boolean, timestamp: Long) {
-        val existing = analytics[uuid]
+    override suspend fun recordExecution(avid: String, executionTimeMs: Long, success: Boolean, timestamp: Long) {
+        val existing = analytics[avid]
         if (existing != null) {
             val newSuccessCount = if (success) existing.successCount + 1 else existing.successCount
             val newFailureCount = if (!success) existing.failureCount + 1 else existing.failureCount
 
-            analytics[uuid] = existing.copy(
+            analytics[avid] = existing.copy(
                 successCount = newSuccessCount,
                 failureCount = newFailureCount,
                 executionTimeMs = executionTimeMs,
                 lastAccessed = timestamp
             )
         } else {
-            analytics[uuid] = AvidAnalyticsDTO(
-                uuid = uuid,
+            analytics[avid] = AvidAnalyticsDTO(
+                avid = avid,
                 accessCount = 0,
                 firstAccessed = timestamp,
                 lastAccessed = timestamp,
@@ -216,19 +216,19 @@ class AvidCreatorDatabase private constructor(
 
     override suspend fun insertAlias(alias: AvidAliasDTO) {
         aliases[alias.alias] = alias
-        val list = aliasesByUuid.getOrPut(alias.uuid) { mutableListOf() }
+        val list = aliasesByAvid.getOrPut(alias.avid) { mutableListOf() }
         list.add(alias)
     }
 
     override suspend fun deleteAliasByName(alias: String) {
         val dto = aliases.remove(alias)
         if (dto != null) {
-            aliasesByUuid[dto.uuid]?.removeIf { it.alias == alias }
+            aliasesByAvid[dto.avid]?.removeIf { it.alias == alias }
         }
     }
 
-    override suspend fun deleteAliasesForUuid(uuid: String) {
-        val list = aliasesByUuid.remove(uuid) ?: return
+    override suspend fun deleteAliasesForAvid(avid: String) {
+        val list = aliasesByAvid.remove(avid) ?: return
         list.forEach { aliases.remove(it.alias) }
     }
 
@@ -236,12 +236,12 @@ class AvidCreatorDatabase private constructor(
         return aliases[alias]
     }
 
-    override suspend fun getAliasesForUuid(uuid: String): List<AvidAliasDTO> {
-        return aliasesByUuid[uuid] ?: emptyList()
+    override suspend fun getAliasesForAvid(avid: String): List<AvidAliasDTO> {
+        return aliasesByAvid[avid] ?: emptyList()
     }
 
-    override suspend fun getUuidByAlias(alias: String): String? {
-        return aliases[alias]?.uuid
+    override suspend fun getAvidByAlias(alias: String): String? {
+        return aliases[alias]?.avid
     }
 
     override suspend fun aliasExists(alias: String): Boolean {
@@ -255,7 +255,7 @@ class AvidCreatorDatabase private constructor(
     override suspend fun insertAliasesBatch(aliases: List<AvidAliasDTO>) {
         aliases.forEach { alias ->
             this.aliases[alias.alias] = alias
-            val list = aliasesByUuid.getOrPut(alias.uuid) { mutableListOf() }
+            val list = aliasesByAvid.getOrPut(alias.avid) { mutableListOf() }
             list.add(alias)
         }
     }
@@ -276,7 +276,7 @@ class AvidCreatorDatabase private constructor(
 
     override suspend fun deleteAllAliases() {
         aliases.clear()
-        aliasesByUuid.clear()
+        aliasesByAvid.clear()
     }
 
     /**
@@ -287,6 +287,6 @@ class AvidCreatorDatabase private constructor(
         hierarchies.clear()
         analytics.clear()
         aliases.clear()
-        aliasesByUuid.clear()
+        aliasesByAvid.clear()
     }
 }
