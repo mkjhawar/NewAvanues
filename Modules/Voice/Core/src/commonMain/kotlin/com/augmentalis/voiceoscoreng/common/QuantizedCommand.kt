@@ -8,6 +8,7 @@ package com.augmentalis.voiceoscoreng.common
  *
  * @property avid Command unique identifier (AVID format)
  * @property phrase Voice phrase that triggers this command
+ * @property aliases Alternative phrases that trigger this command
  * @property actionType Type of action to perform
  * @property targetAvid Target element AVID fingerprint (nullable for navigation)
  * @property confidence Confidence score (0.0 - 1.0)
@@ -16,6 +17,7 @@ package com.augmentalis.voiceoscoreng.common
 data class QuantizedCommand(
     val avid: String = "",
     val phrase: String,
+    val aliases: List<String> = emptyList(),
     val actionType: CommandActionType,
     val targetAvid: String?,
     val confidence: Float,
@@ -108,6 +110,7 @@ data class QuantizedCommand(
             packageName: String,
             targetAvid: String? = null,
             confidence: Float = 1.0f,
+            aliases: List<String> = emptyList(),
             screenId: String? = null,
             appVersion: String? = null,
             additionalMetadata: Map<String, String> = emptyMap()
@@ -132,6 +135,7 @@ data class QuantizedCommand(
             return QuantizedCommand(
                 avid = avid,
                 phrase = phrase,
+                aliases = aliases,
                 actionType = actionType,
                 targetAvid = targetAvid,
                 confidence = confidence,
