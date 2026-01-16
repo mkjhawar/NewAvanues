@@ -247,15 +247,15 @@ dependencies {
     // DEPRECATED (2026-01-06) - Use VoiceOSCoreNG instead
     // These modules remain for backwards compatibility during migration
     // See DEPRECATED.md in each module for migration guide
-    implementation(project(":Modules:VoiceOS:libraries:JITLearning"))      // ⚠️ DEPRECATED: Use VoiceOSCoreNG
-    implementation(project(":Modules:VoiceOS:libraries:LearnAppCore"))     // ⚠️ DEPRECATED: Use VoiceOSCoreNG
+    // implementation(project(":Modules:VoiceOS:libraries:JITLearning"))      // ⚠️ REMOVED: Module deleted
+    // implementation(project(":Modules:VoiceOS:libraries:LearnAppCore"))     // ⚠️ REMOVED: Module deleted
 
     // LearnApp dependencies merged (2025-11-24)
-    implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))      // From LearnApp
+    implementation(project(":Modules:DeviceManager"))      // From LearnApp (consolidated path)
     //implementation(project(":Modules:AvaMagic:AvaUI:Voice"))    // From LearnApp
 
     // Vivoka VSDK (via wrapper module to avoid AAR-in-AAR issues)
-    implementation(project(":Modules:VoiceOS:libraries:VivokaSDK"))
+    implementation(project(":Vivoka:Android"))
 
     // Speech Recognition SDKs (SOLID Phase 2: Factory Pattern)
 

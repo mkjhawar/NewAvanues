@@ -75,7 +75,7 @@ android {
 
 dependencies {
     // Speech Recognition Library
-    implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))   // LearningSystem stubbed
+    implementation(project(":Modules:SpeechRecognition"))   // LearningSystem stubbed
 
     // VOSK Speech Recognition (required by VoskEngine)
     implementation("com.alphacephei:vosk-android:0.3.47")

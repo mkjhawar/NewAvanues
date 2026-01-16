@@ -82,7 +82,7 @@ dependencies {
     implementation("com.google.guava:guava:32.1.3-android")
     
     // VOS4 Dependencies - Direct integration with existing systems
-    implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))       // For IMU integration
+    implementation(project(":Modules:DeviceManager"))       // For IMU integration
     implementation(project(":Modules:AVID"))                                  // For unique identifiers
     // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight       // For data persistence
     implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))  // For localization support

@@ -63,10 +63,10 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.8.2")
     
     // VOS4 Dependencies
-    //implementation(project(":Modules:DeviceManager"))
-    //implementation(project(":Modules:AvaMagic:AvaUI:Voice"))
-    implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))   // LearningSystem stubbed
-    implementation(project(":Modules:VoiceOS:managers:LicenseManager"))
+    implementation(project(":Modules:DeviceManager"))
+    implementation(project(":Modules:VoiceOS:managers:LicenseManager"))  // GlassMorphism UI
+    implementation(project(":Modules:SpeechRecognition"))   // LearningSystem stubbed
+    implementation(project(":Modules:LicenseSDK"))
     
     // Material Design
     implementation("com.google.android.material:material:1.11.0")

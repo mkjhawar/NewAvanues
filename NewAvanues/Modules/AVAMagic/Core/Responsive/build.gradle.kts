@@ -30,7 +30,7 @@ kotlin {
                 implementation("androidx.compose.runtime:runtime:1.6.0")
 
                 // Use existing DeviceManager from VoiceOS
-                implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))
+                implementation(project(":Modules:DeviceManager"))
             }
         }
     }
