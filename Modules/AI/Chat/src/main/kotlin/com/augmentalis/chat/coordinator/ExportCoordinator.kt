@@ -91,9 +91,8 @@ class ExportCoordinator @Inject constructor(
             }
 
             val useCasePrivacy = com.augmentalis.ava.core.domain.usecase.PrivacyOptions(
-                redactTimestamps = privacyOptions.redactTimestamps,
-                redactMetadata = privacyOptions.redactMetadata,
-                anonymizeUserContent = privacyOptions.anonymizeUserContent
+                anonymizeTimestamps = privacyOptions.redactTimestamps,
+                excludeMetadata = privacyOptions.redactMetadata
             )
 
             when (val result = exportConversationUseCase.exportConversation(
@@ -167,9 +166,8 @@ class ExportCoordinator @Inject constructor(
             }
 
             val useCasePrivacy = com.augmentalis.ava.core.domain.usecase.PrivacyOptions(
-                redactTimestamps = privacyOptions.redactTimestamps,
-                redactMetadata = privacyOptions.redactMetadata,
-                anonymizeUserContent = privacyOptions.anonymizeUserContent
+                anonymizeTimestamps = privacyOptions.redactTimestamps,
+                excludeMetadata = privacyOptions.redactMetadata
             )
 
             when (val result = exportConversationUseCase.exportAllConversations(

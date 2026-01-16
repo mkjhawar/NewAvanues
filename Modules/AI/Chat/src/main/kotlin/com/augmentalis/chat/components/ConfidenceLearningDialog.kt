@@ -27,33 +27,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
-/**
- * State for the confidence learning dialog.
- *
- * @property userInput The original user query
- * @property interpretedIntent The intent NLU thought it understood
- * @property confidence NLU confidence score (0.0 to 1.0)
- * @property alternateIntents List of alternate intents with their confidence scores
- */
-data class ConfidenceLearningState(
-    val userInput: String,
-    val interpretedIntent: String,
-    val confidence: Float,
-    val alternateIntents: List<AlternateIntent> = emptyList()
-)
-
-/**
- * Alternate intent option with confidence score.
- *
- * @property intentId Intent identifier
- * @property displayName Human-readable intent name
- * @property confidence Confidence score (0.0 to 1.0)
- */
-data class AlternateIntent(
-    val intentId: String,
-    val displayName: String,
-    val confidence: Float
-)
+// Import from coordinator package to avoid duplicate definitions
+import com.augmentalis.chat.coordinator.ConfidenceLearningState
+import com.augmentalis.chat.coordinator.AlternateIntent
 
 /**
  * Interactive confidence learning dialog (REQ-004).

@@ -6,8 +6,8 @@
 package com.augmentalis.rag.chat
 
 import com.augmentalis.llm.provider.LocalLLMProvider as LLMLocalProvider
-import com.augmentalis.llm.domain.GenerationOptions
-import com.augmentalis.llm.domain.LLMResponse
+import com.augmentalis.llm.GenerationOptions
+import com.augmentalis.llm.LLMResponse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.filter

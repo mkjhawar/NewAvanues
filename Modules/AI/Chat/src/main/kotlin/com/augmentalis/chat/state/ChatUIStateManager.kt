@@ -9,7 +9,7 @@ package com.augmentalis.chat.state
 
 import com.augmentalis.ava.core.domain.model.Conversation
 import com.augmentalis.ava.core.domain.model.Message
-import com.augmentalis.chat.components.ConfidenceLearningState
+import com.augmentalis.chat.coordinator.ConfidenceLearningState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

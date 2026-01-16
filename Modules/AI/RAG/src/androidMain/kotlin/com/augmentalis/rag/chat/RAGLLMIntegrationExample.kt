@@ -7,7 +7,8 @@ package com.augmentalis.rag.chat
 
 import android.content.Context
 import com.augmentalis.llm.provider.LocalLLMProvider as LLMLocalProvider
-import com.augmentalis.llm.domain.LLMConfig
+import com.augmentalis.llm.LLMConfig
+import com.augmentalis.llm.LLMResult
 import com.augmentalis.rag.data.SQLiteRAGRepository
 import com.augmentalis.rag.embeddings.ONNXEmbeddingProvider
 import com.augmentalis.ava.core.common.Result
@@ -108,9 +109,17 @@ class RAGLLMIntegration(
             )
 
             val initResult = llmProvider.initialize(config)
-            if (initResult is Result.Error) {
-                Timber.e("Failed to initialize LocalLLMProvider: ${initResult.message}")
-                return initResult
+            when (initResult) {
+                is LLMResult.Error -> {
+                    Timber.e("Failed to initialize LocalLLMProvider: ${initResult.message}")
+                    return Result.Error(
+                        exception = initResult.cause ?: Exception(initResult.message),
+                        message = initResult.message
+                    )
+                }
+                is LLMResult.Success -> {
+                    // Continue with initialization
+                }
             }
 
             // 4. Create adapter

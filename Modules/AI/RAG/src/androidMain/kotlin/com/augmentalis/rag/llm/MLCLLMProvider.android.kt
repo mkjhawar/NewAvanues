@@ -8,7 +8,13 @@ package com.augmentalis.rag.llm
 import android.content.Context
 import com.augmentalis.rag.chat.LLMProvider
 import com.augmentalis.llm.provider.LocalLLMProvider
-import com.augmentalis.llm.domain.*
+import com.augmentalis.llm.LLMConfig
+import com.augmentalis.llm.LLMResponse
+import com.augmentalis.llm.LLMResult
+import com.augmentalis.llm.LLMProviderInfo
+import com.augmentalis.llm.ChatMessage
+import com.augmentalis.llm.MessageRole
+import com.augmentalis.llm.GenerationOptions
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
@@ -76,14 +82,17 @@ class MLCLLMProvider(
             )
 
             val result = localProvider.initialize(config)
-            if (result is com.augmentalis.ava.core.common.Result.Success) {
-                isInitialized = true
-                Timber.i("MLCLLMProvider initialized successfully with model: $actualModelPath")
-                Result.success(Unit)
-            } else {
-                val error = (result as com.augmentalis.ava.core.common.Result.Error).exception
-                Timber.e(error, "Failed to initialize MLCLLMProvider")
-                Result.failure(error)
+            when (result) {
+                is LLMResult.Success -> {
+                    isInitialized = true
+                    Timber.i("MLCLLMProvider initialized successfully with model: $actualModelPath")
+                    Result.success(Unit)
+                }
+                is LLMResult.Error -> {
+                    val error = result.cause ?: Exception(result.message)
+                    Timber.e(error, "Failed to initialize MLCLLMProvider")
+                    Result.failure(error)
+                }
             }
         } catch (e: Exception) {
             Timber.e(e, "MLCLLMProvider initialization failed")

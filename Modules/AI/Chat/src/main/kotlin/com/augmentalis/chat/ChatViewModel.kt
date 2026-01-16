@@ -38,7 +38,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import com.augmentalis.ava.core.data.util.VuidHelper
+import com.augmentalis.ava.core.data.util.AvidHelper
 import javax.inject.Inject
 
 /**
@@ -256,7 +256,7 @@ class ChatViewModel @Inject constructor(
             }
 
             val welcomeMessage = Message(
-                id = VuidHelper.randomVUID(),
+                id = AvidHelper.randomAVID(),
                 conversationId = conversationId,
                 role = MessageRole.ASSISTANT,
                 content = welcomeContent,
@@ -324,11 +324,11 @@ class ChatViewModel @Inject constructor(
                     )
 
                     when (val result = responseGenerator.initialize(llmConfig)) {
-                        is Result.Success -> {
+                        is com.augmentalis.llm.LLMResult.Success -> {
                             Log.i(TAG, "LLM initialized successfully (${discoveredModel.id})")
                             chatPreferences.setSelectedLLMModel(discoveredModel.id)
                         }
-                        is Result.Error -> {
+                        is com.augmentalis.llm.LLMResult.Error -> {
                             Log.w(TAG, "LLM initialization failed: ${result.message}")
                         }
                     }
@@ -475,7 +475,7 @@ class ChatViewModel @Inject constructor(
 
                 // Create and save user message
                 val userMessage = Message(
-                    id = VuidHelper.randomVUID(),
+                    id = AvidHelper.randomAVID(),
                     conversationId = conversationId,
                     role = MessageRole.USER,
                     content = text.trim(),
@@ -533,7 +533,7 @@ class ChatViewModel @Inject constructor(
                     }
 
                     val avaMessage = Message(
-                        id = VuidHelper.randomVUID(),
+                        id = AvidHelper.randomAVID(),
                         conversationId = conversationId,
                         role = MessageRole.ASSISTANT,
                         content = actionFeedback,
@@ -605,7 +605,7 @@ class ChatViewModel @Inject constructor(
 
                 // Save AVA response
                 val avaMessage = Message(
-                    id = VuidHelper.randomVUID(),
+                    id = AvidHelper.randomAVID(),
                     conversationId = conversationId,
                     role = MessageRole.ASSISTANT,
                     content = responseResult.content,
