@@ -1,9 +1,7 @@
 package com.augmentalis.voiceoscoreng.service
 
 import android.content.res.Resources
-import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscoreng.common.CommandRegistry
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
 import com.augmentalis.voiceoscoreng.functions.HashUtils
 import com.augmentalis.voiceoscoreng.persistence.ScreenHashRepository

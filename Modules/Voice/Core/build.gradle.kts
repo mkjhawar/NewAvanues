@@ -94,7 +94,7 @@ kotlin {
                 // - Native .so libraries (in src/main/jniLibs/)
                 // This avoids Gradle's AAR-in-AAR restriction for library modules.
                 // Runtime: SDK looks for models in external storage (VivokaPathResolver)
-                implementation(project(":Vivoka:Android"))
+                implementation(project(":vivoka:Android"))
 
                 // VoiceOS Database (SQLDelight repositories for Android command persistence)
                 implementation(project(":Modules:VoiceOS:core:database"))

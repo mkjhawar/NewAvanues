@@ -255,7 +255,7 @@ dependencies {
     //implementation(project(":Modules:AvaMagic:AvaUI:Voice"))    // From LearnApp
 
     // Vivoka VSDK (via wrapper module to avoid AAR-in-AAR issues)
-    implementation(project(":Vivoka:Android"))
+    implementation(project(":vivoka:Android"))
 
     // Speech Recognition SDKs (SOLID Phase 2: Factory Pattern)
 

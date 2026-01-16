@@ -417,7 +417,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             }
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
                 if (event.contentChangeTypes and AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE != 0) {
-                    Log.v(TAG, "Window content changed (subtree): ${event.packageName}")
+                    //Log.v(TAG, "Window content changed (subtree): ${event.packageName}")
                 }
             }
         }

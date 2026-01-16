@@ -100,7 +100,7 @@ include(":Modules:DeviceManager")                       // Device info, sensors,
 include(":Modules:SpeechRecognition")                   // Speech recognition engines (Whisper, Vivoka, etc.)
 include(":Modules:Translation")                         // Translation services
 include(":Modules:VoiceKeyboard")                       // Voice keyboard input
-include(":Vivoka:Android")                              // Vivoka VSDK wrapper (AAR dependencies)
+include(":vivoka:Android")                              // Vivoka VSDK wrapper (AAR dependencies)
 
 // VoiceOS Libraries (remaining)
 include(":Modules:VoiceOS:libraries:JITLearning")       // ⚠️ DEPRECATED (2026-01-06): Use Voice:Core
