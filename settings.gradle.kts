@@ -38,16 +38,15 @@ include(":Modules:AVA:core:Data")
 include(":Modules:AVA:core:Theme")
 
 // AVA Feature Modules (Android UI wrappers)
-include(":Modules:AVA:Actions")
-include(":Modules:AVA:Chat")
 include(":Modules:AVA:Overlay")
-include(":Modules:AVA:Teach")
 
 // AI Modules (cross-platform KMP)
 include(":Modules:AI:NLU")      // Natural language understanding
 include(":Modules:AI:RAG")      // Retrieval-augmented generation
 include(":Modules:AI:LLM")      // Language model providers
 include(":Modules:AI:Memory")   // AI memory system (short/long-term)
+include(":Modules:AI:Chat")     // AI Chat interface
+include(":Modules:AI:Teach")    // AI Teaching/training system
 
 // Top-level Modules (cross-platform KMP)
 include(":Modules:AVID")                  // Avanues Voice ID - unified identifier system
@@ -57,6 +56,9 @@ include(":Modules:Database")              // Unified KMP database - VoiceOS, Web
 // Voice Modules (cross-platform KMP)
 include(":Modules:Voice:Core")             // VoiceOSCoreNG - KMP voice control core
 include(":Modules:Voice:WakeWord")         // Wake word detection
+
+// Actions Module (cross-platform KMP)
+include(":Modules:Actions")                 // Intent handlers, action execution
 
 // Shared Modules (cross-platform KMP libraries)
 include(":Modules:Shared:Platform")

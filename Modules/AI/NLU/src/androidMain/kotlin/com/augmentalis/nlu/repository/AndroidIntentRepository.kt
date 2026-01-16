@@ -4,14 +4,15 @@
  * Uses SQLDelight with Android SQLite driver for persistent storage.
  *
  * Created: 2025-12-07
+ * Updated: 2026-01-16 - Fixed package to com.augmentalis.nlu.repository
  */
 
-package com.augmentalis.shared.nlu.repository
+package com.augmentalis.nlu.repository
 
 import android.content.Context
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.augmentalis.shared.nlu.db.SharedNluDatabase
-import com.augmentalis.shared.nlu.model.UnifiedIntent
+import com.augmentalis.nlu.model.UnifiedIntent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

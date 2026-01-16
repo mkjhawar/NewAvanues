@@ -1,4 +1,4 @@
-package com.augmentalis.laas
+package com.augmentalis.license
 
 import kotlinx.serialization.Serializable
 
@@ -142,16 +142,16 @@ data class LicenseInfoResponse(
 // ==================== ERROR MODELS ====================
 
 @Serializable
-data class LaasErrorResponse(
+data class LicenseErrorResponse(
     val code: String,
     val message: String,
     val details: Map<String, String>? = null
 )
 
 /**
- * Exception thrown when a LaaS API call fails.
+ * Exception thrown when a License API call fails.
  */
-class LaasApiException(
+class LicenseApiException(
     override val message: String,
     val code: String,
     val statusCode: Int,
@@ -159,7 +159,7 @@ class LaasApiException(
 ) : Exception(message) {
 
     override fun toString(): String {
-        return "LaasApiException(code=$code, statusCode=$statusCode, message=$message)"
+        return "LicenseApiException(code=$code, statusCode=$statusCode, message=$message)"
     }
 }
 

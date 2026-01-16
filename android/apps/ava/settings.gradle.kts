@@ -36,10 +36,10 @@ project(":core:Theme").projectDir = file("../../../Modules/AVA/core/Theme")
 
 // Shared modules (shared between AVA and VoiceOS)
 include(":SharedPlatform")
-project(":SharedPlatform").projectDir = file("../../../Modules/Shared/Platform")
+project(":SharedPlatform").projectDir = file("../../../Modules/Platform")
 
-include(":SharedNLU")
-project(":SharedNLU").projectDir = file("../../../Modules/Shared/NLU")
+include(":NLU")
+project(":NLU").projectDir = file("../../../Modules/AI/NLU")
 
 // Feature modules
 

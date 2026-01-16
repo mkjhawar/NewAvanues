@@ -1,4 +1,4 @@
-package com.augmentalis.laas
+package com.augmentalis.license
 
 import com.augmentalis.ava.platform.DeviceFingerprint
 import com.augmentalis.ava.platform.DeviceInfo
@@ -16,14 +16,14 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 /**
- * LaaS SDK - Universal License-as-a-Service Client
+ * LicenseSDK - Universal License-as-a-Service Client
  *
  * A Kotlin Multiplatform SDK for integrating with the AvaCloud LaaS API.
  * Works on Android, iOS, Desktop (Windows/macOS/Linux), and Web (JavaScript).
  *
  * Usage:
  * ```kotlin
- * val client = LaasClient.create("your-api-key")
+ * val client = LicenseClient.create("your-api-key")
  *
  * // Validate a license (auto-generates device fingerprint)
  * val result = client.validateLicense("LICENSE-KEY-HERE")
@@ -32,8 +32,8 @@ import kotlinx.serialization.json.Json
  * val activation = client.activateLicense("LICENSE-KEY-HERE")
  * ```
  */
-class LaasClient private constructor(
-    private val config: LaasConfig,
+class LicenseClient private constructor(
+    private val config: LicenseConfig,
     private val httpClient: HttpClient,
     private val deviceInfo: DeviceInfo
 ) {
@@ -190,14 +190,14 @@ class LaasClient private constructor(
     private suspend inline fun <reified T> handleResponse(response: HttpResponse): T {
         if (!response.status.isSuccess()) {
             val errorBody = try {
-                response.body<LaasErrorResponse>()
+                response.body<LicenseErrorResponse>()
             } catch (e: Exception) {
-                LaasErrorResponse(
+                LicenseErrorResponse(
                     code = "HTTP_ERROR",
                     message = "HTTP ${response.status.value}: ${response.status.description}"
                 )
             }
-            throw LaasApiException(
+            throw LicenseApiException(
                 message = errorBody.message,
                 code = errorBody.code,
                 statusCode = response.status.value,
@@ -215,9 +215,9 @@ class LaasClient private constructor(
         }
 
         /**
-         * Create a LaaS client with the given API key.
+         * Create a License client with the given API key.
          *
-         * @param apiKey Your LaaS API key
+         * @param apiKey Your License API key
          * @param baseUrl Optional custom base URL (default: https://api.avacloud.com)
          * @param timeoutMs Request timeout in milliseconds (default: 30000)
          */
@@ -225,10 +225,10 @@ class LaasClient private constructor(
             apiKey: String,
             baseUrl: String = "https://api.avacloud.com",
             timeoutMs: Long = 30000
-        ): LaasClient {
+        ): LicenseClient {
             require(apiKey.isNotBlank()) { "API key is required" }
 
-            val config = LaasConfig(
+            val config = LicenseConfig(
                 apiKey = apiKey,
                 baseUrl = baseUrl.trimEnd('/'),
                 timeoutMs = timeoutMs
@@ -252,15 +252,15 @@ class LaasClient private constructor(
 
             val deviceInfo = DeviceInfoFactory.create()
 
-            return LaasClient(config, httpClient, deviceInfo)
+            return LicenseClient(config, httpClient, deviceInfo)
         }
     }
 }
 
 /**
- * Configuration for the LaaS client.
+ * Configuration for the License client.
  */
-data class LaasConfig(
+data class LicenseConfig(
     val apiKey: String,
     val baseUrl: String,
     val timeoutMs: Long

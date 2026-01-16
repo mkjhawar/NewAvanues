@@ -5,15 +5,15 @@
  * for semantic similarity matching.
  *
  * Created: 2025-12-07
+ * Updated: 2026-01-16 - Fixed package to com.augmentalis.nlu.embedding
  */
 
-package com.augmentalis.shared.nlu.embedding
+package com.augmentalis.nlu.embedding
 
 import android.content.Context
 import android.util.Log
-import com.augmentalis.shared.nlu.matcher.EmbeddingProvider
+import com.augmentalis.nlu.matcher.EmbeddingProvider
 import java.io.File
-import java.nio.FloatBuffer
 
 /**
  * ONNX Runtime-based embedding provider.

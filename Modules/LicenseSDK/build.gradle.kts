@@ -25,7 +25,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(project(":Modules:Shared:Platform"))
+                implementation(project(":Modules:Platform"))
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.ktor.client.core)
@@ -71,7 +71,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.laas"
+    namespace = "com.augmentalis.license"
     compileSdk = 34
 
     defaultConfig {

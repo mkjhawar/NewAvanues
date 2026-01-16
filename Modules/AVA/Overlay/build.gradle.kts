@@ -57,7 +57,7 @@ dependencies {
 
     // Feature modules for integration
     //implementation(project(":Modules:AVA:SharedNLU"))  // TODO: SharedNLU not found in current structure
-    implementation(project(":Modules:AVA:Chat"))
+    implementation(project(":Modules:AI:Chat"))
     implementation(project(":Modules:AI:LLM"))
 
     // Kotlin Coroutines

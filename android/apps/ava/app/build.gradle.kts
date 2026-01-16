@@ -139,7 +139,7 @@ dependencies {
 
     // AVA Feature modules (from Modules/AVA/)
     implementation(project(":Chat"))
-    implementation(project(":SharedNLU"))  // Shared NLU module (AVA + VoiceOS)
+    implementation(project(":NLU"))  // AI NLU module (from Modules/AI/NLU)
     implementation(project(":Actions"))
     implementation(project(":Teach"))
     implementation(project(":Overlay"))
