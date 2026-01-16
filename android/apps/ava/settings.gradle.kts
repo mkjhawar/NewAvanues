@@ -53,10 +53,10 @@ include(":Overlay")
 project(":Overlay").projectDir = file("../../../Modules/AVA/Overlay")
 
 include(":LLM")
-project(":LLM").projectDir = file("../../../Modules/LLM")
+project(":LLM").projectDir = file("../../../Modules/AI/LLM")
 
 include(":RAG")
-project(":RAG").projectDir = file("../../../Modules/RAG")
+project(":RAG").projectDir = file("../../../Modules/AI/RAG")
 
 include(":Actions")
 project(":Actions").projectDir = file("../../../Modules/AVA/Actions")
@@ -65,4 +65,4 @@ include(":WakeWord")
 project(":WakeWord").projectDir = file("../../../Modules/AVA/WakeWord")
 
 include(":Memory")
-project(":Memory").projectDir = file("../../../Modules/AVA/memory")
+project(":Memory").projectDir = file("../../../Modules/AI/Memory")

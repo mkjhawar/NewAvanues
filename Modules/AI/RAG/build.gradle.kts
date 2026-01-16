@@ -65,7 +65,7 @@ kotlin {
                 implementation(project(":Modules:AVA:core:Data"))
 
                 // Shared AI modules
-                implementation(project(":Modules:LLM"))
+                implementation(project(":Modules:AI:LLM"))
 
                 // Compose dependencies
                 implementation(platform("androidx.compose:compose-bom:2023.10.01"))

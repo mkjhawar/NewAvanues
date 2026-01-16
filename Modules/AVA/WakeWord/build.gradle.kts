@@ -43,7 +43,7 @@ dependencies {
     implementation(project(":Modules:AVA:core:Utils"))
 
     // LLM module for ApiKeyManager (Porcupine API key)
-    implementation(project(":Modules:LLM"))
+    implementation(project(":Modules:AI:LLM"))
 
     // Hilt Dependency Injection
     implementation(libs.hilt.android)

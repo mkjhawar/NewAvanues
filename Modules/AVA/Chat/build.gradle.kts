@@ -13,8 +13,8 @@ dependencies {
     implementation(project(":Modules:AVA:core:Theme"))  // Ocean Glass Design System
     //implementation(project(":Modules:AVA:SharedNLU"))  // TODO: SharedNLU not found in current structure
     implementation(project(":Modules:AVA:Actions"))
-    implementation(project(":Modules:LLM"))
-    implementation(project(":Modules:RAG"))  // RAG Phase 2: Chat UI Integration
+    implementation(project(":Modules:AI:LLM"))
+    implementation(project(":Modules:AI:RAG"))  // RAG Phase 2: Chat UI Integration
 
     // Hilt Dependency Injection
     implementation(libs.hilt.android)

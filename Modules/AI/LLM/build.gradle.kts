@@ -47,7 +47,7 @@ dependencies {
     implementation(project(":Modules:AVA:core:Data"))
 
     // NLU module - needed for IntentClassification
-    implementation(project(":Modules:NLU"))
+    implementation(project(":Modules:AI:NLU"))
 
     // Hilt Dependency Injection
     implementation(libs.hilt.android)

@@ -102,14 +102,14 @@ kotlin {
                 // ==========================================================
                 // Provides: IntentClassifier, BertTokenizer, OnnxSessionManager
                 // Uses ONNX Runtime for BERT inference with semantic embeddings
-                implementation(project(":Modules:NLU"))
+                implementation(project(":Modules:AI:NLU"))
 
                 // ==========================================================
                 // LLM (Local language model for natural language fallback)
                 // ==========================================================
                 // Provides: LocalLLMProvider, ALCEngine, model discovery
                 // Loads models from external storage: /sdcard/ava-ai-models/llm/
-                implementation(project(":Modules:LLM"))
+                implementation(project(":Modules:AI:LLM"))
 
                 // ==========================================================
                 // AVA Core Utils (Result type used by NLU and LLM modules)

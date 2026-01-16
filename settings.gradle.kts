@@ -37,18 +37,18 @@ include(":Modules:AVA:core:Utils")
 include(":Modules:AVA:core:Data")
 include(":Modules:AVA:core:Theme")
 
-// AVA Feature Modules
+// AVA Feature Modules (Android UI wrappers)
 include(":Modules:AVA:Actions")
 include(":Modules:AVA:Chat")
-include(":Modules:AVA:memory")
 include(":Modules:AVA:Overlay")
 include(":Modules:AVA:Teach")
 include(":Modules:AVA:WakeWord")
 
-// Shared AI Modules (cross-app)
-include(":Modules:LLM")   // Language model providers and on-device inference
-include(":Modules:RAG")   // Retrieval-augmented generation pipeline
-include(":Modules:NLU")   // Natural language understanding
+// AI Modules (cross-platform KMP)
+include(":Modules:AI:NLU")      // Natural language understanding
+include(":Modules:AI:RAG")      // Retrieval-augmented generation
+include(":Modules:AI:LLM")      // Language model providers
+include(":Modules:AI:Memory")   // AI memory system (short/long-term)
 
 // Top-level Modules (cross-platform KMP)
 include(":Modules:AVID")                  // Avanues Voice ID - unified identifier system
