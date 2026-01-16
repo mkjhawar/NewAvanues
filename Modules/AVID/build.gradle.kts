@@ -35,12 +35,14 @@ kotlin {
             }
         }
     }
-
-    // iOS targets (required for VoiceOSCoreNG dependency)
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
-
+    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+    ) {
+        // iOS targets (required for VoiceOSCoreNG dependency)
+        iosX64()
+        iosArm64()
+        iosSimulatorArm64()
+    }
     // JS target (Web) - conditionally compiled
     if (project.findProperty("kotlin.mpp.enableJsTarget") == "true" ||
         gradle.startParameter.taskNames.any { it.contains("js", ignoreCase = true) }
@@ -77,16 +79,19 @@ kotlin {
                 // Desktop-specific dependencies if needed
             }
         }
-
-        // iOS source sets
-        val iosX64Main by getting
-        val iosArm64Main by getting
-        val iosSimulatorArm64Main by getting
-        val iosMain by creating {
-            dependsOn(commonMain)
-            iosX64Main.dependsOn(this)
-            iosArm64Main.dependsOn(this)
-            iosSimulatorArm64Main.dependsOn(this)
+        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+                gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+        ) {
+            // iOS source sets
+            val iosX64Main by getting
+            val iosArm64Main by getting
+            val iosSimulatorArm64Main by getting
+            val iosMain by creating {
+                dependsOn(commonMain)
+                iosX64Main.dependsOn(this)
+                iosArm64Main.dependsOn(this)
+                iosSimulatorArm64Main.dependsOn(this)
+            }
         }
     }
 }
