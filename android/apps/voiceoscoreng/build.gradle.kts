@@ -64,7 +64,7 @@ dependencies {
     // VoiceOSCoreNG library
     // For monorepo: uses project reference
     // For standalone: uses composite build substitution (see settings.gradle.kts)
-    implementation(project(":Modules:VoiceOSCoreNG"))
+    implementation(project(":Modules:Voice:Core"))
 
     // VoiceOS Database (SQLDelight) - for command persistence
     implementation(project(":Modules:VoiceOS:core:database"))

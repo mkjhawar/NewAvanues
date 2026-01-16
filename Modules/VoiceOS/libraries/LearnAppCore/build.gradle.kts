@@ -7,7 +7,7 @@
  * ║  This module has been consolidated into Modules/VoiceOSCoreNG             ║
  * ║  See DEPRECATED.md for migration guide                                    ║
  * ║                                                                           ║
- * ║  New dependency: implementation(project(":Modules:VoiceOSCoreNG"))        ║
+ * ║  New dependency: implementation(project(":Modules:Voice:Core"))        ║
  * ╚═══════════════════════════════════════════════════════════════════════════╝
  *
  * Provides unified element processing for both JIT and Exploration modes.
@@ -57,7 +57,7 @@ android {
 dependencies {
     // VoiceOSCoreNG - Next-gen replacement (KMP)
     // This module is DEPRECATED - consumers should migrate to VoiceOSCoreNG
-    api(project(":Modules:VoiceOSCoreNG"))  // Use api() to expose transitive types
+    api(project(":Modules:Voice:Core"))  // Use api() to expose transitive types
 
     // Database module (for GeneratedCommandDTO and VoiceOSDatabaseManager)
     implementation(project(":Modules:VoiceOS:core:database"))

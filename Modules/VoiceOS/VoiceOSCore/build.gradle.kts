@@ -171,7 +171,7 @@ dependencies {
     implementation(project(":Modules:VoiceOS:core:json-utils"))          // JSON manipulation utilities (KMP - project dependency)
     implementation(project(":Modules:VoiceOS:core:database"))            // SQLDelight KMP database (KMP - project dependency) - Phase 3: Migration complete
     implementation(project(":Modules:AVID"))                             // AVID generation (KMP - replaced VUID)
-    implementation(project(":Modules:VoiceOSCoreNG"))                     // Next-gen unified core with shared extraction (KMP)
+    implementation(project(":Modules:Voice:Core"))                     // Next-gen unified core with shared extraction (KMP)
 
     // Lifecycle components
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -242,7 +242,7 @@ dependencies {
 
     // VoiceOSCoreNG - Next-gen unified core (KMP)
     // Consolidates JITLearning + LearnAppCore + learnapp/ into single cross-platform module
-    implementation(project(":Modules:VoiceOSCoreNG"))
+    implementation(project(":Modules:Voice:Core"))
 
     // DEPRECATED (2026-01-06) - Use VoiceOSCoreNG instead
     // These modules remain for backwards compatibility during migration

@@ -7,7 +7,7 @@
  * ║  This module has been consolidated into Modules/VoiceOSCoreNG             ║
  * ║  See DEPRECATED.md for migration guide                                    ║
  * ║                                                                           ║
- * ║  New dependency: implementation(project(":Modules:VoiceOSCoreNG"))        ║
+ * ║  New dependency: implementation(project(":Modules:Voice:Core"))        ║
  * ╚═══════════════════════════════════════════════════════════════════════════╝
  *
  * Foreground service that runs passive screen learning in VoiceOSCore process.
@@ -61,7 +61,7 @@ android {
 
 dependencies {
     // VoiceOSCoreNG - Next-gen replacement (KMP)
-    implementation(project(":Modules:VoiceOSCoreNG"))
+    implementation(project(":Modules:Voice:Core"))
 
     // DEPRECATED (2026-01-06) - Use VoiceOSCoreNG instead
     implementation(project(":Modules:VoiceOS:libraries:LearnAppCore"))  // ⚠️ DEPRECATED

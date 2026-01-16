@@ -42,7 +42,6 @@ include(":Modules:AVA:Actions")
 include(":Modules:AVA:Chat")
 include(":Modules:AVA:Overlay")
 include(":Modules:AVA:Teach")
-include(":Modules:AVA:WakeWord")
 
 // AI Modules (cross-platform KMP)
 include(":Modules:AI:NLU")      // Natural language understanding
@@ -55,8 +54,9 @@ include(":Modules:AVID")                  // Avanues Voice ID - unified identifi
 include(":Modules:Database")              // Unified KMP database - VoiceOS, WebAvanue, AVID persistence
 // include(":Modules:VUID")               // DEPRECATED - replaced by AVID module
 
-// VoiceOSCoreNG - Next-generation KMP core for VoiceOS
-include(":Modules:VoiceOSCoreNG")          // KMP types, VUID, features (shared Android/iOS/Desktop)
+// Voice Modules (cross-platform KMP)
+include(":Modules:Voice:Core")             // VoiceOSCoreNG - KMP voice control core
+include(":Modules:Voice:WakeWord")         // Wake word detection
 
 // Shared Modules (cross-platform KMP libraries)
 include(":Modules:Shared:Platform")
