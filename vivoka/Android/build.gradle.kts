@@ -20,18 +20,28 @@ android {
 
     defaultConfig {
         minSdk = 26
-        targetSdk = 34
+        // targetSdk removed - deprecated for libraries
 
         consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
+        debug {
+            isMinifyEnabled = false
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    // Publish all variants for KMP module compatibility
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
         }
     }
 

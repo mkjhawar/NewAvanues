@@ -64,6 +64,7 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     private lateinit var windowManager: WindowManager
     private var numbersOverlayView: View? = null
     private var dialogOverlayView: View? = null  // Separate touchable overlay for dialogs
+    private var debugFabView: View? = null       // Debug FAB overlay
     private val serviceScope = kotlinx.coroutines.CoroutineScope(
         kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob()
     )
@@ -110,6 +111,7 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             Log.d(TAG, "startForeground done")
             lifecycleRegistry.currentState = Lifecycle.State.STARTED
             showNumbersOverlay()
+            showDebugFab()  // Show debug FAB overlay
             observeDialogState()  // Start observing dialog state
             Log.d(TAG, "showNumbersOverlay done")
             lifecycleRegistry.currentState = Lifecycle.State.RESUMED
@@ -148,6 +150,7 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         serviceScope.cancel()
         removeNumbersOverlay()
         removeDialogOverlay()
+        removeDebugFab()
         super.onDestroy()
     }
 
@@ -305,6 +308,81 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
                 Log.e(TAG, "Error removing numbers overlay", e)
             }
             numbersOverlayView = null
+        }
+    }
+
+    /**
+     * Show the debug FAB overlay (touchable).
+     */
+    private fun showDebugFab() {
+        if (debugFabView != null) return
+
+        try {
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                else
+                    WindowManager.LayoutParams.TYPE_PHONE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.BOTTOM or Gravity.END
+                x = 16
+                y = 100
+            }
+
+            val composeView = ComposeView(this).apply {
+                setViewTreeLifecycleOwner(this@OverlayService)
+                setViewTreeSavedStateRegistryOwner(this@OverlayService)
+                setContent {
+                    DebugFabOverlay(
+                        onPositionChange = { newGravity, newX, newY ->
+                            updateDebugFabPosition(newGravity, newX, newY)
+                        }
+                    )
+                }
+            }
+
+            debugFabView = composeView
+            windowManager.addView(composeView, params)
+            Log.d(TAG, "Debug FAB overlay added to WindowManager")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing debug FAB overlay", e)
+        }
+    }
+
+    /**
+     * Update the debug FAB position.
+     */
+    private fun updateDebugFabPosition(gravity: Int, x: Int, y: Int) {
+        debugFabView?.let { view ->
+            try {
+                val params = view.layoutParams as WindowManager.LayoutParams
+                params.gravity = gravity
+                params.x = x
+                params.y = y
+                windowManager.updateViewLayout(view, params)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating debug FAB position", e)
+            }
+        }
+    }
+
+    /**
+     * Remove the debug FAB overlay.
+     */
+    private fun removeDebugFab() {
+        debugFabView?.let {
+            try {
+                windowManager.removeView(it)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error removing debug FAB overlay", e)
+            }
+            debugFabView = null
+            Log.d(TAG, "Debug FAB overlay removed")
         }
     }
 }
@@ -661,5 +739,384 @@ private fun NumbersInstructionPanel(
                 )
             }
         }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Debug FAB Overlay - Floating debug panel for monitoring VoiceOS state
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Position options for the debug panel.
+ */
+enum class DebugPanelPosition {
+    TOP_START, TOP_END, BOTTOM_START, BOTTOM_END
+}
+
+/**
+ * Size options for the expanded debug panel.
+ */
+enum class DebugPanelSize(val fraction: Float, val label: String) {
+    COMPACT(0.2f, "1/5"),
+    SMALL(0.25f, "1/4"),
+    MEDIUM(0.33f, "1/3"),
+    LARGE(0.5f, "1/2")
+}
+
+/**
+ * Debug FAB Overlay - Collapsible floating panel for monitoring VoiceOS.
+ *
+ * Features:
+ * - Collapsed: Small FAB showing element count
+ * - Expanded: Metrics panel with controls
+ * - Numbers mode toggle (OFF/ON/AUTO)
+ * - Position controls (corners)
+ * - Size controls (1/5, 1/4, 1/3, 1/2 of screen)
+ */
+@Composable
+private fun DebugFabOverlay(
+    onPositionChange: (Int, Int, Int) -> Unit
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    var position by remember { mutableStateOf(DebugPanelPosition.BOTTOM_END) }
+    var panelSize by remember { mutableStateOf(DebugPanelSize.SMALL) }
+
+    // Collect metrics from accessibility service
+    val screenInfo by VoiceOSAccessibilityService.currentScreenInfo.collectAsState()
+    val numberedItems by VoiceOSAccessibilityService.numberedOverlayItems.collectAsState()
+    val numbersMode by VoiceOSAccessibilityService.numbersOverlayMode.collectAsState()
+    val isConnected by VoiceOSAccessibilityService.isConnected.collectAsState()
+    val lastError by VoiceOSAccessibilityService.lastError.collectAsState()
+
+    // Animation for expand/collapse
+    val expandProgress by animateFloatAsState(
+        targetValue = if (isExpanded) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "expand"
+    )
+
+    if (isExpanded) {
+        // Expanded panel
+        DebugMetricsPanel(
+            screenInfo = screenInfo,
+            numberedItems = numberedItems,
+            numbersMode = numbersMode,
+            isConnected = isConnected,
+            lastError = lastError,
+            panelSize = panelSize,
+            position = position,
+            onCollapse = { isExpanded = false },
+            onSizeChange = { panelSize = it },
+            onPositionChange = { newPos ->
+                position = newPos
+                val (gravity, x, y) = when (newPos) {
+                    DebugPanelPosition.TOP_START -> Triple(Gravity.TOP or Gravity.START, 16, 100)
+                    DebugPanelPosition.TOP_END -> Triple(Gravity.TOP or Gravity.END, 16, 100)
+                    DebugPanelPosition.BOTTOM_START -> Triple(Gravity.BOTTOM or Gravity.START, 16, 100)
+                    DebugPanelPosition.BOTTOM_END -> Triple(Gravity.BOTTOM or Gravity.END, 16, 100)
+                }
+                onPositionChange(gravity, x, y)
+            },
+            onNumbersModeChange = { mode ->
+                OverlayStateManager.setNumbersOverlayMode(mode)
+            }
+        )
+    } else {
+        // Collapsed FAB
+        DebugFabCollapsed(
+            elementCount = numberedItems.size,
+            isConnected = isConnected,
+            hasError = lastError != null,
+            onClick = { isExpanded = true }
+        )
+    }
+}
+
+/**
+ * Collapsed FAB showing quick status.
+ */
+@Composable
+private fun DebugFabCollapsed(
+    elementCount: Int,
+    isConnected: Boolean,
+    hasError: Boolean,
+    onClick: () -> Unit
+) {
+    val bgColor = when {
+        hasError -> Color(0xFFEF4444)  // Red for error
+        !isConnected -> Color(0xFF6B7280)  // Gray for disconnected
+        elementCount > 0 -> Color(0xFF10B981)  // Green for active
+        else -> Color(0xFF3B82F6)  // Blue for idle
+    }
+
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .background(bgColor)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        if (elementCount > 0) {
+            Text(
+                text = elementCount.toString(),
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Mic,
+                contentDescription = "Debug",
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Expanded metrics panel with detailed info and controls.
+ */
+@Composable
+private fun DebugMetricsPanel(
+    screenInfo: com.augmentalis.voiceoscoreng.persistence.ScreenInfo?,
+    numberedItems: List<OverlayStateManager.NumberOverlayItem>,
+    numbersMode: OverlayStateManager.NumbersOverlayMode,
+    isConnected: Boolean,
+    lastError: String?,
+    panelSize: DebugPanelSize,
+    position: DebugPanelPosition,
+    onCollapse: () -> Unit,
+    onSizeChange: (DebugPanelSize) -> Unit,
+    onPositionChange: (DebugPanelPosition) -> Unit,
+    onNumbersModeChange: (OverlayStateManager.NumbersOverlayMode) -> Unit
+) {
+    val density = LocalDensity.current
+    val screenHeightDp = with(density) {
+        android.content.res.Resources.getSystem().displayMetrics.heightPixels.toDp()
+    }
+    val panelHeight = screenHeightDp * panelSize.fraction
+
+    Card(
+        modifier = Modifier
+            .width(280.dp)
+            .heightIn(max = panelHeight),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xF0101020)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            // Header with collapse button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "VoiceOS Debug",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Size selector
+                    DebugPanelSize.entries.forEach { size ->
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(
+                                    if (size == panelSize) Color(0xFF3B82F6)
+                                    else Color(0xFF374151)
+                                )
+                                .clickable { onSizeChange(size) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = size.label,
+                                color = Color.White,
+                                fontSize = 8.sp
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    // Collapse button
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF374151))
+                            .clickable(onClick = onCollapse),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "−",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Status indicator
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444))
+                )
+                Text(
+                    text = if (isConnected) "Connected" else "Disconnected",
+                    color = if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444),
+                    fontSize = 11.sp
+                )
+            }
+
+            // Error message
+            lastError?.let { error ->
+                Text(
+                    text = error.take(50),
+                    color = Color(0xFFEF4444),
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Divider(color = Color(0xFF374151), thickness = 1.dp)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Metrics
+            MetricRow("Elements", numberedItems.size.toString())
+            screenInfo?.let { info ->
+                MetricRow("Actionable", info.actionableCount.toString())
+                MetricRow("Commands", info.commandCount.toString())
+                MetricRow("Package", info.packageName.substringAfterLast("."))
+                info.activityName?.let { activity ->
+                    MetricRow("Activity", activity.substringAfterLast("."))
+                }
+                MetricRow("Cached", if (info.isCached) "Yes" else "No")
+            } ?: run {
+                MetricRow("Screen", "Not scanned")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Divider(color = Color(0xFF374151), thickness = 1.dp)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Numbers mode toggle
+            Text(
+                text = "Numbers Mode",
+                color = Color(0xFF9CA3AF),
+                fontSize = 10.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                OverlayStateManager.NumbersOverlayMode.entries.forEach { mode ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(
+                                if (mode == numbersMode) Color(0xFF3B82F6)
+                                else Color(0xFF374151)
+                            )
+                            .clickable { onNumbersModeChange(mode) }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = mode.name,
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = if (mode == numbersMode) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Position controls
+            Text(
+                text = "Position",
+                color = Color(0xFF9CA3AF),
+                fontSize = 10.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                listOf(
+                    DebugPanelPosition.TOP_START to "TL",
+                    DebugPanelPosition.TOP_END to "TR",
+                    DebugPanelPosition.BOTTOM_START to "BL",
+                    DebugPanelPosition.BOTTOM_END to "BR"
+                ).forEach { (pos, label) ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(
+                                if (pos == position) Color(0xFF3B82F6)
+                                else Color(0xFF374151)
+                            )
+                            .clickable { onPositionChange(pos) }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = if (pos == position) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Single metric row in the debug panel.
+ */
+@Composable
+private fun MetricRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            color = Color(0xFF9CA3AF),
+            fontSize = 11.sp
+        )
+        Text(
+            text = value,
+            color = Color.White,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
