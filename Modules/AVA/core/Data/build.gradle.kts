@@ -29,7 +29,7 @@ kotlin {
                 implementation(project(":Modules:AVA:core:Domain"))
                 implementation(project(":Modules:AVA:core:Utils"))
                 implementation(project(":Modules:AVID"))
-                //implementation(project(":Modules:AVA:SharedPlatform"))  // TODO: SharedPlatform not found in current structure
+                //implementation(project(":Modules:Utilities"))  // Platform utilities if needed
 
                 // Kotlin Coroutines
                 implementation(libs.kotlinx.coroutines.core)

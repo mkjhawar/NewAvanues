@@ -61,8 +61,8 @@ include(":Modules:Voice:WakeWord")         // Wake word detection
 include(":Modules:Actions")                 // Intent handlers, action execution
 
 // Shared Modules (cross-platform KMP libraries)
-include(":Modules:Shared:Platform")
-include(":Modules:Shared:LaasSDK")
+include(":Modules:Utilities")       // Platform utilities (DeviceInfo, Logger, FileSystem, etc.)
+include(":Modules:LicenseSDK")      // License validation client
 
 // VoiceOS Core Modules
 include(":Modules:VoiceOS:core:database")
