@@ -233,7 +233,7 @@ dependencies {
     // Local modules (when available)
     // implementation(project(":libraries:DeviceManager"))
     // NOTE: Apps cannot depend on other app modules - use AIDL for cross-app communication
-    implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))  // LearningSystem stubbed
+    implementation(project(":Modules:SpeechRecognition"))  // LearningSystem stubbed
     implementation(project(":Modules:VoiceOS:managers:HUDManager"))  // For gaze tracking and HUD functionality
     implementation(project(":Modules:VoiceOS:managers:CommandManager"))  // RE-ENABLED: Agent Swarm Task 2.1 - CommandManager restoration
     // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // Unified database for coordination - DISABLED: Depends on SQLDelight
@@ -251,11 +251,11 @@ dependencies {
     implementation(project(":Modules:VoiceOS:libraries:LearnAppCore"))     // ⚠️ DEPRECATED: Use VoiceOSCoreNG
 
     // LearnApp dependencies merged (2025-11-24)
-    implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))      // From LearnApp
-    implementation(project(":Modules:VoiceOS:libraries:VoiceUIElements"))    // From LearnApp
+    implementation(project(":Modules:DeviceManager"))      // From LearnApp
+    implementation(project(":Modules:AvaMagic:AvaUI:Voice"))    // From LearnApp
 
     // Vivoka VSDK (via wrapper module to avoid AAR-in-AAR issues)
-    implementation(project(":Modules:VoiceOS:libraries:VivokaSDK"))
+    implementation(project(":Vivoka:Android"))
 
     // Speech Recognition SDKs (SOLID Phase 2: Factory Pattern)
 

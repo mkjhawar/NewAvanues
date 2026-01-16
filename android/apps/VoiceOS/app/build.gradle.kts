@@ -82,7 +82,7 @@ dependencies {
     implementation(project(":android:apps:VoiceUI"))
 
     // Input Method Libraries
-    // implementation(project(":Modules:VoiceOS:libraries:VoiceKeyboard"))  // DISABLED: Depends on VoiceDataManager
+    // implementation(project(":Modules:VoiceKeyboard"))  // DISABLED: Depends on VoiceDataManager
 
     // System Managers
     implementation(project(":Modules:VoiceOS:managers:CommandManager"))  // RE-ENABLED: Agent Swarm Task 2.1
@@ -93,9 +93,9 @@ dependencies {
     // Shared Libraries
     implementation(project(":Modules:VoiceOS:VoiceOSCore"))  // RE-ENABLED: Room→SQLDelight migration complete
     implementation(project(":android:apps:VoiceCursor"))
-    implementation(project(":Modules:VoiceOS:libraries:VoiceUIElements"))
-    implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))
-    implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))  // LearningSystem stubbed
+    implementation(project(":Modules:AvaMagic:AvaUI:Voice"))
+    implementation(project(":Modules:DeviceManager"))
+    implementation(project(":Modules:SpeechRecognition"))  // LearningSystem stubbed
     implementation(project(":Modules:AVID"))
     implementation(project(":Modules:VoiceOS:libraries:VoiceOsLogging"))  // Phase 3: Timber replacement
     

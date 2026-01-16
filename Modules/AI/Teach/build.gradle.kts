@@ -36,7 +36,7 @@ kotlin {
                 implementation(libs.hilt.android)
 
                 // Compose
-                implementation(platform("androidx.compose:compose-bom:2023.10.01"))
+                implementation(platform(libs.compose.bom))
                 implementation("androidx.compose.runtime:runtime")
                 implementation("androidx.compose.foundation:foundation")
                 implementation("androidx.compose.material3:material3")
@@ -81,7 +81,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.7"
+        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
     }
 }
 

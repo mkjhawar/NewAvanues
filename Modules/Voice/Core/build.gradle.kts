@@ -82,7 +82,7 @@ kotlin {
                 // ==========================================================
                 // Provides: VivokaEngine, VoskEngine, GoogleSTT, WhisperEngine
                 // Also includes: VivokaPathResolver, model management, initialization
-                implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))
+                implementation(project(":Modules:SpeechRecognition"))
 
                 // ==========================================================
                 // Vivoka SDK (via wrapper module)
@@ -92,7 +92,7 @@ kotlin {
                 // - Native .so libraries (in src/main/jniLibs/)
                 // This avoids Gradle's AAR-in-AAR restriction for library modules.
                 // Runtime: SDK looks for models in external storage (VivokaPathResolver)
-                implementation(project(":Modules:VoiceOS:libraries:VivokaSDK"))
+                implementation(project(":Vivoka:Android"))
 
                 // VoiceOS Database (SQLDelight repositories for Android command persistence)
                 implementation(project(":Modules:VoiceOS:core:database"))

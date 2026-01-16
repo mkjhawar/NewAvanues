@@ -1,6 +1,6 @@
 [versions]
 # Kotlin
-kotlin = "1.9.25"
+kotlin = "1.9.24"  # 1.9.25 not supported by Compose 1.6.11
 kotlinx-coroutines = "1.8.1"  # Updated from 1.7.3 for VoiceOS compatibility
 kotlinx-atomicfu = "0.23.2"  # Atomic operations for KMP
 kotlinx-serialization = "1.6.0"
@@ -8,10 +8,10 @@ kotlinx-datetime = "0.5.0"
 onnxruntime = "1.17.0"  # ONNX Runtime for NLU inference
 
 # Compose
-compose = "1.7.0"
+compose = "1.6.11"  # JetBrains Compose Multiplatform - requires Kotlin 1.9.24
 compose-ui = "1.5.4"
 compose-bom = "2024.06.00"  # Unified BOM version
-compose-compiler = "1.5.15"  # Compatible with Kotlin 1.9.25
+compose-compiler = "1.5.15"  # AndroidX Compose Compiler - compatible with Kotlin 1.9.25
 
 # Android
 android-gradle = "8.2.0"
