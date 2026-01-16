@@ -72,8 +72,11 @@ Voice/Core is allowed to use subfolders (`features/`, `cursor/`, etc.) due to th
 3. **Phase 3:** Move Voice modules (Core, WakeWord)
 4. **Phase 4:** Move Actions module
 5. **Phase 5:** Move Chat and Teach to AI/
-6. **Phase 6:** Cleanup duplicate overlay/ folder, move generic UI to AvaUI:Floating
+6. **Phase 6:** Cleanup duplicate overlay/ folder
 7. **Phase 7:** Final build verification
+
+**Tech Debt - AVA/Overlay UI Migration:**
+Generic UI components (VoiceOrb, GlassMorphicPanel, SuggestionChips) should eventually move to AvaUI:Floating, but have dependencies on overlay-specific code. Deferred to future cleanup.
 
 ## Alternatives Considered
 

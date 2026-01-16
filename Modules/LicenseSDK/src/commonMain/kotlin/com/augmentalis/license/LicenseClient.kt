@@ -13,6 +13,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
 
 /**
@@ -165,7 +166,7 @@ class LicenseClient private constructor(
      * @return true if still within grace period
      */
     fun isWithinGracePeriod(gracePeriod: GracePeriodInfo): Boolean {
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         return now < gracePeriod.offlineGraceExpiresAtMillis
     }
 
@@ -176,7 +177,7 @@ class LicenseClient private constructor(
      * @return true if validation should be performed
      */
     fun isValidationDue(gracePeriod: GracePeriodInfo): Boolean {
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         return now >= gracePeriod.nextValidationDueMillis
     }
 

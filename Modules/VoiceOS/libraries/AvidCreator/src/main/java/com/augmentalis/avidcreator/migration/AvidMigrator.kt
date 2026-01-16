@@ -220,14 +220,14 @@ object AvidMigrator {
     /**
      * Detect VUID format
      */
-    fun detectFormat(vuid: String): AvidGenerator.VuidFormat {
+    fun detectFormat(vuid: String): AvidGenerator.AvidFormat {
         return when {
-            AvidGenerator.isCompactApp(vuid) -> AvidGenerator.VuidFormat.COMPACT_APP
-            AvidGenerator.isCompactModule(vuid) -> AvidGenerator.VuidFormat.COMPACT_MODULE
-            AvidGenerator.isCompactSimple(vuid) -> AvidGenerator.VuidFormat.COMPACT_SIMPLE
-            AvidGenerator.isLegacyUuid(vuid) -> AvidGenerator.VuidFormat.LEGACY_UUID
-            AvidGenerator.isLegacyVoiceOS(vuid) -> AvidGenerator.VuidFormat.LEGACY_VOICEOS
-            else -> AvidGenerator.VuidFormat.UNKNOWN
+            AvidGenerator.isCompactApp(vuid) -> AvidGenerator.AvidFormat.COMPACT_APP
+            AvidGenerator.isCompactModule(vuid) -> AvidGenerator.AvidFormat.COMPACT_MODULE
+            AvidGenerator.isCompactSimple(vuid) -> AvidGenerator.AvidFormat.COMPACT_SIMPLE
+            AvidGenerator.isLegacyUuid(vuid) -> AvidGenerator.AvidFormat.LEGACY_UUID
+            AvidGenerator.isLegacyVoiceOS(vuid) -> AvidGenerator.AvidFormat.LEGACY_VOICEOS
+            else -> AvidGenerator.AvidFormat.UNKNOWN
         }
     }
 

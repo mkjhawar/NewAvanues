@@ -1,5 +1,6 @@
 package com.augmentalis.license
 
+import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 
 /**
@@ -91,9 +92,9 @@ data class GracePeriodInfo(
             // This is a simplified parser - in production use kotlinx-datetime
             val cleaned = isoDate.replace("Z", "").replace("T", " ")
             // Return approximate millis (this would need proper parsing in production)
-            System.currentTimeMillis() + (validationIntervalHours * 60 * 60 * 1000L)
+            Clock.System.now().toEpochMilliseconds() + (validationIntervalHours * 60 * 60 * 1000L)
         } catch (e: Exception) {
-            System.currentTimeMillis()
+            Clock.System.now().toEpochMilliseconds()
         }
     }
 }
@@ -182,7 +183,7 @@ data class OfflineLicenseState(
      * Check if the license is valid for offline use.
      */
     fun isValidOffline(): Boolean {
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         return status == "ACTIVE" && now < gracePeriod.offlineGraceExpiresAtMillis
     }
 
@@ -190,7 +191,7 @@ data class OfflineLicenseState(
      * Check if online validation is needed.
      */
     fun needsOnlineValidation(): Boolean {
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         return now >= gracePeriod.nextValidationDueMillis
     }
 }

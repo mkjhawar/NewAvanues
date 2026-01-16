@@ -338,9 +338,9 @@ class JitProcessor : ICommandGenerator, IBatchManager {
     }
 
     /**
-     * Get the current queue size.
+     * Get the current element queue size.
      */
-    fun getQueueSize(): Int = elementQueue.size
+    fun getElementQueueSize(): Int = elementQueue.size
 
     /**
      * Clear the element queue.

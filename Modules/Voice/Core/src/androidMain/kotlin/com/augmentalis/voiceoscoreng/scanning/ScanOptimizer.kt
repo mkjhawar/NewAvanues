@@ -1,10 +1,8 @@
 package com.augmentalis.voiceoscoreng.scanning
 
-import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.voiceoscoreng.functions.HashUtils
-import com.augmentalis.voiceoscoreng.service.ScreenCacheManager
 
 private const val TAG = "ScanOptimizer"
 
@@ -15,14 +13,12 @@ private const val TAG = "ScanOptimizer"
  * 1. Element-level change detection - only re-scan changed subtrees
  * 2. Hash comparison at each tree level for quick change detection
  * 3. Skips static elements (status bar, navigation bar)
- * 4. Integrates with ScreenCacheManager for efficient caching
+ * 4. Internal caching for efficient hash comparison
  *
  * This dramatically reduces scan time for screens with minor changes
  * (e.g., timer updates, notification badges) by avoiding full tree traversal.
  */
-class ScanOptimizer(
-    private val screenCacheManager: ScreenCacheManager
-) {
+class ScanOptimizer {
 
     /**
      * Package names for static system UI elements to skip.

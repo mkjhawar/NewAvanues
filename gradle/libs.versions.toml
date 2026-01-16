@@ -11,7 +11,7 @@ onnxruntime = "1.17.0"  # ONNX Runtime for NLU inference
 compose = "1.6.11"  # JetBrains Compose Multiplatform - requires Kotlin 1.9.24
 compose-ui = "1.5.4"
 compose-bom = "2024.06.00"  # Unified BOM version
-compose-compiler = "1.5.15"  # AndroidX Compose Compiler - compatible with Kotlin 1.9.25
+compose-compiler = "1.5.14"  # AndroidX Compose Compiler - compatible with Kotlin 1.9.24
 
 # Android
 android-gradle = "8.2.0"
@@ -43,7 +43,7 @@ sqlcipher = "4.5.4"
 koin = "3.5.3"
 koin-compose = "1.1.2"
 hilt = "2.51.1"  # Updated from 2.48 for VoiceOSCore compatibility
-ksp = "1.9.25-1.0.20"
+ksp = "1.9.24-1.0.20"
 
 # Navigation
 voyager = "1.0.0"

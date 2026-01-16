@@ -122,7 +122,7 @@ data class AvidElement(
 
 // Backward compatibility aliases
 @Deprecated("Use AvidElement instead", ReplaceWith("AvidElement"))
-typealias AvidElement = AvidElement
+typealias VUIDElement = AvidElement
 
 @Deprecated("Use AvidElement instead", ReplaceWith("AvidElement"))
-typealias AvidElement = AvidElement
+typealias UUIDElement = AvidElement

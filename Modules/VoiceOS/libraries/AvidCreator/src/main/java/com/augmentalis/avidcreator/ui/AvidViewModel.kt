@@ -40,16 +40,16 @@ data class AvidUiState(
 )
 
 /**
- * Extended VUID element information for UI
+ * Extended AVID element information for UI
  */
 data class AvidElementInfo(
-    val vuid: String,
+    val avid: String,
     val name: String?,
     val type: String,
     val position: AvidPosition?,
     val isEnabled: Boolean,
     val isVisible: Boolean,
-    val parentVUID: String?,
+    val parentAvid: String?,
     val childrenCount: Int,
     val actionCount: Int,
     val registrationTime: Long,
@@ -57,18 +57,22 @@ data class AvidElementInfo(
     val accessCount: Int
 ) {
     /**
-     * Backward-compatible alias for vuid
+     * Backward-compatible alias for avid
      */
     @Suppress("DEPRECATION")
-    @Deprecated("Use vuid instead", ReplaceWith("vuid"))
-    val uuid: String get() = vuid
+    @Deprecated("Use avid instead", ReplaceWith("avid"))
+    val vuid: String get() = avid
+
+    @Suppress("DEPRECATION")
+    @Deprecated("Use avid instead", ReplaceWith("avid"))
+    val uuid: String get() = avid
 
     /**
-     * Backward-compatible alias for parentVUID
+     * Backward-compatible alias for parentAvid
      */
     @Suppress("DEPRECATION")
-    @Deprecated("Use parentVUID instead", ReplaceWith("parentVUID"))
-    val parentUUID: String? get() = parentVUID
+    @Deprecated("Use parentAvid instead", ReplaceWith("parentAvid"))
+    val parentUUID: String? get() = parentAvid
 }
 
 /**
@@ -77,7 +81,7 @@ data class AvidElementInfo(
 data class CommandHistoryItem(
     val id: String,
     val command: String,
-    val targetVUID: String?,
+    val targetAvid: String?,
     val targetName: String?,
     val action: String,
     val success: Boolean,
@@ -105,20 +109,20 @@ data class RegistryStatistics(
 data class CommandResultInfo(
     val success: Boolean,
     val message: String,
-    val targetVUID: String?,
+    val targetAvid: String?,
     val action: String?,
     val executionTime: Long
 ) {
     @Suppress("DEPRECATION")
-    @Deprecated("Use targetVUID instead", ReplaceWith("targetVUID"))
-    val targetUUID: String? get() = targetVUID
+    @Deprecated("Use targetAvid instead", ReplaceWith("targetAvid"))
+    val targetUUID: String? get() = targetAvid
 }
 
 /**
  * ViewModel for VUID Manager UI
  */
 class AvidViewModel(
-    private val vuidManager: AvidCreator = AvidCreator.getInstance()
+    private val avidManager: AvidCreator = AvidCreator.getInstance()
 ) : ViewModel() {
     private val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     
@@ -143,7 +147,7 @@ class AvidViewModel(
         
         repeat(20) { index ->
             val element = AvidElementInfo(
-                vuid = vuidManager.generateVUID(),
+                avid = avidManager.generateAvid(),
                 name = names.random(),
                 type = types.random(),
                 position = AvidPosition(
@@ -155,7 +159,7 @@ class AvidViewModel(
                 ),
                 isEnabled = index % 3 != 0,
                 isVisible = true,
-                parentVUID = if (index > 5) mockElements.randomOrNull()?.vuid else null,
+                parentAvid = if (index > 5) mockElements.randomOrNull()?.avid else null,
                 childrenCount = (0..3).random(),
                 actionCount = (1..5).random(),
                 registrationTime = System.currentTimeMillis() - (index * 3600000),
@@ -168,7 +172,7 @@ class AvidViewModel(
     
     private fun observeCommandEvents() {
         viewModelScope.launch {
-            vuidManager.commandEvents.collect { _ ->
+            avidManager.commandEvents.collect { _ ->
                 // Update command history when new commands are processed
                 refreshCommandHistory()
             }
@@ -181,17 +185,17 @@ class AvidViewModel(
             delay(500) // Simulate loading
             
             // Get real elements from AvidManager
-            val realElements = vuidManager.getAllElements()
+            val realElements = avidManager.getAllElements()
             val elements = if (realElements.isNotEmpty()) {
                 realElements.map { element ->
                     AvidElementInfo(
-                        vuid = element.vuid,
+                        avid = element.avid,
                         name = element.name,
                         type = element.type,
                         position = element.position,
                         isEnabled = element.isEnabled,
                         isVisible = true, // Default to visible
-                        parentVUID = element.parent,
+                        parentAvid = element.parent,
                         childrenCount = 0,
                         actionCount = element.actions.size,
                         registrationTime = System.currentTimeMillis(),
@@ -228,7 +232,7 @@ class AvidViewModel(
     }
     
     fun generateNewVUID(): String {
-        return vuidManager.generateVUID()
+        return avidManager.generateAvid()
     }
 
     @Suppress("DEPRECATION")
@@ -237,7 +241,7 @@ class AvidViewModel(
 
     fun registerNewElement(name: String, type: String) {
         viewModelScope.launch {
-            val vuid = vuidManager.registerWithAutoVUID(
+            val elementAvid = avidManager.registerWithAutoAvid(
                 name = name,
                 type = type,
                 position = AvidPosition(0f, 0f, 0f, 100f, 50f),
@@ -249,13 +253,13 @@ class AvidViewModel(
 
             // Add to mock elements for display
             val newElement = AvidElementInfo(
-                vuid = vuid,
+                avid = elementAvid,
                 name = name,
                 type = type,
                 position = AvidPosition(0f, 0f, 0f, 100f, 50f),
                 isEnabled = true,
                 isVisible = true,
-                parentVUID = null,
+                parentAvid = null,
                 childrenCount = 0,
                 actionCount = 2,
                 registrationTime = System.currentTimeMillis(),
@@ -268,10 +272,10 @@ class AvidViewModel(
         }
     }
 
-    fun unregisterElement(vuid: String) {
+    fun unregisterElement(avid: String) {
         viewModelScope.launch {
-            vuidManager.unregisterElement(vuid)
-            mockElements.removeAll { it.vuid == vuid }
+            avidManager.unregisterElement(avid)
+            mockElements.removeAll { it.avid == avid }
             refreshRegistry()
         }
     }
@@ -283,14 +287,14 @@ class AvidViewModel(
                 currentCommand = command
             )
             
-            val result = vuidManager.processVoiceCommand(command)
+            val result = avidManager.processVoiceCommand(command)
             
             // Add to history
             val historyItem = CommandHistoryItem(
                 id = UUID.randomUUID().toString(),
                 command = command,
-                targetVUID = result.targetVUID,
-                targetName = mockElements.find { it.vuid == result.targetVUID }?.name,
+                targetAvid = result.targetAvid,
+                targetName = mockElements.find { it.avid == result.targetAvid }?.name,
                 action = result.action ?: "unknown",
                 success = result.success,
                 timestamp = System.currentTimeMillis(),
@@ -308,7 +312,7 @@ class AvidViewModel(
                 commandResult = CommandResultInfo(
                     success = result.success,
                     message = result.message ?: result.error ?: "Command processed",
-                    targetVUID = result.targetVUID,
+                    targetAvid = result.targetAvid,
                     action = result.action,
                     executionTime = result.executionTime
                 ),
@@ -327,7 +331,7 @@ class AvidViewModel(
         
         val results = mockElements.filter { element ->
             element.name?.contains(query, ignoreCase = true) == true ||
-            element.vuid.contains(query, ignoreCase = true) ||
+            element.avid.contains(query, ignoreCase = true) ||
             element.type.contains(query, ignoreCase = true)
         }
         
@@ -350,9 +354,9 @@ class AvidViewModel(
         val currentElement = _uiState.value?.selectedElement ?: return
 
         viewModelScope.launch {
-            val targetElement = vuidManager.navigate(currentElement.vuid, direction)
+            val targetElement = avidManager.navigate(currentElement.avid, direction)
             targetElement?.let { target ->
-                val elementInfo = mockElements.find { it.vuid == target.vuid }
+                val elementInfo = mockElements.find { it.avid == target.avid }
                 elementInfo?.let { selectElement(it) }
             }
         }
@@ -360,7 +364,7 @@ class AvidViewModel(
     
     fun clearRegistry() {
         viewModelScope.launch {
-            vuidManager.clearAll()
+            avidManager.clearAll()
             mockElements.clear()
             mockHistory.clear()
             refreshRegistry()
@@ -407,7 +411,7 @@ class AvidViewModel(
             appendLine()
             appendLine("Elements:")
             elements.forEach { element ->
-                appendLine("  - VUID: ${element.vuid}")
+                appendLine("  - VUID: ${element.avid}")
                 appendLine("    Name: ${element.name ?: "unnamed"}")
                 appendLine("    Type: ${element.type}")
                 appendLine("    Enabled: ${element.isEnabled}")
@@ -441,9 +445,9 @@ class AvidViewModel(
         var current: AvidElementInfo? = element
 
         while (current != null) {
-            path.add(0, current.name ?: current.vuid.take(8))
-            current = current.parentVUID?.let { parentId ->
-                mockElements.find { it.vuid == parentId }
+            path.add(0, current.name ?: current.avid.take(8))
+            current = current.parentAvid?.let { parentId ->
+                mockElements.find { it.avid == parentId }
             }
         }
 

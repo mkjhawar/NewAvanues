@@ -80,7 +80,7 @@ class SpatialNavigator(private val registry: AvidRegistry) {
         val sourcePos = sourceElement.position ?: return null
 
         val nearest = registry.getEnabledElements()
-            .filter { it.uuid != fromUUID && it.position != null }
+            .filter { it.avid != fromUUID && it.position != null }
             .minByOrNull { element ->
                 element.position?.let { calculateDistance(sourcePos, it) } ?: Float.MAX_VALUE
             }

@@ -54,7 +54,7 @@ android {
 
 dependencies {
     // Internal modules
-    implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))  // LearningSystem stubbed
+    implementation(project(":Modules:SpeechRecognition"))  // LearningSystem stubbed
     implementation(project(":android:apps:VoiceCursor"))
     implementation(project(":Modules:VoiceOS:libraries:UniversalIPC"))  // Universal IPC Protocol
 

@@ -202,6 +202,28 @@ class AndroidLlmProcessor(
      */
     fun isInitializationFailed(): Boolean = initializationFailed.get()
 
+    override suspend fun clarifyCommand(
+        utterance: String,
+        candidates: List<String>
+    ): LlmResult = withContext(Dispatchers.Default) {
+        if (!config.enabled) {
+            return@withContext LlmResult.NoMatch
+        }
+
+        val provider = llmProviderRef.get()
+        if (provider == null || !initialized.get()) {
+            return@withContext LlmResult.Error("LLM not available")
+        }
+
+        if (candidates.isEmpty()) {
+            return@withContext LlmResult.NoMatch
+        }
+
+        // Use interpretCommand with candidates as the available commands
+        // The LLM will determine which candidate best matches the utterance
+        interpretCommand(utterance, "", candidates)
+    }
+
     override suspend fun dispose() = withContext(Dispatchers.IO) {
         try {
             llmProviderRef.get()?.cleanup()

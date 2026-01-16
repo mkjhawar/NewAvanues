@@ -95,20 +95,20 @@ include(":Modules:VoiceOS:managers:CommandManager")
 include(":Modules:VoiceOS:managers:VoiceDataManager")
 include(":Modules:VoiceOS:managers:LocalizationManager")
 
-// VoiceOS Libraries
-include(":Modules:VoiceOS:libraries:DeviceManager")
-include(":Modules:VoiceOS:libraries:JITLearning")  // ⚠️ DEPRECATED (2026-01-06): Use VoiceOSCoreNG
-include(":Modules:VoiceOS:libraries:LearnAppCore")  // ⚠️ DEPRECATED (2026-01-06): Use VoiceOSCoreNG
+// Top-level Shared Modules (consolidated from VoiceOS/libraries and AvaMagic)
+include(":Modules:DeviceManager")                       // Device info, sensors, audio, network
+include(":Modules:SpeechRecognition")                   // Speech recognition engines (Whisper, Vivoka, etc.)
+include(":Modules:Translation")                         // Translation services
+include(":Modules:VoiceKeyboard")                       // Voice keyboard input
+include(":Vivoka:Android")                              // Vivoka VSDK wrapper (AAR dependencies)
+
+// VoiceOS Libraries (remaining)
+include(":Modules:VoiceOS:libraries:JITLearning")       // ⚠️ DEPRECATED (2026-01-06): Use Voice:Core
+include(":Modules:VoiceOS:libraries:LearnAppCore")      // ⚠️ DEPRECATED (2026-01-06): Use Voice:Core
 include(":Modules:VoiceOS:libraries:PluginSystem")
-include(":Modules:VoiceOS:libraries:SpeechRecognition")
-include(":Modules:VoiceOS:libraries:Translation")
 include(":Modules:VoiceOS:libraries:UniversalIPC")
-include(":Modules:AVID")                               // AVID - Avanues Voice ID (KMP core)
-include(":Modules:VoiceOS:libraries:AvidCreator")      // AvidCreator - Android extensions for AVID
-include(":Modules:VoiceOS:libraries:VivokaSDK")  // Vivoka VSDK wrapper module (AAR dependencies)
-include(":Modules:VoiceOS:libraries:VoiceKeyboard")
+include(":Modules:VoiceOS:libraries:AvidCreator")       // AvidCreator - Android extensions for AVID
 include(":Modules:VoiceOS:libraries:VoiceOsLogging")
-include(":Modules:VoiceOS:libraries:VoiceUIElements")
 
 // WebAvanue Modules
 include(":Modules:WebAvanue:coredata")   // Data layer: repositories, database, models
@@ -140,6 +140,7 @@ include(":Modules:AvaMagic:AvaUI:Layout")               // Layout components
 include(":Modules:AvaMagic:AvaUI:Navigation")           // Navigation components
 include(":Modules:AvaMagic:AvaUI:Floating")             // Floating components
 include(":Modules:AvaMagic:AvaUI:Data")                 // Data components
+include(":Modules:AvaMagic:AvaUI:Voice")                // Voice UI components
 
 // AvaUI Infrastructure
 include(":Modules:AvaMagic:AvaUI:Adapters")             // Platform adapters
