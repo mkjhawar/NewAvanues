@@ -65,6 +65,9 @@ dependencies {
     // AVID module (for unique identifiers - migrated from UUIDCreator)
     implementation(project(":Modules:AVID"))
 
+    // AvidCreator module (for ThirdPartyAvidGenerator)
+    implementation(project(":Modules:VoiceOS:libraries:AvidCreator"))
+
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
@@ -76,6 +79,9 @@ dependencies {
 
     // WorkManager for offline-first sync (Phase 7: Reliability Polish)
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Guava for ListenableFuture (used by WorkManager)
+    implementation("com.google.guava:guava:32.1.3-android")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

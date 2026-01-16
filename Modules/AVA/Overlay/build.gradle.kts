@@ -59,6 +59,7 @@ dependencies {
     //implementation(project(":Modules:AVA:SharedNLU"))  // TODO: SharedNLU not found in current structure
     implementation(project(":Modules:AI:Chat"))
     implementation(project(":Modules:AI:LLM"))
+    implementation(project(":Modules:AI:NLU"))
 
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
@@ -84,6 +85,9 @@ dependencies {
 
     // DataStore for preferences
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // Logging
+    implementation("com.jakewharton.timber:timber:5.0.1")
 
     // Testing
     testImplementation(kotlin("test"))

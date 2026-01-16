@@ -12,6 +12,8 @@ package com.augmentalis.database
 import com.augmentalis.database.repositories.ICommandUsageRepository
 import com.augmentalis.database.repositories.IContextPreferenceRepository
 import com.augmentalis.database.repositories.IVoiceCommandRepository
+import com.augmentalis.database.repositories.ICommandRepository
+import com.augmentalis.database.repositories.ICommandHistoryRepository
 import com.augmentalis.database.repositories.IAvidRepository
 import com.augmentalis.database.repositories.IScrapedAppRepository
 import com.augmentalis.database.repositories.IScrapedElementRepository
@@ -30,6 +32,8 @@ import com.augmentalis.database.repositories.IQualityMetricRepository
 import com.augmentalis.database.repositories.impl.SQLDelightCommandUsageRepository
 import com.augmentalis.database.repositories.impl.SQLDelightContextPreferenceRepository
 import com.augmentalis.database.repositories.impl.SQLDelightVoiceCommandRepository
+import com.augmentalis.database.repositories.impl.SQLDelightCommandRepository
+import com.augmentalis.database.repositories.impl.SQLDelightCommandHistoryRepository
 import com.augmentalis.database.repositories.impl.SQLDelightAvidRepository
 import com.augmentalis.database.repositories.impl.SQLDelightScrapedAppRepository
 import com.augmentalis.database.repositories.impl.SQLDelightScrapedElementRepository
@@ -45,6 +49,18 @@ import com.augmentalis.database.repositories.impl.SQLDelightUserInteractionRepos
 import com.augmentalis.database.repositories.impl.SQLDelightElementStateHistoryRepository
 import com.augmentalis.database.repositories.impl.SQLDelightElementCommandRepository
 import com.augmentalis.database.repositories.impl.SQLDelightQualityMetricRepository
+
+/**
+ * Database statistics data class for VoiceDataManager compatibility.
+ */
+data class DatabaseStats(
+    val commandHistoryCount: Long,
+    val customCommandCount: Long,
+    val recognitionLearningCount: Long,
+    val generatedCommandCount: Long,
+    val scrapedAppCount: Long,
+    val errorReportCount: Long
+)
 
 /**
  * Central database manager providing access to all VoiceOS repositories.
@@ -288,6 +304,21 @@ class VoiceOSDatabaseManager private constructor(
         }
     }
 
+    /**
+     * Get database statistics for monitoring (VoiceDataManager compatibility).
+     * Returns counts from all major tables.
+     */
+    suspend fun getStats(): DatabaseStats {
+        return DatabaseStats(
+            commandHistoryCount = commandHistory.count(),
+            customCommandCount = commands.count(),
+            recognitionLearningCount = _database.recognitionLearningQueries.count().executeAsOne(),
+            generatedCommandCount = generatedCommands.count(),
+            scrapedAppCount = scrapedApps.count(),
+            errorReportCount = errorReports.count()
+        )
+    }
+
     // ==================== Raw Query Accessors (Legacy Compatibility) ====================
     // Note: Prefer using repository interfaces for new code.
     // These are exposed for backward compatibility with existing VoiceOSCore code.
@@ -357,4 +388,65 @@ class VoiceOSDatabaseManager private constructor(
 
     /** Raw queries for CommandUsage table */
     val commandUsageQueries get() = _database.commandUsageQueries
+
+    // ==================== Additional Raw Query Accessors ====================
+    // Added for VoiceDataManager compatibility
+
+    /** Raw queries for DeviceProfile table */
+    val deviceProfileQueries get() = _database.deviceProfileQueries
+
+    /** Raw queries for TouchGesture table */
+    val touchGestureQueries get() = _database.touchGestureQueries
+
+    /** Raw queries for GestureLearning table */
+    val gestureLearningQueries get() = _database.gestureLearningQueries
+
+    /** Raw queries for LanguageModel table */
+    val languageModelQueries get() = _database.languageModelQueries
+
+    /** Raw queries for UsageStatistic table */
+    val usageStatisticQueries get() = _database.usageStatisticQueries
+
+    /** Raw queries for RecognitionLearning table */
+    val recognitionLearningQueries get() = _database.recognitionLearningQueries
+
+    /** Raw queries for Settings table */
+    val settingsQueries get() = _database.settingsQueries
+
+    /** Raw queries for ScrapedApp table */
+    val scrapedAppQueries get() = _database.scrapedAppQueries
+
+    /** Raw queries for ScrappedCommand table */
+    val scrappedCommandQueries get() = _database.scrappedCommandQueries
+
+    /** Raw queries for UserSequence table */
+    val userSequenceQueries get() = _database.userSequenceQueries
+
+    /** Raw queries for CommandHistory table */
+    val commandHistoryQueries get() = _database.commandHistoryQueries
+
+    /** Raw queries for VoiceCommand table */
+    val voiceCommandQueries get() = _database.voiceCommandQueries
+
+    /** Raw queries for ContextPreference table */
+    val contextPreferenceQueries get() = _database.contextPreferenceQueries
+
+    // ==================== Legacy Compatibility Aliases ====================
+    // These provide backward compatibility with VoiceDataManager
+
+    /**
+     * Repository for custom voice commands (legacy compatibility).
+     * Used by VoiceDataManager for custom command management.
+     */
+    val commands: ICommandRepository by lazy {
+        SQLDelightCommandRepository(_database)
+    }
+
+    /**
+     * Repository for command execution history (legacy compatibility).
+     * Used by VoiceDataManager for history tracking.
+     */
+    val commandHistory: ICommandHistoryRepository by lazy {
+        SQLDelightCommandHistoryRepository(_database)
+    }
 }
