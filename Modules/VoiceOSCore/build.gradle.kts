@@ -57,6 +57,9 @@ kotlin {
                 // AVID - Avanues Voice ID
                 implementation(project(":Modules:AVID"))
 
+                // SpeechRecognition - KMP unified speech module
+                implementation(project(":Modules:SpeechRecognition"))
+
                 // Coroutines
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.coroutines}")
 
