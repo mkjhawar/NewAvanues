@@ -47,6 +47,7 @@ include(":Modules:AI:LLM")      // Language model providers
 include(":Modules:AI:Memory")   // AI memory system (short/long-term)
 include(":Modules:AI:Chat")     // AI Chat interface
 include(":Modules:AI:Teach")    // AI Teaching/training system
+include(":Modules:AI:ALC")      // Adaptive LLM Coordinator (local inference)
 
 // Top-level Modules (cross-platform KMP)
 include(":Modules:AVID")                  // Avanues Voice ID - unified identifier system
@@ -54,7 +55,8 @@ include(":Modules:Database")              // Unified KMP database - VoiceOS, Web
 // include(":Modules:VUID")               // DEPRECATED - replaced by AVID module
 
 // Voice Modules (cross-platform KMP)
-include(":Modules:Voice:Core")             // VoiceOSCoreNG - KMP voice control core
+include(":Modules:VoiceOSCore")            // Unified KMP voice control (consolidates Voice:Core + VoiceOS)
+include(":Modules:Voice:Core")             // VoiceOSCoreNG - KMP voice control core (DEPRECATED - use VoiceOSCore)
 include(":Modules:Voice:WakeWord")         // Wake word detection
 
 // Actions Module (cross-platform KMP)

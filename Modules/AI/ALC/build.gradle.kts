@@ -4,22 +4,18 @@ plugins {
     id("com.android.library")
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
-    application
 }
 
 group = "com.augmentalis.alc"
 version = "2.0.0"
 
-// Desktop CLI application configuration
-application {
-    mainClass.set("com.augmentalis.alc.cli.ALCModelToolKt")
-}
-
-// Task alias for running CLI
-tasks.register("runCli") {
+// Desktop CLI executable configuration (via jvm target)
+tasks.register<JavaExec>("runCli") {
     group = "application"
     description = "Run the AVA Model Manager CLI"
-    dependsOn("run")
+    mainClass.set("com.augmentalis.alc.cli.ALCModelToolKt")
+    classpath = kotlin.targets.getByName<org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget>("desktop")
+        .compilations.getByName("main").runtimeDependencyFiles
 }
 
 kotlin {
@@ -89,6 +85,9 @@ kotlin {
 
                 // TVM Runtime (local)
                 implementation(files("libs/tvm4j_core.jar"))
+
+                // Logging
+                implementation("com.jakewharton.timber:timber:5.0.1")
             }
         }
 
