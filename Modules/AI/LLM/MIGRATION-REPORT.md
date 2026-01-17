@@ -64,7 +64,7 @@ android {
 
 ```
 com.augmentalis.llm/
-├── alc/                          # ALC Engine (Augmentalis Local Compute)
+├── alc/                          # ALC Engine (Adaptive LLM Coordinator)
 │   ├── interfaces/               # Core interfaces
 │   │   ├── IInferenceStrategy.kt
 │   │   ├── IMemoryManager.kt

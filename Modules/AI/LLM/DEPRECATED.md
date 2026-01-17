@@ -8,7 +8,7 @@
 
 ## Migration Notice
 
-This Android-only LLM module has been replaced by the Kotlin Multiplatform **ALC (AI Language Core)** module.
+This Android-only LLM module has been replaced by the Kotlin Multiplatform **ALC (Adaptive LLM Coordinator)** module.
 
 ### Why Migrated?
 

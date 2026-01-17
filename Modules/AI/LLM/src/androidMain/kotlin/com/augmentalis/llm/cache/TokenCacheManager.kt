@@ -165,7 +165,7 @@ class TokenCacheManager(
      */
     suspend fun getStats(): TokenCacheStats {
         val count = (tokenCacheRepository.getCacheCount() as? Result.Success)?.data ?: 0L
-        val modelStats = (tokenCacheRepository.getCacheStats() as? Result.Success)?.data ?: emptyList()
+        val modelStats = (tokenCacheRepository.getCacheStats() as? Result.Success)?.data ?: emptyList<CoreTokenCacheStats>()
 
         return TokenCacheStats(
             totalEntries = count,
