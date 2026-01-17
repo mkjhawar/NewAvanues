@@ -43,7 +43,7 @@ actual object SynonymPathsProvider {
 
     private fun createDefaultPaths(): ISynonymPaths {
         // Default fallback using user home directory
-        val userHome = System.getProperty("user.home") ?: "."
+        val userHome = java.lang.System.getProperty("user.home") ?: "."
         val appDataDir = "$userHome/.voiceos"
         return DefaultSynonymPaths.forDesktop(appDataDir)
     }

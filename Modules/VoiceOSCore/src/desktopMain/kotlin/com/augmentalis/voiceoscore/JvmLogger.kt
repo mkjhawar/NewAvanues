@@ -8,6 +8,8 @@
  */
 package com.augmentalis.voiceoscore
 
+import java.io.PrintStream
+
 /**
  * JVM implementation of Logger using System.out/err
  *
@@ -27,6 +29,8 @@ class JvmLogger(private val tag: String) : Logger {
     private val YELLOW = "\u001B[33m"
     private val RED = "\u001B[31m"
     private val MAGENTA = "\u001B[35m"
+
+    private val stdErr: PrintStream get() = java.lang.System.err
 
     override fun v(message: () -> String) {
         if (isLoggable(LogLevel.VERBOSE)) {
@@ -48,32 +52,32 @@ class JvmLogger(private val tag: String) : Logger {
 
     override fun w(message: () -> String) {
         if (isLoggable(LogLevel.WARN)) {
-            System.err.println("${YELLOW}WARN [$tag]: ${message()}${RESET}")
+            stdErr.println("${YELLOW}WARN [$tag]: ${message()}${RESET}")
         }
     }
 
     override fun e(message: () -> String) {
         if (isLoggable(LogLevel.ERROR)) {
-            System.err.println("${RED}ERROR [$tag]: ${message()}${RESET}")
+            stdErr.println("${RED}ERROR [$tag]: ${message()}${RESET}")
         }
     }
 
     override fun e(message: () -> String, throwable: Throwable) {
         if (isLoggable(LogLevel.ERROR)) {
-            System.err.println("${RED}ERROR [$tag]: ${message()}${RESET}")
+            stdErr.println("${RED}ERROR [$tag]: ${message()}${RESET}")
             throwable.printStackTrace()
         }
     }
 
     override fun wtf(message: () -> String) {
         if (isLoggable(LogLevel.ASSERT)) {
-            System.err.println("${MAGENTA}WTF [$tag]: ${message()}${RESET}")
+            stdErr.println("${MAGENTA}WTF [$tag]: ${message()}${RESET}")
         }
     }
 
     override fun isLoggable(level: LogLevel): Boolean {
         // JVM logs everything by default (can be configured via system properties)
-        val minLevel = System.getProperty("log.level", "VERBOSE")
+        val minLevel = java.lang.System.getProperty("log.level") ?: "VERBOSE"
         val configuredLevel = runCatching {
             LogLevel.valueOf(minLevel.uppercase())
         }.getOrDefault(LogLevel.VERBOSE)
