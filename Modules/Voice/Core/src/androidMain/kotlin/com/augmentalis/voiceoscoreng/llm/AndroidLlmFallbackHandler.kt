@@ -13,11 +13,11 @@ package com.augmentalis.voiceoscoreng.llm
 import android.content.Context
 import com.augmentalis.llm.provider.LocalLLMProvider
 import com.augmentalis.llm.provider.CloudLLMProvider
-import com.augmentalis.llm.domain.LLMConfig
-import com.augmentalis.llm.domain.LLMResponse
-import com.augmentalis.llm.domain.GenerationOptions
-import com.augmentalis.llm.domain.ChatMessage
-import com.augmentalis.llm.domain.MessageRole
+import com.augmentalis.llm.LLMConfig
+import com.augmentalis.llm.LLMResponse
+import com.augmentalis.llm.GenerationOptions
+import com.augmentalis.llm.ChatMessage
+import com.augmentalis.llm.MessageRole
 import com.augmentalis.llm.security.ApiKeyManager
 import com.augmentalis.voiceoscoreng.nlu.NluResult
 import com.augmentalis.voiceoscoreng.common.QuantizedCommand
@@ -88,19 +88,17 @@ class AndroidLlmFallbackHandler(
 
                     val result = localProvider.initialize(llmConfig)
 
-                    if (result.isSuccess) {
-                        localProviderRef.set(localProvider)
-                        localInitialized.set(true)
-                        println("[AndroidLlmFallbackHandler] Local LLM initialized successfully")
-                    } else {
-                        val errorMsg = try {
-                            result.getOrThrow()
-                            "Unknown error"
-                        } catch (e: Throwable) {
-                            e.message ?: "Local LLM initialization failed"
+                    when (result) {
+                        is com.augmentalis.llm.LLMResult.Success -> {
+                            localProviderRef.set(localProvider)
+                            localInitialized.set(true)
+                            println("[AndroidLlmFallbackHandler] Local LLM initialized successfully")
                         }
-                        errors.add("Local: $errorMsg")
-                        println("[AndroidLlmFallbackHandler] Local LLM initialization failed: $errorMsg")
+                        is com.augmentalis.llm.LLMResult.Error -> {
+                            val errorMsg = result.message
+                            errors.add("Local: $errorMsg")
+                            println("[AndroidLlmFallbackHandler] Local LLM initialization failed: $errorMsg")
+                        }
                     }
                 } catch (e: Exception) {
                     errors.add("Local: ${e.message}")
@@ -122,19 +120,17 @@ class AndroidLlmFallbackHandler(
 
                     val result = cloudProvider.initialize(cloudConfig)
 
-                    if (result.isSuccess) {
-                        cloudProviderRef.set(cloudProvider)
-                        cloudInitialized.set(true)
-                        println("[AndroidLlmFallbackHandler] Cloud LLM initialized successfully")
-                    } else {
-                        val errorMsg = try {
-                            result.getOrThrow()
-                            "Unknown error"
-                        } catch (e: Throwable) {
-                            e.message ?: "Cloud LLM initialization failed"
+                    when (result) {
+                        is com.augmentalis.llm.LLMResult.Success -> {
+                            cloudProviderRef.set(cloudProvider)
+                            cloudInitialized.set(true)
+                            println("[AndroidLlmFallbackHandler] Cloud LLM initialized successfully")
                         }
-                        errors.add("Cloud: $errorMsg")
-                        println("[AndroidLlmFallbackHandler] Cloud LLM initialization failed: $errorMsg")
+                        is com.augmentalis.llm.LLMResult.Error -> {
+                            val errorMsg = result.message
+                            errors.add("Cloud: $errorMsg")
+                            println("[AndroidLlmFallbackHandler] Cloud LLM initialization failed: $errorMsg")
+                        }
                     }
                 } catch (e: Exception) {
                     errors.add("Cloud: ${e.message}")

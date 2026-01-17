@@ -12,10 +12,10 @@ package com.augmentalis.voiceoscoreng.llm
 
 import android.content.Context
 import com.augmentalis.llm.provider.LocalLLMProvider
-import com.augmentalis.llm.domain.LLMConfig
-import com.augmentalis.llm.domain.GenerationOptions
-import com.augmentalis.llm.domain.LLMResponse
-import com.augmentalis.llm.domain.getText
+import com.augmentalis.llm.LLMConfig
+import com.augmentalis.llm.GenerationOptions
+import com.augmentalis.llm.LLMResponse
+import com.augmentalis.llm.getText
 import com.augmentalis.ava.core.common.Result as AvaResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
@@ -87,23 +87,20 @@ class AndroidLlmProcessor(
 
                 val result = provider.initialize(llmConfig)
 
-                // Handle AVA Result type using isSuccess/isError properties
-                if (result.isSuccess) {
-                    llmProviderRef.set(provider)
-                    initialized.set(true)
-                    println("[AndroidLlmProcessor] LLM initialized successfully")
-                    Result.success(Unit)
-                } else {
-                    // Result is error - extract exception using getOrThrow in try-catch
-                    initializationFailed.set(true)
-                    val errorMessage = try {
-                        result.getOrThrow()
-                        "Unknown error"
-                    } catch (e: Throwable) {
-                        e.message ?: "LLM initialization failed"
+                // Handle LLMResult sealed class
+                when (result) {
+                    is com.augmentalis.llm.LLMResult.Success -> {
+                        llmProviderRef.set(provider)
+                        initialized.set(true)
+                        println("[AndroidLlmProcessor] LLM initialized successfully")
+                        Result.success(Unit)
                     }
-                    println("[AndroidLlmProcessor] LLM initialization failed: $errorMessage")
-                    Result.failure(IllegalStateException(errorMessage))
+                    is com.augmentalis.llm.LLMResult.Error -> {
+                        initializationFailed.set(true)
+                        val errorMessage = result.message
+                        println("[AndroidLlmProcessor] LLM initialization failed: $errorMessage")
+                        Result.failure(IllegalStateException(errorMessage))
+                    }
                 }
             } catch (e: Exception) {
                 initializationFailed.set(true)
