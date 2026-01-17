@@ -1,10 +1,11 @@
 /**
- * AvidAliasManager.kt - Custom aliases for VUIDs
+ * AvidAliasManager.kt - Custom aliases for AVIDs
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Created: 2025-01-03
+ * Updated: 2026-01-16 - Migrated VUID to AVID naming
  *
- * Manages human-readable aliases for VUIDs.
+ * Manages human-readable aliases for AVIDs.
  * Uses IAvidRepository for persistence.
  */
 package com.augmentalis.avidcreator.alias
@@ -15,9 +16,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * VUID Alias Manager
+ * AVID Alias Manager
  *
- * Creates and manages human-readable aliases for VUIDs.
+ * Creates and manages human-readable aliases for AVIDs.
  * Aliases provide smaller footprint and easier voice command integration.
  *
  * @property repository IAvidRepository for persistence
@@ -206,21 +207,21 @@ class AvidAliasManager(
     /**
      * Set multiple aliases in batch
      *
-     * @param vuidAliasMap Map of VUID to alias pairs (vuid -> desiredAlias)
-     * @return Map of VUID to actual registered alias (vuid -> actualAlias)
+     * @param avidAliasMap Map of AVID to alias pairs (avid -> desiredAlias)
+     * @return Map of AVID to actual registered alias (avid -> actualAlias)
      */
-    suspend fun setAliasesBatch(vuidAliasMap: Map<String, String>): Map<String, String> = withContext(Dispatchers.IO) {
+    suspend fun setAliasesBatch(avidAliasMap: Map<String, String>): Map<String, String> = withContext(Dispatchers.IO) {
         ensureLoaded()
         val result = mutableMapOf<String, String>()
-        vuidAliasMap.forEach { (vuid, alias) ->
+        avidAliasMap.forEach { (avid, alias) ->
             try {
-                setAlias(vuid, alias, isPrimary = false)
+                setAlias(avid, alias, isPrimary = false)
                 // Get the actual alias that was registered (might be deduplicated)
-                val actualAlias = getAliases(vuid).firstOrNull() ?: alias
-                result[vuid] = actualAlias
+                val actualAlias = getAliases(avid).firstOrNull() ?: alias
+                result[avid] = actualAlias
             } catch (e: Exception) {
                 // Skip invalid aliases in batch mode, but still track them
-                result[vuid] = alias
+                result[avid] = alias
             }
         }
         result
@@ -232,8 +233,8 @@ class AvidAliasManager(
     fun getStats(): AliasStats {
         return AliasStats(
             totalAliases = aliasToAvid.size,
-            totalVuidsWithAliases = avidToAliases.size,
-            averageAliasesPerVuid = if (avidToAliases.isNotEmpty()) {
+            totalAvidsWithAliases = avidToAliases.size,
+            averageAliasesPerAvid = if (avidToAliases.isNotEmpty()) {
                 avidToAliases.values.map { it.size }.average().toFloat()
             } else {
                 0f
@@ -247,6 +248,6 @@ class AvidAliasManager(
  */
 data class AliasStats(
     val totalAliases: Int,
-    val totalVuidsWithAliases: Int,
-    val averageAliasesPerVuid: Float
+    val totalAvidsWithAliases: Int,
+    val averageAliasesPerAvid: Float
 )

@@ -4,29 +4,29 @@ import com.augmentalis.avidcreator.models.*
 
 /**
  * Public API interface for AvidManager library
- * Framework-agnostic VUID (VoiceUniqueID) management and targeting system
+ * Framework-agnostic AVID (Augmentalis Voice ID) management and targeting system
  */
 interface IAvidManager {
 
     /**
-     * Generate a new VUID
+     * Generate a new AVID
      */
-    fun generateVUID(): String
+    fun generateAvid(): String
 
     /**
-     * Register an element with VUID
+     * Register an element with AVID
      */
     fun registerElement(element: AvidElement): String
 
     /**
      * Unregister an element
      */
-    fun unregisterElement(vuid: String): Boolean
+    fun unregisterElement(avid: String): Boolean
 
     /**
-     * Find element by VUID
+     * Find element by AVID
      */
-    fun findByVUID(vuid: String): AvidElement?
+    fun findByAvid(avid: String): AvidElement?
 
     /**
      * Find elements by name
@@ -46,12 +46,12 @@ interface IAvidManager {
     /**
      * Find elements in direction
      */
-    fun findInDirection(fromVUID: String, direction: String): AvidElement?
+    fun findInDirection(fromAvid: String, direction: String): AvidElement?
 
     /**
      * Execute action on element
      */
-    suspend fun executeAction(vuid: String, action: String, parameters: Map<String, Any> = emptyMap()): Boolean
+    suspend fun executeAction(avid: String, action: String, parameters: Map<String, Any> = emptyMap()): Boolean
 
     /**
      * Process voice command

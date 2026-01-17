@@ -13,7 +13,7 @@ class TargetResolver(private val registry: AvidRegistry) {
      * Target types for different resolution strategies
      */
     enum class TargetType {
-        UUID,           // Direct UUID targeting
+        AVID,           // Direct AVID targeting
         NAME,           // Element name/label
         TYPE,           // Element type (button, text, etc.)
         POSITION,       // Spatial position (first, last, third)
@@ -31,7 +31,7 @@ class TargetResolver(private val registry: AvidRegistry) {
         val value: String? = null,
         val position: Int? = null,
         val direction: String? = null,
-        val fromUUID: String? = null,
+        val fromAvid: String? = null,
         val filters: Map<String, Any> = emptyMap()
     )
     
@@ -50,7 +50,7 @@ class TargetResolver(private val registry: AvidRegistry) {
      */
     fun resolve(request: TargetRequest): TargetResult {
         return when (request.type) {
-            TargetType.UUID -> resolveByUUID(request)
+            TargetType.AVID -> resolveByAvid(request)
             TargetType.NAME -> resolveByName(request)
             TargetType.TYPE -> resolveByType(request)
             TargetType.POSITION -> resolveByPosition(request)
@@ -60,18 +60,18 @@ class TargetResolver(private val registry: AvidRegistry) {
             TargetType.PROXIMITY -> resolveByProximity(request)
         }
     }
-    
+
     /**
-     * Resolve by direct UUID
+     * Resolve by direct AVID
      */
-    private fun resolveByUUID(request: TargetRequest): TargetResult {
-        val uuid = request.value ?: return TargetResult(emptyList(), 0f, "uuid-missing")
-        val element = registry.findByVUID(uuid)
-        
+    private fun resolveByAvid(request: TargetRequest): TargetResult {
+        val avid = request.value ?: return TargetResult(emptyList(), 0f, "avid-missing")
+        val element = registry.findByAvid(avid)
+
         return if (element != null && element.isEnabled) {
-            TargetResult(listOf(element), 1.0f, "uuid-direct")
+            TargetResult(listOf(element), 1.0f, "avid-direct")
         } else {
-            TargetResult(emptyList(), 0f, "uuid-not-found")
+            TargetResult(emptyList(), 0f, "avid-not-found")
         }
     }
     
@@ -140,13 +140,13 @@ class TargetResolver(private val registry: AvidRegistry) {
      * Resolve by hierarchy (parent, child, sibling)
      */
     private fun resolveByHierarchy(request: TargetRequest): TargetResult {
-        val fromUUID = request.fromUUID ?: return TargetResult(emptyList(), 0f, "hierarchy-no-source")
-        // Validate source element exists (element itself not used, just UUID)
-        registry.findByVUID(fromUUID) ?: return TargetResult(emptyList(), 0f, "hierarchy-source-not-found")
-        
+        val fromAvid = request.fromAvid ?: return TargetResult(emptyList(), 0f, "hierarchy-no-source")
+        // Validate source element exists (element itself not used, just AVID)
+        registry.findByAvid(fromAvid) ?: return TargetResult(emptyList(), 0f, "hierarchy-source-not-found")
+
         return when (request.value) {
             "parent", "up" -> {
-                val parent = registry.findParent(fromUUID)
+                val parent = registry.findParent(fromAvid)
                 if (parent != null && parent.isEnabled) {
                     TargetResult(listOf(parent), 1.0f, "hierarchy-parent")
                 } else {
@@ -154,7 +154,7 @@ class TargetResolver(private val registry: AvidRegistry) {
                 }
             }
             "child", "down" -> {
-                val children = registry.findChildren(fromUUID).filter { it.isEnabled }
+                val children = registry.findChildren(fromAvid).filter { it.isEnabled }
                 if (children.isNotEmpty()) {
                     TargetResult(children, 0.9f, "hierarchy-children")
                 } else {
@@ -170,8 +170,8 @@ class TargetResolver(private val registry: AvidRegistry) {
      */
     private fun resolveByContext(request: TargetRequest): TargetResult {
         val context = request.value ?: return TargetResult(emptyList(), 0f, "context-missing")
-        val fromUUID = request.fromUUID
-        
+        val fromAvid = request.fromAvid
+
         // Find elements with matching context
         val contextElements = registry.getEnabledElements().filter { element ->
             // Check if element or its parent matches context
@@ -179,9 +179,9 @@ class TargetResolver(private val registry: AvidRegistry) {
             element.metadata?.label?.contains(context, ignoreCase = true) == true ||
             registry.findParent(element.avid)?.name?.contains(context, ignoreCase = true) == true
         }
-        
+
         return if (contextElements.isNotEmpty()) {
-            val confidence = if (fromUUID != null && contextElements.any { it.avid == fromUUID }) 0.9f else 0.7f
+            val confidence = if (fromAvid != null && contextElements.any { it.avid == fromAvid }) 0.9f else 0.7f
             TargetResult(contextElements, confidence, "context-match")
         } else {
             TargetResult(emptyList(), 0f, "context-no-match")
@@ -262,13 +262,13 @@ class TargetResolver(private val registry: AvidRegistry) {
      * Resolve by proximity to another element
      */
     private fun resolveByProximity(request: TargetRequest): TargetResult {
-        val fromUUID = request.fromUUID ?: return TargetResult(emptyList(), 0f, "proximity-no-source")
-        val sourceElement = registry.findByVUID(fromUUID) ?: return TargetResult(emptyList(), 0f, "proximity-source-not-found")
+        val fromAvid = request.fromAvid ?: return TargetResult(emptyList(), 0f, "proximity-no-source")
+        val sourceElement = registry.findByAvid(fromAvid) ?: return TargetResult(emptyList(), 0f, "proximity-source-not-found")
         val sourcePos = sourceElement.position ?: return TargetResult(emptyList(), 0f, "proximity-no-source-position")
-        
+
         // Find nearest elements
         val nearbyElements = registry.getEnabledElements()
-            .filter { it.avid != fromUUID && it.position != null }
+            .filter { it.avid != fromAvid && it.position != null }
             .sortedBy { element ->
                 val pos = element.position ?: return@sortedBy Float.MAX_VALUE
                 val dx = pos.x - sourcePos.x
@@ -276,7 +276,7 @@ class TargetResolver(private val registry: AvidRegistry) {
                 kotlin.math.sqrt((dx * dx + dy * dy).toDouble()).toFloat()
             }
             .take(5) // Return top 5 nearest
-        
+
         return if (nearbyElements.isNotEmpty()) {
             TargetResult(nearbyElements, 0.8f, "proximity-match")
         } else {

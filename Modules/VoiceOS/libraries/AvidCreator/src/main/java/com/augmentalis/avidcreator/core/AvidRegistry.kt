@@ -1,11 +1,11 @@
 /**
- * AvidRegistry.kt - Central registry for VUID elements
- * Path: libraries/AvidCreator/src/main/java/com/augmentalis/uuidcreator/core/AvidRegistry.kt
+ * AvidRegistry.kt - Central registry for AVID elements
+ * Path: libraries/AvidCreator/src/main/java/com/augmentalis/avidcreator/core/AvidRegistry.kt
  *
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA
  * Created: 2024-08-20
- * Updated: 2025-12-23 - Renamed UUID → VUID (VoiceUniqueID)
+ * Updated: 2026-01-16 - Renamed VUID → AVID (Augmentalis Voice ID)
  *
  * Thread-safe storage and lookup with SQLDelight persistence via repository
  */
@@ -17,7 +17,7 @@ import com.augmentalis.avidcreator.models.AvidElement
 import kotlinx.coroutines.flow.*
 
 /**
- * Central registry for VUID elements
+ * Central registry for AVID elements
  *
  * Delegates to SQLDelightAvidRepositoryAdapter for hybrid storage (SQLDelight + in-memory cache).
  * Maintains backward-compatible API while adding persistence.
@@ -36,7 +36,7 @@ class AvidRegistry(
      */
     sealed class RegistrationEvent {
         data class ElementRegistered(val element: AvidElement) : RegistrationEvent()
-        data class ElementUnregistered(val vuid: String) : RegistrationEvent()
+        data class ElementUnregistered(val avid: String) : RegistrationEvent()
         data class ElementUpdated(val element: AvidElement) : RegistrationEvent()
     }
     
@@ -50,8 +50,8 @@ class AvidRegistry(
         repository.insert(element)
 
         // Update parent's children list in cache
-        element.parent?.let { parentVuid ->
-            repository.getByAvid(parentVuid)?.addChild(element.avid)
+        element.parent?.let { parentAvid ->
+            repository.getByAvid(parentAvid)?.addChild(element.avid)
         }
 
         _registrations.emit(RegistrationEvent.ElementRegistered(element))
@@ -64,19 +64,19 @@ class AvidRegistry(
      * Removes from SQLDelight database and in-memory cache.
      * Recursively unregisters children.
      */
-    suspend fun unregister(vuid: String): Boolean {
-        val element = repository.getByAvid(vuid) ?: return false
+    suspend fun unregister(avid: String): Boolean {
+        val element = repository.getByAvid(avid) ?: return false
 
         // Unregister children recursively
-        element.children.toList().forEach { childVuid: String ->
-            unregister(childVuid)
+        element.children.toList().forEach { childAvid: String ->
+            unregister(childAvid)
         }
 
         // Delete from repository (handles database + cache + indexes)
-        val deleted = repository.deleteByAvid(vuid)
+        val deleted = repository.deleteByAvid(avid)
 
         if (deleted) {
-            _registrations.emit(RegistrationEvent.ElementUnregistered(vuid))
+            _registrations.emit(RegistrationEvent.ElementUnregistered(avid))
         }
 
         return deleted
@@ -98,9 +98,9 @@ class AvidRegistry(
     }
 
     /**
-     * Find element by VUID
+     * Find element by AVID
      */
-    fun findByVUID(vuid: String): AvidElement? = repository.getByAvid(vuid)
+    fun findByAvid(avid: String): AvidElement? = repository.getByAvid(avid)
 
     /**
      * Find elements by name (partial match)
@@ -125,15 +125,15 @@ class AvidRegistry(
     /**
      * Find children of element
      */
-    fun findChildren(parentVuid: String): List<AvidElement> {
-        return repository.getChildren(parentVuid).sortedBy { it.position?.index ?: Int.MAX_VALUE }
+    fun findChildren(parentAvid: String): List<AvidElement> {
+        return repository.getChildren(parentAvid).sortedBy { it.position?.index ?: Int.MAX_VALUE }
     }
 
     /**
      * Find parent of element
      */
-    fun findParent(vuid: String): AvidElement? {
-        val element = repository.getByAvid(vuid) ?: return null
+    fun findParent(avid: String): AvidElement? {
+        val element = repository.getByAvid(avid) ?: return null
         return element.parent?.let { repository.getByAvid(it) }
     }
     
@@ -188,11 +188,11 @@ class AvidRegistry(
      * Clears both SQLDelight database and in-memory cache.
      */
     suspend fun clear() {
-        val clearedVuids = repository.getAll().map { it.avid }
+        val clearedAvids = repository.getAll().map { it.avid }
         repository.deleteAll()
 
-        clearedVuids.forEach { vuid ->
-            _registrations.emit(RegistrationEvent.ElementUnregistered(vuid))
+        clearedAvids.forEach { avid ->
+            _registrations.emit(RegistrationEvent.ElementUnregistered(avid))
         }
     }
 
@@ -218,7 +218,7 @@ class AvidRegistry(
     /**
      * Check if element exists
      */
-    fun exists(vuid: String): Boolean = repository.exists(vuid)
+    fun exists(avid: String): Boolean = repository.exists(avid)
 
     /**
      * Get element count

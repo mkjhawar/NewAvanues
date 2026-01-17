@@ -5,7 +5,7 @@ import com.augmentalis.avidcreator.models.*
 import kotlin.math.*
 
 /**
- * Spatial navigation system for UUID elements
+ * Spatial navigation system for AVID elements
  * Handles directional navigation and position-based targeting
  */
 class SpatialNavigator(private val registry: AvidRegistry) {
@@ -32,8 +32,8 @@ class SpatialNavigator(private val registry: AvidRegistry) {
     /**
      * Navigate from one element to another in specified direction
      */
-    fun navigate(fromUUID: String, direction: Direction): NavigationResult {
-        val sourceElement = registry.findByVUID(fromUUID) 
+    fun navigate(fromAvid: String, direction: Direction): NavigationResult {
+        val sourceElement = registry.findByAvid(fromAvid)
             ?: return NavigationResult(null, Float.MAX_VALUE, direction, 0f)
         
         val sourcePos = sourceElement.position 
@@ -75,12 +75,12 @@ class SpatialNavigator(private val registry: AvidRegistry) {
     /**
      * Find nearest element in any direction
      */
-    fun findNearest(fromUUID: String, maxDistance: Float = Float.MAX_VALUE): NavigationResult? {
-        val sourceElement = registry.findByVUID(fromUUID) ?: return null
+    fun findNearest(fromAvid: String, maxDistance: Float = Float.MAX_VALUE): NavigationResult? {
+        val sourceElement = registry.findByAvid(fromAvid) ?: return null
         val sourcePos = sourceElement.position ?: return null
 
         val nearest = registry.getEnabledElements()
-            .filter { it.avid != fromUUID && it.position != null }
+            .filter { it.avid != fromAvid && it.position != null }
             .minByOrNull { element ->
                 element.position?.let { calculateDistance(sourcePos, it) } ?: Float.MAX_VALUE
             }
