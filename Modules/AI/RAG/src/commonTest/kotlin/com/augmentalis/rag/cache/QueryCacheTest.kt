@@ -6,9 +6,10 @@
 package com.augmentalis.rag.cache
 
 import com.augmentalis.rag.domain.Embedding
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlin.test.*
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -23,6 +24,21 @@ import kotlin.time.Duration.Companion.milliseconds
  * - Statistics tracking
  */
 class QueryCacheTest {
+
+    /**
+     * Test clock that allows manual time advancement
+     */
+    private class TestClock : Clock {
+        private var currentTime: Instant = Instant.fromEpochMilliseconds(0)
+
+        override fun now(): Instant = currentTime
+
+        fun advance(duration: Duration) {
+            currentTime = Instant.fromEpochMilliseconds(
+                currentTime.toEpochMilliseconds() + duration.inWholeMilliseconds
+            )
+        }
+    }
 
     private fun mockEmbedding(seed: Int = 0): Embedding.Float32 {
         return Embedding.Float32(FloatArray(384) { (it + seed).toFloat() })
@@ -96,15 +112,16 @@ class QueryCacheTest {
     }
 
     @Test
-    fun testTTLExpiration() = runTest {
-        val cache = QueryCache(maxSize = 10, ttl = 100.milliseconds)
+    fun testTTLExpiration() {
+        val testClock = TestClock()
+        val cache = QueryCache(maxSize = 10, ttl = 100.milliseconds, clock = testClock)
         cache.put("query", mockEmbedding())
 
         // Immediately available
         assertNotNull(cache.get("query"))
 
-        // Wait for TTL to expire
-        delay(150.milliseconds)
+        // Advance time past TTL
+        testClock.advance(150.milliseconds)
 
         // Should be expired and return null
         assertNull(cache.get("query"))
@@ -165,16 +182,16 @@ class QueryCacheTest {
         // Clear cache
         cache.clear()
 
-        // All should be gone
-        assertNull(cache.get("query1"))
-        assertNull(cache.get("query2"))
-        assertNull(cache.get("query3"))
-
-        // Stats should be reset
+        // Stats should be reset immediately after clear
         val stats = cache.stats()
         assertEquals(0, stats.size)
         assertEquals(0L, stats.hits)
         assertEquals(0L, stats.misses)
+
+        // All entries should be gone
+        assertNull(cache.get("query1"))
+        assertNull(cache.get("query2"))
+        assertNull(cache.get("query3"))
     }
 
     @Test
@@ -221,8 +238,9 @@ class QueryCacheTest {
     }
 
     @Test
-    fun testStatisticsValidEntries() = runTest {
-        val cache = QueryCache(maxSize = 10, ttl = 100.milliseconds)
+    fun testStatisticsValidEntries() {
+        val testClock = TestClock()
+        val cache = QueryCache(maxSize = 10, ttl = 100.milliseconds, clock = testClock)
 
         // Add entries
         cache.put("query1", mockEmbedding(1))
@@ -232,8 +250,8 @@ class QueryCacheTest {
         assertEquals(2, stats.size)
         assertEquals(2, stats.validEntries)
 
-        // Wait for expiration
-        delay(150.milliseconds)
+        // Advance time past TTL
+        testClock.advance(150.milliseconds)
 
         // Stats should show 0 valid entries (but size is still 2 until evicted)
         stats = cache.stats()
@@ -242,8 +260,9 @@ class QueryCacheTest {
     }
 
     @Test
-    fun testEvictExpired() = runTest {
-        val cache = QueryCache(maxSize = 10, ttl = 100.milliseconds)
+    fun testEvictExpired() {
+        val testClock = TestClock()
+        val cache = QueryCache(maxSize = 10, ttl = 100.milliseconds, clock = testClock)
 
         // Add entries
         cache.put("query1", mockEmbedding(1))
@@ -251,8 +270,8 @@ class QueryCacheTest {
 
         assertEquals(2, cache.stats().size)
 
-        // Wait for expiration
-        delay(150.milliseconds)
+        // Advance time past TTL
+        testClock.advance(150.milliseconds)
 
         // Manually evict expired entries
         cache.evictExpired()
@@ -363,7 +382,7 @@ class QueryCacheTest {
     }
 
     @Test
-    fun testConcurrentAccess() = runTest {
+    fun testConcurrentAccess() {
         val cache = QueryCache(maxSize = 100)
 
         // Simulate concurrent access
@@ -386,7 +405,7 @@ class QueryCacheTest {
     }
 
     @Test
-    fun testRealWorldUsagePattern() = runTest {
+    fun testRealWorldUsagePattern() {
         val cache = QueryCache(maxSize = 100, ttl = 1000.milliseconds)
 
         // Simulate real-world usage

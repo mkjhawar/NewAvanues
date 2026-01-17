@@ -81,18 +81,20 @@ class BM25Scorer(
             // Skip terms not in document or not in corpus
             if (tf == 0 || df == 0) continue
 
-            // Prevent log(0) and division by zero
-            if (df >= totalDocs) continue
-
             // IDF = log((N - df + 0.5) / (df + 0.5))
             // Robertson-Sparck Jones weight
+            // When term appears in all docs, IDF can be negative or near-zero
+            // We use max(epsilon, IDF) to ensure common terms still contribute
+            // based on TF and length normalization (BM25+ variant)
             val numerator = (totalDocs - df + 0.5f)
             val denominator = (df + 0.5f)
 
-            // Skip if IDF would be negative or invalid
-            if (numerator <= 0f || denominator <= 0f) continue
+            // Skip if denominator is invalid
+            if (denominator <= 0f) continue
 
-            val idf = ln(numerator / denominator)
+            // Use small epsilon (0.001) to ensure scoring even for universal terms
+            val rawIdf = if (numerator <= 0f) 0f else ln(numerator / denominator).toFloat()
+            val idf = maxOf(0.001f, rawIdf)
 
             // Normalized TF with saturation
             // The (k1 + 1) in numerator and k1 in denominator create saturation effect

@@ -58,7 +58,6 @@ class ReciprocalRankFusion(private val k: Int = 60) {
      */
     fun fuse(vararg rankedLists: List<ScoredDocument>): List<ScoredDocument> {
         if (rankedLists.isEmpty()) return emptyList()
-        if (rankedLists.size == 1) return rankedLists[0]
 
         val rrfScores = mutableMapOf<String, Float>()
 
@@ -95,7 +94,6 @@ class ReciprocalRankFusion(private val k: Int = 60) {
      */
     fun fuseWeighted(vararg rankedListsWithWeights: Pair<List<ScoredDocument>, Float>): List<ScoredDocument> {
         if (rankedListsWithWeights.isEmpty()) return emptyList()
-        if (rankedListsWithWeights.size == 1) return rankedListsWithWeights[0].first
 
         val rrfScores = mutableMapOf<String, Float>()
 

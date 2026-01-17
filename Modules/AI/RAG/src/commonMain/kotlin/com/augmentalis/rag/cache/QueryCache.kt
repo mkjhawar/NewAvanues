@@ -28,7 +28,8 @@ import kotlin.time.Duration.Companion.hours
  */
 class QueryCache(
     private val maxSize: Int = 1000,
-    private val ttl: Duration = 1.hours
+    private val ttl: Duration = 1.hours,
+    private val clock: Clock = Clock.System
 ) {
     // Manual LRU tracking using LinkedHashMap insertion order
     // We'll move entries to end on access to maintain LRU order
@@ -60,7 +61,7 @@ class QueryCache(
         }
 
         // Check TTL expiration
-        val now = Clock.System.now()
+        val now = clock.now()
         val age = now - entry.timestamp
         if (age > ttl) {
             cache.remove(normalized)
@@ -85,7 +86,7 @@ class QueryCache(
      */
     fun put(query: String, embedding: Embedding.Float32) {
         val normalized = normalizeQuery(query)
-        val now = Clock.System.now()
+        val now = clock.now()
 
         // If entry already exists, remove it first to update position
         if (cache.containsKey(normalized)) {
@@ -121,7 +122,7 @@ class QueryCache(
      * Get cache statistics
      */
     fun stats(): CacheStats {
-        val now = Clock.System.now()
+        val now = clock.now()
         val validEntries = cache.values.count { (now - it.timestamp) <= ttl }
 
         return CacheStats(
@@ -141,7 +142,7 @@ class QueryCache(
      * Not required for correctness (get() checks expiration).
      */
     fun evictExpired() {
-        val now = Clock.System.now()
+        val now = clock.now()
         val expiredKeys = cache.filterValues { entry ->
             (now - entry.timestamp) > ttl
         }.keys.toList()

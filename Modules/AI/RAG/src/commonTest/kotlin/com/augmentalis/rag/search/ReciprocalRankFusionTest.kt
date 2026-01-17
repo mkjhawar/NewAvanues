@@ -28,13 +28,16 @@ class ReciprocalRankFusionTest {
 
         val list2 = listOf(
             ReciprocalRankFusion.ScoredDocument("doc2", 0.95f),
-            ReciprocalRankFusion.ScoredDocument("doc1", 0.85f),
+            ReciprocalRankFusion.ScoredDocument("doc3", 0.85f),
             ReciprocalRankFusion.ScoredDocument("doc4", 0.75f)
         )
 
         val fused = rrf.fuse(list1, list2)
 
-        // Doc2 appears first in both lists, should rank highest
+        // Doc2 appears high in both lists (rank 2 + rank 1), should rank highest
+        // doc2: 1/62 + 1/61 = 0.0325
+        // doc3: 1/63 + 1/62 = 0.0320
+        // doc1: 1/61 only = 0.0164
         assertEquals("doc2", fused[0].documentId, "Doc appearing in top of both lists should rank first")
     }
 
