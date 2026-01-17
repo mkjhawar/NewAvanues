@@ -4,10 +4,23 @@ plugins {
     id("com.android.library")
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
+    application
 }
 
 group = "com.augmentalis.alc"
-version = "1.0.0"
+version = "2.0.0"
+
+// Desktop CLI application configuration
+application {
+    mainClass.set("com.augmentalis.alc.cli.ALCModelToolKt")
+}
+
+// Task alias for running CLI
+tasks.register("runCli") {
+    group = "application"
+    description = "Run the AVA Model Manager CLI"
+    dependsOn("run")
+}
 
 kotlin {
     // Android target
@@ -99,6 +112,18 @@ kotlin {
                 implementation("io.ktor:ktor-client-cio:2.3.7")
                 // ONNX Runtime for desktop inference
                 implementation("com.microsoft.onnxruntime:onnxruntime:1.16.3")
+                // Logging
+                implementation("org.slf4j:slf4j-api:2.0.9")
+                implementation("ch.qos.logback:logback-classic:1.4.11")
+                // Coroutines JVM
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.3")
+            }
+        }
+
+        val desktopTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
             }
         }
 
