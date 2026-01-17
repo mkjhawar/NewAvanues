@@ -50,11 +50,12 @@ kotlin {
         }
     }
 
-    // JS target (optional)
-    js(IR) {
-        browser()
-        nodejs()
-    }
+    // JS target (disabled - conflicts with NodeJsRootPlugin in this project)
+    // Uncomment when needed:
+    // js(IR) {
+    //     browser()
+    //     nodejs()
+    // }
 
     sourceSets {
         val commonMain by getting {
@@ -162,11 +163,12 @@ kotlin {
             }
         }
 
-        val jsMain by getting {
-            dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:1.7.3")
-            }
-        }
+        // JS target disabled - uncomment when JS target is enabled
+        // val jsMain by getting {
+        //     dependencies {
+        //         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:1.7.3")
+        //     }
+        // }
     }
 }
 

@@ -156,8 +156,8 @@ class CommandMatchingService(
                 patterns = listOf(cmd.canonicalPhrase) + cmd.alternativePhrases,
                 synonyms = emptyList(),
                 embedding = null,
-                category = cmd.category,
-                actionId = cmd.actionId,
+                category = cmd.category ?: "general",
+                actionId = cmd.actionId ?: cmd.canonicalPhrase,
                 priority = cmd.priority,
                 locale = "en",
                 source = "commands"
@@ -605,6 +605,7 @@ data class MatchingConfig(
     val ambiguityThreshold: Float = 0.1f,
     val maxCandidates: Int = 5,
     val agreementBonus: Float = 0.05f,
+    val normalizationConfig: NormalizationConfig = NormalizationConfig(),
     val enabledStrategies: Set<MatchStrategy> = setOf(
         MatchStrategy.LEARNED,
         MatchStrategy.EXACT,

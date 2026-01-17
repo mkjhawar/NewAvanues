@@ -20,7 +20,6 @@ import com.augmentalis.speechrecognition.SpeechRecognitionService
 import com.augmentalis.speechrecognition.createSpeechRecognitionService
 import com.augmentalis.speechrecognition.RecognitionResult
 import com.augmentalis.speechrecognition.ServiceState
-import com.augmentalis.speechrecognition.SpeechMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -82,8 +81,8 @@ class KmpSpeechEngineAdapter(
             // Map config to KMP SpeechConfig
             val kmpConfig = com.augmentalis.speechrecognition.SpeechConfig(
                 language = config.language,
-                mode = mapMode(config.mode),
-                engine = mapEngine(engineType),
+                mode = mapModeToKmp(config.mode),
+                engine = mapEngineToKmp(engineType),
                 confidenceThreshold = config.confidenceThreshold,
                 enableFuzzyMatching = true,
                 enableSemanticMatching = true,
@@ -103,7 +102,7 @@ class KmpSpeechEngineAdapter(
             }
 
             currentConfig = config
-            engineType = config.speechEngine
+            // engineType is already set from constructor - don't update from config
 
             // Collect state changes
             collectServiceState(svc)
@@ -184,7 +183,7 @@ class KmpSpeechEngineAdapter(
 
         // Apply configuration changes
         svc.setLanguage(config.language)
-        svc.setMode(mapMode(config.mode))
+        svc.setMode(mapModeToKmp(config.mode))
         currentConfig = config
 
         return Result.success(Unit)
@@ -217,20 +216,27 @@ class KmpSpeechEngineAdapter(
     }
 
     // =========================================================================
-    // Mapping Functions
+    // Mapping Functions - VoiceOSCore -> SpeechRecognition
     // =========================================================================
 
-    private fun mapMode(mode: SpeechMode): com.augmentalis.speechrecognition.SpeechMode {
+    /**
+     * Map VoiceOSCore SpeechMode to SpeechRecognition SpeechMode
+     */
+    private fun mapModeToKmp(mode: SpeechMode): com.augmentalis.speechrecognition.SpeechMode {
         return when (mode) {
             SpeechMode.STATIC_COMMAND -> com.augmentalis.speechrecognition.SpeechMode.STATIC_COMMAND
             SpeechMode.DYNAMIC_COMMAND -> com.augmentalis.speechrecognition.SpeechMode.DYNAMIC_COMMAND
             SpeechMode.COMBINED_COMMAND -> com.augmentalis.speechrecognition.SpeechMode.HYBRID
             SpeechMode.DICTATION -> com.augmentalis.speechrecognition.SpeechMode.DICTATION
-            else -> com.augmentalis.speechrecognition.SpeechMode.DYNAMIC_COMMAND
+            SpeechMode.FREE_SPEECH -> com.augmentalis.speechrecognition.SpeechMode.FREE_SPEECH
+            SpeechMode.HYBRID -> com.augmentalis.speechrecognition.SpeechMode.HYBRID
         }
     }
 
-    private fun mapEngine(engine: SpeechEngine): com.augmentalis.speechrecognition.SpeechEngine {
+    /**
+     * Map VoiceOSCore SpeechEngine to SpeechRecognition SpeechEngine
+     */
+    private fun mapEngineToKmp(engine: SpeechEngine): com.augmentalis.speechrecognition.SpeechEngine {
         return when (engine) {
             SpeechEngine.VOSK -> com.augmentalis.speechrecognition.SpeechEngine.VOSK
             SpeechEngine.VIVOKA -> com.augmentalis.speechrecognition.SpeechEngine.VIVOKA
@@ -242,6 +248,9 @@ class KmpSpeechEngineAdapter(
         }
     }
 
+    /**
+     * Map SpeechRecognition RecognitionResult to VoiceOSCore SpeechResult
+     */
     private fun mapResult(result: RecognitionResult): SpeechResult {
         return SpeechResult(
             text = result.text,
@@ -254,16 +263,20 @@ class KmpSpeechEngineAdapter(
         )
     }
 
+    /**
+     * Map SpeechRecognition SpeechError to VoiceOSCore SpeechError
+     */
     private fun mapError(error: com.augmentalis.speechrecognition.SpeechError): SpeechError {
-        val code = when (error.type) {
-            com.augmentalis.speechrecognition.SpeechError.Type.NOT_INITIALIZED -> SpeechError.ErrorCode.NOT_INITIALIZED
-            com.augmentalis.speechrecognition.SpeechError.Type.AUDIO_ERROR -> SpeechError.ErrorCode.AUDIO_ERROR
-            com.augmentalis.speechrecognition.SpeechError.Type.NETWORK_ERROR -> SpeechError.ErrorCode.NETWORK_ERROR
-            com.augmentalis.speechrecognition.SpeechError.Type.PERMISSION_ERROR -> SpeechError.ErrorCode.PERMISSION_DENIED
-            com.augmentalis.speechrecognition.SpeechError.Type.NO_SPEECH -> SpeechError.ErrorCode.NO_SPEECH_DETECTED
-            com.augmentalis.speechrecognition.SpeechError.Type.RECOGNITION_ERROR -> SpeechError.ErrorCode.RECOGNITION_FAILED
-            com.augmentalis.speechrecognition.SpeechError.Type.MODEL_ERROR -> SpeechError.ErrorCode.MODEL_NOT_FOUND
-            com.augmentalis.speechrecognition.SpeechError.Type.TIMEOUT -> SpeechError.ErrorCode.TIMEOUT
+        val code = when (error.code) {
+            com.augmentalis.speechrecognition.SpeechError.ERROR_NOT_INITIALIZED -> SpeechError.ErrorCode.NOT_INITIALIZED
+            com.augmentalis.speechrecognition.SpeechError.ERROR_AUDIO -> SpeechError.ErrorCode.AUDIO_ERROR
+            com.augmentalis.speechrecognition.SpeechError.ERROR_NETWORK,
+            com.augmentalis.speechrecognition.SpeechError.ERROR_NETWORK_TIMEOUT -> SpeechError.ErrorCode.NETWORK_ERROR
+            com.augmentalis.speechrecognition.SpeechError.ERROR_PERMISSIONS -> SpeechError.ErrorCode.PERMISSION_DENIED
+            com.augmentalis.speechrecognition.SpeechError.ERROR_NO_MATCH -> SpeechError.ErrorCode.NO_SPEECH_DETECTED
+            com.augmentalis.speechrecognition.SpeechError.ERROR_MODEL -> SpeechError.ErrorCode.MODEL_NOT_FOUND
+            com.augmentalis.speechrecognition.SpeechError.ERROR_SPEECH_TIMEOUT -> SpeechError.ErrorCode.TIMEOUT
+            com.augmentalis.speechrecognition.SpeechError.ERROR_BUSY -> SpeechError.ErrorCode.ENGINE_BUSY
             else -> SpeechError.ErrorCode.UNKNOWN
         }
 
