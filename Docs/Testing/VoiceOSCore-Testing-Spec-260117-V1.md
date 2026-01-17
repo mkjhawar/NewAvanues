@@ -38,29 +38,31 @@ Located in: `src/commonTest/kotlin/com/augmentalis/voiceoscore/`
 | Test File | Component | Test Count | Status |
 |-----------|-----------|------------|--------|
 | `CommandGeneratorUtilsTest.kt` | CommandGeneratorUtils | 18 | Created |
-| `QuantizedCommandTest.kt` | QuantizedCommand | 12 | Created |
+| `QuantizedCommandTest.kt` | QuantizedCommand | 17 | Created |
 | `HandlerResultTest.kt` | HandlerResult | 18 | Created |
-| `SynonymSetTest.kt` | SynonymSet, SynonymMap | 12 | Created |
+| `SynonymSetTest.kt` | SynonymSet, SynonymMap | 21 | Created |
 
 ### 2.2 Android Instrumentation Tests
 
 Located in: `src/androidInstrumentedTest/kotlin/`
 
-| Test File | Component | Priority |
-|-----------|-----------|----------|
-| `AccessibilityIntegrationTest.kt` | Accessibility Service | P0 |
-| `SpeechRecognitionTest.kt` | Speech Engine | P0 |
-| `OverlayRenderingTest.kt` | Overlay System | P1 |
-| `CommandExecutionTest.kt` | Action Coordinator | P0 |
+| Test File | Component | Priority | Status |
+|-----------|-----------|----------|--------|
+| `AccessibilityIntegrationTest.kt` | Accessibility Service | P0 | Planned |
+| `SpeechRecognitionTest.kt` | Speech Engine | P0 | Planned |
+| `OverlayRenderingTest.kt` | Overlay System | P1 | Planned |
+| `CommandExecutionTest.kt` | Action Coordinator | P0 | Planned |
 
 ### 2.3 Desktop Tests (desktopTest)
 
 Located in: `src/desktopTest/kotlin/`
 
-| Test File | Component | Priority |
-|-----------|-----------|----------|
-| `JvmLoggerTest.kt` | Logging System | P2 |
-| `SynonymPathsTest.kt` | File System Paths | P1 |
+| Test File | Component | Priority | Status |
+|-----------|-----------|----------|--------|
+| `JvmLoggerTest.kt` | Logging System | P2 | Planned |
+| `SynonymPathsTest.kt` | File System Paths | P1 | Planned |
+
+**Note:** Common tests run on desktop JVM target via `desktopTest` task.
 
 ---
 
@@ -119,20 +121,28 @@ Located in: `src/desktopTest/kotlin/`
 | HR-007 | InProgress with progress | progress 0-100, statusMessage |
 | HR-008 | AwaitingSelection | matchCount, announcement |
 
-### 3.4 SynonymMap
+### 3.4 SynonymMap (Builder Pattern)
 
-**Purpose:** Store and retrieve word synonyms
+**Purpose:** Store and retrieve word synonyms using Builder pattern
 
 **Test Scenarios:**
 
 | ID | Scenario | Expected |
 |----|----------|----------|
-| SM-001 | Add and retrieve | Synonyms returned for word |
-| SM-002 | Unknown word | Empty list returned |
-| SM-003 | containsWord check | true/false correctly |
-| SM-004 | allWords enumeration | All added words returned |
-| SM-005 | clear operation | Map emptied |
-| SM-006 | size tracking | Correct count |
+| SM-001 | Builder creates map | `SynonymMap.Builder("en").add(...).build()` works |
+| SM-002 | getCanonical returns mapped action | "tap" → "click" |
+| SM-003 | getCanonical case insensitive | "TAP" → "click" |
+| SM-004 | getCanonical unknown word | Returns null |
+| SM-005 | getSynonyms returns list | All synonyms for canonical |
+| SM-006 | getSynonyms unknown canonical | Returns empty list |
+| SM-007 | hasMapping check | true/false correctly |
+| SM-008 | expand single word | "tap submit" → "click submit" |
+| SM-009 | expand multiple words | "tap preferences" → "click settings" |
+| SM-010 | expandWithMultiWord | "long press" → "long_click" |
+| SM-011 | getAllCanonicals | Returns all canonical words |
+| SM-012 | empty factory method | `SynonymMap.empty("en")` returns empty map |
+| SM-013 | fromEntries factory | Creates map from SynonymEntry list |
+| SM-014 | Builder varargs | `.add("click", "tap", "press")` works |
 
 ---
 
@@ -281,10 +291,24 @@ val sampleTextField = QuantizedElement(
 val sampleClickCommand = QuantizedCommand(
     avid = "cmd-click-submit",
     phrase = "click submit",
-    action = CommandActionType.CLICK,
+    actionType = CommandActionType.CLICK,
     targetAvid = "btn-submit-123",
-    confidence = 0.95f,
-    aliases = listOf("tap submit", "press submit")
+    confidence = 0.95f
+)
+
+// Add metadata for additional context
+val commandWithMetadata = sampleClickCommand
+    .withMetadata("screen_id", "main_screen")
+    .withMetadata("app_version", "1.0.0")
+
+// Create via factory method with package info
+val factoryCommand = QuantizedCommand.create(
+    avid = "cmd-nav-settings",
+    phrase = "go to settings",
+    actionType = CommandActionType.CLICK,
+    packageName = "com.augmentalis.voiceoscoreng",
+    targetAvid = "nav-settings-456",
+    confidence = 0.9f
 )
 ```
 
