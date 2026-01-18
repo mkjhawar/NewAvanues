@@ -239,6 +239,7 @@ dependencies {
     // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // Unified database for coordination - DISABLED: Depends on SQLDelight
     implementation(project(":android:apps:VoiceCursor"))
     implementation(project(":Modules:AVID"))
+    implementation(project(":Modules:AvidCreator"))  // AVID Android extensions (moved from VoiceOS/libraries)
 
     // VoiceOSCoreNG - Next-gen unified core (KMP)
     // Consolidates JITLearning + LearnAppCore + learnapp/ into single cross-platform module

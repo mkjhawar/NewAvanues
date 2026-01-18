@@ -485,7 +485,7 @@ class VoiceCommandProcessor(
             } catch (e: Exception) {
                 "0"
             }
-            val nodeHash = com.augmentalis.uuidcreator.thirdparty.AvidFingerprint.fromNode(node, packageName, appVersion).generateHash()
+            val nodeHash = com.augmentalis.avidcreator.thirdparty.AvidFingerprint.fromNode(node, packageName, appVersion).generateHash()
 
             if (nodeHash == targetHash) {
                 Log.d(TAG, "Found matching node: ${node.className}")

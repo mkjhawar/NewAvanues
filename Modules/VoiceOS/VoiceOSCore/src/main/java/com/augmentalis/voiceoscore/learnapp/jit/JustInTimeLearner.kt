@@ -189,7 +189,7 @@ class JustInTimeLearner(
         this.accessibilityService = accessibilityService
 
         // Phase 4: Initialize UUID generator for element identification
-        val thirdPartyUuidGenerator = com.augmentalis.uuidcreator.thirdparty.ThirdPartyAvidGenerator(context)
+        val thirdPartyUuidGenerator = com.augmentalis.avidcreator.thirdparty.ThirdPartyAvidGenerator(context)
 
         elementCapture = JitElementCapture(accessibilityService, databaseManager, thirdPartyUuidGenerator)
 

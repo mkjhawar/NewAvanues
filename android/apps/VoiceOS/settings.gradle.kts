@@ -69,7 +69,7 @@ include(":android:apps:VoiceOSIPCTest")  // IPC test client (Phase 3f)
 include(":Modules:VoiceOS:managers:CommandManager")  // RE-ENABLED: Agent Swarm Task 2.1 - CommandManager restoration
 include(":Modules:VoiceOS:managers:VoiceDataManager")  // Migrated to SQLDelight (Phase 4 complete)
 include(":Modules:VoiceOS:managers:LocalizationManager")
-include(":Modules:VoiceOS:managers:LicenseManager")
+include(":Modules:LicenseManager")  // Moved from VoiceOS/managers
 include(":Modules:VoiceOS:managers:HUDManager")
 
 // Shared Libraries (Moved to monorepo Modules/)
@@ -79,9 +79,9 @@ include(":Modules:AVID")  // Migrated from UUIDCreator
 include(":Modules:DeviceManager")  // Device management library
 include(":Modules:SpeechRecognition")  // Unified speech recognition module (LearningSystem stubbed)
 // include(":Modules:VoiceOS:libraries:VoiceKeyboard")  // DISABLED: Depends on VoiceDataManager (Phase 4)
-include(":Modules:VoiceOS:libraries:VoiceOsLogging")  // Timber-based logging with custom Trees
-include(":Modules:VoiceOS:libraries:PluginSystem")  // MagicCode plugin infrastructure (KMP support)
-include(":Modules:VoiceOS:libraries:UniversalIPC")  // Universal IPC Protocol encoder/decoder
+include(":Modules:VoiceOS:core:voiceos-logging")  // Use core logging module (VoiceOsLogging archived)
+include(":Modules:PluginSystem")  // Moved from VoiceOS/libraries
+include(":Modules:AvaMagic:IPC")  // Universal IPC Protocol (consolidated)
 
 // Kotlin Multiplatform Libraries (Moved to monorepo Common/)
 include(":Modules:VoiceOS:core:result")         // VoiceOSResult monad - Type-safe error handling
@@ -118,16 +118,15 @@ project(":android:apps:VoiceOSIPCTest").projectDir = file("../VoiceOSIPCTest")
 project(":Modules:VoiceOS:managers:CommandManager").projectDir = file("../../../Modules/VoiceOS/managers/CommandManager")
 project(":Modules:VoiceOS:managers:VoiceDataManager").projectDir = file("../../../Modules/VoiceOS/managers/VoiceDataManager")
 project(":Modules:VoiceOS:managers:LocalizationManager").projectDir = file("../../../Modules/VoiceOS/managers/LocalizationManager")
-project(":Modules:VoiceOS:managers:LicenseManager").projectDir = file("../../../Modules/VoiceOS/managers/LicenseManager")
+project(":Modules:LicenseManager").projectDir = file("../../../Modules/LicenseManager")
 project(":Modules:VoiceOS:managers:HUDManager").projectDir = file("../../../Modules/VoiceOS/managers/HUDManager")
 
 project(":Modules:AvaMagic:AvaUI:Voice").projectDir = file("../../../Modules/AvaMagic/AvaUI/Voice")
 project(":Modules:AVID").projectDir = file("../../../Modules/AVID")
 project(":Modules:DeviceManager").projectDir = file("../../../Modules/DeviceManager")
 project(":Modules:SpeechRecognition").projectDir = file("../../../Modules/SpeechRecognition")
-project(":Modules:VoiceOS:libraries:VoiceOsLogging").projectDir = file("../../../Modules/VoiceOS/libraries/VoiceOsLogging")
-project(":Modules:VoiceOS:libraries:PluginSystem").projectDir = file("../../../Modules/VoiceOS/libraries/PluginSystem")
-project(":Modules:VoiceOS:libraries:UniversalIPC").projectDir = file("../../../Modules/VoiceOS/libraries/UniversalIPC")
+project(":Modules:PluginSystem").projectDir = file("../../../Modules/PluginSystem")
+project(":Modules:AvaMagic:IPC").projectDir = file("../../../Modules/AvaMagic/IPC")
 
 project(":Modules:VoiceOS:core:result").projectDir = file("../../../Modules/VoiceOS/core/result")
 project(":Modules:VoiceOS:core:hash").projectDir = file("../../../Modules/VoiceOS/core/hash")

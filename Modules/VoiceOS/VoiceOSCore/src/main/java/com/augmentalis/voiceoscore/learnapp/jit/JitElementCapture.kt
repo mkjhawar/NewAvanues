@@ -55,7 +55,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 class JitElementCapture(
     private val accessibilityService: AccessibilityService,
     private val databaseManager: VoiceOSDatabaseManager,
-    private val thirdPartyUuidGenerator: com.augmentalis.uuidcreator.thirdparty.ThirdPartyAvidGenerator
+    private val thirdPartyUuidGenerator: com.augmentalis.avidcreator.thirdparty.ThirdPartyAvidGenerator
 ) {
     /**
      * Developer settings for JIT configuration

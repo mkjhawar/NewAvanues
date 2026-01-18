@@ -88,7 +88,7 @@ dependencies {
     implementation(project(":Modules:VoiceOS:managers:CommandManager"))  // RE-ENABLED: Agent Swarm Task 2.1
     // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight database
     implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))
-    implementation(project(":Modules:VoiceOS:managers:LicenseManager"))
+    implementation(project(":Modules:LicenseManager"))  // Moved from VoiceOS/managers
 
     // Shared Libraries
     implementation(project(":Modules:VoiceOS:VoiceOSCore"))  // RE-ENABLED: Room→SQLDelight migration complete
@@ -97,7 +97,7 @@ dependencies {
     implementation(project(":Modules:DeviceManager"))
     implementation(project(":Modules:SpeechRecognition"))  // LearningSystem stubbed
     implementation(project(":Modules:AVID"))
-    implementation(project(":Modules:VoiceOS:libraries:VoiceOsLogging"))  // Phase 3: Timber replacement
+    implementation(project(":Modules:VoiceOS:core:voiceos-logging"))  // Phase 3: Using core logging module
     
     // Android core
     implementation("androidx.core:core-ktx:1.12.0")

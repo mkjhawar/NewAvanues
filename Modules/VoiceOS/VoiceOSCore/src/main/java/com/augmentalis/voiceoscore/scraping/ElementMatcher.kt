@@ -191,7 +191,7 @@ class ElementMatcher {
             try {
                 val packageName = node.packageName?.toString() ?: "unknown"
                 val appVersion = "0" // Would need to be passed from context
-                val nodeHash = com.augmentalis.uuidcreator.thirdparty.AvidFingerprint
+                val nodeHash = com.augmentalis.avidcreator.thirdparty.AvidFingerprint
                     .fromNode(node, packageName, appVersion)
                     .generateHash()
                 nodeHash == targetHash

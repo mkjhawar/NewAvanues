@@ -45,7 +45,7 @@ import java.security.MessageDigest
     message = "Use AvidFingerprint from AvidCreator library for more robust element hashing",
     replaceWith = ReplaceWith(
         "AvidFingerprint.fromNode(node, packageName, appVersion).generateHash()",
-        "com.augmentalis.uuidcreator.thirdparty.AvidFingerprint"
+        "com.augmentalis.avidcreator.thirdparty.AvidFingerprint"
     ),
     level = DeprecationLevel.ERROR
 )

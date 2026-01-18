@@ -90,8 +90,7 @@ include(":android:apps:VoiceCursor")
 include(":android:apps:VoiceOSIPCTest")
 include(":android:apps:VoiceUI")
 
-// VoiceOS Managers
-include(":Modules:VoiceOS:managers:LicenseManager")
+// VoiceOS Managers (remaining in VoiceOS - VoiceOS-specific)
 include(":Modules:VoiceOS:managers:HUDManager")
 include(":Modules:VoiceOS:managers:CommandManager")
 include(":Modules:VoiceOS:managers:VoiceDataManager")
@@ -104,13 +103,12 @@ include(":Modules:Translation")                         // Translation services
 include(":Modules:VoiceKeyboard")                       // Voice keyboard input
 include(":vivoka:Android")                              // Vivoka VSDK wrapper (AAR dependencies)
 
-// VoiceOS Libraries (remaining)
-include(":Modules:VoiceOS:libraries:JITLearning")       // ⚠️ DEPRECATED (2026-01-06): Use Voice:Core
-include(":Modules:VoiceOS:libraries:LearnAppCore")      // ⚠️ DEPRECATED (2026-01-06): Use Voice:Core
-include(":Modules:VoiceOS:libraries:PluginSystem")
-include(":Modules:VoiceOS:libraries:UniversalIPC")
-include(":Modules:VoiceOS:libraries:AvidCreator")       // AvidCreator - Android extensions for AVID
-include(":Modules:VoiceOS:libraries:VoiceOsLogging")
+// Relocated Modules (moved from VoiceOS/libraries and VoiceOS/managers to top-level)
+include(":Modules:PluginSystem")                         // Generic DSL plugin framework (moved from VoiceOS/libraries)
+include(":Modules:AvidCreator")                          // AVID Android extensions (moved from VoiceOS/libraries)
+include(":Modules:LicenseManager")                       // License validation (moved from VoiceOS/managers)
+// NOTE: UniversalIPC consolidated into Modules:AvaMagic:IPC
+// NOTE: JITLearning, LearnAppCore, VoiceOsLogging archived (deprecated/duplicate)
 
 // WebAvanue Modules
 include(":Modules:WebAvanue:coredata")   // Data layer: repositories, database, models

@@ -64,7 +64,7 @@ dependencies {
     
     // VOS4 Dependencies
     implementation(project(":Modules:DeviceManager"))
-    implementation(project(":Modules:VoiceOS:managers:LicenseManager"))  // GlassMorphism UI
+    implementation(project(":Modules:LicenseManager"))  // GlassMorphism UI (moved from VoiceOS/managers)
     implementation(project(":Modules:SpeechRecognition"))   // LearningSystem stubbed
     implementation(project(":Modules:LicenseSDK"))
     
