@@ -78,7 +78,18 @@ import java.io.RandomAccessFile
  * - GPU vendor detection: Less reliable across manufacturers
  * - Year-based classification: Ignores budget vs flagship
  * - Decision: Multi-factor analysis (CPU + RAM + GPU + sensors)
+ *
+ * @deprecated Use DeviceCapabilityFactory.create().getHardwareProfile() for KMP-compatible API.
+ * This class remains available for Android-specific hardware profiling features not exposed via KMP.
  */
+@Deprecated(
+    message = "Use DeviceCapabilityFactory.create().getHardwareProfile() for KMP-compatible API",
+    replaceWith = ReplaceWith(
+        "DeviceCapabilityFactory.create().getHardwareProfile()",
+        "com.augmentalis.devicemanager.DeviceCapabilityFactory"
+    ),
+    level = DeprecationLevel.WARNING
+)
 class HardwareProfiler(private val context: Context) {
 
     companion object {

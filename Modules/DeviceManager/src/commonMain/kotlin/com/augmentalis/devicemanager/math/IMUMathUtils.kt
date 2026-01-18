@@ -234,15 +234,15 @@ data class EulerAngles(
     }
     
     fun toDegrees(): EulerAngles = EulerAngles(
-        Math.toDegrees(yaw.toDouble()).toFloat(),
-        Math.toDegrees(pitch.toDouble()).toFloat(),
-        Math.toDegrees(roll.toDouble()).toFloat()
+        (yaw * 180f / PI.toFloat()),
+        (pitch * 180f / PI.toFloat()),
+        (roll * 180f / PI.toFloat())
     )
-    
+
     fun toRadians(): EulerAngles = EulerAngles(
-        Math.toRadians(yaw.toDouble()).toFloat(),
-        Math.toRadians(pitch.toDouble()).toFloat(),
-        Math.toRadians(roll.toDouble()).toFloat()
+        (yaw * PI.toFloat() / 180f),
+        (pitch * PI.toFloat() / 180f),
+        (roll * PI.toFloat() / 180f)
     )
 }
 
