@@ -111,6 +111,8 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.swing)
                 // ONNX Runtime JVM for desktop inference
                 implementation("com.microsoft.onnxruntime:onnxruntime:${libs.versions.onnxruntime.get()}")
+                // SQLDelight JDBC driver for desktop database
+                implementation(libs.sqldelight.sqlite.driver)
             }
         }
 

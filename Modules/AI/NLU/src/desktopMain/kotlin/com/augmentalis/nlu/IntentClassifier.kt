@@ -91,7 +91,7 @@ actual class IntentClassifier private constructor() {
                     setIntraOpNumThreads(4)
                     setInterOpNumThreads(2)
                     // Enable memory optimization for desktop
-                    setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL)
+                    setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
                 }
 
                 ortSession = ortEnvironment.createSession(
