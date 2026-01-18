@@ -24,6 +24,9 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.datetime)
+
+            // AVUCodec - KMP AVU Protocol encoder/decoder (re-exported to consumers)
+            api(project(":Modules:AVUCodec"))
         }
 
         commonTest.dependencies {
@@ -33,6 +36,8 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.androidx.core.ktx)
+            // DeviceManager for identity and capability detection (Android-only)
+            implementation(project(":Modules:DeviceManager"))
         }
     }
 }

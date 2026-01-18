@@ -1,5 +1,5 @@
 // Author: Manoj Jhawar
-// Purpose: AVU IPC Protocol Extensions for Device Identity
+// Purpose: AVU IPC Protocol Extensions for Device Identity (Android)
 
 package com.augmentalis.avamagic.ipc
 
@@ -8,13 +8,16 @@ import com.augmentalis.devicemanager.DeviceIdentityProvider
 import kotlinx.datetime.Clock
 
 /**
- * AVU IPC Protocol Extensions for Device Identity
+ * AVU IPC Protocol Extensions for Device Identity (Android-specific)
  *
  * These helpers auto-populate deviceId from DeviceIdentityFactory,
  * ensuring consistent device identification across IPC messages.
  *
  * Protocol: Avanues Universal IPC v2.0
  * Handshake format: HND:protocolVersion:appVersion:deviceId
+ *
+ * Note: These extensions are Android-only because DeviceIdentityFactory
+ * is currently implemented for Android only.
  */
 
 /**
