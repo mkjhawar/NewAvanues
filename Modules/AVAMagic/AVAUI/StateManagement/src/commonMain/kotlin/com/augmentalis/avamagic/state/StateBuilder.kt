@@ -63,10 +63,10 @@ class StateBuilder(private val container: StateContainer = StateContainer()) {
         source: MagicState<T>,
         transform: (T) -> R
     ): StateFlow<R> {
-        return source.value.map(transform).stateIn(
+        return source.asFlow().map(transform).stateIn(
             scope = scope,
             started = SharingStarted.Eagerly,
-            initialValue = transform(source.current())
+            initialValue = transform(source.value)
         )
     }
 
@@ -78,12 +78,12 @@ class StateBuilder(private val container: StateContainer = StateContainer()) {
         source2: MagicState<T2>,
         transform: (T1, T2) -> R
     ): StateFlow<R> {
-        return combine(source1.value, source2.value) { v1, v2 ->
+        return combine(source1.asFlow(), source2.asFlow()) { v1: T1, v2: T2 ->
             transform(v1, v2)
         }.stateIn(
             scope = scope,
             started = SharingStarted.Eagerly,
-            initialValue = transform(source1.current(), source2.current())
+            initialValue = transform(source1.value, source2.value)
         )
     }
 
@@ -96,12 +96,12 @@ class StateBuilder(private val container: StateContainer = StateContainer()) {
         source3: MagicState<T3>,
         transform: (T1, T2, T3) -> R
     ): StateFlow<R> {
-        return combine(source1.value, source2.value, source3.value) { v1, v2, v3 ->
+        return combine(source1.asFlow(), source2.asFlow(), source3.asFlow()) { v1: T1, v2: T2, v3: T3 ->
             transform(v1, v2, v3)
         }.stateIn(
             scope = scope,
             started = SharingStarted.Eagerly,
-            initialValue = transform(source1.current(), source2.current(), source3.current())
+            initialValue = transform(source1.value, source2.value, source3.value)
         )
     }
 
@@ -180,7 +180,8 @@ fun <T> StateBuilder.computedState(
     compute: ComputedStateBuilder<T>.() -> T
 ): StateFlow<T> {
     val scope = CoroutineScope(Dispatchers.Main)
-    val builder = ComputedStateBuilder(scope) {
+    lateinit var builder: ComputedStateBuilder<T>
+    builder = ComputedStateBuilder(scope) {
         builder.compute()
     }
     return builder.build()

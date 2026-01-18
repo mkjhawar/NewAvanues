@@ -320,6 +320,9 @@ fun EngineChip(
                 SpeechEngine.VIVOKA -> "Vivoka"
                 SpeechEngine.GOOGLE_CLOUD -> "Cloud"
                 SpeechEngine.WHISPER -> "Whisper"
+                SpeechEngine.AZURE -> "Azure"
+                SpeechEngine.APPLE_SPEECH -> "Apple"
+                SpeechEngine.WEB_SPEECH -> "Web"
             },
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,

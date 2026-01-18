@@ -241,7 +241,7 @@ fun <T> reactive(
     modifiers: List<Modifier> = emptyList(),
     builder: (T) -> Component
 ): ReactiveComponent<T> {
-    return ReactiveComponent(state.value, id, style, modifiers, builder)
+    return ReactiveComponent(state.asFlow(), id, style, modifiers, builder)
 }
 
 /**

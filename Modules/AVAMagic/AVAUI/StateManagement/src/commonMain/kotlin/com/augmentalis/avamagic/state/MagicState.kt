@@ -1,9 +1,17 @@
 package com.augmentalis.avamagic.state
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+
+// Type alias for Compose State to avoid conflict with our State typealias
+private typealias ComposeState<T> = androidx.compose.runtime.State<T>
 
 /**
  * MagicState - Reactive state management for IDEAMagic
@@ -45,7 +53,7 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 interface MagicState<T> {
     var value: T
-    fun asState(): State<T>
+    fun asState(): ComposeState<T>
     fun asFlow(): StateFlow<T>
 }
 
@@ -54,7 +62,7 @@ interface MagicState<T> {
  */
 interface ReadOnlyMagicState<T> {
     val value: T
-    fun asState(): State<T>
+    fun asState(): ComposeState<T>
     fun asFlow(): StateFlow<T>
 }
 
@@ -72,7 +80,7 @@ private class MagicStateImpl<T>(initialValue: T) : MagicState<T> {
             _flow.value = newValue
         }
 
-    override fun asState(): State<T> = _state
+    override fun asState(): ComposeState<T> = _state
 
     override fun asFlow(): StateFlow<T> = _flow.asStateFlow()
 }
@@ -136,7 +144,7 @@ private class DerivedMagicStateImpl<T>(
             return _cachedValue as T
         }
 
-    override fun asState(): State<T> {
+    override fun asState(): ComposeState<T> {
         return derivedStateOf { value }
     }
 
@@ -160,7 +168,7 @@ fun <T> magicDerivedStateOf(calculation: () -> T): ReadOnlyMagicState<T> {
     return remember { derivedStateOf(calculation) }.value.let { value ->
         object : ReadOnlyMagicState<T> {
             override val value: T = value
-            override fun asState(): State<T> = derivedStateOf { this.value }
+            override fun asState(): ComposeState<T> = derivedStateOf { this.value }
             override fun asFlow(): StateFlow<T> = MutableStateFlow(value).asStateFlow()
         }
     }
@@ -178,7 +186,7 @@ interface MagicStateList<T> : List<T> {
     fun removeAt(index: Int): T
     fun clear()
     fun set(index: Int, element: T): T
-    fun asState(): State<List<T>>
+    fun asState(): ComposeState<List<T>>
 }
 
 /**
@@ -227,7 +235,7 @@ private class MagicStateListImpl<T>(
         return old
     }
 
-    override fun asState(): State<List<T>> {
+    override fun asState(): ComposeState<List<T>> {
         return derivedStateOf { _state.toList() }
     }
 }
@@ -263,7 +271,7 @@ interface MagicStateMap<K, V> : Map<K, V> {
     fun putAll(from: Map<out K, V>)
     fun remove(key: K): V?
     fun clear()
-    fun asState(): State<Map<K, V>>
+    fun asState(): ComposeState<Map<K, V>>
 }
 
 /**
@@ -300,7 +308,7 @@ private class MagicStateMapImpl<K, V>(
         _state.clear()
     }
 
-    override fun asState(): State<Map<K, V>> {
+    override fun asState(): ComposeState<Map<K, V>> {
         return derivedStateOf { _state.toMap() }
     }
 }
