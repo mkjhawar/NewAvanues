@@ -316,6 +316,128 @@ actual class IntentClassifier private constructor() {
         return intentEmbeddings.keys.toList()
     }
 
+    /**
+     * Classify a voice command utterance against known command phrases.
+     *
+     * VoiceOS Integration:
+     * This method wraps classifyIntent() and adds:
+     * - Ambiguity detection when multiple commands score similarly
+     * - Structured result types for command processing
+     * - Support for different matching strategies
+     *
+     * @param utterance User's spoken command
+     * @param commandPhrases List of known command phrases (used as candidate intents)
+     * @param confidenceThreshold Minimum confidence for a valid match
+     * @param ambiguityThreshold Max difference between top scores to be ambiguous
+     * @return CommandClassificationResult indicating match, ambiguity, no match, or error
+     */
+    actual suspend fun classifyCommand(
+        utterance: String,
+        commandPhrases: List<String>,
+        confidenceThreshold: Float,
+        ambiguityThreshold: Float
+    ): CommandClassificationResult = withContext(Dispatchers.Default) {
+        try {
+            // Validate inputs
+            if (!isInitialized) {
+                return@withContext CommandClassificationResult.Error(
+                    "Classifier not initialized. Call initialize() first."
+                )
+            }
+
+            if (utterance.isBlank()) {
+                return@withContext CommandClassificationResult.Error(
+                    "Utterance cannot be empty"
+                )
+            }
+
+            if (commandPhrases.isEmpty()) {
+                return@withContext CommandClassificationResult.NoMatch
+            }
+
+            println("IntentClassifier: classifyCommand: \"$utterance\"")
+            println("IntentClassifier: Phrases: ${commandPhrases.size}, Threshold: $confidenceThreshold, Ambiguity: $ambiguityThreshold")
+
+            // Step 1: Try exact matching first (fast path)
+            val normalizedUtterance = utterance.trim().lowercase()
+            for ((index, phrase) in commandPhrases.withIndex()) {
+                val normalizedPhrase = phrase.trim().lowercase()
+                if (normalizedUtterance == normalizedPhrase) {
+                    println("IntentClassifier: Exact match: $phrase (index $index)")
+                    return@withContext CommandClassificationResult.Match(
+                        commandId = phrase,
+                        confidence = 1.0f,
+                        matchMethod = MatchMethod.EXACT
+                    )
+                }
+            }
+
+            // Step 2: Use semantic classification via classifyIntent()
+            val classificationResult = classifyIntent(utterance, commandPhrases)
+
+            when (classificationResult) {
+                is Result.Error -> {
+                    return@withContext CommandClassificationResult.Error(
+                        classificationResult.message ?: "Classification failed"
+                    )
+                }
+                is Result.Success -> {
+                    val classification = classificationResult.data
+
+                    // Extract scores and sort by confidence
+                    val sortedScores = classification.allScores.entries
+                        .sortedByDescending { it.value }
+                        .toList()
+
+                    if (sortedScores.isEmpty()) {
+                        return@withContext CommandClassificationResult.NoMatch
+                    }
+
+                    val topScore = sortedScores[0].value
+                    val topCommand = sortedScores[0].key
+
+                    println("IntentClassifier: Top: $topCommand ($topScore), Threshold: $confidenceThreshold")
+
+                    // Check if below confidence threshold
+                    if (topScore < confidenceThreshold) {
+                        println("IntentClassifier: NoMatch: top score $topScore < threshold $confidenceThreshold")
+                        return@withContext CommandClassificationResult.NoMatch
+                    }
+
+                    // Check for ambiguity: multiple candidates within ambiguityThreshold
+                    val ambiguousCandidates = sortedScores
+                        .filter { it.value >= confidenceThreshold && (topScore - it.value) <= ambiguityThreshold }
+                        .map { CommandCandidate(commandId = it.key, confidence = it.value) }
+
+                    if (ambiguousCandidates.size > 1) {
+                        println("IntentClassifier: Ambiguous: ${ambiguousCandidates.size} candidates within $ambiguityThreshold")
+                        return@withContext CommandClassificationResult.Ambiguous(
+                            candidates = ambiguousCandidates
+                        )
+                    }
+
+                    // Clear match - determine match method
+                    val matchMethod = when {
+                        intentEmbeddings.isNotEmpty() -> MatchMethod.SEMANTIC
+                        else -> MatchMethod.FUZZY
+                    }
+
+                    println("IntentClassifier: Match: $topCommand (confidence: $topScore, method: $matchMethod)")
+                    return@withContext CommandClassificationResult.Match(
+                        commandId = topCommand,
+                        confidence = topScore,
+                        matchMethod = matchMethod
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            println("IntentClassifier: classifyCommand error: ${e.message}")
+            CommandClassificationResult.Error(
+                "Command classification failed: ${e.message}"
+            )
+        }
+    }
+
     @ThreadLocal
     actual companion object {
         private var INSTANCE: IntentClassifier? = null

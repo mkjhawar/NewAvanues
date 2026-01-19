@@ -141,6 +141,8 @@ kotlin {
                 iosSimulatorArm64Main.dependsOn(this)
                 dependencies {
                     implementation("app.cash.sqldelight:native-driver:${Versions.sqldelight}")
+                    // NLU (CoreML-based)
+                    implementation(project(":Modules:AI:NLU"))
                 }
             }
 
@@ -160,6 +162,8 @@ kotlin {
             dependsOn(commonMain)
             dependencies {
                 implementation("app.cash.sqldelight:sqlite-driver:${Versions.sqldelight}")
+                // LLM (OllamaProvider)
+                implementation(project(":Modules:AI:LLM"))
             }
         }
 

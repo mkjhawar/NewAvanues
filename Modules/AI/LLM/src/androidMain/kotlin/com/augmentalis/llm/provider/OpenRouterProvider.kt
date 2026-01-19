@@ -397,6 +397,37 @@ class OpenRouterProvider(
             else -> 4096 // Default
         }
     }
+
+    // ==================== Command Interpretation (VoiceOS AI Integration) ====================
+
+    /**
+     * Interpret a voice command utterance using OpenRouter
+     *
+     * Note: Command interpretation is primarily handled by local LLM for latency.
+     */
+    override suspend fun interpretCommand(
+        utterance: String,
+        availableCommands: List<String>,
+        context: String?
+    ): CommandInterpretationResult {
+        return CommandInterpretationResult.Error(
+            "Command interpretation not implemented for OpenRouter. Use LocalLLMProvider."
+        )
+    }
+
+    /**
+     * Clarify a command when multiple candidates match
+     */
+    override suspend fun clarifyCommand(
+        utterance: String,
+        candidates: List<String>
+    ): ClarificationResult {
+        return ClarificationResult(
+            selectedCommand = null,
+            confidence = 0f,
+            clarificationQuestion = "Please use local voice assistant for command clarification."
+        )
+    }
 }
 
 // ==================== API Data Classes ====================

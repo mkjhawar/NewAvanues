@@ -1,17 +1,17 @@
 /**
- * VoiceOSCoreAndroidFactory.kt - Android factory extensions for VoiceOSCoreNG
+ * VoiceOSCoreAndroidFactory.kt - Android factory extensions for VoiceOSCore
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Created: 2026-01-19
  *
- * Provides Android-specific factory functions for creating VoiceOSCoreNG instances.
+ * Provides Android-specific factory functions for creating VoiceOSCore instances.
  */
 package com.augmentalis.voiceoscore
 
 import android.accessibilityservice.AccessibilityService
 
 /**
- * Create a VoiceOSCoreNG instance configured for Android.
+ * Create a VoiceOSCore instance configured for Android.
  *
  * This is the primary entry point for Android apps using VoiceOSCore.
  * It sets up Android-specific speech engines, handlers, and configuration.
@@ -19,42 +19,26 @@ import android.accessibilityservice.AccessibilityService
  * @param service The accessibility service for gesture dispatch
  * @param configuration Service configuration options
  * @param commandRegistry Shared command registry (optional, creates new if null)
- * @return Configured VoiceOSCoreNG instance
+ * @return Configured VoiceOSCore instance
  */
-fun VoiceOSCoreNG.Companion.createForAndroid(
+fun VoiceOSCore.Companion.createForAndroid(
     service: AccessibilityService,
     configuration: ServiceConfiguration = ServiceConfiguration.DEFAULT,
     commandRegistry: CommandRegistry? = null
-): VoiceOSCoreNG {
+): VoiceOSCore {
     // Get speech engine factory from provider
     val speechEngineFactory = SpeechEngineFactoryProvider.create()
-
-    // Get NLU processor if available
-    val nluProcessor = try {
-        NluProcessorFactory.create(NluConfig.DEFAULT)
-    } catch (e: Exception) {
-        null
-    }
-
-    // Get LLM processor if available
-    val llmProcessor = try {
-        LlmProcessorFactory.create(LlmConfig.DEFAULT)
-    } catch (e: Exception) {
-        null
-    }
 
     // Create Android handler factory with the accessibility service
     val handlerFactory = AndroidHandlerFactory(service)
 
-    // Build the VoiceOSCoreNG instance
-    return VoiceOSCoreNG.Builder()
+    // Build the VoiceOSCore instance
+    return VoiceOSCore.Builder()
         .withHandlerFactory(handlerFactory)
         .withSpeechEngineFactory(speechEngineFactory)
         .withConfiguration(configuration)
         .apply {
             commandRegistry?.let { withCommandRegistry(it) }
-            nluProcessor?.let { withNluProcessor(it) }
-            llmProcessor?.let { withLlmProcessor(it) }
         }
         .build()
 }

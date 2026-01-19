@@ -11,8 +11,8 @@ import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscoreng.VoiceOSCoreNGApplication
-import com.augmentalis.voiceoscore.VoiceOSCoreNG
+import com.augmentalis.voiceoscoreng.VoiceOSCoreApplication
+import com.augmentalis.voiceoscore.VoiceOSCore
 import com.augmentalis.voiceoscore.createForAndroid
 import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.CommandRegistry
@@ -39,11 +39,11 @@ private const val TAG = "VoiceOSA11yService"
 private const val SCREEN_CHANGE_DEBOUNCE_MS = 300L
 
 /**
- * Accessibility Service for VoiceOSCoreNG testing.
+ * Accessibility Service for VoiceOSCore testing.
  *
  * Provides real-time exploration of apps on the device,
  * extracting UI elements and processing them through the
- * VoiceOSCoreNG library for VUID generation, deduplication,
+ * VoiceOSCore library for VUID generation, deduplication,
  * hierarchy tracking, and command generation.
  *
  * SOLID Refactored: Delegates to extracted managers:
@@ -79,7 +79,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     /**
      * Shared command registry - single source of truth.
-     * Passed to VoiceOSCoreNG so both service and ActionCoordinator use the same instance.
+     * Passed to VoiceOSCore so both service and ActionCoordinator use the same instance.
      */
     private val commandRegistry = CommandRegistry()
 
@@ -133,21 +133,21 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     /** Command persistence for saving to SQLDelight database */
     private val commandPersistence: ICommandPersistence by lazy {
-        VoiceOSCoreNGApplication.getInstance(applicationContext).commandPersistence
+        VoiceOSCoreApplication.getInstance(applicationContext).commandPersistence
     }
 
     /** Scraped app repository - for FK integrity */
     private val scrapedAppRepository: IScrapedAppRepository by lazy {
-        VoiceOSCoreNGApplication.getInstance(applicationContext).scrapedAppRepository
+        VoiceOSCoreApplication.getInstance(applicationContext).scrapedAppRepository
     }
 
     /** Scraped element repository - for FK integrity */
     private val scrapedElementRepository: IScrapedElementRepository by lazy {
-        VoiceOSCoreNGApplication.getInstance(applicationContext).scrapedElementRepository
+        VoiceOSCoreApplication.getInstance(applicationContext).scrapedElementRepository
     }
 
-    /** VoiceOSCoreNG facade for voice command processing */
-    private var voiceOSCore: VoiceOSCoreNG? = null
+    /** VoiceOSCore facade for voice command processing */
+    private var voiceOSCore: VoiceOSCore? = null
 
     companion object {
         private var instance: VoiceOSAccessibilityService? = null
@@ -358,7 +358,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         registerReceiver(modeReceiver, filter, RECEIVER_EXPORTED)
         Log.d(TAG, "Registered broadcast receiver for numbers mode control")
 
-        // Initialize VoiceOSCoreNG facade
+        // Initialize VoiceOSCore facade
         initializeVoiceOSCore()
 
         // Auto-start OverlayService if permission granted
@@ -371,14 +371,14 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Initialize the VoiceOSCoreNG facade with speech engine and handlers.
+     * Initialize the VoiceOSCore facade with speech engine and handlers.
      */
     private fun initializeVoiceOSCore() {
         serviceScope.launch {
             try {
-                Log.d(TAG, "Initializing VoiceOSCoreNG facade...")
+                Log.d(TAG, "Initializing VoiceOSCore facade...")
 
-                voiceOSCore = VoiceOSCoreNG.createForAndroid(
+                voiceOSCore = VoiceOSCore.createForAndroid(
                     service = this@VoiceOSAccessibilityService,
                     configuration = ServiceConfiguration(
                         autoStartListening = false,
@@ -389,7 +389,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 )
 
                 voiceOSCore?.initialize()
-                Log.d(TAG, "VoiceOSCoreNG facade initialized successfully")
+                Log.d(TAG, "VoiceOSCore facade initialized successfully")
 
                 // Auto-start voice listening
                 try {
@@ -416,7 +416,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to initialize VoiceOSCoreNG facade", e)
+                Log.e(TAG, "Failed to initialize VoiceOSCore facade", e)
             }
         }
     }
@@ -642,9 +642,9 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         serviceScope.launch {
             try {
                 voiceOSCore?.dispose()
-                Log.d(TAG, "VoiceOSCoreNG facade disposed")
+                Log.d(TAG, "VoiceOSCore facade disposed")
             } catch (e: Exception) {
-                Log.e(TAG, "Error disposing VoiceOSCoreNG facade", e)
+                Log.e(TAG, "Error disposing VoiceOSCore facade", e)
             }
         }
 

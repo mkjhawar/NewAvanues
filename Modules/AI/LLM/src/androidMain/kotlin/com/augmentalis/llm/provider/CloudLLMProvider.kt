@@ -615,6 +615,42 @@ class CloudLLMProvider(
             null
         }
     }
+
+    // ==================== Command Interpretation (VoiceOS AI Integration) ====================
+
+    /**
+     * Interpret a voice command utterance using cloud LLM
+     *
+     * Delegates to the active cloud provider for interpretation.
+     * Cloud LLMs generally provide higher accuracy for complex commands.
+     */
+    override suspend fun interpretCommand(
+        utterance: String,
+        availableCommands: List<String>,
+        context: String?
+    ): CommandInterpretationResult {
+        val provider = activeProviders.firstOrNull()?.second
+            ?: return CommandInterpretationResult.Error("No active cloud provider")
+
+        return provider.interpretCommand(utterance, availableCommands, context)
+    }
+
+    /**
+     * Clarify a command when multiple candidates match
+     */
+    override suspend fun clarifyCommand(
+        utterance: String,
+        candidates: List<String>
+    ): ClarificationResult {
+        val provider = activeProviders.firstOrNull()?.second
+            ?: return ClarificationResult(
+                selectedCommand = null,
+                confidence = 0f,
+                clarificationQuestion = "Cloud service unavailable. Please try again."
+            )
+
+        return provider.clarifyCommand(utterance, candidates)
+    }
 }
 
 /**

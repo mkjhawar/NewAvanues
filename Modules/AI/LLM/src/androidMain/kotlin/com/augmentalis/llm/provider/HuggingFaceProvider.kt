@@ -25,6 +25,8 @@ import android.content.Context
 import com.augmentalis.llm.LLMConfig
 import com.augmentalis.llm.LLMResult
 import com.augmentalis.llm.LLMResponse
+import com.augmentalis.llm.CommandInterpretationResult
+import com.augmentalis.llm.ClarificationResult
 import com.augmentalis.llm.TokenUsage
 import com.augmentalis.llm.ChatMessage
 import com.augmentalis.llm.MessageRole
@@ -413,6 +415,37 @@ class HuggingFaceProvider(
                 )
             )
         }
+    }
+
+    // ==================== Command Interpretation (VoiceOS AI Integration) ====================
+
+    /**
+     * Interpret a voice command utterance using HuggingFace
+     *
+     * Note: Command interpretation is primarily handled by local LLM for latency.
+     */
+    override suspend fun interpretCommand(
+        utterance: String,
+        availableCommands: List<String>,
+        context: String?
+    ): CommandInterpretationResult {
+        return CommandInterpretationResult.Error(
+            "Command interpretation not implemented for HuggingFace. Use LocalLLMProvider."
+        )
+    }
+
+    /**
+     * Clarify a command when multiple candidates match
+     */
+    override suspend fun clarifyCommand(
+        utterance: String,
+        candidates: List<String>
+    ): ClarificationResult {
+        return ClarificationResult(
+            selectedCommand = null,
+            confidence = 0f,
+            clarificationQuestion = "Please use local voice assistant for command clarification."
+        )
     }
 }
 

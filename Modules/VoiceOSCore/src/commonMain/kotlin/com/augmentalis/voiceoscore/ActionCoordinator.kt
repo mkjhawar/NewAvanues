@@ -40,19 +40,13 @@ import kotlinx.coroutines.sync.withLock
  * 1. Dynamic command lookup by VUID (fastest, most accurate)
  * 2. Dynamic command fuzzy match (handles voice variations)
  * 3. Static handler lookup (system commands)
- * 4. NLU classification (semantic matching via BERT)
- * 5. LLM interpretation (natural language fallback)
- * 6. Voice interpreter fallback (legacy keyword mapping)
+ * 4. Voice interpreter fallback (legacy keyword mapping)
  */
 class ActionCoordinator(
     private val voiceInterpreter: IVoiceCommandInterpreter = DefaultVoiceCommandInterpreter,
     private val handlerRegistry: IHandlerRegistry = HandlerRegistry(),
     private val commandRegistry: CommandRegistry = CommandRegistry(),
-    private val metrics: IMetricsCollector = MetricsCollector(),
-    private val nluProcessor: INluProcessor? = null,
-    private val llmProcessor: ILlmProcessor? = null,
-    private val nluConfig: NluConfig = NluConfig.DEFAULT,
-    private val llmConfig: LlmConfig = LlmConfig.DEFAULT
+    private val metrics: IMetricsCollector = MetricsCollector()
 ) {
 
     companion object {
@@ -298,9 +292,9 @@ class ActionCoordinator(
      * 1. Dynamic command by target match (extracts verb, matches target in registry)
      * 2. Dynamic command by fuzzy match (handles voice variations)
      * 3. Static handler match (system commands)
-     * 4. NLU classification (semantic matching via BERT)
-     * 5. LLM interpretation (natural language fallback)
-     * 6. Voice interpreter fallback (legacy keyword mapping)
+     * 4. Voice interpreter fallback (legacy keyword mapping)
+     *
+     * Note: NLU/LLM integration happens at platform level (VoiceOSCore androidMain/iosMain)
      *
      * @param text The voice command text
      * @param confidence Confidence level (0-1)
@@ -388,70 +382,7 @@ class ActionCoordinator(
         }
 
         // ═══════════════════════════════════════════════════════════════════
-        // Step 3: Try NLU classification (semantic matching via BERT)
-        // ═══════════════════════════════════════════════════════════════════
-        if (nluConfig.enabled && nluProcessor?.isAvailable() == true) {
-            val allCommands = getAllQuantizedCommands()
-            if (allCommands.isNotEmpty()) {
-                val nluResult = nluProcessor.classify(normalizedText, allCommands)
-
-                when (nluResult) {
-                    is NluResult.Match -> {
-                        println("[ActionCoordinator] NLU match: ${nluResult.command.phrase} (conf=${nluResult.confidence})")
-                        return processCommand(nluResult.command)
-                    }
-                    is NluResult.Ambiguous -> {
-                        return HandlerResult.awaitingSelection(
-                            message = "Multiple NLU matches found",
-                            matchCount = nluResult.candidates.size,
-                            accessibilityAnnouncement = "Multiple matches. Say a number to select."
-                        )
-                    }
-                    is NluResult.Error -> {
-                        println("[ActionCoordinator] NLU error: ${nluResult.message}")
-                        // Fall through to LLM
-                    }
-                    is NluResult.NoMatch -> {
-                        // Fall through to LLM
-                    }
-                }
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════════════
-        // Step 4: Try LLM interpretation (natural language fallback)
-        // ═══════════════════════════════════════════════════════════════════
-        if (llmConfig.enabled && llmProcessor?.isAvailable() == true) {
-            val nluSchema = getNluSchema()
-            val availableCommands = getAllSupportedActions()
-
-            if (availableCommands.isNotEmpty()) {
-                val llmResult = llmProcessor.interpretCommand(normalizedText, nluSchema, availableCommands)
-
-                when (llmResult) {
-                    is LlmResult.Interpreted -> {
-                        println("[ActionCoordinator] LLM interpreted: ${llmResult.matchedCommand} (conf=${llmResult.confidence})")
-                        val llmCommand = QuantizedCommand(
-                            phrase = llmResult.matchedCommand,
-                            actionType = CommandActionType.EXECUTE,
-                            targetAvid = null,
-                            confidence = llmResult.confidence
-                        )
-                        return processCommand(llmCommand)
-                    }
-                    is LlmResult.Error -> {
-                        println("[ActionCoordinator] LLM error: ${llmResult.message}")
-                        // Fall through to voice interpreter
-                    }
-                    is LlmResult.NoMatch -> {
-                        // Fall through to voice interpreter
-                    }
-                }
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════════════
-        // Step 5: Try voice interpreter (keyword fallback)
+        // Step 3: Try voice interpreter (keyword fallback)
         // ═══════════════════════════════════════════════════════════════════
         val interpretedAction = interpretVoiceCommand(normalizedText)
         if (interpretedAction != null) {
@@ -657,14 +588,6 @@ class ActionCoordinator(
             appendLine("Handlers: ${handlerRegistry.getHandlerCount()}")
             appendLine("Categories: ${handlerRegistry.getCategoryCount()}")
             appendLine("Dynamic Commands: ${commandRegistry.size}")
-            appendLine()
-            appendLine("NLU/LLM Status:")
-            appendLine("  NLU Enabled: ${nluConfig.enabled}")
-            appendLine("  NLU Available: ${nluProcessor?.isAvailable() ?: false}")
-            appendLine("  NLU Threshold: ${nluConfig.confidenceThreshold}")
-            appendLine("  LLM Enabled: ${llmConfig.enabled}")
-            appendLine("  LLM Available: ${llmProcessor?.isAvailable() ?: false}")
-            appendLine("  LLM Model Loaded: ${llmProcessor?.isModelLoaded() ?: false}")
             appendLine()
             append(handlerRegistry.getDebugInfo())
             appendLine()

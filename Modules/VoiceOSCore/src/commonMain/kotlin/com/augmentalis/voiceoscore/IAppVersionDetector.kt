@@ -149,16 +149,3 @@ class InMemoryVersionTracker {
     fun remove(packageName: String) = versions.remove(packageName)
 }
 
-/**
- * No-op version detector for platforms without version tracking.
- */
-class StubAppVersionDetector : IAppVersionDetector {
-    override suspend fun getVersion(packageName: String): AppVersion? = null
-    override suspend fun detectVersionChange(packageName: String): VersionChange =
-        VersionChange.NotFound(packageName)
-    override suspend fun checkForegroundApp(): VersionChange? = null
-    override fun addListener(listener: VersionChangeListener) {}
-    override fun removeListener(listener: VersionChangeListener) {}
-    override fun startMonitoring() {}
-    override fun stopMonitoring() {}
-}

@@ -40,6 +40,22 @@ actual class IntentClassifier private constructor() {
         return emptyList() // Stub - not implemented for Web yet
     }
 
+    /**
+     * Classify a voice command utterance against known command phrases.
+     *
+     * TODO Phase 2: Implement using TensorFlow.js
+     */
+    actual suspend fun classifyCommand(
+        utterance: String,
+        commandPhrases: List<String>,
+        confidenceThreshold: Float,
+        ambiguityThreshold: Float
+    ): CommandClassificationResult {
+        return CommandClassificationResult.Error(
+            "Command classification not available on Web yet. Will be implemented in Phase 2 using TensorFlow.js."
+        )
+    }
+
     actual companion object {
         private var INSTANCE: IntentClassifier? = null
 

@@ -104,17 +104,3 @@ interface IResourceMonitor {
     suspend fun refreshStatus(): ResourceStatus
 }
 
-/**
- * No-op resource monitor for platforms without resource tracking.
- * Always reports NORMAL status with no throttling.
- */
-class StubResourceMonitor : IResourceMonitor {
-    private val _status = kotlinx.coroutines.flow.MutableStateFlow(ResourceStatus())
-    override val currentStatus: StateFlow<ResourceStatus> = _status
-
-    override fun start(intervalMs: Long) {}
-    override fun stop() {}
-    override fun getThrottleRecommendation(): ThrottleLevel = ThrottleLevel.NONE
-    override fun isMonitoring(): Boolean = false
-    override suspend fun refreshStatus(): ResourceStatus = ResourceStatus()
-}

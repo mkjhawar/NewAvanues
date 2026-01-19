@@ -136,4 +136,42 @@ interface LLMProvider {
      * @return Estimated cost in USD
      */
     fun estimateCost(inputTokens: Int, outputTokens: Int): Double
+
+    // ==================== Command Interpretation (VoiceOS AI Integration) ====================
+
+    /**
+     * Interpret a voice command utterance using LLM
+     *
+     * Maps natural language utterances to available commands when traditional
+     * NLU classification confidence is low. This enables handling of:
+     * - Complex multi-step commands
+     * - Ambiguous phrasings
+     * - Context-dependent commands
+     *
+     * @param utterance The user's spoken command (transcribed text)
+     * @param availableCommands List of command identifiers the system can execute
+     * @param context Optional context about the current state (e.g., "on home screen")
+     * @return CommandInterpretationResult indicating match, no-match, or error
+     */
+    suspend fun interpretCommand(
+        utterance: String,
+        availableCommands: List<String>,
+        context: String? = null
+    ): CommandInterpretationResult
+
+    /**
+     * Clarify a command when multiple candidates match
+     *
+     * When the NLU identifies multiple possible commands with similar confidence,
+     * the LLM can help disambiguate by asking the user clarifying questions
+     * or selecting the most likely intent based on context.
+     *
+     * @param utterance The user's spoken command (transcribed text)
+     * @param candidates List of candidate command identifiers to choose from
+     * @return ClarificationResult with selected command or clarification question
+     */
+    suspend fun clarifyCommand(
+        utterance: String,
+        candidates: List<String>
+    ): ClarificationResult
 }

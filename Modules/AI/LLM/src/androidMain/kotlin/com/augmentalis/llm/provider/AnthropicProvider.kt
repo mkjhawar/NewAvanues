@@ -392,6 +392,40 @@ class AnthropicProvider(
             }
         }
     }
+
+    // ==================== Command Interpretation (VoiceOS AI Integration) ====================
+
+    /**
+     * Interpret a voice command utterance using Anthropic Claude
+     *
+     * Note: Command interpretation is primarily handled by local LLM for latency.
+     * This method throws NotImplementedError as a fallback reminder.
+     */
+    override suspend fun interpretCommand(
+        utterance: String,
+        availableCommands: List<String>,
+        context: String?
+    ): CommandInterpretationResult {
+        // Cloud providers are not typically used for command interpretation
+        // due to latency requirements. Use LocalLLMProvider instead.
+        return CommandInterpretationResult.Error(
+            "Command interpretation not implemented for Anthropic. Use LocalLLMProvider."
+        )
+    }
+
+    /**
+     * Clarify a command when multiple candidates match
+     */
+    override suspend fun clarifyCommand(
+        utterance: String,
+        candidates: List<String>
+    ): ClarificationResult {
+        return ClarificationResult(
+            selectedCommand = null,
+            confidence = 0f,
+            clarificationQuestion = "Please use local voice assistant for command clarification."
+        )
+    }
 }
 
 // ==================== API Data Classes ====================

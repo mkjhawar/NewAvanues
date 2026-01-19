@@ -29,6 +29,8 @@ package com.augmentalis.llm.provider
 import android.content.Context
 import com.augmentalis.llm.LLMResult
 import com.augmentalis.llm.LLMResponse
+import com.augmentalis.llm.CommandInterpretationResult
+import com.augmentalis.llm.ClarificationResult
 import com.augmentalis.llm.alc.ALCEngine
 import com.augmentalis.llm.alc.ALCEngineSingleLanguage
 import com.augmentalis.llm.alc.language.LanguagePackManager
@@ -1553,9 +1555,9 @@ class LocalLLMProvider(
             val memories = database.memoryQueries.selectByMemoryType("working").executeAsList()
                 .take(5) // Last 5 items
                 .sortedBy { it.created_at } // Chronological order
-                
+
             if (memories.isEmpty()) return@withContext ""
-            
+
             val builder = StringBuilder("RECENT MEMORY (Working Context):\n")
             memories.forEach { memory ->
                 builder.append("- ${memory.content}\n")
@@ -1564,6 +1566,343 @@ class LocalLLMProvider(
         } catch (e: Exception) {
             Timber.w(e, "Failed to load working memory context")
             ""
+        }
+    }
+
+    // ==================== Command Interpretation (VoiceOS AI Integration) ====================
+
+    /**
+     * Interpret a voice command utterance using LLM
+     *
+     * Maps natural language utterances to available commands when NLU confidence is low.
+     */
+    override suspend fun interpretCommand(
+        utterance: String,
+        availableCommands: List<String>,
+        context: String?
+    ): CommandInterpretationResult {
+        if (alcEngine == null && ggufStrategy == null) {
+            return CommandInterpretationResult.Error("LLM not initialized")
+        }
+
+        val startTime = System.currentTimeMillis()
+
+        try {
+            // Build the interpretation prompt
+            val prompt = buildCommandInterpretationPrompt(utterance, availableCommands, context)
+
+            Timber.d("Command interpretation prompt: ${prompt.take(200)}...")
+
+            // Generate response
+            val responseBuilder = StringBuilder()
+            generateResponse(prompt, GenerationOptions(
+                temperature = 0.3f, // Lower temperature for more deterministic matching
+                maxTokens = 200     // Short response expected
+            )).collect { response ->
+                when (response) {
+                    is LLMResponse.Streaming -> responseBuilder.append(response.chunk)
+                    is LLMResponse.Complete -> responseBuilder.append(response.fullText)
+                    is LLMResponse.Error -> {
+                        Timber.e("Interpretation error: ${response.message}")
+                    }
+                }
+            }
+
+            val llmResponse = responseBuilder.toString().trim()
+            Timber.d("LLM interpretation response: $llmResponse")
+
+            // Parse the response
+            val result = parseCommandInterpretationResponse(llmResponse, availableCommands)
+
+            val latency = System.currentTimeMillis() - startTime
+            Timber.i("Command interpretation completed in ${latency}ms: ${result::class.simpleName}")
+
+            return result
+
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to interpret command")
+            return CommandInterpretationResult.Error("Interpretation failed: ${e.message}")
+        }
+    }
+
+    /**
+     * Clarify a command when multiple candidates match
+     */
+    override suspend fun clarifyCommand(
+        utterance: String,
+        candidates: List<String>
+    ): ClarificationResult {
+        if (alcEngine == null && ggufStrategy == null) {
+            return ClarificationResult(
+                selectedCommand = null,
+                confidence = 0f,
+                clarificationQuestion = "Voice assistant is not ready. Please try again."
+            )
+        }
+
+        val startTime = System.currentTimeMillis()
+
+        try {
+            // Build the clarification prompt
+            val prompt = buildClarificationPrompt(utterance, candidates)
+
+            Timber.d("Clarification prompt: ${prompt.take(200)}...")
+
+            // Generate response
+            val responseBuilder = StringBuilder()
+            generateResponse(prompt, GenerationOptions(
+                temperature = 0.3f,
+                maxTokens = 150
+            )).collect { response ->
+                when (response) {
+                    is LLMResponse.Streaming -> responseBuilder.append(response.chunk)
+                    is LLMResponse.Complete -> responseBuilder.append(response.fullText)
+                    is LLMResponse.Error -> {
+                        Timber.e("Clarification error: ${response.message}")
+                    }
+                }
+            }
+
+            val llmResponse = responseBuilder.toString().trim()
+            Timber.d("LLM clarification response: $llmResponse")
+
+            // Parse the response
+            val result = parseClarificationResponse(llmResponse, candidates)
+
+            val latency = System.currentTimeMillis() - startTime
+            Timber.i("Command clarification completed in ${latency}ms")
+
+            return result
+
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to clarify command")
+            return ClarificationResult(
+                selectedCommand = null,
+                confidence = 0f,
+                clarificationQuestion = "I had trouble understanding. Could you please repeat?"
+            )
+        }
+    }
+
+    /**
+     * Build prompt for command interpretation
+     */
+    private fun buildCommandInterpretationPrompt(
+        utterance: String,
+        availableCommands: List<String>,
+        context: String?
+    ): String {
+        val contextLine = if (context != null) "Context: $context\n" else ""
+        val commandList = availableCommands.joinToString("\n") { "- $it" }
+
+        return """You are a voice command interpreter. Given a user's spoken command, determine which available command best matches their intent.
+
+$contextLine
+Available commands:
+$commandList
+
+User said: "$utterance"
+
+Instructions:
+1. Analyze the user's intent
+2. Match it to the most appropriate command from the list
+3. Respond in this exact format:
+   COMMAND: <command_name>
+   CONFIDENCE: <0.0-1.0>
+   REASONING: <brief explanation>
+
+If no command matches, respond:
+   COMMAND: NONE
+   CONFIDENCE: 0.0
+   REASONING: <why no match>
+
+Response:"""
+    }
+
+    /**
+     * Parse command interpretation response from LLM
+     */
+    private fun parseCommandInterpretationResponse(
+        response: String,
+        availableCommands: List<String>
+    ): CommandInterpretationResult {
+        try {
+            // Extract COMMAND line
+            val commandMatch = Regex("COMMAND:\\s*([^\\n]+)", RegexOption.IGNORE_CASE)
+                .find(response)
+            val commandStr = commandMatch?.groupValues?.get(1)?.trim() ?: ""
+
+            // Extract CONFIDENCE line
+            val confidenceMatch = Regex("CONFIDENCE:\\s*([0-9.]+)", RegexOption.IGNORE_CASE)
+                .find(response)
+            val confidence = confidenceMatch?.groupValues?.get(1)?.toFloatOrNull() ?: 0.5f
+
+            // Extract REASONING line
+            val reasoningMatch = Regex("REASONING:\\s*([^\\n]+)", RegexOption.IGNORE_CASE)
+                .find(response)
+            val reasoning = reasoningMatch?.groupValues?.get(1)?.trim()
+
+            // Check for NONE / no match
+            if (commandStr.equals("NONE", ignoreCase = true) || commandStr.isEmpty()) {
+                return CommandInterpretationResult.NoMatch
+            }
+
+            // Verify command is in available list (case-insensitive match)
+            val matchedCommand = availableCommands.find {
+                it.equals(commandStr, ignoreCase = true)
+            }
+
+            return if (matchedCommand != null) {
+                CommandInterpretationResult.Interpreted(
+                    matchedCommand = matchedCommand,
+                    confidence = confidence.coerceIn(0f, 1f),
+                    reasoning = reasoning
+                )
+            } else {
+                // LLM returned a command not in the list - try fuzzy match
+                val fuzzyMatch = findFuzzyMatch(commandStr, availableCommands)
+                if (fuzzyMatch != null) {
+                    CommandInterpretationResult.Interpreted(
+                        matchedCommand = fuzzyMatch,
+                        confidence = (confidence * 0.8f).coerceIn(0f, 1f), // Reduce confidence for fuzzy match
+                        reasoning = reasoning
+                    )
+                } else {
+                    CommandInterpretationResult.NoMatch
+                }
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to parse interpretation response: $response")
+            return CommandInterpretationResult.Error("Parse error: ${e.message}")
+        }
+    }
+
+    /**
+     * Build prompt for command clarification
+     */
+    private fun buildClarificationPrompt(
+        utterance: String,
+        candidates: List<String>
+    ): String {
+        val candidateList = candidates.mapIndexed { index, cmd -> "${index + 1}. $cmd" }
+            .joinToString("\n")
+
+        return """You are a voice assistant helping to clarify a user's command. The user said something that could match multiple commands.
+
+User said: "$utterance"
+
+Possible matching commands:
+$candidateList
+
+Instructions:
+1. Determine if you can confidently select one command
+2. If confident, respond:
+   SELECT: <command_name>
+   CONFIDENCE: <0.7-1.0>
+3. If unsure, create a clarifying question:
+   SELECT: NONE
+   CONFIDENCE: <0.0-0.6>
+   QUESTION: <simple question to clarify user intent>
+
+Keep questions natural and conversational. Example: "Would you like to open the camera app or take a photo?"
+
+Response:"""
+    }
+
+    /**
+     * Parse clarification response from LLM
+     */
+    private fun parseClarificationResponse(
+        response: String,
+        candidates: List<String>
+    ): ClarificationResult {
+        try {
+            // Extract SELECT line
+            val selectMatch = Regex("SELECT:\\s*([^\\n]+)", RegexOption.IGNORE_CASE)
+                .find(response)
+            val selectStr = selectMatch?.groupValues?.get(1)?.trim() ?: ""
+
+            // Extract CONFIDENCE line
+            val confidenceMatch = Regex("CONFIDENCE:\\s*([0-9.]+)", RegexOption.IGNORE_CASE)
+                .find(response)
+            val confidence = confidenceMatch?.groupValues?.get(1)?.toFloatOrNull() ?: 0.5f
+
+            // Extract QUESTION line
+            val questionMatch = Regex("QUESTION:\\s*([^\\n]+)", RegexOption.IGNORE_CASE)
+                .find(response)
+            val question = questionMatch?.groupValues?.get(1)?.trim()
+
+            // Check if a command was selected
+            if (selectStr.equals("NONE", ignoreCase = true) || selectStr.isEmpty()) {
+                return ClarificationResult(
+                    selectedCommand = null,
+                    confidence = confidence.coerceIn(0f, 1f),
+                    clarificationQuestion = question ?: generateDefaultClarificationQuestion(candidates)
+                )
+            }
+
+            // Find matching command
+            val matchedCommand = candidates.find {
+                it.equals(selectStr, ignoreCase = true)
+            } ?: findFuzzyMatch(selectStr, candidates)
+
+            return if (matchedCommand != null && confidence >= 0.7f) {
+                ClarificationResult(
+                    selectedCommand = matchedCommand,
+                    confidence = confidence.coerceIn(0f, 1f),
+                    clarificationQuestion = null
+                )
+            } else {
+                ClarificationResult(
+                    selectedCommand = null,
+                    confidence = confidence.coerceIn(0f, 1f),
+                    clarificationQuestion = question ?: generateDefaultClarificationQuestion(candidates)
+                )
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to parse clarification response: $response")
+            return ClarificationResult(
+                selectedCommand = null,
+                confidence = 0f,
+                clarificationQuestion = generateDefaultClarificationQuestion(candidates)
+            )
+        }
+    }
+
+    /**
+     * Generate a default clarification question
+     */
+    private fun generateDefaultClarificationQuestion(candidates: List<String>): String {
+        return when (candidates.size) {
+            0 -> "I'm not sure what you'd like me to do. Could you please repeat?"
+            1 -> "Did you mean ${formatCommandName(candidates[0])}?"
+            2 -> "Did you want to ${formatCommandName(candidates[0])} or ${formatCommandName(candidates[1])}?"
+            else -> {
+                val firstTwo = candidates.take(2).joinToString(", ") { formatCommandName(it) }
+                "Did you mean $firstTwo, or something else?"
+            }
+        }
+    }
+
+    /**
+     * Format command name for display (snake_case to natural language)
+     */
+    private fun formatCommandName(command: String): String {
+        return command
+            .replace("_", " ")
+            .replace("-", " ")
+            .lowercase()
+    }
+
+    /**
+     * Find fuzzy match for command name
+     */
+    private fun findFuzzyMatch(input: String, commands: List<String>): String? {
+        val normalizedInput = input.lowercase().replace("_", "").replace("-", "").replace(" ", "")
+
+        return commands.find { cmd ->
+            val normalizedCmd = cmd.lowercase().replace("_", "").replace("-", "").replace(" ", "")
+            normalizedInput.contains(normalizedCmd) || normalizedCmd.contains(normalizedInput)
         }
     }
 }

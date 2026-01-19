@@ -25,6 +25,8 @@ import android.content.Context
 import com.augmentalis.llm.LLMConfig
 import com.augmentalis.llm.LLMResult
 import com.augmentalis.llm.LLMResponse
+import com.augmentalis.llm.CommandInterpretationResult
+import com.augmentalis.llm.ClarificationResult
 import com.augmentalis.llm.TokenUsage
 import com.augmentalis.llm.ChatMessage
 import com.augmentalis.llm.MessageRole
@@ -403,6 +405,37 @@ class OpenAIProvider(
             model.contains("gpt-3.5-turbo") -> 16_385
             else -> 4096 // Default
         }
+    }
+
+    // ==================== Command Interpretation (VoiceOS AI Integration) ====================
+
+    /**
+     * Interpret a voice command utterance using OpenAI
+     *
+     * Note: Command interpretation is primarily handled by local LLM for latency.
+     */
+    override suspend fun interpretCommand(
+        utterance: String,
+        availableCommands: List<String>,
+        context: String?
+    ): CommandInterpretationResult {
+        return CommandInterpretationResult.Error(
+            "Command interpretation not implemented for OpenAI. Use LocalLLMProvider."
+        )
+    }
+
+    /**
+     * Clarify a command when multiple candidates match
+     */
+    override suspend fun clarifyCommand(
+        utterance: String,
+        candidates: List<String>
+    ): ClarificationResult {
+        return ClarificationResult(
+            selectedCommand = null,
+            confidence = 0f,
+            clarificationQuestion = "Please use local voice assistant for command clarification."
+        )
     }
 }
 

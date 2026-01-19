@@ -58,8 +58,8 @@ actual object VivokaEngineFactory {
      * Create Android-specific Vivoka engine.
      *
      * @param config Vivoka configuration
-     * @return IVivokaEngine implementation (VivokaAndroidEngine if available, stub otherwise)
-     * @throws IllegalStateException if initialize() was not called
+     * @return IVivokaEngine implementation (VivokaAndroidEngine)
+     * @throws IllegalStateException if initialize() was not called or Vivoka SDK unavailable
      */
     actual fun create(config: VivokaConfig): IVivokaEngine {
         val context = applicationContext
@@ -68,11 +68,13 @@ actual object VivokaEngineFactory {
                 "Call VivokaEngineFactory.initialize(context) in Application.onCreate()"
             )
 
-        return if (isAvailable()) {
-            VivokaAndroidEngine(context, config)
-        } else {
-            StubVivokaEngine("Vivoka SDK not available on Android")
+        if (!isAvailable()) {
+            throw IllegalStateException(
+                "Vivoka SDK not available. Ensure vivoka-sdk dependency is included in the app module."
+            )
         }
+
+        return VivokaAndroidEngine(context, config)
     }
 
     /**
@@ -82,6 +84,7 @@ actual object VivokaEngineFactory {
      * @param context Android context
      * @param config Vivoka configuration
      * @return IVivokaEngine implementation
+     * @throws IllegalStateException if Vivoka SDK is unavailable
      */
     fun createWithContext(context: Context, config: VivokaConfig): IVivokaEngine {
         val appContext = context.applicationContext
@@ -91,10 +94,12 @@ actual object VivokaEngineFactory {
             applicationContext = appContext
         }
 
-        return if (isAvailable()) {
-            VivokaAndroidEngine(appContext, config)
-        } else {
-            StubVivokaEngine("Vivoka SDK not available on Android")
+        if (!isAvailable()) {
+            throw IllegalStateException(
+                "Vivoka SDK not available. Ensure vivoka-sdk dependency is included in the app module."
+            )
         }
+
+        return VivokaAndroidEngine(appContext, config)
     }
 }

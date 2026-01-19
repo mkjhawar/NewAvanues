@@ -61,6 +61,36 @@ expect class IntentClassifier {
      */
     fun getLoadedIntents(): List<String>
 
+    /**
+     * Classify a voice command utterance against known command phrases.
+     *
+     * VoiceOS Integration:
+     * This method is designed for VoiceOS command matching, supporting:
+     * - Multiple matching strategies (exact, fuzzy, semantic, hybrid)
+     * - Ambiguity detection when multiple commands score similarly
+     * - Confidence thresholds for reliable command execution
+     *
+     * Algorithm:
+     * 1. First attempts exact/fuzzy matching for performance
+     * 2. Falls back to semantic similarity if no exact match
+     * 3. Detects ambiguity when top candidates are within threshold
+     * 4. Returns NoMatch if best score below confidence threshold
+     *
+     * @param utterance User's spoken command (e.g., "turn up the brightness")
+     * @param commandPhrases List of known command phrases to match against
+     * @param confidenceThreshold Minimum confidence for a valid match (default: 0.6)
+     * @param ambiguityThreshold Max difference between top scores to be ambiguous (default: 0.15)
+     * @return CommandClassificationResult indicating match, ambiguity, no match, or error
+     *
+     * @see CommandClassificationResult for possible return types
+     */
+    suspend fun classifyCommand(
+        utterance: String,
+        commandPhrases: List<String>,
+        confidenceThreshold: Float = 0.6f,
+        ambiguityThreshold: Float = 0.15f
+    ): CommandClassificationResult
+
     companion object {
         /**
          * Get singleton instance of IntentClassifier
