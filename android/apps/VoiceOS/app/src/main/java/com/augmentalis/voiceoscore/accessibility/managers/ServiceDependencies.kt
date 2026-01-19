@@ -5,7 +5,7 @@
  * Author: Manoj Jhawar
  * Code-Reviewed-By: CCA (IDEACODE v18)
  * Created: 2025-12-27
- * Updated: 2026-01-15 - Added EventRouter, IntegrationCoordinator, CommandDispatcher (P2-8e)
+ * Updated: 2026-01-19 - Consolidated to use KMP classes only
  *
  * Provides dependency abstraction for testability. Since AccessibilityService
  * cannot use @AndroidEntryPoint, this interface enables manual DI with the
@@ -14,15 +14,16 @@
 
 package com.augmentalis.voiceoscore.accessibility.managers
 
-import android.content.Context
-import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine
-import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine.UIElement
-import com.augmentalis.voiceoscore.accessibility.overlays.OverlayManager
-import com.augmentalis.voiceoscore.accessibility.speech.SpeechEngineManager
-import com.augmentalis.voiceoscore.accessibility.utils.EventPriorityManager
-import com.augmentalis.voiceoscore.accessibility.VoiceOSService
-import com.augmentalis.voiceoscore.version.AppVersionDetector
-import com.augmentalis.voiceoscore.version.AppVersionManager
+import android.accessibilityservice.AccessibilityService
+import com.augmentalis.voiceoscore.ActionCoordinator
+import com.augmentalis.voiceoscore.AndroidScreenExtractor
+import com.augmentalis.voiceoscore.ElementInfo
+import com.augmentalis.voiceoscore.EventPriorityManager
+import com.augmentalis.voiceoscore.IAppVersionDetector
+import com.augmentalis.voiceoscore.OverlayManager as KmpOverlayManager
+import com.augmentalis.voiceoscore.SpeechEngineManager
+import com.augmentalis.voiceoscore.SpeechEngineFactoryProvider
+import com.augmentalis.voiceoscore.createAppVersionDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -32,16 +33,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 /**
  * Service Dependencies Interface
  *
- * Abstracts core dependencies required by VoiceOSService:
- * - Database management
- * - Inter-process communication
- * - Lifecycle coordination
- * - UI scraping
- * - Speech recognition
- * - Overlay management
- * - Event routing (P2-8e)
- * - Integration coordination (P2-8e)
- * - Command dispatch (P2-8e)
+ * Abstracts core dependencies required by VoiceOSService using KMP classes.
+ * All components are from the VoiceOSCore KMP module.
  *
  * Implementations:
  * - [ProductionServiceDependencies]: Real dependencies for production
@@ -49,53 +42,29 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
  */
 interface IServiceDependencies {
 
-    /** Database lifecycle manager (SQLDelight + scraping adapter) */
-    val dbManager: DatabaseManager
-
-    /** Speech recognition engine manager */
+    /** Speech recognition engine manager (KMP) */
     val speechEngineManager: SpeechEngineManager
 
-    /** UI element extraction engine */
-    val uiScrapingEngine: UIScrapingEngine
+    /** UI element extraction engine (KMP AndroidScreenExtractor) */
+    val screenExtractor: AndroidScreenExtractor
 
-    /** Inter-process communication handler */
-    val ipcManager: IPCManager
+    /** Overlay display manager (KMP OverlayManager) */
+    val overlayManager: KmpOverlayManager
 
-    /** Service lifecycle and foreground service coordinator */
-    val lifecycleCoordinator: LifecycleCoordinator
+    /** App version detection (KMP IAppVersionDetector) */
+    val appVersionDetector: IAppVersionDetector
 
-    /** Overlay display manager */
-    val overlayManager: OverlayManager
-
-    /** Installed applications manager */
-    val installedAppsManager: InstalledAppsManager
-
-    /** App version detection */
-    val appVersionDetector: AppVersionDetector
-
-    /** App version management with command invalidation */
-    val appVersionManager: AppVersionManager
-
-    /** Event routing and prioritization (P2-8e) */
-    val eventRouter: EventRouter
-
-    /** Integration lifecycle management (P2-8e) */
-    val integrationCoordinator: IntegrationCoordinator
-
-    /** Voice command dispatch (P2-8e) */
-    val commandDispatcher: CommandDispatcher
-
-    /** Action coordinator for legacy command handling */
+    /** Action coordinator (KMP ActionCoordinator) */
     val actionCoordinator: ActionCoordinator
 
-    /** Event priority manager */
+    /** Event priority manager (KMP EventPriorityManager) */
     val eventPriorityManager: EventPriorityManager
 
     /** Cache lock for thread-safe cache access */
     val cacheLock: ReentrantReadWriteLock
 
-    /** Node cache for UI elements */
-    val nodeCache: MutableList<UIElement>
+    /** Node cache for UI elements (KMP ElementInfo) */
+    val nodeCache: MutableList<ElementInfo>
 
     /** Command cache for normalized command text */
     val commandCache: MutableList<String>
@@ -118,12 +87,13 @@ interface IServiceDependencies {
  *
  * Real implementation of [IServiceDependencies] for production use.
  * Uses lazy initialization for efficient resource usage.
+ * All managers are from the VoiceOSCore KMP module.
  *
- * @param service The VoiceOSService instance
+ * @param service The AccessibilityService instance
  * @param isServiceReady Supplier function to check service readiness
  */
 class ProductionServiceDependencies(
-    private val service: VoiceOSService,
+    private val service: AccessibilityService,
     private val isServiceReady: () -> Boolean
 ) : IServiceDependencies {
 
@@ -131,79 +101,30 @@ class ProductionServiceDependencies(
         private const val TAG = "ServiceDependencies"
     }
 
-    private val context: Context
-        get() = service.applicationContext
-
-    // Coroutine scopes for managers
+    // Coroutine scope for managers
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    private val commandScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-    // Service configuration suppliers
-    private var isLowResourceMode: () -> Boolean = { false }
-    private var verboseLogging: () -> Boolean = { false }
-
-    override val dbManager: DatabaseManager by lazy {
-        DatabaseManager(context).also {
-            android.util.Log.d(TAG, "DatabaseManager initialized (lazy)")
-        }
-    }
 
     override val speechEngineManager: SpeechEngineManager by lazy {
-        SpeechEngineManager(context).also {
+        SpeechEngineManager(SpeechEngineFactoryProvider.create(), serviceScope).also {
             android.util.Log.d(TAG, "SpeechEngineManager initialized (lazy)")
         }
     }
 
-    override val uiScrapingEngine: UIScrapingEngine by lazy {
-        UIScrapingEngine(service).also {
-            android.util.Log.d(TAG, "UIScrapingEngine initialized (lazy)")
+    override val screenExtractor: AndroidScreenExtractor by lazy {
+        AndroidScreenExtractor().also {
+            android.util.Log.d(TAG, "AndroidScreenExtractor initialized (lazy)")
         }
     }
 
-    override val ipcManager: IPCManager by lazy {
-        IPCManager(
-            accessibilityService = service,
-            speechEngineManager = speechEngineManager,
-            uiScrapingEngine = uiScrapingEngine,
-            databaseManager = dbManager,
-            isServiceReady = isServiceReady
-        ).also {
-            android.util.Log.d(TAG, "IPCManager initialized (lazy)")
-        }
-    }
-
-    override val lifecycleCoordinator: LifecycleCoordinator by lazy {
-        LifecycleCoordinator(service).also {
-            android.util.Log.d(TAG, "LifecycleCoordinator initialized (lazy)")
-        }
-    }
-
-    override val overlayManager: OverlayManager by lazy {
-        OverlayManager.getInstance(service).also {
+    override val overlayManager: KmpOverlayManager by lazy {
+        KmpOverlayManager().also {
             android.util.Log.d(TAG, "OverlayManager initialized (lazy)")
         }
     }
 
-    override val installedAppsManager: InstalledAppsManager by lazy {
-        InstalledAppsManager(context).also {
-            android.util.Log.d(TAG, "InstalledAppsManager initialized (lazy)")
-        }
-    }
-
-    override val appVersionDetector: AppVersionDetector by lazy {
-        AppVersionDetector(context, dbManager.sqlDelightManager.appVersions).also {
+    override val appVersionDetector: IAppVersionDetector by lazy {
+        createAppVersionDetector(service.applicationContext).also {
             android.util.Log.d(TAG, "AppVersionDetector initialized (lazy)")
-        }
-    }
-
-    override val appVersionManager: AppVersionManager by lazy {
-        AppVersionManager(
-            context = context,
-            detector = appVersionDetector,
-            versionRepo = dbManager.sqlDelightManager.appVersions,
-            commandRepo = dbManager.sqlDelightManager.generatedCommands
-        ).also {
-            android.util.Log.d(TAG, "AppVersionManager initialized (lazy)")
         }
     }
 
@@ -219,8 +140,8 @@ class ProductionServiceDependencies(
         }
     }
 
-    override val nodeCache: MutableList<UIElement> by lazy {
-        CopyOnWriteArrayList<UIElement>().also {
+    override val nodeCache: MutableList<ElementInfo> by lazy {
+        CopyOnWriteArrayList<ElementInfo>().also {
             android.util.Log.d(TAG, "NodeCache initialized (lazy)")
         }
     }
@@ -232,66 +153,9 @@ class ProductionServiceDependencies(
     }
 
     override val actionCoordinator: ActionCoordinator by lazy {
-        ActionCoordinator(service).also {
+        ActionCoordinator().also {
             android.util.Log.d(TAG, "ActionCoordinator initialized (lazy)")
         }
-    }
-
-    override val integrationCoordinator: IntegrationCoordinator by lazy {
-        IntegrationCoordinator(
-            context = context,
-            accessibilityService = service,
-            serviceScope = serviceScope,
-            databaseManager = dbManager
-        ).also {
-            android.util.Log.d(TAG, "IntegrationCoordinator initialized (lazy)")
-        }
-    }
-
-    override val commandDispatcher: CommandDispatcher by lazy {
-        CommandDispatcher(
-            context = context,
-            accessibilityService = service,
-            serviceScope = serviceScope,
-            actionCoordinator = actionCoordinator,
-            integrationCoordinator = integrationCoordinator,
-            rootNodeProvider = { service.rootInActiveWindow },
-            commandCacheProvider = { commandCache },
-            nodeCacheProvider = { nodeCache }
-        ).also {
-            android.util.Log.d(TAG, "CommandDispatcher initialized (lazy)")
-        }
-    }
-
-    override val eventRouter: EventRouter by lazy {
-        EventRouter(
-            serviceScope = serviceScope,
-            commandScope = commandScope,
-            uiScrapingEngine = uiScrapingEngine,
-            eventPriorityManager = eventPriorityManager,
-            cacheLock = cacheLock,
-            nodeCache = nodeCache,
-            commandCache = commandCache,
-            isServiceReady = isServiceReady,
-            isLowResourceMode = isLowResourceMode,
-            verboseLogging = verboseLogging,
-            rootNodeProvider = { service.rootInActiveWindow },
-            contextProvider = { context }
-        ).also {
-            android.util.Log.d(TAG, "EventRouter initialized (lazy)")
-        }
-    }
-
-    /**
-     * Configure service state suppliers
-     * Called during service initialization to wire up dynamic state
-     */
-    fun configureStateSuppliers(
-        lowResourceMode: () -> Boolean,
-        verbose: () -> Boolean
-    ) {
-        isLowResourceMode = lowResourceMode
-        verboseLogging = verbose
     }
 
     override fun initialize() {
@@ -303,15 +167,11 @@ class ProductionServiceDependencies(
     override fun cleanup() {
         android.util.Log.d(TAG, "Cleaning up production dependencies...")
 
-        // Cleanup new managers (P2-8e)
-        eventRouter.cleanup()
-        commandDispatcher.cleanup()
-        integrationCoordinator.cleanup()
-
-        // Cleanup existing managers
-        lifecycleCoordinator.unregister()
+        // Cleanup speech engine
         speechEngineManager.cleanup()
-        dbManager.cleanup()
+
+        // Cleanup app version detector monitoring
+        appVersionDetector.stopMonitoring()
 
         android.util.Log.i(TAG, "All dependencies cleaned up")
     }
@@ -330,12 +190,12 @@ object ServiceDependenciesFactory {
     /**
      * Create dependencies for a service
      *
-     * @param service The VoiceOSService instance
+     * @param service The AccessibilityService instance
      * @param isServiceReady Supplier function to check service readiness
      * @return Dependencies instance (test or production)
      */
     fun create(
-        service: VoiceOSService,
+        service: AccessibilityService,
         isServiceReady: () -> Boolean
     ): IServiceDependencies {
         return testDependencies ?: ProductionServiceDependencies(service, isServiceReady)

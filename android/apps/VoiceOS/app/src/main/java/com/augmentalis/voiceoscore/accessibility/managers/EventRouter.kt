@@ -17,11 +17,12 @@ package com.augmentalis.voiceoscore.accessibility.managers
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine
-import com.augmentalis.voiceoscore.accessibility.extractors.UIScrapingEngine.UIElement
-import com.augmentalis.voiceoscore.accessibility.utils.EventPriority
-import com.augmentalis.voiceoscore.accessibility.utils.EventPriorityManager
-import com.augmentalis.voiceoscore.config.DynamicPackageConfig
+import com.augmentalis.voiceoscore.AndroidScreenExtractor
+import com.augmentalis.voiceoscore.ElementInfo
+import com.augmentalis.voiceoscore.EventPriority
+import com.augmentalis.voiceoscore.EventPriorityManager
+import com.augmentalis.voiceoscore.AndroidEventClassifier
+import com.augmentalis.voiceoscore.ThrottleLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -51,10 +52,10 @@ import kotlin.concurrent.withLock
  *
  * @param serviceScope Coroutine scope for async operations
  * @param commandScope Coroutine scope for command processing (Dispatchers.IO)
- * @param uiScrapingEngine UI element extraction engine
- * @param eventPriorityManager Event priority calculator
+ * @param screenExtractor KMP AndroidScreenExtractor for UI element extraction
+ * @param eventPriorityManager KMP Event priority calculator
  * @param cacheLock Read-write lock for cache synchronization
- * @param nodeCache UI element cache
+ * @param nodeCache KMP ElementInfo cache
  * @param commandCache Normalized command text cache
  * @param isServiceReady Supplier to check if service is ready
  * @param isLowResourceMode Supplier to check if in low resource mode
@@ -63,10 +64,10 @@ import kotlin.concurrent.withLock
 class EventRouter(
     private val serviceScope: CoroutineScope,
     private val commandScope: CoroutineScope,
-    private val uiScrapingEngine: UIScrapingEngine,
+    private val screenExtractor: AndroidScreenExtractor,
     private val eventPriorityManager: EventPriorityManager,
     private val cacheLock: ReentrantReadWriteLock,
-    private val nodeCache: MutableList<UIElement>,
+    private val nodeCache: MutableList<ElementInfo>,
     private val commandCache: MutableList<String>,
     private val isServiceReady: () -> Boolean,
     private val isLowResourceMode: () -> Boolean,
@@ -206,12 +207,13 @@ class EventRouter(
             return
         }
 
-        // Adaptive event filtering based on memory pressure
-        val eventPriority = eventPriorityManager.getEventPriority(event)
-        val shouldProcess = !isLowResourceMode() || eventPriority >= EventPriority.HIGH
+        // Adaptive event filtering based on memory pressure using KMP EventPriorityManager
+        val eventPriority = AndroidEventClassifier.classify(event.eventType)
+        val throttleLevel = if (isLowResourceMode()) ThrottleLevel.MEDIUM else ThrottleLevel.NONE
+        val shouldProcess = eventPriorityManager.shouldProcess(eventPriority, throttleLevel)
 
         if (!shouldProcess) {
-            Log.v(TAG, "Event filtered due to memory pressure: type=${event.eventType}, priority=$eventPriority")
+            Log.v(TAG, "Event filtered due to resource pressure: type=${event.eventType}, priority=$eventPriority")
             return
         }
 
@@ -271,11 +273,6 @@ class EventRouter(
         if (packageName == null && currentPackage != null) {
             val isWindowChange = isWindowChangeEvent(event)
 
-            // Use dynamic package configuration
-            if (isWindowChange && !DynamicPackageConfig.shouldMonitorPackage(contextProvider(), currentPackage)) {
-                return // Skip for non-monitored packages
-            }
-
             if (isWindowChange) {
                 packageName = currentPackage
             } else {
@@ -312,19 +309,20 @@ class EventRouter(
      */
     private fun handleWindowContentChanged(event: AccessibilityEvent, packageName: String) {
         serviceScope.launch {
-            val commands = uiScrapingEngine.extractUIElementsAsync(event)
-            val normalizedCommands = commands.map { it.normalizedText }
+            val rootNode = rootNodeProvider()
+            val elements = screenExtractor.extract(rootNode)
+            val normalizedCommands = elements.map { it.voiceLabel }
 
             cacheLock.writeLock().withLock {
                 nodeCache.clear()
-                nodeCache.addAll(commands)
+                nodeCache.addAll(elements)
                 commandCache.clear()
                 commandCache.addAll(normalizedCommands)
             }
 
-            Log.d(TAG, "TYPE_WINDOW_CONTENT_CHANGED: ${normalizedCommands.size} commands scraped")
+            Log.d(TAG, "TYPE_WINDOW_CONTENT_CHANGED: ${normalizedCommands.size} elements scraped")
             if (verboseLogging()) {
-                Log.d(TAG, "Scraped commands for $packageName: $commandCache")
+                Log.d(TAG, "Scraped elements for $packageName: $commandCache")
             }
         }
     }
@@ -356,21 +354,22 @@ class EventRouter(
             }
         }
 
-        // Update UI scraping cache
+        // Update UI scraping cache using KMP AndroidScreenExtractor
         commandScope.launch {
-            val commands = uiScrapingEngine.extractUIElementsAsync(event)
-            val normalizedCommands = commands.map { it.normalizedText }
+            val rootNode = rootNodeProvider()
+            val elements = screenExtractor.extract(rootNode)
+            val normalizedCommands = elements.map { it.voiceLabel }
 
             cacheLock.writeLock().withLock {
                 nodeCache.clear()
-                nodeCache.addAll(commands)
+                nodeCache.addAll(elements)
                 commandCache.clear()
                 commandCache.addAll(normalizedCommands)
             }
 
-            Log.d(TAG, "TYPE_WINDOW_STATE_CHANGED: ${normalizedCommands.size} commands scraped")
+            Log.d(TAG, "TYPE_WINDOW_STATE_CHANGED: ${normalizedCommands.size} elements scraped")
             if (verboseLogging()) {
-                Log.d(TAG, "Scraped commands for $packageName: $commandCache")
+                Log.d(TAG, "Scraped elements for $packageName: $commandCache")
             }
         }
     }
@@ -383,21 +382,22 @@ class EventRouter(
             Log.d(TAG, "Click event in $packageName: ${event.className}")
         }
 
-        // Light UI refresh after clicks
+        // Light UI refresh after clicks using KMP AndroidScreenExtractor
         serviceScope.launch {
-            val commands = uiScrapingEngine.extractUIElementsAsync(event)
-            val normalizedCommands = commands.map { it.normalizedText }
+            val rootNode = rootNodeProvider()
+            val elements = screenExtractor.extract(rootNode)
+            val normalizedCommands = elements.map { it.voiceLabel }
 
             cacheLock.writeLock().withLock {
                 nodeCache.clear()
-                nodeCache.addAll(commands)
+                nodeCache.addAll(elements)
                 commandCache.clear()
                 commandCache.addAll(normalizedCommands)
             }
 
-            Log.d(TAG, "TYPE_VIEW_CLICKED: ${normalizedCommands.size} commands scraped")
+            Log.d(TAG, "TYPE_VIEW_CLICKED: ${normalizedCommands.size} elements scraped")
             if (verboseLogging()) {
-                Log.d(TAG, "Scraped commands for $packageName: $commandCache")
+                Log.d(TAG, "Scraped elements for $packageName: $commandCache")
             }
         }
     }
