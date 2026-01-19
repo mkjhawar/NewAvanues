@@ -48,7 +48,7 @@
 
         <!-- VoiceOS Accessibility Service -->
         <!-- Note: Service class will be in com.augmentalis.voiceoscore.service -->
-        <service
+        <!--<service
             android:name="com.augmentalis.voiceoscore.service.VoiceOSService"
             android:enabled="true"
             android:exported="true"
@@ -60,7 +60,7 @@
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
-        </service>
+        </service>-->
 
         <!-- Metadata for library identification -->
         <meta-data

@@ -35,19 +35,21 @@ kotlin {
             }
         }
     }
-
-    // iOS targets
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach {
-        it.binaries.framework {
-            baseName = "AvidCreator"
-            isStatic = true
+    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+    ) {
+        // iOS targets
+        listOf(
+            iosX64(),
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach {
+            it.binaries.framework {
+                baseName = "AvidCreator"
+                isStatic = true
+            }
         }
     }
-
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -121,16 +123,19 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.swing)
             }
         }
-
-        // iOS source sets
-        val iosX64Main by getting
-        val iosArm64Main by getting
-        val iosSimulatorArm64Main by getting
-        val iosMain by creating {
-            dependsOn(commonMain)
-            iosX64Main.dependsOn(this)
-            iosArm64Main.dependsOn(this)
-            iosSimulatorArm64Main.dependsOn(this)
+        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+        ) {
+            // iOS source sets
+            val iosX64Main by getting
+            val iosArm64Main by getting
+            val iosSimulatorArm64Main by getting
+            val iosMain by creating {
+                dependsOn(commonMain)
+                iosX64Main.dependsOn(this)
+                iosArm64Main.dependsOn(this)
+                iosSimulatorArm64Main.dependsOn(this)
+            }
         }
     }
 }
