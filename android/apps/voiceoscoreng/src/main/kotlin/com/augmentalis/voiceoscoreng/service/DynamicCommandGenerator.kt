@@ -193,6 +193,17 @@ class DynamicCommandGenerator(
 
     /**
      * Persist static commands to SQLDelight database.
+     *
+     * FIX (2026-01-19): Resolve FOREIGN KEY constraint failure (code 787)
+     * Root cause: Commands were being inserted referencing elementHashes that
+     * didn't exist in scraped_element table due to:
+     * 1. Silent swallowing of insert failures
+     * 2. No verification that elements actually exist before command insert
+     *
+     * Solution:
+     * - Track which elements were SUCCESSFULLY inserted (not just attempted)
+     * - Verify element existence before command insert
+     * - Only insert commands for elements that actually exist in DB
      */
     private fun persistStaticCommands(
         staticQuantizedCommands: List<QuantizedCommand>,
@@ -225,14 +236,16 @@ class DynamicCommandGenerator(
                 Log.d(TAG, "Step 1/3: Inserted scraped_app for $packageName")
 
                 // Step 2: Insert scraped_elements (FK parent for commands)
-                val insertedHashes = mutableSetOf<String>()
+                // FIX: Track CONFIRMED existing hashes (either inserted or verified to exist)
+                val confirmedHashes = mutableSetOf<String>()
                 var insertedCount = 0
+                var alreadyExistedCount = 0
 
                 staticQuantizedCommands.forEach { cmd ->
                     val elementHash = cmd.metadata["elementHash"] ?: return@forEach
 
-                    // Skip if already inserted
-                    if (elementHash in insertedHashes) return@forEach
+                    // Skip if already confirmed
+                    if (elementHash in confirmedHashes) return@forEach
 
                     // Find the corresponding element
                     val element = elements.find { el ->
@@ -276,18 +289,41 @@ class DynamicCommandGenerator(
                     )
                     try {
                         scrapedElementRepository.insert(scrapedElement)
-                        insertedHashes.add(elementHash)
+                        confirmedHashes.add(elementHash)
                         insertedCount++
                     } catch (e: Exception) {
-                        Log.v(TAG, "Element hash $elementHash may already exist: ${e.message}")
-                        insertedHashes.add(elementHash)
+                        // FIX: Verify element actually exists before assuming it does
+                        val existing = scrapedElementRepository.getByHash(elementHash)
+                        if (existing != null) {
+                            confirmedHashes.add(elementHash)
+                            alreadyExistedCount++
+                            Log.v(TAG, "Element hash $elementHash already exists in DB")
+                        } else {
+                            // Element doesn't exist and insert failed - do NOT add to confirmed
+                            Log.w(TAG, "Element hash $elementHash insert failed and doesn't exist: ${e.message}")
+                        }
                     }
                 }
-                Log.d(TAG, "Step 2/3: Inserted $insertedCount scraped_elements for ${insertedHashes.size} unique hashes (static only)")
+                Log.d(TAG, "Step 2/3: Inserted $insertedCount scraped_elements for ${confirmedHashes.size} unique hashes (static only, $alreadyExistedCount pre-existed)")
 
-                // Step 3: Insert static commands
-                commandPersistence.insertBatch(staticQuantizedCommands)
-                Log.d(TAG, "Step 3/3: Persisted ${staticQuantizedCommands.size} STATIC commands to voiceos.db (skipped $dynamicCount dynamic)")
+                // Step 3: Insert ONLY commands whose elements exist in DB
+                // FIX: Filter commands to only those with confirmed element hashes
+                val validCommands = staticQuantizedCommands.filter { cmd ->
+                    val hash = cmd.metadata["elementHash"]
+                    hash != null && hash in confirmedHashes
+                }
+
+                val skippedCount = staticQuantizedCommands.size - validCommands.size
+                if (skippedCount > 0) {
+                    Log.w(TAG, "Step 3/3: Skipping $skippedCount commands with missing element FK references")
+                }
+
+                if (validCommands.isNotEmpty()) {
+                    commandPersistence.insertBatch(validCommands)
+                    Log.d(TAG, "Step 3/3: Persisted ${validCommands.size} STATIC commands to voiceos.db (skipped $dynamicCount dynamic, $skippedCount FK-invalid)")
+                } else {
+                    Log.w(TAG, "Step 3/3: No valid commands to persist (all had missing FK references)")
+                }
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to persist commands to database", e)
