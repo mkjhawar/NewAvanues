@@ -232,7 +232,7 @@ data class UniversalEntry(
     }
 
     private fun generateRequestId(): String {
-        return "${code.lowercase()}_${System.currentTimeMillis()}"
+        return "${code.lowercase()}_${currentTimeMillis()}"
     }
 }
 

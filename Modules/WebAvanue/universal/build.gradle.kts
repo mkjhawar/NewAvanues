@@ -114,6 +114,7 @@ kotlin {
                 implementation(libs.androidx.core.ktx)
                 implementation(libs.androidx.lifecycle.runtime.ktx)
                 implementation(libs.androidx.lifecycle.viewmodel.compose)
+                implementation(libs.androidx.lifecycle.runtime.compose)  // For LocalLifecycleOwner
 
                 // Activity Compose - For rememberLauncherForActivityResult (file upload support)
                 implementation(libs.androidx.activity.compose)

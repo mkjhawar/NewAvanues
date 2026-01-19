@@ -15,6 +15,13 @@ kotlin {
         }
     }
 
+    // Desktop JVM target (macOS, Windows, Linux)
+    jvm("desktop") {
+        compilations.all {
+            kotlinOptions.jvmTarget = "17"
+        }
+    }
+
     sourceSets {
         commonMain {
             dependencies {
@@ -58,6 +65,21 @@ kotlin {
             dependencies {
                 implementation("io.mockk:mockk:1.13.8")
                 implementation("junit:junit:4.13.2")
+            }
+        }
+
+        // Desktop JVM source set
+        val desktopMain by getting {
+            dependencies {
+                // Coroutines for Swing/desktop
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3")
+            }
+        }
+
+        val desktopTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
             }
         }
     }

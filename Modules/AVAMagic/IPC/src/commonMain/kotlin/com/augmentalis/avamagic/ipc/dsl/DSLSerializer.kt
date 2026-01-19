@@ -1,4 +1,5 @@
 package com.augmentalis.avamagic.ipc.dsl
+import com.augmentalis.avamagic.ipc.currentTimeMillis
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -204,7 +205,7 @@ class DSLSerializer {
             action = action,
             payload = serialize(component),
             format = "dsl",
-            timestamp = System.currentTimeMillis()
+            timestamp = currentTimeMillis()
         )
     }
 
@@ -228,7 +229,7 @@ class DSLSerializer {
             action = "ui.update",
             payload = payload,
             format = "dsl-delta",
-            timestamp = System.currentTimeMillis()
+            timestamp = currentTimeMillis()
         )
     }
 
@@ -253,7 +254,7 @@ class DSLSerializer {
             action = "ui.event",
             payload = payload,
             format = "dsl-event",
-            timestamp = System.currentTimeMillis()
+            timestamp = currentTimeMillis()
         )
     }
 
@@ -524,8 +525,8 @@ class DSLSerializer {
          */
         fun compareSizes(component: UIComponent): SizeComparison {
             val serializer = DSLSerializer()
-            val dslSize = serializer.serialize(component).toByteArray().size
-            val jsonSize = Json.encodeToString(component).toByteArray().size
+            val dslSize = serializer.serialize(component).encodeToByteArray().size
+            val jsonSize = Json.encodeToString(component).encodeToByteArray().size
 
             return SizeComparison(
                 dslBytes = dslSize,

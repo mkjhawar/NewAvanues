@@ -65,7 +65,7 @@ data class Connection(
     val packageName: String,
     val serviceId: String,
     val state: ConnectionState,
-    val connectedAt: Long = System.currentTimeMillis(),
+    val connectedAt: Long = currentTimeMillis(),
     val protocol: IPCProtocol,
     val handle: Any
 ) {

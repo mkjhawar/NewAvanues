@@ -1,4 +1,5 @@
 package com.augmentalis.avamagic.ipc.dsl
+import com.augmentalis.avamagic.ipc.currentTimeMillis
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -72,7 +73,7 @@ class UIIPCProtocol {
                 dsl = serializer.serialize(component),
                 options = options
             ),
-            timestamp = System.currentTimeMillis()
+            timestamp = currentTimeMillis()
         )
     }
 
@@ -94,7 +95,7 @@ class UIIPCProtocol {
                 componentId = componentId,
                 properties = updates.mapValues { serializePropertyValue(it.value) }
             ),
-            timestamp = System.currentTimeMillis()
+            timestamp = currentTimeMillis()
         )
     }
 
@@ -118,7 +119,7 @@ class UIIPCProtocol {
                 eventType = eventType,
                 data = eventData.mapValues { serializePropertyValue(it.value) }
             ),
-            timestamp = System.currentTimeMillis()
+            timestamp = currentTimeMillis()
         )
     }
 
@@ -140,7 +141,7 @@ class UIIPCProtocol {
                 componentId = componentId,
                 state = state.mapValues { serializePropertyValue(it.value) }
             ),
-            timestamp = System.currentTimeMillis()
+            timestamp = currentTimeMillis()
         )
     }
 
@@ -158,7 +159,7 @@ class UIIPCProtocol {
             sourceAppId = sourceAppId,
             targetAppId = targetAppId,
             payload = DisposePayload(componentIds = componentIds),
-            timestamp = System.currentTimeMillis()
+            timestamp = currentTimeMillis()
         )
     }
 
@@ -180,7 +181,7 @@ class UIIPCProtocol {
                 componentId = componentId,
                 queryType = queryType.name
             ),
-            timestamp = System.currentTimeMillis()
+            timestamp = currentTimeMillis()
         )
     }
 
@@ -196,7 +197,7 @@ class UIIPCProtocol {
             success = true,
             data = data?.mapValues { serializePropertyValue(it.value) },
             error = null,
-            timestamp = System.currentTimeMillis()
+            timestamp = currentTimeMillis()
         )
     }
 
@@ -213,7 +214,7 @@ class UIIPCProtocol {
             success = false,
             data = null,
             error = ErrorInfo(code = errorCode, message = errorMessage),
-            timestamp = System.currentTimeMillis()
+            timestamp = currentTimeMillis()
         )
     }
 
@@ -307,7 +308,7 @@ class UIIPCProtocol {
     }
 
     private fun generateRequestId(): String {
-        return "req_${System.currentTimeMillis()}_${(Math.random() * 10000).toInt()}"
+        return "req_${currentTimeMillis()}_${(kotlin.random.Random.nextDouble() * 10000).toInt()}"
     }
 
     private fun serializePropertyValue(value: Any): String {

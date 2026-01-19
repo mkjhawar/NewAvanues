@@ -652,19 +652,30 @@ private fun ScannerControlCard() {
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Start Scanner Overlay button
+            // When both permissions are granted, overlay auto-starts - show ready status
             if (isAccessibilityConnected && hasOverlayPermission) {
-                Button(
-                    onClick = {
-                        OverlayService.start(context)
-                        // Minimize the app so user can navigate to other apps
-                        (context as? ComponentActivity)?.moveTaskToBack(true)
-                    },
-                    modifier = Modifier.fillMaxWidth()
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                    )
                 ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Start Scanner Overlay")
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "VoiceOS Active - Debug FAB visible on all apps",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
                 }
             }
 
@@ -673,14 +684,11 @@ private fun ScannerControlCard() {
             // Instructions
             Text(
                 text = if (!isAccessibilityConnected) {
-                    "1. Enable VoiceOSCoreNG in Accessibility Settings\n" +
-                    "2. Grant overlay permission\n" +
-                    "3. Start the scanner overlay\n" +
-                    "4. Navigate to any app and tap the floating button to scan"
+                    "Enable VoiceOSCoreNG in Accessibility Settings to activate voice commands."
                 } else if (!hasOverlayPermission) {
-                    "Grant overlay permission to show floating scanner button on all apps"
+                    "Grant overlay permission to show the debug FAB on all apps."
                 } else {
-                    "Scanner ready! Tap 'Start Scanner Overlay' then navigate to any app to scan its UI elements."
+                    "VoiceOS is active! Navigate to any app - the debug FAB will show detected elements and voice commands."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)

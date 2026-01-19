@@ -164,6 +164,12 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         private val _lastError = MutableStateFlow<String?>(null)
         val lastError: StateFlow<String?> = _lastError.asStateFlow()
 
+        private val _isVoiceListening = MutableStateFlow(false)
+        val isVoiceListening: StateFlow<Boolean> = _isVoiceListening.asStateFlow()
+
+        private val _lastTranscription = MutableStateFlow<String?>(null)
+        val lastTranscription: StateFlow<String?> = _lastTranscription.asStateFlow()
+
         fun getInstance(): VoiceOSAccessibilityService? = instance
 
         fun exploreCurrentApp() {
@@ -387,18 +393,25 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 // Auto-start voice listening
                 try {
                     voiceOSCore?.startListening()
+                    _isVoiceListening.value = true
                     Log.d(TAG, "Voice listening auto-started")
                 } catch (e: Exception) {
+                    _isVoiceListening.value = false
                     Log.e(TAG, "Failed to auto-start voice listening", e)
                 }
 
                 // Observe speech results
                 voiceOSCore?.speechResults?.collect { speechResult ->
                     Log.d(TAG, "Speech result: ${speechResult.text} (confidence: ${speechResult.confidence})")
+                    // Update transcription for UI display
+                    _lastTranscription.value = speechResult.text
                     if (speechResult.isFinal) {
                         if (!handleVoiceOSControlCommand(speechResult.text.lowercase().trim())) {
                             voiceOSCore?.processCommand(speechResult.text, speechResult.confidence)
                         }
+                        // Clear transcription after processing
+                        kotlinx.coroutines.delay(2000)
+                        _lastTranscription.value = null
                     }
                 }
             } catch (e: Exception) {

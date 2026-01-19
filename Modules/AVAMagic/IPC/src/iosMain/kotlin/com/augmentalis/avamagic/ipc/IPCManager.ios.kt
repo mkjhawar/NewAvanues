@@ -40,9 +40,9 @@ class iOSIPCManager : IPCManager {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : UniversalMessage> subscribe(): Flow<T> {
+        // Note: filterIsInstance requires reified type, using cast instead for iOS
         return messageFlow
-            .map { it.second }
-            .filterIsInstance<T>()
+            .map { it.second as T }
     }
 
     override fun subscribe(filter: MessageFilter): Flow<UniversalMessage> {
@@ -116,6 +116,6 @@ class iOSIPCManager : IPCManager {
 /**
  * Create iOS IPC Manager factory method
  */
-actual fun IPCManager.Companion.create(): IPCManager {
+actual fun createIPCManager(): IPCManager {
     return iOSIPCManager()
 }

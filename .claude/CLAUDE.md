@@ -1,1 +1,1 @@
-/Volumes/M-Drive/Coding/CodeAvenue/.claude/CLAUDE-MASTER.md
+/Volumes/M-Drive/Coding/.claude/CLAUDE.md

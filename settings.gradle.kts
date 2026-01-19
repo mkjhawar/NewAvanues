@@ -56,7 +56,7 @@ include(":Modules:Database")              // Unified KMP database - VoiceOS, Web
 
 // Voice Modules (cross-platform KMP)
 include(":Modules:VoiceOSCore")            // Unified KMP voice control (consolidates Voice:Core + VoiceOS)
-include(":Modules:Voice:Core")             // VoiceOSCoreNG - KMP voice control core (DEPRECATED - use VoiceOSCore)
+// include(":Modules:Voice:Core")          // DEPRECATED - use VoiceOSCore (archived)
 include(":Modules:Voice:WakeWord")         // Wake word detection
 
 // Actions Module (cross-platform KMP)
@@ -99,7 +99,7 @@ include(":Modules:VoiceOS:managers:LocalizationManager")
 // Top-level Shared Modules (consolidated from VoiceOS/libraries and AvaMagic)
 include(":Modules:DeviceManager")                       // Device info, sensors, audio, network
 include(":Modules:SpeechRecognition")                   // Speech recognition engines (Whisper, Vivoka, etc.)
-include(":Modules:Translation")                         // Translation services
+// include(":Modules:Translation")                      // Translation services (stub only - archived)
 include(":Modules:VoiceKeyboard")                       // Voice keyboard input
 include(":vivoka:Android")                              // Vivoka VSDK wrapper (AAR dependencies)
 
@@ -107,7 +107,7 @@ include(":vivoka:Android")                              // Vivoka VSDK wrapper (
 include(":Modules:PluginSystem")                         // Generic DSL plugin framework (moved from VoiceOS/libraries)
 include(":Modules:AvidCreator")                          // AVID Android extensions (moved from VoiceOS/libraries)
 include(":Modules:LicenseManager")                       // License validation (moved from VoiceOS/managers)
-// NOTE: UniversalIPC consolidated into Modules:AvaMagic:IPC
+include(":Modules:AVUCodec")                             // KMP AVU Protocol encoder/decoder
 // NOTE: JITLearning, LearnAppCore, VoiceOsLogging archived (deprecated/duplicate)
 
 // WebAvanue Modules

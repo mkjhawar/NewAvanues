@@ -13,9 +13,12 @@ kotlin {
         }
     }
 
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
+    listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
+        it.binaries.framework {
+            baseName = "AvaMagicIPC"
+            isStatic = true
+        }
+    }
 
     jvm("desktop")
 
@@ -39,6 +42,14 @@ kotlin {
             // DeviceManager for identity and capability detection (Android-only)
             implementation(project(":Modules:DeviceManager"))
         }
+
+        // iOS shared source set
+        val iosMain by creating {
+            dependsOn(commonMain.get())
+        }
+        val iosX64Main by getting { dependsOn(iosMain) }
+        val iosArm64Main by getting { dependsOn(iosMain) }
+        val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
     }
 }
 

@@ -1,23 +1,150 @@
+/**
+ * KMP AvidCreator Module
+ *
+ * Cross-platform AVID element creation and management library.
+ * Android extensions for AccessibilityService integration.
+ *
+ * Supported Platforms:
+ * - Android (full implementation with UI)
+ * - iOS (core models only)
+ * - Desktop (core models only)
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ */
 plugins {
-    id("com.android.library")
-    id("org.jetbrains.kotlin.android")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.library)
     id("kotlin-parcelize")
-    // KSP removed - no longer needed without Room
-    id("maven-publish")
+}
+
+kotlin {
+    // Android target
+    androidTarget {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+    }
+
+    // JVM target (Desktop)
+    jvm("desktop") {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+    }
+
+    // iOS targets
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach {
+        it.binaries.framework {
+            baseName = "AvidCreator"
+            isStatic = true
+        }
+    }
+
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.datetime)
+
+                // Cross-platform AVID generation
+                implementation(project(":Modules:AVID"))
+            }
+        }
+
+        val commonTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.kotlinx.coroutines.test)
+            }
+        }
+
+        val androidMain by getting {
+            dependencies {
+                implementation(libs.kotlinx.coroutines.android)
+                implementation(libs.androidx.core.ktx)
+
+                // SQLDelight KMP Database
+                implementation(project(":Modules:VoiceOS:core:database"))
+
+                // Compatibility Support
+                implementation("androidx.multidex:multidex:2.0.1")
+                implementation("androidx.annotation:annotation:1.7.1")
+                implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+                // JSON Serialization
+                implementation("com.google.code.gson:gson:2.10.1")
+
+                // Compose dependencies
+                implementation(platform("androidx.compose:compose-bom:2024.02.00"))
+                implementation("androidx.compose.runtime:runtime")
+                implementation("androidx.compose.ui:ui")
+                implementation("androidx.compose.ui:ui-tooling-preview")
+                implementation("androidx.compose.foundation:foundation")
+                implementation("androidx.compose.material3:material3")
+                implementation("androidx.compose.material:material-icons-extended")
+                implementation("androidx.compose.runtime:runtime-livedata")
+                implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+                implementation("androidx.activity:activity-compose:1.8.2")
+            }
+        }
+
+        val androidUnitTest by getting {
+            dependencies {
+                implementation("junit:junit:4.13.2")
+                implementation(libs.kotlin.test)
+                implementation("org.mockito:mockito-core:4.11.0")
+                implementation("org.mockito:mockito-inline:4.11.0")
+                implementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
+                implementation("androidx.arch.core:core-testing:2.2.0")
+                implementation(libs.kotlinx.coroutines.test)
+            }
+        }
+
+        val androidInstrumentedTest by getting {
+            dependencies {
+                implementation("androidx.test.ext:junit:1.1.5")
+                implementation("androidx.test.espresso:espresso-core:3.5.1")
+                implementation("androidx.compose.ui:ui-test-junit4")
+            }
+        }
+
+        val desktopMain by getting {
+            dependencies {
+                implementation(libs.kotlinx.coroutines.swing)
+            }
+        }
+
+        // iOS source sets
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+        val iosMain by creating {
+            dependsOn(commonMain)
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
+        }
+    }
 }
 
 android {
     namespace = "com.augmentalis.avidcreator"
-    compileSdk = 34  // Android 14 (API 34) - Latest stable
-    // compileSdkPreview = "VanillaIceCream"  // Android 15 - will enable when available
+    compileSdk = 34
 
     defaultConfig {
-        minSdk = 29  // Android 10 (Q) - Minimum supported
-        // Note: targetSdk is deprecated for libraries
-        multiDexEnabled = true  // Multi-version APK support
+        minSdk = 29
+        multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
-    
+
     testOptions {
         unitTests {
             all {
@@ -25,103 +152,18 @@ android {
             }
         }
     }
-    
-    // testOptions {
-        // targetSdk = 34  // Android 14 - Production target for testing - REMOVED: deprecated for libraries
-    // }
-    
-    lint {
-        // targetSdk = 34  // Android 14 - Production target for lint - REMOVED: deprecated for libraries
-    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
-        aidl = true  // Enable AIDL for IPC service binding
+        aidl = true
     }
 
     composeOptions {
         kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
-    }
-
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-        }
-    }
-}
-
-dependencies {
-    // Cross-platform AVID generation (shared KMP module) - Replaced VUID with AVID
-    implementation(project(":Modules:AVID"))
-
-    // SQLDelight KMP Database (replaces Room)
-    implementation(project(":Modules:VoiceOS:core:database"))
-
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    
-    // Compatibility Support
-    implementation("androidx.multidex:multidex:2.0.1")
-    implementation("androidx.annotation:annotation:1.7.1")
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
-    
-    // Android XR Support (when available)
-    // NOTE: These libraries are not yet published. Uncomment when available.
-    // compileOnly("androidx.xr:xr-core:1.0.0-alpha01")
-    
-    // JSON Serialization (still needed for metadata)
-    implementation("com.google.code.gson:gson:2.10.1")
-
-    // Compose dependencies
-    implementation(platform("androidx.compose:compose-bom:2024.02.00"))
-    implementation("androidx.compose.runtime:runtime")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.foundation:foundation")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.compose.runtime:runtime-livedata")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    implementation("androidx.activity:activity-compose:1.8.2")
-    
-    // Testing dependencies
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.25")
-    testImplementation("org.mockito:mockito-core:4.11.0")
-    testImplementation("org.mockito:mockito-inline:4.11.0") // Enables mocking of final classes
-    testImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
-    testImplementation("androidx.arch.core:core-testing:2.2.0")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-    
-    // Android Test dependencies
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    
-    // Debug implementations
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
-}
-
-publishing {
-    publications {
-        create<MavenPublication>("release") {
-            groupId = "com.augmentalis"
-            artifactId = "avidcreator"
-            version = "1.0.0"
-
-            afterEvaluate {
-                from(components["release"])
-            }
-        }
     }
 }

@@ -184,6 +184,15 @@ android {
         buildConfigField("String", "MODULE_NAME", "\"SpeechRecognition-KMP\"")
     }
 
+    // Include legacy Android-only source set for Vivoka and other engines
+    sourceSets {
+        getByName("main") {
+            java.srcDirs("src/main/java")
+            res.srcDirs("src/main/res")
+            manifest.srcFile("src/main/AndroidManifest.xml")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
