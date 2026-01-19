@@ -1,5 +1,6 @@
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.LoggingUtils
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.concurrent.Volatile
@@ -52,9 +53,12 @@ class CommandRegistry {
      * @param newCommands List of commands from current scan
      */
     fun updateSync(newCommands: List<QuantizedCommand>) {
-        commandsSnapshot = newCommands
-            .filter { it.targetVuid != null }
-            .associateBy { it.targetVuid!! }
+        val validCommands = newCommands.filter { it.targetVuid != null }
+        LoggingUtils.d("updateSync: received ${newCommands.size} commands, ${validCommands.size} have valid AVIDs", TAG)
+        if (validCommands.isNotEmpty()) {
+            LoggingUtils.d("updateSync: first 3 commands: ${validCommands.take(3).map { "'${it.phrase}' (bounds=${it.metadata["bounds"]})" }}", TAG)
+        }
+        commandsSnapshot = validCommands.associateBy { it.targetVuid!! }
     }
 
     /**
@@ -69,18 +73,33 @@ class CommandRegistry {
     fun findByPhrase(phrase: String): QuantizedCommand? {
         val normalized = phrase.lowercase().trim()
         val snapshot = commandsSnapshot.values // Read volatile once
+        LoggingUtils.d("findByPhrase('$phrase'): searching ${snapshot.size} commands", TAG)
 
         // Exact match first
         val exactMatch = snapshot.firstOrNull { cmd: QuantizedCommand ->
             cmd.phrase.lowercase() == normalized
         }
-        if (exactMatch != null) return exactMatch
+        if (exactMatch != null) {
+            LoggingUtils.d("findByPhrase: exact match found - '${exactMatch.phrase}'", TAG)
+            return exactMatch
+        }
 
         // Partial match - check if input matches just the label part
-        return snapshot.firstOrNull { cmd: QuantizedCommand ->
+        // Skip empty labels to avoid false matches
+        val partialMatch = snapshot.firstOrNull { cmd: QuantizedCommand ->
             val label = cmd.phrase.substringAfter(" ").lowercase()
-            normalized == label || normalized.endsWith(label, ignoreCase = true)
+            label.isNotBlank() && (normalized == label || normalized.endsWith(label, ignoreCase = true))
         }
+        if (partialMatch != null) {
+            LoggingUtils.d("findByPhrase: partial match found - '${partialMatch.phrase}'", TAG)
+        } else {
+            LoggingUtils.d("findByPhrase: no match for '$phrase'. Available: ${snapshot.take(5).map { it.phrase }}", TAG)
+        }
+        return partialMatch
+    }
+
+    companion object {
+        private const val TAG = "CommandRegistry"
     }
 
     /**

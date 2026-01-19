@@ -48,8 +48,8 @@ class ActionCoordinator(
     private val commandRegistry: CommandRegistry = CommandRegistry(),
     private val metrics: IMetricsCollector = MetricsCollector()
 ) {
-
     companion object {
+        private const val TAG = "ActionCoordinator"
         private const val HANDLER_TIMEOUT_MS = 5000L
         private const val DEFAULT_FUZZY_THRESHOLD = 0.7f
         private const val HIGH_CONFIDENCE_THRESHOLD = 0.85f
@@ -141,11 +141,14 @@ class ActionCoordinator(
      */
     suspend fun processCommand(command: QuantizedCommand): HandlerResult {
         val startTime = currentTimeMillis()
+        LoggingUtils.d("processCommand: phrase='${command.phrase}', actionType=${command.actionType}, bounds=${command.metadata["bounds"]}", TAG)
 
         // Find handler
         val handler = handlerRegistry.findHandler(command)
+        LoggingUtils.d("findHandler result: ${handler?.let { it::class.simpleName } ?: "null"}", TAG)
         if (handler == null) {
             val result = HandlerResult.failure("No handler found for: ${command.phrase}")
+            LoggingUtils.w("No handler found for '${command.phrase}'", TAG)
             recordResult(command, result, currentTimeMillis() - startTime)
             return result
         }
@@ -302,18 +305,22 @@ class ActionCoordinator(
      */
     suspend fun processVoiceCommand(text: String, confidence: Float = 1.0f): HandlerResult {
         val normalizedText = text.lowercase().trim()
+        LoggingUtils.d("processVoiceCommand: '$normalizedText' (conf: $confidence)", TAG)
 
         // ═══════════════════════════════════════════════════════════════════
-        // Step 1: Try dynamic command lookup (has VUID for direct execution)
+        // Step 1: Try dynamic command lookup (has AVID for direct execution)
         // ═══════════════════════════════════════════════════════════════════
+        LoggingUtils.d("Dynamic command registry size: ${commandRegistry.size}", TAG)
         if (commandRegistry.size > 0) {
             // Extract verb and target from voice input
             // e.g., "click 4" -> verb="click", target="4"
             val (verb, target) = extractVerbAndTarget(normalizedText)
+            LoggingUtils.d("Extracted verb='$verb', target='$target'", TAG)
 
             if (target != null) {
                 // Try exact match with extracted target
                 val exactMatch = commandRegistry.findByPhrase(target)
+                LoggingUtils.d("findByPhrase('$target') = ${exactMatch?.phrase ?: "null"}", TAG)
                 if (exactMatch != null) {
                     // Found! Execute the command
                     // If user provided verb (e.g., "click 4"), use their phrase
@@ -322,6 +329,7 @@ class ActionCoordinator(
                     val actionPhrase = verb?.let { normalizedText }
                         ?: actionTypeToPhrase(exactMatch.actionType, target)
                     val actionCommand = exactMatch.copy(phrase = actionPhrase)
+                    LoggingUtils.d("Dynamic command match! phrase='$actionPhrase', actionType=${exactMatch.actionType}, bounds=${exactMatch.metadata["bounds"]}", TAG)
                     return processCommand(actionCommand)
                 }
 
@@ -370,6 +378,7 @@ class ActionCoordinator(
         // ═══════════════════════════════════════════════════════════════════
         // Step 2: Try static handler lookup
         // ═══════════════════════════════════════════════════════════════════
+        LoggingUtils.d("No dynamic match, trying static handlers", TAG)
         val directCommand = QuantizedCommand(
             phrase = normalizedText,
             actionType = CommandActionType.EXECUTE,
@@ -377,7 +386,9 @@ class ActionCoordinator(
             confidence = confidence
         )
 
-        if (handlerRegistry.canHandle(normalizedText)) {
+        val canHandle = handlerRegistry.canHandle(normalizedText)
+        LoggingUtils.d("handlerRegistry.canHandle('$normalizedText') = $canHandle", TAG)
+        if (canHandle) {
             return processCommand(directCommand)
         }
 
