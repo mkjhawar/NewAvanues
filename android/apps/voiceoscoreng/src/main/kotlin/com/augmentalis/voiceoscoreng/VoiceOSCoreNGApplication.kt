@@ -11,6 +11,7 @@ import com.augmentalis.database.repositories.IScrapedAppRepository
 import com.augmentalis.database.repositories.IScrapedElementRepository
 import com.augmentalis.voiceoscoreng.AndroidCommandPersistence
 import com.augmentalis.voiceoscore.ICommandPersistence
+import com.augmentalis.voiceoscore.VivokaEngineFactory
 
 /**
  * Application class for VoiceOSCoreNG Test App.
@@ -59,6 +60,9 @@ class VoiceOSCoreNGApplication : Application() {
 
         // Create command persistence bridge
         commandPersistence = AndroidCommandPersistence(databaseManager.generatedCommands)
+
+        // Initialize Vivoka engine factory with application context
+        VivokaEngineFactory.initialize(this)
 
         // Initialize LearnApp feature toggles
         LearnAppDevToggle.initialize(
