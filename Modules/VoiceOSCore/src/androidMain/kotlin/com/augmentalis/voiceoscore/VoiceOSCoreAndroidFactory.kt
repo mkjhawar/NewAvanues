@@ -9,6 +9,9 @@
 package com.augmentalis.voiceoscore
 
 import android.accessibilityservice.AccessibilityService
+import android.util.Log
+
+private const val TAG = "VoiceOSFactory"
 
 /**
  * Create a VoiceOSCore instance configured for Android.
@@ -85,10 +88,12 @@ internal class AndroidGestureHandler(
         return try {
             when (command.actionType) {
                 CommandActionType.TAP, CommandActionType.CLICK -> {
+                    Log.d(TAG, "Executing TAP/CLICK for '${command.phrase}', metadata: ${command.metadata}")
                     // Check if coordinates are provided in params
                     val x = params["x"] as? Float
                     val y = params["y"] as? Float
                     if (x != null && y != null) {
+                        Log.d(TAG, "Tapping with coords: ($x, $y)")
                         val success = dispatcher.tap(x, y)
                         if (success) {
                             HandlerResult.success("Tapped ${command.phrase}")
@@ -98,14 +103,19 @@ internal class AndroidGestureHandler(
                     } else {
                         // Check metadata for bounds
                         val bounds = parseBoundsFromMetadata(command.metadata)
+                        Log.d(TAG, "Parsed bounds from metadata: $bounds")
                         if (bounds != null) {
+                            Log.d(TAG, "Clicking with bounds: ${bounds.left},${bounds.top},${bounds.right},${bounds.bottom}")
                             val success = dispatcher.click(bounds)
                             if (success) {
+                                Log.d(TAG, "Click succeeded for '${command.phrase}'")
                                 HandlerResult.success("Clicked ${command.phrase}")
                             } else {
+                                Log.w(TAG, "Click failed for '${command.phrase}'")
                                 HandlerResult.failure("Failed to click")
                             }
                         } else {
+                            Log.w(TAG, "No bounds in metadata for '${command.phrase}', returning notHandled")
                             HandlerResult.notHandled()
                         }
                     }

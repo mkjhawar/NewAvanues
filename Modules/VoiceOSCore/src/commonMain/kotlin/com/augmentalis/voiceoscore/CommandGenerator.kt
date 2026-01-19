@@ -90,7 +90,8 @@ object CommandGenerator {
                 "resourceId" to element.resourceId,
                 "label" to label,
                 "isDynamic" to isDynamic.toString(),
-                "listIndex" to element.listIndex.toString()
+                "listIndex" to element.listIndex.toString(),
+                "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}"
             )
         )
 
@@ -158,7 +159,8 @@ object CommandGenerator {
                     "packageName" to packageName,
                     "elementHash" to deriveElementHash(element),
                     "isIndexCommand" to "true",
-                    "listIndex" to index.toString()
+                    "listIndex" to index.toString(),
+                    "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}"
                 )
             )
         }
@@ -232,7 +234,8 @@ object CommandGenerator {
                     "elementHash" to deriveElementHash(element),
                     "isLabelCommand" to "true",
                     "listIndex" to element.listIndex.toString(),
-                    "originalLabel" to label
+                    "originalLabel" to label,
+                    "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}"
                 )
             )
         }
