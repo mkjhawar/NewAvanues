@@ -270,13 +270,41 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
 
         serviceScope.launch {
             val coordinator = getActionCoordinator()
-            val result = coordinator.processVoiceCommand(utterance)
+            val result = coordinator.processVoiceCommand(utterance, confidence)
 
-            // Notify app-level service of result
-            result?.let { cmd ->
-                onCommandExecuted(cmd, true)
-            } ?: run {
-                Log.w(TAG, "No matching command for: $utterance")
+            // Handle the result
+            when (result) {
+                is HandlerResult.Success -> {
+                    Log.d(TAG, "Command executed: ${result.message}")
+                    // Create a placeholder command for the callback
+                    val cmd = QuantizedCommand(
+                        phrase = utterance,
+                        actionType = CommandActionType.EXECUTE,
+                        targetAvid = null,
+                        confidence = confidence
+                    )
+                    onCommandExecuted(cmd, true)
+                }
+                is HandlerResult.Failure -> {
+                    Log.w(TAG, "Command failed: ${result.reason}")
+                    val cmd = QuantizedCommand(
+                        phrase = utterance,
+                        actionType = CommandActionType.EXECUTE,
+                        targetAvid = null,
+                        confidence = confidence
+                    )
+                    onCommandExecuted(cmd, false)
+                }
+                is HandlerResult.NotHandled -> {
+                    Log.w(TAG, "No matching command for: $utterance")
+                }
+                is HandlerResult.AwaitingSelection -> {
+                    Log.d(TAG, "Awaiting selection: ${result.message}")
+                    // UI layer should handle disambiguation
+                }
+                else -> {
+                    Log.d(TAG, "Command result: $result")
+                }
             }
         }
     }

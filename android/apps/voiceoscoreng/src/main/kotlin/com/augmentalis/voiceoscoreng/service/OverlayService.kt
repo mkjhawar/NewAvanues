@@ -1064,7 +1064,7 @@ private fun DebugFabCollapsed(
  */
 @Composable
 private fun DebugMetricsPanel(
-    screenInfo: com.augmentalis.voiceoscoreng.persistence.ScreenInfo?,
+    screenInfo: com.augmentalis.voiceoscore.ScreenInfo?,
     numberedItems: List<OverlayStateManager.NumberOverlayItem>,
     numbersMode: OverlayStateManager.NumbersOverlayMode,
     isConnected: Boolean,

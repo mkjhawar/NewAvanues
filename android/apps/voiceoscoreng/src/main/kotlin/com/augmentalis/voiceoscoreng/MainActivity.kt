@@ -1,6 +1,7 @@
 package com.augmentalis.voiceoscoreng
 
 import android.accessibilityservice.AccessibilityServiceInfo
+import com.augmentalis.voiceoscoreng.app.BuildConfig
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -28,11 +29,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.augmentalis.voiceoscoreng.handlers.VoiceOSCoreNG
-import com.augmentalis.voiceoscoreng.features.LearnAppConfig
-import com.augmentalis.voiceoscoreng.features.LearnAppDevToggle
-import com.augmentalis.voiceoscoreng.features.DeveloperSettingsScreen
-import com.augmentalis.voiceoscoreng.features.ScanningCallbacks
+import com.augmentalis.voiceoscore.VoiceOSCoreNG
+import com.augmentalis.voiceoscore.LearnAppConfig
+import com.augmentalis.voiceoscore.LearnAppDevToggle
+import com.augmentalis.voiceoscoreng.ui.DeveloperSettingsScreen
+import com.augmentalis.voiceoscoreng.ui.ScanningCallbacks
 import com.augmentalis.voiceoscoreng.service.OverlayService
 import com.augmentalis.voiceoscoreng.service.VoiceOSAccessibilityService
 import com.augmentalis.voiceoscoreng.ui.theme.VoiceOSCoreNGTheme
@@ -137,7 +138,7 @@ fun MainScreen() {
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                "v${VoiceOSCoreNG.getVersion()} • Test App",
+                                "v${BuildConfig.VERSION_NAME} • Test App",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -149,9 +150,9 @@ fun MainScreen() {
                     },
                     actions = {
                         // Tier indicator
-                        val tier = VoiceOSCoreNG.getCurrentTier()
+                        val tier = LearnAppDevToggle.getCurrentTier()
                         AssistChip(
-                            onClick = { VoiceOSCoreNG.toggle() },
+                            onClick = { LearnAppDevToggle.toggle() },
                             label = { Text(tier.name) },
                             leadingIcon = {
                                 Icon(
@@ -230,7 +231,7 @@ private fun DrawerContent(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "v${VoiceOSCoreNG.getVersion()} • ${LearnAppDevToggle.getCurrentTier().name} Mode",
+                    "v${BuildConfig.VERSION_NAME} • ${LearnAppDevToggle.getCurrentTier().name} Mode",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )

@@ -2,10 +2,10 @@ package com.augmentalis.voiceoscoreng.service
 
 import android.content.res.Resources
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscoreng.common.QuantizedCommand
-import com.augmentalis.voiceoscoreng.functions.HashUtils
-import com.augmentalis.voiceoscoreng.persistence.ScreenHashRepository
-import com.augmentalis.voiceoscoreng.persistence.ScreenInfo
+import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.voiceoscore.HashUtils
+import com.augmentalis.voiceoscore.ScreenHashRepository
+import com.augmentalis.voiceoscore.ScreenInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,7 +54,7 @@ class ScreenCacheManager(
         val dimensionKey = "${screenWidth}x${screenHeight}"
 
         val signature = "$dimensionKey|${elements.sorted().joinToString("|")}"
-        return HashUtils.generateHash(signature, 16)
+        return HashUtils.calculateHash(signature).take(16)
     }
 
     /**

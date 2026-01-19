@@ -1,6 +1,6 @@
 package com.augmentalis.voiceoscoreng.service
 
-import com.augmentalis.voiceoscoreng.common.ElementInfo
+import com.augmentalis.voiceoscore.ElementInfo
 
 /**
  * Data models for accessibility exploration results.

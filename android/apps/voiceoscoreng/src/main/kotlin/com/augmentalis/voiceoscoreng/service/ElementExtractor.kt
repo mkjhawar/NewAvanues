@@ -3,10 +3,10 @@ package com.augmentalis.voiceoscoreng.service
 import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscoreng.common.Bounds
-import com.augmentalis.voiceoscoreng.common.CommandGenerator
-import com.augmentalis.voiceoscoreng.common.ElementInfo
-import com.augmentalis.voiceoscoreng.functions.HashUtils
+import com.augmentalis.voiceoscore.Bounds
+import com.augmentalis.voiceoscore.CommandGenerator
+import com.augmentalis.voiceoscore.ElementInfo
+import com.augmentalis.voiceoscore.HashUtils
 
 private const val TAG = "ElementExtractor"
 
@@ -99,7 +99,7 @@ object ElementExtractor {
 
         // Generate hash for deduplication - use className|resourceId|text (NOT bounds, as bounds make every element unique)
         val hashInput = "${element.className}|${element.resourceId}|${element.text}"
-        val hash = HashUtils.generateHash(hashInput, 16)
+        val hash = HashUtils.calculateHash(hashInput).take(16)
 
         if (seenHashes.contains(hash)) {
             Log.d(TAG, "DUPLICATE FOUND: hash=$hash class=${element.className.substringAfterLast(".")} text='${element.text.take(20)}'")
@@ -108,7 +108,7 @@ object ElementExtractor {
                     hash = hash,
                     element = element,
                     firstSeenIndex = elements.indexOfFirst { e ->
-                        val h = HashUtils.generateHash("${e.className}|${e.resourceId}|${e.text}", 16)
+                        val h = HashUtils.calculateHash("${e.className}|${e.resourceId}|${e.text}").take(16)
                         h == hash
                     }
                 )

@@ -2,14 +2,14 @@ package com.augmentalis.voiceoscoreng.service
 
 import android.content.pm.PackageManager
 import android.util.Log
-import com.augmentalis.voiceoscoreng.common.CommandGenerator
-import com.augmentalis.voiceoscoreng.common.CommandRegistry
-import com.augmentalis.voiceoscoreng.common.ElementFingerprint
-import com.augmentalis.voiceoscoreng.common.ElementInfo
-import com.augmentalis.voiceoscoreng.common.QuantizedCommand
-import com.augmentalis.voiceoscoreng.common.StaticCommandRegistry
-import com.augmentalis.voiceoscoreng.functions.HashUtils
-import com.augmentalis.voiceoscoreng.persistence.ICommandPersistence
+import com.augmentalis.voiceoscore.CommandGenerator
+import com.augmentalis.voiceoscore.CommandRegistry
+import com.augmentalis.voiceoscore.ElementFingerprint
+import com.augmentalis.voiceoscore.ElementInfo
+import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.voiceoscore.StaticCommandRegistry
+import com.augmentalis.voiceoscore.HashUtils
+import com.augmentalis.voiceoscore.ICommandPersistence
 import com.augmentalis.database.dto.ScrapedAppDTO
 import com.augmentalis.database.dto.ScrapedElementDTO
 import com.augmentalis.database.repositories.IScrapedAppRepository
@@ -211,7 +211,7 @@ class DynamicCommandGenerator(
                     packageName = packageName,
                     versionCode = appInfo.versionCode,
                     versionName = appInfo.versionName,
-                    appHash = HashUtils.generateHash(packageName + appInfo.versionCode, 8),
+                    appHash = HashUtils.calculateHash(packageName + appInfo.versionCode).take(8),
                     isFullyLearned = 0,
                     learnCompletedAt = null,
                     scrapingMode = "DYNAMIC",

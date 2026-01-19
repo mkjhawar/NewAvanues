@@ -12,13 +12,14 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.voiceoscoreng.VoiceOSCoreNGApplication
-import com.augmentalis.voiceoscoreng.VoiceOSCoreNG
-import com.augmentalis.voiceoscoreng.createForAndroid
-import com.augmentalis.voiceoscoreng.common.QuantizedCommand
-import com.augmentalis.voiceoscoreng.common.CommandRegistry
-import com.augmentalis.voiceoscoreng.common.ElementFingerprint
-import com.augmentalis.voiceoscoreng.handlers.ServiceConfiguration
-import com.augmentalis.voiceoscoreng.persistence.ICommandPersistence
+import com.augmentalis.voiceoscore.VoiceOSCoreNG
+import com.augmentalis.voiceoscore.createForAndroid
+import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.voiceoscore.CommandRegistry
+import com.augmentalis.voiceoscore.ElementFingerprint
+import com.augmentalis.voiceoscore.ServiceConfiguration
+import com.augmentalis.voiceoscore.ServiceState
+import com.augmentalis.voiceoscore.ICommandPersistence
 import com.augmentalis.database.repositories.IScrapedAppRepository
 import com.augmentalis.database.repositories.IScrapedElementRepository
 import kotlinx.coroutines.*
@@ -26,9 +27,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import com.augmentalis.voiceoscoreng.persistence.ScreenHashRepository
-import com.augmentalis.voiceoscoreng.persistence.ScreenHashRepositoryImpl
-import com.augmentalis.voiceoscoreng.persistence.ScreenInfo
+import com.augmentalis.voiceoscore.ScreenHashRepository
+import com.augmentalis.voiceoscore.ScreenHashRepositoryImpl
+import com.augmentalis.voiceoscore.ScreenInfo
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
@@ -217,7 +218,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
          */
         fun isListening(): Boolean {
             return instance?.voiceOSCore?.state?.value?.let { state ->
-                state is com.augmentalis.voiceoscoreng.handlers.ServiceState.Listening
+                state is com.augmentalis.voiceoscore.ServiceState.Listening
             } ?: false
         }
 
@@ -716,7 +717,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         val startTime = System.currentTimeMillis()
 
         // Extract elements using ElementExtractor
-        val elements = mutableListOf<com.augmentalis.voiceoscoreng.common.ElementInfo>()
+        val elements = mutableListOf<com.augmentalis.voiceoscore.ElementInfo>()
         val hierarchy = mutableListOf<HierarchyNode>()
         val seenHashes = mutableSetOf<String>()
         val duplicates = mutableListOf<DuplicateInfo>()
