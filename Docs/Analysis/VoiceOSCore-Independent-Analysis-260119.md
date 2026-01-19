@@ -461,32 +461,58 @@ src/
 
 ---
 
-## 10. Consolidation Recommendations
+## 10. Consolidation Recommendations - REVISED
 
-### Confirmed from Previous Analysis
+### Previous Plan Was Overkill
 
-1. **30 conflict files where MASTER is superior** - KEEP MASTER ✅
-2. **20 conflict files needing merge** - Extract LEGACY features to MASTER ✅
-3. **141 KMP-ready LEGACY files** - Move to commonMain ✅
-4. **349 Android-specific files** - Move to androidMain ✅
+The original plan to migrate 490 LEGACY files is **unnecessary**. Here's why:
 
-### Additional Findings
+| Original Plan | Reality |
+|---------------|---------|
+| Migrate 141 KMP-ready files | MASTER already has equivalent/better implementations |
+| Migrate 349 Android files | Most are app-level code, not core module code |
+| Merge 20 conflict files | MASTER versions are cleaner KMP designs |
 
-1. **VoiceOS/core utility modules** - These are already KMP and overlap with MASTER:
-   - `VoiceOS/core/hash` duplicates `VoiceOSCore/HashUtils.kt`
-   - `VoiceOS/core/logging` could merge with MASTER logging
-   - **Recommendation:** Consolidate utilities into VoiceOSCore
+### New Approach: Use MASTER + Add Android Wiring
 
-2. **VoiceOS/managers** - These are additional managers:
-   - `HUDManager/` - HUD/AR rendering (Android)
-   - `CommandManager/` - Command execution (Android)
-   - `LocalizationManager/` - i18n (Android)
-   - `VoiceDataManager/` - Data export (Android)
-   - **Recommendation:** Keep as separate Android modules or move to androidMain
+**MASTER VoiceOSCore is production-ready.** It has:
+- ✅ All core business logic (KMP)
+- ✅ All interfaces defined
+- ✅ Platform stubs for iOS/Desktop
+- ⚠️ Android implementations need wiring
 
-3. **Voice/WakeWord** - Wake word detection:
-   - Already partial KMP (commonMain + android)
-   - **Recommendation:** Keep as separate module, it's a different concern
+### What's Actually Needed from LEGACY
+
+Only **~15-20 files** for Android platform implementation:
+
+| File | Purpose | Priority |
+|------|---------|----------|
+| `VoiceOSService.kt` | Main accessibility service | P0 |
+| `AccessibilityNodeExtensions.kt` | Node traversal helpers | P0 |
+| `AccessibilityNodeManager.kt` | Node caching/management | P0 |
+| `AndroidScreenFingerprinter.kt` | Platform fingerprinting | P1 |
+| `AndroidGestureExecutor.kt` | Gesture dispatch | P1 |
+| `AndroidNluProcessor.kt` | BERT/ONNX wrapper | P1 |
+| `NumberOverlay.kt` | Number overlay UI | P2 |
+| `CommandStatusOverlay.kt` | Status feedback | P2 |
+| `ConfidenceOverlay.kt` | Confidence display | P2 |
+
+### What Should NOT Be Migrated
+
+| Category | Reason |
+|----------|--------|
+| Activities (LearnAppActivity, etc.) | App-level, not module-level |
+| Database DAOs/Repositories | SQLDelight handles this in KMP |
+| 100+ sub-packages | Organizational bloat |
+| Duplicate utilities | Already in MASTER |
+| UI ViewModels | App-level concern |
+
+### Revised Recommendation
+
+1. **Keep MASTER as-is** - It's complete
+2. **Create Android wiring** - Add ~15 files to `androidMain/`
+3. **Archive LEGACY** - Reference only, don't migrate wholesale
+4. **Build Android app separately** - In `android/apps/voiceos/`
 
 ---
 
@@ -552,7 +578,215 @@ The VoiceOSCore consolidation analysis is **accurate and complete**. The MASTER 
 
 ---
 
-**Analysis Complete** | Ready for Implementation
+## 12. Module Location Decision
+
+### Question: Should VoiceOSCore move under Voice/?
+
+**Current Structure:**
+```
+Modules/
+├── Voice/
+│   └── WakeWord/           # Wake word detection only
+├── VoiceOS/
+│   ├── VoiceOSCore/        # LEGACY (490 files, Android-only)
+│   ├── core/               # Utility KMP modules
+│   └── managers/           # HUD, Command, etc.
+└── VoiceOSCore/            # MASTER (222 files, KMP)
+```
+
+### Decision: Keep VoiceOSCore Standalone
+
+**Reasons:**
+1. **VoiceOSCore is the main backend** - Deserves top-level visibility
+2. **Import path stability** - Moving would require updating many imports
+3. **Flat KMP structure works** - Current location is clean
+4. **Different concerns** - Wake word detection vs full voice OS are separate
+5. **LEGACY VoiceOS/ will be archived** - No need to align with it
+
+### Final Structure
+
+```
+Modules/
+├── Voice/
+│   └── WakeWord/           # Wake word detection (separate concern)
+├── VoiceOS/                # LEGACY - TO BE ARCHIVED
+│   ├── VoiceOSCore/        # Archive after wiring complete
+│   ├── core/               # Keep as shared utilities
+│   └── managers/           # May archive or keep
+└── VoiceOSCore/            # MASTER - PRIMARY MODULE
+    └── src/
+        ├── commonMain/     # KMP business logic (185 files)
+        └── androidMain/    # Android wiring (FLAT structure)
+```
+
+---
+
+## 13. Android Wiring Plan - FLAT STRUCTURE
+
+### Target Location
+
+All Android wiring goes in:
+```
+Modules/VoiceOSCore/src/androidMain/kotlin/com/augmentalis/voiceoscore/
+```
+
+### Current androidMain Files (11)
+
+```
+AndroidLogger.kt                     ✅ Logging
+LlmFallbackHandlerFactory.android.kt ✅ LLM factory
+LlmProcessorFactory.android.kt       ✅ LLM processor
+LoggerFactory.kt                     ✅ Logger factory
+NluProcessorFactory.android.kt       ✅ NLU processor
+PlatformActuals.kt                   ✅ Platform actuals (sha256, time)
+Sha256Android.kt                     ✅ SHA-256 implementation
+SpeechEngineFactoryProvider.android.kt ✅ Speech factory
+SynonymPathsProvider.android.kt      ✅ Synonym paths
+VivokaEngineFactory.android.kt       ✅ Vivoka factory
+VoiceOSCoreAndroid.kt                ✅ Android entry point
+```
+
+### New Files to Add (FLAT naming per project rules)
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `VoiceOSAccessibilityService.kt` | ~250 | Main accessibility service (thin wrapper) |
+| `AccessibilityNodeAdapter.kt` | ~150 | AccessibilityNodeInfo → ElementInfo |
+| `AndroidScreenExtractor.kt` | ~100 | IScreenExtractor implementation |
+| `AndroidGestureDispatcher.kt` | ~200 | IGestureExecutor implementation |
+| `AndroidSpeechBridge.kt` | ~150 | Speech recognition → ActionCoordinator |
+| `AndroidTTSBridge.kt` | ~100 | Text-to-speech feedback |
+| `NumberOverlayRenderer.kt` | ~200 | Number overlay (Compose) |
+| `StatusOverlayRenderer.kt` | ~150 | Status feedback (Compose) |
+
+**Total new: ~1,300 lines** in 8 files
+
+### Implementation Approach
+
+**DON'T migrate VoiceOSService.kt (3077 lines)** - it's a monolith.
+
+**DO create clean adapters:**
+
+```kotlin
+// VoiceOSAccessibilityService.kt - THIN WRAPPER
+class VoiceOSAccessibilityService : AccessibilityService() {
+
+    // Use MASTER's ActionCoordinator (from commonMain)
+    private lateinit var coordinator: ActionCoordinator
+    private lateinit var extractor: AndroidScreenExtractor
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    override fun onServiceConnected() {
+        coordinator = ActionCoordinator(
+            nluProcessor = NluProcessorFactory.create(this),
+            llmProcessor = LlmProcessorFactory.create(this)
+        )
+        extractor = AndroidScreenExtractor()
+    }
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        when (event.eventType) {
+            TYPE_WINDOW_STATE_CHANGED,
+            TYPE_WINDOW_CONTENT_CHANGED -> handleScreenChange(event)
+        }
+    }
+
+    private fun handleScreenChange(event: AccessibilityEvent) {
+        // 1. Extract elements using adapter
+        val elements = extractor.extract(rootInActiveWindow)
+
+        // 2. Generate commands using MASTER's CommandGenerator
+        val commands = elements.mapNotNull { elem ->
+            CommandGenerator.fromElement(elem, event.packageName.toString())
+        }
+
+        // 3. Update coordinator
+        scope.launch { coordinator.updateDynamicCommands(commands) }
+    }
+
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
+    }
+}
+```
+
+```kotlin
+// AccessibilityNodeAdapter.kt - CONVERTER
+object AccessibilityNodeAdapter {
+
+    fun toElementInfo(node: AccessibilityNodeInfo, listIndex: Int = -1): ElementInfo {
+        val rect = Rect()
+        node.getBoundsInScreen(rect)
+
+        return ElementInfo(
+            className = node.className?.toString() ?: "",
+            resourceId = node.viewIdResourceName ?: "",
+            text = node.text?.toString() ?: "",
+            contentDescription = node.contentDescription?.toString() ?: "",
+            bounds = Bounds(rect.left, rect.top, rect.right, rect.bottom),
+            isClickable = node.isClickable,
+            isScrollable = node.isScrollable,
+            isEnabled = node.isEnabled,
+            packageName = node.packageName?.toString() ?: "",
+            listIndex = listIndex,
+            isInDynamicContainer = isDynamicContainer(node)
+        )
+    }
+
+    fun extractAll(root: AccessibilityNodeInfo?): List<ElementInfo> {
+        if (root == null) return emptyList()
+        return buildList {
+            traverseNode(root, this, 0)
+        }
+    }
+
+    private fun traverseNode(
+        node: AccessibilityNodeInfo,
+        list: MutableList<ElementInfo>,
+        depth: Int
+    ) {
+        if (depth > 30) return // Prevent infinite recursion
+
+        list.add(toElementInfo(node))
+
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { child ->
+                traverseNode(child, list, depth + 1)
+                child.recycle()
+            }
+        }
+    }
+
+    private fun isDynamicContainer(node: AccessibilityNodeInfo): Boolean {
+        val className = node.className?.toString() ?: return false
+        return className.contains("RecyclerView") ||
+               className.contains("ListView") ||
+               className.contains("ScrollView")
+    }
+}
+```
+
+### Benefits of This Approach
+
+1. **~1,300 lines vs 3,077 lines** - 60% less code
+2. **Clean separation** - Adapters only translate between platforms
+3. **Uses MASTER's KMP logic** - No duplication
+4. **Testable** - Adapters are pure functions
+5. **Same pattern for iOS/Desktop** - Just different adapters
+
+---
+
+## 14. Next Steps
+
+1. **Create the 8 Android wiring files** in `androidMain/` (FLAT structure)
+2. **Reference LEGACY** for edge cases and patterns (don't migrate)
+3. **Archive LEGACY VoiceOS/VoiceOSCore** after wiring is complete
+4. **Build Android app** in `android/apps/voiceos/` using the wired module
+
+---
+
+**Analysis Complete** | Ready for Android Wiring Implementation
 
 *Reference: Previous Analysis in `Docs/Analysis/VoiceOSCore-Deep-Analysis-260119.md`*
 *Reference: Task Plan in `docs/plans/VoiceOSCore-Consolidation-Tasks-260119.md`*
