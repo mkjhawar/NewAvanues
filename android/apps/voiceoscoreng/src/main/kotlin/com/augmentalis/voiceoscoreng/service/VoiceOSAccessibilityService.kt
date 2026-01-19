@@ -11,7 +11,7 @@ import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscoreng.VoiceOSCoreApplication
+import com.augmentalis.voiceoscoreng.VoiceOSCoreNGApplication
 import com.augmentalis.voiceoscore.VoiceOSCore
 import com.augmentalis.voiceoscore.createForAndroid
 import com.augmentalis.voiceoscore.QuantizedCommand
@@ -133,17 +133,17 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     /** Command persistence for saving to SQLDelight database */
     private val commandPersistence: ICommandPersistence by lazy {
-        VoiceOSCoreApplication.getInstance(applicationContext).commandPersistence
+        VoiceOSCoreNGApplication.getInstance(applicationContext).commandPersistence
     }
 
     /** Scraped app repository - for FK integrity */
     private val scrapedAppRepository: IScrapedAppRepository by lazy {
-        VoiceOSCoreApplication.getInstance(applicationContext).scrapedAppRepository
+        VoiceOSCoreNGApplication.getInstance(applicationContext).scrapedAppRepository
     }
 
     /** Scraped element repository - for FK integrity */
     private val scrapedElementRepository: IScrapedElementRepository by lazy {
-        VoiceOSCoreApplication.getInstance(applicationContext).scrapedElementRepository
+        VoiceOSCoreNGApplication.getInstance(applicationContext).scrapedElementRepository
     }
 
     /** VoiceOSCore facade for voice command processing */
