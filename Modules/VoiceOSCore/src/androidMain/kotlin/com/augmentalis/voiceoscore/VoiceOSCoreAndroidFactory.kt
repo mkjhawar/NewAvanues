@@ -57,8 +57,61 @@ internal class AndroidHandlerFactory(
 
     override fun createHandlers(): List<IHandler> {
         return listOf(
-            AndroidGestureHandler(service)
+            AndroidGestureHandler(service),
+            SystemHandler(AndroidSystemExecutor(service))
         )
+    }
+}
+
+/**
+ * Android implementation of SystemExecutor.
+ * Uses AccessibilityService global actions for system commands.
+ */
+internal class AndroidSystemExecutor(
+    private val service: AccessibilityService
+) : SystemExecutor {
+
+    override suspend fun goBack(): Boolean {
+        Log.d(TAG, "Executing goBack")
+        return service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+    }
+
+    override suspend fun goHome(): Boolean {
+        Log.d(TAG, "Executing goHome")
+        return service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
+    }
+
+    override suspend fun showRecents(): Boolean {
+        Log.d(TAG, "Executing showRecents")
+        return service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS)
+    }
+
+    override suspend fun showNotifications(): Boolean {
+        Log.d(TAG, "Executing showNotifications")
+        return service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
+    }
+
+    override suspend fun showQuickSettings(): Boolean {
+        Log.d(TAG, "Executing showQuickSettings")
+        return service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS)
+    }
+
+    override suspend fun showPowerMenu(): Boolean {
+        Log.d(TAG, "Executing showPowerMenu")
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_POWER_DIALOG)
+        } else {
+            false
+        }
+    }
+
+    override suspend fun lockScreen(): Boolean {
+        Log.d(TAG, "Executing lockScreen")
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
+        } else {
+            false
+        }
     }
 }
 
@@ -77,15 +130,46 @@ internal class AndroidGestureHandler(
     override val category: ActionCategory = ActionCategory.NAVIGATION
 
     override val supportedActions: List<String> = listOf(
-        "tap", "click", "long press", "scroll up", "scroll down",
-        "scroll left", "scroll right", "swipe", "back", "home"
+        "tap", "click", "press", "select",
+        "long press", "long click", "hold",
+        "scroll up", "scroll down", "scroll left", "scroll right",
+        "swipe up", "swipe down", "swipe left", "swipe right"
     )
 
     override suspend fun execute(
         command: QuantizedCommand,
         params: Map<String, Any>
     ): HandlerResult {
+        val phrase = command.phrase.lowercase().trim()
+        Log.d(TAG, "AndroidGestureHandler.execute: phrase='$phrase', actionType=${command.actionType}")
+
         return try {
+            // First try phrase-based routing for scroll/swipe commands
+            // This handles commands that come in with EXECUTE actionType
+            when {
+                phrase.startsWith("scroll down") || phrase.startsWith("swipe up") -> {
+                    val success = dispatcher.scroll("down")
+                    return if (success) HandlerResult.success("Scrolled down")
+                           else HandlerResult.failure("Failed to scroll down")
+                }
+                phrase.startsWith("scroll up") || phrase.startsWith("swipe down") -> {
+                    val success = dispatcher.scroll("up")
+                    return if (success) HandlerResult.success("Scrolled up")
+                           else HandlerResult.failure("Failed to scroll up")
+                }
+                phrase.startsWith("scroll left") || phrase.startsWith("swipe right") -> {
+                    val success = dispatcher.scroll("left")
+                    return if (success) HandlerResult.success("Scrolled left")
+                           else HandlerResult.failure("Failed to scroll left")
+                }
+                phrase.startsWith("scroll right") || phrase.startsWith("swipe left") -> {
+                    val success = dispatcher.scroll("right")
+                    return if (success) HandlerResult.success("Scrolled right")
+                           else HandlerResult.failure("Failed to scroll right")
+                }
+            }
+
+            // Then route by actionType
             when (command.actionType) {
                 CommandActionType.TAP, CommandActionType.CLICK -> {
                     Log.d(TAG, "Executing TAP/CLICK for '${command.phrase}', metadata: ${command.metadata}")
