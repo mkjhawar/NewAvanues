@@ -1,4 +1,5 @@
 package com.augmentalis.avamagic.ipc.universal
+import com.augmentalis.avamagic.ipc.currentTimeMillis
 
 import com.augmentalis.avamagic.ipc.*
 
