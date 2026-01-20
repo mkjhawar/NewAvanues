@@ -598,6 +598,9 @@ class VoiceOSAccessibilityService : AccessibilityService() {
      * - IME (keyboard) showing/hiding
      * - Floating action buttons or overlays
      * - Split-screen/multi-window mode transitions
+     *
+     * IMPORTANT: We skip processing if the screen hash matches currentScreenHash
+     * to avoid continuously updating the speech engine, which blocks voice recognition.
      */
     private fun handleWindowsChange(event: AccessibilityEvent) {
         val now = System.currentTimeMillis()
@@ -612,8 +615,6 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             ?: rootInActiveWindow?.packageName?.toString()
             ?: return
 
-        Log.d(TAG, "Processing windows change for $packageName")
-
         // For window changes, we need a fresh scrape since the window set changed
         serviceScope.launch {
             try {
@@ -622,6 +623,15 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 // Generate new screen hash since windows changed
                 val screenHash = screenCacheManager.generateScreenHash(rootNode)
                 rootNode.recycle()
+
+                // CRITICAL FIX: Skip if this is the same screen we already have loaded
+                // This prevents continuous speech engine updates that block voice recognition
+                if (screenHash == currentScreenHash) {
+                    Log.v(TAG, "Windows change: same screen hash ${screenHash.take(8)}, skipping")
+                    return@launch
+                }
+
+                Log.d(TAG, "Processing windows change for $packageName (hash: ${screenHash.take(8)})")
 
                 // Check if this is a new screen configuration
                 val isKnown = screenCacheManager.hasScreen(screenHash)
@@ -636,21 +646,23 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     val cachedCommands = screenCacheManager.getCommandsForScreen(screenHash)
                     if (cachedCommands.isNotEmpty()) {
                         commandRegistry.updateSync(cachedCommands)
-                        currentScreenHash = screenHash
-                        Log.d(TAG, "Windows change: loaded ${cachedCommands.size} cached commands")
 
-                        // FIX: Update speech engine with cached commands (was missing)
+                        // Update speech engine ONLY if hash changed (we already checked above)
                         val staticPhrases = StaticCommandRegistry.allPhrases()
                         val dynamicPhrases = cachedCommands.map { it.phrase }
                         val allPhrases = (staticPhrases + dynamicPhrases).distinct()
                         try {
                             voiceOSCore?.updateCommands(allPhrases)
-                            Log.d(TAG, "Windows change: updated speech engine with ${allPhrases.size} phrases")
+                            Log.d(TAG, "Windows change: loaded ${cachedCommands.size} cached commands, updated speech engine with ${allPhrases.size} phrases")
                         } catch (e: Exception) {
                             Log.e(TAG, "Failed to update speech engine in windows change", e)
                         }
+
+                        // Update currentScreenHash AFTER successful speech engine update
+                        currentScreenHash = screenHash
                     } else {
                         // Known hash but no cached commands - do incremental update
+                        currentScreenHash = screenHash
                         handleContentUpdate(event)
                         Log.d(TAG, "Windows change: known screen, incremental update")
                     }
@@ -687,6 +699,13 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     /**
      * Handle screen change with debouncing and caching.
+     *
+     * IMPORTANT: We skip speech engine update if screen hash matches currentScreenHash
+     * to avoid continuously updating the grammar, which blocks voice recognition.
+     * Speech engine is only updated when:
+     * 1. App/package changes (always need new commands)
+     * 2. Screen hash changes (different screen in same app)
+     * 3. App version changes (need to rescan)
      */
     private fun handleScreenChange(packageName: String?) {
         // Debounce rapid screen changes
@@ -707,6 +726,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         if (!continuousScanningEnabled.get()) {
             commandRegistry.clear()
+            currentScreenHash = null  // Clear hash when monitoring disabled
             Log.d(TAG, "Screen changed to $packageName - manual mode, awaiting user scan")
             return
         }
@@ -719,11 +739,19 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     if (rootNode == null) {
                         Log.w(TAG, "No active window for screen hash")
                         commandRegistry.clear()
+                        currentScreenHash = null
                         return@launch
                     }
 
                     val screenHash = screenCacheManager.generateScreenHash(rootNode)
                     rootNode.recycle()
+
+                    // CRITICAL FIX: Skip if this is the same screen we already have loaded
+                    // This prevents continuous speech engine updates that block voice recognition
+                    if (screenHash == currentScreenHash) {
+                        Log.v(TAG, "Screen change: same screen hash ${screenHash.take(8)}, skipping")
+                        return@launch
+                    }
 
                     val isKnown = screenCacheManager.hasScreen(screenHash)
                     val appVersion = getAppInfo(packageName).versionName
@@ -733,11 +761,10 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                         val cachedCommands = screenCacheManager.getCommandsForScreen(screenHash)
                         if (cachedCommands.isNotEmpty()) {
                             commandRegistry.updateSync(cachedCommands)
-                            currentScreenHash = screenHash
                             Log.d(TAG, "Screen known - loaded ${cachedCommands.size} cached commands for $packageName")
 
-                            // FIX: Update speech engine with cached commands (was missing)
-                            // Must include static commands as updateCommands() REPLACES the grammar
+                            // Update speech engine with cached commands
+                            // Only called when hash changed (we already checked above)
                             val staticPhrases = StaticCommandRegistry.allPhrases()
                             val dynamicPhrases = cachedCommands.map { it.phrase }
                             val allPhrases = (staticPhrases + dynamicPhrases).distinct()
@@ -747,6 +774,9 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to update speech engine with cached commands", e)
                             }
+
+                            // Update currentScreenHash AFTER successful speech engine update
+                            currentScreenHash = screenHash
 
                             val screenInfo = screenCacheManager.getScreenInfo(screenHash)
                             screenCacheManager.updateCurrentScreenInfo(screenInfo)
@@ -763,10 +793,12 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in continuous monitoring", e)
                     commandRegistry.clear()
+                    currentScreenHash = null
                 }
             }
         } else {
             commandRegistry.clear()
+            currentScreenHash = null
         }
     }
 
