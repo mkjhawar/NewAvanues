@@ -59,6 +59,36 @@ class DynamicCommandGenerator(
     )
 
     /**
+     * Result of incremental command update (for scroll/content changes).
+     */
+    data class IncrementalUpdateResult(
+        val totalCommands: Int,
+        val newCommands: Int,
+        val preservedCommands: Int,
+        val removedCommands: Int
+    )
+
+    // =========================================================================
+    // In-memory tracking for incremental updates
+    // =========================================================================
+
+    /**
+     * In-memory cache of element hash -> AVID number assignment.
+     * Preserved across scrolls within the same app.
+     */
+    private val avidAssignments = mutableMapOf<String, Int>()
+
+    /**
+     * Next available AVID number for new elements.
+     */
+    private var nextAvidNumber = 1
+
+    /**
+     * Current app package for tracking app changes.
+     */
+    private var currentAppPackage: String? = null
+
+    /**
      * Generate voice commands for actionable elements using KMP CommandGenerator.
      * Also updates the in-memory CommandRegistry for voice matching.
      *
@@ -152,6 +182,163 @@ class DynamicCommandGenerator(
             labelCommands = labelCommands,
             overlayItems = overlayItems
         )
+    }
+
+    /**
+     * Generate commands incrementally for scroll/content changes.
+     * Merges new elements with existing commands, preserving AVID assignments
+     * for previously seen elements.
+     *
+     * Key principle: Elements that were visible before retain their AVID numbers.
+     * New elements get new numbers. Memory is cleared only on app change.
+     *
+     * @param elements Newly extracted UI elements
+     * @param hierarchy Element hierarchy information
+     * @param elementLabels Pre-derived labels for elements
+     * @param packageName App package name
+     * @param existingCommands Currently registered commands
+     * @param updateSpeechEngine Callback to update speech engine
+     * @return IncrementalUpdateResult with counts
+     */
+    fun generateCommandsIncremental(
+        elements: List<ElementInfo>,
+        hierarchy: List<HierarchyNode>,
+        elementLabels: Map<Int, String>,
+        packageName: String,
+        existingCommands: List<QuantizedCommand>,
+        updateSpeechEngine: ((List<String>) -> Unit)? = null
+    ): IncrementalUpdateResult {
+        // Reset on app change
+        if (packageName != currentAppPackage) {
+            avidAssignments.clear()
+            nextAvidNumber = 1
+            currentAppPackage = packageName
+            Log.d(TAG, "App changed to $packageName - reset AVID assignments")
+        }
+
+        // Build a map of existing commands by element hash for quick lookup
+        val existingByHash = existingCommands.associateBy { it.metadata["elementHash"] }
+
+        // Track results
+        var newCount = 0
+        var preservedCount = 0
+        val mergedCommands = mutableListOf<QuantizedCommand>()
+
+        // Generate commands for current elements
+        val commandResults = elements.mapNotNull { element ->
+            CommandGenerator.fromElementWithPersistence(element, packageName)
+        }
+
+        commandResults.forEach { result ->
+            val cmd = result.command
+            val hash = cmd.metadata["elementHash"]
+
+            if (hash != null && hash in avidAssignments) {
+                // Preserve existing AVID number
+                val existingCmd = existingByHash[hash]
+                if (existingCmd != null) {
+                    mergedCommands.add(existingCmd)
+                    preservedCount++
+                } else {
+                    // Hash known but command not in registry - re-add with same number
+                    mergedCommands.add(cmd)
+                    preservedCount++
+                }
+            } else {
+                // New element - assign next number
+                if (hash != null) {
+                    avidAssignments[hash] = nextAvidNumber++
+                }
+                mergedCommands.add(cmd)
+                newCount++
+            }
+        }
+
+        // Update registry with merged commands
+        commandRegistry.updateSync(mergedCommands)
+
+        // Also update list index commands
+        val listItems = elements.filter { it.listIndex >= 0 }
+        val indexCommands = CommandGenerator.generateListIndexCommands(listItems, packageName)
+        if (indexCommands.isNotEmpty()) {
+            commandRegistry.addAll(indexCommands)
+        }
+
+        // Update label commands
+        val labelCommands = CommandGenerator.generateListLabelCommands(listItems, packageName)
+        if (labelCommands.isNotEmpty()) {
+            commandRegistry.addAll(labelCommands)
+        }
+
+        // Update overlay incrementally (preserve positions for existing items)
+        val overlayItems = generateOverlayItemsIncremental(listItems, elements, packageName)
+        OverlayStateManager.updateNumberedOverlayItemsIncremental(overlayItems)
+
+        // Update speech engine with all phrases
+        val staticPhrases = StaticCommandRegistry.allPhrases()
+        val dynamicPhrases = mergedCommands.map { it.phrase } +
+            indexCommands.map { it.phrase } +
+            labelCommands.map { it.phrase }
+        val allPhrases = (staticPhrases + dynamicPhrases).distinct()
+        updateSpeechEngine?.invoke(allPhrases)
+
+        Log.d(TAG, "Incremental update: ${mergedCommands.size} commands " +
+            "($newCount new, $preservedCount preserved)")
+
+        return IncrementalUpdateResult(
+            totalCommands = mergedCommands.size + indexCommands.size + labelCommands.size,
+            newCommands = newCount,
+            preservedCommands = preservedCount,
+            removedCommands = existingCommands.size - preservedCount
+        )
+    }
+
+    /**
+     * Generate overlay items incrementally, preserving numbers for existing items.
+     */
+    private fun generateOverlayItemsIncremental(
+        listItems: List<ElementInfo>,
+        allElements: List<ElementInfo>,
+        packageName: String
+    ): List<OverlayStateManager.NumberOverlayItem> {
+        val rowElements = ElementExtractor.findTopLevelListItems(listItems, allElements)
+            .sortedBy { it.bounds.top }
+
+        return rowElements.mapIndexed { index, element ->
+            val label = CommandGenerator.extractShortLabel(element) ?: ""
+
+            val fingerprint = ElementFingerprint.generate(
+                className = element.className,
+                packageName = packageName,
+                resourceId = element.resourceId,
+                text = element.text,
+                contentDesc = element.contentDescription
+            )
+
+            // Use AVID assignment if available, otherwise use sequential index
+            val hash = element.hashCode().toString()  // Simple hash for lookup
+            val assignedNumber = avidAssignments[hash] ?: (index + 1)
+
+            OverlayStateManager.NumberOverlayItem(
+                number = assignedNumber,
+                label = label,
+                left = element.bounds.left,
+                top = element.bounds.top,
+                right = element.bounds.right,
+                bottom = element.bounds.bottom,
+                vuid = fingerprint
+            )
+        }
+    }
+
+    /**
+     * Clear all AVID assignments (called on explicit refresh or app change).
+     */
+    fun clearAvidAssignments() {
+        avidAssignments.clear()
+        nextAvidNumber = 1
+        currentAppPackage = null
+        Log.d(TAG, "AVID assignments cleared")
     }
 
     /**

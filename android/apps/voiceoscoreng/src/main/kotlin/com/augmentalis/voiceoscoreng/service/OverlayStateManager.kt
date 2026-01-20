@@ -208,6 +208,52 @@ object OverlayStateManager {
     }
 
     /**
+     * Update overlay items incrementally, preserving numbers for existing items.
+     * Used for scroll/content changes where we want stable numbering.
+     *
+     * Strategy:
+     * - Items with matching VUID keep their existing number
+     * - New items get numbers from the incoming list
+     * - This provides visual stability during scrolling
+     *
+     * @param newItems Items from the current screen state
+     */
+    fun updateNumberedOverlayItemsIncremental(newItems: List<NumberOverlayItem>) {
+        val currentItems = _numberedOverlayItems.value
+
+        if (currentItems.isEmpty()) {
+            // First load - just set directly
+            _numberedOverlayItems.value = newItems
+            updateNumbersOverlayVisibility()
+            return
+        }
+
+        // Build map of VUID -> existing number for preservation
+        val existingNumbers = currentItems.associateBy({ it.vuid }, { it.number })
+
+        // Merge: preserve numbers for items that were already visible
+        val mergedItems = newItems.map { item ->
+            val existingNumber = existingNumbers[item.vuid]
+            if (existingNumber != null) {
+                // Preserve the existing number for visual stability
+                item.copy(number = existingNumber)
+            } else {
+                // New item - use the number from the incoming list
+                item
+            }
+        }
+
+        _numberedOverlayItems.value = mergedItems
+        updateNumbersOverlayVisibility()
+
+        if (mergedItems.isNotEmpty()) {
+            val preservedCount = mergedItems.count { existingNumbers.containsKey(it.vuid) }
+            val newCount = mergedItems.size - preservedCount
+            Log.d(TAG, "Incremental overlay update: ${mergedItems.size} items ($preservedCount preserved, $newCount new)")
+        }
+    }
+
+    /**
      * Legacy toggle for backward compatibility.
      */
     fun setShowNumbersOverlay(show: Boolean) {
