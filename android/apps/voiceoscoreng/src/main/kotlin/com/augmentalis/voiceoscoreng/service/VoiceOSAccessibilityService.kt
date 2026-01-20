@@ -727,6 +727,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         if (!continuousScanningEnabled.get()) {
             commandRegistry.clear()
+            OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges
             currentScreenHash = null  // Clear hash when monitoring disabled
             Log.d(TAG, "Screen changed to $packageName - manual mode, awaiting user scan")
             return
@@ -740,6 +741,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     if (rootNode == null) {
                         Log.w(TAG, "No active window for screen hash")
                         commandRegistry.clear()
+                        OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges
                         currentScreenHash = null
                         return@launch
                     }
@@ -762,6 +764,9 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                         val cachedCommands = screenCacheManager.getCommandsForScreen(screenHash)
                         if (cachedCommands.isNotEmpty()) {
                             commandRegistry.updateSync(cachedCommands)
+                            // Clear DynamicLists overlay - cached commands don't include list items
+                            // DynamicLists are regenerated on each scan, not persisted
+                            OverlayStateManager.clearOverlayItems()
                             Log.d(TAG, "Screen known - loaded ${cachedCommands.size} cached commands for $packageName")
 
                             // Update speech engine with cached commands
@@ -787,6 +792,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
                     Log.d(TAG, "Screen changed to $packageName - ${if (isKnown) "version changed, rescanning" else "new screen, scanning"}")
                     commandRegistry.clear()
+                    OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges before new scan
                     currentScreenHash = screenHash
 
                     performExplorationWithCache(screenHash, packageName, appVersion)
@@ -794,11 +800,13 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in continuous monitoring", e)
                     commandRegistry.clear()
+                    OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges on error
                     currentScreenHash = null
                 }
             }
         } else {
             commandRegistry.clear()
+            OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges
             currentScreenHash = null
         }
     }

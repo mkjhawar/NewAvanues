@@ -208,6 +208,19 @@ object OverlayStateManager {
     }
 
     /**
+     * Clear all numbered overlay items.
+     * Called when switching screens/apps or when commands are cleared.
+     * This ensures DynamicLists badges don't persist across screen changes.
+     */
+    fun clearOverlayItems() {
+        if (_numberedOverlayItems.value.isNotEmpty()) {
+            Log.d(TAG, "Clearing ${_numberedOverlayItems.value.size} overlay items")
+            _numberedOverlayItems.value = emptyList()
+            updateNumbersOverlayVisibility()
+        }
+    }
+
+    /**
      * Update overlay items incrementally, preserving numbers for existing items.
      * Used for scroll/content changes where we want stable numbering.
      *
