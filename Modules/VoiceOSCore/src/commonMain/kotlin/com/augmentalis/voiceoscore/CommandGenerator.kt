@@ -194,6 +194,65 @@ object CommandGenerator {
     }
 
     /**
+     * Generate numeric commands for list items.
+     * Creates commands with raw numbers "1", "2", "3"... so users can simply say
+     * the number shown in the overlay badge to click that item.
+     *
+     * IMPORTANT: This is SEPARATE from generateListIndexCommands() which creates
+     * ordinal words ("first", "second"). Numeric commands are what users see
+     * in the numbered overlay badges.
+     *
+     * @param listItems Elements that are list items (have listIndex >= 0)
+     * @param packageName Host application package name
+     * @return List of numeric commands (in-memory only, never persisted)
+     */
+    fun generateNumericCommands(
+        listItems: List<ElementInfo>,
+        packageName: String
+    ): List<QuantizedCommand> {
+        // Group by listIndex and keep only the best element per index
+        val bestElementPerIndex = listItems
+            .filter { it.listIndex >= 0 }
+            .groupBy { it.listIndex }
+            .mapValues { (_, elements) ->
+                // Prefer: clickable > has content > in dynamic container > first
+                elements.maxByOrNull { element ->
+                    var score = 0
+                    if (element.isClickable) score += 100
+                    if (element.isInDynamicContainer) score += 50
+                    if (element.text.isNotBlank() || element.contentDescription.isNotBlank()) score += 25
+                    if (element.resourceId.isNotBlank()) score += 10
+                    score
+                }
+            }
+            .values
+            .filterNotNull()
+            .sortedBy { it.listIndex }
+
+        return bestElementPerIndex.mapIndexed { visualIndex, element ->
+            // Visual index is 1-based (matches overlay badge numbers)
+            val number = visualIndex + 1
+            val vuid = generateVuid(element, packageName)
+
+            QuantizedCommand(
+                avid = "",
+                phrase = number.toString(),  // Raw number: "1", "2", "3"
+                actionType = CommandActionType.CLICK,
+                targetAvid = vuid,
+                confidence = 0.9f,  // High confidence for numeric commands
+                metadata = mapOf(
+                    "packageName" to packageName,
+                    "elementHash" to deriveElementHash(element),
+                    "isNumericCommand" to "true",
+                    "numericIndex" to number.toString(),
+                    "listIndex" to element.listIndex.toString(),
+                    "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}"
+                )
+            )
+        }
+    }
+
+    /**
      * Generate label-based commands for list items.
      * Creates commands using the extracted label (sender name, title, etc.)
      * so users can say "Lifemiles" instead of just "first".

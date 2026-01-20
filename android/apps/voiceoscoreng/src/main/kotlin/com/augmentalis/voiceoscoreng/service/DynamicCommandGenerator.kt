@@ -55,6 +55,7 @@ class DynamicCommandGenerator(
         val dynamicCommands: List<QuantizedCommand>,
         val indexCommands: List<QuantizedCommand>,
         val labelCommands: List<QuantizedCommand>,
+        val numericCommands: List<QuantizedCommand>,  // FIX: Added numeric commands "1", "2", "3"...
         val overlayItems: List<OverlayStateManager.NumberOverlayItem>
     )
 
@@ -133,6 +134,14 @@ class DynamicCommandGenerator(
             Log.d(TAG, "Label commands for lists: ${labelCommands.take(5).map { it.phrase }}")
         }
 
+        // FIX: Generate numeric commands ("1", "2", "3"...) for overlay badge numbers
+        // This allows users to say the number shown in the overlay to click that item
+        val numericCommands = CommandGenerator.generateNumericCommands(listItems, packageName)
+        if (numericCommands.isNotEmpty()) {
+            commandRegistry.addAll(numericCommands)
+            Log.d(TAG, "Numeric commands for badges: ${numericCommands.take(10).map { it.phrase }}")
+        }
+
         // Populate numbered overlay items for visual display
         val overlayItems = generateOverlayItems(listItems, elements, packageName)
 
@@ -154,13 +163,14 @@ class DynamicCommandGenerator(
         val staticPhrases = StaticCommandRegistry.allPhrases()
         val dynamicPhrases = allCommands.map { it.phrase } +
             indexCommands.map { it.phrase } +
-            labelCommands.map { it.phrase }
+            labelCommands.map { it.phrase } +
+            numericCommands.map { it.phrase }  // FIX: Include numeric commands "1", "2", "3"...
 
         // Deduplicate while preserving order (static commands first)
         val commandPhrases = (staticPhrases + dynamicPhrases).distinct()
 
         Log.d(TAG, "Updated speech engine with ${commandPhrases.size} command phrases " +
-            "(${staticPhrases.size} static, ${allCommands.size} elements, ${indexCommands.size} index, ${labelCommands.size} labels)")
+            "(${staticPhrases.size} static, ${allCommands.size} elements, ${indexCommands.size} index, ${labelCommands.size} labels, ${numericCommands.size} numeric)")
 
         updateSpeechEngine?.invoke(commandPhrases)
 
@@ -180,6 +190,7 @@ class DynamicCommandGenerator(
             dynamicCommands = dynamicCommands.map { it.command },
             indexCommands = indexCommands,
             labelCommands = labelCommands,
+            numericCommands = numericCommands,  // FIX: Include numeric commands
             overlayItems = overlayItems
         )
     }
@@ -270,6 +281,12 @@ class DynamicCommandGenerator(
             commandRegistry.addAll(labelCommands)
         }
 
+        // FIX: Update numeric commands ("1", "2", "3"...) for overlay badge numbers
+        val numericCommands = CommandGenerator.generateNumericCommands(listItems, packageName)
+        if (numericCommands.isNotEmpty()) {
+            commandRegistry.addAll(numericCommands)
+        }
+
         // Update overlay incrementally (preserve positions for existing items)
         val overlayItems = generateOverlayItemsIncremental(listItems, elements, packageName)
         OverlayStateManager.updateNumberedOverlayItemsIncremental(overlayItems)
@@ -278,7 +295,8 @@ class DynamicCommandGenerator(
         val staticPhrases = StaticCommandRegistry.allPhrases()
         val dynamicPhrases = mergedCommands.map { it.phrase } +
             indexCommands.map { it.phrase } +
-            labelCommands.map { it.phrase }
+            labelCommands.map { it.phrase } +
+            numericCommands.map { it.phrase }  // FIX: Include numeric commands
         val allPhrases = (staticPhrases + dynamicPhrases).distinct()
         updateSpeechEngine?.invoke(allPhrases)
 
