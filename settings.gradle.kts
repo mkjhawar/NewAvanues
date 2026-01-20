@@ -110,9 +110,8 @@ include(":Modules:LicenseManager")                       // License validation (
 include(":Modules:AVUCodec")                             // KMP AVU Protocol encoder/decoder
 // NOTE: JITLearning, LearnAppCore, VoiceOsLogging archived (deprecated/duplicate)
 
-// WebAvanue Modules
-include(":Modules:WebAvanue:coredata")   // Data layer: repositories, database, models
-include(":Modules:WebAvanue:universal")  // UI layer: ViewModels, screens, platform code
+// WebAvanue Module - Unified KMP Browser Library
+include(":Modules:WebAvanue")            // Merged flat structure: data + UI in single module
 
 // UniversalRPC - Cross-platform gRPC module
 include(":Modules:UniversalRPC")         // Root module with KMP + Wire

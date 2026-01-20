@@ -75,9 +75,8 @@ android {
 }
 
 dependencies {
-    // Project modules
-    implementation(project(":Modules:WebAvanue:coredata"))
-    implementation(project(":Modules:WebAvanue:universal"))
+    // WebAvanue KMP module (unified data + UI)
+    implementation(project(":Modules:WebAvanue"))
 
     // Voyager Navigation (KMP-compatible)
     implementation(libs.voyager.navigator)
