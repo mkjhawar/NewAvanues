@@ -1,12 +1,9 @@
-package com.augmentalis.voiceoscoreng.service
+package com.augmentalis.voiceoscore
 
 import android.accessibilityservice.AccessibilityService
 import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.Bounds
-import com.augmentalis.voiceoscore.QuantizedCommand
-import java.lang.ref.WeakReference
 import java.util.ArrayDeque
 
 private const val TAG = "BoundsResolver"

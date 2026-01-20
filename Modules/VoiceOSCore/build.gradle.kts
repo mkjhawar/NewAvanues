@@ -111,6 +111,9 @@ kotlin {
 
                 // AVA Core Utils
                 implementation(project(":Modules:AVA:core:Utils"))
+
+                // VoiceOS Database - for command persistence and scraping repositories
+                implementation(project(":Modules:VoiceOS:core:database"))
             }
         }
 

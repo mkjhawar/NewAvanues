@@ -159,6 +159,9 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         const val ACTION_SET_NUMBERS_MODE = "com.augmentalis.voiceoscoreng.SET_NUMBERS_MODE"
         const val EXTRA_MODE = "mode"  // "ON", "OFF", or "AUTO"
 
+        /** Debounce delay for windows change events (dialogs, IME) - longer than scroll */
+        private const val WINDOWS_CHANGE_DEBOUNCE_MS = 500L
+
         private val _isConnected = MutableStateFlow(false)
         val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
@@ -563,11 +566,6 @@ class VoiceOSAccessibilityService : AccessibilityService() {
      * Last windows change timestamp for debouncing dialog/overlay events.
      */
     private var lastWindowsChangeTime = 0L
-
-    /** Debounce delay for windows change events (dialogs, IME) - longer than scroll */
-    private companion object WindowsChangeDebounce {
-        const val WINDOWS_CHANGE_DEBOUNCE_MS = 500L
-    }
 
     /**
      * Handle direct scroll events from TYPE_VIEW_SCROLLED.
