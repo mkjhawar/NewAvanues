@@ -258,9 +258,14 @@ object CommandGenerator {
 
     /**
      * Derive the best label for voice recognition from element properties.
+     * Normalizes special characters to speech-friendly equivalents.
+     *
+     * @param element Source element
+     * @param locale Locale for symbol normalization (default: "en")
+     * @return Normalized label suitable for voice recognition
      */
-    private fun deriveLabel(element: ElementInfo): String {
-        return when {
+    private fun deriveLabel(element: ElementInfo, locale: String = "en"): String {
+        val rawLabel = when {
             element.text.isNotBlank() -> element.text
             element.contentDescription.isNotBlank() -> element.contentDescription
             element.resourceId.isNotBlank() -> {
@@ -270,6 +275,13 @@ object CommandGenerator {
                     .replace("-", " ")
             }
             else -> ""
+        }
+
+        // Normalize special characters (e.g., "&" → "and", "#" → "pound")
+        return if (SymbolNormalizer.containsSymbols(rawLabel)) {
+            SymbolNormalizer.normalize(rawLabel, locale)
+        } else {
+            rawLabel
         }
     }
 

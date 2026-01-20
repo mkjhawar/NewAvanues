@@ -88,6 +88,16 @@ object CommandMatcher {
             return MatchResult.Exact(it)
         }
 
+        // Try exact match with symbol normalization (e.g., "sound and vibration" = "Sound & vibration")
+        val symbolNormalized = SymbolNormalizer.normalize(normalized, lang)
+        if (symbolNormalized != normalized) {
+            commands.firstOrNull { cmd ->
+                SymbolNormalizer.normalize(cmd.phrase.lowercase(), lang) == symbolNormalized
+            }?.let {
+                return MatchResult.Exact(it, synonymExpanded = true)
+            }
+        }
+
         // Calculate similarity scores using expanded input
         val candidates = commands
             .map { cmd ->
@@ -156,8 +166,28 @@ object CommandMatcher {
     }
 
     /**
+     * Match voice input against a phrase with symbol alias support.
+     * Handles bidirectional matching:
+     * - "sound and vibration" matches "Sound & vibration"
+     * - "display size ampersand text" also matches
+     *
+     * @param voiceInput User's voice input
+     * @param phrase Command phrase to match
+     * @param locale Locale for symbol normalization
+     * @return True if inputs are equivalent after normalization
+     */
+    fun matchWithSymbolAliases(
+        voiceInput: String,
+        phrase: String,
+        locale: String = "en"
+    ): Boolean {
+        return SymbolNormalizer.matchWithAliases(voiceInput, phrase, locale)
+    }
+
+    /**
      * Calculate similarity between two strings using Jaccard index on words.
      * Also considers partial word matches for better voice input handling.
+     * Normalizes symbols before comparison for better matching.
      */
     private fun similarity(input: String, phrase: String): Float {
         val inputWords = input.split(Regex("\\s+")).filter { it.isNotBlank() }.toSet()
