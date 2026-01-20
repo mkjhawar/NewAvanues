@@ -9,7 +9,21 @@ import android.os.Bundle
 import android.util.Base64
 import android.util.Log
 import android.view.ViewGroup
-import android.webkit.*
+import android.webkit.CookieManager
+import android.webkit.DownloadListener
+import android.webkit.JsPromptResult
+import android.webkit.JsResult
+import android.webkit.SslErrorHandler
+import android.webkit.URLUtil
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
+import android.webkit.WebStorage
+import android.webkit.WebViewClient
+import android.webkit.WebView as AndroidWebView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
@@ -109,7 +123,7 @@ actual fun WebViewContainer(
     modifier: Modifier
 ) {
     val context = LocalContext.current
-    var webView: WebView? by remember(tabId) { mutableStateOf(null) }
+    var webView: AndroidWebView? by remember(tabId) { mutableStateOf(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // VoiceOS bridge for DOM scraping (only created if callback is provided)
@@ -224,7 +238,7 @@ actual fun WebViewContainer(
                 // FIX: Use WebViewLifecycle to get or create WebView for this tab
                 // This preserves navigation history when switching between tabs
                 globalWebViewLifecycle.acquireWebView(tabId, factoryContext) { ctx ->
-                    WebView(ctx).apply {
+                    AndroidWebView(ctx).apply {
                         // Set layout params to respect parent constraints
                         layoutParams = ViewGroup.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -269,7 +283,7 @@ actual fun WebViewContainer(
                             private var loadTimeoutRunnable: Runnable? = null
                             private val loadTimeoutHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
-                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                            override fun onPageStarted(view: AndroidWebView?, url: String?, favicon: Bitmap?) {
                                 super.onPageStarted(view, url, favicon)
                                 onLoadingChange(true)
                                 url?.let { onUrlChange(it) }
@@ -289,7 +303,7 @@ actual fun WebViewContainer(
                                 loadTimeoutHandler.postDelayed(loadTimeoutRunnable!!, 4000) // 4s (before 5s ANR threshold)
                             }
 
-                            override fun onPageFinished(view: WebView?, url: String?) {
+                            override fun onPageFinished(view: AndroidWebView?, url: String?) {
                                 super.onPageFinished(view, url)
                                 onLoadingChange(false)
 
@@ -539,12 +553,12 @@ actual fun WebViewContainer(
 
                         // WebChromeClient (handles JavaScript dialogs, progress, etc.)
                         webChromeClient = object : WebChromeClient() {
-                            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                            override fun onProgressChanged(view: AndroidWebView?, newProgress: Int) {
                                 super.onProgressChanged(view, newProgress)
                                 onProgressChange(newProgress / 100f)
                             }
 
-                            override fun onReceivedTitle(view: WebView?, title: String?) {
+                            override fun onReceivedTitle(view: AndroidWebView?, title: String?) {
                                 super.onReceivedTitle(view, title)
                                 title?.let { onTitleChange(it) }
                             }

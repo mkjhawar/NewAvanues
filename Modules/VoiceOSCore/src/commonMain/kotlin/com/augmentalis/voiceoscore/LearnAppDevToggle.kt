@@ -122,8 +122,8 @@ object LearnAppDevToggle {
         /** Element inspector */
         ELEMENT_INSPECTOR(Tier.DEV, Category.DEV_TOOLS, "Interactive element inspector"),
 
-        /** VUID viewer */
-        VUID_VIEWER(Tier.DEV, Category.DEV_TOOLS, "View and search VUIDs"),
+        /** AVID viewer */
+        AVID_VIEWER(Tier.DEV, Category.DEV_TOOLS, "View and search AVIDs"),
 
         /** Performance profiler */
         PERFORMANCE_PROFILER(Tier.DEV, Category.DEV_TOOLS, "Performance metrics viewer"),

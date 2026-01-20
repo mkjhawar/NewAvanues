@@ -1,8 +1,15 @@
 package com.augmentalis.webavanue
 
 import io.github.aakira.napier.Napier
-import com.augmentalis.webavanue.BrowserDatabase
+import com.augmentalis.webavanue.data.db.BrowserDatabase
 import com.augmentalis.webavanue.*
+import com.augmentalis.webavanue.data.Tab as DbTab
+import com.augmentalis.webavanue.data.Favorite as DbFavorite
+import com.augmentalis.webavanue.data.History_entry as DbHistoryEntry
+import com.augmentalis.webavanue.data.Download as DbDownload
+import com.augmentalis.webavanue.data.Browser_settings as DbBrowserSettings
+import com.augmentalis.webavanue.data.Session as DbSession
+import com.augmentalis.webavanue.data.Session_tab as DbSessionTab
 import com.augmentalis.webavanue.BrowserData
 import com.augmentalis.webavanue.BrowserRepository
 import com.augmentalis.webavanue.SettingsPreset

@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -428,4 +429,181 @@ object OceanTokens {
 
     val AnimationDuration = 300 // milliseconds
     val SpringStiffness = spring<Float>()
+}
+
+// ========== Top-level component functions ==========
+// These provide direct access without needing a provider instance
+
+/**
+ * AppIcon - Standard icon component with variant-based coloring
+ */
+@Composable
+fun AppIcon(
+    imageVector: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String?,
+    variant: IconVariant = IconVariant.Primary,
+    modifier: Modifier = Modifier
+) {
+    val tint = when (variant) {
+        IconVariant.Primary -> OceanDesignTokens.Icon.primary
+        IconVariant.Secondary -> OceanDesignTokens.Icon.secondary
+        IconVariant.Disabled -> OceanDesignTokens.Icon.disabled
+        IconVariant.Success -> OceanDesignTokens.Icon.success
+        IconVariant.Warning -> OceanDesignTokens.Icon.warning
+        IconVariant.Error -> OceanDesignTokens.Icon.error
+        IconVariant.OnPrimary -> OceanDesignTokens.Icon.onPrimary
+    }
+    Icon(
+        imageVector = imageVector,
+        contentDescription = contentDescription,
+        tint = tint,
+        modifier = modifier
+    )
+}
+
+/**
+ * AppIconButton - Standard icon button component
+ */
+@Composable
+fun AppIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable () -> Unit
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        content = content
+    )
+}
+
+/**
+ * AppSurface - Surface component with variant-based styling
+ */
+@Composable
+fun AppSurface(
+    modifier: Modifier = Modifier,
+    variant: SurfaceVariant = SurfaceVariant.Default,
+    shape: Shape? = null,
+    onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit
+) {
+    val surfaceColor = when (variant) {
+        SurfaceVariant.Default -> OceanDesignTokens.Surface.default
+        SurfaceVariant.Elevated -> OceanDesignTokens.Surface.elevated
+        SurfaceVariant.Input -> OceanDesignTokens.Surface.input
+        SurfaceVariant.Glass -> OceanDesignTokens.Surface.elevated.copy(alpha = 0.8f)
+    }
+    val surfaceShape = shape ?: RoundedCornerShape(OceanTokens.CornerRadius)
+
+    if (onClick != null) {
+        Surface(
+            onClick = onClick,
+            modifier = modifier,
+            shape = surfaceShape,
+            color = surfaceColor,
+            content = content
+        )
+    } else {
+        Surface(
+            modifier = modifier,
+            shape = surfaceShape,
+            color = surfaceColor,
+            content = content
+        )
+    }
+}
+
+/**
+ * OceanComponents - Static access to Ocean component implementations
+ *
+ * Provides Material3 implementations with Ocean theming.
+ * When MagicUI is ready, these implementations switch to MagicUI components.
+ */
+object OceanComponents {
+
+    /**
+     * Ocean-styled Text component
+     */
+    @Composable
+    fun Text(
+        text: String,
+        modifier: Modifier = Modifier,
+        color: Color = OceanTheme.textPrimary,
+        style: androidx.compose.ui.text.TextStyle = LocalTextStyle.current
+    ) {
+        androidx.compose.material3.Text(
+            text = text,
+            modifier = modifier,
+            color = color,
+            style = style
+        )
+    }
+
+    /**
+     * Ocean-styled Icon component
+     */
+    @Composable
+    fun Icon(
+        imageVector: androidx.compose.ui.graphics.vector.ImageVector,
+        contentDescription: String?,
+        modifier: Modifier = Modifier,
+        tint: Color = OceanTheme.textPrimary
+    ) {
+        androidx.compose.material3.Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            tint = tint
+        )
+    }
+
+    /**
+     * Ocean-styled IconButton component
+     */
+    @Composable
+    fun IconButton(
+        onClick: () -> Unit,
+        modifier: Modifier = Modifier,
+        enabled: Boolean = true,
+        content: @Composable () -> Unit
+    ) {
+        androidx.compose.material3.IconButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            content = content
+        )
+    }
+
+    /**
+     * Ocean-styled Surface component
+     */
+    @Composable
+    fun Surface(
+        modifier: Modifier = Modifier,
+        shape: Shape = RoundedCornerShape(OceanTokens.CornerRadius),
+        color: Color = OceanTheme.surface,
+        onClick: (() -> Unit)? = null,
+        content: @Composable () -> Unit
+    ) {
+        if (onClick != null) {
+            androidx.compose.material3.Surface(
+                onClick = onClick,
+                modifier = modifier,
+                shape = shape,
+                color = color,
+                content = content
+            )
+        } else {
+            androidx.compose.material3.Surface(
+                modifier = modifier,
+                shape = shape,
+                color = color,
+                content = content
+            )
+        }
+    }
 }

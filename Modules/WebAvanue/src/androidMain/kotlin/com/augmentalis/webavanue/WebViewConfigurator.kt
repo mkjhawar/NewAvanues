@@ -570,7 +570,7 @@ class WebViewConfigurator {
             }
 
             override fun onJsPrompt(
-                view: WebView?,
+                view: AndroidWebView?,
                 url: String?,
                 message: String?,
                 defaultValue: String?,
@@ -663,7 +663,7 @@ class WebViewConfigurator {
 
             // File upload support - onShowFileChooser for <input type="file">
             override fun onShowFileChooser(
-                webView: WebView?,
+                webView: AndroidWebView?,
                 newFilePathCallback: ValueCallback<Array<Uri>>?,
                 fileChooserParams: FileChooserParams?
             ): Boolean {
@@ -698,7 +698,7 @@ class WebViewConfigurator {
      * @param onDownloadStart Callback for download requests (optional)
      */
     private fun configureDownloadListener(
-        webView: WebView,
+        webView: AndroidWebView,
         context: Context,
         onDownloadStart: ((DownloadRequest) -> Unit)?
     ) {

@@ -8,7 +8,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.augmentalis.webavanue.glassmorphism as applyGlassmorphism
+// Import the expect/actual glassmorphism from BlurEffect.kt with an alias
+import com.augmentalis.webavanue.glassmorphism as platformGlassmorphism
 import com.augmentalis.webavanue.supportsBlur
 
 /**
@@ -40,7 +41,7 @@ fun Modifier.glassmorphism(
     // API 31+: Use real blur effect
     this
         .clip(RoundedCornerShape(cornerRadius))
-        .applyGlassmorphism(
+        .platformGlassmorphism(
             blurRadius = blurRadius,
             backgroundColor = backgroundColor,
             borderColor = borderColor,
