@@ -1068,7 +1068,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     /**
      * Get app version info for the given package name.
      */
-    private fun getAppInfo(packageName: String): DynamicCommandGenerator.AppVersionInfo {
+    private fun getAppInfo(packageName: String): AppVersionInfo {
         return DynamicCommandGenerator.getAppInfoFromPackageManager(packageManager, packageName)
     }
 
