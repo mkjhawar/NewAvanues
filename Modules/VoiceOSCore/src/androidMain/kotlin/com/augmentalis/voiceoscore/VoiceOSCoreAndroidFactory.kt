@@ -120,12 +120,14 @@ internal class AndroidSystemExecutor(
  *
  * Handles gesture-based commands using AndroidGestureDispatcher.
  * Supports scroll, tap (with coordinates in params), and global actions.
+ * Uses BoundsResolver for layered bounds resolution to handle stale cached bounds.
  */
 internal class AndroidGestureHandler(
     private val service: AccessibilityService
 ) : BaseHandler() {
 
     private val dispatcher = AndroidGestureDispatcher(service)
+    private val boundsResolver = BoundsResolver(service)
 
     override val category: ActionCategory = ActionCategory.NAVIGATION
 
@@ -173,7 +175,7 @@ internal class AndroidGestureHandler(
             when (command.actionType) {
                 CommandActionType.TAP, CommandActionType.CLICK -> {
                     Log.d(TAG, "Executing TAP/CLICK for '${command.phrase}', metadata: ${command.metadata}")
-                    // Check if coordinates are provided in params
+                    // Check if coordinates are provided in params (direct tap)
                     val x = params["x"] as? Float
                     val y = params["y"] as? Float
                     if (x != null && y != null) {
@@ -185,11 +187,11 @@ internal class AndroidGestureHandler(
                             HandlerResult.failure("Failed to tap")
                         }
                     } else {
-                        // Check metadata for bounds
-                        val bounds = parseBoundsFromMetadata(command.metadata)
-                        Log.d(TAG, "Parsed bounds from metadata: $bounds")
+                        // Use BoundsResolver for layered bounds resolution
+                        // This handles stale cached bounds by trying multiple strategies
+                        val bounds = boundsResolver.resolve(command)
                         if (bounds != null) {
-                            Log.d(TAG, "Clicking with bounds: ${bounds.left},${bounds.top},${bounds.right},${bounds.bottom}")
+                            Log.d(TAG, "Clicking with resolved bounds: ${bounds.left},${bounds.top},${bounds.right},${bounds.bottom}")
                             val success = dispatcher.click(bounds)
                             if (success) {
                                 Log.d(TAG, "Click succeeded for '${command.phrase}'")
@@ -199,7 +201,7 @@ internal class AndroidGestureHandler(
                                 HandlerResult.failure("Failed to click")
                             }
                         } else {
-                            Log.w(TAG, "No bounds in metadata for '${command.phrase}', returning notHandled")
+                            Log.w(TAG, "BoundsResolver failed for '${command.phrase}', returning notHandled")
                             HandlerResult.notHandled()
                         }
                     }
@@ -216,7 +218,20 @@ internal class AndroidGestureHandler(
                             HandlerResult.failure("Failed to long press")
                         }
                     } else {
-                        HandlerResult.notHandled()
+                        // Use BoundsResolver for layered bounds resolution
+                        val bounds = boundsResolver.resolve(command)
+                        if (bounds != null) {
+                            val centerX = bounds.centerX.toFloat()
+                            val centerY = bounds.centerY.toFloat()
+                            val success = dispatcher.longPress(centerX, centerY)
+                            if (success) {
+                                HandlerResult.success("Long pressed ${command.phrase}")
+                            } else {
+                                HandlerResult.failure("Failed to long press")
+                            }
+                        } else {
+                            HandlerResult.notHandled()
+                        }
                     }
                 }
 
@@ -304,24 +319,6 @@ internal class AndroidGestureHandler(
             }
         } catch (e: Exception) {
             HandlerResult.failure("Error executing command: ${e.message}")
-        }
-    }
-
-    /**
-     * Parse bounds from command metadata if present.
-     * Expected format: "left,top,right,bottom"
-     */
-    private fun parseBoundsFromMetadata(metadata: Map<String, String>): Bounds? {
-        val boundsStr = metadata["bounds"] ?: return null
-        return try {
-            val parts = boundsStr.split(",").map { it.trim().toInt() }
-            if (parts.size == 4) {
-                Bounds(parts[0], parts[1], parts[2], parts[3])
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            null
         }
     }
 }
