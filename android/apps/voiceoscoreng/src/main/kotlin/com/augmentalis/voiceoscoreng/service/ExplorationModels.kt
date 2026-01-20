@@ -1,6 +1,7 @@
 package com.augmentalis.voiceoscoreng.service
 
 import com.augmentalis.voiceoscore.ElementInfo
+import com.augmentalis.voiceoscore.DisplayCommand
 
 /**
  * Data models for accessibility exploration results.
@@ -24,7 +25,7 @@ data class ExplorationResult(
     val hierarchy: List<HierarchyNode>,
     val duplicates: List<DuplicateInfo>,
     val deduplicationStats: DeduplicationStats,
-    val commands: List<GeneratedCommand>,
+    val commands: List<DisplayCommand>,
     val avuOutput: String,
     val elementLabels: Map<Int, String> = emptyMap()
 )
@@ -68,14 +69,4 @@ data class DeduplicationStats(
     val duplicateElements: List<DuplicateInfo>
 )
 
-/**
- * Generated voice command for an actionable element.
- */
-data class GeneratedCommand(
-    val phrase: String,
-    val alternates: List<String>,
-    val targetVuid: String,
-    val action: String,
-    val element: ElementInfo,
-    val derivedLabel: String = ""
-)
+// DisplayCommand is in VoiceOSCore module (com.augmentalis.voiceoscore.DisplayCommand)

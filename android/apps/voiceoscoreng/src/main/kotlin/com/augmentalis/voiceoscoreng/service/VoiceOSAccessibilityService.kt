@@ -20,6 +20,7 @@ import com.augmentalis.voiceoscore.ElementFingerprint
 import com.augmentalis.voiceoscore.ServiceConfiguration
 import com.augmentalis.voiceoscore.ServiceState
 import com.augmentalis.voiceoscore.ICommandPersistence
+import com.augmentalis.voiceoscore.AppVersionInfo
 import com.augmentalis.database.repositories.IScrapedAppRepository
 import com.augmentalis.database.repositories.IScrapedElementRepository
 import kotlinx.coroutines.*
@@ -1029,7 +1030,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         )
 
         // Generate AVU output using AVUFormatter
-        val avuOutput = AVUFormatter.generateAVU(packageName, elements, elementLabels, commandResult.legacyCommands)
+        val avuOutput = AVUFormatter.generateAVU(packageName, elements, elementLabels, commandResult.uiCommands)
 
         val duration = System.currentTimeMillis() - startTime
 
@@ -1059,7 +1060,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 duplicateCount = duplicates.size,
                 duplicateElements = duplicates
             ),
-            commands = commandResult.legacyCommands,
+            commands = commandResult.uiCommands,
             avuOutput = avuOutput,
             elementLabels = elementLabels
         )

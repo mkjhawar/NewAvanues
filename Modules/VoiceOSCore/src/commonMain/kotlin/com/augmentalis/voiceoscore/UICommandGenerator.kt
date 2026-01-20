@@ -1,28 +1,37 @@
-package com.augmentalis.voiceoscoreng.service
-
-import com.augmentalis.voiceoscore.ElementFingerprint
-import com.augmentalis.voiceoscore.ElementInfo
+/**
+ * UICommandGenerator.kt - Generate commands for UI display
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ * Created: 2026-01-20
+ *
+ * Generates DisplayCommand objects for UI display and exploration results.
+ * These commands include full element references for rich presentation.
+ *
+ * For voice recognition commands, use CommandGenerator which produces
+ * lightweight QuantizedCommand objects.
+ */
+package com.augmentalis.voiceoscore
 
 /**
- * Generates legacy GeneratedCommand objects for UI display.
- * Extracted from DynamicCommandGenerator for SOLID compliance.
- * Single Responsibility: Generate legacy command format for backwards compatibility.
+ * Generates DisplayCommand objects for UI display.
+ *
+ * Single Responsibility: Generate command format for UI/exploration display.
  */
-object LegacyCommandGenerator {
+object UICommandGenerator {
 
     /**
-     * Generate legacy GeneratedCommand objects for UI display.
+     * Generate DisplayCommand objects for UI display.
      *
      * @param elements All extracted UI elements
-     * @param elementLabels Pre-derived labels for elements
+     * @param elementLabels Pre-derived labels for elements (index -> label)
      * @param packageName App package name
-     * @return List of legacy GeneratedCommand objects
+     * @return List of DisplayCommand objects for UI display
      */
     fun generate(
         elements: List<ElementInfo>,
         elementLabels: Map<Int, String>,
         packageName: String
-    ): List<GeneratedCommand> {
+    ): List<DisplayCommand> {
         return elements.mapIndexedNotNull { index, element ->
             if (!element.isClickable && !element.isScrollable) return@mapIndexedNotNull null
 
@@ -40,7 +49,7 @@ object LegacyCommandGenerator {
                 contentDesc = element.contentDescription
             )
 
-            GeneratedCommand(
+            DisplayCommand(
                 phrase = "$actionType $label",
                 alternates = listOf("press $label", "select $label", label),
                 targetVuid = fingerprint,

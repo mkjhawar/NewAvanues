@@ -1,6 +1,7 @@
 package com.augmentalis.voiceoscoreng.service
 
 import com.augmentalis.voiceoscore.ElementFingerprint
+import com.augmentalis.voiceoscore.DisplayCommand
 import com.augmentalis.voiceoscore.ElementInfo
 
 /**
@@ -27,7 +28,7 @@ object AVUFormatter {
         packageName: String,
         elements: List<ElementInfo>,
         elementLabels: Map<Int, String>,
-        commands: List<GeneratedCommand>
+        commands: List<DisplayCommand>
     ): String {
         return buildString {
             appendLine("# Avanues Universal Format v2.0")

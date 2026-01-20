@@ -2,12 +2,15 @@ package com.augmentalis.voiceoscoreng.service
 
 import android.content.pm.PackageManager
 import android.util.Log
-import com.augmentalis.voiceoscore.CommandGenerator
+import com.augmentalis.voiceoscore.AppVersionInfo
+import com.augmentalis.voiceoscore.CommandOrchestrator
 import com.augmentalis.voiceoscore.CommandRegistry
+import com.augmentalis.voiceoscore.CoreCommandResult
 import com.augmentalis.voiceoscore.ElementInfo
-import com.augmentalis.voiceoscore.QuantizedCommand
-import com.augmentalis.voiceoscore.StaticCommandRegistry
 import com.augmentalis.voiceoscore.ICommandPersistence
+import com.augmentalis.voiceoscore.IncrementalCommandResult
+import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.voiceoscore.UICommandGenerator
 import com.augmentalis.database.repositories.IScrapedAppRepository
 import com.augmentalis.database.repositories.IScrapedElementRepository
 import kotlinx.coroutines.CoroutineScope
@@ -15,13 +18,14 @@ import kotlinx.coroutines.CoroutineScope
 private const val TAG = "DynamicCommandGen"
 
 /**
- * Generates voice commands for actionable elements.
+ * App-level command generation wrapper.
  *
- * Single Responsibility: Orchestrate command generation and registry updates.
- * Delegates to:
- * - CommandPersistenceManager: Database persistence
- * - OverlayItemGenerator: Visual badge generation
- * - LegacyCommandGenerator: Backwards-compatible command format
+ * Composes CommandOrchestrator (core logic) with app-specific concerns:
+ * - Overlay badge generation via OverlayItemGenerator
+ * - Database persistence via CommandPersistenceManager
+ * - UI command generation via UICommandGenerator
+ *
+ * Core command generation logic is delegated to CommandOrchestrator in VoiceOSCore.
  */
 class DynamicCommandGenerator(
     private val commandRegistry: CommandRegistry,
@@ -31,16 +35,21 @@ class DynamicCommandGenerator(
     private val scope: CoroutineScope,
     private val getAppInfo: (String) -> AppVersionInfo
 ) {
+    // Core orchestrator for command generation
+    private val orchestrator = CommandOrchestrator(commandRegistry, commandPersistence)
+
+    // App-specific persistence manager for scraped elements
     private val persistenceManager = CommandPersistenceManager(
         commandPersistence, scrapedAppRepository, scrapedElementRepository, scope, getAppInfo
     )
 
-    private val avidAssignments = mutableMapOf<String, Int>()
-    private var nextAvidNumber = 1
-    private var currentAppPackage: String? = null
-
     /**
-     * Generate voice commands for actionable elements using KMP CommandGenerator.
+     * Generate voice commands for actionable elements.
+     *
+     * Delegates core logic to CommandOrchestrator, then adds:
+     * - Overlay item generation
+     * - UI command generation
+     * - Scraped element persistence
      */
     fun generateCommands(
         elements: List<ElementInfo>,
@@ -49,47 +58,41 @@ class DynamicCommandGenerator(
         packageName: String,
         updateSpeechEngine: ((List<String>) -> Unit)? = null
     ): CommandGenerationResult {
-        val commandResults = elements.mapNotNull { element ->
-            CommandGenerator.fromElementWithPersistence(element, packageName)
-        }
+        // Core command generation
+        val coreResult = orchestrator.generateCommands(
+            elements = elements,
+            packageName = packageName,
+            updateSpeechEngine = updateSpeechEngine
+        )
 
-        val staticCommands = commandResults.filter { it.shouldPersist }
-        val dynamicCommands = commandResults.filter { !it.shouldPersist }
-        val allCommands = commandResults.map { it.command }
-        commandRegistry.updateSync(allCommands)
-
+        // App-specific: Generate overlay items for visual badges
         val listItems = elements.filter { it.listIndex >= 0 }
-        val indexCommands = generateAndRegisterIndexCommands(listItems, packageName)
-        val labelCommands = generateAndRegisterLabelCommands(listItems, packageName)
-        val numericCommands = generateAndRegisterNumericCommands(listItems, packageName)
-
         val overlayItems = OverlayItemGenerator.generate(listItems, elements, packageName)
         OverlayStateManager.updateNumberedOverlayItems(overlayItems)
 
-        logCommandSummary(allCommands, staticCommands, dynamicCommands, indexCommands)
+        // App-specific: Generate UI commands for exploration display
+        val uiCommands = UICommandGenerator.generate(elements, elementLabels, packageName)
 
-        val commandPhrases = buildSpeechPhrases(
-            allCommands, indexCommands, labelCommands, numericCommands
-        )
-        updateSpeechEngine?.invoke(commandPhrases)
-
-        val staticQuantizedCommands = staticCommands.map { it.command }
-        if (staticQuantizedCommands.isNotEmpty()) {
+        // App-specific: Persist scraped elements with full metadata
+        if (coreResult.staticCommands.isNotEmpty()) {
             persistenceManager.persistStaticCommands(
-                staticQuantizedCommands, elements, packageName, dynamicCommands.size
+                coreResult.staticCommands,
+                elements,
+                packageName,
+                coreResult.dynamicCommands.size
             )
         }
 
-        val legacyCommands = LegacyCommandGenerator.generate(elements, elementLabels, packageName)
+        Log.v(TAG, "Generated ${coreResult.allCommands.size} commands, ${overlayItems.size} overlays")
 
         return CommandGenerationResult(
-            legacyCommands = legacyCommands,
-            allQuantizedCommands = allCommands,
-            staticCommands = staticQuantizedCommands,
-            dynamicCommands = dynamicCommands.map { it.command },
-            indexCommands = indexCommands,
-            labelCommands = labelCommands,
-            numericCommands = numericCommands,
+            uiCommands = uiCommands,
+            allQuantizedCommands = coreResult.allCommands,
+            staticCommands = coreResult.staticCommands,
+            dynamicCommands = coreResult.dynamicCommands,
+            indexCommands = coreResult.indexCommands,
+            labelCommands = coreResult.labelCommands,
+            numericCommands = coreResult.numericCommands,
             overlayItems = overlayItems
         )
     }
@@ -105,126 +108,43 @@ class DynamicCommandGenerator(
         existingCommands: List<QuantizedCommand>,
         updateSpeechEngine: ((List<String>) -> Unit)? = null
     ): IncrementalUpdateResult {
-        if (packageName != currentAppPackage) {
-            clearAvidAssignments()
-            currentAppPackage = packageName
-            Log.v(TAG, "App changed to $packageName - reset AVID")
-        }
+        // Core incremental generation
+        val coreResult = orchestrator.generateCommandsIncremental(
+            elements = elements,
+            packageName = packageName,
+            existingCommands = existingCommands,
+            updateSpeechEngine = updateSpeechEngine
+        )
 
-        val existingByHash = existingCommands.associateBy { it.metadata["elementHash"] }
-        var newCount = 0
-        var preservedCount = 0
-        val mergedCommands = mutableListOf<QuantizedCommand>()
-
-        val commandResults = elements.mapNotNull { element ->
-            CommandGenerator.fromElementWithPersistence(element, packageName)
-        }
-
-        commandResults.forEach { result ->
-            val cmd = result.command
-            val hash = cmd.metadata["elementHash"]
-
-            if (hash != null && hash in avidAssignments) {
-                val existingCmd = existingByHash[hash]
-                mergedCommands.add(existingCmd ?: cmd)
-                preservedCount++
-            } else {
-                if (hash != null) avidAssignments[hash] = nextAvidNumber++
-                mergedCommands.add(cmd)
-                newCount++
-            }
-        }
-
-        commandRegistry.updateSync(mergedCommands)
-
+        // App-specific: Generate overlay items with AVID assignments
         val listItems = elements.filter { it.listIndex >= 0 }
-        val indexCommands = generateAndRegisterIndexCommands(listItems, packageName)
-        val labelCommands = generateAndRegisterLabelCommands(listItems, packageName)
-        val numericCommands = generateAndRegisterNumericCommands(listItems, packageName)
-
+        val avidAssignments = orchestrator.getAvidAssignments()
         val overlayItems = OverlayItemGenerator.generateIncremental(
             listItems, elements, packageName, avidAssignments
         )
         OverlayStateManager.updateNumberedOverlayItemsIncremental(overlayItems)
 
-        val allPhrases = buildSpeechPhrases(
-            mergedCommands, indexCommands, labelCommands, numericCommands
-        )
-        updateSpeechEngine?.invoke(allPhrases)
-
-        Log.v(TAG, "Incremental: ${mergedCommands.size} ($newCount new, $preservedCount kept)")
+        Log.v(TAG, "Incremental: ${coreResult.totalCommands} total, ${overlayItems.size} overlays")
 
         return IncrementalUpdateResult(
-            totalCommands = mergedCommands.size + indexCommands.size + labelCommands.size,
-            newCommands = newCount,
-            preservedCommands = preservedCount,
-            removedCommands = existingCommands.size - preservedCount
+            totalCommands = coreResult.totalCommands,
+            newCommands = coreResult.newCommands,
+            preservedCommands = coreResult.preservedCommands,
+            removedCommands = coreResult.removedCommands
         )
     }
 
+    /**
+     * Clear AVID assignments. Call when switching apps or resetting state.
+     */
     fun clearAvidAssignments() {
-        avidAssignments.clear()
-        nextAvidNumber = 1
-        currentAppPackage = null
-    }
-
-    private fun generateAndRegisterIndexCommands(
-        listItems: List<ElementInfo>,
-        packageName: String
-    ): List<QuantizedCommand> {
-        val commands = CommandGenerator.generateListIndexCommands(listItems, packageName)
-        if (commands.isNotEmpty()) commandRegistry.addAll(commands)
-        return commands
-    }
-
-    private fun generateAndRegisterLabelCommands(
-        listItems: List<ElementInfo>,
-        packageName: String
-    ): List<QuantizedCommand> {
-        val commands = CommandGenerator.generateListLabelCommands(listItems, packageName)
-        if (commands.isNotEmpty()) commandRegistry.addAll(commands)
-        return commands
-    }
-
-    private fun generateAndRegisterNumericCommands(
-        listItems: List<ElementInfo>,
-        packageName: String
-    ): List<QuantizedCommand> {
-        val commands = CommandGenerator.generateNumericCommands(listItems, packageName)
-        if (commands.isNotEmpty()) commandRegistry.addAll(commands)
-        return commands
-    }
-
-    private fun buildSpeechPhrases(
-        allCommands: List<QuantizedCommand>,
-        indexCommands: List<QuantizedCommand>,
-        labelCommands: List<QuantizedCommand>,
-        numericCommands: List<QuantizedCommand>
-    ): List<String> {
-        val staticPhrases = StaticCommandRegistry.allPhrases()
-        val dynamicPhrases = allCommands.map { it.phrase } +
-            indexCommands.map { it.phrase } +
-            labelCommands.map { it.phrase } +
-            numericCommands.map { it.phrase }
-        return (staticPhrases + dynamicPhrases).distinct()
-    }
-
-    private fun logCommandSummary(
-        allCommands: List<QuantizedCommand>,
-        staticCommands: List<CommandGenerator.GeneratedCommandResult>,
-        dynamicCommands: List<CommandGenerator.GeneratedCommandResult>,
-        indexCommands: List<QuantizedCommand>
-    ) {
-        Log.v(TAG, "Commands: ${allCommands.size} (${staticCommands.size} static)")
-        if (dynamicCommands.isNotEmpty()) {
-            Log.v(TAG, "Dynamic: ${dynamicCommands.take(3).map { it.command.phrase }}")
-        }
-        if (indexCommands.isNotEmpty()) {
-            Log.v(TAG, "Index: ${indexCommands.take(5).map { it.phrase }}")
-        }
+        orchestrator.clearAvidAssignments()
     }
 
     companion object {
+        /**
+         * Get app version info from PackageManager.
+         */
         fun getAppInfoFromPackageManager(
             packageManager: PackageManager,
             packageName: String

@@ -1,26 +1,23 @@
 package com.augmentalis.voiceoscoreng.service
 
+import com.augmentalis.voiceoscore.DisplayCommand
 import com.augmentalis.voiceoscore.QuantizedCommand
 
 /**
- * Data models for command generation results.
- * Extracted from DynamicCommandGenerator for SOLID compliance.
+ * App-specific data models for command generation results.
+ *
+ * Core models (AppVersionInfo, IncrementalCommandResult) are in VoiceOSCore.
+ * This file contains app-specific result types with overlay support.
  */
-
-/**
- * App version info holder.
- */
-data class AppVersionInfo(
-    val versionCode: Long,
-    val versionName: String
-)
 
 /**
  * Result of command generation containing all generated commands
- * and metadata for UI display and persistence.
+ * and metadata for UI display, persistence, and overlay rendering.
+ *
+ * App-specific: includes overlayItems for visual badge display.
  */
 data class CommandGenerationResult(
-    val legacyCommands: List<GeneratedCommand>,
+    val uiCommands: List<DisplayCommand>,
     val allQuantizedCommands: List<QuantizedCommand>,
     val staticCommands: List<QuantizedCommand>,
     val dynamicCommands: List<QuantizedCommand>,
@@ -31,7 +28,9 @@ data class CommandGenerationResult(
 )
 
 /**
- * Result of incremental command update (for scroll/content changes).
+ * Result of incremental command update (app-specific, simplified).
+ *
+ * For full result with merged commands, use IncrementalCommandResult from VoiceOSCore.
  */
 data class IncrementalUpdateResult(
     val totalCommands: Int,

@@ -4,6 +4,7 @@ import android.util.Log
 import com.augmentalis.voiceoscore.ElementInfo
 import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.HashUtils
+import com.augmentalis.voiceoscore.AppVersionInfo
 import com.augmentalis.voiceoscore.ICommandPersistence
 import com.augmentalis.database.dto.ScrapedAppDTO
 import com.augmentalis.database.dto.ScrapedElementDTO
