@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import com.augmentalis.voiceoscore.DeviceCapabilityManager
 import com.augmentalis.voiceoscore.TimingOperation
+import com.augmentalis.voiceoscore.StaticCommandRegistry
 
 private const val TAG = "VoiceOSA11yService"
 
@@ -639,6 +640,17 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                         commandRegistry.updateSync(cachedCommands)
                         currentScreenHash = screenHash
                         Log.d(TAG, "Windows change: loaded ${cachedCommands.size} cached commands")
+
+                        // FIX: Update speech engine with cached commands (was missing)
+                        val staticPhrases = StaticCommandRegistry.allPhrases()
+                        val dynamicPhrases = cachedCommands.map { it.phrase }
+                        val allPhrases = (staticPhrases + dynamicPhrases).distinct()
+                        try {
+                            voiceOSCore?.updateCommands(allPhrases)
+                            Log.d(TAG, "Windows change: updated speech engine with ${allPhrases.size} phrases")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to update speech engine in windows change", e)
+                        }
                     } else {
                         // Known hash but no cached commands - do incremental update
                         handleContentUpdate(event)
@@ -725,6 +737,18 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                             commandRegistry.updateSync(cachedCommands)
                             currentScreenHash = screenHash
                             Log.d(TAG, "Screen known - loaded ${cachedCommands.size} cached commands for $packageName")
+
+                            // FIX: Update speech engine with cached commands (was missing)
+                            // Must include static commands as updateCommands() REPLACES the grammar
+                            val staticPhrases = StaticCommandRegistry.allPhrases()
+                            val dynamicPhrases = cachedCommands.map { it.phrase }
+                            val allPhrases = (staticPhrases + dynamicPhrases).distinct()
+                            try {
+                                voiceOSCore?.updateCommands(allPhrases)
+                                Log.d(TAG, "Updated speech engine with ${allPhrases.size} cached command phrases")
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to update speech engine with cached commands", e)
+                            }
 
                             val screenInfo = screenCacheManager.getScreenInfo(screenHash)
                             screenCacheManager.updateCurrentScreenInfo(screenInfo)
