@@ -32,6 +32,8 @@ import com.augmentalis.voiceoscore.ScreenHashRepositoryImpl
 import com.augmentalis.voiceoscore.ScreenInfo
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
+import com.augmentalis.voiceoscore.DeviceCapabilityManager
+import com.augmentalis.voiceoscore.TimingOperation
 
 private const val TAG = "VoiceOSA11yService"
 
@@ -358,6 +360,10 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         registerReceiver(modeReceiver, filter, RECEIVER_EXPORTED)
         Log.d(TAG, "Registered broadcast receiver for numbers mode control")
 
+        // Initialize DeviceCapabilityManager with context for accurate device detection
+        DeviceCapabilityManager.init(this)
+        Log.d(TAG, "DeviceCapabilityManager initialized: speed=${DeviceCapabilityManager.getDeviceSpeed()}, debounce=${DeviceCapabilityManager.getContentDebounceMs()}ms")
+
         // Initialize VoiceOSCore facade
         initializeVoiceOSCore()
 
@@ -426,13 +432,221 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                // Full screen change - app switch, new activity, navigation
                 Log.d(TAG, "Window state changed: ${event.packageName}")
                 handleScreenChange(event.packageName?.toString())
             }
-            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
-                if (event.contentChangeTypes and AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE != 0) {
-                    //Log.v(TAG, "Window content changed (subtree): ${event.packageName}")
+
+            AccessibilityEvent.TYPE_WINDOWS_CHANGED -> {
+                // Dialogs, overlays, IME (keyboard), multi-window changes
+                if (continuousScanningEnabled.get()) {
+                    Log.d(TAG, "Windows changed: ${event.packageName}")
+                    handleWindowsChange(event)
                 }
+            }
+
+            AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
+                // Direct scroll event - more reliable than inferring from content changes
+                if (continuousScanningEnabled.get()) {
+                    Log.v(TAG, "View scrolled: ${event.packageName}")
+                    handleScrollEvent(event)
+                }
+            }
+
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
+                // UI subtree changed (items inserted/removed, layout updated)
+                if (shouldHandleContentChange(event)) {
+                    Log.d(TAG, "Content changed (subtree): ${event.packageName}")
+                    handleContentUpdate(event)
+                }
+            }
+        }
+    }
+
+    /**
+     * Determine if content change should trigger an incremental re-scrape.
+     * Focus on scroll events in dynamic containers (RecyclerView, ListView, etc.)
+     */
+    private fun shouldHandleContentChange(event: AccessibilityEvent): Boolean {
+        if (!continuousScanningEnabled.get()) return false
+
+        val contentTypes = event.contentChangeTypes
+
+        // Subtree changes often indicate scroll in RecyclerView/ListView
+        if (contentTypes and AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE != 0) {
+            // Check if source is a scrollable container
+            event.source?.let { node ->
+                val isScrollable = node.isScrollable ||
+                    ElementExtractor.isDynamicContainer(node.className?.toString() ?: "")
+                node.recycle()
+                return isScrollable
+            }
+        }
+        return false
+    }
+
+    /**
+     * Handle incremental content updates from scroll/list changes.
+     * Uses dynamic debounce based on device capability.
+     */
+    private fun handleContentUpdate(event: AccessibilityEvent) {
+        // Get dynamic debounce based on device capability
+        val debounceMs = DeviceCapabilityManager.getContentDebounceMs()
+
+        val now = System.currentTimeMillis()
+        if (now - lastContentUpdateTime < debounceMs) {
+            Log.v(TAG, "Content update debounced (${now - lastContentUpdateTime}ms < ${debounceMs}ms)")
+            return
+        }
+        lastContentUpdateTime = now
+
+        serviceScope.launch {
+            try {
+                val rootNode = rootInActiveWindow ?: return@launch
+                val packageName = event.packageName?.toString() ?: rootNode.packageName?.toString() ?: "unknown"
+
+                // Extract current visible elements
+                val elements = mutableListOf<com.augmentalis.voiceoscore.ElementInfo>()
+                val hierarchy = mutableListOf<HierarchyNode>()
+                val seenHashes = mutableSetOf<String>()
+                val duplicates = mutableListOf<DuplicateInfo>()
+
+                ElementExtractor.extractElements(rootNode, elements, hierarchy, seenHashes, duplicates, 0)
+                rootNode.recycle()
+
+                if (elements.isEmpty()) {
+                    Log.v(TAG, "No elements extracted during content update")
+                    return@launch
+                }
+
+                // Derive labels for elements
+                val elementLabels = ElementExtractor.deriveElementLabels(elements, hierarchy)
+
+                // Generate/merge commands using incremental generator
+                val commandResult = dynamicCommandGenerator.generateCommandsIncremental(
+                    elements = elements,
+                    hierarchy = hierarchy,
+                    elementLabels = elementLabels,
+                    packageName = packageName,
+                    existingCommands = commandRegistry.all(),
+                    updateSpeechEngine = { phrases ->
+                        serviceScope.launch {
+                            try {
+                                voiceOSCore?.updateCommands(phrases)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to update speech engine during incremental update", e)
+                            }
+                        }
+                    }
+                )
+
+                Log.d(TAG, "Incremental update: ${commandResult.totalCommands} commands (${elements.size} elements)")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in content update", e)
+            }
+        }
+    }
+
+    /**
+     * Last content update timestamp for debouncing scroll events.
+     */
+    private var lastContentUpdateTime = 0L
+
+    /**
+     * Last scroll event timestamp for debouncing direct scroll events.
+     */
+    private var lastScrollEventTime = 0L
+
+    /**
+     * Last windows change timestamp for debouncing dialog/overlay events.
+     */
+    private var lastWindowsChangeTime = 0L
+
+    /** Debounce delay for windows change events (dialogs, IME) - longer than scroll */
+    private companion object WindowsChangeDebounce {
+        const val WINDOWS_CHANGE_DEBOUNCE_MS = 500L
+    }
+
+    /**
+     * Handle direct scroll events from TYPE_VIEW_SCROLLED.
+     * Uses shorter debounce from DeviceCapabilityManager for responsive feel.
+     *
+     * This is more reliable than inferring scroll from content changes because:
+     * - Fast fling scrolls may only fire TYPE_VIEW_SCROLLED
+     * - Content changes might not fire for every scroll position
+     */
+    private fun handleScrollEvent(event: AccessibilityEvent) {
+        val debounceMs = DeviceCapabilityManager.getScrollDebounceMs()
+        val now = System.currentTimeMillis()
+
+        if (now - lastScrollEventTime < debounceMs) {
+            Log.v(TAG, "Scroll event debounced (${now - lastScrollEventTime}ms < ${debounceMs}ms)")
+            return
+        }
+        lastScrollEventTime = now
+
+        // Reuse the content update logic which does incremental scraping
+        handleContentUpdate(event)
+    }
+
+    /**
+     * Handle window changes (dialogs, overlays, IME keyboard, multi-window).
+     * Triggers a re-scrape since the visible window set changed.
+     *
+     * This handles scenarios like:
+     * - Confirmation dialogs appearing ("Delete this item?")
+     * - IME (keyboard) showing/hiding
+     * - Floating action buttons or overlays
+     * - Split-screen/multi-window mode transitions
+     */
+    private fun handleWindowsChange(event: AccessibilityEvent) {
+        val now = System.currentTimeMillis()
+        if (now - lastWindowsChangeTime < WINDOWS_CHANGE_DEBOUNCE_MS) {
+            Log.v(TAG, "Windows change debounced (${now - lastWindowsChangeTime}ms < ${WINDOWS_CHANGE_DEBOUNCE_MS}ms)")
+            return
+        }
+        lastWindowsChangeTime = now
+
+        // Get the package name from the event or active window
+        val packageName = event.packageName?.toString()
+            ?: rootInActiveWindow?.packageName?.toString()
+            ?: return
+
+        Log.d(TAG, "Processing windows change for $packageName")
+
+        // For window changes, we need a fresh scrape since the window set changed
+        serviceScope.launch {
+            try {
+                val rootNode = rootInActiveWindow ?: return@launch
+
+                // Generate new screen hash since windows changed
+                val screenHash = screenCacheManager.generateScreenHash(rootNode)
+                rootNode.recycle()
+
+                // Check if this is a new screen configuration
+                val isKnown = screenCacheManager.hasScreen(screenHash)
+                if (!isKnown) {
+                    // New window configuration (dialog appeared, etc.) - do full exploration
+                    currentScreenHash = screenHash
+                    val appVersion = getAppInfo(packageName).versionName
+                    performExplorationWithCache(screenHash, packageName, appVersion)
+                    Log.d(TAG, "Windows change: new screen hash, performed full exploration")
+                } else {
+                    // Known screen (maybe dialog closed) - load cached commands
+                    val cachedCommands = screenCacheManager.getCommandsForScreen(screenHash)
+                    if (cachedCommands.isNotEmpty()) {
+                        commandRegistry.updateSync(cachedCommands)
+                        currentScreenHash = screenHash
+                        Log.d(TAG, "Windows change: loaded ${cachedCommands.size} cached commands")
+                    } else {
+                        // Known hash but no cached commands - do incremental update
+                        handleContentUpdate(event)
+                        Log.d(TAG, "Windows change: known screen, incremental update")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error handling windows change", e)
             }
         }
     }
