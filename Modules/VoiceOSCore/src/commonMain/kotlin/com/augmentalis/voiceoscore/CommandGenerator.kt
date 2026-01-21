@@ -14,6 +14,8 @@ import com.augmentalis.voiceoscore.currentTimeMillis
  */
 object CommandGenerator {
 
+    private val PARSE_DESCRIPTION_DELIMITERS = listOf(":", "|", ",", ".")
+
     /**
      * Generate command from element during extraction (single pass).
      * Returns null if element is not actionable or has no useful label.
@@ -200,9 +202,12 @@ object CommandGenerator {
             }
         }
 
-        // First word if reasonably short
-        val firstWord = text.split(Regex("[,\\s]+")).firstOrNull { it.length in 2..20 }
-        return firstWord
+        val normalizeRealWearMlScript = normalizeRealWearMlScript(text)
+        return if (SymbolNormalizer.containsSymbols(normalizeRealWearMlScript)) {
+            SymbolNormalizer.normalize(normalizeRealWearMlScript)
+        } else {
+            normalizeRealWearMlScript
+        }
     }
 
     /**
@@ -357,15 +362,62 @@ object CommandGenerator {
                     .replace("_", " ")
                     .replace("-", " ")
             }
+
             else -> ""
         }
 
+        val normalizeRealWearMlScript = normalizeRealWearMlScript(rawLabel)
         // Normalize special characters (e.g., "&" → "and", "#" → "pound")
-        return if (SymbolNormalizer.containsSymbols(rawLabel)) {
-            SymbolNormalizer.normalize(rawLabel, locale)
+        return if (SymbolNormalizer.containsSymbols(normalizeRealWearMlScript)) {
+            SymbolNormalizer.normalize(normalizeRealWearMlScript, locale)
         } else {
-            rawLabel
+            normalizeRealWearMlScript
         }
+    }
+
+    /**
+    * Normalizes a RealWear ML script string by trimming the input around the first supported delimiter.
+    *
+    * This function searches for the first delimiter (in the order defined by [PARSE_DESCRIPTION_DELIMITERS])
+    * that appears in [text]. If a delimiter is found, the input is split into exactly two parts using
+    * `split(delimiter, limit = 2)`.
+    *
+    * Selection logic:
+    * - If the original [text] contains `"hf_"`, the function returns the substring *after* the first
+    *   encountered delimiter (i.e., `parts[1]`).
+    * - Otherwise, it returns the substring *before* the first encountered delimiter (i.e., `parts[0]`).
+    *
+    * If no delimiter from [PARSE_DESCRIPTION_DELIMITERS] is present, the input is returned unchanged.
+    *
+    * Notes / edge cases:
+    * - If the delimiter exists but is at the beginning or end of the string, the returned value may be
+    *   an empty string.
+    * - The delimiter search is order-dependent: if multiple delimiters are present, only the first match
+    *   according to [PARSE_DESCRIPTION_DELIMITERS] is used.
+    * - The `"hf_"` check is performed on the original [text], not on the split parts.
+    *
+    * @param text Raw ML script or description text to normalize.
+    * @return A normalized string segment based on the delimiter and `"hf_"` presence rules.
+    */
+    private fun normalizeRealWearMlScript(text: String): String {
+        // Find the first delimiter from our list that exists in the current processedText
+        val foundDelimiter = PARSE_DESCRIPTION_DELIMITERS.firstOrNull { text.contains(it) }
+
+        if (foundDelimiter != null) {
+            // If a delimiter is found, split the string.
+            // limit = 2 ensures we get exactly two parts if the delimiter is present.
+            val parts = text.split(foundDelimiter, limit = 2)
+
+            val normalizedText = if ("hf_" in text) { // Condition checks the input `text` (normalized version)
+                // If "hf_" is present, take the part *after* the first delimiter
+                parts[1]
+            } else {
+                // If "hf_" is NOT present, take the part *before* the first delimiter
+                parts[0]
+            }
+            return normalizedText
+        }
+        return text
     }
 
     /**
