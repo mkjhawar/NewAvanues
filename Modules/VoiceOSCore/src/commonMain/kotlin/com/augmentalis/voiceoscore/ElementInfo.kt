@@ -144,7 +144,19 @@ data class ElementInfo(
      * 1. Inside a dynamic container (RecyclerView, ListView)
      * 2. Very long text (>100 chars) - likely message preview
      * 3. Email-like patterns ("Unread, , ,")
+     *
+     * @deprecated Use [PersistenceDecisionEngine.decideForElement] for 4-layer persistence decision.
+     * This legacy check only considers container type and text patterns.
+     * The new 4-layer system considers:
+     * - Layer 1: App category (EMAIL, SETTINGS, etc.)
+     * - Layer 2: Container type (RecyclerView vs ScrollView)
+     * - Layer 3: Content signals (text length, stability score)
+     * - Layer 4: Screen type (settings screen, form, list)
      */
+    @Deprecated(
+        message = "Use PersistenceDecisionEngine.decideForElement() for 4-layer persistence decision",
+        level = DeprecationLevel.WARNING
+    )
     val isDynamicContent: Boolean
         get() {
             // In dynamic container (most reliable)
@@ -166,7 +178,14 @@ data class ElementInfo(
      * Check if this element should be persisted to database.
      * Static UI elements (menus, buttons) are persisted.
      * Dynamic content (list items) is kept in memory only.
+     *
+     * @deprecated Use [PersistenceDecisionEngine.decideForElement] for 4-layer persistence decision.
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Use PersistenceDecisionEngine.decideForElement() for 4-layer persistence decision",
+        level = DeprecationLevel.WARNING
+    )
     val shouldPersist: Boolean
         get() = !isDynamicContent && hasVoiceContent && isActionable
 
@@ -175,6 +194,25 @@ data class ElementInfo(
          * Create an empty ElementInfo (useful for testing)
          */
         val EMPTY = ElementInfo(className = "")
+
+        /**
+         * Migration helper: Get persistence decision for an element.
+         *
+         * This is a convenience method that calls [PersistenceDecisionEngine.decideForElement].
+         * Requires additional context (packageName, allElements) for accurate decision.
+         *
+         * @param element The element to evaluate
+         * @param packageName The app package name for category-based rules
+         * @param allElements All elements on the current screen for context analysis
+         * @return A [PersistenceDecision] indicating whether and how to persist the element
+         */
+        fun getPersistenceDecision(
+            element: ElementInfo,
+            packageName: String,
+            allElements: List<ElementInfo>
+        ): PersistenceDecision {
+            return PersistenceDecisionEngine.decideForElement(element, packageName, allElements)
+        }
 
         /**
          * Create ElementInfo for a simple button

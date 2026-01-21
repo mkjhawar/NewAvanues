@@ -55,7 +55,7 @@ class CommandOrchestrator(
         updateSpeechEngine: ((List<String>) -> Unit)? = null
     ): CoreCommandResult {
         val commandResults = elements.mapNotNull { element ->
-            CommandGenerator.fromElementWithPersistence(element, packageName)
+            CommandGenerator.fromElementWithPersistence(element, packageName, elements)
         }
 
         val staticCommands = commandResults.filter { it.shouldPersist }
@@ -78,7 +78,7 @@ class CommandOrchestrator(
         updateSpeechEngine?.invoke(speechPhrases)
 
         // Log summary
-        logCommandSummary(allCommands, staticCommands, dynamicCommands, indexCommands)
+        logCommandSummary(allCommands, staticCommands, dynamicCommands, indexCommands, elements, packageName)
 
         // Persist static commands (fire-and-forget, errors logged internally)
         val staticQuantizedCommands = staticCommands.map { it.command }
@@ -128,7 +128,7 @@ class CommandOrchestrator(
         val mergedCommands = mutableListOf<QuantizedCommand>()
 
         val commandResults = elements.mapNotNull { element ->
-            CommandGenerator.fromElementWithPersistence(element, packageName)
+            CommandGenerator.fromElementWithPersistence(element, packageName, elements)
         }
 
         commandResults.forEach { result ->
@@ -185,6 +185,27 @@ class CommandOrchestrator(
      */
     fun getAvidAssignments(): Map<String, Int> = avidAssignments.toMap()
 
+    /**
+     * Get persistence decision statistics for debugging.
+     */
+    fun getPersistenceStats(
+        elements: List<ElementInfo>,
+        packageName: String
+    ): Map<String, Int> {
+        val decisions = PersistenceDecisionEngine.batchDecide(elements, packageName)
+        return mapOf(
+            "total" to decisions.size,
+            "persist" to decisions.values.count { it.shouldPersist },
+            "skip" to decisions.values.count { !it.shouldPersist },
+            "rule1" to decisions.values.count { it.ruleApplied == 1 },
+            "rule2" to decisions.values.count { it.ruleApplied == 2 },
+            "rule3" to decisions.values.count { it.ruleApplied == 3 },
+            "rule4" to decisions.values.count { it.ruleApplied == 4 },
+            "rule5" to decisions.values.count { it.ruleApplied == 5 },
+            "rule6" to decisions.values.count { it.ruleApplied == 6 }
+        )
+    }
+
     private fun generateAndRegisterIndexCommands(
         listItems: List<ElementInfo>,
         packageName: String
@@ -236,14 +257,19 @@ class CommandOrchestrator(
         allCommands: List<QuantizedCommand>,
         staticCommands: List<CommandGenerator.GeneratedCommandResult>,
         dynamicCommands: List<CommandGenerator.GeneratedCommandResult>,
-        indexCommands: List<QuantizedCommand>
+        indexCommands: List<QuantizedCommand>,
+        elements: List<ElementInfo>,
+        packageName: String
     ) {
-        logger.v { "Commands: ${allCommands.size} (${staticCommands.size} static)" }
+        logger.v { "Commands: ${allCommands.size} (${staticCommands.size} static, ${dynamicCommands.size} dynamic)" }
         if (dynamicCommands.isNotEmpty()) {
             logger.v { "Dynamic: ${dynamicCommands.take(3).map { it.command.phrase }}" }
         }
         if (indexCommands.isNotEmpty()) {
             logger.v { "Index: ${indexCommands.take(5).map { it.phrase }}" }
         }
+        // Log persistence rule distribution
+        val stats = getPersistenceStats(elements, packageName)
+        logger.v { "Persistence: ${stats["persist"]} persist, ${stats["skip"]} skip" }
     }
 }

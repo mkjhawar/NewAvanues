@@ -44,13 +44,78 @@ object CommandGenerator {
     }
 
     /**
-     * Generate command from element with persistence information.
+     * Generate command from element with full persistence decision using 4-layer system.
+     *
+     * This is the preferred method that uses PersistenceDecisionEngine to make intelligent
+     * persistence decisions based on app category, container behavior, screen type, and content analysis.
+     *
+     * @param element Source element info
+     * @param packageName Host application package name
+     * @param allElements All elements on screen (for ScreenClassifier)
+     * @return GeneratedCommandResult with persistence decision from PersistenceDecisionEngine
+     */
+    fun fromElementWithPersistence(
+        element: ElementInfo,
+        packageName: String,
+        allElements: List<ElementInfo>
+    ): GeneratedCommandResult? {
+        // Skip non-actionable elements
+        if (!element.isActionable) return null
+        if (!element.hasVoiceContent) return null
+
+        val label = deriveLabel(element)
+        if (label.isBlank() || label == element.className.substringAfterLast(".")) {
+            return null
+        }
+
+        // Use PersistenceDecisionEngine for 4-layer decision
+        val decision = PersistenceDecisionEngine.decideForElement(element, packageName, allElements)
+
+        val actionType = deriveActionType(element)
+        val elementHash = deriveElementHash(element)
+        val avid = generateAvid(element, packageName)
+        val currentTime = currentTimeMillis()
+
+        val command = QuantizedCommand(
+            avid = "",
+            phrase = label,
+            actionType = actionType,
+            targetAvid = avid,
+            confidence = decision.confidence,  // Use decision confidence
+            metadata = mapOf(
+                "packageName" to packageName,
+                "elementHash" to elementHash,
+                "createdAt" to currentTime.toString(),
+                "className" to element.className,
+                "resourceId" to element.resourceId,
+                "label" to label,
+                "isDynamic" to (!decision.shouldPersist).toString(),
+                "persistenceRule" to decision.ruleApplied.toString(),
+                "persistenceReason" to decision.reason,
+                "listIndex" to element.listIndex.toString(),
+                "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}"
+            )
+        )
+
+        return GeneratedCommandResult(
+            command = command,
+            shouldPersist = decision.shouldPersist,
+            listIndex = element.listIndex
+        )
+    }
+
+    /**
+     * Generate command from element with persistence information using legacy detection.
      * Returns both the command and whether it should be persisted to database.
      *
      * @param element Source element info
      * @param packageName Host application package name
      * @return GeneratedCommandResult or null if element is not suitable
      */
+    @Deprecated(
+        message = "Use fromElementWithPersistence(element, packageName, allElements) for 4-layer persistence decision",
+        replaceWith = ReplaceWith("fromElementWithPersistence(element, packageName, allElements)")
+    )
     fun fromElementWithPersistence(
         element: ElementInfo,
         packageName: String

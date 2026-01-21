@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicLong
 import com.augmentalis.voiceoscore.DeviceCapabilityManager
 import com.augmentalis.voiceoscore.TimingOperation
 import com.augmentalis.voiceoscore.StaticCommandRegistry
+import com.augmentalis.voiceoscore.IAppCategoryProvider
 
 private const val TAG = "VoiceOSA11yService"
 
@@ -47,7 +48,7 @@ private const val SCREEN_CHANGE_DEBOUNCE_MS = 300L
  *
  * Provides real-time exploration of apps on the device,
  * extracting UI elements and processing them through the
- * VoiceOSCore library for VUID generation, deduplication,
+ * VoiceOSCore library for AVID generation, deduplication,
  * hierarchy tracking, and command generation.
  *
  * SOLID Refactored: Delegates to extracted managers:
@@ -97,6 +98,14 @@ class VoiceOSAccessibilityService : AccessibilityService() {
      */
     private val screenCacheManager: ScreenCacheManager by lazy {
         ScreenCacheManager(screenHashRepository, resources)
+    }
+
+    /**
+     * App category provider for 4-layer persistence decisions.
+     * Uses PackageManager API (API 26+) with pattern-based fallback.
+     */
+    private val appCategoryProvider: IAppCategoryProvider by lazy {
+        AndroidAppCategoryProvider(applicationContext)
     }
 
     /**
@@ -1003,8 +1012,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         val packageName = rootNode.packageName?.toString() ?: "unknown"
 
-        // Generate VUIDs
-        val vuids = elements.map { element ->
+        // Generate AVIDs
+        val avids = elements.map { element ->
             val fingerprint = ElementFingerprint.generate(
                 className = element.className,
                 packageName = packageName,
@@ -1013,7 +1022,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 contentDesc = element.contentDescription
             )
             val elemHash = ElementFingerprint.parse(fingerprint)?.second ?: ""
-            VUIDInfo(element = element, vuid = fingerprint, hash = elemHash)
+            AVIDInfo(element = element, avid = fingerprint, hash = elemHash)
         }
 
         // Derive labels using ElementExtractor
@@ -1059,7 +1068,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             clickableElements = elements.count { it.isClickable },
             scrollableElements = elements.count { it.isScrollable },
             elements = elements,
-            vuids = vuids,
+            avids = avids,
             hierarchy = hierarchy,
             duplicates = duplicates,
             deduplicationStats = DeduplicationStats(
@@ -1091,7 +1100,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 clickableElements = 0,
                 scrollableElements = 0,
                 elements = emptyList(),
-                vuids = emptyList(),
+                avids = emptyList(),
                 hierarchy = emptyList(),
                 duplicates = emptyList(),
                 deduplicationStats = DeduplicationStats(0, 0, 0, emptyList()),
@@ -1118,7 +1127,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             clickableElements = results.sumOf { it.clickableElements },
             scrollableElements = results.sumOf { it.scrollableElements },
             elements = results.flatMap { it.elements },
-            vuids = results.flatMap { it.vuids },
+            avids = results.flatMap { it.avids },
             hierarchy = results.flatMap { it.hierarchy },
             duplicates = results.flatMap { it.duplicates },
             deduplicationStats = DeduplicationStats(

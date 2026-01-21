@@ -43,6 +43,20 @@
             android:label="VoiceOS Settings"
             android:theme="@style/Theme.VoiceOSCoreNG" />
 
+        <!-- Export settings activity -->
+        <activity
+            android:name="com.augmentalis.voiceoscoreng.ExportSettingsActivity"
+            android:exported="false"
+            android:label="Export Commands"
+            android:theme="@style/Theme.VoiceOSCoreNG" />
+
+        <!-- Import settings activity -->
+        <activity
+            android:name="com.augmentalis.voiceoscoreng.ImportSettingsActivity"
+            android:exported="false"
+            android:label="Import Commands"
+            android:theme="@style/Theme.VoiceOSCoreNG" />
+
         <!-- Accessibility Service for UI exploration -->
         <service
             android:name="com.augmentalis.voiceoscoreng.service.VoiceOSAccessibilityService"
