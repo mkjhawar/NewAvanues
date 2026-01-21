@@ -67,25 +67,31 @@ include(":Modules:Utilities")       // Platform utilities (DeviceInfo, Logger, F
 include(":Modules:LicenseSDK")      // License validation client
 
 // VoiceOS Core Modules
-include(":Modules:VoiceOS:core:database")
-include(":Modules:VoiceOS:core:accessibility-types")
-include(":Modules:VoiceOS:core:result")
-include(":Modules:VoiceOS:core:voiceos-logging")
-include(":Modules:VoiceOS:core:command-models")
-include(":Modules:VoiceOS:core:hash")
-include(":Modules:VoiceOS:core:json-utils")
-include(":Modules:VoiceOS:core:constants")
-include(":Modules:VoiceOS:core:exceptions")
-include(":Modules:VoiceOS:core:text-utils")
-include(":Modules:VoiceOS:core:validation")
+include(":Modules:VoiceOS:core:database")          // CRITICAL - used by VoiceOSCore, voiceoscoreng, managers
+include(":Modules:VoiceOS:core:command-models")    // Used by managers/CommandManager
 
-// VoiceOS Core Module (moved from apps/ to module root)
-include(":Modules:VoiceOS:VoiceOSCore")
+// DEPRECATED (2026-01-21) - Functionality consolidated into VoiceOSCore
+// These modules are redundant copies with old package names (com.augmentalis.voiceos.*)
+// VoiceOSCore has the same code with correct package (com.augmentalis.voiceoscore)
+// include(":Modules:VoiceOS:core:accessibility-types")
+// include(":Modules:VoiceOS:core:result")
+// include(":Modules:VoiceOS:core:voiceos-logging")
+// include(":Modules:VoiceOS:core:hash")
+// include(":Modules:VoiceOS:core:json-utils")
+// include(":Modules:VoiceOS:core:constants")
+// include(":Modules:VoiceOS:core:exceptions")
+// include(":Modules:VoiceOS:core:text-utils")
+// include(":Modules:VoiceOS:core:validation")
 
-// VoiceOS Apps (moved from Modules/VoiceOS/apps/ to android/apps/)
+// VoiceOS Core Module - DEPRECATED (2026-01-21)
+// Replaced by top-level :Modules:VoiceOSCore, old path archived
+// include(":Modules:VoiceOS:VoiceOSCore")
+
+// VoiceOS Apps
 // LearnApp and LearnAppDev removed - functionality integrated into VoiceOSCore (2025-12-23)
+// VoiceOS legacy app archived to archive/deprecated/VoiceOS-LegacyApp-260121/ (2026-01-21)
 include(":android:apps:VoiceRecognition")
-include(":Modules:VoiceOS:apps:VoiceOS")  // Main launcher app with onboarding
+// include(":Modules:VoiceOS:apps:VoiceOS")  // ARCHIVED - use voiceoscoreng instead
 include(":android:apps:VoiceCursor")
 include(":android:apps:VoiceOSIPCTest")
 include(":android:apps:VoiceUI")
