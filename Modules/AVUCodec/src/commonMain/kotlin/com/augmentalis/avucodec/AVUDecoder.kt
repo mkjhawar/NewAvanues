@@ -157,4 +157,246 @@ object AVUDecoder {
         val confidence: Float,
         val isFinal: Boolean
     )
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PLUGIN MANIFEST PARSING (AVU Plugin Format v1.0)
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Parse a complete plugin manifest from AVU format string.
+     *
+     * @param content AVU format manifest content
+     * @return Parsed PluginManifest or null if invalid
+     */
+    fun parsePluginManifest(content: String): PluginManifest? {
+        if (content.isBlank()) return null
+
+        val lines = content.lines()
+            .map { it.trim() }
+            .filter { it.isNotBlank() && !it.startsWith("#") }
+
+        var manifest = PluginManifest()
+        var inConfigBlock = false
+        val configKeys = mutableListOf<ConfigKey>()
+
+        for (line in lines) {
+            val colonIndex = line.indexOf(':')
+            if (colonIndex < 0) continue
+
+            val code = line.substring(0, colonIndex).uppercase()
+            val value = line.substring(colonIndex + 1)
+
+            when {
+                code == AVUEncoder.CODE_CONFIG && value == "start" -> {
+                    inConfigBlock = true
+                }
+                code == AVUEncoder.CODE_CONFIG && value == "end" -> {
+                    inConfigBlock = false
+                    manifest = manifest.copy(configSchema = configKeys.toList())
+                }
+                inConfigBlock && code == AVUEncoder.CODE_CONFIG_KEY -> {
+                    parseConfigKey(value)?.let { configKeys.add(it) }
+                }
+                else -> {
+                    manifest = parseManifestLine(manifest, code, value)
+                }
+            }
+        }
+
+        // Validate required fields
+        if (manifest.id.isBlank() || manifest.version.isBlank()) {
+            return null
+        }
+
+        return manifest
+    }
+
+    private fun parseManifestLine(manifest: PluginManifest, code: String, value: String): PluginManifest {
+        return when (code) {
+            AVUEncoder.CODE_PLUGIN -> {
+                val parts = splitUnescaped(value)
+                manifest.copy(
+                    id = AVUEncoder.unescape(parts.getOrNull(0) ?: ""),
+                    version = AVUEncoder.unescape(parts.getOrNull(1) ?: ""),
+                    entrypoint = AVUEncoder.unescape(parts.getOrNull(2) ?: ""),
+                    name = AVUEncoder.unescape(parts.getOrNull(3) ?: "")
+                )
+            }
+            AVUEncoder.CODE_DESCRIPTION -> {
+                manifest.copy(description = AVUEncoder.unescape(value))
+            }
+            AVUEncoder.CODE_AUTHOR -> {
+                val parts = splitUnescaped(value)
+                manifest.copy(
+                    author = Author(
+                        name = AVUEncoder.unescape(parts.getOrNull(0) ?: ""),
+                        email = AVUEncoder.unescape(parts.getOrNull(1) ?: ""),
+                        url = AVUEncoder.unescape(parts.getOrNull(2) ?: "")
+                    )
+                )
+            }
+            AVUEncoder.CODE_PLUGIN_CAP -> {
+                val capabilities = value.split("|").map { AVUEncoder.unescape(it) }
+                manifest.copy(capabilities = capabilities.toSet())
+            }
+            AVUEncoder.CODE_MODULE -> {
+                val modules = value.split("|").map { AVUEncoder.unescape(it) }
+                manifest.copy(targetModules = modules.toSet())
+            }
+            AVUEncoder.CODE_DEPENDENCY -> {
+                val parts = splitUnescaped(value)
+                val dep = Dependency(
+                    pluginId = AVUEncoder.unescape(parts.getOrNull(0) ?: ""),
+                    versionConstraint = AVUEncoder.unescape(parts.getOrElse(1) { "*" })
+                )
+                manifest.copy(dependencies = manifest.dependencies + dep)
+            }
+            AVUEncoder.CODE_PERMISSION -> {
+                val parts = splitUnescaped(value)
+                val perm = Permission(
+                    name = AVUEncoder.unescape(parts.getOrNull(0) ?: ""),
+                    rationale = AVUEncoder.unescape(parts.getOrElse(1) { "" })
+                )
+                manifest.copy(permissions = manifest.permissions + perm)
+            }
+            AVUEncoder.CODE_PLATFORM -> {
+                val parts = splitUnescaped(value)
+                val platform = parts.getOrNull(0) ?: ""
+                val minVersion = parts.getOrElse(1) { "any" }
+                manifest.copy(platforms = manifest.platforms + (platform to minVersion))
+            }
+            AVUEncoder.CODE_ASSET -> {
+                val parts = splitUnescaped(value)
+                val asset = Asset(
+                    type = AVUEncoder.unescape(parts.getOrNull(0) ?: ""),
+                    path = AVUEncoder.unescape(parts.getOrElse(1) { "" })
+                )
+                manifest.copy(assets = manifest.assets + asset)
+            }
+            AVUEncoder.CODE_HOOK -> {
+                val parts = splitUnescaped(value)
+                val event = AVUEncoder.unescape(parts.getOrNull(0) ?: "")
+                val handler = AVUEncoder.unescape(parts.getOrElse(1) { "" })
+                manifest.copy(hooks = manifest.hooks + (event to handler))
+            }
+            else -> manifest
+        }
+    }
+
+    private fun parseConfigKey(value: String): ConfigKey? {
+        val parts = splitUnescaped(value)
+        if (parts.isEmpty()) return null
+        return ConfigKey(
+            name = AVUEncoder.unescape(parts.getOrNull(0) ?: ""),
+            type = AVUEncoder.unescape(parts.getOrElse(1) { "string" }),
+            default = AVUEncoder.unescape(parts.getOrElse(2) { "" }),
+            description = AVUEncoder.unescape(parts.getOrElse(3) { "" })
+        )
+    }
+
+    /**
+     * Split a value by colons, respecting escaped colons.
+     */
+    private fun splitUnescaped(value: String): List<String> {
+        val result = mutableListOf<String>()
+        val current = StringBuilder()
+        var i = 0
+        while (i < value.length) {
+            when {
+                i + 2 < value.length && value.substring(i, i + 3) == "%3A" -> {
+                    current.append("%3A")
+                    i += 3
+                }
+                value[i] == ':' -> {
+                    result.add(current.toString())
+                    current.clear()
+                    i++
+                }
+                else -> {
+                    current.append(value[i])
+                    i++
+                }
+            }
+        }
+        result.add(current.toString())
+        return result
+    }
+
+    /**
+     * Check if content is a valid plugin manifest.
+     */
+    fun isPluginManifest(content: String): Boolean {
+        return content.lines().any { line ->
+            val trimmed = line.trim()
+            trimmed.startsWith("${AVUEncoder.CODE_PLUGIN}:") ||
+                trimmed.contains("Avanues Universal Plugin Format")
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PLUGIN MANIFEST DATA CLASSES
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Parsed plugin manifest.
+     */
+    data class PluginManifest(
+        val id: String = "",
+        val version: String = "",
+        val entrypoint: String = "",
+        val name: String = "",
+        val description: String = "",
+        val author: Author = Author(),
+        val capabilities: Set<String> = emptySet(),
+        val targetModules: Set<String> = emptySet(),
+        val dependencies: List<Dependency> = emptyList(),
+        val permissions: List<Permission> = emptyList(),
+        val platforms: Map<String, String> = emptyMap(),
+        val assets: List<Asset> = emptyList(),
+        val configSchema: List<ConfigKey> = emptyList(),
+        val hooks: Map<String, String> = emptyMap()
+    )
+
+    /**
+     * Plugin author info.
+     */
+    data class Author(
+        val name: String = "",
+        val email: String = "",
+        val url: String = ""
+    )
+
+    /**
+     * Plugin dependency.
+     */
+    data class Dependency(
+        val pluginId: String,
+        val versionConstraint: String = "*"
+    )
+
+    /**
+     * Plugin permission.
+     */
+    data class Permission(
+        val name: String,
+        val rationale: String = ""
+    )
+
+    /**
+     * Plugin asset.
+     */
+    data class Asset(
+        val type: String,
+        val path: String
+    )
+
+    /**
+     * Plugin configuration key.
+     */
+    data class ConfigKey(
+        val name: String,
+        val type: String,
+        val default: String = "",
+        val description: String = ""
+    )
 }

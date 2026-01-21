@@ -23,7 +23,7 @@ object AVUEncoder {
     const val EXTRA_MESSAGE = "message"
     const val EXTRA_SOURCE_APP = "source_app"
 
-    // Protocol codes
+    // Protocol codes - IPC
     const val CODE_VOICE_COMMAND = "VCM"
     const val CODE_ACCEPT = "ACC"
     const val CODE_ACCEPT_DATA = "ACD"
@@ -45,6 +45,20 @@ object AVUEncoder {
     const val CODE_PING = "PNG"
     const val CODE_PONG = "PON"
     const val CODE_CAPABILITY = "CAP"
+
+    // Protocol codes - Plugin Manifest (AVU Plugin Format v1.0)
+    const val CODE_PLUGIN = "PLG"           // PLG:id:version:entrypoint:name
+    const val CODE_DESCRIPTION = "DSC"      // DSC:description text
+    const val CODE_AUTHOR = "AUT"           // AUT:name:email:url
+    const val CODE_PLUGIN_CAP = "PCP"       // PCP:cap1|cap2|cap3 (pipe-separated capabilities)
+    const val CODE_MODULE = "MOD"           // MOD:module1|module2 (target modules)
+    const val CODE_DEPENDENCY = "DEP"       // DEP:pluginId:versionConstraint
+    const val CODE_PERMISSION = "PRM"       // PRM:permission:rationale
+    const val CODE_PLATFORM = "PLT"         // PLT:platform:minVersion
+    const val CODE_ASSET = "AST"            // AST:type:path
+    const val CODE_CONFIG = "CFG"           // CFG:start or CFG:end (config block markers)
+    const val CODE_CONFIG_KEY = "KEY"       // KEY:name:type:default:description
+    const val CODE_HOOK = "HKS"             // HKS:event:handler
 
     private const val DELIMITER = ':'
 
@@ -247,6 +261,244 @@ object AVUEncoder {
     fun encodeCapabilities(sessionId: String, capabilities: List<String>): String {
         return "$CODE_CAPABILITY:${escape(sessionId)}:${capabilities.joinToString(",") { escape(it) }}"
     }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PLUGIN MANIFEST (AVU Plugin Format v1.0)
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Encode plugin header line.
+     *
+     * Format: PLG:id:version:entrypoint:name
+     * Example: PLG:com.example.myplugin:1.2.0:com.example.MyPlugin:My Plugin
+     */
+    fun encodePluginHeader(
+        id: String,
+        version: String,
+        entrypoint: String,
+        name: String
+    ): String {
+        require(id.isNotBlank()) { "Plugin id cannot be blank" }
+        require(version.isNotBlank()) { "Plugin version cannot be blank" }
+        return "$CODE_PLUGIN:${escape(id)}:${escape(version)}:${escape(entrypoint)}:${escape(name)}"
+    }
+
+    /**
+     * Encode plugin description line.
+     *
+     * Format: DSC:description text
+     */
+    fun encodeDescription(description: String): String {
+        return "$CODE_DESCRIPTION:${escape(description)}"
+    }
+
+    /**
+     * Encode plugin author line.
+     *
+     * Format: AUT:name:email:url
+     */
+    fun encodeAuthor(name: String, email: String = "", url: String = ""): String {
+        return "$CODE_AUTHOR:${escape(name)}:${escape(email)}:${escape(url)}"
+    }
+
+    /**
+     * Encode plugin capabilities line.
+     *
+     * Format: PCP:cap1|cap2|cap3
+     * Example: PCP:accessibility.voice|ai.nlu|speech.recognition
+     */
+    fun encodePluginCapabilities(capabilities: List<String>): String {
+        require(capabilities.isNotEmpty()) { "Capabilities list cannot be empty" }
+        return "$CODE_PLUGIN_CAP:${capabilities.joinToString("|") { escape(it) }}"
+    }
+
+    /**
+     * Encode target modules line.
+     *
+     * Format: MOD:module1|module2
+     * Example: MOD:VoiceOSCore|AI|SpeechRecognition
+     */
+    fun encodeTargetModules(modules: List<String>): String {
+        return "$CODE_MODULE:${modules.joinToString("|") { escape(it) }}"
+    }
+
+    /**
+     * Encode plugin dependency line.
+     *
+     * Format: DEP:pluginId:versionConstraint
+     * Example: DEP:com.augmentalis.core:^2.0.0
+     */
+    fun encodeDependency(pluginId: String, versionConstraint: String = "*"): String {
+        return "$CODE_DEPENDENCY:${escape(pluginId)}:${escape(versionConstraint)}"
+    }
+
+    /**
+     * Encode plugin permission line.
+     *
+     * Format: PRM:permission:rationale
+     * Example: PRM:MICROPHONE:Required for voice input processing
+     */
+    fun encodePermission(permission: String, rationale: String = ""): String {
+        return "$CODE_PERMISSION:${escape(permission)}:${escape(rationale)}"
+    }
+
+    /**
+     * Encode platform requirement line.
+     *
+     * Format: PLT:platform:minVersion
+     * Example: PLT:android:26
+     */
+    fun encodePlatform(platform: String, minVersion: String): String {
+        return "$CODE_PLATFORM:${escape(platform)}:${escape(minVersion)}"
+    }
+
+    /**
+     * Encode asset line.
+     *
+     * Format: AST:type:path
+     * Example: AST:model:models/custom_vocab.onnx
+     */
+    fun encodeAsset(type: String, path: String): String {
+        return "$CODE_ASSET:${escape(type)}:${escape(path)}"
+    }
+
+    /**
+     * Encode config block start marker.
+     */
+    fun encodeConfigStart(): String = "$CODE_CONFIG:start"
+
+    /**
+     * Encode config block end marker.
+     */
+    fun encodeConfigEnd(): String = "$CODE_CONFIG:end"
+
+    /**
+     * Encode config key line.
+     *
+     * Format: KEY:name:type:default:description
+     * Example: KEY:sensitivity:float:0.8:Voice detection sensitivity
+     */
+    fun encodeConfigKey(
+        name: String,
+        type: String,
+        default: String = "",
+        description: String = ""
+    ): String {
+        return "$CODE_CONFIG_KEY:${escape(name)}:${escape(type)}:${escape(default)}:${escape(description)}"
+    }
+
+    /**
+     * Encode hook line.
+     *
+     * Format: HKS:event:handler
+     * Example: HKS:on_voice_command:handleVoiceCommand
+     */
+    fun encodeHook(event: String, handler: String): String {
+        return "$CODE_HOOK:${escape(event)}:${escape(handler)}"
+    }
+
+    /**
+     * Encode a complete plugin manifest to AVU format string.
+     *
+     * @param manifest Plugin manifest data
+     * @return AVU format string
+     */
+    fun encodePluginManifest(manifest: PluginManifestData): String = buildString {
+        // Header comment
+        appendLine("# Avanues Universal Plugin Format v1.0")
+        appendLine("# Type: Plugin Manifest")
+        appendLine("# Extension: .avu")
+        appendLine()
+
+        // Plugin header
+        appendLine(encodePluginHeader(manifest.id, manifest.version, manifest.entrypoint, manifest.name))
+
+        // Description
+        if (manifest.description.isNotBlank()) {
+            appendLine(encodeDescription(manifest.description))
+        }
+
+        // Author
+        if (manifest.authorName.isNotBlank()) {
+            appendLine(encodeAuthor(manifest.authorName, manifest.authorEmail, manifest.authorUrl))
+        }
+
+        // Capabilities
+        if (manifest.capabilities.isNotEmpty()) {
+            appendLine(encodePluginCapabilities(manifest.capabilities))
+        }
+
+        // Target modules
+        if (manifest.targetModules.isNotEmpty()) {
+            appendLine(encodeTargetModules(manifest.targetModules))
+        }
+
+        // Dependencies
+        manifest.dependencies.forEach { (pluginId, version) ->
+            appendLine(encodeDependency(pluginId, version))
+        }
+
+        // Permissions
+        manifest.permissions.forEach { (permission, rationale) ->
+            appendLine(encodePermission(permission, rationale))
+        }
+
+        // Platforms
+        manifest.platforms.forEach { (platform, minVersion) ->
+            appendLine(encodePlatform(platform, minVersion))
+        }
+
+        // Assets
+        manifest.assets.forEach { (type, path) ->
+            appendLine(encodeAsset(type, path))
+        }
+
+        // Config schema
+        if (manifest.configKeys.isNotEmpty()) {
+            appendLine(encodeConfigStart())
+            manifest.configKeys.forEach { key ->
+                appendLine(encodeConfigKey(key.name, key.type, key.default, key.description))
+            }
+            appendLine(encodeConfigEnd())
+        }
+
+        // Hooks
+        manifest.hooks.forEach { (event, handler) ->
+            appendLine(encodeHook(event, handler))
+        }
+    }
+
+    /**
+     * Plugin manifest data class for encoding.
+     */
+    data class PluginManifestData(
+        val id: String,
+        val version: String,
+        val entrypoint: String,
+        val name: String,
+        val description: String = "",
+        val authorName: String = "",
+        val authorEmail: String = "",
+        val authorUrl: String = "",
+        val capabilities: List<String> = emptyList(),
+        val targetModules: List<String> = emptyList(),
+        val dependencies: List<Pair<String, String>> = emptyList(),  // pluginId to versionConstraint
+        val permissions: List<Pair<String, String>> = emptyList(),   // permission to rationale
+        val platforms: List<Pair<String, String>> = emptyList(),     // platform to minVersion
+        val assets: List<Pair<String, String>> = emptyList(),        // type to path
+        val configKeys: List<ConfigKeyData> = emptyList(),
+        val hooks: List<Pair<String, String>> = emptyList()          // event to handler
+    )
+
+    /**
+     * Config key data class.
+     */
+    data class ConfigKeyData(
+        val name: String,
+        val type: String,
+        val default: String = "",
+        val description: String = ""
+    )
 
     // ════════════════════════════════════════════════════════════════════════
     // GENERIC

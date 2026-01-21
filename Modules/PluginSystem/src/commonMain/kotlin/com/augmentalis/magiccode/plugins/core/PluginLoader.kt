@@ -64,7 +64,8 @@ class PluginLoader(
 
     companion object {
         private const val TAG = "PluginLoader"
-        private const val MANIFEST_FILENAME = "plugin.yaml"
+        private const val MANIFEST_FILENAME_YAML = "plugin.yaml"
+        private const val MANIFEST_FILENAME_AVU = "plugin.avu"
     }
 
     /**
@@ -283,17 +284,32 @@ class PluginLoader(
     }
 
     /**
-     * Parse YAML manifest content.
+     * Parse manifest content (supports both YAML and AVU formats).
      *
-     * @param yamlContent YAML string content
+     * The parser automatically detects the format:
+     * - AVU format: Lines starting with PLG: or containing "Avanues Universal Plugin Format"
+     * - YAML format: Everything else
+     *
+     * @param content Manifest string content (YAML or AVU format)
      * @return Parsed PluginManifest
      * @throws ManifestInvalidException if parsing fails
      */
-    private fun parseManifest(yamlContent: String): PluginManifest {
+    private fun parseManifest(content: String): PluginManifest {
         return try {
-            Yaml.Default.decodeFromString(PluginManifest.serializer(), yamlContent)
+            // Detect AVU format
+            if (AvuManifestParser.isAvuManifest(content)) {
+                PluginLog.d(TAG, "Detected AVU format manifest, using AvuManifestParser")
+                AvuManifestParser.parse(content)
+                    ?: throw ManifestInvalidException("Failed to parse AVU manifest: invalid format")
+            } else {
+                // Default to YAML format
+                PluginLog.d(TAG, "Using YAML format manifest parser")
+                Yaml.Default.decodeFromString(PluginManifest.serializer(), content)
+            }
+        } catch (e: ManifestInvalidException) {
+            throw e
         } catch (e: Exception) {
-            throw ManifestInvalidException("Failed to parse manifest YAML", e)
+            throw ManifestInvalidException("Failed to parse manifest", e)
         }
     }
 
