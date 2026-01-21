@@ -70,7 +70,7 @@ object CommandGenerator {
 
         // Generate element hash for database FK reference
         val elementHash = deriveElementHash(element)
-        val vuid = generateVuid(element, packageName)
+        val avid = generateAvid(element, packageName)
         val currentTime = currentTimeMillis()
 
         // Determine if this is dynamic content (should NOT be persisted)
@@ -80,7 +80,7 @@ object CommandGenerator {
             avid = "", // Generated on persist if needed
             phrase = label,  // No verb - just the element label
             actionType = actionType,
-            targetAvid = vuid,
+            targetAvid = avid,
             confidence = calculateConfidence(element),
             metadata = mapOf(
                 "packageName" to packageName,
@@ -147,20 +147,32 @@ object CommandGenerator {
                 else -> "item ${index + 1}"
             }
 
-            val vuid = generateVuid(element, packageName)
+            val avid = generateAvid(element, packageName)
+
+            // Derive label for fallback search - prioritize text, then contentDescription
+            val label = when {
+                element.text.isNotBlank() -> element.text
+                element.contentDescription.isNotBlank() -> element.contentDescription
+                else -> ""
+            }
 
             QuantizedCommand(
                 avid = "",
                 phrase = phrase,
                 actionType = CommandActionType.CLICK,
-                targetAvid = vuid,
+                targetAvid = avid,
                 confidence = 0.7f,
                 metadata = mapOf(
                     "packageName" to packageName,
                     "elementHash" to deriveElementHash(element),
                     "isIndexCommand" to "true",
                     "listIndex" to index.toString(),
-                    "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}"
+                    "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}",
+                    // Additional metadata for BoundsResolver fallback layers
+                    "label" to label,
+                    "contentDescription" to element.contentDescription,
+                    "resourceId" to element.resourceId,
+                    "className" to element.className
                 )
             )
         }
@@ -232,13 +244,20 @@ object CommandGenerator {
         return bestElementPerIndex.mapIndexed { visualIndex, element ->
             // Visual index is 1-based (matches overlay badge numbers)
             val number = visualIndex + 1
-            val vuid = generateVuid(element, packageName)
+            val avid = generateAvid(element, packageName)
+
+            // Derive label for fallback search - prioritize text, then contentDescription
+            val label = when {
+                element.text.isNotBlank() -> element.text
+                element.contentDescription.isNotBlank() -> element.contentDescription
+                else -> ""
+            }
 
             QuantizedCommand(
                 avid = "",
                 phrase = number.toString(),  // Raw number: "1", "2", "3"
                 actionType = CommandActionType.CLICK,
-                targetAvid = vuid,
+                targetAvid = avid,
                 confidence = 0.9f,  // High confidence for numeric commands
                 metadata = mapOf(
                     "packageName" to packageName,
@@ -246,7 +265,12 @@ object CommandGenerator {
                     "isNumericCommand" to "true",
                     "numericIndex" to number.toString(),
                     "listIndex" to element.listIndex.toString(),
-                    "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}"
+                    "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}",
+                    // Additional metadata for BoundsResolver fallback layers
+                    "label" to label,
+                    "contentDescription" to element.contentDescription,
+                    "resourceId" to element.resourceId,
+                    "className" to element.className
                 )
             )
         }
@@ -280,13 +304,13 @@ object CommandGenerator {
             // Skip very short labels (likely noise) or very long ones
             if (label.length < 2 || label.length > 30) return@mapNotNull null
 
-            val vuid = generateVuid(element, packageName)
+            val avid = generateAvid(element, packageName)
 
             QuantizedCommand(
                 avid = "",
                 phrase = label,  // The sender name/title as command
                 actionType = CommandActionType.CLICK,
-                targetAvid = vuid,
+                targetAvid = avid,
                 confidence = 0.8f,  // Higher confidence for label matches
                 metadata = mapOf(
                     "packageName" to packageName,
@@ -302,7 +326,7 @@ object CommandGenerator {
 
     /**
      * Derive a stable element hash for database FK reference.
-     * Uses the same logic as generateVuid's elementHash for consistency.
+     * Uses the same logic as generateAvid's elementHash for consistency.
      */
     private fun deriveElementHash(element: ElementInfo): String {
         val hashInput = when {
@@ -363,7 +387,7 @@ object CommandGenerator {
      * Generate element fingerprint for targeting.
      * Format: {TypeCode}:{hash8} e.g., "BTN:a3f2e1c9"
      */
-    private fun generateVuid(element: ElementInfo, packageName: String): String {
+    private fun generateAvid(element: ElementInfo, packageName: String): String {
         return ElementFingerprint.fromElementInfo(element, packageName)
     }
 

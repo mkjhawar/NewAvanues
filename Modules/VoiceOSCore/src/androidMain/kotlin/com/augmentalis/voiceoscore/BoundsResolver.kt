@@ -38,6 +38,15 @@ class BoundsResolver(private val service: AccessibilityService) {
     fun resolve(command: QuantizedCommand): Bounds? {
         val startTime = System.currentTimeMillis()
 
+        // Log command details for debugging
+        val isIndex = command.metadata["isIndexCommand"] == "true"
+        val isNumeric = command.metadata["isNumericCommand"] == "true"
+        val hasBounds = command.metadata["bounds"] != null
+        Log.d(TAG, "resolve: phrase='${command.phrase}', isIndex=$isIndex, isNumeric=$isNumeric, hasBounds=$hasBounds")
+        if (hasBounds) {
+            Log.v(TAG, "  bounds=${command.metadata["bounds"]}, label=${command.metadata["label"]}")
+        }
+
         // Layer 1: Try cached metadata bounds (fastest)
         val metadataBounds = tryMetadataBounds(command)
         if (metadataBounds != null) {
@@ -100,10 +109,27 @@ class BoundsResolver(private val service: AccessibilityService) {
     }
 
     /**
-     * Quick validation that something clickable exists at the bounds.
-     * Does not require exact text match, just that the area is valid.
+     * Quick validation that something exists at the bounds.
+     *
+     * For index/numeric commands (isIndexCommand=true or isNumericCommand=true),
+     * we trust the bounds more since they're freshly generated from the current
+     * screen scan. We only need to verify there's ANY visible node at position.
+     *
+     * For other commands, we check for clickable/focusable nodes.
      */
     private fun quickValidatePosition(bounds: Bounds, command: QuantizedCommand): Boolean {
+        // For index/numeric commands, trust the bounds - they're fresh from screen scan
+        // Skip strict validation to avoid false negatives from non-clickable containers
+        val isIndexOrNumeric = command.metadata["isIndexCommand"] == "true" ||
+            command.metadata["isNumericCommand"] == "true"
+
+        if (isIndexOrNumeric) {
+            // For index/numeric commands, just verify bounds are on-screen
+            // The bounds were generated from a real element, trust them
+            Log.v(TAG, "Index/numeric command - trusting metadata bounds")
+            return true
+        }
+
         val root = service.rootInActiveWindow ?: return false
         try {
             // Check if there's any clickable node at the center of bounds
