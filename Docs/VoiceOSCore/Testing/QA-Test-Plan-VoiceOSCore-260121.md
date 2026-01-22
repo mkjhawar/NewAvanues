@@ -104,23 +104,267 @@ This document provides comprehensive test scenarios for QA testers to validate:
 - Overlay permission granted
 - Test apps installed: Gmail, Teams, Calculator, Settings, Contacts
 
-### 2.2 Enabling Developer Mode
+### 2.2 App Installation
 
-1. Open VoiceOSCoreNG app
-2. Navigate to Settings > Developer Settings
-3. Enable "Debug Overlay"
-4. Enable "Element Inspector"
-5. Enable "Performance Profiler"
+```bash
+# Build and install debug APK
+./gradlew :android:apps:voiceoscoreng:installDebug
 
-### 2.3 Database Inspection Tools
+# Or install pre-built APK
+adb install voiceoscoreng-debug.apk
+```
 
-The app provides debug screens to inspect:
+### 2.3 UI Navigation Guide
+
+This section shows how to navigate to all settings and features in VoiceOSCoreNG.
+
+#### 2.3.1 Main Screen Layout
+
+When you open VoiceOSCoreNG, you'll see:
+
+```
+┌─────────────────────────────────────────┐
+│  [≡]  VoiceOSCoreNG           [LITE] ◉  │  <- Top Bar with Menu & Tier Toggle
+│       v1.0.0 • Test App                 │
+├─────────────────────────────────────────┤
+│                                         │
+│  ┌──────────────────────────────────┐   │
+│  │ 🔍 App Scanner                   │   │  <- Scanner Control Card
+│  │                                  │   │
+│  │ [Accessibility ✓] [Overlay ✓]   │   │  <- Status Chips
+│  │                                  │   │
+│  │ ✓ VoiceOS Active - Debug FAB    │   │
+│  │   visible on all apps           │   │
+│  └──────────────────────────────────┘   │
+│                                         │
+│  ┌──────────────────────────────────┐   │
+│  │ ℹ️ Current Configuration         │   │  <- Status Card
+│  │ Mode: LITE                       │   │
+│  │ Test Mode: OFF                   │   │
+│  │ AI: OFF | NLU: OFF               │   │
+│  └──────────────────────────────────┘   │
+│                                         │
+│  ┌──────────────────────────────────┐   │
+│  │ ❓ How to Use                    │   │  <- Instructions Card
+│  │ 1. Enable Accessibility Service  │   │
+│  │ 2. Grant overlay permission      │   │
+│  │ 3. Start Scanner Overlay         │   │
+│  │ ...                              │   │
+│  └──────────────────────────────────┘   │
+│                                         │
+│  ┌──────────────────────────────────┐   │
+│  │ ☑️ Feature Status                │   │  <- Feature Status Card
+│  │ AI               [✓]            │   │
+│  │ NLU              [✓]            │   │
+│  │ Exploration      [✓]            │   │
+│  │ ...              ...            │   │
+│  └──────────────────────────────────┘   │
+└─────────────────────────────────────────┘
+```
+
+#### 2.3.2 Navigation Drawer (Side Menu)
+
+**How to Open:** Tap the hamburger menu [≡] in the top-left corner.
+
+```
+┌──────────────────────────────────┐
+│  VoiceOSCoreNG                   │
+│  v1.0.0 • LITE Mode              │
+├──────────────────────────────────┤
+│                                  │
+│  TEST MODE                       │
+│  ────────────────────────────    │
+│  🧪 Enable Test Mode      [OFF]  │  <- Toggle: Unlock all features
+│     Unlock all features          │
+│                                  │
+│  SCANNING                        │
+│  ────────────────────────────    │
+│  🔄 Continuous Monitoring  [ON]  │  <- Toggle: Auto-scan
+│     Auto-scan on screen change   │
+│                                  │
+│  🔃 Rescan Current App           │  <- Button: Clear & rescan
+│     Clear cache and rescan       │
+│                                  │
+│  🗑️ Rescan Everything            │  <- Button: Clear ALL caches
+│     Clear all cached screens     │
+│                                  │
+│  OVERLAY                         │
+│  ────────────────────────────    │
+│  ▶️ Start Scanner Overlay        │  <- Start floating FAB
+│     Show floating scanner button │
+│                                  │
+│  ⏹️ Stop Scanner Overlay         │  <- Stop floating FAB
+│     Remove floating button       │
+│                                  │
+│  SETTINGS                        │
+│  ────────────────────────────    │
+│  ⚙️ Developer Settings           │  <- Opens bottom sheet
+│     Advanced configuration       │
+│                                  │
+│  ♿ Accessibility Settings       │  <- Opens system settings
+│     System accessibility options │
+│                                  │
+│  CURRENT CONFIGURATION           │
+│  ────────────────────────────    │
+│  ┌────────────────────────────┐  │
+│  │ Mode: LITE                 │  │  <- Config summary box
+│  │ Test Mode: OFF             │  │
+│  │ AI: OFF | NLU: OFF         │  │
+│  └────────────────────────────┘  │
+└──────────────────────────────────┘
+```
+
+#### 2.3.3 Developer Settings (Bottom Sheet)
+
+**How to Open:**
+1. Tap [≡] menu → "Developer Settings"
+2. OR swipe up from bottom of main screen
+
+```
+┌──────────────────────────────────────────┐
+│                    ━                     │  <- Drag handle
+├──────────────────────────────────────────┤
+│  Developer Settings                  [X] │  <- Close button
+├──────────────────────────────────────────┤
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │ TEST MODE                          │  │  <- Primary card (highlighted)
+│  │                                    │  │
+│  │ Enable Test Mode           [OFF]   │  │  <- Switch toggle
+│  │ Unlock all features for testing    │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │ TIER SELECTION                     │  │
+│  │                                    │  │
+│  │ ◉ LITE                            │  │  <- Radio: Free tier
+│  │   Basic features only              │  │
+│  │                                    │  │
+│  │ ○ DEV                             │  │  <- Radio: Full features
+│  │   All features + debug tools       │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │ SCANNING CONTROLS                  │  │
+│  │                                    │  │
+│  │ Continuous Monitoring      [ON]    │  │  <- Switch
+│  │ Auto-scan on screen change         │  │
+│  │                                    │  │
+│  │ [🔃 Rescan App] [🗑️ Clear All]    │  │  <- Action buttons
+│  └────────────────────────────────────┘  │
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │ FEATURE FLAGS                      │  │  <- Read-only display
+│  │                                    │  │
+│  │ AI Processing            [✓]      │  │
+│  │ NLU Processing           [✓]      │  │
+│  │ Exploration Mode         [✓]      │  │
+│  │ Framework Detection      [✓]      │  │
+│  │ Caching                  [✓]      │  │
+│  │ Analytics                [✓]      │  │
+│  │ Debug Overlay            [✓]      │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+└──────────────────────────────────────────┘
+```
+
+#### 2.3.4 Tier Selection and Feature Flags
+
+| Tier | Features Enabled | How to Select |
+|------|------------------|---------------|
+| **LITE** | Core scraping, AVID generation, basic voice commands, JIT processing | Developer Settings → Tier Selection → LITE |
+| **DEV** | All LITE + exploration, batch processing, AI features, debug tools, analytics | Developer Settings → Tier Selection → DEV |
+
+**Quick Tier Toggle:** Tap the tier chip (e.g., `[LITE]`) in the top-right of the main screen.
+
+#### 2.3.5 Feature Flags (LearnAppDevToggle)
+
+| Category | Features | Tier Required |
+|----------|----------|---------------|
+| **CORE** | ELEMENT_SCRAPING, AVID_GENERATION, NATIVE_DETECTION, VOICE_COMMANDS | LITE |
+| **JIT** | JIT_PROCESSING, JIT_COMMANDS | LITE |
+| **EXPLORATION** | EXPLORATION_MODE, BATCH_PROCESSING, SCREEN_CACHING | DEV |
+| **FRAMEWORK** | FLUTTER_DETECTION, UNITY_DETECTION, REACT_NATIVE_DETECTION, WEBVIEW_HANDLING | DEV |
+| **AI** | AI_CLASSIFICATION, AI_NAMING, AI_SUGGESTIONS | DEV |
+| **DEV_TOOLS** | DEBUG_OVERLAY, ELEMENT_INSPECTOR, AVID_VIEWER, PERFORMANCE_PROFILER | DEV |
+| **ANALYTICS** | USAGE_ANALYTICS, COMMAND_METRICS | DEV |
+| **EXPERIMENTAL** | HIERARCHY_MAP, CROSS_APP_LEARNING | DEV |
+
+#### 2.3.6 Enabling Required Permissions
+
+**Step 1: Enable Accessibility Service**
+
+1. If not enabled, tap "Enable Accessibility Service" button (shown in red)
+2. System Settings > Accessibility opens
+3. Find "VoiceOSCoreNG" in the list
+4. Toggle ON
+5. Confirm any permission dialogs
+6. Return to app - status should show ✓
+
+```
+Path: Settings > Accessibility > Downloaded apps > VoiceOSCoreNG > ON
+```
+
+**Step 2: Enable Overlay Permission**
+
+1. If not granted, tap "Enable Overlay Permission" button (shown in red)
+2. System Settings > Display over other apps opens
+3. Find "VoiceOSCoreNG" in the list
+4. Toggle ON "Allow display over other apps"
+5. Return to app - status should show ✓
+
+```
+Path: Settings > Apps > VoiceOSCoreNG > Display over other apps > Allow
+```
+
+#### 2.3.7 Debug Floating Action Button (FAB)
+
+When both permissions are granted, a floating debug FAB appears on ALL screens:
+
+```
+                                    ┌───┐
+    Any app screen...               │ 🔍│ <- Debug FAB (draggable)
+                                    └───┘
+
+    Tap FAB to see:
+    ┌─────────────────────────────────────┐
+    │ 📊 Scan Results                     │
+    │                                     │
+    │ Screen: Calculator                  │
+    │ Package: com.google.android.calc    │
+    │ Hash: a1b2c3d4e5f67890              │
+    │                                     │
+    │ Elements: 23 found                  │
+    │ Commands: 18 generated              │
+    │ Duplicates: 5 removed               │
+    │                                     │
+    │ [AVIDs] [Hierarchy] [Commands]      │
+    │ [Duplicates] [AVU Output]           │
+    └─────────────────────────────────────┘
+```
+
+The FAB provides tabs for:
+- **AVIDs**: View all generated AVIDs with element details
+- **Hierarchy**: View UI element hierarchy tree
+- **Commands**: View generated voice commands
+- **Duplicates**: View deduplicated elements
+- **AVU Output**: View serialized AVU format output
+
+### 2.4 Database Inspection
+
+**Note:** Database inspection is available via the Debug FAB when in DEV tier mode.
+
+The debug panel shows:
+- Total scraped elements
+- Commands generated
 - Screen cache entries
-- Command registry
-- Element deduplication stats
+- Deduplication statistics
 - Performance metrics
 
-Access via: Settings > Developer Settings > Database Inspector
+For direct database inspection, use Android Studio's Database Inspector or:
+```bash
+adb shell run-as com.augmentalis.voiceoscoreng cat databases/voiceos.db > voiceos.db
+```
 
 ---
 
@@ -754,7 +998,7 @@ Access via: Settings > Developer Settings > Database Inspector
 | avid | TEXT | Unique voice ID |
 | phrase | TEXT | Voice command phrase |
 | action_type | TEXT | CLICK, SCROLL, TEXT_ENTRY, etc. |
-| target_vuid | TEXT | Element hash for targeting |
+| target_avid | TEXT | Element hash for targeting |
 | confidence | REAL | 0.0-1.0 confidence score |
 | app_package | TEXT | Package name |
 | app_version | TEXT | App version when scraped |
