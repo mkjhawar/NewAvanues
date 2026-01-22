@@ -5,7 +5,7 @@
  * Created: 2026-01-22 (Phase 4)
  *
  * Bridges the GesturePlugin to Android AccessibilityService for
- * gesture-based actions like swipe, pinch, drag, etc.
+ * gesture-based actions like swipe, pinch, tap, etc.
  */
 package com.augmentalis.magiccode.plugins.android.executors
 
@@ -15,6 +15,7 @@ import android.graphics.Path
 import android.os.Build
 import com.augmentalis.magiccode.plugins.android.ServiceRegistry
 import com.augmentalis.magiccode.plugins.builtin.GestureExecutor
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
@@ -32,10 +33,115 @@ class AndroidGestureExecutor(
     private val accessibilityService: AccessibilityService?
         get() = serviceRegistry.getSync(ServiceRegistry.ACCESSIBILITY_SERVICE)
 
-    override suspend fun swipe(
+    override suspend fun tap(x: Int, y: Int): Boolean {
+        val service = accessibilityService ?: return false
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false
+
+        val path = Path()
+        path.moveTo(x.toFloat(), y.toFloat())
+
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, TAP_DURATION_MS))
+            .build()
+
+        return dispatchGesture(service, gesture)
+    }
+
+    override suspend fun doubleTap(x: Int, y: Int): Boolean {
+        // First tap
+        if (!tap(x, y)) return false
+
+        // Brief delay
+        delay(DOUBLE_TAP_INTERVAL_MS)
+
+        // Second tap
+        return tap(x, y)
+    }
+
+    override suspend fun longPress(x: Int, y: Int, duration: Long): Boolean {
+        val service = accessibilityService ?: return false
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false
+
+        val path = Path()
+        path.moveTo(x.toFloat(), y.toFloat())
+
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, duration))
+            .build()
+
+        return dispatchGesture(service, gesture)
+    }
+
+    override suspend fun swipeUp(distance: Int): Boolean {
+        val service = accessibilityService ?: return false
+        val displayMetrics = service.resources.displayMetrics
+        val centerX = displayMetrics.widthPixels / 2
+        val centerY = displayMetrics.heightPixels / 2
+
+        return swipe(centerX, centerY + distance / 2, centerX, centerY - distance / 2)
+    }
+
+    override suspend fun swipeDown(distance: Int): Boolean {
+        val service = accessibilityService ?: return false
+        val displayMetrics = service.resources.displayMetrics
+        val centerX = displayMetrics.widthPixels / 2
+        val centerY = displayMetrics.heightPixels / 2
+
+        return swipe(centerX, centerY - distance / 2, centerX, centerY + distance / 2)
+    }
+
+    override suspend fun swipeLeft(distance: Int): Boolean {
+        val service = accessibilityService ?: return false
+        val displayMetrics = service.resources.displayMetrics
+        val centerX = displayMetrics.widthPixels / 2
+        val centerY = displayMetrics.heightPixels / 2
+
+        return swipe(centerX + distance / 2, centerY, centerX - distance / 2, centerY)
+    }
+
+    override suspend fun swipeRight(distance: Int): Boolean {
+        val service = accessibilityService ?: return false
+        val displayMetrics = service.resources.displayMetrics
+        val centerX = displayMetrics.widthPixels / 2
+        val centerY = displayMetrics.heightPixels / 2
+
+        return swipe(centerX - distance / 2, centerY, centerX + distance / 2, centerY)
+    }
+
+    override suspend fun pinchIn(centerX: Int, centerY: Int, scale: Float): Boolean {
+        // Scale < 1.0 means pinch in (fingers moving together)
+        val startDistance = 200
+        val endDistance = (startDistance * scale).toInt().coerceAtLeast(50)
+        return pinch(centerX, centerY, startDistance, endDistance)
+    }
+
+    override suspend fun pinchOut(centerX: Int, centerY: Int, scale: Float): Boolean {
+        // Scale > 1.0 means pinch out (fingers moving apart)
+        val startDistance = 100
+        val endDistance = (startDistance * scale).toInt().coerceAtMost(400)
+        return pinch(centerX, centerY, startDistance, endDistance)
+    }
+
+    override suspend fun rotateLeft(centerX: Int, centerY: Int, angle: Float): Boolean {
+        // Rotate gestures are complex; simulating with two-finger arc
+        // For now, return false as full rotation support requires more complex gesture paths
+        return false
+    }
+
+    override suspend fun rotateRight(centerX: Int, centerY: Int, angle: Float): Boolean {
+        // Rotate gestures are complex; simulating with two-finger arc
+        // For now, return false as full rotation support requires more complex gesture paths
+        return false
+    }
+
+    // =========================================================================
+    // Helper Methods
+    // =========================================================================
+
+    private suspend fun swipe(
         startX: Int, startY: Int,
         endX: Int, endY: Int,
-        durationMs: Long
+        durationMs: Long = SWIPE_DURATION_MS
     ): Boolean {
         val service = accessibilityService ?: return false
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false
@@ -51,49 +157,10 @@ class AndroidGestureExecutor(
         return dispatchGesture(service, gesture)
     }
 
-    override suspend fun tap(x: Int, y: Int): Boolean {
-        val service = accessibilityService ?: return false
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false
-
-        val path = Path()
-        path.moveTo(x.toFloat(), y.toFloat())
-
-        val gesture = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(path, 0, TAP_DURATION_MS))
-            .build()
-
-        return dispatchGesture(service, gesture)
-    }
-
-    override suspend fun longPress(x: Int, y: Int, durationMs: Long): Boolean {
-        val service = accessibilityService ?: return false
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false
-
-        val path = Path()
-        path.moveTo(x.toFloat(), y.toFloat())
-
-        val gesture = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(path, 0, durationMs))
-            .build()
-
-        return dispatchGesture(service, gesture)
-    }
-
-    override suspend fun doubleTap(x: Int, y: Int): Boolean {
-        // First tap
-        if (!tap(x, y)) return false
-
-        // Brief delay
-        kotlinx.coroutines.delay(DOUBLE_TAP_INTERVAL_MS)
-
-        // Second tap
-        return tap(x, y)
-    }
-
-    override suspend fun pinch(
+    private suspend fun pinch(
         centerX: Int, centerY: Int,
         startDistance: Int, endDistance: Int,
-        durationMs: Long
+        durationMs: Long = PINCH_DURATION_MS
     ): Boolean {
         val service = accessibilityService ?: return false
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false
@@ -116,38 +183,6 @@ class AndroidGestureExecutor(
             .build()
 
         return dispatchGesture(service, gesture)
-    }
-
-    override suspend fun drag(
-        startX: Int, startY: Int,
-        endX: Int, endY: Int,
-        durationMs: Long
-    ): Boolean {
-        // Drag is similar to swipe but typically longer duration
-        return swipe(startX, startY, endX, endY, durationMs)
-    }
-
-    override suspend fun fling(direction: String): Boolean {
-        val service = accessibilityService ?: return false
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false
-
-        val displayMetrics = service.resources.displayMetrics
-        val screenWidth = displayMetrics.widthPixels
-        val screenHeight = displayMetrics.heightPixels
-
-        val centerX = screenWidth / 2
-        val centerY = screenHeight / 2
-        val flingDistance = screenHeight / 3
-
-        val (startX, startY, endX, endY) = when (direction.lowercase()) {
-            "up" -> listOf(centerX, centerY + flingDistance/2, centerX, centerY - flingDistance/2)
-            "down" -> listOf(centerX, centerY - flingDistance/2, centerX, centerY + flingDistance/2)
-            "left" -> listOf(centerX + flingDistance/2, centerY, centerX - flingDistance/2, centerY)
-            "right" -> listOf(centerX - flingDistance/2, centerY, centerX + flingDistance/2, centerY)
-            else -> return false
-        }
-
-        return swipe(startX, startY, endX, endY, FLING_DURATION_MS)
     }
 
     private suspend fun dispatchGesture(
@@ -174,6 +209,7 @@ class AndroidGestureExecutor(
     companion object {
         private const val TAP_DURATION_MS = 50L
         private const val DOUBLE_TAP_INTERVAL_MS = 100L
-        private const val FLING_DURATION_MS = 150L
+        private const val SWIPE_DURATION_MS = 300L
+        private const val PINCH_DURATION_MS = 300L
     }
 }

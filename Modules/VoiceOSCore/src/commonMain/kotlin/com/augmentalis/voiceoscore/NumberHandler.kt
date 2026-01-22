@@ -6,16 +6,20 @@ import com.augmentalis.voiceoscore.Bounds
  * Represents a UI element that has been assigned a number for voice selection.
  *
  * @property number The assigned number (1-based)
- * @property vuid The unique voice identifier for the element
+ * @property avid The unique voice identifier for the element
  * @property label The human-readable label for the element
  * @property bounds Optional screen bounds of the element
  */
 data class NumberedElement(
     val number: Int,
-    val vuid: String,
+    val avid: String,
     val label: String,
     val bounds: Bounds? = null
-)
+) {
+    /** Legacy alias for avid */
+    @Deprecated("Use avid instead", ReplaceWith("avid"))
+    val vuid: String get() = avid
+}
 
 /**
  * Result of attempting to select a numbered element.
@@ -45,7 +49,7 @@ data class NumberSelectionResult(
  * ```
  * val handler = NumberHandler()
  *
- * // Assign numbers to elements (vuid to label pairs)
+ * // Assign numbers to elements (avid to label pairs)
  * handler.assignNumbers(listOf(
  *     "btn_submit" to "Submit",
  *     "btn_cancel" to "Cancel"
@@ -81,14 +85,14 @@ class NumberHandler {
      *
      * This clears any previous assignments and starts numbering from 1.
      *
-     * @param elements List of pairs where first is VUID and second is label
+     * @param elements List of pairs where first is AVID and second is label
      * @return Map of assigned numbers to their elements
      */
     fun assignNumbers(elements: List<Pair<String, String>>): Map<Int, NumberedElement> {
         clear()
-        elements.forEach { (vuid, label) ->
+        elements.forEach { (avid, label) ->
             val number = nextNumber++
-            numberedElements[number] = NumberedElement(number, vuid, label)
+            numberedElements[number] = NumberedElement(number, avid, label)
         }
         return numberedElements.toMap()
     }
@@ -96,14 +100,14 @@ class NumberHandler {
     /**
      * Assigns sequential numbers to elements with bounds information.
      *
-     * @param elements List of triples (vuid, label, bounds)
+     * @param elements List of triples (avid, label, bounds)
      * @return Map of assigned numbers to their elements
      */
     fun assignNumbersWithBounds(elements: List<Triple<String, String, Bounds?>>): Map<Int, NumberedElement> {
         clear()
-        elements.forEach { (vuid, label, bounds) ->
+        elements.forEach { (avid, label, bounds) ->
             val number = nextNumber++
-            numberedElements[number] = NumberedElement(number, vuid, label, bounds)
+            numberedElements[number] = NumberedElement(number, avid, label, bounds)
         }
         return numberedElements.toMap()
     }

@@ -348,7 +348,7 @@ class PluginContextBuilder {
  * @return true if no real service registry is configured
  */
 fun PluginContext.hasNoOpServiceRegistry(): Boolean {
-    return serviceRegistry === PluginContextBuilder.NoOpServiceRegistry
+    return serviceRegistry.toString() == "NoOpServiceRegistry"
 }
 
 /**
@@ -357,7 +357,7 @@ fun PluginContext.hasNoOpServiceRegistry(): Boolean {
  * @return true if no real event bus is configured
  */
 fun PluginContext.hasNoOpEventBus(): Boolean {
-    return eventBus === PluginContextBuilder.NoOpEventBus
+    return eventBus.toString() == "NoOpEventBus"
 }
 
 /**

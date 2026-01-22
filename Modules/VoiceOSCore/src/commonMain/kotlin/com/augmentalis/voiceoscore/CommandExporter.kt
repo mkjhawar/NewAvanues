@@ -51,7 +51,7 @@ package com.augmentalis.voiceoscore
 class CommandExporter(
     private val commandPersistence: ICommandPersistence,
     private val getPackageNames: suspend () -> List<String>,
-    private val getAppInfo: suspend (String) -> AppInfo = { AppInfo.fromPackageName(it) },
+    private val getAppInfo: suspend (String) -> AppMetadata = { AppMetadata.fromPackageName(it) },
     private val getAppCategory: (String) -> AppCategory = { AppCategoryClassifier.classifyPackage(it) }
 ) : ICommandExporter {
 
@@ -165,7 +165,7 @@ class CommandExporter(
             .map { (hash, cmds) ->
                 ScreenExportData(
                     screenHash = hash,
-                    screenType = cmds.firstOrNull()?.metadata["screenType"] ?: ScreenType.UNKNOWN.name,
+                    screenType = cmds.firstOrNull()?.metadata?.get("screenType") ?: ScreenType.UNKNOWN.name,
                     elementCount = cmds.distinctBy { it.targetAvid }.size,
                     staticCommandCount = cmds.size
                 )
@@ -184,7 +184,7 @@ class CommandExporter(
 }
 
 /**
- * App information used during export.
+ * App metadata used during export.
  *
  * Platform implementations should provide this data from PackageManager (Android)
  * or equivalent APIs on other platforms.
@@ -194,7 +194,7 @@ class CommandExporter(
  * @property versionName Display version string (e.g., "1.2.3")
  * @property lastUpdated Timestamp of last update/modification
  */
-data class AppInfo(
+data class AppMetadata(
     val appName: String,
     val versionCode: Long,
     val versionName: String,
@@ -202,12 +202,12 @@ data class AppInfo(
 ) {
     companion object {
         /**
-         * Creates AppInfo from package name using default values.
+         * Creates AppMetadata from package name using default values.
          * Platform implementations should override [CommandExporter.getAppInfo]
          * to provide actual values from PackageManager.
          */
-        fun fromPackageName(packageName: String): AppInfo {
-            return AppInfo(
+        fun fromPackageName(packageName: String): AppMetadata {
+            return AppMetadata(
                 appName = packageName.substringAfterLast(".").replaceFirstChar {
                     if (it.isLowerCase()) it.titlecase() else it.toString()
                 },

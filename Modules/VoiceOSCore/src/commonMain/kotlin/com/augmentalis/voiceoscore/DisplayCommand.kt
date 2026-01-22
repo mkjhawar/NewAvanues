@@ -34,4 +34,10 @@ data class DisplayCommand(
     val action: String,
     val element: ElementInfo,
     val derivedLabel: String = ""
-)
+) {
+    /**
+     * AVID-compatible alias for targetVuid.
+     * Use this for new code during AVID migration.
+     */
+    val targetAvid: String get() = targetVuid
+}

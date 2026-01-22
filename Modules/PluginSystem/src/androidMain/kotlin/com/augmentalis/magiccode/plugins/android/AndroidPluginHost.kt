@@ -116,12 +116,12 @@ enum class HostState {
  */
 class AndroidPluginHost(
     private val context: Context,
-    val serviceRegistry: ServiceRegistry,
-    val eventBus: PluginEventBus,
+    val serviceRegistry: ServiceRegistry = ServiceRegistry(),
+    val eventBus: PluginEventBus = GrpcPluginEventBus(),
     private val rpcServiceRegistry: RpcServiceRegistry = RpcServiceRegistry(),
     private val logger: PluginLogger = ConsolePluginLogger(),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-) {
+) : IPluginHost<Context> {
     /**
      * Plugin registry for all registered plugins.
      */
@@ -245,9 +245,9 @@ class AndroidPluginHost(
      * @param config Optional plugin configuration
      * @return Result containing the loaded plugin or failure
      */
-    suspend fun loadPlugin(
+    override suspend fun loadPlugin(
         pluginId: String,
-        config: PluginConfig = PluginConfig.EMPTY
+        config: PluginConfig
     ): Result<UniversalPlugin> {
         if (_state.value != HostState.READY) {
             return Result.failure(IllegalStateException("Plugin host not ready (state: ${_state.value})"))
@@ -335,7 +335,7 @@ class AndroidPluginHost(
      * @param pluginId Plugin identifier to unload
      * @return Result indicating success or failure
      */
-    suspend fun unloadPlugin(pluginId: String): Result<Unit> {
+    override suspend fun unloadPlugin(pluginId: String): Result<Unit> {
         return mutex.withLock {
             try {
                 val plugin = _plugins.value[pluginId]
@@ -383,7 +383,7 @@ class AndroidPluginHost(
      * @param pluginId Plugin identifier
      * @return The plugin instance or null if not loaded
      */
-    fun getPlugin(pluginId: String): UniversalPlugin? {
+    override fun getPlugin(pluginId: String): UniversalPlugin? {
         return _plugins.value[pluginId]
     }
 
@@ -393,7 +393,7 @@ class AndroidPluginHost(
      * @param capabilityId Capability identifier to search for
      * @return List of plugins providing the capability
      */
-    fun getPluginsByCapability(capabilityId: String): List<UniversalPlugin> {
+    override fun getPluginsByCapability(capabilityId: String): List<UniversalPlugin> {
         val registrations = registry.discoverByCapability(capabilityId)
         return registrations.mapNotNull { _plugins.value[it.pluginId] }
     }
@@ -403,7 +403,7 @@ class AndroidPluginHost(
      *
      * @return List of all loaded plugin instances
      */
-    fun getLoadedPlugins(): List<UniversalPlugin> {
+    override fun getLoadedPlugins(): List<UniversalPlugin> {
         return _plugins.value.values.toList()
     }
 
@@ -413,7 +413,7 @@ class AndroidPluginHost(
      * @param pluginId Plugin identifier
      * @return true if the plugin is loaded
      */
-    fun isPluginLoaded(pluginId: String): Boolean {
+    override fun isPluginLoaded(pluginId: String): Boolean {
         return _plugins.value.containsKey(pluginId)
     }
 

@@ -12,6 +12,7 @@ package com.augmentalis.magiccode.plugins.discovery
 
 import com.augmentalis.magiccode.plugins.platform.FileIO
 import com.augmentalis.magiccode.plugins.universal.UniversalPlugin
+import com.augmentalis.magiccode.plugins.universal.currentTimeMillis
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -608,7 +609,4 @@ interface PluginLoader {
  */
 internal class NoManifestException(message: String) : Exception(message)
 
-/**
- * Platform-agnostic current time function.
- */
-private expect fun currentTimeMillis(): Long
+// Uses currentTimeMillis() from com.augmentalis.magiccode.plugins.universal

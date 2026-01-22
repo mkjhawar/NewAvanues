@@ -9,4 +9,4 @@ package com.augmentalis.magiccode.plugins.universal
 /**
  * JVM implementation of currentTimeMillis.
  */
-internal actual fun currentTimeMillis(): Long = System.currentTimeMillis()
+actual fun currentTimeMillis(): Long = System.currentTimeMillis()

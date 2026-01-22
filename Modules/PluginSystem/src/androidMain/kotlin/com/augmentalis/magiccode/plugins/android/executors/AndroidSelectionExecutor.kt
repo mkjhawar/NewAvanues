@@ -246,4 +246,16 @@ class AndroidClipboardProvider(
     override suspend fun hasContent(): Boolean = withContext(Dispatchers.Main) {
         clipboardManager?.hasPrimaryClip() == true
     }
+
+    override suspend fun getContentType(): String? = withContext(Dispatchers.Main) {
+        val clipboard = clipboardManager ?: return@withContext null
+        if (!clipboard.hasPrimaryClip()) return@withContext null
+
+        val clip = clipboard.primaryClip ?: return@withContext null
+        if (clip.description.mimeTypeCount > 0) {
+            clip.description.getMimeType(0)
+        } else {
+            null
+        }
+    }
 }

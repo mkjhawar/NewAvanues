@@ -3,6 +3,11 @@ package com.augmentalis.magiccode.plugins.universal
 import kotlinx.serialization.Serializable
 
 /**
+ * Type alias for UniversalPlugin for cleaner API.
+ */
+typealias Plugin = UniversalPlugin
+
+/**
  * Configuration data for plugin initialization.
  *
  * Contains settings, secrets, and feature flags passed to a plugin
@@ -641,4 +646,63 @@ data class EventFilter(
  * Platform-agnostic current time provider.
  * Uses expect/actual pattern for multiplatform compatibility.
  */
-internal expect fun currentTimeMillis(): Long
+expect fun currentTimeMillis(): Long
+
+/**
+ * Plugin host interface for managing plugin lifecycle.
+ *
+ * Provides the core operations for loading, unloading, and querying plugins.
+ * Platform-specific implementations provide the actual plugin management logic.
+ *
+ * @param T Platform-specific context type
+ */
+interface IPluginHost<T : Any> {
+
+    /**
+     * Get a plugin by its ID.
+     *
+     * @param pluginId The unique plugin identifier
+     * @return The plugin instance or null if not loaded
+     */
+    fun getPlugin(pluginId: String): UniversalPlugin?
+
+    /**
+     * Get all loaded plugins.
+     *
+     * @return List of all currently loaded plugins
+     */
+    fun getLoadedPlugins(): List<UniversalPlugin>
+
+    /**
+     * Check if a plugin is loaded.
+     *
+     * @param pluginId The unique plugin identifier
+     * @return true if the plugin is loaded
+     */
+    fun isPluginLoaded(pluginId: String): Boolean
+
+    /**
+     * Get plugins that provide a specific capability.
+     *
+     * @param capabilityId Capability identifier to search for
+     * @return List of plugins providing the capability
+     */
+    fun getPluginsByCapability(capabilityId: String): List<UniversalPlugin>
+
+    /**
+     * Load a plugin.
+     *
+     * @param pluginId The plugin identifier to load
+     * @param config Optional plugin configuration
+     * @return Result containing the loaded plugin or failure
+     */
+    suspend fun loadPlugin(pluginId: String, config: PluginConfig = PluginConfig.EMPTY): Result<UniversalPlugin>
+
+    /**
+     * Unload a plugin.
+     *
+     * @param pluginId The plugin identifier to unload
+     * @return Result indicating success or failure
+     */
+    suspend fun unloadPlugin(pluginId: String): Result<Unit>
+}

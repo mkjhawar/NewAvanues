@@ -603,12 +603,12 @@ class SelectionPlugin(
         val normalizedCommand = command.lowercase().trim()
 
         return when {
-            normalizedCommand == "select all" -> selectAll()
-            normalizedCommand == "copy" -> copy()
-            normalizedCommand == "cut" -> cut()
-            normalizedCommand == "paste" -> paste()
-            normalizedCommand == "clear" || normalizedCommand == "clear selection" || normalizedCommand == "deselect" -> clearSelection()
-            normalizedCommand.startsWith("select ") -> selectText(command.substringAfter("select "))
+            normalizedCommand == "select all" -> selectAllSync()
+            normalizedCommand == "copy" -> copySync()
+            normalizedCommand == "cut" -> cutSync()
+            normalizedCommand == "paste" -> pasteSync()
+            normalizedCommand == "clear" || normalizedCommand == "clear selection" || normalizedCommand == "deselect" -> clearSelectionSync()
+            normalizedCommand.startsWith("select ") -> selectTextSync(command.substringAfter("select "))
             normalizedCommand == "select" -> SelectionResult.failure(SelectionAction.SELECT, "Please specify what to select")
             else -> SelectionResult.failure(
                 SelectionAction.SELECT,
@@ -649,7 +649,7 @@ class SelectionPlugin(
     /**
      * Synchronous version for command handling compatibility.
      */
-    private fun selectAll(): SelectionResult {
+    private fun selectAllSync(): SelectionResult {
         updateSelectionState(SelectionState.withRange(0, Int.MAX_VALUE))
         return SelectionResult.success(SelectionAction.SELECT_ALL)
     }
@@ -686,7 +686,7 @@ class SelectionPlugin(
     /**
      * Synchronous version for command handling compatibility.
      */
-    private fun selectText(text: String): SelectionResult {
+    private fun selectTextSync(text: String): SelectionResult {
         if (text.isBlank()) {
             return SelectionResult.failure(SelectionAction.SELECT, "Cannot select empty text")
         }
@@ -736,7 +736,7 @@ class SelectionPlugin(
     /**
      * Synchronous version for command handling compatibility.
      */
-    private fun copy(): SelectionResult {
+    private fun copySync(): SelectionResult {
         val text = _selectionState.selectedText
             ?: return SelectionResult.failure(SelectionAction.COPY, "Nothing selected")
 
@@ -780,7 +780,7 @@ class SelectionPlugin(
     /**
      * Synchronous version for command handling compatibility.
      */
-    private fun cut(): SelectionResult {
+    private fun cutSync(): SelectionResult {
         val text = _selectionState.selectedText
             ?: return SelectionResult.failure(SelectionAction.CUT, "Nothing selected")
 
@@ -816,7 +816,7 @@ class SelectionPlugin(
     /**
      * Synchronous version for command handling compatibility.
      */
-    private fun paste(): SelectionResult {
+    private fun pasteSync(): SelectionResult {
         // Without async clipboard access, we can only report the action
         return SelectionResult.failure(SelectionAction.PASTE, "Clipboard empty or unavailable")
     }
@@ -842,7 +842,7 @@ class SelectionPlugin(
     /**
      * Synchronous version for command handling compatibility.
      */
-    private fun clearSelection(): SelectionResult {
+    private fun clearSelectionSync(): SelectionResult {
         clearSelectionState()
         return SelectionResult.success(SelectionAction.CLEAR)
     }

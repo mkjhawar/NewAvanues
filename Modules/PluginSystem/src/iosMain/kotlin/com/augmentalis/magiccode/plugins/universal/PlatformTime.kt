@@ -12,6 +12,6 @@ import platform.Foundation.timeIntervalSince1970
 /**
  * iOS implementation of currentTimeMillis.
  */
-internal actual fun currentTimeMillis(): Long {
+actual fun currentTimeMillis(): Long {
     return (NSDate().timeIntervalSince1970 * 1000).toLong()
 }

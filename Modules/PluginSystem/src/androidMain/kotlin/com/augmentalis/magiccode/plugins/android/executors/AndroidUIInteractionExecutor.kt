@@ -76,12 +76,10 @@ class AndroidUIInteractionExecutor(
                     bounds = Bounds(bounds.left, bounds.top, bounds.right, bounds.bottom),
                     isClickable = isClickable,
                     isLongClickable = node.isLongClickable,
-                    isEditable = isEditable,
                     isScrollable = node.isScrollable,
-                    isCheckable = node.isCheckable,
-                    isChecked = node.isChecked,
-                    isFocusable = node.isFocusable,
-                    isFocused = node.isFocused
+                    isEnabled = node.isEnabled,
+                    isChecked = if (node.isCheckable) node.isChecked else null,
+                    isSelected = node.isSelected
                 )
                 elements.add(element)
             }

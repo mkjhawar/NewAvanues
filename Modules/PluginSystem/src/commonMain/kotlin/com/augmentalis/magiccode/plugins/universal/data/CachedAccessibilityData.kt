@@ -289,7 +289,7 @@ class CachedAccessibilityData(
      */
     private fun hasScreenChanged(current: ScreenContext): Boolean {
         val last = lastScreenContext ?: return false
-        return current.screenId != last.screenId ||
+        return current.screenId() != last.screenId() ||
                 current.packageName != last.packageName
     }
 

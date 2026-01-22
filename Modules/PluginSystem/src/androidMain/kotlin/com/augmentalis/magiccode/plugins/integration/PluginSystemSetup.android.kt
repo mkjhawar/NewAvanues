@@ -124,10 +124,10 @@ class AndroidPluginSystemSetup(
 
             // Register custom plugins
             customFactories.forEach { (id, factory) ->
-                host.registerBuiltinPluginFactory(id, factory)
+                host.registerBuiltinPluginFactory(id) { factory() }
             }
             config.customPluginFactories.forEach { (id, factory) ->
-                host.registerBuiltinPluginFactory(id, factory)
+                host.registerBuiltinPluginFactory(id) { factory() }
             }
 
             // Initialize plugins
@@ -150,7 +150,7 @@ class AndroidPluginSystemSetup(
                 _performanceMonitor = PluginPerformanceMonitor.initialize()
                 _performanceMonitor?.updatePluginCounts(
                     total = host.getLoadedPlugins().size,
-                    active = host.getLoadedPlugins().count { it.state == PluginState.READY }
+                    active = host.getLoadedPlugins().count { it.state == PluginState.ACTIVE }
                 )
             }
 
@@ -200,7 +200,7 @@ class AndroidPluginSystemSetup(
 
     override fun registerPluginFactory(pluginId: String, factory: () -> Plugin) {
         if (_isInitialized.value) {
-            _pluginHost?.registerBuiltinPluginFactory(pluginId, factory)
+            _pluginHost?.registerBuiltinPluginFactory(pluginId) { factory() }
         } else {
             customFactories[pluginId] = factory
         }
@@ -306,9 +306,11 @@ class AndroidCommandDispatcher(
 
     override suspend fun dispatch(command: String, context: Any?): DispatchResult {
         val quantizedCommand = QuantizedCommand(
+            avid = "",
             phrase = command,
-            confidence = 1.0f,
-            timestamp = System.currentTimeMillis()
+            actionType = com.augmentalis.voiceoscore.CommandActionType.CLICK,
+            targetAvid = null,
+            confidence = 1.0f
         )
 
         val handlerContext = when (context) {
@@ -342,9 +344,8 @@ class AndroidCommandDispatcher(
         return when (val result = handlerBridge.dispatch(quantizedCommand, handlerContext)) {
             is ActionResult.Success -> DispatchResult.Success(result.message)
             is ActionResult.Error -> DispatchResult.Error(result.message)
-            is ActionResult.Ambiguous -> DispatchResult.Ambiguous(
-                result.options.map { it.label }
-            )
+            is ActionResult.Ambiguous -> DispatchResult.Ambiguous(result.candidates)
+            else -> DispatchResult.Error(result.message)
         }
     }
 }

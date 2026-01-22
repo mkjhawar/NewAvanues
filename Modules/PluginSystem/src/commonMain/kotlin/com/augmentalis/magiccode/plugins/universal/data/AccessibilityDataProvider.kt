@@ -200,7 +200,7 @@ interface AccessibilityDataProvider {
  */
 @Serializable
 data class CommandHistoryEntry(
-    val command: QuantizedCommand,
+    @kotlinx.serialization.Contextual val command: QuantizedCommand,
     val timestamp: Long,
     val success: Boolean,
     val executionTimeMs: Long,
@@ -232,7 +232,7 @@ data class CommandHistoryEntry(
  */
 @Serializable
 data class RankedCommand(
-    val command: QuantizedCommand,
+    @kotlinx.serialization.Contextual val command: QuantizedCommand,
     val usageCount: Int,
     val lastUsed: Long,
     val contextScore: Float,
@@ -502,7 +502,8 @@ suspend fun AccessibilityDataProvider.getMostUsedCommand(): RankedCommand? {
  * @return true if current screen has learned commands
  */
 suspend fun AccessibilityDataProvider.isScreenLearned(): Boolean {
-    return getScreenContext().isLearned
+    // Check if there are any commands for the current screen
+    return getScreenCommands().isNotEmpty()
 }
 
 /**

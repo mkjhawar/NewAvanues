@@ -13,15 +13,21 @@ sealed class ElementProcessingResult {
     /**
      * Element was successfully processed
      *
-     * @property vuid The generated Voice Unique Identifier for this element
+     * @property avid The generated Augmentalis Voice Identifier for this element
      * @property commandsGenerated Number of voice commands generated
      * @property processingTimeMs Time taken to process in milliseconds
      */
     data class Success(
-        val vuid: String,
+        val avid: String,
         val commandsGenerated: Int,
         val processingTimeMs: Long
-    ) : ElementProcessingResult()
+    ) : ElementProcessingResult() {
+        /**
+         * Legacy alias for avid (deprecated, use avid directly).
+         */
+        @Deprecated("Use avid instead", ReplaceWith("avid"))
+        val vuid: String get() = avid
+    }
 
     /**
      * Processing failed with an error
@@ -59,9 +65,15 @@ sealed class ElementProcessingResult {
     fun isSkipped(): Boolean = this is Skipped
 
     /**
-     * Get the VUID if this is a success, null otherwise
+     * Get the AVID if this is a success, null otherwise
      */
-    fun getVuidOrNull(): String? = (this as? Success)?.vuid
+    fun getAvidOrNull(): String? = (this as? Success)?.avid
+
+    /**
+     * Legacy alias for getAvidOrNull (deprecated).
+     */
+    @Deprecated("Use getAvidOrNull instead", ReplaceWith("getAvidOrNull()"))
+    fun getVuidOrNull(): String? = getAvidOrNull()
 
     /**
      * Get the error message if this is a failure, null otherwise
@@ -119,8 +131,8 @@ sealed class ElementProcessingResult {
         /**
          * Create a success result
          */
-        fun success(vuid: String, commandsGenerated: Int = 1, processingTimeMs: Long = 0) =
-            Success(vuid, commandsGenerated, processingTimeMs)
+        fun success(avid: String, commandsGenerated: Int = 1, processingTimeMs: Long = 0) =
+            Success(avid, commandsGenerated, processingTimeMs)
 
         /**
          * Create a failure result

@@ -77,7 +77,7 @@ class ExportSettingsActivity : ComponentActivity() {
             getAppInfo = { packageName ->
                 val appDto = app.scrapedAppRepository.getByPackage(packageName)
                 if (appDto != null) {
-                    AppInfo(
+                    AppMetadata(
                         appName = appDto.packageName.substringAfterLast(".").replaceFirstChar {
                             if (it.isLowerCase()) it.titlecase() else it.toString()
                         },
@@ -86,7 +86,7 @@ class ExportSettingsActivity : ComponentActivity() {
                         lastUpdated = appDto.lastScrapedAt
                     )
                 } else {
-                    AppInfo.fromPackageName(packageName)
+                    AppMetadata.fromPackageName(packageName)
                 }
             }
         )

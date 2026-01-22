@@ -10,6 +10,7 @@
 package com.augmentalis.magiccode.plugins.discovery
 
 import com.augmentalis.magiccode.plugins.universal.UniversalPlugin
+import com.augmentalis.magiccode.plugins.universal.currentTimeMillis
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -578,7 +579,4 @@ class CompositePluginDiscoveryBuilder {
     }
 }
 
-/**
- * Platform-agnostic current time function.
- */
-private expect fun currentTimeMillis(): Long
+// Uses currentTimeMillis() from com.augmentalis.magiccode.plugins.universal

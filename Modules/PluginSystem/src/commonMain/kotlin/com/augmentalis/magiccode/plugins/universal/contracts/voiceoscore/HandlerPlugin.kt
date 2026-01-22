@@ -323,5 +323,10 @@ data class ScreenContext(
             elementCount = 0,
             primaryAction = null
         )
+
+        /**
+         * Alias for UNKNOWN for code compatibility.
+         */
+        val EMPTY = UNKNOWN
     }
 }

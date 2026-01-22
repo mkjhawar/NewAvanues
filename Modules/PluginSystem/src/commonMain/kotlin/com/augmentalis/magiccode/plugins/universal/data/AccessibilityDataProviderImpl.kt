@@ -127,7 +127,7 @@ class AccessibilityDataProviderImpl(
         return mutex.withLock {
             // In actual implementation, this would query commandRepository
             // filtered by current package and screen
-            fetchCommandsForContext(context.packageName, context.screenId)
+            fetchCommandsForContext(context.packageName, context.screenId())
         }
     }
 
@@ -164,8 +164,8 @@ class AccessibilityDataProviderImpl(
 
     override suspend fun getScreenContext(): ScreenContext {
         return mutex.withLock {
-            _screenContextFlow.value ?: ScreenContext.EMPTY
-        }
+            _screenContextFlow.value
+        } ?: ScreenContext.EMPTY
     }
 
     override suspend fun getNavigationGraph(packageName: String): NavigationGraph {
