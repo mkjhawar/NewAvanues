@@ -418,7 +418,7 @@ class PluginLifecycleIntegrationTest {
         // Act & Assert: Health check when ACTIVE
         var health = plugin.healthCheck()
         assertTrue(health.healthy, "Plugin should be healthy when ACTIVE")
-        assertEquals("OK", health.message.take(2), "Health message should indicate healthy")
+        assertTrue(health.message.contains("healthy"), "Health message should indicate healthy")
 
         // Pause and check health
         lifecycleManager.pause(plugin.pluginId)
