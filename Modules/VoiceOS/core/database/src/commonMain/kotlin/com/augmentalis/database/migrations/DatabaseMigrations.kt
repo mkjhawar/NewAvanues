@@ -23,7 +23,7 @@ import app.cash.sqldelight.db.SqlSchema
  * - Version 2: Added appId column to commands_generated
  * - Version 3: Added version tracking (appVersion, versionCode, lastVerified, isDeprecated)
  * - Version 4: Added foreign key constraints for data integrity (D-P0-1, D-P0-2, D-P0-3)
- * - Version 5: Added pkg_hash column for compact VUID format support
+ * - Version 5: Added pkg_hash column for compact AVID format support
  *
  * ## Usage:
  * ```kotlin
@@ -228,10 +228,10 @@ object DatabaseMigrations {
 
     /**
      * Migration from version 4 to 5
-     * Adds pkg_hash column for compact VUID format support
+     * Adds pkg_hash column for compact AVID format support
      *
      * FIX (2025-12-30): Add pre-computed package hash for efficient lookups
-     * with the new compact VUID format: {reversedPkg}:{version}:{typeAbbrev}:{hash8}
+     * with the new compact AVID format: {reversedPkg}:{version}:{typeAbbrev}:{hash8}
      */
     private fun migrateV4ToV5(driver: SqlDriver) {
         // Check if pkg_hash column already exists
