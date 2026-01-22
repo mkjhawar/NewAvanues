@@ -277,7 +277,7 @@ object TestUtils {
  * @param failOnResume Whether to fail during resume
  * @param initDelay Delay in milliseconds before completing initialization
  */
-class TestPlugin(
+open class TestPlugin(
     override val pluginId: String = "test.plugin",
     private val failOnInitialize: Boolean = false,
     private val failOnShutdown: Boolean = false,
@@ -444,7 +444,7 @@ class TestPlugin(
  * @param supportedPhrases Phrases this handler can process
  * @param shouldSucceed Whether handler execution should succeed
  */
-class TestHandlerPlugin(
+open class TestHandlerPlugin(
     override val pluginId: String = "test.handler",
     override val handlerType: HandlerType = HandlerType.UI_INTERACTION,
     private val supportedPhrases: List<String> = listOf("test", "click", "tap"),

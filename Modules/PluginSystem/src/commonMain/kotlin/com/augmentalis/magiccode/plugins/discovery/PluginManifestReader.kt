@@ -13,6 +13,7 @@ import com.augmentalis.magiccode.plugins.core.AvuManifestParser
 import com.augmentalis.magiccode.plugins.core.PluginManifest
 import com.augmentalis.magiccode.plugins.platform.FileIO
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 

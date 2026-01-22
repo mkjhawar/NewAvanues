@@ -22,7 +22,7 @@ import kotlin.test.*
  * Note: These are unit tests using mock storage. Full encryption tests are in androidInstrumentedTest/.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28])
+@Config(sdk = [29])
 class PermissionStorageTest {
 
     companion object {

@@ -1,7 +1,5 @@
 package com.augmentalis.magiccode.plugins.security
 
-import android.content.Context
-
 /**
  * Encrypted storage for plugin permissions.
  *
@@ -169,26 +167,4 @@ expect class PermissionStorage {
      */
     suspend fun migrateToEncrypted(): MigrationResult
 
-    companion object {
-        /**
-         * Create new PermissionStorage instance.
-         *
-         * Initializes encrypted storage with hardware-backed keys (when available).
-         *
-         * ## Initialization
-         * 1. Generate/retrieve master encryption key
-         * 2. Initialize EncryptedSharedPreferences
-         * 3. Detect hardware backing status
-         * 4. Log security audit event
-         *
-         * ## Performance
-         * - First call: 100-500ms (key generation)
-         * - Subsequent calls: 10-50ms (key retrieval)
-         *
-         * @param context Android application context
-         * @return PermissionStorage instance
-         * @throws EncryptionException if initialization fails
-         */
-        fun create(context: Context): PermissionStorage
-    }
 }

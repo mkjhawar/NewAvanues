@@ -144,7 +144,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 29  // Match VoiceOSCore requirement
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

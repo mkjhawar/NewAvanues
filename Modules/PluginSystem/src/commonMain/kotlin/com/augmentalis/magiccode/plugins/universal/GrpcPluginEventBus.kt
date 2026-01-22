@@ -184,11 +184,12 @@ class GrpcPluginEventBus(
      * Generate a unique event ID.
      *
      * Uses a combination of timestamp and counter for uniqueness.
+     * Thread-safe using mutex lock.
      */
-    private fun generateEventId(): String {
-        val counter = mutex.runCatching {
+    private suspend fun generateEventId(): String {
+        val counter = mutex.withLock {
             eventCounter++
-        }.getOrDefault(eventCounter)
+        }
         return "evt_${currentTimeMillis()}_$counter"
     }
 

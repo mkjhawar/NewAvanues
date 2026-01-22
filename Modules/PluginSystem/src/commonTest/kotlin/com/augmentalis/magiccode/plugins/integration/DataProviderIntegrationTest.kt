@@ -97,7 +97,7 @@ class DataProviderIntegrationTest {
         // Arrange
         val commands = listOf(
             TestUtils.createMockQuantizedCommand("submit form"),
-            TestUtils.createMockQuantizedCommand("cancel", actionType = CommandActionType.CANCEL),
+            TestUtils.createMockQuantizedCommand("cancel", actionType = CommandActionType.BACK),
             TestUtils.createMockQuantizedCommand("scroll down", actionType = CommandActionType.SCROLL)
         )
         val provider = MockAccessibilityDataProvider(commands = commands)
@@ -207,7 +207,9 @@ class DataProviderIntegrationTest {
         val initialContext = ScreenContext(
             packageName = "com.initial.app",
             activityName = "InitialActivity",
-            screenTitle = "Initial"
+            screenTitle = "Initial",
+            elementCount = 10,
+            primaryAction = null
         )
         val provider = MockAccessibilityDataProvider(screenContext = initialContext)
         val collectedContexts = mutableListOf<ScreenContext?>()
@@ -225,7 +227,9 @@ class DataProviderIntegrationTest {
         val updatedContext = ScreenContext(
             packageName = "com.updated.app",
             activityName = "UpdatedActivity",
-            screenTitle = "Updated"
+            screenTitle = "Updated",
+            elementCount = 15,
+            primaryAction = "submit"
         )
         provider.setScreenContext(updatedContext)
 

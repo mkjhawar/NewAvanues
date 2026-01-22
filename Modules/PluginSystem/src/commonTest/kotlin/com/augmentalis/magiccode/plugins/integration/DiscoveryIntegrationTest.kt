@@ -43,8 +43,8 @@ class DiscoveryIntegrationTest {
         // Register test plugins
         val plugin1 = TestPlugin(pluginId = "builtin.test.1")
         val plugin2 = TestPlugin(pluginId = "builtin.test.2")
-        discovery.registerPlugin(plugin1)
-        discovery.registerPlugin(plugin2)
+        discovery.registerBuiltin { plugin1 }
+        discovery.registerBuiltin { plugin2 }
 
         // Act
         val descriptors = discovery.discoverPlugins()
@@ -66,7 +66,7 @@ class DiscoveryIntegrationTest {
         // Arrange
         val discovery = BuiltinPluginDiscovery()
         val plugin = TestPlugin(pluginId = "builtin.loadable")
-        discovery.registerPlugin(plugin)
+        discovery.registerBuiltin { plugin }
 
         // Act: Discover and load
         val descriptors = discovery.discoverPlugins()
@@ -93,7 +93,7 @@ class DiscoveryIntegrationTest {
         // Arrange
         val discovery = BuiltinPluginDiscovery()
         val plugin = TestPlugin(pluginId = "builtin.properties")
-        discovery.registerPlugin(plugin)
+        discovery.registerBuiltin { plugin }
 
         // Act
         val descriptors = discovery.discoverPlugins()
@@ -112,14 +112,14 @@ class DiscoveryIntegrationTest {
         // Arrange
         val discovery = BuiltinPluginDiscovery()
         val plugin = TestPlugin(pluginId = "builtin.unregister")
-        discovery.registerPlugin(plugin)
+        discovery.registerBuiltin { plugin }
 
         // Verify registered
         var descriptors = discovery.discoverPlugins()
         assertEquals(1, descriptors.size)
 
         // Act: Unregister
-        val removed = discovery.unregisterPlugin("builtin.unregister")
+        val removed = discovery.unregister("builtin.unregister")
 
         // Assert
         assertTrue(removed, "Should return true for successful unregistration")
@@ -131,9 +131,9 @@ class DiscoveryIntegrationTest {
     fun testBuiltinPluginClear() = runBlocking {
         // Arrange
         val discovery = BuiltinPluginDiscovery()
-        discovery.registerPlugin(TestPlugin(pluginId = "clear.1"))
-        discovery.registerPlugin(TestPlugin(pluginId = "clear.2"))
-        discovery.registerPlugin(TestPlugin(pluginId = "clear.3"))
+        discovery.registerBuiltin { TestPlugin(pluginId = "clear.1") }
+        discovery.registerBuiltin { TestPlugin(pluginId = "clear.2") }
+        discovery.registerBuiltin { TestPlugin(pluginId = "clear.3") }
 
         assertEquals(3, discovery.discoverPlugins().size)
 
@@ -152,7 +152,7 @@ class DiscoveryIntegrationTest {
     fun testCompositeDiscovery() = runBlocking {
         // Arrange
         val builtinDiscovery = BuiltinPluginDiscovery()
-        builtinDiscovery.registerPlugin(TestPlugin(pluginId = "builtin.plugin"))
+        builtinDiscovery.registerBuiltin { TestPlugin(pluginId = "builtin.plugin") }
 
         val testDiscovery = TestPluginDiscovery(priority = 100)
         testDiscovery.addDescriptor(
@@ -281,8 +281,8 @@ class DiscoveryIntegrationTest {
     fun testCompositeDiscoveryGrouped() = runBlocking {
         // Arrange
         val builtinDiscovery = BuiltinPluginDiscovery()
-        builtinDiscovery.registerPlugin(TestPlugin(pluginId = "builtin.1"))
-        builtinDiscovery.registerPlugin(TestPlugin(pluginId = "builtin.2"))
+        builtinDiscovery.registerBuiltin { TestPlugin(pluginId = "builtin.1") }
+        builtinDiscovery.registerBuiltin { TestPlugin(pluginId = "builtin.2") }
 
         val fileDiscovery = TestPluginDiscovery(priority = 100)
         fileDiscovery.addDescriptor(

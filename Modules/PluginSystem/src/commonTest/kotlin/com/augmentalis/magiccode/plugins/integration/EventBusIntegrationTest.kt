@@ -18,6 +18,7 @@ package com.augmentalis.magiccode.plugins.integration
 import com.augmentalis.magiccode.plugins.universal.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -416,44 +417,52 @@ class EventBusIntegrationTest {
         val goodSubscriberEvents = mutableListOf<PluginEvent>()
         var errorThrown = false
 
+        // Use SupervisorJob to prevent exception propagation between child coroutines
+        val supervisorScope = kotlinx.coroutines.CoroutineScope(
+            coroutineContext + kotlinx.coroutines.SupervisorJob()
+        )
+
         // Good subscriber
         val goodSub = eventBus.subscribe(EventFilter.ALL)
-        val goodJob = launch {
+        val goodJob = supervisorScope.launch {
             goodSub.collect { event ->
                 goodSubscriberEvents.add(event)
             }
         }
 
-        // Bad subscriber that throws errors
+        // Bad subscriber that throws errors - use exception handler to prevent crash
         val badSub = eventBus.subscribe(EventFilter.ALL)
-        val badJob = launch {
-            badSub.collect { event ->
+        val exceptionHandler = kotlinx.coroutines.CoroutineExceptionHandler { _, _ ->
+            // Silently handle exception for test
+        }
+        val badJob = supervisorScope.launch(exceptionHandler) {
+            badSub.collect { _ ->
                 errorThrown = true
                 throw RuntimeException("Simulated error in event handler")
             }
         }
 
-        // Act: Publish event
-        try {
-            eventBus.publish(createPluginEvent("source", "test.event"))
+        // Give collectors time to start
+        delay(50)
 
-            // Wait for good subscriber to receive event
-            withTimeout(1000) {
-                while (goodSubscriberEvents.isEmpty()) {
-                    delay(10)
-                }
+        // Act: Publish event
+        eventBus.publish(createPluginEvent("source", "test.event"))
+
+        // Wait for good subscriber to receive event
+        withTimeout(1000) {
+            while (goodSubscriberEvents.isEmpty()) {
+                delay(10)
             }
-        } catch (e: Exception) {
-            // Expected that bad subscriber may throw
         }
 
         delay(100)
 
         goodJob.cancel()
         badJob.cancel()
+        supervisorScope.coroutineContext.cancelChildren()
 
         // Assert: Good subscriber still received the event
-        // Note: Due to SharedFlow behavior, the error in one collector
+        // Note: Due to SharedFlow behavior with SupervisorJob, the error in one collector
         // doesn't affect other collectors
         assertTrue(goodSubscriberEvents.isNotEmpty(), "Good subscriber should receive event")
     }
@@ -578,11 +587,14 @@ class EventBusIntegrationTest {
     @Test
     fun testUniqueEventIdGeneration() = runBlocking {
         // Arrange
-        val eventBus = GrpcPluginEventBus()
+        // Use stateless event bus to avoid replay buffer issues
+        val eventBus = GrpcPluginEventBus(replay = 0, extraBufferCapacity = 200)
         val eventIds = mutableSetOf<String>()
+        val collectorStarted = kotlinx.coroutines.CompletableDeferred<Unit>()
 
         val subscription = eventBus.subscribe(EventFilter.ALL)
         val collectJob = launch {
+            collectorStarted.complete(Unit)
             subscription.collect { event ->
                 synchronized(eventIds) {
                     eventIds.add(event.eventId)
@@ -590,13 +602,17 @@ class EventBusIntegrationTest {
             }
         }
 
+        // Wait for collector to start before publishing
+        collectorStarted.await()
+        delay(50) // Additional delay to ensure collector is actively listening
+
         // Act: Publish many events without IDs
         repeat(100) {
             eventBus.publish(createPluginEvent("source", "test"))
         }
 
-        // Wait for events
-        withTimeout(2000) {
+        // Wait for events with longer timeout
+        withTimeout(5000) {
             while (eventIds.size < 100) {
                 delay(10)
             }

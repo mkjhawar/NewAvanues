@@ -22,6 +22,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
@@ -212,7 +213,7 @@ class PluginLifecycleIntegrationTest {
         val collectedStates = mutableListOf<PluginState>()
 
         // Start collecting states in background
-        val collectJob = kotlinx.coroutines.launch {
+        val collectJob = launch {
             plugin.stateFlow.collect { state ->
                 collectedStates.add(state)
             }
@@ -597,7 +598,7 @@ class PluginLifecycleIntegrationTest {
         // Subscribe to state change events
         val stateEvents = mutableListOf<PluginEvent>()
         val subscription = eventBus.subscribeToTypes(PluginEvent.TYPE_STATE_CHANGED)
-        val collectJob = kotlinx.coroutines.launch {
+        val collectJob = launch {
             subscription.collect { event ->
                 if (event.sourcePluginId == plugin.pluginId) {
                     stateEvents.add(event)

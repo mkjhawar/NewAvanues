@@ -471,7 +471,7 @@ class HandlerPluginIntegrationTest {
         // Arrange
         val previousCommand = TestUtils.createMockQuantizedCommand(
             phrase = "select item 1",
-            actionType = CommandActionType.SELECT
+            actionType = CommandActionType.CLICK
         )
 
         val handlerContext = TestUtils.createMockHandlerContext(
@@ -481,7 +481,7 @@ class HandlerPluginIntegrationTest {
         // Assert
         assertNotNull(handlerContext.previousCommand, "Should have previous command")
         assertEquals("select item 1", handlerContext.previousCommand?.phrase, "Previous phrase should match")
-        assertEquals(CommandActionType.SELECT, handlerContext.previousCommand?.actionType, "Action type should match")
+        assertEquals(CommandActionType.CLICK, handlerContext.previousCommand?.actionType, "Action type should match")
     }
 
     // =========================================================================
@@ -554,9 +554,8 @@ class HandlerPluginIntegrationTest {
         assertEquals("UI_INTERACTION", HandlerType.UI_INTERACTION.name)
         assertEquals("TEXT_INPUT", HandlerType.TEXT_INPUT.name)
         assertEquals("SYSTEM", HandlerType.SYSTEM.name)
-        assertEquals("GESTURE", HandlerType.GESTURE.name)
-        assertEquals("SELECTION", HandlerType.SELECTION.name)
-        assertEquals("APP_LAUNCHER", HandlerType.APP_LAUNCHER.name)
+        assertEquals("ACCESSIBILITY", HandlerType.ACCESSIBILITY.name)
+        assertEquals("CUSTOM", HandlerType.CUSTOM.name)
 
         // Assert handler types can be compared
         val type1 = HandlerType.NAVIGATION
