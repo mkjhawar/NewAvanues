@@ -50,12 +50,17 @@ class DynamicCommandGenerator(
      * - Overlay item generation
      * - UI command generation
      * - Scraped element persistence
+     *
+     * @param screenHash Optional screen hash for element persistence. When provided,
+     *                   elements are stored per-screen to preserve commands across
+     *                   screen navigation within the same app.
      */
     fun generateCommands(
         elements: List<ElementInfo>,
         hierarchy: List<HierarchyNode>,
         elementLabels: Map<Int, String>,
         packageName: String,
+        screenHash: String? = null,
         updateSpeechEngine: ((List<String>) -> Unit)? = null
     ): CommandGenerationResult {
         // Core command generation
@@ -79,7 +84,8 @@ class DynamicCommandGenerator(
                 coreResult.staticCommands,
                 elements,
                 packageName,
-                coreResult.dynamicCommands.size
+                coreResult.dynamicCommands.size,
+                screenHash
             )
         }
 

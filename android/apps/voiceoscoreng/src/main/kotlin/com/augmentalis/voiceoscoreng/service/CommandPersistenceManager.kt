@@ -40,12 +40,21 @@ class CommandPersistenceManager(
      * - Track which elements were SUCCESSFULLY inserted (not just attempted)
      * - Verify element existence before command insert
      * - Only insert commands for elements that actually exist in DB
+     *
+     * FIX (2026-01-22): Preserve commands across screen navigation
+     * Root cause: Elements were being overwritten on screen change due to
+     * INSERT OR REPLACE with elementHash as unique key (no screen awareness).
+     *
+     * Solution:
+     * - Pass screenHash to distinguish elements on different screens
+     * - Elements are now stored per-screen to avoid cross-screen deletion
      */
     fun persistStaticCommands(
         staticQuantizedCommands: List<QuantizedCommand>,
         elements: List<ElementInfo>,
         packageName: String,
-        dynamicCount: Int
+        dynamicCount: Int,
+        screenHash: String? = null
     ) {
         scope.launch(Dispatchers.IO) {
             try {
@@ -56,7 +65,7 @@ class CommandPersistenceManager(
 
                 // Step 2: Insert scraped_elements (FK parent for commands)
                 val confirmedHashes = insertScrapedElements(
-                    staticQuantizedCommands, elements, packageName, currentTime
+                    staticQuantizedCommands, elements, packageName, currentTime, screenHash
                 )
 
                 // Step 3: Insert ONLY commands whose elements exist in DB
@@ -101,7 +110,8 @@ class CommandPersistenceManager(
         commands: List<QuantizedCommand>,
         elements: List<ElementInfo>,
         packageName: String,
-        currentTime: Long
+        currentTime: Long,
+        screenHash: String? = null
     ): Set<String> {
         val confirmedHashes = mutableSetOf<String>()
         var insertedCount = 0
@@ -113,7 +123,7 @@ class CommandPersistenceManager(
 
             val element = findMatchingElement(cmd, elements)
             val scrapedElement = createScrapedElementDTO(
-                elementHash, packageName, element, cmd, currentTime
+                elementHash, packageName, element, cmd, currentTime, screenHash
             )
 
             try {
@@ -153,7 +163,8 @@ class CommandPersistenceManager(
         packageName: String,
         element: ElementInfo?,
         cmd: QuantizedCommand,
-        currentTime: Long
+        currentTime: Long,
+        screenHash: String? = null
     ): ScrapedElementDTO {
         val bounds = element?.let {
             "${it.bounds.left},${it.bounds.top},${it.bounds.right},${it.bounds.bottom}"
@@ -188,7 +199,7 @@ class CommandPersistenceManager(
             placeholderText = null,
             validationPattern = null,
             backgroundColor = null,
-            screen_hash = null
+            screen_hash = screenHash  // FIX (2026-01-22): Store screen hash to preserve commands per-screen
         )
     }
 

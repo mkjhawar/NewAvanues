@@ -1,9 +1,11 @@
 -- ScrapedElement.sq
 -- UI elements scraped from apps
 
+-- FIX (2026-01-22): Changed UNIQUE(elementHash) to UNIQUE(elementHash, screen_hash)
+-- to preserve commands across screen navigation within the same app.
 CREATE TABLE scraped_element (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    elementHash TEXT NOT NULL UNIQUE,
+    elementHash TEXT NOT NULL,
     appId TEXT NOT NULL,
     uuid TEXT,
     className TEXT NOT NULL,
@@ -30,6 +32,7 @@ CREATE TABLE scraped_element (
     validationPattern TEXT,
     backgroundColor TEXT,
     screen_hash TEXT,
+    UNIQUE(elementHash, screen_hash),
     FOREIGN KEY (appId) REFERENCES scraped_app(appId) ON DELETE CASCADE
 );
 
@@ -41,8 +44,11 @@ CREATE INDEX idx_se_class ON scraped_element(className);
 CREATE INDEX idx_se_screen_hash ON scraped_element(appId, screen_hash);
 CREATE INDEX IF NOT EXISTS idx_scraped_element_app_hash ON scraped_element(appId, elementHash);
 
+-- FIX (2026-01-22): Changed from INSERT OR REPLACE to INSERT OR IGNORE
+-- to preserve existing elements across screen navigation within the same app.
+-- Elements are now uniquely identified by (elementHash, screen_hash) combination.
 insert:
-INSERT OR REPLACE INTO scraped_element(
+INSERT OR IGNORE INTO scraped_element(
     elementHash, appId, uuid, className, viewIdResourceName, text, contentDescription,
     bounds, isClickable, isLongClickable, isEditable, isScrollable, isCheckable,
     isFocusable, isEnabled, depth, indexInParent, scrapedAt, semanticRole, inputType,

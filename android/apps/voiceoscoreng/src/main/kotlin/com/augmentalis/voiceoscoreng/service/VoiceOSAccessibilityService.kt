@@ -876,7 +876,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             try {
                 val rootNode = rootInActiveWindow ?: return@launch
 
-                val result = exploreNode(rootNode)
+                // FIX (2026-01-22): Pass screenHash to preserve commands per-screen
+                val result = exploreNode(rootNode, screenHash)
                 _explorationResults.value = result
                 rootNode.recycle()
 
@@ -998,8 +999,13 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     /**
      * Explore a single accessibility node tree.
+     *
+     * @param rootNode Root accessibility node to explore
+     * @param screenHash Optional screen hash for element persistence. When provided,
+     *                   elements are stored per-screen to preserve commands across
+     *                   screen navigation within the same app.
      */
-    private suspend fun exploreNode(rootNode: AccessibilityNodeInfo): ExplorationResult {
+    private suspend fun exploreNode(rootNode: AccessibilityNodeInfo, screenHash: String? = null): ExplorationResult {
         val startTime = System.currentTimeMillis()
 
         // Extract elements using ElementExtractor
@@ -1034,6 +1040,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             hierarchy = hierarchy,
             elementLabels = elementLabels,
             packageName = packageName,
+            screenHash = screenHash,  // FIX (2026-01-22): Pass screenHash for per-screen persistence
             updateSpeechEngine = { phrases ->
                 serviceScope.launch {
                     try {

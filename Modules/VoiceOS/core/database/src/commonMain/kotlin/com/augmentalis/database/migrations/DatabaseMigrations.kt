@@ -286,6 +286,118 @@ object DatabaseMigrations {
         if (oldVersion < 5 && newVersion >= 5) {
             migrateV4ToV5(driver)
         }
+
+        if (oldVersion < 6 && newVersion >= 6) {
+            migrateV5ToV6(driver)
+        }
+    }
+
+    /**
+     * Migration from version 5 to 6
+     * Changes UNIQUE constraint on scraped_element from (elementHash) to (elementHash, screen_hash)
+     *
+     * FIX (2026-01-22): Preserve commands across screen navigation
+     * Root cause: Elements were being overwritten on screen change due to
+     * INSERT OR REPLACE with elementHash as unique key (no screen awareness).
+     *
+     * Solution:
+     * - Change UNIQUE(elementHash) to UNIQUE(elementHash, screen_hash)
+     * - Requires table recreation since SQLite doesn't support ALTER TABLE DROP CONSTRAINT
+     */
+    private fun migrateV5ToV6(driver: SqlDriver) {
+        // Step 1: Create new table with updated schema
+        driver.execute(
+            identifier = null,
+            sql = """
+                CREATE TABLE IF NOT EXISTS scraped_element_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    elementHash TEXT NOT NULL,
+                    appId TEXT NOT NULL,
+                    uuid TEXT,
+                    className TEXT NOT NULL,
+                    viewIdResourceName TEXT,
+                    text TEXT,
+                    contentDescription TEXT,
+                    bounds TEXT NOT NULL,
+                    isClickable INTEGER NOT NULL,
+                    isLongClickable INTEGER NOT NULL,
+                    isEditable INTEGER NOT NULL,
+                    isScrollable INTEGER NOT NULL,
+                    isCheckable INTEGER NOT NULL,
+                    isFocusable INTEGER NOT NULL,
+                    isEnabled INTEGER NOT NULL DEFAULT 1,
+                    depth INTEGER NOT NULL,
+                    indexInParent INTEGER NOT NULL,
+                    scrapedAt INTEGER NOT NULL,
+                    semanticRole TEXT,
+                    inputType TEXT,
+                    visualWeight TEXT,
+                    isRequired INTEGER DEFAULT 0,
+                    formGroupId TEXT,
+                    placeholderText TEXT,
+                    validationPattern TEXT,
+                    backgroundColor TEXT,
+                    screen_hash TEXT,
+                    UNIQUE(elementHash, screen_hash),
+                    FOREIGN KEY (appId) REFERENCES scraped_app(appId) ON DELETE CASCADE
+                )
+            """.trimIndent(),
+            parameters = 0,
+            binders = null
+        )
+
+        // Step 2: Copy existing data
+        driver.execute(
+            identifier = null,
+            sql = """
+                INSERT OR IGNORE INTO scraped_element_new
+                SELECT * FROM scraped_element
+            """.trimIndent(),
+            parameters = 0,
+            binders = null
+        )
+
+        // Step 3: Drop old table
+        driver.execute(
+            identifier = null,
+            sql = "DROP TABLE IF EXISTS scraped_element",
+            parameters = 0,
+            binders = null
+        )
+
+        // Step 4: Rename new table
+        driver.execute(
+            identifier = null,
+            sql = "ALTER TABLE scraped_element_new RENAME TO scraped_element",
+            parameters = 0,
+            binders = null
+        )
+
+        // Step 5: Recreate indexes
+        driver.execute(
+            identifier = null,
+            sql = "CREATE INDEX IF NOT EXISTS idx_se_app ON scraped_element(appId)",
+            parameters = 0,
+            binders = null
+        )
+        driver.execute(
+            identifier = null,
+            sql = "CREATE INDEX IF NOT EXISTS idx_se_hash ON scraped_element(elementHash)",
+            parameters = 0,
+            binders = null
+        )
+        driver.execute(
+            identifier = null,
+            sql = "CREATE INDEX IF NOT EXISTS idx_se_screen_hash ON scraped_element(appId, screen_hash)",
+            parameters = 0,
+            binders = null
+        )
+        driver.execute(
+            identifier = null,
+            sql = "CREATE INDEX IF NOT EXISTS idx_scraped_element_app_hash ON scraped_element(appId, elementHash)",
+            parameters = 0,
+            binders = null
+        )
     }
 
     /**
