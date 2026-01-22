@@ -28,7 +28,15 @@ class AndroidCommandPersistence(
 ) : ICommandPersistence {
 
     override suspend fun insertBatch(commands: List<QuantizedCommand>) {
-        val dtos = commands.map { it.toDTO() }
+        // FIX (2026-01-22): Filter out commands with empty elementHash to prevent FK violation
+        // Empty elementHash ("") references no valid scraped_element, causing SQLITE_CONSTRAINT_FOREIGNKEY
+        val validCommands = commands.filter { cmd ->
+            val hash = cmd.metadata["elementHash"]
+            !hash.isNullOrBlank()
+        }
+        if (validCommands.isEmpty()) return
+
+        val dtos = validCommands.map { it.toDTO() }
         repository.insertBatch(dtos)
     }
 
@@ -56,11 +64,19 @@ class AndroidCommandPersistence(
      * Root cause: targetAvid contains AVID with prefix (e.g., "BTN:a3f2e1c9")
      * but scraped_element stores elementHash without prefix (e.g., "a3f2e1c9").
      * This mismatch caused FOREIGN KEY constraint failure (code 787).
+     *
+     * FIX (2026-01-22): Fail-fast for missing elementHash instead of using empty string.
+     * Empty elementHash causes FK violation since no element has hash "".
      */
     private fun QuantizedCommand.toDTO(): GeneratedCommandDTO {
+        val elementHash = this.metadata["elementHash"]
+        require(!elementHash.isNullOrBlank()) {
+            "QuantizedCommand missing required elementHash in metadata for phrase: ${this.phrase}"
+        }
+
         return GeneratedCommandDTO(
             id = 0, // Auto-generated
-            elementHash = this.metadata["elementHash"] ?: "",  // FIX: Use metadata hash, not AVID
+            elementHash = elementHash,  // FIX: Validated non-empty hash
             commandText = this.phrase,
             actionType = this.actionType.name,
             confidence = this.confidence.toDouble(),

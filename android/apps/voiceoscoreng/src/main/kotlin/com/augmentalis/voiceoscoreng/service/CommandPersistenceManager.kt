@@ -36,7 +36,12 @@ class CommandPersistenceManager(
      * Root cause: Commands were being inserted referencing elementHashes that
      * didn't exist in scraped_element table.
      *
+     * FIX (2026-01-22): Additional FK constraint fix
+     * Root cause #2: Commands with empty/null elementHash were passing validation
+     * but failing FK constraint (no element with hash "").
+     *
      * Solution:
+     * - Pre-filter commands to only those with valid elementHash
      * - Track which elements were SUCCESSFULLY inserted (not just attempted)
      * - Verify element existence before command insert
      * - Only insert commands for elements that actually exist in DB
@@ -51,17 +56,33 @@ class CommandPersistenceManager(
             try {
                 val currentTime = System.currentTimeMillis()
 
+                // Pre-filter: Only commands with valid non-empty elementHash
+                val validHashCommands = staticQuantizedCommands.filter { cmd ->
+                    val hash = cmd.metadata["elementHash"]
+                    !hash.isNullOrBlank()
+                }
+
+                if (validHashCommands.isEmpty()) {
+                    Log.w(TAG, "No commands with valid elementHash to persist (filtered ${staticQuantizedCommands.size})")
+                    return@launch
+                }
+
+                val filteredOut = staticQuantizedCommands.size - validHashCommands.size
+                if (filteredOut > 0) {
+                    Log.w(TAG, "Pre-filtered $filteredOut commands with missing/empty elementHash")
+                }
+
                 // Step 1: Ensure scraped_app exists (FK parent)
-                insertScrapedApp(packageName, elements.size, staticQuantizedCommands.size, currentTime)
+                insertScrapedApp(packageName, elements.size, validHashCommands.size, currentTime)
 
                 // Step 2: Insert scraped_elements (FK parent for commands)
                 val confirmedHashes = insertScrapedElements(
-                    staticQuantizedCommands, elements, packageName, currentTime
+                    validHashCommands, elements, packageName, currentTime
                 )
 
                 // Step 3: Insert ONLY commands whose elements exist in DB
                 insertValidCommands(
-                    staticQuantizedCommands, confirmedHashes, dynamicCount
+                    validHashCommands, confirmedHashes, dynamicCount
                 )
 
             } catch (e: Exception) {
