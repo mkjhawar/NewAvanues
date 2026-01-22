@@ -1,7 +1,8 @@
 # CLASS-INDEX
 # AI-Readable Class Reference
-# Version: 2.0 | Updated: 2026-01-11
+# Version: 2.1 | Updated: 2026-01-14
 # Note: Includes SOLID-refactored classes from commits cf7fe0ff, 9231c8d9, 5a0353a6
+# Note: VUID migrated to AVID (2026-01-14) - Common/VUID deleted, Modules/AVID active
 
 ---
 
@@ -630,19 +631,33 @@ methods:
 
 ## COMMON_CLASSES
 
-### VUIDGenerator
+### AvidGenerator
 ```yaml
-package: com.augmentalis.common.vuid
-file: VUIDGenerator.kt
+package: com.augmentalis.avid.core
+file: AvidGenerator.kt
 type: object
-purpose: Unique identifier generation
-format: Compact, parseable VUIDs
+purpose: Avanues Voice Identifier generation (replaces VUID)
+format: Compact format: {module}:{typeAbbrev}:{hash8}
+status: ACTIVE (migrated 2026-01-14)
 methods:
-  - generateCompact(packageName: String, version: String, typeName: String): String
-  - generateMessageVuid(): String
-  - generateConversationVuid(): String
-  - isValid(vuid: String): Boolean
-  - parse(vuid: String): ParsedVuid?
+  - generateCompact(packageName: String, version: String, typeName: String, elementHash: String?): String
+  - generateCompactSimple(module: String, typeAbbrev: String): String
+  - generateMessageAvid(): String
+  - generateConversationAvid(): String
+  - isValid(avid: String): Boolean
+  - isCompact(avid: String): Boolean
+  - parse(avid: String): ParsedAvid?
+  - migrateToCompact(legacyVuid: String, version: String?): String?
+deprecated_aliases:
+  - generateMessageVuid() -> generateMessageAvid()
+  - generateConversationVuid() -> generateConversationAvid()
+```
+
+### VUIDGenerator (DELETED)
+```yaml
+status: DELETED (2026-01-14)
+replacement: AvidGenerator in com.augmentalis.avid.core
+migration: typealias VUIDGenerator = AvidGenerator for backward compatibility
 ```
 
 ### VoiceOSResult
@@ -686,6 +701,119 @@ methods:
   - registerIconLibrary(library: IconLibrary): suspend -> Unit
   - getIcon(reference: String): suspend -> Icon?
   - searchIcons(query: String): suspend -> List<IconSearchResult>
+```
+
+---
+
+## DATABASE_CLASSES
+
+### ScrapedWebCommandDTO
+```yaml
+package: com.augmentalis.database.dto
+file: ScrapedWebCommandDTO.kt
+type: data_class
+purpose: DTO for web voice commands extracted from web pages
+fields:
+  - id: Long
+  - elementHash: String
+  - domainId: String
+  - urlPattern: String?
+  - cssSelector: String
+  - xpath: String?
+  - commandText: String
+  - elementText: String?
+  - elementTag: String
+  - elementType: String
+  - allowedActions: List<String>
+  - primaryAction: String
+  - confidence: Float
+  - isUserApproved: Boolean
+  - synonyms: List<String>?
+  - usageCount: Int
+  - boundLeft/Top/Width/Height: Int?
+methods:
+  - allowedActionsJson(): String
+  - synonymsJson(): String?
+  - parseAllowedActions(json): List<String>
+  - parseSynonyms(json): List<String>?
+```
+
+### WebAppWhitelistDTO
+```yaml
+package: com.augmentalis.database.dto
+file: WebAppWhitelistDTO.kt
+type: data_class
+purpose: DTO for user-designated web apps for persistent voice command storage
+fields:
+  - id: Long
+  - domainId: String (e.g., "mail.google.com")
+  - displayName: String (e.g., "Gmail")
+  - baseUrl: String?
+  - category: String? (email, social, productivity, etc.)
+  - isEnabled: Boolean
+  - autoScan: Boolean
+  - saveCommands: Boolean
+  - commandCount: Int
+  - lastVisited: Long?
+  - visitCount: Int
+constants:
+  Categories: [EMAIL, SOCIAL, PRODUCTIVITY, SHOPPING, BANKING, ENTERTAINMENT, NEWS, TRAVEL, EDUCATION, HEALTH, OTHER]
+  POPULAR_APPS: Map of known domains to names/categories
+methods:
+  - suggestMetadata(domainId): Pair<String, String>
+```
+
+### IScrapedWebCommandRepository
+```yaml
+package: com.augmentalis.database.repositories
+file: IScrapedWebCommandRepository.kt
+type: interface
+purpose: Repository interface for scraped web voice commands CRUD
+methods:
+  - insert(command): suspend Long
+  - insertBatch(commands): suspend Unit
+  - getById(id): suspend ScrapedWebCommandDTO?
+  - getByDomain(domainId): suspend List<ScrapedWebCommandDTO>
+  - getByDomainAndUrl(domainId, url): suspend List<ScrapedWebCommandDTO>
+  - getByElementHash(hash, domainId): suspend List<ScrapedWebCommandDTO>
+  - getHighConfidence(domainId, minConfidence): suspend List<ScrapedWebCommandDTO>
+  - getUserApproved(domainId): suspend List<ScrapedWebCommandDTO>
+  - getMostUsed(domainId, limit): suspend List<ScrapedWebCommandDTO>
+  - countByDomain(domainId): suspend Long
+  - updateConfidence(id, confidence, lastVerified): suspend Unit
+  - markApproved(id, approvedAt): suspend Unit
+  - updateSynonyms(id, synonyms): suspend Unit
+  - incrementUsage(id, lastUsed): suspend Unit
+  - markVerified(hash, domainId, lastVerified): suspend Unit
+  - markDeprecated(domainId, olderThan): suspend Unit
+  - deleteDeprecated(olderThan): suspend Unit
+  - deleteByDomain(domainId): suspend Unit
+  - vacuum(olderThan): suspend Unit
+```
+
+### IWebAppWhitelistRepository
+```yaml
+package: com.augmentalis.database.repositories
+file: IWebAppWhitelistRepository.kt
+type: interface
+purpose: Repository interface for web app whitelist management
+methods:
+  - insertOrUpdate(webApp): suspend Long
+  - insert(domainId, displayName, baseUrl, category, createdAt, updatedAt): suspend Long
+  - getAll(): suspend List<WebAppWhitelistDTO>
+  - getEnabled(): suspend List<WebAppWhitelistDTO>
+  - getByCategory(category): suspend List<WebAppWhitelistDTO>
+  - getByDomain(domainId): suspend WebAppWhitelistDTO?
+  - isWhitelisted(domainId): suspend Boolean
+  - getMostVisited(limit): suspend List<WebAppWhitelistDTO>
+  - updateSettings(domainId, isEnabled, autoScan, saveCommands, updatedAt): suspend Unit
+  - updateDisplayName(domainId, displayName, updatedAt): suspend Unit
+  - updateCategory(domainId, category, updatedAt): suspend Unit
+  - recordVisit(domainId, visitedAt): suspend Unit
+  - updateCommandCount(domainId, count, updatedAt): suspend Unit
+  - incrementCommandCount(domainId, updatedAt): suspend Unit
+  - deleteByDomain(domainId): suspend Unit
+  - deleteInactive(olderThan): suspend Unit
 ```
 
 ---
@@ -770,6 +898,91 @@ values: [PDF, DOCX, TXT, MD, HTML, EPUB, RTF]
 ### ChunkingStrategy
 ```yaml
 values: [FIXED_SIZE, SEMANTIC, HYBRID]
+```
+
+---
+
+## AVU_FORMAT_CLASSES
+
+### UniversalAvuParser
+```yaml
+package: com.augmentalis.avamagic.ipc.universal
+file: UniversalAvuParser.kt
+type: object
+purpose: Universal parser for AVU format with auto-detection
+added: 2026-01-15
+methods:
+  - parse(content: String): AvuFile
+  - parseAs<T>(content: String): T
+  - parseVoiceCommands(file: AvuFile): AvuVoiceCommands
+  - parseConfig(file: AvuFile): AvuConfig
+  - parseTheme(file: AvuFile): AvuTheme
+```
+
+### VosToAvuConverter
+```yaml
+package: com.augmentalis.avamagic.ipc.universal
+file: VosToAvuConverter.kt
+type: object
+purpose: Converts VOS JSON files to AVU format (~52% size reduction)
+added: 2026-01-15
+methods:
+  - convert(vosJson: String): String
+  - convertBatch(vosFiles: Map<String, String>): Map<String, String>
+  - calculateSizeReduction(vosJson: String, avuContent: String): SizeComparison
+```
+
+### AvuWriter
+```yaml
+package: com.augmentalis.avamagic.ipc.universal
+file: VosToAvuConverter.kt
+type: class
+purpose: Programmatic AVU content builder
+added: 2026-01-15
+methods:
+  - metadata(key: String, value: String): AvuWriter
+  - entry(prefix: String, data: String): AvuWriter
+  - command(action: String, primaryText: String, syns: List<String>): AvuWriter
+  - config(key: String, value: Any, type: String?): AvuWriter
+  - build(): String
+```
+
+### UnifiedCommandParser
+```yaml
+package: com.augmentalis.commandmanager.loader
+file: UnifiedCommandParser.kt
+type: class
+purpose: Unified parser supporting both .vos (JSON) and .avu formats
+added: 2026-01-15
+methods:
+  - parseCommandFile(assetPath: String): Result<CommandFileResult>
+  - parseAllCommandFiles(): Result<List<CommandFileResult>>
+  - convertToEntities(result: CommandFileResult): List<VoiceCommandEntity>
+```
+
+### AvuType
+```yaml
+package: com.augmentalis.avamagic.ipc.universal
+file: UniversalAvuParser.kt
+type: enum
+values: [CONFIG, VOICE, THEME, STATE, IPC, HANDOVER, DATA]
+purpose: AVU file type enumeration
+```
+
+### AvuFile
+```yaml
+package: com.augmentalis.avamagic.ipc.universal
+file: UniversalAvuParser.kt
+type: data_class
+fields:
+  - type: AvuType
+  - schema: String
+  - version: String
+  - locale: String
+  - project: String
+  - metadata: Map<String, String>
+  - entries: List<AvuEntry>
+  - synonyms: Map<String, List<String>>
 ```
 
 ---

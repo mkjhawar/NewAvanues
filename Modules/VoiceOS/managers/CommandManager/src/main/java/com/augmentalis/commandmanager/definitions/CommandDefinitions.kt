@@ -386,7 +386,7 @@ class CommandDefinitions {
         builtInDefinitions["relearn_app"] = CommandDefinition(
             id = "relearn_app",
             name = "Relearn App",
-            description = "Update VUIDs for an app without full re-exploration",
+            description = "Update AVIDs for an app without full re-exploration",
             category = "LEARNAPP",
             patterns = listOf(
                 "relearn {app_name}",

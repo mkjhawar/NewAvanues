@@ -9,6 +9,7 @@ version = "1.0.0"
 
 kotlin {
     // Target platforms
+    // NOTE: Android-only until Core module supports multiplatform
     androidTarget {
         compilations.all {
             kotlinOptions {
@@ -17,24 +18,24 @@ kotlin {
         }
     }
 
-    jvm()
-
-    val iosX64Target = iosX64()
-    val iosArm64Target = iosArm64()
-    val iosSimulatorArm64Target = iosSimulatorArm64()
+    // TODO: Re-enable when Core module supports these targets
+    // jvm()
+    // val iosX64Target = iosX64()
+    // val iosArm64Target = iosArm64()
+    // val iosSimulatorArm64Target = iosSimulatorArm64()
 
     sourceSets {
         val commonMain by getting {
             dependencies {
                 // MagicUI Core
-                implementation(project(":Modules:AVAMagic:AVAUI:Core"))
+                implementation(project(":Modules:AvaMagic:AvaUI:Core"))
                 // MagicUI Component Categories
-                implementation(project(":Modules:AVAMagic:AVAUI:Input"))
-                implementation(project(":Modules:AVAMagic:AVAUI:Feedback"))
-                implementation(project(":Modules:AVAMagic:AVAUI:Display"))
-                implementation(project(":Modules:AVAMagic:AVAUI:Layout"))
-                implementation(project(":Modules:AVAMagic:AVAUI:Navigation"))
-                implementation(project(":Modules:AVAMagic:AVAUI:Floating"))
+                implementation(project(":Modules:AvaMagic:AvaUI:Input"))
+                implementation(project(":Modules:AvaMagic:AvaUI:Feedback"))
+                implementation(project(":Modules:AvaMagic:AvaUI:Display"))
+                implementation(project(":Modules:AvaMagic:AvaUI:Layout"))
+                implementation(project(":Modules:AvaMagic:AvaUI:Navigation"))
+                implementation(project(":Modules:AvaMagic:AvaUI:Floating"))
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
             }
@@ -48,21 +49,11 @@ kotlin {
             }
         }
 
-        val iosMain by creating {
-            dependsOn(commonMain)
-        }
-
-        val iosX64Main by getting {
-            dependsOn(iosMain)
-        }
-
-        val iosArm64Main by getting {
-            dependsOn(iosMain)
-        }
-
-        val iosSimulatorArm64Main by getting {
-            dependsOn(iosMain)
-        }
+        // TODO: Re-enable when Core module supports iOS
+        // val iosMain by creating { dependsOn(commonMain) }
+        // val iosX64Main by getting { dependsOn(iosMain) }
+        // val iosArm64Main by getting { dependsOn(iosMain) }
+        // val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
 
         val commonTest by getting {
             dependencies {

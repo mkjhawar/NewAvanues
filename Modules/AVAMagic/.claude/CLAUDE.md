@@ -96,7 +96,6 @@ AVAMagic provides UI component generation and code generation capabilities for t
 | LSP Server | MUST reuse existing Kotlin logic (no duplication) |
 | Web Components | MUST be embeddable (no framework lock-in) |
 | IDE Plugins | MUST share LSP server (single source of truth) |
-
 ---
 
 ## RELATED MODULES

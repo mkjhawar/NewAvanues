@@ -1,0 +1,7 @@
+#!/bin/bash
+# gw - Short alias for gradle-run.sh
+# Usage: ./scripts/gw :Modules:AvaMagic:AVACode:build
+#        ./scripts/gw --tail 40 :Modules:VoiceOSCoreNG:compileDebugKotlinAndroid
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec "$SCRIPT_DIR/gradle-run.sh" "$@"

@@ -7,11 +7,11 @@
 
 package com.augmentalis.database.repositories
 
-import com.augmentalis.database.dto.plugin.PluginDTO
-import com.augmentalis.database.dto.plugin.PluginDependencyDTO
-import com.augmentalis.database.dto.plugin.PluginPermissionDTO
-import com.augmentalis.database.dto.plugin.SystemCheckpointDTO
-import com.augmentalis.database.dto.plugin.PluginState
+import com.augmentalis.database.dto.PluginDTO
+import com.augmentalis.database.dto.PluginDependencyDTO
+import com.augmentalis.database.dto.PluginPermissionDTO
+import com.augmentalis.database.dto.SystemCheckpointDTO
+import com.augmentalis.database.dto.PluginState
 import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 

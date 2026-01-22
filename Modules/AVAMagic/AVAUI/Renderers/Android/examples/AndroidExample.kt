@@ -1,13 +1,13 @@
-package com.augmentalis.avanues.avaelements.renderer.android.examples
+package com.augmentalis.avamagic.renderer.android.examples
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
-import com.augmentalis.avanues.avaelements.core.*
-import com.augmentalis.avanues.avaelements.dsl.ButtonScope
-import com.augmentalis.avanues.avaelements.dsl.AvaUI
-import com.augmentalis.avanues.avaelements.renderer.android.AvaUI as RenderAvaUI
+import com.augmentalis.avamagic.core.*
+import com.augmentalis.avamagic.dsl.ButtonScope
+import com.augmentalis.avamagic.dsl.AvaUI
+import com.augmentalis.avamagic.renderer.android.AvaUI as RenderAvaUI
 
 /**
  * AndroidExample - Demo Android app using AvaElements Compose Renderer

@@ -21,7 +21,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.util.LinkedList
-import com.augmentalis.ava.core.data.util.VuidHelper
+import com.augmentalis.ava.core.data.util.AvidHelper
 
 /**
  * Priority levels for dialogs
@@ -44,7 +44,7 @@ enum class DialogPriority {
  * Dialog request to be queued
  */
 data class DialogRequest(
-    val id: String = VuidHelper.randomVUID(),
+    val id: String = AvidHelper.randomDialogAVID(),
     val title: String,
     val message: String,
     val priority: DialogPriority = DialogPriority.NORMAL,

@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.onEach
 /**
  * Base interface for MagicElements components
  */
-interface Component {
+interface Identifiable {
     val id: String?
     val className: String?
 }
@@ -17,7 +17,7 @@ interface Component {
 /**
  * Wraps a component with state management capabilities
  */
-data class StatefulComponent<T : Component>(
+open class StatefulComponent<T : Identifiable>(
     val component: T,
     val state: ComponentStateHolder
 ) {
@@ -104,7 +104,7 @@ class ComponentStateHolder {
 /**
  * Example: Basic component interface
  */
-interface TextFieldComponent : Component {
+interface TextFieldComponent : Identifiable {
     val value: String
     val placeholder: String
     val label: String?
@@ -189,7 +189,7 @@ class StatefulTextField(
 /**
  * Example: Button component
  */
-interface ButtonComponent : Component {
+interface ButtonComponent : Identifiable {
     val text: String
     val enabled: Boolean
     val onClick: (() -> Unit)?
@@ -240,6 +240,6 @@ fun createStatefulTextField(
 /**
  * Extension to add state to any component
  */
-fun <T : Component> T.withState(): StatefulComponent<T> {
+fun <T : Identifiable> T.withState(): StatefulComponent<T> {
     return StatefulComponent(this, ComponentStateHolder())
 }

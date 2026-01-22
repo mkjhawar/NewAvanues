@@ -1,6 +1,7 @@
 package com.augmentalis.voiceoscoreng
 
 import android.accessibilityservice.AccessibilityServiceInfo
+import com.augmentalis.voiceoscoreng.app.BuildConfig
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -11,6 +12,7 @@ import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -27,15 +29,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.augmentalis.voiceoscoreng.handlers.VoiceOSCoreNG
-import com.augmentalis.voiceoscoreng.features.LearnAppConfig
-import com.augmentalis.voiceoscoreng.features.LearnAppDevToggle
-import com.augmentalis.voiceoscoreng.features.DeveloperSettingsScreen
-import com.augmentalis.voiceoscoreng.features.ScanningCallbacks
-import com.augmentalis.voiceoscoreng.features.TestModeFab
+import com.augmentalis.voiceoscore.LearnAppConfig
+import com.augmentalis.voiceoscore.LearnAppDevToggle
+import com.augmentalis.voiceoscoreng.ui.DeveloperSettingsScreen
+import com.augmentalis.voiceoscoreng.ui.ScanningCallbacks
 import com.augmentalis.voiceoscoreng.service.OverlayService
 import com.augmentalis.voiceoscoreng.service.VoiceOSAccessibilityService
 import com.augmentalis.voiceoscoreng.ui.theme.VoiceOSCoreNGTheme
+import kotlinx.coroutines.launch
 
 /**
  * Main Activity for VoiceOSCoreNG Test App.
@@ -64,6 +65,8 @@ fun MainScreen() {
     var configSummary by remember {
         mutableStateOf(LearnAppConfig.getSummary())
     }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
     // Listen for config changes
     DisposableEffect(Unit) {
@@ -105,72 +108,336 @@ fun MainScreen() {
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            "VoiceOSCoreNG",
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "v${VoiceOSCoreNG.getVersion()} • Test App",
-                            style = MaterialTheme.typography.bodySmall
-                        )
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                modifier = Modifier.width(300.dp)
+            ) {
+                DrawerContent(
+                    configSummary = configSummary,
+                    onOpenSettings = {
+                        scope.launch { drawerState.close() }
+                        showDeveloperSettings = true
+                    },
+                    onCloseDrawer = {
+                        scope.launch { drawerState.close() }
                     }
-                },
-                actions = {
-                    // Tier indicator
-                    val tier = VoiceOSCoreNG.getCurrentTier()
-                    AssistChip(
-                        onClick = { VoiceOSCoreNG.toggle() },
-                        label = { Text(tier.name) },
-                        leadingIcon = {
-                            Icon(
-                                if (tier == LearnAppDevToggle.Tier.DEV)
-                                    Icons.Default.Code
-                                else
-                                    Icons.Default.Person,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                "VoiceOSCoreNG",
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "v${BuildConfig.VERSION_NAME} • Test App",
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        }
+                    },
+                    actions = {
+                        // Tier indicator
+                        val tier = LearnAppDevToggle.getCurrentTier()
+                        AssistChip(
+                            onClick = { LearnAppDevToggle.toggle() },
+                            label = { Text(tier.name) },
+                            leadingIcon = {
+                                Icon(
+                                    if (tier == LearnAppDevToggle.Tier.DEV)
+                                        Icons.Default.Code
+                                    else
+                                        Icons.Default.Person,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
-            )
-        },
-        floatingActionButton = {
-            TestModeFab(
-                onOpenSettings = { showDeveloperSettings = true }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Scanner Control Card (Primary action)
-            ScannerControlCard()
+            }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Scanner Control Card (Primary action)
+                ScannerControlCard()
 
-            // Status Card
-            StatusCard(configSummary = configSummary)
+                // Status Card
+                StatusCard(configSummary = configSummary)
 
-            // Instructions Card
-            InstructionsCard()
+                // Instructions Card
+                InstructionsCard()
 
-            // Feature Status Card
-            FeatureStatusCard()
+                // Feature Status Card
+                FeatureStatusCard()
+            }
         }
     }
+}
+
+/**
+ * Drawer content with all testing and settings options.
+ */
+@Composable
+private fun DrawerContent(
+    configSummary: String,
+    onOpenSettings: () -> Unit,
+    onCloseDrawer: () -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var testModeEnabled by remember { mutableStateOf(LearnAppConfig.DeveloperSettings.enabled) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .verticalScroll(rememberScrollState())
+    ) {
+        // Header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .padding(24.dp)
+        ) {
+            Column {
+                Text(
+                    "VoiceOSCoreNG",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "v${BuildConfig.VERSION_NAME} • ${LearnAppDevToggle.getCurrentTier().name} Mode",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Test Mode Section
+        DrawerSection(title = "Test Mode") {
+            DrawerToggleItem(
+                icon = Icons.Default.Science,
+                title = if (testModeEnabled) "Disable Test Mode" else "Enable Test Mode",
+                subtitle = if (testModeEnabled) "All features unlocked" else "Unlock all features",
+                checked = testModeEnabled,
+                onToggle = {
+                    if (testModeEnabled) {
+                        LearnAppConfig.reset()
+                    } else {
+                        LearnAppConfig.enableTestMode()
+                    }
+                    testModeEnabled = !testModeEnabled
+                }
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+        // Scanning Section
+        var continuousMonitoringEnabled by remember { mutableStateOf(true) }
+        DrawerSection(title = "Scanning") {
+            DrawerToggleItem(
+                icon = Icons.Default.Sync,
+                title = "Continuous Monitoring",
+                subtitle = if (continuousMonitoringEnabled) "Auto-scan on screen change" else "Manual scanning only",
+                checked = continuousMonitoringEnabled,
+                onToggle = {
+                    continuousMonitoringEnabled = !continuousMonitoringEnabled
+                    VoiceOSAccessibilityService.setContinuousMonitoring(continuousMonitoringEnabled)
+                }
+            )
+            DrawerActionItem(
+                icon = Icons.Default.Refresh,
+                title = "Rescan Current App",
+                subtitle = "Clear cache and rescan current app",
+                onClick = {
+                    VoiceOSAccessibilityService.rescanCurrentApp()
+                    onCloseDrawer()
+                }
+            )
+            DrawerActionItem(
+                icon = Icons.Default.DeleteSweep,
+                title = "Rescan Everything",
+                subtitle = "Clear all cached screens",
+                onClick = {
+                    VoiceOSAccessibilityService.rescanEverything()
+                    onCloseDrawer()
+                }
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+        // Overlay Section
+        DrawerSection(title = "Overlay") {
+            DrawerActionItem(
+                icon = Icons.Default.PlayArrow,
+                title = "Start Scanner Overlay",
+                subtitle = "Show floating scanner button",
+                onClick = {
+                    OverlayService.start(context)
+                    (context as? ComponentActivity)?.moveTaskToBack(true)
+                    onCloseDrawer()
+                }
+            )
+            DrawerActionItem(
+                icon = Icons.Default.Stop,
+                title = "Stop Scanner Overlay",
+                subtitle = "Remove floating button",
+                onClick = {
+                    OverlayService.stop(context)
+                    onCloseDrawer()
+                }
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+        // Settings Section
+        DrawerSection(title = "Settings") {
+            DrawerActionItem(
+                icon = Icons.Default.Settings,
+                title = "Developer Settings",
+                subtitle = "Advanced configuration options",
+                onClick = onOpenSettings
+            )
+            DrawerActionItem(
+                icon = Icons.Default.Accessibility,
+                title = "Accessibility Settings",
+                subtitle = "System accessibility options",
+                onClick = {
+                    context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    onCloseDrawer()
+                }
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+        // Current Configuration
+        DrawerSection(title = "Current Configuration") {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Text(
+                    text = configSummary,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun DrawerSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+        content()
+    }
+}
+
+@Composable
+private fun DrawerActionItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    NavigationDrawerItem(
+        icon = { Icon(icon, contentDescription = null) },
+        label = {
+            Column {
+                Text(title, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        selected = false,
+        onClick = onClick,
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+    )
+}
+
+@Composable
+private fun DrawerToggleItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onToggle: () -> Unit
+) {
+    NavigationDrawerItem(
+        icon = { Icon(icon, contentDescription = null) },
+        label = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(title, style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = checked,
+                    onCheckedChange = { onToggle() }
+                )
+            }
+        },
+        selected = false,
+        onClick = onToggle,
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+    )
 }
 
 @Composable
@@ -385,19 +652,30 @@ private fun ScannerControlCard() {
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Start Scanner Overlay button
+            // When both permissions are granted, overlay auto-starts - show ready status
             if (isAccessibilityConnected && hasOverlayPermission) {
-                Button(
-                    onClick = {
-                        OverlayService.start(context)
-                        // Minimize the app so user can navigate to other apps
-                        (context as? ComponentActivity)?.moveTaskToBack(true)
-                    },
-                    modifier = Modifier.fillMaxWidth()
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                    )
                 ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Start Scanner Overlay")
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "VoiceOS Active - Debug FAB visible on all apps",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
                 }
             }
 
@@ -406,14 +684,11 @@ private fun ScannerControlCard() {
             // Instructions
             Text(
                 text = if (!isAccessibilityConnected) {
-                    "1. Enable VoiceOSCoreNG in Accessibility Settings\n" +
-                    "2. Grant overlay permission\n" +
-                    "3. Start the scanner overlay\n" +
-                    "4. Navigate to any app and tap the floating button to scan"
+                    "Enable VoiceOSCoreNG in Accessibility Settings to activate voice commands."
                 } else if (!hasOverlayPermission) {
-                    "Grant overlay permission to show floating scanner button on all apps"
+                    "Grant overlay permission to show the debug FAB on all apps."
                 } else {
-                    "Scanner ready! Tap 'Start Scanner Overlay' then navigate to any app to scan its UI elements."
+                    "VoiceOS is active! Navigate to any app - the debug FAB will show detected elements and voice commands."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
@@ -472,7 +747,7 @@ private fun InstructionsCard() {
                 3. Start Scanner Overlay
                 4. Navigate to any app on the device
                 5. Tap the floating scanner button to analyze
-                6. View VUIDs, hierarchy, duplicates, commands, AVU output
+                6. View AVIDs, hierarchy, duplicates, commands, AVU output
 
                 The scanner tests: deduplication, page hierarchy, command hierarchy, hash generation, and command generation.
                 """.trimIndent(),

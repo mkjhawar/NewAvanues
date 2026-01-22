@@ -32,7 +32,7 @@ kotlin {
     
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":Modules:AVAMagic:AVAUI:Core"))
+            implementation(project(":Modules:AvaMagic:AvaUI:Core"))
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
         }

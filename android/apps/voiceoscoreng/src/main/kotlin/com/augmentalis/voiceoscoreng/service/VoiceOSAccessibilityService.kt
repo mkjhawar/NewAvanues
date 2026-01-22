@@ -7,26 +7,20 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.graphics.Rect
 import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.voiceoscoreng.VoiceOSCoreNGApplication
-import com.augmentalis.voiceoscoreng.VoiceOSCoreNG
-import com.augmentalis.voiceoscoreng.createForAndroid
-import com.augmentalis.voiceoscoreng.common.QuantizedCommand
-import com.augmentalis.voiceoscoreng.common.CommandGenerator
-import com.augmentalis.voiceoscoreng.common.CommandRegistry
-import com.augmentalis.voiceoscoreng.common.Bounds
-import com.augmentalis.voiceoscoreng.common.ElementInfo
-import com.augmentalis.voiceoscoreng.common.VUIDGenerator
-import com.augmentalis.voiceoscoreng.common.VUIDTypeCode
-import com.augmentalis.voiceoscoreng.functions.HashUtils
-import com.augmentalis.voiceoscoreng.handlers.ServiceConfiguration
-import com.augmentalis.voiceoscoreng.persistence.ICommandPersistence
-import com.augmentalis.database.dto.ScrapedAppDTO
-import com.augmentalis.database.dto.ScrapedElementDTO
+import com.augmentalis.voiceoscore.VoiceOSCore
+import com.augmentalis.voiceoscore.createForAndroid
+import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.voiceoscore.CommandRegistry
+import com.augmentalis.voiceoscore.ElementFingerprint
+import com.augmentalis.voiceoscore.ServiceConfiguration
+import com.augmentalis.voiceoscore.ServiceState
+import com.augmentalis.voiceoscore.ICommandPersistence
+import com.augmentalis.voiceoscore.AppVersionInfo
 import com.augmentalis.database.repositories.IScrapedAppRepository
 import com.augmentalis.database.repositories.IScrapedElementRepository
 import kotlinx.coroutines.*
@@ -34,11 +28,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import com.augmentalis.voiceoscoreng.persistence.ScreenHashRepository
-import com.augmentalis.voiceoscoreng.persistence.ScreenHashRepositoryImpl
-import com.augmentalis.voiceoscoreng.persistence.ScreenInfo
+import com.augmentalis.voiceoscore.ScreenHashRepository
+import com.augmentalis.voiceoscore.ScreenHashRepositoryImpl
+import com.augmentalis.voiceoscore.ScreenInfo
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
+import com.augmentalis.voiceoscore.DeviceCapabilityManager
+import com.augmentalis.voiceoscore.TimingOperation
+import com.augmentalis.voiceoscore.StaticCommandRegistry
+import com.augmentalis.voiceoscore.IAppCategoryProvider
 
 private const val TAG = "VoiceOSA11yService"
 
@@ -46,12 +44,19 @@ private const val TAG = "VoiceOSA11yService"
 private const val SCREEN_CHANGE_DEBOUNCE_MS = 300L
 
 /**
- * Accessibility Service for VoiceOSCoreNG testing.
+ * Accessibility Service for VoiceOSCore testing.
  *
  * Provides real-time exploration of apps on the device,
  * extracting UI elements and processing them through the
- * VoiceOSCoreNG library for VUID generation, deduplication,
+ * VoiceOSCore library for AVID generation, deduplication,
  * hierarchy tracking, and command generation.
+ *
+ * SOLID Refactored: Delegates to extracted managers:
+ * - OverlayStateManager: Overlay state and UI preferences
+ * - ElementExtractor: Accessibility tree traversal
+ * - AVUFormatter: AVU output generation
+ * - ScreenCacheManager: Screen hash and caching
+ * - DynamicCommandGenerator: Voice command generation
  */
 class VoiceOSAccessibilityService : AccessibilityService() {
 
@@ -67,32 +72,58 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 val modeStr = intent.getStringExtra(EXTRA_MODE)?.uppercase() ?: return
                 Log.d(TAG, "Received broadcast to set numbers mode: $modeStr")
                 val mode = when (modeStr) {
-                    "ON" -> NumbersOverlayMode.ON
-                    "OFF" -> NumbersOverlayMode.OFF
-                    "AUTO" -> NumbersOverlayMode.AUTO
+                    "ON" -> OverlayStateManager.NumbersOverlayMode.ON
+                    "OFF" -> OverlayStateManager.NumbersOverlayMode.OFF
+                    "AUTO" -> OverlayStateManager.NumbersOverlayMode.AUTO
                     else -> return
                 }
-                setNumbersOverlayMode(mode)
+                OverlayStateManager.setNumbersOverlayMode(mode)
             }
         }
     }
 
     /**
      * Shared command registry - single source of truth.
-     * Passed to VoiceOSCoreNG so both service and ActionCoordinator use the same instance.
-     * This allows direct synchronous access without async wrappers.
+     * Passed to VoiceOSCore so both service and ActionCoordinator use the same instance.
      */
     private val commandRegistry = CommandRegistry()
 
     /**
      * Screen hash repository for caching known screens.
-     * Avoids re-scanning screens that have already been processed.
      */
     private val screenHashRepository: ScreenHashRepository = ScreenHashRepositoryImpl()
 
     /**
+     * Screen cache manager for hash generation and caching logic.
+     */
+    private val screenCacheManager: ScreenCacheManager by lazy {
+        ScreenCacheManager(screenHashRepository, resources)
+    }
+
+    /**
+     * App category provider for 4-layer persistence decisions.
+     * Uses PackageManager API (API 26+) with pattern-based fallback.
+     */
+    private val appCategoryProvider: IAppCategoryProvider by lazy {
+        AndroidAppCategoryProvider(applicationContext)
+    }
+
+    /**
+     * Dynamic command generator for voice command creation.
+     */
+    private val dynamicCommandGenerator: DynamicCommandGenerator by lazy {
+        DynamicCommandGenerator(
+            commandRegistry = commandRegistry,
+            commandPersistence = commandPersistence,
+            scrapedAppRepository = scrapedAppRepository,
+            scrapedElementRepository = scrapedElementRepository,
+            scope = serviceScope,
+            getAppInfo = { packageName -> getAppInfo(packageName) }
+        )
+    }
+
+    /**
      * Whether continuous scanning is enabled.
-     * When true, screens are automatically scanned on navigation.
      */
     private val continuousScanningEnabled = AtomicBoolean(true)
 
@@ -118,18 +149,18 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         VoiceOSCoreNGApplication.getInstance(applicationContext).commandPersistence
     }
 
-    /** Scraped app repository - for FK integrity (must insert before elements/commands) */
+    /** Scraped app repository - for FK integrity */
     private val scrapedAppRepository: IScrapedAppRepository by lazy {
         VoiceOSCoreNGApplication.getInstance(applicationContext).scrapedAppRepository
     }
 
-    /** Scraped element repository - for FK integrity (must insert before commands) */
+    /** Scraped element repository - for FK integrity */
     private val scrapedElementRepository: IScrapedElementRepository by lazy {
         VoiceOSCoreNGApplication.getInstance(applicationContext).scrapedElementRepository
     }
 
-    /** VoiceOSCoreNG facade for voice command processing */
-    private var voiceOSCore: VoiceOSCoreNG? = null
+    /** VoiceOSCore facade for voice command processing */
+    private var voiceOSCore: VoiceOSCore? = null
 
     companion object {
         private var instance: VoiceOSAccessibilityService? = null
@@ -137,6 +168,9 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         // Broadcast action for controlling numbers overlay via adb
         const val ACTION_SET_NUMBERS_MODE = "com.augmentalis.voiceoscoreng.SET_NUMBERS_MODE"
         const val EXTRA_MODE = "mode"  // "ON", "OFF", or "AUTO"
+
+        /** Debounce delay for windows change events (dialogs, IME) - longer than scroll */
+        private const val WINDOWS_CHANGE_DEBOUNCE_MS = 500L
 
         private val _isConnected = MutableStateFlow(false)
         val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
@@ -146,6 +180,12 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         private val _lastError = MutableStateFlow<String?>(null)
         val lastError: StateFlow<String?> = _lastError.asStateFlow()
+
+        private val _isVoiceListening = MutableStateFlow(false)
+        val isVoiceListening: StateFlow<Boolean> = _isVoiceListening.asStateFlow()
+
+        private val _lastTranscription = MutableStateFlow<String?>(null)
+        val lastTranscription: StateFlow<String?> = _lastTranscription.asStateFlow()
 
         fun getInstance(): VoiceOSAccessibilityService? = instance
 
@@ -159,7 +199,6 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         /**
          * Get all currently registered dynamic commands.
-         * Direct access to shared registry (synchronous, no async wrapper needed).
          */
         fun getCurrentCommands(): List<QuantizedCommand> {
             return instance?.commandRegistry?.all() ?: emptyList()
@@ -195,7 +234,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
          */
         fun isListening(): Boolean {
             return instance?.voiceOSCore?.state?.value?.let { state ->
-                state is com.augmentalis.voiceoscoreng.handlers.ServiceState.Listening
+                state is com.augmentalis.voiceoscore.ServiceState.Listening
             } ?: false
         }
 
@@ -204,254 +243,47 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         private val _isContinuousMonitoring = MutableStateFlow(true)
         val isContinuousMonitoring: StateFlow<Boolean> = _isContinuousMonitoring.asStateFlow()
 
-        private val _currentScreenInfo = MutableStateFlow<ScreenInfo?>(null)
-        val currentScreenInfo: StateFlow<ScreenInfo?> = _currentScreenInfo.asStateFlow()
+        // Delegate to ScreenCacheManager's StateFlow
+        val currentScreenInfo: StateFlow<ScreenInfo?>
+            get() = instance?.screenCacheManager?.currentScreenInfo ?: MutableStateFlow(null)
 
-        // ===== App Detection for Numbers Overlay =====
+        // ===== Delegated to OverlayStateManager =====
 
-        /**
-         * Apps that commonly have list-based UIs where numbers overlay is helpful.
-         * These apps will trigger a first-time prompt asking the user about numbers mode.
-         */
-        val TARGET_APPS = setOf(
-            // Email clients
-            "com.google.android.gm",           // Gmail
-            "com.microsoft.office.outlook",    // Outlook
-            "com.samsung.android.email.provider", // Samsung Mail
-            "com.yahoo.mobile.client.android.mail", // Yahoo Mail
-            "me.bluemail.mail",                // BlueMail
-            "org.mozilla.thunderbird",         // Thunderbird
-            // Messaging apps
-            "com.google.android.apps.messaging", // Google Messages
-            "com.whatsapp",                    // WhatsApp
-            "org.telegram.messenger",          // Telegram
-            "com.discord",                     // Discord
-            "com.Slack",                       // Slack
-            // Social media
-            "com.twitter.android",             // Twitter/X
-            "com.instagram.android",           // Instagram
-            "com.facebook.katana",             // Facebook
-            "com.linkedin.android",            // LinkedIn
-            // Task/Note apps
-            "com.todoist",                     // Todoist
-            "com.google.android.keep",         // Google Keep
-            "com.microsoft.todos",             // Microsoft To Do
-            // Shopping/Lists
-            "com.amazon.mShop.android.shopping", // Amazon
-            "com.google.android.apps.shopping.express" // Google Shopping
-        )
+        val TARGET_APPS get() = OverlayStateManager.TARGET_APPS
 
-        /**
-         * Preference for per-app numbers mode.
-         * Stored in SharedPreferences with key "app_numbers_mode_{packageName}"
-         */
-        enum class AppNumbersPreference {
-            ASK,       // Not yet decided, show dialog
-            ALWAYS,    // Always show numbers in this app
-            AUTO,      // Use AUTO mode for this app
-            NEVER      // Never show numbers in this app
-        }
+        // Delegated StateFlows
+        val showAppDetectionDialog: StateFlow<String?> get() = OverlayStateManager.showAppDetectionDialog
+        val currentDetectedAppName: StateFlow<String?> get() = OverlayStateManager.currentDetectedAppName
+        val numberedOverlayItems: StateFlow<List<OverlayStateManager.NumberOverlayItem>> get() = OverlayStateManager.numberedOverlayItems
+        val numbersOverlayMode: StateFlow<OverlayStateManager.NumbersOverlayMode> get() = OverlayStateManager.numbersOverlayMode
+        val showNumbersOverlayComputed: StateFlow<Boolean> get() = OverlayStateManager.showNumbersOverlayComputed
+        val instructionBarMode: StateFlow<OverlayStateManager.InstructionBarMode> get() = OverlayStateManager.instructionBarMode
+        val badgeTheme: StateFlow<OverlayStateManager.BadgeTheme> get() = OverlayStateManager.badgeTheme
 
-        // Dialog control for app detection prompt
-        private val _showAppDetectionDialog = MutableStateFlow<String?>(null) // packageName or null
-        val showAppDetectionDialog: StateFlow<String?> = _showAppDetectionDialog.asStateFlow()
+        // Delegated methods
+        fun showAppDetectionDialogFor(packageName: String, appName: String) =
+            OverlayStateManager.showAppDetectionDialogFor(packageName, appName)
 
-        private val _currentDetectedAppName = MutableStateFlow<String?>(null)
-        val currentDetectedAppName: StateFlow<String?> = _currentDetectedAppName.asStateFlow()
+        fun dismissAppDetectionDialog() = OverlayStateManager.dismissAppDetectionDialog()
 
-        /**
-         * Show the app detection dialog for a specific package.
-         */
-        fun showAppDetectionDialogFor(packageName: String, appName: String) {
-            _currentDetectedAppName.value = appName
-            _showAppDetectionDialog.value = packageName
-            Log.d(TAG, "Showing app detection dialog for: $appName ($packageName)")
-        }
+        fun handleAppDetectionResponse(packageName: String, preference: OverlayStateManager.AppNumbersPreference) =
+            OverlayStateManager.handleAppDetectionResponse(packageName, preference) { exploreAllApps() }
 
-        /**
-         * Dismiss the app detection dialog.
-         */
-        fun dismissAppDetectionDialog() {
-            _showAppDetectionDialog.value = null
-            _currentDetectedAppName.value = null
-        }
+        fun setNumbersOverlayMode(mode: OverlayStateManager.NumbersOverlayMode) =
+            OverlayStateManager.setNumbersOverlayMode(mode)
 
-        /**
-         * Handle user response from app detection dialog.
-         */
-        fun handleAppDetectionResponse(packageName: String, preference: AppNumbersPreference) {
-            instance?.saveAppNumbersPreference(packageName, preference)
-            dismissAppDetectionDialog()
+        fun cycleNumbersOverlayMode() = OverlayStateManager.cycleNumbersOverlayMode()
 
-            // Apply the preference immediately
-            when (preference) {
-                AppNumbersPreference.ALWAYS -> setNumbersOverlayMode(NumbersOverlayMode.ON)
-                AppNumbersPreference.AUTO -> setNumbersOverlayMode(NumbersOverlayMode.AUTO)
-                AppNumbersPreference.NEVER -> setNumbersOverlayMode(NumbersOverlayMode.OFF)
-                AppNumbersPreference.ASK -> { /* No change, will ask again next time */ }
-            }
-            Log.d(TAG, "App detection response for $packageName: $preference")
+        fun setShowNumbersOverlay(show: Boolean) = OverlayStateManager.setShowNumbersOverlay(show)
 
-            // Refresh the screen to populate overlay items with the new setting
-            if (preference != AppNumbersPreference.NEVER) {
-                exploreAllApps()
-            }
-        }
+        fun setInstructionBarMode(mode: OverlayStateManager.InstructionBarMode) =
+            OverlayStateManager.setInstructionBarMode(mode)
 
-        // ===== Numbers Overlay for Voice Commands =====
+        fun cycleInstructionBarMode() = OverlayStateManager.cycleInstructionBarMode()
 
-        /**
-         * Numbers overlay mode:
-         * - ON: Always show numbers on all clickable elements
-         * - OFF: Never show numbers
-         * - AUTO: Show numbers only when there are list items (emails, messages, etc.)
-         */
-        enum class NumbersOverlayMode {
-            ON,    // Always show
-            OFF,   // Never show
-            AUTO   // Show only for lists/duplicates
-        }
+        fun setBadgeTheme(theme: OverlayStateManager.BadgeTheme) = OverlayStateManager.setBadgeTheme(theme)
 
-        /**
-         * Data for displaying numbered badges on screen elements.
-         * Used by the numbers overlay to show which elements can be selected by number.
-         * Example: User says "first" or "1" to click element with number=1
-         */
-        data class NumberOverlayItem(
-            val number: Int,           // 1-based display number (matches "first", "second", etc.)
-            val label: String,         // Short label for display (e.g., sender name)
-            val left: Int,             // Element bounds
-            val top: Int,
-            val right: Int,
-            val bottom: Int,
-            val vuid: String           // Target VUID for executing action
-        )
-
-        private val _numberedOverlayItems = MutableStateFlow<List<NumberOverlayItem>>(emptyList())
-        val numberedOverlayItems: StateFlow<List<NumberOverlayItem>> = _numberedOverlayItems.asStateFlow()
-
-        private val _numbersOverlayMode = MutableStateFlow(NumbersOverlayMode.AUTO)
-        val numbersOverlayMode: StateFlow<NumbersOverlayMode> = _numbersOverlayMode.asStateFlow()
-
-        // Computed: should we show numbers based on mode and items?
-        val showNumbersOverlay: StateFlow<Boolean> = _numbersOverlayMode.let { modeFlow ->
-            // This is a simplified reactive pattern - in production would use combine()
-            MutableStateFlow(false).also { resultFlow ->
-                // Initial computation handled in updateNumbersOverlayVisibility()
-            }
-        }
-
-        private val _showNumbersOverlayComputed = MutableStateFlow(false)
-        val showNumbersOverlayComputed: StateFlow<Boolean> = _showNumbersOverlayComputed.asStateFlow()
-
-        // ===== Instruction Bar Settings =====
-
-        /**
-         * Instruction bar mode:
-         * - ON: Always show instruction bar
-         * - OFF: Never show instruction bar
-         * - AUTO: Show briefly then fade out (default)
-         */
-        enum class InstructionBarMode {
-            ON,    // Always visible
-            OFF,   // Never visible
-            AUTO   // Show then fade after 3 seconds
-        }
-
-        private val _instructionBarMode = MutableStateFlow(InstructionBarMode.AUTO)
-        val instructionBarMode: StateFlow<InstructionBarMode> = _instructionBarMode.asStateFlow()
-
-        fun setInstructionBarMode(mode: InstructionBarMode) {
-            _instructionBarMode.value = mode
-            Log.d(TAG, "Instruction bar mode: $mode")
-        }
-
-        fun cycleInstructionBarMode() {
-            val newMode = when (_instructionBarMode.value) {
-                InstructionBarMode.OFF -> InstructionBarMode.AUTO
-                InstructionBarMode.AUTO -> InstructionBarMode.ON
-                InstructionBarMode.ON -> InstructionBarMode.OFF
-            }
-            setInstructionBarMode(newMode)
-        }
-
-        // ===== Badge Theme Settings =====
-
-        /**
-         * Badge color themes for numbered badges.
-         */
-        enum class BadgeTheme(val backgroundColor: Long, val textColor: Long) {
-            GREEN(0xFF4CAF50, 0xFFFFFFFF),       // Default green
-            BLUE(0xFF2196F3, 0xFFFFFFFF),        // Blue
-            PURPLE(0xFF9C27B0, 0xFFFFFFFF),      // Purple
-            ORANGE(0xFFFF9800, 0xFF000000),      // Orange with black text
-            RED(0xFFF44336, 0xFFFFFFFF),         // Red
-            TEAL(0xFF009688, 0xFFFFFFFF),        // Teal
-            PINK(0xFFE91E63, 0xFFFFFFFF)         // Pink
-        }
-
-        private val _badgeTheme = MutableStateFlow(BadgeTheme.GREEN)
-        val badgeTheme: StateFlow<BadgeTheme> = _badgeTheme.asStateFlow()
-
-        fun setBadgeTheme(theme: BadgeTheme) {
-            _badgeTheme.value = theme
-            Log.d(TAG, "Badge theme: $theme")
-        }
-
-        fun cycleBadgeTheme() {
-            val themes = BadgeTheme.entries
-            val currentIndex = themes.indexOf(_badgeTheme.value)
-            val nextIndex = (currentIndex + 1) % themes.size
-            setBadgeTheme(themes[nextIndex])
-        }
-
-        /**
-         * Set the numbers overlay mode.
-         * Voice commands: "numbers on", "numbers off", "numbers auto"
-         */
-        fun setNumbersOverlayMode(mode: NumbersOverlayMode) {
-            _numbersOverlayMode.value = mode
-            updateNumbersOverlayVisibility()
-            Log.d(TAG, "Numbers overlay mode: $mode")
-        }
-
-        /**
-         * Cycle through overlay modes: OFF -> AUTO -> ON -> OFF
-         * Voice command: "show numbers" or "toggle numbers"
-         */
-        fun cycleNumbersOverlayMode() {
-            val newMode = when (_numbersOverlayMode.value) {
-                NumbersOverlayMode.OFF -> NumbersOverlayMode.AUTO
-                NumbersOverlayMode.AUTO -> NumbersOverlayMode.ON
-                NumbersOverlayMode.ON -> NumbersOverlayMode.OFF
-            }
-            setNumbersOverlayMode(newMode)
-        }
-
-        /**
-         * Update visibility based on current mode and items.
-         * Called when mode changes or when items are updated.
-         */
-        internal fun updateNumbersOverlayVisibility() {
-            val mode = _numbersOverlayMode.value
-            val hasItems = _numberedOverlayItems.value.isNotEmpty()
-
-            val shouldShow = when (mode) {
-                NumbersOverlayMode.ON -> true
-                NumbersOverlayMode.OFF -> false
-                NumbersOverlayMode.AUTO -> hasItems  // Only show when list items exist
-            }
-
-            _showNumbersOverlayComputed.value = shouldShow
-            Log.d(TAG, "Numbers overlay: mode=$mode, hasItems=$hasItems, showing=$shouldShow")
-        }
-
-        /**
-         * Legacy toggle for backward compatibility.
-         */
-        fun setShowNumbersOverlay(show: Boolean) {
-            setNumbersOverlayMode(if (show) NumbersOverlayMode.ON else NumbersOverlayMode.OFF)
-        }
+        fun cycleBadgeTheme() = OverlayStateManager.cycleBadgeTheme()
 
         /**
          * Enable or disable continuous screen scanning.
@@ -471,27 +303,23 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
         /**
          * Rescan current app - clears cache for current package only.
-         * Runs asynchronously in service scope.
          */
         fun rescanCurrentApp() {
             instance?.serviceScope?.launch {
                 val packageName = instance?.currentPackageName ?: return@launch
                 val count = instance?.screenHashRepository?.clearScreensForPackage(packageName) ?: 0
                 Log.d(TAG, "Rescan Current App: cleared $count screens for $packageName")
-                // Trigger immediate rescan
                 instance?.performExploration()
             }
         }
 
         /**
          * Rescan everything - clears ALL cached screens.
-         * Runs asynchronously in service scope.
          */
         fun rescanEverything() {
             instance?.serviceScope?.launch {
                 val count = instance?.screenHashRepository?.clearAllScreens() ?: 0
                 Log.d(TAG, "Rescan Everything: cleared $count total screens")
-                // Trigger immediate rescan
                 instance?.performExploration()
             }
         }
@@ -519,6 +347,13 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         _isConnected.value = true
         Log.d(TAG, "isConnected set to true")
 
+        // Setup OverlayStateManager preference callback
+        OverlayStateManager.preferenceCallback = object : OverlayStateManager.PreferenceCallback {
+            override fun saveAppNumbersPreference(packageName: String, preference: OverlayStateManager.AppNumbersPreference) {
+                this@VoiceOSAccessibilityService.saveAppNumbersPreference(packageName, preference)
+            }
+        }
+
         try {
             serviceInfo = serviceInfo.apply {
                 eventTypes = AccessibilityEvent.TYPES_ALL_MASK
@@ -526,7 +361,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 flags = AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
                         AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or
                         AccessibilityServiceInfo.FLAG_REQUEST_ENHANCED_WEB_ACCESSIBILITY or
-                        AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS  // Required for windows property
+                        AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
                 notificationTimeout = 100
             }
             Log.d(TAG, "serviceInfo configured successfully with FLAG_RETRIEVE_INTERACTIVE_WINDOWS")
@@ -534,62 +369,83 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             Log.e(TAG, "Error configuring serviceInfo", e)
         }
 
-        // Register broadcast receiver for adb control of numbers mode
+        // Register broadcast receiver for adb control
         val filter = IntentFilter(ACTION_SET_NUMBERS_MODE)
         registerReceiver(modeReceiver, filter, RECEIVER_EXPORTED)
         Log.d(TAG, "Registered broadcast receiver for numbers mode control")
 
-        // Initialize VoiceOSCoreNG facade for voice command processing
+        // Initialize DeviceCapabilityManager with context for accurate device detection
+        DeviceCapabilityManager.init(this)
+        Log.d(TAG, "DeviceCapabilityManager initialized: speed=${DeviceCapabilityManager.getDeviceSpeed()}, debounce=${DeviceCapabilityManager.getContentDebounceMs()}ms")
+
+        // Initialize VoiceOSCore facade
         initializeVoiceOSCore()
 
-        // Auto-start OverlayService if overlay permission is granted
+        // Auto-start OverlayService if permission granted
         if (Settings.canDrawOverlays(this)) {
             Log.d(TAG, "Overlay permission granted, auto-starting OverlayService")
             OverlayService.start(this)
         } else {
             Log.w(TAG, "Overlay permission not granted - numbers overlay will not show")
         }
+
+        // Phase 4: Notify plugin system that AccessibilityService is connected
+        try {
+            VoiceOSCoreNGApplication.getInstance(applicationContext)
+                .onAccessibilityServiceConnected(this)
+            Log.d(TAG, "Plugin system notified of service connection")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to notify plugin system", e)
+        }
     }
 
     /**
-     * Initialize the VoiceOSCoreNG facade with speech engine and handlers.
+     * Initialize the VoiceOSCore facade with speech engine and handlers.
      */
     private fun initializeVoiceOSCore() {
         serviceScope.launch {
             try {
-                Log.d(TAG, "Initializing VoiceOSCoreNG facade...")
+                Log.d(TAG, "Initializing VoiceOSCore facade...")
 
-                // Create the facade with Android-specific handlers and speech engine
-                // Primary engine: VIVOKA (offline, commercial SDK)
-                // Fallback: ANDROID_STT (requires network)
-                // Pass shared commandRegistry so both service and ActionCoordinator use same instance
-                voiceOSCore = VoiceOSCoreNG.createForAndroid(
+                voiceOSCore = VoiceOSCore.createForAndroid(
                     service = this@VoiceOSAccessibilityService,
                     configuration = ServiceConfiguration(
-                        autoStartListening = false,  // Don't auto-start, UI will control
-                        speechEngine = "VIVOKA",     // Primary: Vivoka offline engine
+                        autoStartListening = false,
+                        speechEngine = "VIVOKA",
                         debugMode = true
                     ),
-                    commandRegistry = commandRegistry  // Shared registry - single source of truth
+                    commandRegistry = commandRegistry
                 )
 
-                // Initialize the facade
                 voiceOSCore?.initialize()
-                Log.d(TAG, "VoiceOSCoreNG facade initialized successfully")
+                Log.d(TAG, "VoiceOSCore facade initialized successfully")
 
-                // Observe speech results and process commands
+                // Auto-start voice listening
+                try {
+                    voiceOSCore?.startListening()
+                    _isVoiceListening.value = true
+                    Log.d(TAG, "Voice listening auto-started")
+                } catch (e: Exception) {
+                    _isVoiceListening.value = false
+                    Log.e(TAG, "Failed to auto-start voice listening", e)
+                }
+
+                // Observe speech results
                 voiceOSCore?.speechResults?.collect { speechResult ->
                     Log.d(TAG, "Speech result: ${speechResult.text} (confidence: ${speechResult.confidence})")
+                    // Update transcription for UI display
+                    _lastTranscription.value = speechResult.text
                     if (speechResult.isFinal) {
-                        // Pre-process VoiceOS control commands (numbers overlay, etc.)
                         if (!handleVoiceOSControlCommand(speechResult.text.lowercase().trim())) {
-                            // Not a VoiceOS control command, delegate to normal processing
                             voiceOSCore?.processCommand(speechResult.text, speechResult.confidence)
                         }
+                        // Clear transcription after processing
+                        kotlinx.coroutines.delay(2000)
+                        _lastTranscription.value = null
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to initialize VoiceOSCoreNG facade", e)
+                Log.e(TAG, "Failed to initialize VoiceOSCore facade", e)
             }
         }
     }
@@ -597,54 +453,278 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return
 
-        // Handle screen change events to invalidate caches and regenerate commands
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                // New window/screen opened - regenerate commands
+                // Full screen change - app switch, new activity, navigation
                 Log.d(TAG, "Window state changed: ${event.packageName}")
                 handleScreenChange(event.packageName?.toString())
             }
+
+            AccessibilityEvent.TYPE_WINDOWS_CHANGED -> {
+                // Dialogs, overlays, IME (keyboard), multi-window changes
+                if (continuousScanningEnabled.get()) {
+                    Log.d(TAG, "Windows changed: ${event.packageName}")
+                    handleWindowsChange(event)
+                }
+            }
+
+            AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
+                // Direct scroll event - more reliable than inferring from content changes
+                if (continuousScanningEnabled.get()) {
+                    Log.v(TAG, "View scrolled: ${event.packageName}")
+                    handleScrollEvent(event)
+                }
+            }
+
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
-                // Content within window changed - may need to update commands
-                // Only trigger if content change is significant (e.g., not just scrolling)
-                if (event.contentChangeTypes and AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE != 0) {
-                    Log.v(TAG, "Window content changed (subtree): ${event.packageName}")
-                    // Debounce: Don't regenerate on every small change
-                    // The cache TTL will handle stale elements
+                // UI subtree changed (items inserted/removed, layout updated)
+                if (shouldHandleContentChange(event)) {
+                    Log.d(TAG, "Content changed (subtree): ${event.packageName}")
+                    handleContentUpdate(event)
                 }
             }
         }
     }
 
     /**
-     * Handle VoiceOS control commands (numbers overlay, etc.).
-     * Returns true if the command was handled, false to delegate to normal processing.
+     * Determine if content change should trigger an incremental re-scrape.
+     * Focus on scroll events in dynamic containers (RecyclerView, ListView, etc.)
      */
-    private fun handleVoiceOSControlCommand(command: String): Boolean {
-        return when (command) {
-            // Numbers overlay commands
-            "numbers on", "show numbers", "numbers always" -> {
-                setNumbersOverlayMode(NumbersOverlayMode.ON)
-                Log.d(TAG, "Voice command: Numbers overlay ON")
-                true
+    private fun shouldHandleContentChange(event: AccessibilityEvent): Boolean {
+        if (!continuousScanningEnabled.get()) return false
+
+        val contentTypes = event.contentChangeTypes
+
+        // Subtree changes often indicate scroll in RecyclerView/ListView
+        if (contentTypes and AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE != 0) {
+            // Check if source is a scrollable container
+            event.source?.let { node ->
+                val isScrollable = node.isScrollable ||
+                    ElementExtractor.isDynamicContainer(node.className?.toString() ?: "")
+                node.recycle()
+                return isScrollable
             }
-            "numbers off", "hide numbers", "no numbers" -> {
-                setNumbersOverlayMode(NumbersOverlayMode.OFF)
-                Log.d(TAG, "Voice command: Numbers overlay OFF")
-                true
+        }
+        return false
+    }
+
+    /**
+     * Handle incremental content updates from scroll/list changes.
+     * Uses dynamic debounce based on device capability.
+     */
+    private fun handleContentUpdate(event: AccessibilityEvent) {
+        // Get dynamic debounce based on device capability
+        val debounceMs = DeviceCapabilityManager.getContentDebounceMs()
+
+        val now = System.currentTimeMillis()
+        if (now - lastContentUpdateTime < debounceMs) {
+            Log.v(TAG, "Content update debounced (${now - lastContentUpdateTime}ms < ${debounceMs}ms)")
+            return
+        }
+        lastContentUpdateTime = now
+
+        serviceScope.launch {
+            try {
+                val rootNode = rootInActiveWindow ?: return@launch
+                val packageName = event.packageName?.toString() ?: rootNode.packageName?.toString() ?: "unknown"
+
+                // Extract current visible elements
+                val elements = mutableListOf<com.augmentalis.voiceoscore.ElementInfo>()
+                val hierarchy = mutableListOf<HierarchyNode>()
+                val seenHashes = mutableSetOf<String>()
+                val duplicates = mutableListOf<DuplicateInfo>()
+
+                ElementExtractor.extractElements(rootNode, elements, hierarchy, seenHashes, duplicates, 0)
+                rootNode.recycle()
+
+                if (elements.isEmpty()) {
+                    Log.v(TAG, "No elements extracted during content update")
+                    return@launch
+                }
+
+                // Derive labels for elements
+                val elementLabels = ElementExtractor.deriveElementLabels(elements, hierarchy)
+
+                // Generate/merge commands using incremental generator
+                val commandResult = dynamicCommandGenerator.generateCommandsIncremental(
+                    elements = elements,
+                    hierarchy = hierarchy,
+                    elementLabels = elementLabels,
+                    packageName = packageName,
+                    existingCommands = commandRegistry.all(),
+                    updateSpeechEngine = { phrases ->
+                        serviceScope.launch {
+                            try {
+                                voiceOSCore?.updateCommands(phrases)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to update speech engine during incremental update", e)
+                            }
+                        }
+                    }
+                )
+
+                Log.d(TAG, "Incremental update: ${commandResult.totalCommands} commands (${elements.size} elements)")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in content update", e)
             }
-            "numbers auto", "numbers automatic", "auto numbers" -> {
-                setNumbersOverlayMode(NumbersOverlayMode.AUTO)
-                Log.d(TAG, "Voice command: Numbers overlay AUTO")
-                true
-            }
-            else -> false // Not a VoiceOS control command
         }
     }
 
     /**
-     * Handle screen change by clearing caches and optionally regenerating commands.
-     * Implements continuous monitoring with screen hash comparison.
+     * Last content update timestamp for debouncing scroll events.
+     */
+    private var lastContentUpdateTime = 0L
+
+    /**
+     * Last scroll event timestamp for debouncing direct scroll events.
+     */
+    private var lastScrollEventTime = 0L
+
+    /**
+     * Last windows change timestamp for debouncing dialog/overlay events.
+     */
+    private var lastWindowsChangeTime = 0L
+
+    /**
+     * Handle direct scroll events from TYPE_VIEW_SCROLLED.
+     * Uses shorter debounce from DeviceCapabilityManager for responsive feel.
+     *
+     * This is more reliable than inferring scroll from content changes because:
+     * - Fast fling scrolls may only fire TYPE_VIEW_SCROLLED
+     * - Content changes might not fire for every scroll position
+     */
+    private fun handleScrollEvent(event: AccessibilityEvent) {
+        val debounceMs = DeviceCapabilityManager.getScrollDebounceMs()
+        val now = System.currentTimeMillis()
+
+        if (now - lastScrollEventTime < debounceMs) {
+            Log.v(TAG, "Scroll event debounced (${now - lastScrollEventTime}ms < ${debounceMs}ms)")
+            return
+        }
+        lastScrollEventTime = now
+
+        // Reuse the content update logic which does incremental scraping
+        handleContentUpdate(event)
+    }
+
+    /**
+     * Handle window changes (dialogs, overlays, IME keyboard, multi-window).
+     * Triggers a re-scrape since the visible window set changed.
+     *
+     * This handles scenarios like:
+     * - Confirmation dialogs appearing ("Delete this item?")
+     * - IME (keyboard) showing/hiding
+     * - Floating action buttons or overlays
+     * - Split-screen/multi-window mode transitions
+     *
+     * IMPORTANT: We skip processing if the screen hash matches currentScreenHash
+     * to avoid continuously updating the speech engine, which blocks voice recognition.
+     */
+    private fun handleWindowsChange(event: AccessibilityEvent) {
+        val now = System.currentTimeMillis()
+        if (now - lastWindowsChangeTime < WINDOWS_CHANGE_DEBOUNCE_MS) {
+            Log.v(TAG, "Windows change debounced (${now - lastWindowsChangeTime}ms < ${WINDOWS_CHANGE_DEBOUNCE_MS}ms)")
+            return
+        }
+        lastWindowsChangeTime = now
+
+        // Get the package name from the event or active window
+        val packageName = event.packageName?.toString()
+            ?: rootInActiveWindow?.packageName?.toString()
+            ?: return
+
+        // For window changes, we need a fresh scrape since the window set changed
+        serviceScope.launch {
+            try {
+                val rootNode = rootInActiveWindow ?: return@launch
+
+                // Generate new screen hash since windows changed
+                val screenHash = screenCacheManager.generateScreenHash(rootNode)
+                rootNode.recycle()
+
+                // CRITICAL FIX: Skip if this is the same screen we already have loaded
+                // This prevents continuous speech engine updates that block voice recognition
+                if (screenHash == currentScreenHash) {
+                    Log.v(TAG, "Windows change: same screen hash ${screenHash.take(8)}, skipping")
+                    return@launch
+                }
+
+                Log.d(TAG, "Processing windows change for $packageName (hash: ${screenHash.take(8)})")
+
+                // Check if this is a new screen configuration
+                val isKnown = screenCacheManager.hasScreen(screenHash)
+                if (!isKnown) {
+                    // New window configuration (dialog appeared, etc.) - do full exploration
+                    currentScreenHash = screenHash
+                    val appVersion = getAppInfo(packageName).versionName
+                    performExplorationWithCache(screenHash, packageName, appVersion)
+                    Log.d(TAG, "Windows change: new screen hash, performed full exploration")
+                } else {
+                    // Known screen (maybe dialog closed) - load cached commands
+                    val cachedCommands = screenCacheManager.getCommandsForScreen(screenHash)
+                    if (cachedCommands.isNotEmpty()) {
+                        commandRegistry.updateSync(cachedCommands)
+
+                        // Update speech engine ONLY if hash changed (we already checked above)
+                        val staticPhrases = StaticCommandRegistry.allPhrases()
+                        val dynamicPhrases = cachedCommands.map { it.phrase }
+                        val allPhrases = (staticPhrases + dynamicPhrases).distinct()
+                        try {
+                            voiceOSCore?.updateCommands(allPhrases)
+                            Log.d(TAG, "Windows change: loaded ${cachedCommands.size} cached commands, updated speech engine with ${allPhrases.size} phrases")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to update speech engine in windows change", e)
+                        }
+
+                        // Update currentScreenHash AFTER successful speech engine update
+                        currentScreenHash = screenHash
+                    } else {
+                        // Known hash but no cached commands - do incremental update
+                        currentScreenHash = screenHash
+                        handleContentUpdate(event)
+                        Log.d(TAG, "Windows change: known screen, incremental update")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error handling windows change", e)
+            }
+        }
+    }
+
+    /**
+     * Handle VoiceOS control commands.
+     */
+    private fun handleVoiceOSControlCommand(command: String): Boolean {
+        return when (command) {
+            "numbers on", "show numbers", "numbers always" -> {
+                OverlayStateManager.setNumbersOverlayMode(OverlayStateManager.NumbersOverlayMode.ON)
+                Log.d(TAG, "Voice command: Numbers overlay ON")
+                true
+            }
+            "numbers off", "hide numbers", "no numbers" -> {
+                OverlayStateManager.setNumbersOverlayMode(OverlayStateManager.NumbersOverlayMode.OFF)
+                Log.d(TAG, "Voice command: Numbers overlay OFF")
+                true
+            }
+            "numbers auto", "numbers automatic", "auto numbers" -> {
+                OverlayStateManager.setNumbersOverlayMode(OverlayStateManager.NumbersOverlayMode.AUTO)
+                Log.d(TAG, "Voice command: Numbers overlay AUTO")
+                true
+            }
+            else -> false
+        }
+    }
+
+    /**
+     * Handle screen change with debouncing and caching.
+     *
+     * IMPORTANT: We skip speech engine update if screen hash matches currentScreenHash
+     * to avoid continuously updating the grammar, which blocks voice recognition.
+     * Speech engine is only updated when:
+     * 1. App/package changes (always need new commands)
+     * 2. Screen hash changes (different screen in same app)
+     * 3. App version changes (need to rescan)
      */
     private fun handleScreenChange(packageName: String?) {
         // Debounce rapid screen changes
@@ -656,74 +736,96 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         }
         lastScreenChangeTime.set(now)
 
-        // Update current package tracking
         currentPackageName = packageName
 
-        // Check if this is a target app that needs the numbers overlay prompt
-        if (packageName != null && TARGET_APPS.contains(packageName)) {
+        // Check for target app dialog
+        if (packageName != null && OverlayStateManager.TARGET_APPS.contains(packageName)) {
             checkAndShowAppDetectionDialog(packageName)
         }
 
-        // Check if continuous monitoring is enabled
         if (!continuousScanningEnabled.get()) {
-            // Manual mode - just clear registry and wait for user action
             commandRegistry.clear()
+            OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges
+            currentScreenHash = null  // Clear hash when monitoring disabled
             Log.d(TAG, "Screen changed to $packageName - manual mode, awaiting user scan")
             return
         }
 
-        // Continuous monitoring mode - auto-scan with hash comparison
+        // Continuous monitoring mode
         if (packageName != null && packageName != "unknown") {
             serviceScope.launch {
                 try {
-                    // Get root node for hash generation
                     val rootNode = rootInActiveWindow
                     if (rootNode == null) {
                         Log.w(TAG, "No active window for screen hash")
                         commandRegistry.clear()
+                        OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges
+                        currentScreenHash = null
                         return@launch
                     }
 
-                    // Generate screen hash from current elements
-                    val screenHash = generateScreenHash(rootNode)
+                    val screenHash = screenCacheManager.generateScreenHash(rootNode)
                     rootNode.recycle()
 
-                    // Check if this screen is already known
-                    val isKnown = screenHashRepository.hasScreen(screenHash)
-                    val appVersion = getAppInfo(packageName).versionName
-                    val storedVersion = screenHashRepository.getAppVersion(screenHash)
-
-                    if (isKnown && appVersion == storedVersion) {
-                        // Load cached commands instead of rescanning
-                        val cachedCommands = screenHashRepository.getCommandsForScreen(screenHash)
-                        if (cachedCommands.isNotEmpty()) {
-                            commandRegistry.updateSync(cachedCommands)
-                            currentScreenHash = screenHash
-                            Log.d(TAG, "Screen known - loaded ${cachedCommands.size} cached commands for $packageName")
-
-                            // Update screen info for UI display
-                            val screenInfo = screenHashRepository.getScreenInfo(screenHash)
-                            _currentScreenInfo.value = screenInfo
-                            return@launch
-                        }
-                        // Fall through to rescan if cache is empty
+                    // CRITICAL FIX: Skip if this is the same screen we already have loaded
+                    // This prevents continuous speech engine updates that block voice recognition
+                    if (screenHash == currentScreenHash) {
+                        Log.v(TAG, "Screen change: same screen hash ${screenHash.take(8)}, skipping")
+                        return@launch
                     }
 
-                    // New or updated screen - perform full scan
+                    val isKnown = screenCacheManager.hasScreen(screenHash)
+                    val appVersion = getAppInfo(packageName).versionName
+                    val storedVersion = screenCacheManager.getAppVersion(screenHash)
+
+                    if (isKnown && appVersion == storedVersion) {
+                        val cachedCommands = screenCacheManager.getCommandsForScreen(screenHash)
+                        if (cachedCommands.isNotEmpty()) {
+                            commandRegistry.updateSync(cachedCommands)
+                            // Clear DynamicLists overlay - cached commands don't include list items
+                            // DynamicLists are regenerated on each scan, not persisted
+                            OverlayStateManager.clearOverlayItems()
+                            Log.d(TAG, "Screen known - loaded ${cachedCommands.size} cached commands for $packageName")
+
+                            // Update speech engine with cached commands
+                            // Only called when hash changed (we already checked above)
+                            val staticPhrases = StaticCommandRegistry.allPhrases()
+                            val dynamicPhrases = cachedCommands.map { it.phrase }
+                            val allPhrases = (staticPhrases + dynamicPhrases).distinct()
+                            try {
+                                voiceOSCore?.updateCommands(allPhrases)
+                                Log.d(TAG, "Updated speech engine with ${allPhrases.size} cached command phrases")
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to update speech engine with cached commands", e)
+                            }
+
+                            // Update currentScreenHash AFTER successful speech engine update
+                            currentScreenHash = screenHash
+
+                            val screenInfo = screenCacheManager.getScreenInfo(screenHash)
+                            screenCacheManager.updateCurrentScreenInfo(screenInfo)
+                            return@launch
+                        }
+                    }
+
                     Log.d(TAG, "Screen changed to $packageName - ${if (isKnown) "version changed, rescanning" else "new screen, scanning"}")
                     commandRegistry.clear()
+                    OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges before new scan
                     currentScreenHash = screenHash
 
-                    // Perform exploration and cache results
                     performExplorationWithCache(screenHash, packageName, appVersion)
 
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in continuous monitoring", e)
                     commandRegistry.clear()
+                    OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges on error
+                    currentScreenHash = null
                 }
             }
         } else {
             commandRegistry.clear()
+            OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges
+            currentScreenHash = null
         }
     }
 
@@ -732,53 +834,42 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     private val PREFS_NAME = "voiceos_app_prefs"
     private val PREF_KEY_PREFIX = "app_numbers_mode_"
 
-    /**
-     * Check if we should show the app detection dialog for this package.
-     * Only shows if user hasn't made a choice yet.
-     */
     private fun checkAndShowAppDetectionDialog(packageName: String) {
         val pref = getAppNumbersPreference(packageName)
-        if (pref == AppNumbersPreference.ASK) {
-            // Get app name for display
+        if (pref == OverlayStateManager.AppNumbersPreference.ASK) {
             val appName = try {
                 val appInfo = packageManager.getApplicationInfo(packageName, 0)
                 packageManager.getApplicationLabel(appInfo).toString()
             } catch (e: Exception) {
                 packageName.substringAfterLast(".")
             }
-
-            // Show the dialog
-            showAppDetectionDialogFor(packageName, appName)
+            OverlayStateManager.showAppDetectionDialogFor(packageName, appName)
         } else {
-            // Apply saved preference
             when (pref) {
-                AppNumbersPreference.ALWAYS -> setNumbersOverlayMode(NumbersOverlayMode.ON)
-                AppNumbersPreference.AUTO -> setNumbersOverlayMode(NumbersOverlayMode.AUTO)
-                AppNumbersPreference.NEVER -> setNumbersOverlayMode(NumbersOverlayMode.OFF)
+                OverlayStateManager.AppNumbersPreference.ALWAYS ->
+                    OverlayStateManager.setNumbersOverlayMode(OverlayStateManager.NumbersOverlayMode.ON)
+                OverlayStateManager.AppNumbersPreference.AUTO ->
+                    OverlayStateManager.setNumbersOverlayMode(OverlayStateManager.NumbersOverlayMode.AUTO)
+                OverlayStateManager.AppNumbersPreference.NEVER ->
+                    OverlayStateManager.setNumbersOverlayMode(OverlayStateManager.NumbersOverlayMode.OFF)
                 else -> {}
             }
         }
     }
 
-    /**
-     * Get the user's preference for numbers overlay in a specific app.
-     */
-    private fun getAppNumbersPreference(packageName: String): AppNumbersPreference {
+    private fun getAppNumbersPreference(packageName: String): OverlayStateManager.AppNumbersPreference {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val savedValue = prefs.getString("$PREF_KEY_PREFIX$packageName", null)
         return savedValue?.let {
             try {
-                AppNumbersPreference.valueOf(it)
+                OverlayStateManager.AppNumbersPreference.valueOf(it)
             } catch (e: Exception) {
-                AppNumbersPreference.ASK
+                OverlayStateManager.AppNumbersPreference.ASK
             }
-        } ?: AppNumbersPreference.ASK
+        } ?: OverlayStateManager.AppNumbersPreference.ASK
     }
 
-    /**
-     * Save the user's preference for numbers overlay in a specific app.
-     */
-    internal fun saveAppNumbersPreference(packageName: String, preference: AppNumbersPreference) {
+    internal fun saveAppNumbersPreference(packageName: String, preference: OverlayStateManager.AppNumbersPreference) {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putString("$PREF_KEY_PREFIX$packageName", preference.name)
@@ -787,97 +878,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Generate a hash of the current screen for comparison.
-     *
-     * IMPORTANT: Includes screen dimensions in the hash so that different
-     * orientations/window sizes get separate cache entries. This means:
-     * - Portrait 1080x1920 = hash1
-     * - Landscape 1920x1080 = hash2
-     * - Freeform 800x600 = hash3
-     *
-     * When user rotates back to portrait, we load from hash1 cache (instant).
-     */
-    private fun generateScreenHash(rootNode: AccessibilityNodeInfo): String {
-        val elements = mutableListOf<String>()
-        collectElementSignatures(rootNode, elements, maxDepth = 5)
-
-        // Include screen dimensions in hash for orientation/freeform support
-        val displayMetrics = resources.displayMetrics
-        val screenWidth = displayMetrics.widthPixels
-        val screenHeight = displayMetrics.heightPixels
-        val dimensionKey = "${screenWidth}x${screenHeight}"
-
-        val signature = "$dimensionKey|${elements.sorted().joinToString("|")}"
-        return HashUtils.generateHash(signature, 16)
-    }
-
-    /**
-     * Collect element signatures for screen hashing.
-     *
-     * STRUCTURAL HASH: Uses only structural properties to create stable hash.
-     * Does NOT include text content to avoid false rescans from:
-     * - Changing counters ("3 unread" → "4 unread")
-     * - Timestamps ("10:45 AM" → "10:46 AM")
-     * - Dynamic data (user names, messages, etc.)
-     * - Loading states
-     *
-     * What IS included (stable structural properties):
-     * - className: The widget type (TextView, Button, etc.)
-     * - resourceId: Developer-assigned ID (stable across sessions)
-     * - depth: Position in hierarchy
-     * - childCount: Number of children (structural shape)
-     * - isClickable/isScrollable: Interaction flags
-     *
-     * This ensures same screens always produce same hash, regardless of content.
-     */
-    private fun collectElementSignatures(
-        node: AccessibilityNodeInfo,
-        signatures: MutableList<String>,
-        depth: Int = 0,
-        maxDepth: Int = 5
-    ) {
-        if (depth > maxDepth) return
-
-        // Build signature from STRUCTURAL properties only (no text content!)
-        val className = node.className?.toString()?.substringAfterLast(".") ?: ""
-        val resourceId = node.viewIdResourceName?.substringAfterLast("/") ?: ""
-        val isClickable = if (node.isClickable) "C" else ""
-        val isScrollable = if (node.isScrollable) "S" else ""
-
-        // For scrollable containers (RecyclerView, ListView, ScrollView), don't include childCount
-        // as it changes when user scrolls (items are recycled/added)
-        val isScrollableContainer = className in listOf(
-            "RecyclerView", "ListView", "GridView", "ScrollView",
-            "HorizontalScrollView", "NestedScrollView", "ViewPager", "ViewPager2"
-        ) || node.isScrollable
-
-        val childCount = if (isScrollableContainer) {
-            "v"  // "v" for variable - indicates scrollable container
-        } else {
-            "c${node.childCount}"
-        }
-
-        // Only include elements with identifying structure
-        if (className.isNotEmpty() || resourceId.isNotEmpty()) {
-            // Format: "ClassName:resourceId:depth:childCount:flags"
-            // Example: "TextView:message_count:d2:c0:C" (TextView at depth 2, no children, clickable)
-            // Example: "RecyclerView:list:d1:v:S" (RecyclerView at depth 1, variable children, scrollable)
-            signatures.add("$className:$resourceId:d$depth:$childCount:$isClickable$isScrollable")
-        }
-
-        // Recurse into children (but limit depth in scrollable containers to avoid
-        // including recycled item content which changes on scroll)
-        val childDepthLimit = if (isScrollableContainer) depth + 2 else maxDepth
-        for (i in 0 until node.childCount) {
-            node.getChild(i)?.let { child ->
-                collectElementSignatures(child, signatures, depth + 1, childDepthLimit)
-                child.recycle()
-            }
-        }
-    }
-
-    /**
-     * Perform exploration and cache results in the screen hash repository.
+     * Perform exploration and cache results.
      */
     private fun performExplorationWithCache(screenHash: String, packageName: String, appVersion: String) {
         serviceScope.launch {
@@ -888,21 +889,19 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 _explorationResults.value = result
                 rootNode.recycle()
 
-                // Get the generated commands
                 val commands = commandRegistry.all()
 
-                // Cache the screen and commands
-                screenHashRepository.saveScreen(
+                // Cache the screen
+                screenCacheManager.saveScreen(
                     hash = screenHash,
                     packageName = packageName,
                     activityName = null,
                     appVersion = appVersion,
                     elementCount = result.totalElements
                 )
-                screenHashRepository.saveCommandsForScreen(screenHash, commands)
+                screenCacheManager.saveCommandsForScreen(screenHash, commands)
 
-                // Update screen info for UI display
-                val screenInfo = ScreenInfo(
+                val screenInfo = screenCacheManager.createScreenInfo(
                     hash = screenHash,
                     packageName = packageName,
                     activityName = null,
@@ -910,10 +909,9 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     elementCount = result.totalElements,
                     actionableCount = result.clickableElements + result.scrollableElements,
                     commandCount = commands.size,
-                    scannedAt = System.currentTimeMillis(),
-                    isCached = false  // Just scanned, not from cache
+                    isCached = false
                 )
-                _currentScreenInfo.value = screenInfo
+                screenCacheManager.updateCurrentScreenInfo(screenInfo)
 
                 Log.d(TAG, "Screen cached: ${screenHash.take(16)}... with ${commands.size} commands")
 
@@ -930,20 +928,27 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         Log.d(TAG, "onDestroy() called")
 
-        // Unregister broadcast receiver
+        // Phase 4: Notify plugin system before cleanup
+        try {
+            VoiceOSCoreNGApplication.getInstance(applicationContext)
+                .onAccessibilityServiceDisconnected()
+            Log.d(TAG, "Plugin system notified of service disconnection")
+        } catch (e: Exception) {
+            Log.w(TAG, "Error notifying plugin system of disconnection", e)
+        }
+
         try {
             unregisterReceiver(modeReceiver)
         } catch (e: Exception) {
             Log.w(TAG, "Error unregistering receiver", e)
         }
 
-        // Dispose VoiceOSCoreNG facade
         serviceScope.launch {
             try {
                 voiceOSCore?.dispose()
-                Log.d(TAG, "VoiceOSCoreNG facade disposed")
+                Log.d(TAG, "VoiceOSCore facade disposed")
             } catch (e: Exception) {
-                Log.e(TAG, "Error disposing VoiceOSCoreNG facade", e)
+                Log.e(TAG, "Error disposing VoiceOSCore facade", e)
             }
         }
 
@@ -955,7 +960,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Perform exploration of the currently focused app
+     * Perform exploration of the currently focused app.
      */
     fun performExploration() {
         serviceScope.launch {
@@ -976,7 +981,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Perform exploration across all windows
+     * Perform exploration across all windows.
      */
     fun performFullExploration() {
         serviceScope.launch {
@@ -998,7 +1003,6 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     } ?: Log.d(TAG, "  Window $index has null root")
                 }
 
-                // Merge all results
                 val merged = mergeResults(allResults)
                 _explorationResults.value = merged
                 Log.d(TAG, "performFullExploration() complete: ${merged.totalElements} total elements from ${allResults.size} windows")
@@ -1010,44 +1014,58 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         }
     }
 
+    /**
+     * Explore a single accessibility node tree.
+     */
     private suspend fun exploreNode(rootNode: AccessibilityNodeInfo): ExplorationResult {
         val startTime = System.currentTimeMillis()
 
-        // Extract all elements from the tree
-        val elements = mutableListOf<ElementInfo>()
+        // Extract elements using ElementExtractor
+        val elements = mutableListOf<com.augmentalis.voiceoscore.ElementInfo>()
         val hierarchy = mutableListOf<HierarchyNode>()
         val seenHashes = mutableSetOf<String>()
         val duplicates = mutableListOf<DuplicateInfo>()
 
-        extractElements(rootNode, elements, hierarchy, seenHashes, duplicates, depth = 0)
+        ElementExtractor.extractElements(rootNode, elements, hierarchy, seenHashes, duplicates, depth = 0)
 
-        // Generate VUIDs for all elements
         val packageName = rootNode.packageName?.toString() ?: "unknown"
-        val vuids = elements.map { element ->
-            val typeCode = VUIDGenerator.getTypeCode(element.className)
-            val elementIdentifier = buildString {
-                append(element.className)
-                if (element.resourceId.isNotBlank()) append(":${element.resourceId}")
-                if (element.text.isNotBlank()) append(":${element.text.take(20)}")
-            }
-            val elemHash = HashUtils.generateHash(elementIdentifier, 8)
-            val vuid = VUIDGenerator.generate(packageName, typeCode, elemHash)
 
-            VUIDInfo(
-                element = element,
-                vuid = vuid,
-                hash = elemHash
+        // Generate AVIDs
+        val avids = elements.map { element ->
+            val fingerprint = ElementFingerprint.generate(
+                className = element.className,
+                packageName = packageName,
+                resourceId = element.resourceId,
+                text = element.text,
+                contentDesc = element.contentDescription
             )
+            val elemHash = ElementFingerprint.parse(fingerprint)?.second ?: ""
+            AVIDInfo(element = element, avid = fingerprint, hash = elemHash)
         }
 
-        // Derive labels for ALL elements (looking at children for empty parents)
-        val elementLabels = deriveElementLabels(elements, hierarchy)
+        // Derive labels using ElementExtractor
+        val elementLabels = ElementExtractor.deriveElementLabels(elements, hierarchy)
 
-        // Generate commands (pass hierarchy to find child labels)
-        val commands = generateCommands(elements, hierarchy, elementLabels, packageName)
+        // Generate commands using DynamicCommandGenerator
+        val commandResult = dynamicCommandGenerator.generateCommands(
+            elements = elements,
+            hierarchy = hierarchy,
+            elementLabels = elementLabels,
+            packageName = packageName,
+            updateSpeechEngine = { phrases ->
+                serviceScope.launch {
+                    try {
+                        voiceOSCore?.updateCommands(phrases)
+                        Log.d(TAG, "Updated speech engine with ${phrases.size} command phrases")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to update speech engine commands", e)
+                    }
+                }
+            }
+        )
 
-        // Generate AVU output with derived labels
-        val avuOutput = generateAVU(packageName, elements, elementLabels, commands)
+        // Generate AVU output using AVUFormatter
+        val avuOutput = AVUFormatter.generateAVU(packageName, elements, elementLabels, commandResult.uiCommands)
 
         val duration = System.currentTimeMillis() - startTime
 
@@ -1068,616 +1086,27 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             clickableElements = elements.count { it.isClickable },
             scrollableElements = elements.count { it.isScrollable },
             elements = elements,
-            vuids = vuids,
+            avids = avids,
             hierarchy = hierarchy,
             duplicates = duplicates,
             deduplicationStats = DeduplicationStats(
-                totalHashes = elements.size,  // Total elements processed
-                uniqueHashes = seenHashes.size,  // Unique hash count
-                duplicateCount = duplicates.size,  // Number of duplicate occurrences
+                totalHashes = elements.size,
+                uniqueHashes = seenHashes.size,
+                duplicateCount = duplicates.size,
                 duplicateElements = duplicates
             ),
-            commands = commands,
+            commands = commandResult.uiCommands,
             avuOutput = avuOutput,
-            elementLabels = elementLabels  // Map of index -> derived label
+            elementLabels = elementLabels
         )
-    }
-
-    /**
-     * Dynamic container types that indicate list/dynamic content.
-     */
-    private val dynamicContainerTypes = setOf(
-        "RecyclerView",
-        "ListView",
-        "GridView",
-        "ViewPager",
-        "ViewPager2",
-        "ScrollView",
-        "HorizontalScrollView",
-        "NestedScrollView",
-        "LazyColumn",       // Compose
-        "LazyRow",          // Compose
-        "LazyVerticalGrid", // Compose
-        "LazyHorizontalGrid" // Compose
-    )
-
-    /**
-     * Check if a class name is a dynamic container.
-     */
-    private fun isDynamicContainer(className: String): Boolean {
-        val simpleName = className.substringAfterLast(".")
-        return dynamicContainerTypes.any { simpleName.contains(it, ignoreCase = true) }
-    }
-
-    /**
-     * Find top-level list item rows from all list elements.
-     *
-     * The problem: When we extract elements from a RecyclerView, ALL nested children
-     * get listIndex >= 0. For example, an email row might contain:
-     * - ViewGroup (row container, listIndex=2)
-     *   - ImageView (avatar, listIndex=2)
-     *   - TextView (sender, listIndex=2)
-     *   - TextView (subject, listIndex=2)
-     *   - TextView (preview, listIndex=2)
-     *
-     * We only want ONE badge per row, positioned at the row container.
-     *
-     * Strategy:
-     * 1. Group elements by listIndex
-     * 2. For each group, find the element with the LARGEST bounds area (the container)
-     * 3. That element must be clickable or long-clickable
-     * 4. Return one element per listIndex (the top-level row)
-     *
-     * @param listItems Elements with listIndex >= 0 (inside dynamic containers)
-     * @param allElements All elements for context
-     * @return List of top-level row elements (one per listIndex)
-     */
-    /**
-     * Find actual list item rows (like email rows) from dynamic container elements.
-     *
-     * Strategy: Look for elements that have the email content pattern.
-     * Gmail emails have contentDescription like "Unread, , , SenderName, , Subject..."
-     * We use this pattern to identify actual email rows.
-     *
-     * For each valid email row, we use its own bounds for badge positioning.
-     */
-    private fun findTopLevelListItems(
-        listItems: List<ElementInfo>,
-        allElements: List<ElementInfo>
-    ): List<ElementInfo> {
-        Log.d(TAG, "findTopLevelListItems: ${listItems.size} items with listIndex >= 0")
-
-        // Filter for elements that look like actual list item rows
-        // Email rows in Gmail typically have:
-        // - contentDescription starting with "Unread," or containing sender/subject
-        // - Valid bounds with reasonable height (not tiny icons)
-        // - Are clickable or long-clickable
-        val emailRows = listItems.filter { element ->
-            // Must have valid bounds
-            val hasValidBounds = !(element.bounds.left == 0 && element.bounds.top == 0 &&
-                element.bounds.right == 0 && element.bounds.bottom == 0)
-            if (!hasValidBounds) return@filter false
-
-            // Must be actionable
-            val isActionable = element.isClickable || element.isLongClickable
-            if (!isActionable) return@filter false
-
-            // Check for email-like content (Gmail specific pattern)
-            val content = element.contentDescription.ifBlank { element.text }
-            val looksLikeEmailRow = content.startsWith("Unread,") ||
-                content.startsWith("Starred,") ||
-                content.startsWith("Read,") ||
-                (content.contains(",") && content.length > 30) // Long comma-separated content
-
-            // Also check bounds height - email rows are typically 80-200px tall
-            val height = element.bounds.bottom - element.bounds.top
-            val reasonableHeight = height in 60..300
-
-            val isEmailRow = looksLikeEmailRow && reasonableHeight
-
-            if (isEmailRow) {
-                val label = CommandGenerator.extractShortLabel(element) ?: "?"
-                Log.d(TAG, "  EMAIL ROW: '$label' bounds=(${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}) h=$height")
-            }
-
-            isEmailRow
-        }
-
-        Log.d(TAG, "findTopLevelListItems: found ${emailRows.size} email rows")
-
-        // Deduplicate by listIndex (keep first/best per row)
-        val deduped = emailRows
-            .groupBy { it.listIndex }
-            .mapNotNull { (_, elements) -> elements.firstOrNull() }
-            .sortedBy { it.bounds.top }
-
-        Log.d(TAG, "findTopLevelListItems: ${deduped.size} unique rows after dedup")
-
-        return deduped
-    }
-
-    private fun extractElements(
-        node: AccessibilityNodeInfo,
-        elements: MutableList<ElementInfo>,
-        hierarchy: MutableList<HierarchyNode>,
-        seenHashes: MutableSet<String>,
-        duplicates: MutableList<DuplicateInfo>,
-        depth: Int,
-        parentIndex: Int? = null,
-        inDynamicContainer: Boolean = false,
-        containerType: String = "",
-        listIndex: Int = -1
-    ) {
-        val bounds = Rect()
-        node.getBoundsInScreen(bounds)
-
-        val className = node.className?.toString() ?: ""
-
-        // Check if THIS node is a dynamic container
-        val isContainer = isDynamicContainer(className)
-        val currentContainerType = if (isContainer) className.substringAfterLast(".") else containerType
-        val isInDynamic = inDynamicContainer || isContainer
-
-        val element = ElementInfo(
-            className = className,
-            resourceId = node.viewIdResourceName ?: "",
-            text = node.text?.toString() ?: "",
-            contentDescription = node.contentDescription?.toString() ?: "",
-            bounds = Bounds(bounds.left, bounds.top, bounds.right, bounds.bottom),
-            isClickable = node.isClickable,
-            isLongClickable = node.isLongClickable,
-            isScrollable = node.isScrollable,
-            isEnabled = node.isEnabled,
-            packageName = node.packageName?.toString() ?: "",
-            // Dynamic content tracking
-            isInDynamicContainer = isInDynamic && !isContainer, // Container itself is not dynamic, its children are
-            containerType = if (isInDynamic && !isContainer) currentContainerType else "",
-            listIndex = if (isInDynamic && !isContainer) listIndex else -1
-        )
-
-        // Generate hash for deduplication - use className|resourceId|text (NOT bounds, as bounds make every element unique)
-        val hashInput = "${element.className}|${element.resourceId}|${element.text}"
-        val hash = HashUtils.generateHash(hashInput, 16)
-
-        if (seenHashes.contains(hash)) {
-            Log.d(TAG, "DUPLICATE FOUND: hash=$hash class=${element.className.substringAfterLast(".")} text='${element.text.take(20)}'")
-            duplicates.add(DuplicateInfo(
-                hash = hash,
-                element = element,
-                firstSeenIndex = elements.indexOfFirst { e ->
-                    val h = HashUtils.generateHash("${e.className}|${e.resourceId}|${e.text}", 16)
-                    h == hash
-                }
-            ))
-        } else {
-            seenHashes.add(hash)
-        }
-
-        val currentIndex = elements.size
-        elements.add(element)
-
-        // Track hierarchy
-        hierarchy.add(HierarchyNode(
-            index = currentIndex,
-            depth = depth,
-            parentIndex = parentIndex,
-            childCount = node.childCount,
-            className = element.className.substringAfterLast(".")
-        ))
-
-        // Recurse into children
-        // If this is a dynamic container, track child indices for list items
-        for (i in 0 until node.childCount) {
-            node.getChild(i)?.let { child ->
-                // Children of a dynamic container get the list index from their position
-                val childListIndex = if (isContainer) i else listIndex
-                extractElements(
-                    child, elements, hierarchy, seenHashes, duplicates,
-                    depth + 1, currentIndex,
-                    isInDynamic, currentContainerType, childListIndex
-                )
-                child.recycle()
-            }
-        }
-    }
-
-    /**
-     * Derive labels for ALL elements by looking at child TextViews when parent has no text.
-     * Returns a map of elementIndex -> derivedLabel
-     */
-    private fun deriveElementLabels(
-        elements: List<ElementInfo>,
-        hierarchy: List<HierarchyNode>
-    ): Map<Int, String> {
-        val labels = mutableMapOf<Int, String>()
-
-        elements.forEachIndexed { index, element ->
-            // First try the element's own content
-            var label: String? = when {
-                element.text.isNotBlank() -> element.text.take(30)
-                element.contentDescription.isNotBlank() -> element.contentDescription.take(30)
-                element.resourceId.isNotBlank() -> element.resourceId.substringAfterLast("/").replace("_", " ")
-                else -> null
-            }
-
-            // If no label, look at children (especially for clickable Views wrapping TextViews)
-            if (label == null) {
-                val node = hierarchy.getOrNull(index)
-                if (node != null && node.childCount > 0) {
-                    for (childIdx in (index + 1) until minOf(index + 10, elements.size)) {
-                        val childNode = hierarchy.getOrNull(childIdx) ?: continue
-                        if (childNode.depth <= node.depth) break
-                        if (childNode.depth == node.depth + 1) {
-                            val childElement = elements[childIdx]
-                            if (childElement.text.isNotBlank()) {
-                                label = childElement.text.take(30)
-                                break
-                            }
-                            if (childElement.contentDescription.isNotBlank()) {
-                                label = childElement.contentDescription.take(30)
-                                break
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Store the label (or fallback to class name)
-            labels[index] = label ?: element.className.substringAfterLast(".")
-        }
-
-        return labels
-    }
-
-    /**
-     * Generate AVU (Avanues Universal) format output with proper command names
-     */
-    private fun generateAVU(
-        packageName: String,
-        elements: List<ElementInfo>,
-        elementLabels: Map<Int, String>,
-        commands: List<GeneratedCommand>
-    ): String {
-        return buildString {
-            appendLine("# Avanues Universal Format v2.0")
-            appendLine("# Package: $packageName")
-            appendLine("# Elements: ${elements.size}")
-            appendLine("# Commands: ${commands.size}")
-            appendLine()
-            appendLine("schema: avu-2.0")
-            appendLine("version: 2.0.0")
-            appendLine("package: $packageName")
-            appendLine()
-
-            // Elements section with derived labels
-            appendLine("@elements:")
-            elements.forEachIndexed { index, element ->
-                val typeCode = VUIDGenerator.getTypeCode(element.className)
-                val label = elementLabels[index] ?: element.className.substringAfterLast(".")
-                val clickable = if (element.isClickable) "T" else "F"
-                val scrollable = if (element.isScrollable) "T" else "F"
-                appendLine("  - idx:$index type:${typeCode.abbrev} label:\"$label\" click:$clickable scroll:$scrollable")
-            }
-            appendLine()
-
-            // Commands section with voice phrases
-            appendLine("@commands:")
-            if (commands.isEmpty()) {
-                appendLine("  # No actionable elements found")
-            } else {
-                commands.forEach { cmd ->
-                    // The voice command is just the label (e.g., "Accessibility", "Reset")
-                    // The action (tap/scroll/toggle) is metadata
-                    appendLine("  - voice:\"${cmd.derivedLabel}\" action:${cmd.action} vuid:${cmd.targetVuid}")
-                    // Also include alternate phrases
-                    appendLine("    alternates: [\"${cmd.phrase}\", \"press ${cmd.derivedLabel}\", \"select ${cmd.derivedLabel}\"]")
-                }
-            }
-            appendLine()
-
-            // Actionable elements summary
-            appendLine("@actionable:")
-            val actionableElements = elements.mapIndexedNotNull { index, element ->
-                if (element.isClickable || element.isScrollable) {
-                    val label = elementLabels[index] ?: return@mapIndexedNotNull null
-                    val action = when {
-                        element.isClickable -> "tap"
-                        element.isScrollable -> "scroll"
-                        else -> "interact"
-                    }
-                    "  - \"$label\" -> $action"
-                } else null
-            }
-            actionableElements.forEach { appendLine(it) }
-        }
-    }
-
-    /**
-     * Generate voice commands for actionable elements using KMP CommandGenerator.
-     * Also updates the in-memory CommandRegistry for voice matching.
-     *
-     * Static/Dynamic Separation:
-     * - Static commands (menus, buttons) are persisted to database
-     * - Dynamic commands (list items, emails) are kept in memory only
-     */
-    private fun generateCommands(
-        elements: List<ElementInfo>,
-        hierarchy: List<HierarchyNode>,
-        elementLabels: Map<Int, String>,
-        packageName: String
-    ): List<GeneratedCommand> {
-        // Generate QuantizedCommands with persistence info using KMP CommandGenerator
-        val commandResults = elements.mapNotNull { element ->
-            CommandGenerator.fromElementWithPersistence(element, packageName)
-        }
-
-        // Separate static (persist) and dynamic (memory-only) commands
-        val staticCommands = commandResults.filter { it.shouldPersist }
-        val dynamicCommands = commandResults.filter { !it.shouldPersist }
-
-        // All commands go to in-memory registry for voice matching
-        val allCommands = commandResults.map { it.command }
-        commandRegistry.updateSync(allCommands)
-
-        // Also generate index commands for list items ("first", "second", etc.)
-        val listItems = elements.filter { it.listIndex >= 0 }
-        val indexCommands = CommandGenerator.generateListIndexCommands(listItems, packageName)
-        if (indexCommands.isNotEmpty()) {
-            commandRegistry.addAll(indexCommands)
-        }
-
-        // Generate label-based commands for list items (e.g., "Lifemiles" for email sender)
-        val labelCommands = CommandGenerator.generateListLabelCommands(listItems, packageName)
-        if (labelCommands.isNotEmpty()) {
-            commandRegistry.addAll(labelCommands)
-            Log.d(TAG, "Label commands for lists: ${labelCommands.take(5).map { it.phrase }}")
-        }
-
-        // Populate numbered overlay items for visual display
-        // These are the elements that can be selected by saying "first", "second", "1", "2", etc.
-        //
-        // IMPORTANT: We need to find the TOP-LEVEL list item rows, not all nested children.
-        // Strategy:
-        // 1. Group elements by listIndex to find all elements within each list item row
-        // 2. For each row, find the FIRST clickable parent container (the actual row)
-        // 3. Use that container's bounds for badge positioning
-        // 4. Use consistent VUID generation matching CommandGenerator
-        //
-        // This ensures:
-        // - One badge per email row, not per nested child
-        // - Badge positioned at the actual row bounds
-        // - VUID matches what's in the command registry
-        val rowElements = findTopLevelListItems(listItems, elements)
-            .sortedBy { it.bounds.top }  // Sort by visual position (top to bottom)
-
-        // Assign sequential numbers based on sorted order
-        val overlayItems = rowElements.mapIndexed { index, element ->
-            val label = CommandGenerator.extractShortLabel(element) ?: ""
-
-            // Use consistent VUID generation matching CommandGenerator.generateVuid()
-            val typeCode = VUIDGenerator.getTypeCode(element.className)
-            val elementHash = when {
-                element.resourceId.isNotBlank() -> element.resourceId
-                element.contentDescription.isNotBlank() -> element.contentDescription
-                element.text.isNotBlank() -> element.text
-                else -> "${element.className}:${element.bounds}"
-            }
-            val vuid = VUIDGenerator.generate(packageName, typeCode, elementHash)
-
-            NumberOverlayItem(
-                number = index + 1,  // Sequential 1-based numbering by screen position
-                label = label,
-                left = element.bounds.left,
-                top = element.bounds.top,
-                right = element.bounds.right,
-                bottom = element.bounds.bottom,
-                vuid = vuid
-            )
-        }
-
-        _numberedOverlayItems.value = overlayItems
-        updateNumbersOverlayVisibility()  // Update visibility based on mode (AUTO shows when items exist)
-        if (overlayItems.isNotEmpty()) {
-            Log.d(TAG, "Numbered overlay: ${overlayItems.size} items for voice selection")
-        }
-
-        // Log the separation
-        Log.d(TAG, "Commands: ${allCommands.size} total (${staticCommands.size} static, ${dynamicCommands.size} dynamic)")
-        if (dynamicCommands.isNotEmpty()) {
-            Log.d(TAG, "Dynamic commands (not persisted): ${dynamicCommands.take(3).map { it.command.phrase.take(30) }}")
-        }
-        if (indexCommands.isNotEmpty()) {
-            Log.d(TAG, "Index commands for lists: ${indexCommands.take(5).map { it.phrase }}")
-        }
-
-        // Update speech engine grammar (Vivoka SDK) so it recognizes ALL phrases
-        // Includes: element commands, index commands ("first", "second"), and label commands ("Lifemiles")
-        val commandPhrases = allCommands.map { it.phrase } +
-            indexCommands.map { it.phrase } +
-            labelCommands.map { it.phrase }
-        serviceScope.launch {
-            try {
-                voiceOSCore?.updateCommands(commandPhrases)
-                Log.d(TAG, "Updated speech engine with ${commandPhrases.size} command phrases " +
-                    "(${allCommands.size} elements, ${indexCommands.size} index, ${labelCommands.size} labels)")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to update speech engine commands", e)
-            }
-        }
-
-        // ONLY persist STATIC commands to SQLDelight database
-        // Dynamic commands are kept in memory only and discarded on navigation
-        val staticQuantizedCommands = staticCommands.map { it.command }
-        if (staticQuantizedCommands.isNotEmpty()) {
-            serviceScope.launch(Dispatchers.IO) {
-                try {
-                    val currentTime = System.currentTimeMillis()
-
-                    // Step 1: Ensure scraped_app exists (FK parent)
-                    val appInfo = getAppInfo(packageName)
-                    val scrapedApp = ScrapedAppDTO(
-                        appId = packageName,
-                        packageName = packageName,
-                        versionCode = appInfo.versionCode,
-                        versionName = appInfo.versionName,
-                        appHash = HashUtils.generateHash(packageName + appInfo.versionCode, 8),
-                        isFullyLearned = 0,
-                        learnCompletedAt = null,
-                        scrapingMode = "DYNAMIC",
-                        scrapeCount = 1,
-                        elementCount = elements.size.toLong(),
-                        commandCount = staticQuantizedCommands.size.toLong(),
-                        firstScrapedAt = currentTime,
-                        lastScrapedAt = currentTime
-                    )
-                    scrapedAppRepository.insert(scrapedApp)
-                    Log.d(TAG, "Step 1/3: Inserted scraped_app for $packageName")
-
-                    // Step 2: Insert scraped_elements (FK parent for commands)
-                    // CRITICAL: Use the SAME elementHash that's in the command's metadata
-                    // to ensure FK constraint is satisfied when inserting commands
-                    val insertedHashes = mutableSetOf<String>()
-                    var insertedCount = 0
-
-                    // Iterate over STATIC commands only and insert corresponding elements
-                    // using the EXACT hash from command metadata
-                    staticQuantizedCommands.forEach { cmd ->
-                        val elementHash = cmd.metadata["elementHash"] ?: return@forEach
-
-                        // Skip if already inserted (avoid duplicates)
-                        if (elementHash in insertedHashes) return@forEach
-
-                        // Find the corresponding element by matching metadata
-                        val element = elements.find { el ->
-                            // Match by className + resourceId + label
-                            val cmdClassName = cmd.metadata["className"] ?: ""
-                            val cmdResourceId = cmd.metadata["resourceId"] ?: ""
-                            el.className == cmdClassName && el.resourceId == cmdResourceId
-                        } ?: elements.firstOrNull { el ->
-                            // Fallback: match by label
-                            val cmdLabel = cmd.metadata["label"] ?: ""
-                            el.text == cmdLabel || el.contentDescription == cmdLabel
-                        }
-
-                        // Build scraped element DTO using command's elementHash
-                        val scrapedElement = ScrapedElementDTO(
-                            id = 0,  // Auto-generated
-                            elementHash = elementHash,  // Use EXACT hash from command
-                            appId = packageName,
-                            uuid = null,
-                            className = element?.className ?: cmd.metadata["className"] ?: "",
-                            viewIdResourceName = element?.resourceId?.ifBlank { null } ?: cmd.metadata["resourceId"]?.ifBlank { null },
-                            text = element?.text?.ifBlank { null },
-                            contentDescription = element?.contentDescription?.ifBlank { null },
-                            bounds = element?.let { "${it.bounds.left},${it.bounds.top},${it.bounds.right},${it.bounds.bottom}" } ?: "0,0,0,0",
-                            isClickable = if (element?.isClickable == true) 1L else 0L,
-                            isLongClickable = if (element?.isLongClickable == true) 1L else 0L,
-                            isEditable = 0L,
-                            isScrollable = if (element?.isScrollable == true) 1L else 0L,
-                            isCheckable = 0L,
-                            isFocusable = 0L,
-                            isEnabled = if (element?.isEnabled != false) 1L else 0L,
-                            depth = 0L,
-                            indexInParent = 0L,
-                            scrapedAt = currentTime,
-                            semanticRole = null,
-                            inputType = null,
-                            visualWeight = null,
-                            isRequired = null,
-                            formGroupId = null,
-                            placeholderText = null,
-                            validationPattern = null,
-                            backgroundColor = null,
-                            screen_hash = null
-                        )
-                        try {
-                            scrapedElementRepository.insert(scrapedElement)
-                            insertedHashes.add(elementHash)
-                            insertedCount++
-                        } catch (e: Exception) {
-                            // Element may already exist, ignore duplicate errors
-                            Log.v(TAG, "Element hash $elementHash may already exist: ${e.message}")
-                            insertedHashes.add(elementHash)  // Mark as "handled" even if exists
-                        }
-                    }
-                    Log.d(TAG, "Step 2/3: Inserted $insertedCount scraped_elements for ${insertedHashes.size} unique hashes (static only)")
-
-                    // Step 3: Now insert STATIC commands only (FK references are satisfied)
-                    commandPersistence.insertBatch(staticQuantizedCommands)
-                    Log.d(TAG, "Step 3/3: Persisted ${staticQuantizedCommands.size} STATIC commands to voiceos.db (skipped ${dynamicCommands.size} dynamic)")
-
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to persist commands to database", e)
-                }
-            }
-        }
-
-        // Also create legacy GeneratedCommand for UI display (backwards compatibility)
-        return elements
-            .mapIndexedNotNull { index, element ->
-                // Only process clickable or scrollable elements
-                if (!element.isClickable && !element.isScrollable) return@mapIndexedNotNull null
-
-                // Get the pre-derived label
-                val label = elementLabels[index]
-
-                // Skip if label is just the class name (no meaningful content)
-                if (label == null || label == element.className.substringAfterLast(".")) {
-                    return@mapIndexedNotNull null
-                }
-
-                val actionType = when {
-                    element.isClickable && element.className.contains("Button") -> "tap"
-                    element.isClickable && element.className.contains("EditText") -> "focus"
-                    element.isClickable && element.className.contains("ImageView") -> "tap"
-                    element.isClickable && element.className.contains("CheckBox") -> "toggle"
-                    element.isClickable && element.className.contains("Switch") -> "toggle"
-                    element.isClickable -> "tap"
-                    element.isScrollable -> "scroll"
-                    else -> "interact"
-                }
-
-                val typeCode = VUIDGenerator.getTypeCode(element.className)
-                val elemHash = HashUtils.generateHash(element.resourceId.ifEmpty { label }, 8)
-                val vuid = VUIDGenerator.generate(packageName, typeCode, elemHash)
-
-                GeneratedCommand(
-                    phrase = "$actionType $label",  // Full voice phrase: "tap Reset"
-                    alternates = listOf(
-                        "press $label",
-                        "select $label",
-                        label  // Just the label also works
-                    ),
-                    targetVuid = vuid,
-                    action = actionType,  // Action type for execution
-                    element = element,
-                    derivedLabel = label  // The clean label without action prefix
-                )
-            }
     }
 
     /**
      * Get app version info for the given package name.
      */
     private fun getAppInfo(packageName: String): AppVersionInfo {
-        return try {
-            val packageInfo = packageManager.getPackageInfo(packageName, 0)
-            AppVersionInfo(
-                versionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                    packageInfo.longVersionCode
-                } else {
-                    @Suppress("DEPRECATION")
-                    packageInfo.versionCode.toLong()
-                },
-                versionName = packageInfo.versionName ?: "unknown"
-            )
-        } catch (e: PackageManager.NameNotFoundException) {
-            Log.w(TAG, "Package not found: $packageName, using defaults")
-            AppVersionInfo(versionCode = 0, versionName = "unknown")
-        }
+        return DynamicCommandGenerator.getAppInfoFromPackageManager(packageManager, packageName)
     }
-
-    private data class AppVersionInfo(val versionCode: Long, val versionName: String)
 
     private fun mergeResults(results: List<ExplorationResult>): ExplorationResult {
         if (results.isEmpty()) {
@@ -1689,7 +1118,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 clickableElements = 0,
                 scrollableElements = 0,
                 elements = emptyList(),
-                vuids = emptyList(),
+                avids = emptyList(),
                 hierarchy = emptyList(),
                 duplicates = emptyList(),
                 deduplicationStats = DeduplicationStats(0, 0, 0, emptyList()),
@@ -1699,7 +1128,6 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             )
         }
 
-        // Merge elementLabels with re-indexed keys
         val mergedLabels = mutableMapOf<Int, String>()
         var offset = 0
         results.forEach { result ->
@@ -1717,7 +1145,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             clickableElements = results.sumOf { it.clickableElements },
             scrollableElements = results.sumOf { it.scrollableElements },
             elements = results.flatMap { it.elements },
-            vuids = results.flatMap { it.vuids },
+            avids = results.flatMap { it.avids },
             hierarchy = results.flatMap { it.hierarchy },
             duplicates = results.flatMap { it.duplicates },
             deduplicationStats = DeduplicationStats(
@@ -1733,56 +1161,4 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     }
 }
 
-// Data classes for exploration results
-data class ExplorationResult(
-    val packageName: String,
-    val timestamp: Long,
-    val duration: Long,
-    val totalElements: Int,
-    val clickableElements: Int,
-    val scrollableElements: Int,
-    val elements: List<ElementInfo>,
-    val vuids: List<VUIDInfo>,
-    val hierarchy: List<HierarchyNode>,
-    val duplicates: List<DuplicateInfo>,
-    val deduplicationStats: DeduplicationStats,
-    val commands: List<GeneratedCommand>,
-    val avuOutput: String,
-    val elementLabels: Map<Int, String> = emptyMap()  // index -> derived label (from self or child)
-)
-
-data class VUIDInfo(
-    val element: ElementInfo,
-    val vuid: String,
-    val hash: String
-)
-
-data class HierarchyNode(
-    val index: Int,
-    val depth: Int,
-    val parentIndex: Int?,
-    val childCount: Int,
-    val className: String
-)
-
-data class DuplicateInfo(
-    val hash: String,
-    val element: ElementInfo,
-    val firstSeenIndex: Int
-)
-
-data class DeduplicationStats(
-    val totalHashes: Int,
-    val uniqueHashes: Int,
-    val duplicateCount: Int,
-    val duplicateElements: List<DuplicateInfo>
-)
-
-data class GeneratedCommand(
-    val phrase: String,
-    val alternates: List<String>,
-    val targetVuid: String,
-    val action: String,
-    val element: ElementInfo,
-    val derivedLabel: String = ""  // Label derived from child elements if parent has none
-)
+// Data classes moved to ExplorationModels.kt for SOLID compliance

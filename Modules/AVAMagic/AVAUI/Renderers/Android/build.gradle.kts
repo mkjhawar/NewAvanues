@@ -20,8 +20,8 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 // MagicElements Core - base types and components
-                implementation(project(":Modules:AVAMagic:AVAUI:Core"))
-                implementation(project(":Modules:AVAMagic:AVAUI:Core"))
+                implementation(project(":Modules:AvaMagic:AvaUI:Core"))
+                implementation(project(":Modules:AvaMagic:AvaUI:Core"))
 
                 // Jetpack Compose - Use explicit versions instead of BOM
                 implementation("androidx.compose.ui:ui:1.6.8")

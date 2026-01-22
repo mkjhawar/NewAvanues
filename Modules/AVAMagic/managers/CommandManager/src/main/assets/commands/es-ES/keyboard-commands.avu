@@ -1,0 +1,35 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: keyboard-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: es-ES
+project: voiceos
+metadata:
+  category: keyboard
+  display_name: Keyboard Control
+  description: Voice commands for on-screen keyboard control
+  command_count: 9
+---
+CAT:keyboard:Keyboard Control:Voice commands for on-screen keyboard control
+CMD:HIDE_KEYBOARD:ocultar teclado
+CMD:DISMISS_KEYBOARD:dismiss teclado
+CMD:OPEN_KEYBOARD:abrir teclado
+CMD:CLOSE_KEYBOARD:cerrar teclado
+CMD:CHANGE_KEYBOARD:change teclado
+CMD:SWITCH_KEYBOARD:switch teclado
+CMD:KEYBOARD_MODE_CHANGE:teclado mode change
+CMD:KEYBOARD_CHANGE:teclado change
+CMD:KEYBOARD_MODE:teclado mode
+---
+SYN:HIDE_KEYBOARD:[teclado ocultar,cerrar teclado,dismiss teclado,teclado away,remove teclado,teclado abajo,teclado off,teclado invisible,minimize teclado,teclado gone,put teclado away,cerrar abajo teclado,get rid of teclado,teclado out of the way]
+SYN:DISMISS_KEYBOARD:[ocultar teclado,cerrar teclado,teclado dismiss,teclado away,remove teclado,send teclado away,teclado gone,teclado invisible,put away teclado,cerrar abajo teclado,get rid of teclado,teclado off,minimize teclado,teclado out of sight]
+SYN:OPEN_KEYBOARD:[mostrar teclado,teclado abrir,display teclado,teclado arriba,teclado visible,bring teclado,teclado on,activate teclado,teclado appear,call teclado,summon teclado,bring arriba teclado,get teclado,teclado por favor]
+SYN:CLOSE_KEYBOARD:[ocultar teclado,teclado cerrar,dismiss teclado,teclado abajo,teclado off,remove teclado,teclado away,teclado invisible,teclado gone,send teclado away,put teclado away,cerrar abajo teclado,get rid of teclado,minimize teclado]
+SYN:CHANGE_KEYBOARD:[switch teclado,teclado change,different teclado,other teclado,new teclado,swap teclado,alternate teclado,modify teclado,teclado mode,teclado type,change the teclado,switch to different teclado,use different teclado,another teclado]
+SYN:SWITCH_KEYBOARD:[change teclado,teclado switch,different teclado,other teclado,alternate teclado,swap teclado,new teclado,modify teclado,teclado mode,teclado type,switch to different teclado,change to another teclado,use different teclado,another teclado por favor]
+SYN:KEYBOARD_MODE_CHANGE:[change teclado mode,teclado mode switch,switch teclado mode,different teclado mode,new teclado mode,teclado setting change,input mode change,typing mode change,teclado style change,teclado configuration change,teclado mode adjustment,teclado setup change,input method change,typing style change]
+SYN:KEYBOARD_CHANGE:[change teclado,switch teclado,teclado switch,different teclado,new teclado,swap teclado,other teclado,alternate teclado,modify teclado,teclado mode,teclado type,teclado adjustment,teclado modification,teclado alteration]
+SYN:KEYBOARD_MODE:[change teclado mode,teclado mode change,switch teclado mode,teclado type,input mode,teclado setting,teclado configuration,teclado option,teclado style,teclado format,typing mode,input method,teclado preference,teclado layout]

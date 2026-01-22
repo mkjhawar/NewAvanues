@@ -1,0 +1,21 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: scroll-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: es-ES
+project: voiceos
+metadata:
+  category: scroll
+  display_name: Scrolling
+  description: Voice commands for scrolling content
+  command_count: 2
+---
+CAT:scroll:Scrolling:Voice commands for scrolling content
+CMD:SCROLL_UP:desplazar arriba
+CMD:SCROLL_DOWN:desplazar abajo
+---
+SYN:SCROLL_UP:[page arriba,move arriba,upward desplazar,desplazar upward,ir arriba,desplazar upwards,page upwards,move upwards,ir upwards,desplazar arriba the page,move arriba the page,desplazar it arriba,page arriba ahora,move it arriba]
+SYN:SCROLL_DOWN:[page abajo,move abajo,downward desplazar,desplazar downward,ir abajo,desplazar downwards,page downwards,move downwards,ir downwards,desplazar abajo the page,move abajo the page,desplazar it abajo,page abajo ahora,move it abajo]

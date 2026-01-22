@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash scripts/post-write-analyze.sh"
+            "command": "/Volumes/M-Drive/Coding/.claude/hooks/post-write.sh"
           }
         ]
       }

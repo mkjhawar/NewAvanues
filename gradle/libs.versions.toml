@@ -1,16 +1,17 @@
 [versions]
 # Kotlin
-kotlin = "1.9.25"
+kotlin = "1.9.24"  # 1.9.25 not supported by Compose 1.6.11
 kotlinx-coroutines = "1.8.1"  # Updated from 1.7.3 for VoiceOS compatibility
+kotlinx-atomicfu = "0.23.2"  # Atomic operations for KMP
 kotlinx-serialization = "1.6.0"
 kotlinx-datetime = "0.5.0"
 onnxruntime = "1.17.0"  # ONNX Runtime for NLU inference
 
 # Compose
-compose = "1.7.0"
+compose = "1.6.11"  # JetBrains Compose Multiplatform - requires Kotlin 1.9.24
 compose-ui = "1.5.4"
 compose-bom = "2024.06.00"  # Unified BOM version
-compose-compiler = "1.5.15"  # Compatible with Kotlin 1.9.25
+compose-compiler = "1.5.14"  # AndroidX Compose Compiler - compatible with Kotlin 1.9.24
 
 # Android
 android-gradle = "8.2.0"
@@ -42,7 +43,7 @@ sqlcipher = "4.5.4"
 koin = "3.5.3"
 koin-compose = "1.1.2"
 hilt = "2.51.1"  # Updated from 2.48 for VoiceOSCore compatibility
-ksp = "1.9.25-1.0.20"
+ksp = "1.9.24-1.0.20"
 
 # Navigation
 voyager = "1.0.0"
@@ -68,7 +69,7 @@ dokka = "1.9.10"
 ktor = "2.3.7"
 
 # gRPC/Wire
-wire = "5.1.0"
+wire = "5.4.0"
 grpc-kotlin = "1.4.1"
 grpc = "1.62.2"
 grpc-netty = "1.62.2"
@@ -82,6 +83,7 @@ kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+kotlinx-atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "kotlinx-atomicfu" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
@@ -90,6 +92,7 @@ onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android"
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
 sqldelight-coroutines-extensions = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
 sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
 sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 sqldelight-sqlite-dialect = { module = "app.cash.sqldelight:sqlite-3-38-dialect", version.ref = "sqldelight" }
 sqlcipher-android = { module = "net.zetetic:sqlcipher-android", version.ref = "sqlcipher" }

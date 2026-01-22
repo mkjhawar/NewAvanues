@@ -1,0 +1,25 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: connectivity-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: es-ES
+project: voiceos
+metadata:
+  category: connectivity
+  display_name: Network Connectivity
+  description: Voice commands for managing network connections
+  command_count: 4
+---
+CAT:connectivity:Network Connectivity:Voice commands for managing network connections
+CMD:TURN_ON_BLUETOOTH:turn on Bluetooth
+CMD:TURN_OFF_BLUETOOTH:turn off Bluetooth
+CMD:TURN_ON_WIFI:turn on WiFi
+CMD:TURN_OFF_WIFI:turn off WiFi
+---
+SYN:TURN_ON_BLUETOOTH:[Bluetooth on,habilitar Bluetooth,Bluetooth habilitar,iniciar Bluetooth,activate Bluetooth,Bluetooth iniciar,Bluetooth active,switch on Bluetooth,Bluetooth switch on,abrir Bluetooth,turn on Bluetooth por favor,habilitar Bluetooth por favor,Bluetooth on ahora,activate Bluetooth por favor]
+SYN:TURN_OFF_BLUETOOTH:[Bluetooth off,deshabilitar Bluetooth,Bluetooth deshabilitar,detener Bluetooth,deactivate Bluetooth,Bluetooth detener,Bluetooth inactive,switch off Bluetooth,Bluetooth switch off,cerrar Bluetooth,turn off Bluetooth por favor,deshabilitar Bluetooth por favor,Bluetooth off ahora,deactivate Bluetooth por favor]
+SYN:TURN_ON_WIFI:[WiFi on,habilitar WiFi,WiFi habilitar,iniciar WiFi,activate WiFi,WiFi iniciar,WiFi active,switch on WiFi,WiFi switch on,abrir WiFi,turn on WiFi por favor,habilitar WiFi por favor,WiFi on ahora,activate WiFi por favor]
+SYN:TURN_OFF_WIFI:[WiFi off,deshabilitar WiFi,WiFi deshabilitar,detener WiFi,deactivate WiFi,WiFi detener,WiFi inactive,switch off WiFi,WiFi switch off,cerrar WiFi,turn off WiFi por favor,deshabilitar WiFi por favor,WiFi off ahora,deactivate WiFi por favor]

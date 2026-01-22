@@ -218,6 +218,38 @@ chunking_strategies:
   - HYBRID
 ```
 
+### DATABASE
+```yaml
+id: database
+path: /Modules/Database
+type: kmp-library
+status: production
+version: 1.0.0
+loc: 2000+
+purpose: Unified cross-platform database persistence
+key_classes:
+  - ScrapedWebCommandDTO: Web voice command data transfer
+  - WebAppWhitelistDTO: Whitelisted web app data transfer
+  - IScrapedWebCommandRepository: Web command CRUD interface
+  - IWebAppWhitelistRepository: Whitelist management interface
+dependencies:
+  - Modules/AVID
+  - SQLDelight
+capabilities:
+  - avid_persistence: element, hierarchy, alias, analytics tables
+  - web_command_storage: scraped commands for whitelisted domains
+  - browser_data: tabs, history, favorites, downloads, sessions
+  - cross_platform: Android, iOS, Desktop
+tables:
+  avid: [avid_element, avid_hierarchy, avid_alias, avid_analytics]
+  web: [scraped_web_command, web_app_whitelist]
+  browser: [tab, tab_group, favorite, history_entry, download, browser_settings, site_permission, session]
+platform_support:
+  android: production (SQLDelight Android driver)
+  ios: production (SQLDelight Native driver)
+  desktop: production (SQLDelight SQLite driver)
+```
+
 ### WEBAVANUE
 ```yaml
 id: webavanue
@@ -234,13 +266,15 @@ key_classes:
   - TabManager: Tab management with LRU
 dependencies:
   - VoiceOSCoreNG
+  - Modules/Database
   - Common/*
 capabilities:
   - voice_navigation
-  - dom_scraping_with_vuids
+  - dom_scraping_with_avids
   - tab_management
   - reader_mode
   - encrypted_storage: AES-256-CBC
+  - web_command_persistence: via Database module
 platform_support:
   android: production (WebView)
   ios: phase_2 (WKWebView)
@@ -269,25 +303,8 @@ libraries:
     types: [Success, Failure]
     methods: [map, flatMap, mapError]
 
-  - id: voiceos-hash
-    path: /Common/VoiceOS/hash
-    purpose: SHA-256 hashing
-
-  - id: voiceos-constants
-    path: /Common/VoiceOS/constants
-    purpose: Configuration constants
-
-  - id: voiceos-validation
-    path: /Common/VoiceOS/validation
-    purpose: SQL escaping, input validation
-
-  - id: voiceos-exceptions
-    path: /Common/VoiceOS/exceptions
-    purpose: Exception hierarchy
-
-  - id: voiceos-database
-    path: /Common/VoiceOS/database
-    purpose: SQLDelight persistence
+  # DELETED 2026-01-14: voiceos-hash, voiceos-constants, voiceos-validation,
+  # voiceos-exceptions, voiceos-database - duplicate of Modules/VoiceOS/core/*
 
   - id: core-assetmanager
     path: /Common/Core/AssetManager
@@ -321,11 +338,13 @@ libraries:
 ## DEPENDENCY_GRAPH
 
 ```
-VoiceOS_App -> VoiceOSCoreNG -> [Common/VUID, Common/VoiceOS/*, Common/Database]
-AVA -> [LLM -> Common/Core, NLU -> Common/VUID, RAG -> Common/Database, Common/*]
-WebAvanue -> [VoiceOSCoreNG, Common/*]
+VoiceOS_App -> VoiceOSCoreNG -> [Modules/AVID, Modules/VoiceOS/core/*, Common/Database]
+AVA -> [LLM -> Common/Core, NLU -> Modules/AVID, RAG -> Common/Database, Common/*]
+WebAvanue -> [VoiceOSCoreNG, Modules/AVID, Common/*]
 All_Modules -> Common_Libraries
 ```
+
+**Updated 2026-01-14:** VUID migrated to AVID, Common/VoiceOS deleted (duplicate)
 
 ---
 
@@ -447,6 +466,45 @@ html_diagrams:
   - /Docs/MasterDocs/VoiceOSCoreNG/html/flowcharts.html
   - /Docs/MasterDocs/VoiceOSCoreNG/html/sequence-diagrams.html
   - /Docs/MasterDocs/VoiceOSCoreNG/html/class-diagrams.html
+```
+
+---
+
+## PROJECT_RULES
+
+```yaml
+app_placement:
+  critical_rules:
+    - "NEVER create apps inside Modules/ folders"
+    - "NEVER place Android apps anywhere except android/apps/"
+    - "NEVER place iOS apps anywhere except ios/apps/"
+    - "ALWAYS: Modules contain ONLY shared KMP libraries"
+    - "ALWAYS: Platform-specific code goes in platform root folders"
+
+  folder_semantics:
+    Modules/{Name}/: "Shared KMP libraries ONLY - no runnable apps"
+    android/apps/: "Android apps"
+    ios/apps/: "iOS apps"
+    web/apps/: "Web apps"
+    desktop/apps/: "Desktop apps"
+
+  module_purposes:
+    AVA: "Core AVA library - shared utilities, data models, APIs"
+    AvaMagic: "UI generation - parsers, generators, DSL tools"
+    VoiceOS: "Voice processing - KMP voice logic, command processing"
+    WebAvanue: "Web components - shared web utilities"
+    NLU: "Natural language - language processing libraries"
+    Shared: "Common utilities - cross-module shared code"
+
+  modules_must_not_contain:
+    - "Android Manifest files"
+    - "iOS Info.plist files"
+    - "Platform-specific MainActivity/AppDelegate"
+    - "Application class definitions"
+    - "Platform-specific app build.gradle configurations"
+
+  verification_command: "find Modules -type d -name 'apps' 2>/dev/null"
+  expected_output: "(nothing - no apps folders should exist in Modules)"
 ```
 
 ---

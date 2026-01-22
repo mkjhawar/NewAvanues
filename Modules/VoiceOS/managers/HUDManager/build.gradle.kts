@@ -82,12 +82,12 @@ dependencies {
     implementation("com.google.guava:guava:32.1.3-android")
     
     // VOS4 Dependencies - Direct integration with existing systems
-    implementation(project(":Modules:VoiceOS:libraries:DeviceManager"))       // For IMU integration
-    implementation(project(":Modules:VoiceOS:libraries:UUIDCreator"))         // For unique identifiers
+    implementation(project(":Modules:DeviceManager"))       // For IMU integration
+    implementation(project(":Modules:AVID"))                                  // For unique identifiers
     // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight       // For data persistence
     implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))  // For localization support
     // implementation(project(":apps:SpeechRecognition"))        // For voice command data - TEMP: Has compilation errors
-    // implementation(project(":Modules:VoiceOS:apps:VoiceOSCore")) // VoiceOSCore is now application - cannot depend on it
+    // implementation(project(":Modules:VoiceOS:VoiceOSCore")) // VoiceOSCore is now application - cannot depend on it
     // implementation(project(":apps:VoiceUI"))                  // For HUD rendering - TEMP: Has compilation errors
     
     // Testing

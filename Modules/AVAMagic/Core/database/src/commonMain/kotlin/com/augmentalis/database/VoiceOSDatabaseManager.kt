@@ -15,7 +15,7 @@ import com.augmentalis.database.repositories.ICommandRepository
 import com.augmentalis.database.repositories.ICommandHistoryRepository
 import com.augmentalis.database.repositories.IUserPreferenceRepository
 import com.augmentalis.database.repositories.IErrorReportRepository
-import com.augmentalis.database.repositories.IUUIDRepository
+import com.augmentalis.database.repositories.IAvidRepository
 import com.augmentalis.database.repositories.IVoiceCommandRepository
 import com.augmentalis.database.repositories.ICommandUsageRepository
 import com.augmentalis.database.repositories.IContextPreferenceRepository
@@ -32,29 +32,28 @@ import com.augmentalis.database.repositories.IAppConsentHistoryRepository
 import com.augmentalis.database.repositories.IElementCommandRepository
 import com.augmentalis.database.repositories.IQualityMetricRepository
 import com.augmentalis.database.repositories.IAppVersionRepository
-import com.augmentalis.database.repositories.impl.SQLDelightCommandRepository
-import com.augmentalis.database.repositories.impl.SQLDelightCommandHistoryRepository
-import com.augmentalis.database.repositories.impl.SQLDelightUserPreferenceRepository
-import com.augmentalis.database.repositories.impl.SQLDelightErrorReportRepository
-import com.augmentalis.database.repositories.impl.SQLDelightUUIDRepository
-import com.augmentalis.database.repositories.impl.SQLDelightVoiceCommandRepository
-import com.augmentalis.database.repositories.impl.SQLDelightCommandUsageRepository
-import com.augmentalis.database.repositories.impl.SQLDelightContextPreferenceRepository
-import com.augmentalis.database.repositories.impl.SQLDelightScrapedAppRepository
-import com.augmentalis.database.repositories.impl.SQLDelightScrapedElementRepository
-import com.augmentalis.database.repositories.impl.SQLDelightGeneratedCommandRepository
-import com.augmentalis.database.repositories.impl.SQLDelightScreenContextRepository
-import com.augmentalis.database.repositories.impl.SQLDelightScreenTransitionRepository
-import com.augmentalis.database.repositories.impl.SQLDelightUserInteractionRepository
-import com.augmentalis.database.repositories.impl.SQLDelightElementStateHistoryRepository
-import com.augmentalis.database.repositories.impl.SQLDelightScrapedHierarchyRepository
-import com.augmentalis.database.repositories.impl.SQLDelightElementRelationshipRepository
-import com.augmentalis.database.repositories.impl.SQLDelightAppConsentHistoryRepository
-import com.augmentalis.database.repositories.impl.SQLDelightElementCommandRepository
-import com.augmentalis.database.repositories.impl.SQLDelightQualityMetricRepository
-import com.augmentalis.database.repositories.impl.SQLDelightAppVersionRepository
-import com.augmentalis.database.repositories.plugin.IPluginRepository
-import com.augmentalis.database.repositories.plugin.SQLDelightPluginRepository
+import com.augmentalis.database.repositories.SQLDelightCommandRepository
+import com.augmentalis.database.repositories.SQLDelightCommandHistoryRepository
+import com.augmentalis.database.repositories.SQLDelightUserPreferenceRepository
+import com.augmentalis.database.repositories.SQLDelightErrorReportRepository
+import com.augmentalis.database.repositories.SQLDelightAvidRepository
+import com.augmentalis.database.repositories.SQLDelightVoiceCommandRepository
+import com.augmentalis.database.repositories.SQLDelightCommandUsageRepository
+import com.augmentalis.database.repositories.SQLDelightContextPreferenceRepository
+import com.augmentalis.database.repositories.SQLDelightScrapedAppRepository
+import com.augmentalis.database.repositories.SQLDelightScrapedElementRepository
+import com.augmentalis.database.repositories.SQLDelightGeneratedCommandRepository
+import com.augmentalis.database.repositories.SQLDelightScreenContextRepository
+import com.augmentalis.database.repositories.SQLDelightScreenTransitionRepository
+import com.augmentalis.database.repositories.SQLDelightUserInteractionRepository
+import com.augmentalis.database.repositories.SQLDelightElementStateHistoryRepository
+import com.augmentalis.database.repositories.SQLDelightScrapedHierarchyRepository
+import com.augmentalis.database.repositories.SQLDelightElementRelationshipRepository
+import com.augmentalis.database.repositories.SQLDelightAppConsentHistoryRepository
+import com.augmentalis.database.repositories.SQLDelightElementCommandRepository
+import com.augmentalis.database.repositories.SQLDelightAppVersionRepository
+import com.augmentalis.database.repositories.IPluginRepository
+import com.augmentalis.database.repositories.SQLDelightPluginRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
@@ -164,7 +163,7 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
     val commandHistory: ICommandHistoryRepository = SQLDelightCommandHistoryRepository(database)
     val userPreferences: IUserPreferenceRepository = SQLDelightUserPreferenceRepository(database)
     val errorReports: IErrorReportRepository = SQLDelightErrorReportRepository(database)
-    val uuids: IUUIDRepository = SQLDelightUUIDRepository(database)
+    val avids: IAvidRepository = SQLDelightAvidRepository(database)
     val plugins: IPluginRepository = SQLDelightPluginRepository(database)
 
     // CommandManager repositories
@@ -214,11 +213,11 @@ class VoiceOSDatabaseManager internal constructor(driverFactory: DatabaseDriverF
     val screenContextQueries get() = database.screenContextQueries
     val screenTransitionQueries get() = database.screenTransitionQueries
     val userSequenceQueries get() = database.userSequenceQueries
-    // UUID queries for UUIDCreator module
-    val uuidElementQueries get() = database.uUIDElementQueries
-    val uuidHierarchyQueries get() = database.uUIDHierarchyQueries
-    val uuidAnalyticsQueries get() = database.uUIDAnalyticsQueries
-    val uuidAliasQueries get() = database.uUIDAliasQueries
+    // AVID queries for AvidCreator module (backed by UUID tables)
+    val avidElementQueries get() = database.uUIDElementQueries
+    val avidHierarchyQueries get() = database.uUIDHierarchyQueries
+    val avidAnalyticsQueries get() = database.uUIDAnalyticsQueries
+    val avidAliasQueries get() = database.uUIDAliasQueries
     // Analytics and Retention settings are accessed via settingsQueries
     // Use: settingsQueries.getAnalyticsSettings() and settingsQueries.getRetentionSettings()
 

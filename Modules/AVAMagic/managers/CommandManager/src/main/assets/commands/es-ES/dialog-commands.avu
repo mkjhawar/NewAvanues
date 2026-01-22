@@ -1,0 +1,25 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: dialog-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: es-ES
+project: voiceos
+metadata:
+  category: dialog
+  display_name: Dialog Actions
+  description: Voice commands for interacting with dialogs and prompts
+  command_count: 4
+---
+CAT:dialog:Dialog Actions:Voice commands for interacting with dialogs and prompts
+CMD:CLOSE:cerrar
+CMD:CANCEL:cancel
+CMD:CONFIRM:confirm
+CMD:SUBMIT:submit
+---
+SYN:CLOSE:[finish,end,detener,shut,exit,quit,leave,atrás,return,cancel,cerrar abajo,shut abajo,finish arriba,wrap arriba]
+SYN:CANCEL:[abort,dismiss,no,decline,detener,quit,exit,atrás,nevermind,never mind,forget it,cerrar,no thanks,not interested]
+SYN:CONFIRM:[accept,agree,yes,derecha,ok,okay,proceed,continue,ir ahead,sure,absolutely,certainly,indeed,correct,affirmative]
+SYN:SUBMIT:[send,ir,enter,confirm,okay,done,finish,complete,save,apply,send off,post,dispatch,deliver]

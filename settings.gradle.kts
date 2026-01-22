@@ -37,120 +37,126 @@ include(":Modules:AVA:core:Utils")
 include(":Modules:AVA:core:Data")
 include(":Modules:AVA:core:Theme")
 
-// AVA Feature Modules
-include(":Modules:AVA:Actions")
-include(":Modules:AVA:Chat")
-include(":Modules:AVA:memory")
+// AVA Feature Modules (Android UI wrappers)
 include(":Modules:AVA:Overlay")
-include(":Modules:AVA:Teach")
-include(":Modules:AVA:WakeWord")
 
-// Shared AI Modules (cross-app)
-include(":Modules:LLM")   // Language model providers and on-device inference
-include(":Modules:RAG")   // Retrieval-augmented generation pipeline
-include(":Modules:NLU")   // Natural language understanding
+// AI Modules (cross-platform KMP)
+include(":Modules:AI:NLU")      // Natural language understanding
+include(":Modules:AI:RAG")      // Retrieval-augmented generation
+include(":Modules:AI:LLM")      // Language model providers
+include(":Modules:AI:Memory")   // AI memory system (short/long-term)
+include(":Modules:AI:Chat")     // AI Chat interface
+include(":Modules:AI:Teach")    // AI Teaching/training system
+include(":Modules:AI:ALC")      // Adaptive LLM Coordinator (local inference)
 
-// Common Libraries (cross-platform KMP)
-include(":Common:VUID")                   // Voice Unique Identifier generator (shared across all modules)
+// Top-level Modules (cross-platform KMP)
+include(":Modules:AVID")                  // Avanues Voice ID - unified identifier system
+include(":Modules:Database")              // Unified KMP database - VoiceOS, WebAvanue, AVID persistence
+// include(":Modules:VUID")               // DEPRECATED - replaced by AVID module
 
-// VoiceOSCoreNG - Next-generation KMP core for VoiceOS
-include(":Modules:VoiceOSCoreNG")          // KMP types, VUID, features (shared Android/iOS/Desktop)
+// Voice Modules (cross-platform KMP)
+include(":Modules:VoiceOSCore")            // Unified KMP voice control (consolidates Voice:Core + VoiceOS)
+// include(":Modules:Voice:Core")          // DEPRECATED - use VoiceOSCore (archived)
+include(":Modules:Voice:WakeWord")         // Wake word detection
+
+// Actions Module (cross-platform KMP)
+include(":Modules:Actions")                 // Intent handlers, action execution
 
 // Shared Modules (cross-platform KMP libraries)
-include(":Modules:Shared:NLU")
-include(":Modules:Shared:Platform")
-include(":Modules:Shared:LaasSDK")
+include(":Modules:Utilities")       // Platform utilities (DeviceInfo, Logger, FileSystem, etc.)
+include(":Modules:LicenseSDK")      // License validation client
 
 // VoiceOS Core Modules
-include(":Modules:VoiceOS:core:database")
-include(":Modules:VoiceOS:core:accessibility-types")
-include(":Modules:VoiceOS:core:result")
-include(":Modules:VoiceOS:core:voiceos-logging")
-include(":Modules:VoiceOS:core:command-models")
-include(":Modules:VoiceOS:core:hash")
-include(":Modules:VoiceOS:core:json-utils")
-include(":Modules:VoiceOS:core:constants")
-include(":Modules:VoiceOS:core:exceptions")
-include(":Modules:VoiceOS:core:text-utils")
-include(":Modules:VoiceOS:core:validation")
+include(":Modules:VoiceOS:core:database")          // CRITICAL - used by VoiceOSCore, voiceoscoreng, managers
+include(":Modules:VoiceOS:core:command-models")    // Used by managers/CommandManager
+
+// DEPRECATED (2026-01-21) - Functionality consolidated into VoiceOSCore
+// These modules are redundant copies with old package names (com.augmentalis.voiceos.*)
+// VoiceOSCore has the same code with correct package (com.augmentalis.voiceoscore)
+// include(":Modules:VoiceOS:core:accessibility-types")
+// include(":Modules:VoiceOS:core:result")
+// include(":Modules:VoiceOS:core:voiceos-logging")
+// include(":Modules:VoiceOS:core:hash")
+// include(":Modules:VoiceOS:core:json-utils")
+// include(":Modules:VoiceOS:core:constants")
+// include(":Modules:VoiceOS:core:exceptions")
+// include(":Modules:VoiceOS:core:text-utils")
+// include(":Modules:VoiceOS:core:validation")
+
+// VoiceOS Core Module - DEPRECATED (2026-01-21)
+// Replaced by top-level :Modules:VoiceOSCore, old path archived
+// include(":Modules:VoiceOS:VoiceOSCore")
 
 // VoiceOS Apps
 // LearnApp and LearnAppDev removed - functionality integrated into VoiceOSCore (2025-12-23)
-include(":Modules:VoiceOS:apps:VoiceRecognition")
-include(":Modules:VoiceOS:apps:VoiceOSCore")
-include(":Modules:VoiceOS:apps:VoiceOS")  // Main launcher app with onboarding
-include(":Modules:VoiceOS:apps:VoiceCursor")
-include(":Modules:VoiceOS:apps:VoiceOSIPCTest")
-include(":Modules:VoiceOS:apps:VoiceUI")
+// VoiceOS legacy app archived to archive/deprecated/VoiceOS-LegacyApp-260121/ (2026-01-21)
+include(":android:apps:VoiceRecognition")
+// include(":Modules:VoiceOS:apps:VoiceOS")  // ARCHIVED - use voiceoscoreng instead
+include(":android:apps:VoiceCursor")
+include(":android:apps:VoiceOSIPCTest")
+include(":android:apps:VoiceUI")
 
-// VoiceOS Managers
-include(":Modules:VoiceOS:managers:LicenseManager")
+// VoiceOS Managers (remaining in VoiceOS - VoiceOS-specific)
 include(":Modules:VoiceOS:managers:HUDManager")
 include(":Modules:VoiceOS:managers:CommandManager")
 include(":Modules:VoiceOS:managers:VoiceDataManager")
 include(":Modules:VoiceOS:managers:LocalizationManager")
 
-// VoiceOS Libraries
-include(":Modules:VoiceOS:libraries:DeviceManager")
-include(":Modules:VoiceOS:libraries:JITLearning")  // ⚠️ DEPRECATED (2026-01-06): Use VoiceOSCoreNG
-include(":Modules:VoiceOS:libraries:LearnAppCore")  // ⚠️ DEPRECATED (2026-01-06): Use VoiceOSCoreNG
-include(":Modules:VoiceOS:libraries:PluginSystem")
-include(":Modules:VoiceOS:libraries:SpeechRecognition")
-include(":Modules:VoiceOS:libraries:Translation")
-include(":Modules:VoiceOS:libraries:UniversalIPC")
-include(":Modules:VoiceOS:libraries:UUIDCreator")
-include(":Modules:VoiceOS:libraries:VivokaSDK")  // Vivoka VSDK wrapper module (AAR dependencies)
-include(":Modules:VoiceOS:libraries:VoiceKeyboard")
-include(":Modules:VoiceOS:libraries:VoiceOsLogging")
-include(":Modules:VoiceOS:libraries:VoiceUIElements")
+// Top-level Shared Modules (consolidated from VoiceOS/libraries and AvaMagic)
+include(":Modules:DeviceManager")                       // Device info, sensors, audio, network
+include(":Modules:SpeechRecognition")                   // Speech recognition engines (Whisper, Vivoka, etc.)
+// include(":Modules:Translation")                      // Translation services (stub only - archived)
+include(":Modules:VoiceKeyboard")                       // Voice keyboard input
+include(":vivoka:Android")                              // Vivoka VSDK wrapper (AAR dependencies)
 
-// WebAvanue Modules
-include(":Modules:WebAvanue:coredata")   // Data layer: repositories, database, models
-include(":Modules:WebAvanue:universal")  // UI layer: ViewModels, screens, platform code
+// Relocated Modules (moved from VoiceOS/libraries and VoiceOS/managers to top-level)
+include(":Modules:PluginSystem")                         // Generic DSL plugin framework (moved from VoiceOS/libraries)
+include(":Modules:AvidCreator")                          // AVID Android extensions (moved from VoiceOS/libraries)
+include(":Modules:LicenseManager")                       // License validation (moved from VoiceOS/managers)
+include(":Modules:AVUCodec")                             // KMP AVU Protocol encoder/decoder
+// NOTE: JITLearning, LearnAppCore, VoiceOsLogging archived (deprecated/duplicate)
+
+// WebAvanue Module - Unified KMP Browser Library
+include(":Modules:WebAvanue")            // Merged flat structure: data + UI in single module
 
 // UniversalRPC - Cross-platform gRPC module
 include(":Modules:UniversalRPC")         // Root module with KMP + Wire
 
-// AVAMagic Modules
-include(":Modules:AVAMagic:MagicTools:LanguageServer")  // AVA Language Server (LSP)
+// AvaMagic Modules
+include(":Modules:AvaMagic:MagicTools:LanguageServer")  // AVA Language Server (LSP)
+include(":Modules:AvaMagic:AVACode")                    // Kotlin Builder Functions (DSL)
+include(":Modules:AvaMagic:AVURuntime")                 // AVU file parsing/processing
 
-// AVAMagic Language & Runtime (at AVAMagic level)
-include(":Modules:AVAMagic:AVACode")                    // Kotlin Builder Functions (DSL)
-include(":Modules:AVAMagic:AVURuntime")                 // AVU file parsing/processing
+// AvaUI Core & Base Types
+include(":Modules:AvaMagic:AvaUI:Core")                 // Base types, interfaces
+include(":Modules:AvaMagic:AvaUI:CoreTypes")            // Shared type definitions
+include(":Modules:AvaMagic:AvaUI:Foundation")           // Foundation components
+include(":Modules:AvaMagic:AvaUI:Theme")                // Theme system
+include(":Modules:AvaMagic:AvaUI:ThemeBridge")          // Theme conversion utilities
+include(":Modules:AvaMagic:AvaUI:DesignSystem")         // Design tokens
+include(":Modules:AvaMagic:AvaUI:StateManagement")      // State management
+include(":Modules:AvaMagic:AvaUI:UIConvertor")          // UI conversion utilities
 
-// AVAUI Core & Base Types
-include(":Modules:AVAMagic:AVAUI:Core")                 // Base types, interfaces
-include(":Modules:AVAMagic:AVAUI:CoreTypes")            // Shared type definitions
-include(":Modules:AVAMagic:AVAUI:Foundation")           // Foundation components
-include(":Modules:AVAMagic:AVAUI:Theme")                // Theme system
-include(":Modules:AVAMagic:AVAUI:ThemeBridge")          // Theme conversion utilities
-include(":Modules:AVAMagic:AVAUI:DesignSystem")         // Design tokens
-include(":Modules:AVAMagic:AVAUI:StateManagement")      // State management
-include(":Modules:AVAMagic:AVAUI:UIConvertor")          // UI conversion utilities
+// AvaUI Component Modules
+include(":Modules:AvaMagic:AvaUI:Input")                // Input components
+include(":Modules:AvaMagic:AvaUI:Display")              // Display components
+include(":Modules:AvaMagic:AvaUI:Feedback")             // Feedback components
+include(":Modules:AvaMagic:AvaUI:Layout")               // Layout components
+include(":Modules:AvaMagic:AvaUI:Navigation")           // Navigation components
+include(":Modules:AvaMagic:AvaUI:Floating")             // Floating components
+include(":Modules:AvaMagic:AvaUI:Data")                 // Data components
+include(":Modules:AvaMagic:AvaUI:Voice")                // Voice UI components
 
-// AVAUI Component Modules (DTOs)
-include(":Modules:AVAMagic:AVAUI:Input")                // Input components (Slider, DatePicker, etc.)
-include(":Modules:AVAMagic:AVAUI:Display")              // Display components (Badge, Avatar, etc.)
-include(":Modules:AVAMagic:AVAUI:Feedback")             // Feedback components (Alert, Toast, etc.)
-include(":Modules:AVAMagic:AVAUI:Layout")               // Layout components (Grid, Stack, etc.)
-include(":Modules:AVAMagic:AVAUI:Navigation")           // Navigation components (AppBar, Tabs, etc.)
-include(":Modules:AVAMagic:AVAUI:Floating")             // Floating components (CommandBar)
-include(":Modules:AVAMagic:AVAUI:Data")                 // Data components (Accordion, Carousel, etc.)
+// AvaUI Infrastructure
+include(":Modules:AvaMagic:AvaUI:Adapters")             // Platform adapters
+include(":Modules:AvaMagic:AvaUI:TemplateLibrary")      // Component templates
+include(":Modules:AvaMagic:AvaUI:VoiceCommandRouter")   // Voice command routing
+include(":Modules:AvaMagic:IPC")                         // Unified AVU IPC Protocol
+include(":Modules:AvaMagic:AvaUI:ARGScanner")           // ARG scanning utilities
+include(":Modules:AvaMagic:AvaUI:AssetManager")         // Asset management
 
-// AVAUI Infrastructure
-include(":Modules:AVAMagic:AVAUI:Adapters")             // Platform adapters
-include(":Modules:AVAMagic:AVAUI:TemplateLibrary")      // Component templates
-include(":Modules:AVAMagic:AVAUI:ThemeBuilder")         // Theme builder tools
-include(":Modules:AVAMagic:AVAUI:VoiceCommandRouter")   // Voice command routing
-include(":Modules:AVAMagic:AVAUI:IPCConnector")         // IPC connection layer
-include(":Modules:AVAMagic:AVAUI:ARGScanner")           // ARG scanning utilities
-include(":Modules:AVAMagic:AVAUI:AssetManager")         // Asset management
-
-// AVAUI Platform Renderers
-include(":Modules:AVAMagic:AVAUI:Renderers:Android")    // Android Compose renderer
-include(":Modules:AVAMagic:AVAUI:Renderers:iOS")        // iOS SwiftUI renderer (45 views)
-include(":Modules:AVAMagic:AVAUI:Renderers:Desktop")    // Desktop Compose renderer
-include(":Modules:AVAMagic:AVAUI:Renderers:Web")        // Web React renderer
+// AvaUI Platform Renderers
+include(":Modules:AvaMagic:AvaUI:Renderers:Android")    // Android Compose renderer
 
 // Android Apps
 include(":android:apps:webavanue")

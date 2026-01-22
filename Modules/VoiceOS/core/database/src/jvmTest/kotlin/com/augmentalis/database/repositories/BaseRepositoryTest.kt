@@ -30,14 +30,17 @@ abstract class BaseRepositoryTest {
 
     @BeforeTest
     fun setup() {
+        // Clear any existing singleton instance to ensure fresh state for each test
+        VoiceOSDatabaseManager.clearInstance()
+
         val driverFactory = DatabaseDriverFactory()
-        databaseManager = VoiceOSDatabaseManager(driverFactory)
+        databaseManager = VoiceOSDatabaseManager.getInstance(driverFactory)
     }
 
     @AfterTest
     fun teardown() {
-        // Database is in-memory, so it will be garbage collected
-        // No explicit cleanup needed
+        // Clear singleton instance to ensure isolation between tests
+        VoiceOSDatabaseManager.clearInstance()
     }
 
     /**

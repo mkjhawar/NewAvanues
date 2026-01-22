@@ -1,0 +1,23 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: drag-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: de-DE
+project: voiceos
+metadata:
+  category: drag
+  display_name: Drag Actions
+  description: Voice commands for drag and drop operations
+  command_count: 3
+---
+CAT:drag:Drag Actions:Voice commands for drag and drop operations
+CMD:DRAG_UP_DOWN:ziehen hoch
+CMD:DRAG_START:ziehen starten
+CMD:DRAG_STOP:ziehen stoppen
+---
+SYN:DRAG_UP_DOWN:[ziehen runter,ziehen vertical,move hoch runter,vertical ziehen,hoch runter ziehen,pull hoch,pull runter,move vertical,slide hoch runter,vertical move,ziehen it hoch,ziehen it runter,move it hoch and runter,vertical movement]
+SYN:DRAG_START:[starten ziehen,begin ziehen,commence ziehen,initiate ziehen,starten dragging,begin dragging,starten moving,begin moving,starten pulling,begin pulling,starten the ziehen,begin the ziehen,commence dragging,initiate dragging]
+SYN:DRAG_STOP:[stoppen ziehen,end ziehen,finish ziehen,cease ziehen,stoppen dragging,end dragging,stoppen moving,finish moving,stoppen pulling,end pulling,stoppen the ziehen,end the ziehen,cease dragging,finish dragging]

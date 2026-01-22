@@ -45,7 +45,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.7"
+        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
     }
 }
 
@@ -57,15 +57,16 @@ dependencies {
 
     // Feature modules for integration
     //implementation(project(":Modules:AVA:SharedNLU"))  // TODO: SharedNLU not found in current structure
-    implementation(project(":Modules:AVA:Chat"))
-    implementation(project(":Modules:LLM"))
+    implementation(project(":Modules:AI:Chat"))
+    implementation(project(":Modules:AI:LLM"))
+    implementation(project(":Modules:AI:NLU"))
 
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     // Compose
-    implementation(platform("androidx.compose:compose-bom:2023.10.01"))
+    implementation(platform(libs.compose.bom))
     implementation("androidx.compose.runtime:runtime")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
@@ -84,6 +85,9 @@ dependencies {
 
     // DataStore for preferences
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // Logging
+    implementation("com.jakewharton.timber:timber:5.0.1")
 
     // Testing
     testImplementation(kotlin("test"))

@@ -8,7 +8,8 @@
 package com.augmentalis.overlay.integration
 
 import android.content.Context
-import com.augmentalis.ava.core.common.Result
+import com.augmentalis.llm.LLMResult
+import com.augmentalis.llm.LLMResponse
 import com.augmentalis.llm.response.IntentTemplates
 import com.augmentalis.llm.domain.*
 import com.augmentalis.llm.provider.LocalLLMProvider
@@ -58,14 +59,14 @@ class ChatConnector(private val context: Context) {
             modelPath = modelPath
         )
 
-        return when (llmProvider.initialize(config)) {
-            is Result.Success -> {
+        return when (val result = llmProvider.initialize(config)) {
+            is LLMResult.Success -> {
                 llmInitialized = true
                 Timber.i("LLM initialized successfully for overlay")
                 true
             }
-            is Result.Error -> {
-                Timber.w("LLM initialization failed, will use fallback templates")
+            is LLMResult.Error -> {
+                Timber.w("LLM initialization failed: ${result.message}, will use fallback templates")
                 false
             }
         }

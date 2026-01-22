@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.augmentalis.voiceoscoreng.service.OverlayStateManager
 import com.augmentalis.voiceoscoreng.service.VoiceOSAccessibilityService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -65,7 +66,7 @@ private fun AccessibilitySettingsScreen(onBack: () -> Unit) {
 
     // Developer settings state
     var debugLogging by remember { mutableStateOf(true) }
-    var showVuidsOverlay by remember { mutableStateOf(false) }
+    var showAvidsOverlay by remember { mutableStateOf(false) }
     var autoMinimize by remember { mutableStateOf(true) }
 
     // Rescan feedback
@@ -169,9 +170,9 @@ private fun AccessibilitySettingsScreen(onBack: () -> Unit) {
                         ModeChip(
                             mode = numbersOverlayMode.name,
                             color = when (numbersOverlayMode) {
-                                VoiceOSAccessibilityService.Companion.NumbersOverlayMode.ON -> Color(0xFF10B981)
-                                VoiceOSAccessibilityService.Companion.NumbersOverlayMode.OFF -> Color(0xFF6B7280)
-                                VoiceOSAccessibilityService.Companion.NumbersOverlayMode.AUTO -> Color(0xFF3B82F6)
+                                OverlayStateManager.NumbersOverlayMode.ON -> Color(0xFF10B981)
+                                OverlayStateManager.NumbersOverlayMode.OFF -> Color(0xFF6B7280)
+                                OverlayStateManager.NumbersOverlayMode.AUTO -> Color(0xFF3B82F6)
                             }
                         )
                     }
@@ -187,9 +188,9 @@ private fun AccessibilitySettingsScreen(onBack: () -> Unit) {
                         ModeChip(
                             mode = instructionBarMode.name,
                             color = when (instructionBarMode) {
-                                VoiceOSAccessibilityService.Companion.InstructionBarMode.ON -> Color(0xFF10B981)
-                                VoiceOSAccessibilityService.Companion.InstructionBarMode.OFF -> Color(0xFF6B7280)
-                                VoiceOSAccessibilityService.Companion.InstructionBarMode.AUTO -> Color(0xFF3B82F6)
+                                OverlayStateManager.InstructionBarMode.ON -> Color(0xFF10B981)
+                                OverlayStateManager.InstructionBarMode.OFF -> Color(0xFF6B7280)
+                                OverlayStateManager.InstructionBarMode.AUTO -> Color(0xFF3B82F6)
                             }
                         )
                     }
@@ -279,11 +280,11 @@ private fun AccessibilitySettingsScreen(onBack: () -> Unit) {
 
                         Divider(color = Color.Gray.copy(alpha = 0.2f), modifier = Modifier.padding(vertical = 12.dp))
 
-                        // Show VUIDs
+                        // Show AVIDs
                         SettingsToggle(
-                            title = "Show VUIDs",
-                            checked = showVuidsOverlay,
-                            onCheckedChange = { showVuidsOverlay = it }
+                            title = "Show AVIDs",
+                            checked = showAvidsOverlay,
+                            onCheckedChange = { showAvidsOverlay = it }
                         )
 
                         Divider(color = Color.Gray.copy(alpha = 0.2f), modifier = Modifier.padding(vertical = 12.dp))

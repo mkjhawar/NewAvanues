@@ -54,9 +54,9 @@ android {
 
 dependencies {
     // Internal modules
-    implementation(project(":Modules:VoiceOS:libraries:SpeechRecognition"))  // LearningSystem stubbed
-    implementation(project(":Modules:VoiceOS:apps:VoiceCursor"))
-    implementation(project(":Modules:VoiceOS:libraries:UniversalIPC"))  // Universal IPC Protocol
+    implementation(project(":Modules:SpeechRecognition"))   // LearningSystem stubbed
+    implementation(project(":android:apps:VoiceCursor"))
+    implementation(project(":Modules:AvaMagic:IPC"))  // Universal IPC Protocol (consolidated)
 
     // KMP Libraries (project dependencies)
     implementation(project(":Modules:VoiceOS:core:command-models"))

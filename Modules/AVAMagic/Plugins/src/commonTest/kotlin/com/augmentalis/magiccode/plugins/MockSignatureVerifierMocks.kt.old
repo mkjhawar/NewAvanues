@@ -1,0 +1,70 @@
+package com.augmentalis.magiccode.plugins
+
+import com.augmentalis.magiccode.plugins.security.*
+
+/**
+ * Mock implementation of SignatureVerifier for testing.
+ *
+ * Allows control over verification results for testing.
+ */
+class MockSignatureVerifier {
+    var shouldVerifySuccessfully = true
+    var verificationFailureReason = "Mock verification failure"
+    var lastVerifiedPackagePath: String? = null
+    var lastVerifiedAlgorithm: SignatureAlgorithm? = null
+
+    /**
+     * Verify digital signature of a plugin package.
+     */
+    fun verify(
+        packagePath: String,
+        signaturePath: String,
+        publicKeyPath: String,
+        algorithm: SignatureAlgorithm = SignatureAlgorithm.RSA_SHA256
+    ): VerificationResult {
+        lastVerifiedPackagePath = packagePath
+        lastVerifiedAlgorithm = algorithm
+
+        return if (shouldVerifySuccessfully) {
+            VerificationResult.Valid(algorithm)
+        } else {
+            VerificationResult.Invalid(verificationFailureReason)
+        }
+    }
+
+    /**
+     * Verify signature using embedded signature.
+     */
+    fun verifyEmbedded(
+        packagePath: String,
+        embeddedSignature: String,
+        publicKeyPath: String,
+        algorithm: SignatureAlgorithm = SignatureAlgorithm.RSA_SHA256
+    ): VerificationResult {
+        lastVerifiedPackagePath = packagePath
+        lastVerifiedAlgorithm = algorithm
+
+        return if (shouldVerifySuccessfully) {
+            VerificationResult.Valid(algorithm)
+        } else {
+            VerificationResult.Invalid(verificationFailureReason)
+        }
+    }
+
+    /**
+     * Load public key from file.
+     */
+    fun loadPublicKey(publicKeyPath: String, algorithm: SignatureAlgorithm): Any {
+        return "MockPublicKey($publicKeyPath, $algorithm)"
+    }
+
+    /**
+     * Reset mock state.
+     */
+    fun reset() {
+        shouldVerifySuccessfully = true
+        verificationFailureReason = "Mock verification failure"
+        lastVerifiedPackagePath = null
+        lastVerifiedAlgorithm = null
+    }
+}

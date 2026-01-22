@@ -1,0 +1,23 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: system-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: fr-FR
+project: voiceos
+metadata:
+  category: system
+  display_name: System Control
+  description: Voice commands for system-level control
+  command_count: 3
+---
+CAT:system:System Control:Voice commands for system-level control
+CMD:SHUT_DOWN:shut bas device
+CMD:REBOOT:reboot device
+CMD:TURN_OFF_DISPLAY:turn off display
+---
+SYN:SHUT_DOWN:[power off,turn off device,shutdown,power bas,désactiver,shut bas,device off,power off device,switch off,fermer device,turn off phone,switch off phone,power bas phone,shut bas phone]
+SYN:REBOOT:[restart device,restart,reboot,device restart,reset device,power cycle,restart system,reboot system,device reboot,system restart,restart phone,reboot phone,reset phone,power cycle phone]
+SYN:TURN_OFF_DISPLAY:[écran off,display off,turn off écran,black écran,écran sleep,display sleep,écran dark,turn écran off,écran blank,display blank,switch off écran,switch off display,écran standby,display standby]

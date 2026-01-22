@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.augmentalis.webavanue"
-        minSdk = 26
+        minSdk = 28
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
@@ -75,9 +75,8 @@ android {
 }
 
 dependencies {
-    // Project modules
-    implementation(project(":Modules:WebAvanue:coredata"))
-    implementation(project(":Modules:WebAvanue:universal"))
+    // WebAvanue KMP module (unified data + UI)
+    implementation(project(":Modules:WebAvanue"))
 
     // Voyager Navigation (KMP-compatible)
     implementation(libs.voyager.navigator)

@@ -1,0 +1,106 @@
+-- AvidAlias.sq - AVID alias/synonym storage
+-- Alternative names for AVID elements (voice command variations)
+-- Created: 2026-01-14
+
+CREATE TABLE avid_alias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    -- Reference
+    avid TEXT NOT NULL,
+    package_name TEXT NOT NULL,
+
+    -- Alias data
+    alias TEXT NOT NULL,                    -- Alternative name
+    canonical TEXT NOT NULL,                -- Primary/canonical name
+    alias_type TEXT NOT NULL DEFAULT 'voice', -- voice, accessibility, user, system
+
+    -- Usage
+    usage_count INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+
+    -- Source
+    source TEXT NOT NULL DEFAULT 'system',  -- system, user, learned, imported
+
+    -- Timestamps
+    created_at INTEGER NOT NULL,
+    last_used INTEGER,
+
+    UNIQUE(avid, alias),
+    FOREIGN KEY(avid) REFERENCES avid_element(avid) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_alias_avid ON avid_alias(avid);
+CREATE INDEX idx_alias_package ON avid_alias(package_name);
+CREATE INDEX idx_alias_type ON avid_alias(alias_type);
+CREATE INDEX idx_alias_text ON avid_alias(alias);
+CREATE INDEX idx_alias_canonical ON avid_alias(canonical);
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Queries
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+selectByAvid:
+SELECT * FROM avid_alias
+WHERE avid = ? AND is_active = 1
+ORDER BY usage_count DESC;
+
+selectByPackage:
+SELECT * FROM avid_alias
+WHERE package_name = ? AND is_active = 1;
+
+selectByAlias:
+SELECT * FROM avid_alias
+WHERE alias = ? AND is_active = 1;
+
+selectByCanonical:
+SELECT * FROM avid_alias
+WHERE canonical = ? AND is_active = 1;
+
+searchAlias:
+SELECT * FROM avid_alias
+WHERE alias LIKE ? AND is_active = 1
+ORDER BY usage_count DESC
+LIMIT ?;
+
+selectMostUsed:
+SELECT * FROM avid_alias
+WHERE package_name = ? AND is_active = 1
+ORDER BY usage_count DESC
+LIMIT ?;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Insert/Update Operations
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+insert:
+INSERT INTO avid_alias (
+    avid, package_name, alias, canonical, alias_type, source, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+insertOrReplace:
+INSERT OR REPLACE INTO avid_alias (
+    avid, package_name, alias, canonical, alias_type, source, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+incrementUsage:
+UPDATE avid_alias
+SET usage_count = usage_count + 1, last_used = ?
+WHERE avid = ? AND alias = ?;
+
+markInactive:
+UPDATE avid_alias
+SET is_active = 0
+WHERE avid = ? AND alias = ?;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Delete Operations
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+deleteByAvid:
+DELETE FROM avid_alias WHERE avid = ?;
+
+deleteByPackage:
+DELETE FROM avid_alias WHERE package_name = ?;
+
+deleteInactive:
+DELETE FROM avid_alias WHERE is_active = 0;

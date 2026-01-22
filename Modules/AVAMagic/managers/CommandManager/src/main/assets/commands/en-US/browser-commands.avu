@@ -1,0 +1,99 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: browser-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: en-US
+project: voiceos
+metadata:
+  category: browser
+  display_name: Browser Control
+  description: Voice commands for web browser control
+  command_count: 41
+---
+CAT:browser:Browser Control:Voice commands for web browser control
+CMD:SCROLL_TOP:scroll to top
+CMD:SCROLL_BOTTOM:scroll to bottom
+CMD:FREEZE_PAGE:freeze page
+CMD:UNFREEZE_PAGE:unfreeze page
+CMD:CLEAR_COOKIES:clear cookies
+CMD:ZOOM_IN:zoom in
+CMD:ZOOM_OUT:zoom out
+CMD:DESKTOP_MODE:desktop mode
+CMD:MOBILE_MODE:mobile mode
+CMD:RESET_ZOOM:reset zoom
+CMD:SET_ZOOM_LEVEL:set zoom level
+CMD:ADD_BOOKMARK:add bookmark
+CMD:NEW_TAB:new tab
+CMD:CLOSE_TAB:close tab
+CMD:SWITCH_TAB:switch tab
+CMD:RELOAD_PAGE:reload page
+CMD:STOP_LOADING:stop loading
+CMD:GO_BACK:go back
+CMD:GO_FORWARD:go forward
+CMD:OPEN_LINK:open link
+CMD:COPY_LINK:copy link
+CMD:SHARE_PAGE:share page
+CMD:FIND_ON_PAGE:find on page
+CMD:READER_MODE:reader mode
+CMD:EXIT_READER_MODE:exit reader mode
+CMD:FULL_SCREEN:full screen
+CMD:EXIT_FULL_SCREEN:exit full screen
+CMD:VIEW_SOURCE:view source
+CMD:INCOGNITO_MODE:incognito mode
+CMD:CLOSE_INCOGNITO:close incognito
+CMD:OPEN_HISTORY:open history
+CMD:CLEAR_HISTORY:clear history
+CMD:OPEN_DOWNLOADS:open downloads
+CMD:SAVE_PAGE:save page
+CMD:PRINT_PAGE:print page
+CMD:OPEN_SETTINGS:open settings
+CMD:SCROLL_UP:scroll up
+CMD:SCROLL_DOWN:scroll down
+CMD:SCROLL_LEFT:scroll left
+CMD:SCROLL_RIGHT:scroll right
+CMD:OPEN_NEW_WINDOW:open new window
+---
+SYN:SCROLL_TOP:[top of page,scroll up all the way,jump to top,page top,go to top,scroll to beginning,top please,page beginning,start of page,first line,scroll all the way up,jump to start,page start,top of the page]
+SYN:SCROLL_BOTTOM:[bottom of page,scroll down all the way,jump to bottom,page bottom,go to bottom,scroll to end,bottom please,page end,end of page,last line,scroll all the way down,jump to end,page finish,bottom of the page]
+SYN:FREEZE_PAGE:[lock scroll,disable scrolling,freeze scrolling,stop scroll,lock page,hold page,freeze content,lock content,stop scrolling,disable scroll,freeze it,lock it up,hold scrolling,page lock]
+SYN:UNFREEZE_PAGE:[unlock scroll,enable scrolling,unfreeze scrolling,resume scroll,unlock page,release page,unfreeze content,unlock content,resume scrolling,enable scroll,unfreeze it,unlock it,release scrolling,page unlock]
+SYN:CLEAR_COOKIES:[delete cookies,remove cookies,clear browsing data,erase cookies,cookies clear,clear browser data,delete browsing data,remove browsing data,erase browsing data,clear cache and cookies,wipe cookies,cookies delete,clear web data,browser data clear]
+SYN:ZOOM_IN:[enlarge page,magnify,bigger text,increase zoom,zoom larger,make text bigger,enlarge text,bigger page,zoom up,increase magnification,larger view,make bigger,zoom closer,magnify page]
+SYN:ZOOM_OUT:[shrink page,reduce zoom,smaller text,decrease zoom,zoom smaller,make text smaller,reduce text,smaller page,zoom down,decrease magnification,smaller view,make smaller,zoom back,reduce page]
+SYN:DESKTOP_MODE:[desktop site,full site,desktop version,request desktop,desktop view,full website,desktop page,computer version,desktop browser,PC mode,request desktop site,show desktop version,switch to desktop,desktop mode on]
+SYN:MOBILE_MODE:[mobile site,mobile version,phone site,mobile view,phone mode,mobile website,mobile page,phone version,mobile browser,switch to mobile,request mobile site,show mobile version,mobile mode on,phone view]
+SYN:RESET_ZOOM:[default zoom,normal zoom,100 percent zoom,original size,zoom reset,normal size,default size,regular zoom,standard zoom,zoom to default,reset size,normal view,default view,original zoom]
+SYN:SET_ZOOM_LEVEL:[zoom level,adjust zoom,change zoom,zoom to,set zoom,zoom percentage,zoom amount,zoom setting,zoom adjustment,change zoom level,adjust zoom level,modify zoom,zoom control,zoom configuration]
+SYN:ADD_BOOKMARK:[bookmark page,save bookmark,add to bookmarks,bookmark this,save page,bookmark current page,add to favorites,save to bookmarks,bookmark it,create bookmark,bookmark this page,save this page,add favorite,bookmark now]
+SYN:NEW_TAB:[open new tab,create tab,add tab,new browser tab,open tab,create new tab,add new tab,new page,open new page,tab new,make new tab,start new tab,open another tab,new tab please]
+SYN:CLOSE_TAB:[close this tab,remove tab,delete tab,close current tab,tab close,close page,remove this tab,delete this tab,close browser tab,tab remove,end tab,finish tab,close active tab,close it]
+SYN:SWITCH_TAB:[change tab,next tab,previous tab,go to tab,tab switch,switch to tab,move to tab,navigate tab,tab navigation,cycle tab,tab cycling]
+SYN:RELOAD_PAGE:[refresh page,reload,refresh,update page,page reload,page refresh,reload this page,refresh this page,reload current page,refresh current page,reload it,refresh it]
+SYN:STOP_LOADING:[stop page,cancel loading,halt loading,stop,cancel,halt page,stop load,cancel load,halt load,stop it,cancel it,halt it]
+SYN:GO_BACK:[back,previous page,go to previous page,navigate back,back page,last page,return,go backwards,backwards,step back]
+SYN:GO_FORWARD:[forward,next page,go to next page,navigate forward,forward page,advance,go forwards,forwards,step forward]
+SYN:OPEN_LINK:[click link,follow link,open URL,navigate to link,go to link,open this link,click this link,follow this link,tap link,select link]
+SYN:COPY_LINK:[copy URL,copy link address,copy this link,copy link URL,copy page link,save link,copy link to clipboard,clipboard link]
+SYN:SHARE_PAGE:[share this page,share URL,share link,share this link,send page,send link,share current page,share this site,share website]
+SYN:FIND_ON_PAGE:[search page,find text,search on page,find in page,page search,search this page,find word,search for text,locate text,find string]
+SYN:READER_MODE:[reading mode,enable reader mode,turn on reader mode,reader view,reading view,simplified view,text only mode,article mode,clean view]
+SYN:EXIT_READER_MODE:[disable reader mode,turn off reader mode,leave reader mode,normal view,standard view,full view,exit reading mode,close reader mode]
+SYN:FULL_SCREEN:[enter full screen,fullscreen mode,maximize browser,full screen mode,go full screen,fullscreen,maximize page,full view]
+SYN:EXIT_FULL_SCREEN:[leave full screen,minimize browser,exit fullscreen mode,normal screen,windowed mode,restore window,exit fullscreen]
+SYN:VIEW_SOURCE:[show source,page source,view page source,show page source,HTML source,view HTML,show HTML,source code]
+SYN:INCOGNITO_MODE:[private mode,private browsing,incognito window,private window,open incognito,start private browsing,new incognito tab,new private tab]
+SYN:CLOSE_INCOGNITO:[exit incognito,close private mode,exit private browsing,close private window,close incognito window,leave incognito,leave private mode]
+SYN:OPEN_HISTORY:[show history,view history,browser history,browsing history,history page,open browsing history,show browsing history]
+SYN:CLEAR_HISTORY:[delete history,remove history,erase history,clear browsing history,delete browsing history,wipe history,history clear]
+SYN:OPEN_DOWNLOADS:[show downloads,view downloads,downloads page,download history,open download page,show download page]
+SYN:SAVE_PAGE:[download page,save webpage,save this page,download webpage,save current page,save page as,download current page]
+SYN:PRINT_PAGE:[print this page,print webpage,print current page,page print,print it,print this]
+SYN:OPEN_SETTINGS:[browser settings,show settings,settings page,open browser settings,show browser settings,preferences,options]
+SYN:SCROLL_UP:[page up,scroll page up,move up,go up,scroll upward,scroll upwards,up,scroll a bit up]
+SYN:SCROLL_DOWN:[page down,scroll page down,move down,go down,scroll downward,scroll downwards,down,scroll a bit down]
+SYN:SCROLL_LEFT:[page left,move left,go left,scroll to left,leftward,left,scroll a bit left]
+SYN:SCROLL_RIGHT:[page right,move right,go right,scroll to right,rightward,right,scroll a bit right]
+SYN:OPEN_NEW_WINDOW:[new window,new browser window,open window,create window,add window,new window please]

@@ -1,5 +1,6 @@
 package com.augmentalis.avamagic.state
 
+import kotlin.jvm.JvmName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -181,10 +182,10 @@ object ComputedOps {
     /**
      * Sort a list state by a selector
      */
-    fun <T, R : Comparable<R>> State<List<T>>.sortedByList(
+    fun <T, R : Comparable<R>> FlowState<List<T>>.sortedByList(
         selector: (T) -> R
-    ): ComputedState<List<R>> {
-        return computed(this) { list ->
+    ): ComputedState<List<T>> {
+        return computed(this) { list: List<T> ->
             list.sortedBy(selector)
         }
     }
@@ -192,29 +193,29 @@ object ComputedOps {
     /**
      * Count items in a list state
      */
-    fun <T> State<List<T>>.countList(): ComputedState<Int> {
-        return computed(this) { it.size }
+    fun <T> FlowState<List<T>>.countList(): ComputedState<Int> {
+        return computed(this) { list: List<T> -> list.size }
     }
 
     /**
      * Check if list is empty
      */
-    fun <T> State<List<T>>.isEmptyList(): ComputedState<Boolean> {
-        return computed(this) { it.isEmpty() }
+    fun <T> FlowState<List<T>>.isEmptyList(): ComputedState<Boolean> {
+        return computed(this) { list: List<T> -> list.isEmpty() }
     }
 
     /**
      * Get first item or null
      */
-    fun <T> State<List<T>>.firstOrNullList(): ComputedState<T?> {
-        return computed(this) { it.firstOrNull() }
+    fun <T> FlowState<List<T>>.firstOrNullList(): ComputedState<T?> {
+        return computed(this) { list: List<T> -> list.firstOrNull() }
     }
 
     /**
      * Get last item or null
      */
-    fun <T> State<List<T>>.lastOrNullList(): ComputedState<T?> {
-        return computed(this) { it.lastOrNull() }
+    fun <T> FlowState<List<T>>.lastOrNullList(): ComputedState<T?> {
+        return computed(this) { list: List<T> -> list.lastOrNull() }
     }
 }
 
@@ -224,29 +225,33 @@ object ComputedOps {
 object ComputedMath {
 
     /**
-     * Sum of two numeric states
+     * Sum of two Int states
      */
+    @JvmName("plusInt")
     fun State<Int>.plus(other: State<Int>): ComputedState<Int> {
         return computed(this, other) { a, b -> a + b }
     }
 
     /**
-     * Difference of two numeric states
+     * Difference of two Int states
      */
+    @JvmName("minusInt")
     fun State<Int>.minus(other: State<Int>): ComputedState<Int> {
         return computed(this, other) { a, b -> a - b }
     }
 
     /**
-     * Product of two numeric states
+     * Product of two Int states
      */
+    @JvmName("timesInt")
     fun State<Int>.times(other: State<Int>): ComputedState<Int> {
         return computed(this, other) { a, b -> a * b }
     }
 
     /**
-     * Division of two numeric states
+     * Division of two Int states
      */
+    @JvmName("divInt")
     fun State<Int>.div(other: State<Int>): ComputedState<Int> {
         return computed(this, other) { a, b ->
             if (b == 0) 0 else a / b
@@ -254,29 +259,33 @@ object ComputedMath {
     }
 
     /**
-     * Sum of double states
+     * Sum of Double states
      */
+    @JvmName("plusDouble")
     fun State<Double>.plus(other: State<Double>): ComputedState<Double> {
         return computed(this, other) { a, b -> a + b }
     }
 
     /**
-     * Difference of double states
+     * Difference of Double states
      */
+    @JvmName("minusDouble")
     fun State<Double>.minus(other: State<Double>): ComputedState<Double> {
         return computed(this, other) { a, b -> a - b }
     }
 
     /**
-     * Product of double states
+     * Product of Double states
      */
+    @JvmName("timesDouble")
     fun State<Double>.times(other: State<Double>): ComputedState<Double> {
         return computed(this, other) { a, b -> a * b }
     }
 
     /**
-     * Division of double states
+     * Division of Double states
      */
+    @JvmName("divDouble")
     fun State<Double>.div(other: State<Double>): ComputedState<Double> {
         return computed(this, other) { a, b ->
             if (b == 0.0) 0.0 else a / b
@@ -307,7 +316,7 @@ object ComputedBool {
      * Logical NOT of a boolean state
      */
     fun State<Boolean>.not(): ComputedState<Boolean> {
-        return computed(this) { !it }
+        return computed(this) { b: Boolean -> !b }
     }
 
     /**
@@ -334,42 +343,42 @@ object ComputedString {
      * Check if string is blank
      */
     fun State<String>.isBlank(): ComputedState<Boolean> {
-        return computed(this) { it.isBlank() }
+        return computed(this) { s: String -> s.isBlank() }
     }
 
     /**
      * Check if string is empty
      */
     fun State<String>.isEmpty(): ComputedState<Boolean> {
-        return computed(this) { it.isEmpty() }
+        return computed(this) { s: String -> s.isEmpty() }
     }
 
     /**
      * Get string length
      */
     fun State<String>.length(): ComputedState<Int> {
-        return computed(this) { it.length }
+        return computed(this) { s: String -> s.length }
     }
 
     /**
      * Uppercase string
      */
     fun State<String>.uppercase(): ComputedState<String> {
-        return computed(this) { it.uppercase() }
+        return computed(this) { s: String -> s.uppercase() }
     }
 
     /**
      * Lowercase string
      */
     fun State<String>.lowercase(): ComputedState<String> {
-        return computed(this) { it.lowercase() }
+        return computed(this) { s: String -> s.lowercase() }
     }
 
     /**
      * Trim string
      */
     fun State<String>.trim(): ComputedState<String> {
-        return computed(this) { it.trim() }
+        return computed(this) { s: String -> s.trim() }
     }
 }
 

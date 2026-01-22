@@ -62,8 +62,10 @@ private const val TAG = "OverlayService"
 class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
     private lateinit var windowManager: WindowManager
+    private lateinit var notificationManager: NotificationManager
     private var numbersOverlayView: View? = null
     private var dialogOverlayView: View? = null  // Separate touchable overlay for dialogs
+    private var debugFabView: View? = null       // Debug FAB overlay
     private val serviceScope = kotlinx.coroutines.CoroutineScope(
         kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob()
     )
@@ -100,17 +102,20 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        notificationManager = getSystemService(NotificationManager::class.java)
         createNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand called")
         try {
-            startForeground(NOTIFICATION_ID, createNotification())
+            startForeground(NOTIFICATION_ID, createNotification(isListening = false, transcription = null))
             Log.d(TAG, "startForeground done")
             lifecycleRegistry.currentState = Lifecycle.State.STARTED
             showNumbersOverlay()
+            showDebugFab()  // Show debug FAB overlay
             observeDialogState()  // Start observing dialog state
+            observeVoiceState()   // Start observing voice state for notification updates
             Log.d(TAG, "showNumbersOverlay done")
             lifecycleRegistry.currentState = Lifecycle.State.RESUMED
         } catch (e: Exception) {
@@ -148,6 +153,7 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         serviceScope.cancel()
         removeNumbersOverlay()
         removeDialogOverlay()
+        removeDebugFab()
         super.onDestroy()
     }
 
@@ -168,6 +174,35 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
                 }
             }
         }
+    }
+
+    /**
+     * Observe voice listening state and update notification accordingly.
+     */
+    private fun observeVoiceState() {
+        Log.d(TAG, "Starting voice state observation")
+        serviceScope.launch {
+            // Observe voice listening state
+            VoiceOSAccessibilityService.isVoiceListening.collect { isListening ->
+                Log.d(TAG, "Voice listening state changed: $isListening")
+                updateNotification(isListening, VoiceOSAccessibilityService.lastTranscription.value)
+            }
+        }
+        serviceScope.launch {
+            // Observe transcription
+            VoiceOSAccessibilityService.lastTranscription.collect { transcription ->
+                Log.d(TAG, "Transcription changed: $transcription")
+                updateNotification(VoiceOSAccessibilityService.isVoiceListening.value, transcription)
+            }
+        }
+    }
+
+    /**
+     * Update the foreground notification with current voice state.
+     */
+    private fun updateNotification(isListening: Boolean, transcription: String?) {
+        val notification = createNotification(isListening, transcription)
+        notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
     /**
@@ -239,7 +274,7 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         }
     }
 
-    private fun createNotification(): Notification {
+    private fun createNotification(isListening: Boolean, transcription: String?): Notification {
         val pendingIntent = PendingIntent.getActivity(
             this,
             0,
@@ -247,13 +282,28 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Dynamic title based on voice state
+        val title = if (isListening) {
+            "🎤 VoiceOS Listening"
+        } else {
+            "VoiceOS Active"
+        }
+
+        // Dynamic content based on transcription
+        val content = when {
+            transcription != null -> "\"${transcription.take(40)}${if (transcription.length > 40) "..." else ""}\""
+            isListening -> "Say a command..."
+            else -> "Voice commands ready"
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(getString(R.string.overlay_notification_title))
-            .setContentText(getString(R.string.overlay_notification_text))
-            .setSmallIcon(android.R.drawable.ic_menu_view)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setSmallIcon(if (isListening) android.R.drawable.ic_btn_speak_now else android.R.drawable.ic_menu_view)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setShowWhen(false)
             .build()
     }
 
@@ -307,6 +357,114 @@ class OverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             numbersOverlayView = null
         }
     }
+
+    /**
+     * Show the debug FAB overlay (touchable).
+     */
+    private fun showDebugFab() {
+        if (debugFabView != null) return
+
+        try {
+            // Start with WRAP_CONTENT, will be updated when expanded
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                else
+                    WindowManager.LayoutParams.TYPE_PHONE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.BOTTOM or Gravity.END
+                x = 16
+                y = 100
+            }
+
+            val composeView = ComposeView(this).apply {
+                setViewTreeLifecycleOwner(this@OverlayService)
+                setViewTreeSavedStateRegistryOwner(this@OverlayService)
+                setContent {
+                    DebugFabOverlay(
+                        onPositionChange = { newGravity, newX, newY ->
+                            updateDebugFabPosition(newGravity, newX, newY)
+                        },
+                        onExpandedChange = { isExpanded ->
+                            updateDebugFabSize(isExpanded)
+                        }
+                    )
+                }
+            }
+
+            debugFabView = composeView
+            windowManager.addView(composeView, params)
+            Log.d(TAG, "Debug FAB overlay added to WindowManager")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing debug FAB overlay", e)
+        }
+    }
+
+    /**
+     * Update the debug FAB position.
+     */
+    private fun updateDebugFabPosition(gravity: Int, x: Int, y: Int) {
+        debugFabView?.let { view ->
+            try {
+                val params = view.layoutParams as WindowManager.LayoutParams
+                params.gravity = gravity
+                params.x = x
+                params.y = y
+                windowManager.updateViewLayout(view, params)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating debug FAB position", e)
+            }
+        }
+    }
+
+    /**
+     * Update the debug FAB size when expanded/collapsed.
+     * This is crucial for touch events to work on the expanded panel.
+     */
+    private fun updateDebugFabSize(isExpanded: Boolean) {
+        debugFabView?.let { view ->
+            try {
+                val params = view.layoutParams as WindowManager.LayoutParams
+                if (isExpanded) {
+                    // Expanded: Fixed size to ensure touch bounds cover the panel
+                    val displayMetrics = resources.displayMetrics
+                    val panelWidth = (280 * displayMetrics.density).toInt()
+                    val panelHeight = (displayMetrics.heightPixels * 0.5f).toInt() // Max half screen
+                    params.width = panelWidth
+                    params.height = panelHeight
+                    Log.d(TAG, "Debug FAB expanded: ${panelWidth}x${panelHeight}")
+                } else {
+                    // Collapsed: Small FAB size
+                    params.width = WindowManager.LayoutParams.WRAP_CONTENT
+                    params.height = WindowManager.LayoutParams.WRAP_CONTENT
+                    Log.d(TAG, "Debug FAB collapsed: WRAP_CONTENT")
+                }
+                windowManager.updateViewLayout(view, params)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating debug FAB size", e)
+            }
+        }
+    }
+
+    /**
+     * Remove the debug FAB overlay.
+     */
+    private fun removeDebugFab() {
+        debugFabView?.let {
+            try {
+                windowManager.removeView(it)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error removing debug FAB overlay", e)
+            }
+            debugFabView = null
+            Log.d(TAG, "Debug FAB overlay removed")
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -329,7 +487,7 @@ private fun NumbersOverlayContent() {
     }
 
     // For AUTO mode, also check if there are items
-    if (mode == VoiceOSAccessibilityService.Companion.NumbersOverlayMode.AUTO && items.isEmpty()) {
+    if (mode == OverlayStateManager.NumbersOverlayMode.AUTO && items.isEmpty()) {
         return
     }
 
@@ -448,7 +606,7 @@ private fun AppDetectionDialog(
                     onClick = {
                         VoiceOSAccessibilityService.handleAppDetectionResponse(
                             packageName,
-                            VoiceOSAccessibilityService.Companion.AppNumbersPreference.AUTO
+                            OverlayStateManager.AppNumbersPreference.AUTO
                         )
                     }
                 )
@@ -460,7 +618,7 @@ private fun AppDetectionDialog(
                     onClick = {
                         VoiceOSAccessibilityService.handleAppDetectionResponse(
                             packageName,
-                            VoiceOSAccessibilityService.Companion.AppNumbersPreference.ALWAYS
+                            OverlayStateManager.AppNumbersPreference.ALWAYS
                         )
                     }
                 )
@@ -472,7 +630,7 @@ private fun AppDetectionDialog(
                     onClick = {
                         VoiceOSAccessibilityService.handleAppDetectionResponse(
                             packageName,
-                            VoiceOSAccessibilityService.Companion.AppNumbersPreference.NEVER
+                            OverlayStateManager.AppNumbersPreference.NEVER
                         )
                     }
                 )
@@ -531,7 +689,7 @@ private fun DialogButton(
  * Uses theme colors from settings.
  */
 @Composable
-private fun NumberBadge(item: VoiceOSAccessibilityService.Companion.NumberOverlayItem) {
+private fun NumberBadge(item: OverlayStateManager.NumberOverlayItem) {
     // Get theme from settings
     val theme by VoiceOSAccessibilityService.badgeTheme.collectAsState()
     val density = LocalDensity.current
@@ -601,7 +759,7 @@ private fun NumbersInstructionPanel(
     val mode by VoiceOSAccessibilityService.instructionBarMode.collectAsState()
 
     // Don't show if mode is OFF
-    if (mode == VoiceOSAccessibilityService.Companion.InstructionBarMode.OFF) {
+    if (mode == OverlayStateManager.InstructionBarMode.OFF) {
         return
     }
 
@@ -615,7 +773,7 @@ private fun NumbersInstructionPanel(
 
     // Trigger fade after delay in AUTO mode
     LaunchedEffect(mode, itemCount) {
-        if (mode == VoiceOSAccessibilityService.Companion.InstructionBarMode.AUTO) {
+        if (mode == OverlayStateManager.InstructionBarMode.AUTO) {
             visible = true
             kotlinx.coroutines.delay(3000)  // Show for 3 seconds
             visible = false
@@ -661,5 +819,512 @@ private fun NumbersInstructionPanel(
                 )
             }
         }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Debug FAB Overlay - Floating debug panel for monitoring VoiceOS state
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Position options for the debug panel.
+ */
+enum class DebugPanelPosition {
+    TOP_START, TOP_END, BOTTOM_START, BOTTOM_END
+}
+
+/**
+ * Size options for the expanded debug panel.
+ */
+enum class DebugPanelSize(val fraction: Float, val label: String) {
+    COMPACT(0.2f, "1/5"),
+    SMALL(0.25f, "1/4"),
+    MEDIUM(0.33f, "1/3"),
+    LARGE(0.5f, "1/2")
+}
+
+/**
+ * Debug FAB Overlay - Collapsible floating panel for monitoring VoiceOS.
+ *
+ * Features:
+ * - Collapsed: Small FAB showing element count
+ * - Expanded: Metrics panel with controls
+ * - Numbers mode toggle (OFF/ON/AUTO)
+ * - Position controls (corners)
+ * - Size controls (1/5, 1/4, 1/3, 1/2 of screen)
+ */
+@Composable
+private fun DebugFabOverlay(
+    onPositionChange: (Int, Int, Int) -> Unit,
+    onExpandedChange: (Boolean) -> Unit = {}
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    var position by remember { mutableStateOf(DebugPanelPosition.BOTTOM_END) }
+    var panelSize by remember { mutableStateOf(DebugPanelSize.SMALL) }
+
+    // Notify parent when expanded state changes for window size updates
+    LaunchedEffect(isExpanded) {
+        onExpandedChange(isExpanded)
+    }
+
+    // Collect metrics from accessibility service
+    val screenInfo by VoiceOSAccessibilityService.currentScreenInfo.collectAsState()
+    val numberedItems by VoiceOSAccessibilityService.numberedOverlayItems.collectAsState()
+    val numbersMode by VoiceOSAccessibilityService.numbersOverlayMode.collectAsState()
+    val isConnected by VoiceOSAccessibilityService.isConnected.collectAsState()
+    val lastError by VoiceOSAccessibilityService.lastError.collectAsState()
+    val isVoiceListening by VoiceOSAccessibilityService.isVoiceListening.collectAsState()
+    val lastTranscription by VoiceOSAccessibilityService.lastTranscription.collectAsState()
+
+    // Animation for expand/collapse
+    val expandProgress by animateFloatAsState(
+        targetValue = if (isExpanded) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "expand"
+    )
+
+    // Show transcription bubble when voice is detected
+    Column(
+        horizontalAlignment = Alignment.End
+    ) {
+        // Transcription bubble (show above FAB when speaking)
+        lastTranscription?.let { text ->
+            Card(
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
+                    .widthIn(max = 200.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xF0101020))
+            ) {
+                Row(
+                    modifier = Modifier.padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = null,
+                        tint = Color(0xFF10B981),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = text.take(50),
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+
+        if (isExpanded) {
+            // Expanded panel
+            DebugMetricsPanel(
+                screenInfo = screenInfo,
+                numberedItems = numberedItems,
+                numbersMode = numbersMode,
+                isConnected = isConnected,
+                isVoiceListening = isVoiceListening,
+                lastError = lastError,
+                panelSize = panelSize,
+                position = position,
+                onCollapse = { isExpanded = false },
+                onSizeChange = { panelSize = it },
+                onPositionChange = { newPos ->
+                    position = newPos
+                    val (gravity, x, y) = when (newPos) {
+                        DebugPanelPosition.TOP_START -> Triple(Gravity.TOP or Gravity.START, 16, 100)
+                        DebugPanelPosition.TOP_END -> Triple(Gravity.TOP or Gravity.END, 16, 100)
+                        DebugPanelPosition.BOTTOM_START -> Triple(Gravity.BOTTOM or Gravity.START, 16, 100)
+                        DebugPanelPosition.BOTTOM_END -> Triple(Gravity.BOTTOM or Gravity.END, 16, 100)
+                    }
+                    onPositionChange(gravity, x, y)
+                },
+                onNumbersModeChange = { mode ->
+                    OverlayStateManager.setNumbersOverlayMode(mode)
+                }
+            )
+        } else {
+            // Collapsed FAB with voice indicator
+            DebugFabCollapsed(
+                elementCount = numberedItems.size,
+                isConnected = isConnected,
+                isVoiceListening = isVoiceListening,
+                hasError = lastError != null,
+                onClick = { isExpanded = true }
+            )
+        }
+    }
+}
+
+/**
+ * Collapsed FAB showing quick status with voice indicator.
+ */
+@Composable
+private fun DebugFabCollapsed(
+    elementCount: Int,
+    isConnected: Boolean,
+    isVoiceListening: Boolean,
+    hasError: Boolean,
+    onClick: () -> Unit
+) {
+    val bgColor = when {
+        hasError -> Color(0xFFEF4444)  // Red for error
+        !isConnected -> Color(0xFF6B7280)  // Gray for disconnected
+        elementCount > 0 -> Color(0xFF10B981)  // Green for active
+        else -> Color(0xFF3B82F6)  // Blue for idle
+    }
+
+    // Pulsing animation for voice listening
+    val pulseAnim = remember { androidx.compose.animation.core.Animatable(1f) }
+    LaunchedEffect(isVoiceListening) {
+        if (isVoiceListening) {
+            while (true) {
+                pulseAnim.animateTo(
+                    targetValue = 1.15f,
+                    animationSpec = tween(500)
+                )
+                pulseAnim.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(500)
+                )
+            }
+        } else {
+            pulseAnim.snapTo(1f)
+        }
+    }
+
+    Box(contentAlignment = Alignment.Center) {
+        // Outer pulse ring when listening
+        if (isVoiceListening) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .graphicsLayer {
+                        scaleX = pulseAnim.value
+                        scaleY = pulseAnim.value
+                        alpha = 2f - pulseAnim.value
+                    }
+                    .clip(CircleShape)
+                    .background(Color(0xFF10B981).copy(alpha = 0.4f))
+            )
+        }
+
+        // Main FAB
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(bgColor)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+            if (elementCount > 0) {
+                Text(
+                    text = elementCount.toString(),
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = "Debug",
+                    tint = if (isVoiceListening) Color(0xFF10B981) else Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
+        // Voice listening indicator dot
+        if (isVoiceListening && elementCount == 0) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 2.dp, y = 2.dp)
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF10B981))
+                    .padding(2.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .background(Color.White)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Expanded metrics panel with detailed info and controls.
+ */
+@Composable
+private fun DebugMetricsPanel(
+    screenInfo: com.augmentalis.voiceoscore.ScreenInfo?,
+    numberedItems: List<OverlayStateManager.NumberOverlayItem>,
+    numbersMode: OverlayStateManager.NumbersOverlayMode,
+    isConnected: Boolean,
+    isVoiceListening: Boolean,
+    lastError: String?,
+    panelSize: DebugPanelSize,
+    position: DebugPanelPosition,
+    onCollapse: () -> Unit,
+    onSizeChange: (DebugPanelSize) -> Unit,
+    onPositionChange: (DebugPanelPosition) -> Unit,
+    onNumbersModeChange: (OverlayStateManager.NumbersOverlayMode) -> Unit
+) {
+    val density = LocalDensity.current
+    val screenHeightDp = with(density) {
+        android.content.res.Resources.getSystem().displayMetrics.heightPixels.toDp()
+    }
+    val panelHeight = screenHeightDp * panelSize.fraction
+
+    Card(
+        modifier = Modifier
+            .width(280.dp)
+            .heightIn(max = panelHeight),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xF0101020)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            // Header with collapse button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "VoiceOS Debug",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Size selector
+                    DebugPanelSize.entries.forEach { size ->
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(
+                                    if (size == panelSize) Color(0xFF3B82F6)
+                                    else Color(0xFF374151)
+                                )
+                                .clickable { onSizeChange(size) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = size.label,
+                                color = Color.White,
+                                fontSize = 8.sp
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    // Collapse button
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF374151))
+                            .clickable(onClick = onCollapse),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "−",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Status indicators row
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Connection status
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444))
+                    )
+                    Text(
+                        text = if (isConnected) "Connected" else "Disconnected",
+                        color = if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444),
+                        fontSize = 10.sp
+                    )
+                }
+                // Voice status
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = null,
+                        tint = if (isVoiceListening) Color(0xFF10B981) else Color(0xFF6B7280),
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        text = if (isVoiceListening) "Listening" else "Off",
+                        color = if (isVoiceListening) Color(0xFF10B981) else Color(0xFF6B7280),
+                        fontSize = 10.sp
+                    )
+                }
+            }
+
+            // Error message
+            lastError?.let { error ->
+                Text(
+                    text = error.take(50),
+                    color = Color(0xFFEF4444),
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Divider(color = Color(0xFF374151), thickness = 1.dp)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Metrics
+            MetricRow("Elements", numberedItems.size.toString())
+            screenInfo?.let { info ->
+                MetricRow("Actionable", info.actionableCount.toString())
+                MetricRow("Commands", info.commandCount.toString())
+                MetricRow("Package", info.packageName.substringAfterLast("."))
+                info.activityName?.let { activity ->
+                    MetricRow("Activity", activity.substringAfterLast("."))
+                }
+                MetricRow("Cached", if (info.isCached) "Yes" else "No")
+            } ?: run {
+                MetricRow("Screen", "Not scanned")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Divider(color = Color(0xFF374151), thickness = 1.dp)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Numbers mode toggle
+            Text(
+                text = "Numbers Mode",
+                color = Color(0xFF9CA3AF),
+                fontSize = 10.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                OverlayStateManager.NumbersOverlayMode.entries.forEach { mode ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(
+                                if (mode == numbersMode) Color(0xFF3B82F6)
+                                else Color(0xFF374151)
+                            )
+                            .clickable { onNumbersModeChange(mode) }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = mode.name,
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = if (mode == numbersMode) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Position controls
+            Text(
+                text = "Position",
+                color = Color(0xFF9CA3AF),
+                fontSize = 10.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                listOf(
+                    DebugPanelPosition.TOP_START to "TL",
+                    DebugPanelPosition.TOP_END to "TR",
+                    DebugPanelPosition.BOTTOM_START to "BL",
+                    DebugPanelPosition.BOTTOM_END to "BR"
+                ).forEach { (pos, label) ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(
+                                if (pos == position) Color(0xFF3B82F6)
+                                else Color(0xFF374151)
+                            )
+                            .clickable { onPositionChange(pos) }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = if (pos == position) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Single metric row in the debug panel.
+ */
+@Composable
+private fun MetricRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            color = Color(0xFF9CA3AF),
+            fontSize = 11.sp
+        )
+        Text(
+            text = value,
+            color = Color.White,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium
+        )
     }
 }

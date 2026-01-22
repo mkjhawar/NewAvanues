@@ -1,6 +1,6 @@
 package com.augmentalis.avamagic.state
 
-import com.augmentalis.magicelements.core.*
+import com.augmentalis.avamagic.core.*
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -241,7 +241,7 @@ fun <T> reactive(
     modifiers: List<Modifier> = emptyList(),
     builder: (T) -> Component
 ): ReactiveComponent<T> {
-    return ReactiveComponent(state.value, id, style, modifiers, builder)
+    return ReactiveComponent(state.asFlow(), id, style, modifiers, builder)
 }
 
 /**

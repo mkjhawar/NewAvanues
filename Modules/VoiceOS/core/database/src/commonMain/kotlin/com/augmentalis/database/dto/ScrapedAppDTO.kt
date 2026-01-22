@@ -21,7 +21,7 @@ import com.augmentalis.database.Scraped_app
  * Full Room entity has additional fields (appName, etc.) that are stored
  * in the adapter layer when needed.
  *
- * @property pkgHash Pre-computed package hash for compact VUID format lookups.
+ * @property pkgHash Pre-computed package hash for compact AVID format lookups.
  *                   Format: 6-char hex hash of reversed package name.
  *                   Example: "a3f2e1" for "com.instagram.android"
  */
@@ -39,7 +39,7 @@ data class ScrapedAppDTO(
     val commandCount: Long = 0,
     val firstScrapedAt: Long,
     val lastScrapedAt: Long,
-    val pkgHash: String? = null  // Pre-computed package hash for compact VUID format
+    val pkgHash: String? = null  // Pre-computed package hash for compact AVID format
 )
 
 /**

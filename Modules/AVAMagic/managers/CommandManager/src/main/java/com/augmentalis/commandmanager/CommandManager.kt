@@ -10,7 +10,7 @@ import android.content.Intent
 import android.util.Log
 import com.augmentalis.voiceos.command.*
 import com.augmentalis.commandmanager.actions.*
-import com.augmentalis.universalipc.UniversalIPCEncoder
+import com.augmentalis.avamagic.ipc.UniversalIPCEncoder  // Consolidated into AvaMagic/IPC
 import com.augmentalis.commandmanager.loader.CommandLoader
 import com.augmentalis.commandmanager.loader.CommandLocalizer
 import com.augmentalis.commandmanager.routing.IntentDispatcher
@@ -71,8 +71,8 @@ class CommandManager(private val context: Context) {
         IntentDispatcher(context)
     }
 
-    // Universal IPC encoder for cross-app communication
-    private val ipcEncoder = UniversalIPCEncoder()
+    // Universal IPC encoder for cross-app communication (object singleton)
+    private val ipcEncoder = UniversalIPCEncoder
 
     // Database command cache (command ID -> CommandMetadata)
     // CommandMetadata contains patterns and category for dynamic action creation

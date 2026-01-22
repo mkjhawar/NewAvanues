@@ -35,34 +35,34 @@ include(":core:Theme")
 project(":core:Theme").projectDir = file("../../../Modules/AVA/core/Theme")
 
 // Shared modules (shared between AVA and VoiceOS)
-include(":SharedPlatform")
-project(":SharedPlatform").projectDir = file("../../../Modules/Shared/Platform")
+include(":Utilities")
+project(":Utilities").projectDir = file("../../../Modules/Utilities")
 
-include(":SharedNLU")
-project(":SharedNLU").projectDir = file("../../../Modules/Shared/NLU")
+include(":NLU")
+project(":NLU").projectDir = file("../../../Modules/AI/NLU")
 
 // Feature modules
 
 include(":Chat")
-project(":Chat").projectDir = file("../../../Modules/AVA/Chat")
+project(":Chat").projectDir = file("../../../Modules/AI/Chat")
 
 include(":Teach")
-project(":Teach").projectDir = file("../../../Modules/AVA/Teach")
+project(":Teach").projectDir = file("../../../Modules/AI/Teach")
 
 include(":Overlay")
 project(":Overlay").projectDir = file("../../../Modules/AVA/Overlay")
 
 include(":LLM")
-project(":LLM").projectDir = file("../../../Modules/LLM")
+project(":LLM").projectDir = file("../../../Modules/AI/LLM")
 
 include(":RAG")
-project(":RAG").projectDir = file("../../../Modules/RAG")
+project(":RAG").projectDir = file("../../../Modules/AI/RAG")
 
 include(":Actions")
-project(":Actions").projectDir = file("../../../Modules/AVA/Actions")
+project(":Actions").projectDir = file("../../../Modules/Actions")
 
 include(":WakeWord")
-project(":WakeWord").projectDir = file("../../../Modules/AVA/WakeWord")
+project(":WakeWord").projectDir = file("../../../Modules/Voice/WakeWord")
 
 include(":Memory")
-project(":Memory").projectDir = file("../../../Modules/AVA/memory")
+project(":Memory").projectDir = file("../../../Modules/AI/Memory")

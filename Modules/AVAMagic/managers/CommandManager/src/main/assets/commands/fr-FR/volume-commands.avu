@@ -1,0 +1,55 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: volume-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: fr-FR
+project: voiceos
+metadata:
+  category: volume
+  display_name: Volume Control
+  description: Voice commands for device volume control and settings
+  command_count: 18
+---
+CAT:volume:Volume Control:Voice commands for device volume control and settings
+CMD:INCREASE_VOLUME:augmenter volume
+CMD:DECREASE_VOLUME:diminuer volume
+CMD:MUTE_VOLUME:mute volume
+CMD:SET_VOLUME_MAX:set volume to max
+CMD:SET_VOLUME_1:set volume number one
+CMD:SET_VOLUME_2:set volume number two
+CMD:SET_VOLUME_3:set volume number three
+CMD:SET_VOLUME_4:set volume 4
+CMD:SET_VOLUME_5:set volume 5
+CMD:SET_VOLUME_6:set volume 6
+CMD:SET_VOLUME_7:set volume 7
+CMD:SET_VOLUME_8:set volume 8
+CMD:SET_VOLUME_9:set volume 9
+CMD:SET_VOLUME_10:set volume 10
+CMD:SET_VOLUME_11:set volume 11
+CMD:SET_VOLUME_12:set volume 12
+CMD:SET_VOLUME_13:set volume 13
+CMD:SET_VOLUME_14:set volume 14
+CMD:SET_VOLUME_15:set volume 15
+---
+SYN:INCREASE_VOLUME:[volume haut,turn haut volume,louder,raise volume,boost volume,make it louder,turn it haut,crank it haut,pump haut the volume,make the sound louder,volume higher,turn the volume haut,louder s'il vous plaît,make it loud]
+SYN:DECREASE_VOLUME:[volume bas,turn bas volume,quieter,lower volume,reduce volume,make it quieter,turn it bas,quiet it bas,lower the volume,make the sound quieter,volume lower,turn the volume bas,quieter s'il vous plaît,make it quiet]
+SYN:MUTE_VOLUME:[mute sound,silence,turn off sound,no sound,quiet mode,silent mode,mute it,silence it,turn sound off,make it silent,cut the sound,kill the sound,no audio,shut off the sound]
+SYN:SET_VOLUME_MAX:[maximum volume,full volume,highest volume,volume max,loudest setting,turn volume to maximum,set volume to maximum,full blast,maximum sound,loudest volume,top volume,crank it to max,full throttle,max it out]
+SYN:SET_VOLUME_1:[volume one,set volume one,adjust volume one,volume level one,volume to one,premier volume level,minimum volume,lowest volume,volume at one,volume setting one,level one volume,one volume,volume number one,set to volume one]
+SYN:SET_VOLUME_2:[volume two,set volume two,adjust volume two,volume level two,volume to two,second volume level,low volume,volume at two,volume setting two,level two volume,two volume,volume number two,set to volume two,quiet volume]
+SYN:SET_VOLUME_3:[volume three,set volume three,adjust volume three,volume level three,volume to three,third volume level,low-medium volume,volume at three,volume setting three,level three volume,three volume,volume number three,set to volume three,soft volume]
+SYN:SET_VOLUME_4:[set volume four,volume level four,volume to four,fourth volume level,soft volume,volume four,adjust volume four,volume at four,volume setting four,level four volume,four volume,volume number four,set to volume four]
+SYN:SET_VOLUME_5:[set volume five,volume level five,volume to five,fifth volume level,medium volume,volume five,adjust volume five,volume at five,volume setting five,level five volume,five volume,volume number five,set to volume five,middle volume]
+SYN:SET_VOLUME_6:[set volume six,volume level six,volume to six,sixth volume level,moderate volume,volume six,adjust volume six,volume at six,volume setting six,level six volume,six volume,volume number six,set to volume six]
+SYN:SET_VOLUME_7:[set volume seven,volume level seven,volume to seven,seventh volume level,medium high volume,volume seven,adjust volume seven,volume at seven,volume setting seven,level seven volume,seven volume,volume number seven,set to volume seven]
+SYN:SET_VOLUME_8:[set volume eight,volume level eight,volume to eight,eighth volume level,high volume,volume eight,adjust volume eight,volume at eight,volume setting eight,level eight volume,eight volume,volume number eight,set to volume eight,loud volume]
+SYN:SET_VOLUME_9:[set volume nine,volume level nine,volume to nine,ninth volume level,very high volume,volume nine,adjust volume nine,volume at nine,volume setting nine,level nine volume,nine volume,volume number nine,set to volume nine,very loud volume]
+SYN:SET_VOLUME_10:[set volume ten,volume level ten,volume to ten,tenth volume level,loud volume,volume ten,adjust volume ten,volume at ten,volume setting ten,level ten volume,ten volume,volume number ten,set to volume ten,really loud volume]
+SYN:SET_VOLUME_11:[set volume eleven,volume level eleven,volume to eleven,eleventh volume level,very loud volume,volume eleven,adjust volume eleven,volume at eleven,volume setting eleven,level eleven volume,eleven volume,volume number eleven,set to volume eleven]
+SYN:SET_VOLUME_12:[set volume twelve,volume level twelve,volume to twelve,twelfth volume level,extra loud volume,volume twelve,adjust volume twelve,volume at twelve,volume setting twelve,level twelve volume,twelve volume,volume number twelve,set to volume twelve]
+SYN:SET_VOLUME_13:[set volume thirteen,volume level thirteen,volume to thirteen,thirteenth volume level,super loud volume,volume thirteen,adjust volume thirteen,volume at thirteen,volume setting thirteen,level thirteen volume,thirteen volume,volume number thirteen,set to volume thirteen]
+SYN:SET_VOLUME_14:[set volume fourteen,volume level fourteen,volume to fourteen,fourteenth volume level,almost max volume,volume fourteen,adjust volume fourteen,volume at fourteen,volume setting fourteen,level fourteen volume,fourteen volume,volume number fourteen,set to volume fourteen]
+SYN:SET_VOLUME_15:[set volume fifteen,volume level fifteen,volume to fifteen,fifteenth volume level,nearly max volume,volume fifteen,adjust volume fifteen,volume at fifteen,volume setting fifteen,level fifteen volume,fifteen volume,volume number fifteen,set to volume fifteen]

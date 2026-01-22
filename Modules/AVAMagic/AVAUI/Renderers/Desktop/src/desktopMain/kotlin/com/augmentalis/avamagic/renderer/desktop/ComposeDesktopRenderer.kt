@@ -1,16 +1,16 @@
-package com.augmentalis.avaelements.renderer.desktop
+package com.augmentalis.avamagic.renderer.desktop
 
 import androidx.compose.runtime.Composable
-import com.augmentalis.avaelements.core.Component
-import com.augmentalis.avaelements.core.api.Renderer
-import com.augmentalis.avaelements.core.Theme
-import com.augmentalis.avaelements.core.ThemeProvider
-import com.augmentalis.avaelements.components.phase1.form.*
-import com.augmentalis.avaelements.components.phase1.display.*
-import com.augmentalis.avaelements.components.phase1.layout.*
-import com.augmentalis.avaelements.components.phase1.navigation.*
-import com.augmentalis.avaelements.components.phase1.data.*
-import com.augmentalis.avaelements.renderer.desktop.mappers.*
+import com.augmentalis.avamagic.core.Component
+import com.augmentalis.avamagic.core.api.Renderer
+import com.augmentalis.avamagic.core.Theme
+import com.augmentalis.avamagic.core.ThemeProvider
+import com.augmentalis.avamagic.components.phase1.form.*
+import com.augmentalis.avamagic.components.phase1.display.*
+import com.augmentalis.avamagic.components.phase1.layout.*
+import com.augmentalis.avamagic.components.phase1.navigation.*
+import com.augmentalis.avamagic.components.phase1.data.*
+import com.augmentalis.avamagic.renderer.desktop.mappers.*
 
 /**
  * Compose Desktop Renderer
@@ -45,7 +45,7 @@ class ComposeDesktopRenderer(override val theme: Theme = ThemeProvider.getCurren
 
             // Phase 1 - Navigation & Data
             is ScrollView -> RenderScrollView(component, theme)
-            is com.augmentalis.avaelements.components.phase1.data.List -> RenderList(component, theme)
+            is com.augmentalis.avamagic.components.phase1.data.List -> RenderList(component, theme)
 
             else -> {
                 // Unknown component - just show placeholder

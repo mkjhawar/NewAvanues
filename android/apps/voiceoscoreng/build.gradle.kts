@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.augmentalis.voiceoscoreng"
-        minSdk = 28  // Android 9 (Pie) - Required for LLM module dependency
+        minSdk = 29  // Android 10 (Q) - Required to match VoiceOSCore (DEPRECATED app)
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
@@ -50,7 +50,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"
+        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
     }
 
     packaging {
@@ -61,13 +61,16 @@ android {
 }
 
 dependencies {
-    // VoiceOSCoreNG library
+    // VoiceOSCore library (consolidated KMP module)
     // For monorepo: uses project reference
     // For standalone: uses composite build substitution (see settings.gradle.kts)
-    implementation(project(":Modules:VoiceOSCoreNG"))
+    implementation(project(":Modules:VoiceOSCore"))
 
     // VoiceOS Database (SQLDelight) - for command persistence
     implementation(project(":Modules:VoiceOS:core:database"))
+
+    // PluginSystem - Universal Plugin Architecture (Phase 4)
+    implementation(project(":Modules:PluginSystem"))
 
     // Core Android
     implementation("androidx.core:core-ktx:1.12.0")
@@ -85,12 +88,27 @@ dependencies {
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
-    // Testing
+    // Testing - Unit Tests
     testImplementation("junit:junit:4.13.2")
+    testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("app.cash.turbine:turbine:1.0.0")
+    testImplementation("com.google.truth:truth:1.1.5")
+
+    // Testing - Instrumented Tests
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("androidx.test:core:1.5.0")
+    androidTestImplementation("androidx.test:runner:1.5.2")
+    androidTestImplementation("androidx.test:rules:1.5.0")
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.02.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("io.mockk:mockk-android:1.13.8")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    androidTestImplementation("app.cash.turbine:turbine:1.0.0")
+    androidTestImplementation("com.google.truth:truth:1.1.5")
+
+    // Debug dependencies for testing
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
