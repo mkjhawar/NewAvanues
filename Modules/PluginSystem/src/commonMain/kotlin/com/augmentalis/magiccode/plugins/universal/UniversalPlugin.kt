@@ -284,6 +284,93 @@ interface UniversalPlugin {
      * @see PluginEvent
      */
     suspend fun onEvent(event: PluginEvent)
+
+    // =========================================================================
+    // State Persistence (for Hot Reload)
+    // =========================================================================
+
+    /**
+     * Save the plugin's current state for hot reload.
+     *
+     * Called before the plugin is unloaded during a hot reload cycle.
+     * Plugins should return a map containing all state that needs to be
+     * preserved across the reload.
+     *
+     * ## State Map Guidelines
+     * The returned map should contain only serializable types:
+     * - Primitives: String, Int, Long, Float, Double, Boolean
+     * - Collections: List<Any>, Map<String, Any>
+     * - Null values
+     *
+     * Complex objects should be serialized to JSON strings or broken
+     * down into primitive components.
+     *
+     * ## Example Implementation
+     * ```kotlin
+     * override suspend fun saveState(): Map<String, Any> {
+     *     return mapOf(
+     *         "counter" to requestCounter,
+     *         "lastProcessedId" to lastProcessedId,
+     *         "cacheEntries" to cacheEntries.toList(),
+     *         "userPreferences" to userPreferences.toMap()
+     *     )
+     * }
+     * ```
+     *
+     * ## Default Behavior
+     * The default implementation returns an empty map, indicating no state
+     * needs to be preserved. Override this method to enable state persistence.
+     *
+     * @return Map containing state to preserve, or empty map if no state
+     * @see restoreState
+     */
+    suspend fun saveState(): Map<String, Any> = emptyMap()
+
+    /**
+     * Restore the plugin's state after hot reload.
+     *
+     * Called after the plugin is reloaded and initialized, with the state
+     * that was saved before the reload. Plugins should restore their
+     * internal state from the provided map.
+     *
+     * ## Implementation Notes
+     * - This method is called after [initialize] completes successfully
+     * - The state map will contain the same data returned by [saveState]
+     * - Handle missing keys gracefully (state format may have changed)
+     * - Validate restored data before using it
+     *
+     * ## Example Implementation
+     * ```kotlin
+     * override suspend fun restoreState(state: Map<String, Any>): Result<Unit> {
+     *     return try {
+     *         requestCounter = (state["counter"] as? Int) ?: 0
+     *         lastProcessedId = (state["lastProcessedId"] as? String) ?: ""
+     *
+     *         @Suppress("UNCHECKED_CAST")
+     *         val entries = state["cacheEntries"] as? List<String> ?: emptyList()
+     *         cacheEntries.addAll(entries)
+     *
+     *         Result.success(Unit)
+     *     } catch (e: Exception) {
+     *         Result.failure(e)
+     *     }
+     * }
+     * ```
+     *
+     * ## Error Handling
+     * If state restoration fails, return a failure Result. The hot reload
+     * system will log the error but the plugin will continue with its
+     * default initialized state.
+     *
+     * ## Default Behavior
+     * The default implementation returns success without restoring any state.
+     * Override this method if you override [saveState].
+     *
+     * @param state The state map saved before reload
+     * @return Result indicating success or failure of state restoration
+     * @see saveState
+     */
+    suspend fun restoreState(state: Map<String, Any>): Result<Unit> = Result.success(Unit)
 }
 
 // =============================================================================

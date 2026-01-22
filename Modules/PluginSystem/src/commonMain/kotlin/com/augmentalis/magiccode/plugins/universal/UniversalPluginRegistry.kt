@@ -389,6 +389,57 @@ class UniversalPluginRegistry(
     }
 
     /**
+     * Get the service endpoint for a registered plugin.
+     *
+     * Retrieves the gRPC service endpoint associated with a plugin,
+     * which can be used for direct communication with the plugin.
+     *
+     * @param pluginId The unique plugin identifier
+     * @return ServiceEndpoint if the plugin is registered, null otherwise
+     */
+    fun getEndpoint(pluginId: String): ServiceEndpoint? {
+        return _plugins.value[pluginId]?.endpoint
+    }
+
+    /**
+     * Update the service endpoint for a registered plugin.
+     *
+     * This is useful during hot reload when a plugin's endpoint may change
+     * (e.g., new port assignment after restart). The endpoint is updated
+     * in both the plugin registration and the underlying ServiceRegistry.
+     *
+     * @param pluginId The unique plugin identifier
+     * @param endpoint The new service endpoint
+     * @return true if the endpoint was updated, false if plugin not found
+     */
+    suspend fun updateEndpoint(pluginId: String, endpoint: ServiceEndpoint): Boolean = mutex.withLock {
+        val current = _plugins.value.toMutableMap()
+        val registration = current[pluginId]
+
+        if (registration != null) {
+            // Update the registration with new endpoint
+            current[pluginId] = registration.copy(endpoint = endpoint)
+            _plugins.value = current
+
+            // Update in ServiceRegistry - unregister old and register new
+            serviceRegistry.unregister(pluginId)
+            val serviceEndpoint = endpoint.copy(
+                serviceName = pluginId,
+                metadata = endpoint.metadata + mapOf(
+                    "type" to "plugin",
+                    "version" to registration.version,
+                    "capabilities" to registration.capabilities.joinToString(",") { it.id }
+                )
+            )
+            serviceRegistry.registerRemote(serviceEndpoint)
+
+            true
+        } else {
+            false
+        }
+    }
+
+    /**
      * Get all available capabilities from active plugins.
      *
      * @return Set of all capability IDs available from active plugins
