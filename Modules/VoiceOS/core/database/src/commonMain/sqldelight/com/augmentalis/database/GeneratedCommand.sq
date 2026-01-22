@@ -30,7 +30,7 @@ CREATE TABLE commands_generated (
     -- Schema v4: Foreign key integrity (2025-12-23)
     -- Ensures commands are automatically deleted when their element is removed
     -- Prevents orphaned commands and maintains referential integrity
-    FOREIGN KEY (elementHash) REFERENCES scraped_element(elementHash) ON DELETE CASCADE,
+    -- FOREIGN KEY (elementHash) REFERENCES scraped_element(elementHash) ON DELETE CASCADE,
 
     UNIQUE(elementHash, commandText)  -- FIX (2025-12-05): Prevent duplicate commands
 );
