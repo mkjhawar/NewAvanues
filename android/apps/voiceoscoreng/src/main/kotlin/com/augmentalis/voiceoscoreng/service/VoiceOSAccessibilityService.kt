@@ -388,6 +388,15 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         } else {
             Log.w(TAG, "Overlay permission not granted - numbers overlay will not show")
         }
+
+        // Phase 4: Notify plugin system that AccessibilityService is connected
+        try {
+            VoiceOSCoreNGApplication.getInstance(applicationContext)
+                .onAccessibilityServiceConnected(this)
+            Log.d(TAG, "Plugin system notified of service connection")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to notify plugin system", e)
+        }
     }
 
     /**
@@ -919,6 +928,15 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         Log.d(TAG, "onDestroy() called")
+
+        // Phase 4: Notify plugin system before cleanup
+        try {
+            VoiceOSCoreNGApplication.getInstance(applicationContext)
+                .onAccessibilityServiceDisconnected()
+            Log.d(TAG, "Plugin system notified of service disconnection")
+        } catch (e: Exception) {
+            Log.w(TAG, "Error notifying plugin system of disconnection", e)
+        }
 
         try {
             unregisterReceiver(modeReceiver)

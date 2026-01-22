@@ -21,7 +21,7 @@ data class ExplorationResult(
     val clickableElements: Int,
     val scrollableElements: Int,
     val elements: List<ElementInfo>,
-    val vuids: List<VUIDInfo>,
+    val avids: List<AVIDInfo>,
     val hierarchy: List<HierarchyNode>,
     val duplicates: List<DuplicateInfo>,
     val deduplicationStats: DeduplicationStats,
@@ -31,11 +31,11 @@ data class ExplorationResult(
 )
 
 /**
- * VUID information for a single element.
+ * AVID information for a single element.
  */
-data class VUIDInfo(
+data class AVIDInfo(
     val element: ElementInfo,
-    val vuid: String,
+    val avid: String,
     val hash: String
 )
 

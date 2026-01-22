@@ -30,7 +30,7 @@ actual class PermissionStorage private constructor(
     private val encryptedPrefs: SharedPreferences
 ) {
 
-    actual companion object {
+    companion object {
         private const val TAG = "PermissionStorage"
         private const val STORAGE_FILE_NAME = "plugin_permissions_encrypted"
         private const val MIGRATION_COMPLETE_KEY = "_migration_completed_"
@@ -54,7 +54,7 @@ actual class PermissionStorage private constructor(
          * @return PermissionStorage instance with encrypted backend
          * @throws EncryptionException if encryption setup fails
          */
-        actual fun create(context: Context): PermissionStorage {
+        fun create(context: Context): PermissionStorage {
             PluginLog.security(TAG, "Initializing encrypted permission storage")
 
             try {

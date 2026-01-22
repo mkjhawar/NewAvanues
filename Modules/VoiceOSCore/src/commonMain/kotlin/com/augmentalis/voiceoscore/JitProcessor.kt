@@ -73,7 +73,7 @@ data class JitProcessingResult(
  * // Immediate processing
  * val result = processor.processElement(element)
  * if (result.isSuccess) {
- *     registerCommand(result.vuid!!)
+ *     registerCommand(result.avid!!)
  * }
  *
  * // Batch processing

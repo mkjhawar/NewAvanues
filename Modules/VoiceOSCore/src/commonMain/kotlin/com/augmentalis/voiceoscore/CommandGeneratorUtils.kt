@@ -211,7 +211,7 @@ object CommandGeneratorUtils {
         }
 
         return GeneratedCommand(
-            elementHash = element.vuid,
+            elementHash = element.avid,
             commandText = commandText,
             actionType = action,
             confidence = confidence.toDouble(),
@@ -301,8 +301,8 @@ object CommandGeneratorUtils {
     private fun calculateConfidence(element: QuantizedElement): Float {
         var confidence = 0.5f
 
-        // Boost for having VUID (unique identifier)
-        if (element.vuid.isNotBlank()) {
+        // Boost for having AVID (unique identifier)
+        if (element.avid.isNotBlank()) {
             confidence += 0.2f
         }
 

@@ -54,24 +54,32 @@ sealed class ActionResult {
     // ═══════════════════════════════════════════════════════════════════
 
     /**
-     * Element not found for the given VUID.
+     * Element not found for the given AVID.
      */
     data class ElementNotFound(
-        val vuid: String,
-        override val message: String = "Element not found: $vuid"
+        val avid: String,
+        override val message: String = "Element not found: $avid"
     ) : ActionResult() {
         override val isSuccess: Boolean = false
+
+        /** Legacy alias for avid */
+        @Deprecated("Use avid instead", ReplaceWith("avid"))
+        val vuid: String get() = avid
     }
 
     /**
      * Element found but not actionable (disabled, obscured, etc.)
      */
     data class ElementNotActionable(
-        val vuid: String,
+        val avid: String,
         val reason: String,
         override val message: String = "Element not actionable: $reason"
     ) : ActionResult() {
         override val isSuccess: Boolean = false
+
+        /** Legacy alias for avid */
+        @Deprecated("Use avid instead", ReplaceWith("avid"))
+        val vuid: String get() = avid
     }
 
     /**
@@ -167,7 +175,7 @@ sealed class ActionResult {
         /**
          * Create element not found result
          */
-        fun notFound(vuid: String): ActionResult = ElementNotFound(vuid)
+        fun notFound(avid: String): ActionResult = ElementNotFound(avid)
 
         /**
          * Create not supported result

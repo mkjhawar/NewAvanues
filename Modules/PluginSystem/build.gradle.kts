@@ -8,7 +8,7 @@ group = "com.augmentalis.magiccode"
 version = "1.0.0"
 
 kotlin {
-    // Android target only (VOS4 is Android-only, iOS/JVM support removed for now)
+    // Android target
     androidTarget {
         compilations.all {
             kotlinOptions {
@@ -17,9 +17,32 @@ kotlin {
         }
     }
 
+    // JVM target for desktop/server
+    jvm("jvm") {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+    }
+
+    // iOS targets
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+
     sourceSets {
         val commonMain by getting {
             dependencies {
+                // VoiceOSCore - for QuantizedCommand, ActionResult, QuantizedElement types
+                api(project(":Modules:VoiceOSCore"))
+
+                // UniversalRPC - for RPC service integration
+                api(project(":Modules:UniversalRPC"))
+
+                // VoiceOS Database - for repository interfaces
+                api(project(":Modules:VoiceOS:core:database"))
+
                 // YAML parsing
                 implementation("net.mamoe.yamlkt:yamlkt:0.13.0")
 
@@ -76,6 +99,43 @@ kotlin {
                 implementation("io.mockk:mockk-android:1.13.8")  // Android version of MockK
             }
         }
+
+        // JVM source sets
+        val jvmMain by getting {
+            dependencies {
+                // JVM-specific dependencies if needed
+            }
+        }
+
+        val jvmTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation(kotlin("test-junit"))
+            }
+        }
+
+        // iOS source sets - shared intermediate source set
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+
+        val iosMain by creating {
+            dependsOn(commonMain)
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
+        }
+
+        val iosX64Test by getting
+        val iosArm64Test by getting
+        val iosSimulatorArm64Test by getting
+
+        val iosTest by creating {
+            dependsOn(commonTest)
+            iosX64Test.dependsOn(this)
+            iosArm64Test.dependsOn(this)
+            iosSimulatorArm64Test.dependsOn(this)
+        }
     }
 }
 
@@ -84,7 +144,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 29  // Match VoiceOSCore requirement
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

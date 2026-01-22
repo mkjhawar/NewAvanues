@@ -747,7 +747,7 @@ private fun InstructionsCard() {
                 3. Start Scanner Overlay
                 4. Navigate to any app on the device
                 5. Tap the floating scanner button to analyze
-                6. View VUIDs, hierarchy, duplicates, commands, AVU output
+                6. View AVIDs, hierarchy, duplicates, commands, AVU output
 
                 The scanner tests: deduplication, page hierarchy, command hierarchy, hash generation, and command generation.
                 """.trimIndent(),

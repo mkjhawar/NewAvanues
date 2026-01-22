@@ -299,7 +299,7 @@ object AVUSerializer {
                 if (parts.size >= 4) {
                     ParsedElement(
                         QuantizedElement(
-                            vuid = parts[0],
+                            avid = parts[0],
                             label = parts[1],
                             type = try {
                                 ElementType.valueOf(parts[2])

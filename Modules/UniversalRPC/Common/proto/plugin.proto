@@ -1,0 +1,172 @@
+// plugin.proto - Universal Plugin System service definitions
+//
+// Copyright (C) Manoj Jhawar, Intelligent Devices LLC
+// Created: 2026-01-22
+//
+// Universal Plugin Architecture - Phase 1 Foundation
+// Provides plugin registration, discovery, lifecycle, and event bus
+
+syntax = "proto3";
+
+package com.augmentalis.universalrpc.plugin;
+
+option java_package = "com.augmentalis.universalrpc.plugin";
+option java_multiple_files = true;
+
+// Plugin capability advertisement
+message PluginCapability {
+    string id = 1;                      // e.g., "llm.text-generation"
+    string name = 2;
+    string version = 3;
+    repeated string interfaces = 4;     // Implemented interfaces
+    map<string, string> metadata = 5;
+}
+
+// Plugin registration request
+message RegisterPluginRequest {
+    string request_id = 1;
+    string plugin_id = 2;               // com.augmentalis.llm.openai
+    string plugin_name = 3;
+    string version = 4;
+    repeated PluginCapability capabilities = 5;
+    string endpoint_address = 6;        // UDS path or host:port
+    string endpoint_protocol = 7;       // "grpc", "uds", "tcp"
+}
+
+message RegisterPluginResponse {
+    string request_id = 1;
+    bool success = 2;
+    string message = 3;
+    string assigned_id = 4;             // Confirmed plugin ID
+}
+
+// Plugin discovery
+message DiscoverPluginsRequest {
+    string request_id = 1;
+    repeated string capability_filter = 2;  // Filter by capabilities
+    bool include_disabled = 3;
+}
+
+message DiscoverPluginsResponse {
+    string request_id = 1;
+    repeated PluginInfo plugins = 2;
+}
+
+message PluginInfo {
+    string plugin_id = 1;
+    string plugin_name = 2;
+    string version = 3;
+    PluginState state = 4;
+    repeated PluginCapability capabilities = 5;
+    string endpoint_address = 6;
+    int64 registered_at = 7;
+    int64 last_health_check = 8;
+}
+
+enum PluginState {
+    PLUGIN_STATE_UNKNOWN = 0;
+    PLUGIN_STATE_REGISTERED = 1;
+    PLUGIN_STATE_INITIALIZING = 2;
+    PLUGIN_STATE_ACTIVE = 3;
+    PLUGIN_STATE_PAUSED = 4;
+    PLUGIN_STATE_ERROR = 5;
+    PLUGIN_STATE_STOPPING = 6;
+    PLUGIN_STATE_STOPPED = 7;
+}
+
+// Plugin lifecycle commands
+message LifecycleCommand {
+    string request_id = 1;
+    string plugin_id = 2;
+    LifecycleAction action = 3;
+    map<string, string> config = 4;     // For CONFIG_CHANGED
+}
+
+enum LifecycleAction {
+    LIFECYCLE_ACTIVATE = 0;
+    LIFECYCLE_PAUSE = 1;
+    LIFECYCLE_RESUME = 2;
+    LIFECYCLE_STOP = 3;
+    LIFECYCLE_CONFIG_CHANGED = 4;
+}
+
+message LifecycleResponse {
+    string request_id = 1;
+    bool success = 2;
+    string message = 3;
+    PluginState new_state = 4;
+}
+
+// Plugin events (for event bus)
+message PluginEvent {
+    string event_id = 1;
+    string source_plugin_id = 2;
+    string event_type = 3;              // "capability.registered", "state.changed", etc.
+    int64 timestamp = 4;
+    map<string, string> payload = 5;
+    string payload_json = 6;            // For complex payloads
+}
+
+message SubscribeEventsRequest {
+    string request_id = 1;
+    string subscriber_plugin_id = 2;
+    repeated string event_types = 3;    // Filter by event type
+    repeated string source_plugins = 4; // Filter by source plugin
+}
+
+// Health check
+message HealthCheckRequest {
+    string request_id = 1;
+    string plugin_id = 2;
+}
+
+message HealthCheckResponse {
+    string request_id = 1;
+    bool healthy = 2;
+    string status_message = 3;
+    map<string, string> diagnostics = 4;
+}
+
+// Additional request/response messages
+message UnregisterPluginRequest {
+    string request_id = 1;
+    string plugin_id = 2;
+}
+
+message UnregisterPluginResponse {
+    string request_id = 1;
+    bool success = 2;
+    string message = 3;
+}
+
+message GetPluginInfoRequest {
+    string request_id = 1;
+    string plugin_id = 2;
+}
+
+message PublishEventResponse {
+    string request_id = 1;
+    bool success = 2;
+    int32 subscribers_notified = 3;
+}
+
+// Plugin Service Definition
+service PluginService {
+    // Registration
+    rpc RegisterPlugin(RegisterPluginRequest) returns (RegisterPluginResponse);
+    rpc UnregisterPlugin(UnregisterPluginRequest) returns (UnregisterPluginResponse);
+
+    // Discovery
+    rpc DiscoverPlugins(DiscoverPluginsRequest) returns (DiscoverPluginsResponse);
+    rpc GetPluginInfo(GetPluginInfoRequest) returns (PluginInfo);
+
+    // Lifecycle
+    rpc SendLifecycleCommand(LifecycleCommand) returns (LifecycleResponse);
+
+    // Event Bus (streaming)
+    rpc SubscribeEvents(SubscribeEventsRequest) returns (stream PluginEvent);
+    rpc PublishEvent(PluginEvent) returns (PublishEventResponse);
+
+    // Health
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}

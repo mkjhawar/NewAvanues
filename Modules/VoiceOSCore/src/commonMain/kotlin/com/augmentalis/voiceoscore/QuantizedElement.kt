@@ -8,7 +8,7 @@ import com.augmentalis.voiceoscore.ElementInfo
  * Stores essential element properties optimized for LLM consumption
  * and voice command generation.
  *
- * @property vuid Voice Unique Identifier (compact 16-char format)
+ * @property avid Augmentalis Voice Identifier (compact 16-char format)
  * @property type Classified element type
  * @property label Primary label for voice reference
  * @property aliases Alternative names/labels for this element
@@ -17,7 +17,7 @@ import com.augmentalis.voiceoscore.ElementInfo
  * @property category Element category (action, input, display, etc.)
  */
 data class QuantizedElement(
-    val vuid: String,
+    val avid: String,
     val type: ElementType,
     val label: String,
     val aliases: List<String> = emptyList(),
@@ -25,15 +25,21 @@ data class QuantizedElement(
     val actions: String = "",
     val category: String = ""
 ) {
+    /**
+     * Legacy alias for avid (deprecated, use avid directly).
+     */
+    @Deprecated("Use avid instead", ReplaceWith("avid"))
+    val vuid: String get() = avid
+
     companion object {
         /**
          * Create QuantizedElement from ElementInfo.
          *
          * @param elementInfo Source element info
-         * @param vuid Generated VUID for this element
+         * @param avid Generated AVID for this element
          * @return QuantizedElement
          */
-        fun fromElementInfo(elementInfo: ElementInfo, vuid: String): QuantizedElement {
+        fun fromElementInfo(elementInfo: ElementInfo, avid: String): QuantizedElement {
             val type = ElementType.fromClassName(elementInfo.className)
             val label = elementInfo.text.ifBlank {
                 elementInfo.contentDescription.ifBlank {
@@ -59,7 +65,7 @@ data class QuantizedElement(
             }
 
             return QuantizedElement(
-                vuid = vuid,
+                avid = avid,
                 type = type,
                 label = label,
                 aliases = aliases,
@@ -73,9 +79,9 @@ data class QuantizedElement(
     /**
      * Generate AVU ELM line format.
      *
-     * Format: ELM:uuid:label:type:actions:bounds:category
+     * Format: ELM:avid:label:type:actions:bounds:category
      */
     fun toElmLine(): String {
-        return "ELM:$vuid:$label:${type.name}:$actions:$bounds:$category"
+        return "ELM:$avid:$label:${type.name}:$actions:$bounds:$category"
     }
 }
