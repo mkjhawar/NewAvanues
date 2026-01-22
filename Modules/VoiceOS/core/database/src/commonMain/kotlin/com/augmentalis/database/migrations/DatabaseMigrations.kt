@@ -290,6 +290,96 @@ object DatabaseMigrations {
         if (oldVersion < 6 && newVersion >= 6) {
             migrateV5ToV6(driver)
         }
+
+        if (oldVersion < 7 && newVersion >= 7) {
+            migrateV6ToV7(driver)
+        }
+    }
+
+    /**
+     * Migration from version 6 to 7
+     * Removes FK constraints from element_relationship table
+     *
+     * FIX (2026-01-22): FK constraint mismatch crash
+     * Root cause: element_relationship had FK to scraped_element(elementHash)
+     * but scraped_element now uses composite UNIQUE(elementHash, screen_hash).
+     * SQLite requires FK target to be UNIQUE or PRIMARY KEY.
+     *
+     * Solution: Remove FK constraints from element_relationship table.
+     * Relationships are enforced at application level, not database level.
+     */
+    private fun migrateV6ToV7(driver: SqlDriver) {
+        // Step 1: Create new table without FK constraints
+        driver.execute(
+            identifier = null,
+            sql = """
+                CREATE TABLE IF NOT EXISTS element_relationship_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    sourceElementHash TEXT NOT NULL,
+                    targetElementHash TEXT,
+                    relationshipType TEXT NOT NULL,
+                    relationshipData TEXT,
+                    confidence REAL NOT NULL DEFAULT 1.0,
+                    createdAt INTEGER NOT NULL DEFAULT 0,
+                    updatedAt INTEGER NOT NULL DEFAULT 0
+                )
+            """.trimIndent(),
+            parameters = 0,
+            binders = null
+        )
+
+        // Step 2: Copy existing data
+        driver.execute(
+            identifier = null,
+            sql = """
+                INSERT OR IGNORE INTO element_relationship_new
+                SELECT * FROM element_relationship
+            """.trimIndent(),
+            parameters = 0,
+            binders = null
+        )
+
+        // Step 3: Drop old table
+        driver.execute(
+            identifier = null,
+            sql = "DROP TABLE IF EXISTS element_relationship",
+            parameters = 0,
+            binders = null
+        )
+
+        // Step 4: Rename new table
+        driver.execute(
+            identifier = null,
+            sql = "ALTER TABLE element_relationship_new RENAME TO element_relationship",
+            parameters = 0,
+            binders = null
+        )
+
+        // Step 5: Recreate indexes
+        driver.execute(
+            identifier = null,
+            sql = "CREATE INDEX IF NOT EXISTS idx_elrel_source ON element_relationship(sourceElementHash)",
+            parameters = 0,
+            binders = null
+        )
+        driver.execute(
+            identifier = null,
+            sql = "CREATE INDEX IF NOT EXISTS idx_elrel_target ON element_relationship(targetElementHash)",
+            parameters = 0,
+            binders = null
+        )
+        driver.execute(
+            identifier = null,
+            sql = "CREATE INDEX IF NOT EXISTS idx_elrel_type ON element_relationship(relationshipType)",
+            parameters = 0,
+            binders = null
+        )
+        driver.execute(
+            identifier = null,
+            sql = "CREATE INDEX IF NOT EXISTS idx_elrel_confidence ON element_relationship(confidence)",
+            parameters = 0,
+            binders = null
+        )
     }
 
     /**

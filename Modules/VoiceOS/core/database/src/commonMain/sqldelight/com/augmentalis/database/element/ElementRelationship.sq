@@ -1,6 +1,10 @@
 -- ElementRelationship.sq
 -- Semantic relationships between UI elements (label-for, triggers, navigates-to, etc.)
 
+-- FIX (2026-01-22): Removed FK constraints because scraped_element now uses
+-- composite unique key (elementHash, screen_hash) for per-screen persistence.
+-- SQLite requires FK to reference a column with UNIQUE or PRIMARY KEY constraint.
+-- Relationships are application-level, not enforced at DB level.
 CREATE TABLE element_relationship (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sourceElementHash TEXT NOT NULL,
@@ -9,9 +13,7 @@ CREATE TABLE element_relationship (
     relationshipData TEXT,
     confidence REAL NOT NULL DEFAULT 1.0,
     createdAt INTEGER NOT NULL DEFAULT 0,
-    updatedAt INTEGER NOT NULL DEFAULT 0,
-    FOREIGN KEY (sourceElementHash) REFERENCES scraped_element(elementHash) ON DELETE CASCADE,
-    FOREIGN KEY (targetElementHash) REFERENCES scraped_element(elementHash) ON DELETE CASCADE
+    updatedAt INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX idx_elrel_source ON element_relationship(sourceElementHash);
