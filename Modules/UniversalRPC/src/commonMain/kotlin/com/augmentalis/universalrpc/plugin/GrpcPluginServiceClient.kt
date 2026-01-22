@@ -76,20 +76,20 @@ public class GrpcPluginServiceClient(
    * Subscribe to plugin events (server streaming)
    * Returns a stream of PluginEvent messages based on subscription filters
    */
-  override fun SubscribeEvents(): GrpcStreamingCall<SubscribeEventsRequest, PluginEvent> =
+  override fun SubscribeEvents(): GrpcStreamingCall<SubscribeEventsRequest, PluginEventProto> =
       client.newStreamingCall(GrpcMethod(
       path = "/com.augmentalis.universalrpc.plugin.PluginService/SubscribeEvents",
       requestAdapter = SubscribeEventsRequest.ADAPTER,
-      responseAdapter = PluginEvent.ADAPTER
+      responseAdapter = PluginEventProto.ADAPTER
   ))
 
   /**
    * Publish an event to the plugin event bus
    */
-  override fun PublishEvent(): GrpcCall<PluginEvent, PublishEventResponse> =
+  override fun PublishEvent(): GrpcCall<PluginEventProto, PublishEventResponse> =
       client.newCall(GrpcMethod(
       path = "/com.augmentalis.universalrpc.plugin.PluginService/PublishEvent",
-      requestAdapter = PluginEvent.ADAPTER,
+      requestAdapter = PluginEventProto.ADAPTER,
       responseAdapter = PublishEventResponse.ADAPTER
   ))
 

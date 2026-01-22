@@ -48,12 +48,12 @@ public interface PluginServiceClient : Service {
    * Subscribe to plugin events (server streaming)
    * Returns a stream of PluginEvent messages based on subscription filters
    */
-  public fun SubscribeEvents(): GrpcStreamingCall<SubscribeEventsRequest, PluginEvent>
+  public fun SubscribeEvents(): GrpcStreamingCall<SubscribeEventsRequest, PluginEventProto>
 
   /**
    * Publish an event to the plugin event bus
    */
-  public fun PublishEvent(): GrpcCall<PluginEvent, PublishEventResponse>
+  public fun PublishEvent(): GrpcCall<PluginEventProto, PublishEventResponse>
 
   /**
    * Check health status of a specific plugin
