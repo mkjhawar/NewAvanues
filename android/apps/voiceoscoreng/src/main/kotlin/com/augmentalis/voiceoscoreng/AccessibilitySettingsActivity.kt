@@ -66,7 +66,7 @@ private fun AccessibilitySettingsScreen(onBack: () -> Unit) {
 
     // Developer settings state
     var debugLogging by remember { mutableStateOf(true) }
-    var showVuidsOverlay by remember { mutableStateOf(false) }
+    var showAvidsOverlay by remember { mutableStateOf(false) }
     var autoMinimize by remember { mutableStateOf(true) }
 
     // Rescan feedback
@@ -280,11 +280,11 @@ private fun AccessibilitySettingsScreen(onBack: () -> Unit) {
 
                         Divider(color = Color.Gray.copy(alpha = 0.2f), modifier = Modifier.padding(vertical = 12.dp))
 
-                        // Show VUIDs
+                        // Show AVIDs
                         SettingsToggle(
-                            title = "Show VUIDs",
-                            checked = showVuidsOverlay,
-                            onCheckedChange = { showVuidsOverlay = it }
+                            title = "Show AVIDs",
+                            checked = showAvidsOverlay,
+                            onCheckedChange = { showAvidsOverlay = it }
                         )
 
                         Divider(color = Color.Gray.copy(alpha = 0.2f), modifier = Modifier.padding(vertical = 12.dp))

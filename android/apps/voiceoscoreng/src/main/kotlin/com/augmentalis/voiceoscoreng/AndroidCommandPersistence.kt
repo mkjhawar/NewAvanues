@@ -53,14 +53,14 @@ class AndroidCommandPersistence(
      * Convert QuantizedCommand to GeneratedCommandDTO for database storage.
      *
      * FIX (2026-01-19): Use metadata["elementHash"] instead of targetAvid.
-     * Root cause: targetAvid contains VUID with prefix (e.g., "BTN:a3f2e1c9")
+     * Root cause: targetAvid contains AVID with prefix (e.g., "BTN:a3f2e1c9")
      * but scraped_element stores elementHash without prefix (e.g., "a3f2e1c9").
      * This mismatch caused FOREIGN KEY constraint failure (code 787).
      */
     private fun QuantizedCommand.toDTO(): GeneratedCommandDTO {
         return GeneratedCommandDTO(
             id = 0, // Auto-generated
-            elementHash = this.metadata["elementHash"] ?: "",  // FIX: Use metadata hash, not VUID
+            elementHash = this.metadata["elementHash"] ?: "",  // FIX: Use metadata hash, not AVID
             commandText = this.phrase,
             actionType = this.actionType.name,
             confidence = this.confidence.toDouble(),

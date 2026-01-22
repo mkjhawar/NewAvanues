@@ -79,7 +79,7 @@ object OverlayStateManager {
         val top: Int,
         val right: Int,
         val bottom: Int,
-        val vuid: String           // Target VUID for executing action
+        val avid: String           // Target AVID for executing action
     )
 
     // ===== Target Apps =====
@@ -225,7 +225,7 @@ object OverlayStateManager {
      * Used for scroll/content changes where we want stable numbering.
      *
      * Strategy:
-     * - Items with matching VUID keep their existing number
+     * - Items with matching AVID keep their existing number
      * - New items get numbers from the incoming list
      * - This provides visual stability during scrolling
      *
@@ -241,12 +241,12 @@ object OverlayStateManager {
             return
         }
 
-        // Build map of VUID -> existing number for preservation
-        val existingNumbers = currentItems.associateBy({ it.vuid }, { it.number })
+        // Build map of AVID -> existing number for preservation
+        val existingNumbers = currentItems.associateBy({ it.avid }, { it.number })
 
         // Merge: preserve numbers for items that were already visible
         val mergedItems = newItems.map { item ->
-            val existingNumber = existingNumbers[item.vuid]
+            val existingNumber = existingNumbers[item.avid]
             if (existingNumber != null) {
                 // Preserve the existing number for visual stability
                 item.copy(number = existingNumber)
@@ -260,7 +260,7 @@ object OverlayStateManager {
         updateNumbersOverlayVisibility()
 
         if (mergedItems.isNotEmpty()) {
-            val preservedCount = mergedItems.count { existingNumbers.containsKey(it.vuid) }
+            val preservedCount = mergedItems.count { existingNumbers.containsKey(it.avid) }
             val newCount = mergedItems.size - preservedCount
             Log.d(TAG, "Incremental overlay update: ${mergedItems.size} items ($preservedCount preserved, $newCount new)")
         }

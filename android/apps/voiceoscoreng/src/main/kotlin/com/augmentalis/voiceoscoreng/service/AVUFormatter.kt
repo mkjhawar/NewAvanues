@@ -60,7 +60,7 @@ object AVUFormatter {
                 commands.forEach { cmd ->
                     // The voice command is just the label (e.g., "Accessibility", "Reset")
                     // The action (tap/scroll/toggle) is metadata
-                    appendLine("  - voice:\"${cmd.derivedLabel}\" action:${cmd.action} vuid:${cmd.targetVuid}")
+                    appendLine("  - voice:\"${cmd.derivedLabel}\" action:${cmd.action} avid:${cmd.targetAvid}")
                     // Also include alternate phrases
                     appendLine("    alternates: [\"${cmd.phrase}\", \"press ${cmd.derivedLabel}\", \"select ${cmd.derivedLabel}\"]")
                 }

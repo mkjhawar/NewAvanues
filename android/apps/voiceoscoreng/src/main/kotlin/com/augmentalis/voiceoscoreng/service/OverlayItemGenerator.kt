@@ -78,7 +78,7 @@ object OverlayItemGenerator {
             top = element.bounds.top,
             right = element.bounds.right,
             bottom = element.bounds.bottom,
-            vuid = fingerprint
+            avid = fingerprint
         )
     }
 }
