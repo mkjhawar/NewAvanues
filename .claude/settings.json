@@ -6,21 +6,20 @@
   "hooks": {
     "SessionStart": [
       {
+        "matcher": "startup",
         "hooks": [
           {
             "type": "command",
-            "command": "bash /Volumes/M-Drive/Coding/.claude/startup-banner.sh"
+            "command": "/Volumes/M-Drive/Coding/.claude/hooks/session-start.sh"
           }
         ]
-      }
-    ],
-    "PreToolUse": [
+      },
       {
-        "matcher": "SlashCommand",
+        "matcher": "resume",
         "hooks": [
           {
             "type": "command",
-            "command": "bash scripts/validate-ideacode.sh"
+            "command": "/Volumes/M-Drive/Coding/.claude/hooks/session-start.sh"
           }
         ]
       }
