@@ -1,0 +1,18 @@
+{
+  "api": {
+    "autoStart": false,
+    "askOnOffline": true,
+    "defaultChoice": "ask"
+  },
+  "coordination": {
+    "enabled": true,
+    "askOnStart": true,
+    "defaultMode": "ask"
+  },
+  "notes": {
+    "autoStart": "If true, starts API without asking. If false, asks user.",
+    "askOnOffline": "If true, asks user when API is offline. If false, uses defaultChoice.",
+    "defaultChoice": "Options: ask, start, offline, skip",
+    "defaultMode": "Options: ask, coordinate, isolate"
+  }
+}

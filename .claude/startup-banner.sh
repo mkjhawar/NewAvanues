@@ -15,10 +15,18 @@ NC='\033[0m'
 input=$(cat)
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // "~"')
 
-# Export CWD for shared memory manager
-export CWD="$cwd"
+# ============ API Status Check (NO AUTO-START) ============
+# Claude Code will ask user interactively whether to start API
+API_PORT=3850
 
-# Get IDEACODE version from config (check JSON first, then YAML)
+api_status="offline"
+if curl -s --connect-timeout 1 --max-time 2 "http://localhost:${API_PORT}/health" >/dev/null 2>&1; then
+    api_status="running"
+fi
+# Note: Auto-start removed. Claude Code handles this interactively via AskUserQuestion
+cwd=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // "."')
+
+# Get IDEACODE version
 ideacode_version="?"
 if [[ -f "$cwd/.ideacode/config.ideacode" ]]; then
     ideacode_version=$(jq -r '.version // "?"' "$cwd/.ideacode/config.ideacode" 2>/dev/null)
