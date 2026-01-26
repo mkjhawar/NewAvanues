@@ -5,7 +5,7 @@ package com.augmentalis.database.repositories.impl
 
 import com.augmentalis.database.VoiceOSDatabase
 import com.augmentalis.database.dto.ErrorReportDTO
-import com.augmentalis.database.dto.toDTO
+import com.augmentalis.database.dto.toErrorReportDTO
 import com.augmentalis.database.repositories.IErrorReportRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -37,23 +37,23 @@ class SQLDelightErrorReportRepository(
     }
 
     override suspend fun getById(id: Long): ErrorReportDTO? = withContext(Dispatchers.Default) {
-        queries.getById(id).executeAsOneOrNull()?.toDTO()
+        queries.getById(id).executeAsOneOrNull()?.toErrorReportDTO()
     }
 
     override suspend fun getAll(): List<ErrorReportDTO> = withContext(Dispatchers.Default) {
-        queries.getRecent(Long.MAX_VALUE).executeAsList().map { it.toDTO() }
+        queries.getRecent(Long.MAX_VALUE).executeAsList().map { it.toErrorReportDTO() }
     }
 
     override suspend fun getUnsent(): List<ErrorReportDTO> = withContext(Dispatchers.Default) {
-        queries.getUnsent().executeAsList().map { it.toDTO() }
+        queries.getUnsent().executeAsList().map { it.toErrorReportDTO() }
     }
 
     override suspend fun getByType(errorType: String): List<ErrorReportDTO> = withContext(Dispatchers.Default) {
-        queries.getByType(errorType).executeAsList().map { it.toDTO() }
+        queries.getByType(errorType).executeAsList().map { it.toErrorReportDTO() }
     }
 
     override suspend fun getRecent(limit: Int): List<ErrorReportDTO> = withContext(Dispatchers.Default) {
-        queries.getRecent(limit.toLong()).executeAsList().map { it.toDTO() }
+        queries.getRecent(limit.toLong()).executeAsList().map { it.toErrorReportDTO() }
     }
 
     override suspend fun markSent(id: Long) = withContext(Dispatchers.Default) {

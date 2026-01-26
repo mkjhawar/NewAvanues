@@ -1,144 +1,88 @@
--- AvidElement.sq - AVID (Avanues Voice ID) Element persistence
--- Unified identifier system for UI elements across platforms
--- Created: 2026-01-14
+-- AvidElement.sq
+-- SQLDelight schema for AVID element storage
+-- Consolidated from UUIDElement.sq and VUIDElement.sq (nomenclature update to AVID)
 
-CREATE TABLE avid_element (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-    -- AVID Identifier
-    avid TEXT NOT NULL UNIQUE,              -- e.g., "AVID-A-000001" or "LAVID-m14a-0047"
-    platform TEXT NOT NULL,                 -- Platform code: A, I, W, M, X, L
-    sequence INTEGER NOT NULL DEFAULT 0,    -- Sequence number for this platform
-
-    -- Element identification
-    package_name TEXT NOT NULL,             -- App package/bundle identifier
-    element_hash TEXT NOT NULL,             -- Fingerprint hash
-    element_type TEXT NOT NULL,             -- Type code: BTN, INP, TXT, etc.
-
-    -- Element data
-    resource_id TEXT,                       -- Platform resource ID
-    display_name TEXT,                      -- Human-readable name
-    content_desc TEXT,                      -- Accessibility description
-    bounds_left REAL,                       -- Relative bounds (0.0-1.0)
-    bounds_top REAL,
-    bounds_right REAL,
-    bounds_bottom REAL,
-
-    -- Version tracking
-    app_version TEXT,                       -- App version when captured
-    os_version TEXT,                        -- OS version
-
-    -- Metadata
-    screen_id INTEGER,                      -- Associated screen ID
-    parent_avid TEXT,                       -- Parent element AVID (hierarchy)
-    is_active INTEGER NOT NULL DEFAULT 1,   -- Still exists on current app version
-    confidence REAL NOT NULL DEFAULT 1.0,   -- Match confidence
-
-    -- Timestamps
-    created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL,
-    last_verified INTEGER,
-
-    UNIQUE(package_name, element_hash)
+CREATE TABLE avid_elements (
+    avid TEXT NOT NULL PRIMARY KEY,
+    name TEXT,
+    type TEXT NOT NULL,
+    description TEXT,
+    parent_avid TEXT,
+    is_enabled INTEGER NOT NULL DEFAULT 1,
+    priority INTEGER NOT NULL DEFAULT 0,
+    timestamp INTEGER NOT NULL,
+    metadata_json TEXT,
+    position_json TEXT
 );
 
-CREATE INDEX idx_avid_element_avid ON avid_element(avid);
-CREATE INDEX idx_avid_element_package ON avid_element(package_name);
-CREATE INDEX idx_avid_element_type ON avid_element(element_type);
-CREATE INDEX idx_avid_element_platform ON avid_element(platform);
-CREATE INDEX idx_avid_element_screen ON avid_element(screen_id);
-CREATE INDEX idx_avid_element_active ON avid_element(is_active);
+CREATE INDEX idx_avid_element_name ON avid_elements(name);
+CREATE INDEX idx_avid_element_type ON avid_elements(type);
+CREATE INDEX idx_avid_element_parent ON avid_elements(parent_avid);
+CREATE INDEX idx_avid_element_timestamp ON avid_elements(timestamp);
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- Queries
--- ═══════════════════════════════════════════════════════════════════════════════
+-- Get all elements
+getAllElements:
+SELECT * FROM avid_elements ORDER BY timestamp DESC;
 
-selectAll:
-SELECT * FROM avid_element WHERE is_active = 1;
+-- Get element by AVID
+getElementByAvid:
+SELECT * FROM avid_elements WHERE avid = ?;
 
-selectByAvid:
-SELECT * FROM avid_element WHERE avid = ?;
+-- Get elements by type
+getElementsByType:
+SELECT * FROM avid_elements WHERE type = ? ORDER BY priority DESC, timestamp DESC;
 
-selectByPackage:
-SELECT * FROM avid_element
-WHERE package_name = ? AND is_active = 1
-ORDER BY element_type, display_name;
+-- Get children of parent
+getChildrenOfParent:
+SELECT * FROM avid_elements WHERE parent_avid = ? ORDER BY priority DESC;
 
-selectByScreen:
-SELECT * FROM avid_element
-WHERE screen_id = ? AND is_active = 1
-ORDER BY bounds_top, bounds_left;
+-- Get root elements (no parent)
+getRootElements:
+SELECT * FROM avid_elements WHERE parent_avid IS NULL ORDER BY priority DESC;
 
-selectByType:
-SELECT * FROM avid_element
-WHERE element_type = ? AND is_active = 1;
+-- Get enabled elements
+getEnabledElements:
+SELECT * FROM avid_elements WHERE is_enabled = 1 ORDER BY priority DESC;
 
-selectByPlatform:
-SELECT * FROM avid_element
-WHERE platform = ? AND is_active = 1;
+-- Insert element
+insertElement:
+INSERT OR REPLACE INTO avid_elements (avid, name, type, description, parent_avid, is_enabled, priority, timestamp, metadata_json, position_json)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
-selectByHash:
-SELECT * FROM avid_element
-WHERE package_name = ? AND element_hash = ?;
-
-getNextSequence:
-SELECT COALESCE(MAX(sequence), 0) + 1 FROM avid_element WHERE platform = ?;
-
-countByPackage:
-SELECT COUNT(*) FROM avid_element WHERE package_name = ? AND is_active = 1;
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- Insert/Update Operations
--- ═══════════════════════════════════════════════════════════════════════════════
-
-insert:
-INSERT INTO avid_element (
-    avid, platform, sequence, package_name, element_hash, element_type,
-    resource_id, display_name, content_desc,
-    bounds_left, bounds_top, bounds_right, bounds_bottom,
-    app_version, os_version, screen_id, parent_avid, confidence,
-    created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-
-insertOrReplace:
-INSERT OR REPLACE INTO avid_element (
-    avid, platform, sequence, package_name, element_hash, element_type,
-    resource_id, display_name, content_desc,
-    bounds_left, bounds_top, bounds_right, bounds_bottom,
-    app_version, os_version, screen_id, parent_avid, confidence,
-    created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-
-updateBounds:
-UPDATE avid_element
-SET bounds_left = ?, bounds_top = ?, bounds_right = ?, bounds_bottom = ?,
-    updated_at = ?
+-- Update element
+updateElement:
+UPDATE avid_elements
+SET name = ?, type = ?, description = ?, parent_avid = ?, is_enabled = ?, priority = ?, metadata_json = ?, position_json = ?
 WHERE avid = ?;
 
-updateVerification:
-UPDATE avid_element
-SET is_active = 1, last_verified = ?, updated_at = ?
-WHERE avid = ?;
+-- Update enabled state
+updateEnabledState:
+UPDATE avid_elements SET is_enabled = ? WHERE avid = ?;
 
-markInactive:
-UPDATE avid_element
-SET is_active = 0, updated_at = ?
-WHERE avid = ?;
+-- Update priority
+updatePriority:
+UPDATE avid_elements SET priority = ? WHERE avid = ?;
 
-markInactiveByPackage:
-UPDATE avid_element
-SET is_active = 0, updated_at = ?
-WHERE package_name = ? AND last_verified < ?;
+-- Delete element
+deleteElement:
+DELETE FROM avid_elements WHERE avid = ?;
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- Delete Operations
--- ═══════════════════════════════════════════════════════════════════════════════
+-- Delete all children of parent
+deleteChildrenOfParent:
+DELETE FROM avid_elements WHERE parent_avid = ?;
 
-deleteByAvid:
-DELETE FROM avid_element WHERE avid = ?;
+-- Count elements
+countElements:
+SELECT COUNT(*) FROM avid_elements;
 
-deleteByPackage:
-DELETE FROM avid_element WHERE package_name = ?;
+-- Count elements by type
+countElementsByType:
+SELECT COUNT(*) FROM avid_elements WHERE type = ?;
 
-deleteInactive:
-DELETE FROM avid_element WHERE is_active = 0 AND updated_at < ?;
+-- Search elements by name
+searchByName:
+SELECT * FROM avid_elements WHERE name LIKE '%' || ? || '%' ORDER BY priority DESC;
+
+-- Delete all elements
+deleteAll:
+DELETE FROM avid_elements;

@@ -1,144 +1,99 @@
--- AvidAnalytics.sq - AVID usage analytics
--- Tracks usage patterns and statistics for AVID elements
--- Created: 2026-01-14
+-- AvidAnalytics.sq
+-- SQLDelight schema for AVID analytics tracking
+-- Consolidated from UUIDAnalytics.sq and VUIDAnalytics.sq (nomenclature update to AVID)
 
 CREATE TABLE avid_analytics (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-    -- Reference
-    avid TEXT NOT NULL,
-    package_name TEXT NOT NULL,
-
-    -- Usage metrics
-    total_uses INTEGER NOT NULL DEFAULT 0,
-    successful_uses INTEGER NOT NULL DEFAULT 0,
-    failed_uses INTEGER NOT NULL DEFAULT 0,
-    voice_activations INTEGER NOT NULL DEFAULT 0,
-    touch_activations INTEGER NOT NULL DEFAULT 0,
-
-    -- Time-based metrics
-    avg_response_ms INTEGER,                -- Average response time
-    last_success_at INTEGER,
-    last_failure_at INTEGER,
-
-    -- Session metrics
-    sessions_used INTEGER NOT NULL DEFAULT 0,
-    unique_days INTEGER NOT NULL DEFAULT 0,
-
-    -- Context
-    most_common_context TEXT,               -- Most common screen/activity
-    most_common_action TEXT,                -- click, focus, scroll, etc.
-
-    -- Timestamps
-    first_used INTEGER NOT NULL,
-    last_used INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL,
-
-    UNIQUE(avid),
-    FOREIGN KEY(avid) REFERENCES avid_element(avid) ON DELETE CASCADE
+    avid TEXT NOT NULL PRIMARY KEY,
+    access_count INTEGER NOT NULL DEFAULT 0,
+    first_accessed INTEGER NOT NULL,
+    last_accessed INTEGER NOT NULL,
+    execution_time_ms INTEGER NOT NULL DEFAULT 0,
+    success_count INTEGER NOT NULL DEFAULT 0,
+    failure_count INTEGER NOT NULL DEFAULT 0,
+    lifecycle_state TEXT NOT NULL DEFAULT 'CREATED',
+    FOREIGN KEY (avid) REFERENCES avid_elements(avid) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_analytics_avid ON avid_analytics(avid);
-CREATE INDEX idx_analytics_package ON avid_analytics(package_name);
-CREATE INDEX idx_analytics_total ON avid_analytics(total_uses DESC);
-CREATE INDEX idx_analytics_last_used ON avid_analytics(last_used DESC);
+CREATE INDEX idx_avid_analytics_access_count ON avid_analytics(access_count);
+CREATE INDEX idx_avid_analytics_last_accessed ON avid_analytics(last_accessed);
+CREATE INDEX idx_avid_analytics_lifecycle ON avid_analytics(lifecycle_state);
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- Queries
--- ═══════════════════════════════════════════════════════════════════════════════
+-- Get all analytics
+getAllAnalytics:
+SELECT * FROM avid_analytics ORDER BY last_accessed DESC;
 
-selectByAvid:
+-- Get analytics by AVID
+getAnalyticsByAvid:
 SELECT * FROM avid_analytics WHERE avid = ?;
 
-selectByPackage:
-SELECT * FROM avid_analytics
-WHERE package_name = ?
-ORDER BY total_uses DESC;
+-- Get analytics by lifecycle state
+getAnalyticsByLifecycle:
+SELECT * FROM avid_analytics WHERE lifecycle_state = ? ORDER BY last_accessed DESC;
 
-selectMostUsed:
-SELECT * FROM avid_analytics
-ORDER BY total_uses DESC
-LIMIT ?;
+-- Get most accessed elements
+getMostAccessed:
+SELECT * FROM avid_analytics ORDER BY access_count DESC LIMIT ?;
 
-selectMostUsedByPackage:
-SELECT * FROM avid_analytics
-WHERE package_name = ?
-ORDER BY total_uses DESC
-LIMIT ?;
+-- Get recently accessed elements
+getRecentlyAccessed:
+SELECT * FROM avid_analytics ORDER BY last_accessed DESC LIMIT ?;
 
-selectRecentlyUsed:
-SELECT * FROM avid_analytics
-WHERE last_used > ?
-ORDER BY last_used DESC
-LIMIT ?;
+-- Get stale elements (not accessed in N days)
+getStaleElements:
+SELECT * FROM avid_analytics WHERE last_accessed < ? ORDER BY last_accessed ASC;
 
-selectHighSuccessRate:
-SELECT * FROM avid_analytics
-WHERE total_uses > 0 AND (successful_uses * 100 / total_uses) >= ?
-ORDER BY total_uses DESC;
+-- Get active elements
+getActiveElements:
+SELECT * FROM avid_analytics WHERE lifecycle_state = 'ACTIVE' ORDER BY access_count DESC;
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- Insert/Update Operations
--- ═══════════════════════════════════════════════════════════════════════════════
+-- Insert analytics
+insertAnalytics:
+INSERT OR REPLACE INTO avid_analytics (avid, access_count, first_accessed, last_accessed, execution_time_ms, success_count, failure_count, lifecycle_state)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
-insert:
-INSERT INTO avid_analytics (
-    avid, package_name, first_used, last_used, updated_at
-) VALUES (?, ?, ?, ?, ?);
-
-insertOrReplace:
-INSERT OR REPLACE INTO avid_analytics (
-    avid, package_name, total_uses, successful_uses, failed_uses,
-    voice_activations, touch_activations, avg_response_ms,
-    last_success_at, last_failure_at, sessions_used, unique_days,
-    most_common_context, most_common_action,
-    first_used, last_used, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-
-recordSuccess:
+-- Increment access count
+incrementAccessCount:
 UPDATE avid_analytics
-SET total_uses = total_uses + 1,
-    successful_uses = successful_uses + 1,
-    last_success_at = ?,
-    last_used = ?,
-    updated_at = ?
+SET access_count = access_count + 1, last_accessed = ?
 WHERE avid = ?;
 
-recordFailure:
+-- Record execution
+recordExecution:
 UPDATE avid_analytics
-SET total_uses = total_uses + 1,
-    failed_uses = failed_uses + 1,
-    last_failure_at = ?,
-    last_used = ?,
-    updated_at = ?
+SET execution_time_ms = execution_time_ms + ?,
+    success_count = success_count + ?,
+    failure_count = failure_count + ?,
+    last_accessed = ?
 WHERE avid = ?;
 
-recordVoiceActivation:
-UPDATE avid_analytics
-SET voice_activations = voice_activations + 1,
-    updated_at = ?
-WHERE avid = ?;
+-- Update lifecycle state
+updateLifecycleState:
+UPDATE avid_analytics SET lifecycle_state = ? WHERE avid = ?;
 
-recordTouchActivation:
-UPDATE avid_analytics
-SET touch_activations = touch_activations + 1,
-    updated_at = ?
-WHERE avid = ?;
-
-updateContext:
-UPDATE avid_analytics
-SET most_common_context = ?, most_common_action = ?, updated_at = ?
-WHERE avid = ?;
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- Delete Operations
--- ═══════════════════════════════════════════════════════════════════════════════
-
-deleteByAvid:
+-- Delete analytics
+deleteAnalytics:
 DELETE FROM avid_analytics WHERE avid = ?;
 
-deleteByPackage:
-DELETE FROM avid_analytics WHERE package_name = ?;
+-- Delete stale analytics
+deleteStaleAnalytics:
+DELETE FROM avid_analytics WHERE last_accessed < ?;
 
-deleteOld:
-DELETE FROM avid_analytics WHERE last_used < ?;
+-- Count analytics
+countAnalytics:
+SELECT COUNT(*) FROM avid_analytics;
+
+-- Get total access count
+getTotalAccessCount:
+SELECT SUM(access_count) FROM avid_analytics;
+
+-- Get average success rate
+getSuccessRate:
+SELECT
+    CASE WHEN (success_count + failure_count) > 0
+    THEN CAST(success_count AS REAL) / (success_count + failure_count)
+    ELSE 0.0 END AS success_rate
+FROM avid_analytics WHERE avid = ?;
+
+-- Delete all analytics
+deleteAll:
+DELETE FROM avid_analytics;

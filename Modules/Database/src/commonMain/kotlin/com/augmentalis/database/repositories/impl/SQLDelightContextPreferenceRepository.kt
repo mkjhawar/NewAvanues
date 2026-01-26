@@ -5,7 +5,7 @@ package com.augmentalis.database.repositories.impl
 
 import com.augmentalis.database.VoiceOSDatabase
 import com.augmentalis.database.dto.ContextPreferenceDTO
-import com.augmentalis.database.dto.toDTO
+import com.augmentalis.database.dto.toContextPreferenceDTO
 import com.augmentalis.database.repositories.IContextPreferenceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,17 +34,17 @@ class SQLDelightContextPreferenceRepository(
         }
 
     override suspend fun getAll(): List<ContextPreferenceDTO> = withContext(Dispatchers.Default) {
-        queries.getAllPreferences().executeAsList().map { it.toDTO() }
+        queries.getAllPreferences().executeAsList().map { it.toContextPreferenceDTO() }
     }
 
     override suspend fun get(commandId: String, contextKey: String): ContextPreferenceDTO? =
         withContext(Dispatchers.Default) {
-            queries.getPreference(commandId, contextKey).executeAsOneOrNull()?.toDTO()
+            queries.getPreference(commandId, contextKey).executeAsOneOrNull()?.toContextPreferenceDTO()
         }
 
     override suspend fun getForCommand(commandId: String): List<ContextPreferenceDTO> =
         withContext(Dispatchers.Default) {
-            queries.getPreferencesForCommand(commandId).executeAsList().map { it.toDTO() }
+            queries.getPreferencesForCommand(commandId).executeAsList().map { it.toContextPreferenceDTO() }
         }
 
     override suspend fun getMostUsedCommands(limit: Long): List<Pair<String, Long>> =
@@ -63,7 +63,7 @@ class SQLDelightContextPreferenceRepository(
 
     override suspend fun getRecent(limit: Long): List<ContextPreferenceDTO> =
         withContext(Dispatchers.Default) {
-            queries.getRecentPreferences(limit).executeAsList().map { it.toDTO() }
+            queries.getRecentPreferences(limit).executeAsList().map { it.toContextPreferenceDTO() }
         }
 
     override suspend fun countCommands(): Long = withContext(Dispatchers.Default) {

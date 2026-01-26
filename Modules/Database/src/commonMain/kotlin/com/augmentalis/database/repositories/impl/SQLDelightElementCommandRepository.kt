@@ -10,7 +10,7 @@ import com.augmentalis.database.VoiceOSDatabase
 import com.augmentalis.database.dto.ElementCommandDTO
 import com.augmentalis.database.dto.QualityMetricDTO
 import com.augmentalis.database.dto.QualityStatsDTO
-import com.augmentalis.database.dto.toDTO
+import com.augmentalis.database.dto.toElementCommandDTO
 import com.augmentalis.database.repositories.IElementCommandRepository
 import com.augmentalis.database.repositories.IQualityMetricRepository
 import kotlinx.coroutines.Dispatchers
@@ -46,21 +46,21 @@ class SQLDelightElementCommandRepository(
         withContext(Dispatchers.Default) {
             queries.getCommandsByUuid(elementUuid)
                 .executeAsList()
-                .map { it.toDTO() }
+                .map { it.toElementCommandDTO() }
         }
 
     override suspend fun getByApp(appId: String): List<ElementCommandDTO> =
         withContext(Dispatchers.Default) {
             queries.getCommandsByApp(appId)
                 .executeAsList()
-                .map { it.toDTO() }
+                .map { it.toElementCommandDTO() }
         }
 
     override suspend fun getByPhrase(phrase: String, appId: String): ElementCommandDTO? =
         withContext(Dispatchers.Default) {
             queries.getCommandByPhrase(phrase, appId)
                 .executeAsOneOrNull()
-                ?.toDTO()
+                ?.toElementCommandDTO()
         }
 
     override suspend fun delete(commandId: Long) = withContext(Dispatchers.Default) {
@@ -75,7 +75,7 @@ class SQLDelightElementCommandRepository(
         withContext(Dispatchers.Default) {
             queries.getAllCommandsForElement(elementUuid)
                 .executeAsList()
-                .map { it.toDTO() }
+                .map { it.toElementCommandDTO() }
         }
 
     override suspend fun hasPrimaryCommand(elementUuid: String): Boolean =
@@ -102,7 +102,7 @@ class SQLDelightElementCommandRepository(
         withContext(Dispatchers.Default) {
             queries.getAllCommands()
                 .executeAsList()
-                .map { it.toDTO() }
+                .map { it.toElementCommandDTO() }
         }
 }
 
@@ -133,28 +133,28 @@ class SQLDelightQualityMetricRepository(
         withContext(Dispatchers.Default) {
             queries.getQualityMetricsByApp(appId)
                 .executeAsList()
-                .map { it.toDTO() }
+                .map { it.toElementCommandDTO() }
         }
 
     override suspend fun getByUuid(elementUuid: String): QualityMetricDTO? =
         withContext(Dispatchers.Default) {
             queries.getQualityMetricByUuid(elementUuid)
                 .executeAsOneOrNull()
-                ?.toDTO()
+                ?.toElementCommandDTO()
         }
 
     override suspend fun getPoorQualityElements(appId: String): List<QualityMetricDTO> =
         withContext(Dispatchers.Default) {
             queries.getPoorQualityElements(appId)
                 .executeAsList()
-                .map { it.toDTO() }
+                .map { it.toElementCommandDTO() }
         }
 
     override suspend fun getElementsWithoutCommands(appId: String): List<QualityMetricDTO> =
         withContext(Dispatchers.Default) {
             queries.getElementsWithoutCommands(appId)
                 .executeAsList()
-                .map { it.toDTO() }
+                .map { it.toElementCommandDTO() }
         }
 
     override suspend fun updateCommandCounts(
@@ -201,6 +201,6 @@ class SQLDelightQualityMetricRepository(
         withContext(Dispatchers.Default) {
             queries.getElementsNeedingCommands(appId)
                 .executeAsList()
-                .map { it.toDTO() }
+                .map { it.toElementCommandDTO() }
         }
 }

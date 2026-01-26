@@ -50,7 +50,7 @@ data class ContextPreferenceDTO(
 /**
  * Extension to convert SQLDelight entity to DTO.
  */
-fun com.augmentalis.database.Context_preference.toDTO(): ContextPreferenceDTO = ContextPreferenceDTO(
+fun com.augmentalis.database.Context_preference.toContextPreferenceDTO(): ContextPreferenceDTO = ContextPreferenceDTO(
     id = id,
     commandId = command_id,
     contextKey = context_key,

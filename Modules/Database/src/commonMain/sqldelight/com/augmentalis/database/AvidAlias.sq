@@ -1,106 +1,88 @@
--- AvidAlias.sq - AVID alias/synonym storage
--- Alternative names for AVID elements (voice command variations)
--- Created: 2026-01-14
+-- AvidAlias.sq
+-- SQLDelight schema for AVID aliases
+-- Consolidated from UUIDAlias.sq and VUIDAlias.sq (nomenclature update to AVID)
 
-CREATE TABLE avid_alias (
+CREATE TABLE avid_aliases (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-    -- Reference
+    alias TEXT NOT NULL UNIQUE,
     avid TEXT NOT NULL,
-    package_name TEXT NOT NULL,
-
-    -- Alias data
-    alias TEXT NOT NULL,                    -- Alternative name
-    canonical TEXT NOT NULL,                -- Primary/canonical name
-    alias_type TEXT NOT NULL DEFAULT 'voice', -- voice, accessibility, user, system
-
-    -- Usage
-    usage_count INTEGER NOT NULL DEFAULT 0,
-    is_active INTEGER NOT NULL DEFAULT 1,
-
-    -- Source
-    source TEXT NOT NULL DEFAULT 'system',  -- system, user, learned, imported
-
-    -- Timestamps
+    is_primary INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
-    last_used INTEGER,
-
-    UNIQUE(avid, alias),
-    FOREIGN KEY(avid) REFERENCES avid_element(avid) ON DELETE CASCADE
+    FOREIGN KEY (avid) REFERENCES avid_elements(avid) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_alias_avid ON avid_alias(avid);
-CREATE INDEX idx_alias_package ON avid_alias(package_name);
-CREATE INDEX idx_alias_type ON avid_alias(alias_type);
-CREATE INDEX idx_alias_text ON avid_alias(alias);
-CREATE INDEX idx_alias_canonical ON avid_alias(canonical);
+CREATE INDEX idx_avid_alias_alias ON avid_aliases(alias);
+CREATE INDEX idx_avid_alias_avid ON avid_aliases(avid);
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- Queries
--- ═══════════════════════════════════════════════════════════════════════════════
+-- Get all aliases
+getAllAliases:
+SELECT * FROM avid_aliases ORDER BY created_at DESC;
 
-selectByAvid:
-SELECT * FROM avid_alias
-WHERE avid = ? AND is_active = 1
-ORDER BY usage_count DESC;
+-- Get alias by ID
+getAliasById:
+SELECT * FROM avid_aliases WHERE id = ?;
 
-selectByPackage:
-SELECT * FROM avid_alias
-WHERE package_name = ? AND is_active = 1;
+-- Get alias by name
+getAliasByName:
+SELECT * FROM avid_aliases WHERE alias = ?;
 
-selectByAlias:
-SELECT * FROM avid_alias
-WHERE alias = ? AND is_active = 1;
+-- Get aliases for AVID
+getAliasesForAvid:
+SELECT * FROM avid_aliases WHERE avid = ? ORDER BY is_primary DESC, created_at ASC;
 
-selectByCanonical:
-SELECT * FROM avid_alias
-WHERE canonical = ? AND is_active = 1;
+-- Get primary alias for AVID
+getPrimaryAliasForAvid:
+SELECT * FROM avid_aliases WHERE avid = ? AND is_primary = 1 LIMIT 1;
 
-searchAlias:
-SELECT * FROM avid_alias
-WHERE alias LIKE ? AND is_active = 1
-ORDER BY usage_count DESC
-LIMIT ?;
+-- Get AVID by alias
+getAvidByAlias:
+SELECT avid FROM avid_aliases WHERE alias = ?;
 
-selectMostUsed:
-SELECT * FROM avid_alias
-WHERE package_name = ? AND is_active = 1
-ORDER BY usage_count DESC
-LIMIT ?;
+-- Check if alias exists
+aliasExists:
+SELECT COUNT(*) FROM avid_aliases WHERE alias = ?;
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- Insert/Update Operations
--- ═══════════════════════════════════════════════════════════════════════════════
+-- Insert alias
+insertAlias:
+INSERT OR REPLACE INTO avid_aliases (alias, avid, is_primary, created_at)
+VALUES (?, ?, ?, ?);
 
-insert:
-INSERT INTO avid_alias (
-    avid, package_name, alias, canonical, alias_type, source, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?);
+-- Update alias
+updateAlias:
+UPDATE avid_aliases SET alias = ?, is_primary = ? WHERE id = ?;
 
-insertOrReplace:
-INSERT OR REPLACE INTO avid_alias (
-    avid, package_name, alias, canonical, alias_type, source, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?);
+-- Set primary alias (clears other primaries for same AVID)
+setPrimaryAlias:
+UPDATE avid_aliases SET is_primary = CASE WHEN id = ? THEN 1 ELSE 0 END WHERE avid = ?;
 
-incrementUsage:
-UPDATE avid_alias
-SET usage_count = usage_count + 1, last_used = ?
-WHERE avid = ? AND alias = ?;
+-- Clear primary for AVID
+clearPrimaryForAvid:
+UPDATE avid_aliases SET is_primary = 0 WHERE avid = ?;
 
-markInactive:
-UPDATE avid_alias
-SET is_active = 0
-WHERE avid = ? AND alias = ?;
+-- Delete alias by ID
+deleteAlias:
+DELETE FROM avid_aliases WHERE id = ?;
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- Delete Operations
--- ═══════════════════════════════════════════════════════════════════════════════
+-- Delete alias by name
+deleteAliasByName:
+DELETE FROM avid_aliases WHERE alias = ?;
 
-deleteByAvid:
-DELETE FROM avid_alias WHERE avid = ?;
+-- Delete aliases for AVID
+deleteAliasesForAvid:
+DELETE FROM avid_aliases WHERE avid = ?;
 
-deleteByPackage:
-DELETE FROM avid_alias WHERE package_name = ?;
+-- Count aliases
+countAliases:
+SELECT COUNT(*) FROM avid_aliases;
 
-deleteInactive:
-DELETE FROM avid_alias WHERE is_active = 0;
+-- Count aliases for AVID
+countAliasesForAvid:
+SELECT COUNT(*) FROM avid_aliases WHERE avid = ?;
+
+-- Search aliases
+searchAliases:
+SELECT * FROM avid_aliases WHERE alias LIKE '%' || ? || '%' ORDER BY is_primary DESC, created_at DESC;
+
+-- Delete all aliases
+deleteAll:
+DELETE FROM avid_aliases;

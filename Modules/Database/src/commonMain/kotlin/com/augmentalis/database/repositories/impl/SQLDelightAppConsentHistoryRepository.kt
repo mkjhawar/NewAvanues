@@ -11,7 +11,7 @@ package com.augmentalis.database.repositories.impl
 
 import com.augmentalis.database.VoiceOSDatabase
 import com.augmentalis.database.dto.AppConsentHistoryDTO
-import com.augmentalis.database.dto.toDTO
+import com.augmentalis.database.dto.toAppConsentHistoryDTO
 import com.augmentalis.database.repositories.IAppConsentHistoryRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,12 +41,12 @@ class SQLDelightAppConsentHistoryRepository(
 
     override suspend fun getConsentHistory(packageName: String): List<AppConsentHistoryDTO> =
         withContext(Dispatchers.Default) {
-            queries.getConsentHistory(packageName).executeAsList().map { it.toDTO() }
+            queries.getConsentHistory(packageName).executeAsList().map { it.toAppConsentHistoryDTO() }
         }
 
     override suspend fun getLatestConsent(packageName: String): AppConsentHistoryDTO? =
         withContext(Dispatchers.Default) {
-            queries.getLatestConsent(packageName).executeAsOneOrNull()?.toDTO()
+            queries.getLatestConsent(packageName).executeAsOneOrNull()?.toAppConsentHistoryDTO()
         }
 
     override suspend fun getDontAskAgainApps(): List<String> =

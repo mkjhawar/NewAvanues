@@ -52,7 +52,7 @@ data class ElementCommandDTO(
 /**
  * Extension function to convert database entity to DTO
  */
-fun com.augmentalis.database.Element_command.toDTO(): ElementCommandDTO {
+fun com.augmentalis.database.Element_command.toElementCommandDTO(): ElementCommandDTO {
     return ElementCommandDTO(
         id = id,
         elementUuid = element_uuid,
@@ -152,7 +152,7 @@ enum class MetadataQualityLevel {
 /**
  * Extension function to convert database entity to DTO
  */
-fun com.augmentalis.database.Element_quality_metric.toDTO(): QualityMetricDTO {
+fun com.augmentalis.database.Element_quality_metric.toElementCommandDTO(): QualityMetricDTO {
     return QualityMetricDTO(
         elementUuid = element_uuid,
         appId = app_id,

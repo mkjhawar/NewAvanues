@@ -5,7 +5,7 @@ package com.augmentalis.database.repositories.impl
 
 import com.augmentalis.database.VoiceOSDatabase
 import com.augmentalis.database.dto.UserPreferenceDTO
-import com.augmentalis.database.dto.toDTO
+import com.augmentalis.database.dto.toUserPreferenceDTO
 import com.augmentalis.database.repositories.IUserPreferenceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -37,11 +37,11 @@ class SQLDelightUserPreferenceRepository(
     }
 
     override suspend fun getAll(): List<UserPreferenceDTO> = withContext(Dispatchers.Default) {
-        queries.getAll().executeAsList().map { it.toDTO() }
+        queries.getAll().executeAsList().map { it.toUserPreferenceDTO() }
     }
 
     override suspend fun getByType(type: String): List<UserPreferenceDTO> = withContext(Dispatchers.Default) {
-        queries.getByType(type).executeAsList().map { it.toDTO() }
+        queries.getByType(type).executeAsList().map { it.toUserPreferenceDTO() }
     }
 
     override suspend fun delete(key: String) = withContext(Dispatchers.Default) {

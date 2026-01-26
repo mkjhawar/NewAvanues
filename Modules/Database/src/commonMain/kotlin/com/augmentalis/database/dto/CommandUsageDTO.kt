@@ -81,7 +81,7 @@ data class CommandUsageDTO(
 /**
  * Extension to convert SQLDelight entity to DTO.
  */
-fun com.augmentalis.database.Command_usage.toDTO(): CommandUsageDTO = CommandUsageDTO(
+fun com.augmentalis.database.Command_usage.toCommandUsageDTO(): CommandUsageDTO = CommandUsageDTO(
     id = id,
     commandId = command_id,
     locale = locale,

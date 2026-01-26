@@ -1,96 +1,88 @@
--- AvidHierarchy.sq - AVID hierarchy relationships
--- Parent-child relationships between AVID elements
--- Created: 2026-01-14
+-- AvidHierarchy.sq
+-- SQLDelight schema for AVID hierarchy relationships
+-- Consolidated from UUIDHierarchy.sq and VUIDHierarchy.sq (nomenclature update to AVID)
 
 CREATE TABLE avid_hierarchy (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-    -- Hierarchy relationship
     parent_avid TEXT NOT NULL,
     child_avid TEXT NOT NULL,
-
-    -- Context
-    package_name TEXT NOT NULL,
-    screen_id INTEGER,
-
-    -- Relationship metadata
-    depth INTEGER NOT NULL DEFAULT 1,       -- Depth from root (1 = direct child)
-    child_index INTEGER NOT NULL DEFAULT 0, -- Order among siblings
-
-    -- Timestamps
-    created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL,
-
-    UNIQUE(parent_avid, child_avid),
-    FOREIGN KEY(parent_avid) REFERENCES avid_element(avid) ON DELETE CASCADE,
-    FOREIGN KEY(child_avid) REFERENCES avid_element(avid) ON DELETE CASCADE
+    depth INTEGER NOT NULL DEFAULT 0,
+    path TEXT NOT NULL,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (parent_avid) REFERENCES avid_elements(avid) ON DELETE CASCADE,
+    FOREIGN KEY (child_avid) REFERENCES avid_elements(avid) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_hierarchy_parent ON avid_hierarchy(parent_avid);
-CREATE INDEX idx_hierarchy_child ON avid_hierarchy(child_avid);
-CREATE INDEX idx_hierarchy_package ON avid_hierarchy(package_name);
-CREATE INDEX idx_hierarchy_screen ON avid_hierarchy(screen_id);
+CREATE INDEX idx_avid_hierarchy_parent ON avid_hierarchy(parent_avid);
+CREATE INDEX idx_avid_hierarchy_child ON avid_hierarchy(child_avid);
+CREATE INDEX idx_avid_hierarchy_depth ON avid_hierarchy(depth);
+CREATE INDEX idx_avid_hierarchy_path ON avid_hierarchy(path);
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- Queries
--- ═══════════════════════════════════════════════════════════════════════════════
+-- Get all hierarchy relationships
+getAllHierarchy:
+SELECT * FROM avid_hierarchy ORDER BY path, order_index;
 
-selectChildren:
-SELECT * FROM avid_hierarchy
-WHERE parent_avid = ?
-ORDER BY child_index;
+-- Get hierarchy by ID
+getHierarchyById:
+SELECT * FROM avid_hierarchy WHERE id = ?;
 
-selectParent:
-SELECT * FROM avid_hierarchy
-WHERE child_avid = ?;
+-- Get children of parent
+getChildrenOfParent:
+SELECT * FROM avid_hierarchy WHERE parent_avid = ? ORDER BY order_index;
 
-selectByPackage:
-SELECT * FROM avid_hierarchy
-WHERE package_name = ?;
+-- Get parent of child
+getParentOfChild:
+SELECT * FROM avid_hierarchy WHERE child_avid = ?;
 
-selectByScreen:
-SELECT * FROM avid_hierarchy
-WHERE screen_id = ?
-ORDER BY depth, child_index;
+-- Get all descendants of parent (all depths)
+getDescendantsOfParent:
+SELECT * FROM avid_hierarchy WHERE path LIKE ? || '%' ORDER BY depth, order_index;
 
-selectDescendants:
-SELECT * FROM avid_hierarchy
-WHERE parent_avid = ?
-ORDER BY depth, child_index;
+-- Get direct children only (depth = 0)
+getDirectChildren:
+SELECT * FROM avid_hierarchy WHERE parent_avid = ? AND depth = 0 ORDER BY order_index;
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- Insert/Update Operations
--- ═══════════════════════════════════════════════════════════════════════════════
+-- Get hierarchy by path
+getHierarchyByPath:
+SELECT * FROM avid_hierarchy WHERE path = ?;
 
-insert:
-INSERT INTO avid_hierarchy (
-    parent_avid, child_avid, package_name, screen_id,
-    depth, child_index, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+-- Insert hierarchy relationship
+insertHierarchy:
+INSERT OR REPLACE INTO avid_hierarchy (parent_avid, child_avid, depth, path, order_index)
+VALUES (?, ?, ?, ?, ?);
 
-insertOrReplace:
-INSERT OR REPLACE INTO avid_hierarchy (
-    parent_avid, child_avid, package_name, screen_id,
-    depth, child_index, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+-- Update order index
+updateOrderIndex:
+UPDATE avid_hierarchy SET order_index = ? WHERE id = ?;
 
-updateIndex:
-UPDATE avid_hierarchy
-SET child_index = ?, updated_at = ?
-WHERE parent_avid = ? AND child_avid = ?;
+-- Update path
+updatePath:
+UPDATE avid_hierarchy SET path = ? WHERE id = ?;
 
--- ═══════════════════════════════════════════════════════════════════════════════
--- Delete Operations
--- ═══════════════════════════════════════════════════════════════════════════════
+-- Delete hierarchy by ID
+deleteHierarchy:
+DELETE FROM avid_hierarchy WHERE id = ?;
 
+-- Delete by parent
 deleteByParent:
 DELETE FROM avid_hierarchy WHERE parent_avid = ?;
 
+-- Delete by child
 deleteByChild:
 DELETE FROM avid_hierarchy WHERE child_avid = ?;
 
-deleteByPackage:
-DELETE FROM avid_hierarchy WHERE package_name = ?;
+-- Count children of parent
+countChildrenOfParent:
+SELECT COUNT(*) FROM avid_hierarchy WHERE parent_avid = ?;
 
-deleteByScreen:
-DELETE FROM avid_hierarchy WHERE screen_id = ?;
+-- Count total relationships
+countRelationships:
+SELECT COUNT(*) FROM avid_hierarchy;
+
+-- Get max order index for parent
+getMaxOrderIndex:
+SELECT MAX(order_index) FROM avid_hierarchy WHERE parent_avid = ?;
+
+-- Delete all hierarchy
+deleteAll:
+DELETE FROM avid_hierarchy;

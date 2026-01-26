@@ -5,7 +5,7 @@ package com.augmentalis.database.repositories.impl
 
 import com.augmentalis.database.VoiceOSDatabase
 import com.augmentalis.database.dto.VoiceCommandDTO
-import com.augmentalis.database.dto.toDTO
+import com.augmentalis.database.dto.toVoiceCommandDTO
 import com.augmentalis.database.repositories.IVoiceCommandRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -39,54 +39,54 @@ class SQLDelightVoiceCommandRepository(
 
     override suspend fun getById(id: Long): VoiceCommandDTO? = withContext(Dispatchers.Default) {
         queries.getCommandById(id).executeAsOneOrNull()?.let { cmd: com.augmentalis.database.Commands_static ->
-            cmd.toDTO()
+            cmd.toVoiceCommandDTO()
         }
     }
 
     override suspend fun getByCommandId(commandId: String): List<VoiceCommandDTO> =
         withContext(Dispatchers.Default) {
             queries.getCommandsByCommandId(commandId).executeAsList().map { cmd: com.augmentalis.database.Commands_static ->
-                cmd.toDTO()
+                cmd.toVoiceCommandDTO()
             }
         }
 
     override suspend fun getByLocale(locale: String): List<VoiceCommandDTO> =
         withContext(Dispatchers.Default) {
             queries.getCommandsByLocale(locale).executeAsList().map { cmd: com.augmentalis.database.Commands_static ->
-                cmd.toDTO()
+                cmd.toVoiceCommandDTO()
             }
         }
 
     override suspend fun getByLocaleWithFallback(locale: String): List<VoiceCommandDTO> =
         withContext(Dispatchers.Default) {
             queries.getCommandsByLocaleWithFallback(locale, locale).executeAsList().map { cmd: com.augmentalis.database.Commands_static ->
-                cmd.toDTO()
+                cmd.toVoiceCommandDTO()
             }
         }
 
     override suspend fun getByCategory(category: String): List<VoiceCommandDTO> =
         withContext(Dispatchers.Default) {
             queries.getCommandsByCategory(category).executeAsList().map { cmd: com.augmentalis.database.Commands_static ->
-                cmd.toDTO()
+                cmd.toVoiceCommandDTO()
             }
         }
 
     override suspend fun getEnabled(): List<VoiceCommandDTO> = withContext(Dispatchers.Default) {
         queries.getEnabledCommands().executeAsList().map { cmd: com.augmentalis.database.Commands_static ->
-            cmd.toDTO()
+            cmd.toVoiceCommandDTO()
         }
     }
 
     override suspend fun searchByTrigger(query: String): List<VoiceCommandDTO> =
         withContext(Dispatchers.Default) {
             queries.searchByTrigger(query).executeAsList().map { cmd: com.augmentalis.database.Commands_static ->
-                cmd.toDTO()
+                cmd.toVoiceCommandDTO()
             }
         }
 
     override suspend fun getAll(): List<VoiceCommandDTO> = withContext(Dispatchers.Default) {
         queries.getAllCommands().executeAsList().map { cmd: com.augmentalis.database.Commands_static ->
-            cmd.toDTO()
+            cmd.toVoiceCommandDTO()
         }
     }
 

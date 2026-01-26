@@ -27,7 +27,7 @@ data class CustomCommandDTO(
 /**
  * Extension to convert SQLDelight entity to DTO.
  */
-fun com.augmentalis.database.Custom_command.toDTO(): CustomCommandDTO = CustomCommandDTO(
+fun com.augmentalis.database.Custom_command.toCustomCommandDTO(): CustomCommandDTO = CustomCommandDTO(
     id = id,
     name = name,
     description = description,

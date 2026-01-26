@@ -19,7 +19,7 @@ data class UserPreferenceDTO(
 /**
  * Extension to convert SQLDelight entity to DTO.
  */
-fun com.augmentalis.database.User_preference.toDTO(): UserPreferenceDTO = UserPreferenceDTO(
+fun com.augmentalis.database.User_preference.toUserPreferenceDTO(): UserPreferenceDTO = UserPreferenceDTO(
     key = key,
     value = value_,
     type = type,

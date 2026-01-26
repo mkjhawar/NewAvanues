@@ -33,7 +33,7 @@ enum class ConsentChoice {
 /**
  * Extension to convert SQLDelight entity to DTO.
  */
-fun com.augmentalis.database.App_consent_history.toDTO(): AppConsentHistoryDTO = AppConsentHistoryDTO(
+fun com.augmentalis.database.App_consent_history.toAppConsentHistoryDTO(): AppConsentHistoryDTO = AppConsentHistoryDTO(
     id = id,
     packageName = package_name,
     userChoice = user_choice,

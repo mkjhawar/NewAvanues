@@ -66,7 +66,7 @@ data class DatabaseVersionDTO(
 /**
  * Extension to convert SQLDelight entity to DTO.
  */
-fun com.augmentalis.database.Database_version.toDTO(): DatabaseVersionDTO = DatabaseVersionDTO(
+fun com.augmentalis.database.Database_version.toDatabaseVersionDTO(): DatabaseVersionDTO = DatabaseVersionDTO(
     id = id,
     jsonVersion = json_version,
     loadedAt = loaded_at,

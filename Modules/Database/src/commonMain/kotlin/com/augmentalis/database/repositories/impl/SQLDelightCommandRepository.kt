@@ -5,7 +5,7 @@ package com.augmentalis.database.repositories.impl
 
 import com.augmentalis.database.VoiceOSDatabase
 import com.augmentalis.database.dto.CustomCommandDTO
-import com.augmentalis.database.dto.toDTO
+import com.augmentalis.database.dto.toCustomCommandDTO
 import com.augmentalis.database.repositories.ICommandRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,47 +41,47 @@ class SQLDelightCommandRepository(
 
     override suspend fun getById(id: Long): CustomCommandDTO? = withContext(Dispatchers.Default) {
         queries.getById(id).executeAsOneOrNull()?.let { cmd: com.augmentalis.database.Custom_command ->
-            cmd.toDTO()
+            cmd.toCustomCommandDTO()
         }
     }
 
     override suspend fun getAll(): List<CustomCommandDTO> = withContext(Dispatchers.Default) {
         queries.getAll().executeAsList().map { cmd: com.augmentalis.database.Custom_command ->
-            cmd.toDTO()
+            cmd.toCustomCommandDTO()
         }
     }
 
     override suspend fun getActive(): List<CustomCommandDTO> = withContext(Dispatchers.Default) {
         queries.getActive().executeAsList().map { cmd: com.augmentalis.database.Custom_command ->
-            cmd.toDTO()
+            cmd.toCustomCommandDTO()
         }
     }
 
     override suspend fun getActiveByLanguage(language: String): List<CustomCommandDTO> =
         withContext(Dispatchers.Default) {
             queries.getActiveByLanguage(language).executeAsList().map { cmd: com.augmentalis.database.Custom_command ->
-                cmd.toDTO()
+                cmd.toCustomCommandDTO()
             }
         }
 
     override suspend fun getByLanguage(language: String): List<CustomCommandDTO> =
         withContext(Dispatchers.Default) {
             queries.getByLanguage(language).executeAsList().map { cmd: com.augmentalis.database.Custom_command ->
-                cmd.toDTO()
+                cmd.toCustomCommandDTO()
             }
         }
 
     override suspend fun getMostUsed(limit: Int): List<CustomCommandDTO> =
         withContext(Dispatchers.Default) {
             queries.getMostUsed(limit.toLong()).executeAsList().map { cmd: com.augmentalis.database.Custom_command ->
-                cmd.toDTO()
+                cmd.toCustomCommandDTO()
             }
         }
 
     override suspend fun searchByName(query: String): List<CustomCommandDTO> =
         withContext(Dispatchers.Default) {
             queries.searchByName(query).executeAsList().map { cmd: com.augmentalis.database.Custom_command ->
-                cmd.toDTO()
+                cmd.toCustomCommandDTO()
             }
         }
 

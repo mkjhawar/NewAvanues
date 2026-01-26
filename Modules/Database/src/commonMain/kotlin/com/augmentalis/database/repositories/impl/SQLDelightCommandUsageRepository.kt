@@ -5,7 +5,7 @@ package com.augmentalis.database.repositories.impl
 
 import com.augmentalis.database.VoiceOSDatabase
 import com.augmentalis.database.dto.CommandUsageDTO
-import com.augmentalis.database.dto.toDTO
+import com.augmentalis.database.dto.toCommandUsageDTO
 import com.augmentalis.database.repositories.CommandStats
 import com.augmentalis.database.repositories.ICommandUsageRepository
 import kotlinx.coroutines.Dispatchers
@@ -36,21 +36,21 @@ class SQLDelightCommandUsageRepository(
 
     override suspend fun getAll(): List<CommandUsageDTO> = withContext(Dispatchers.Default) {
         queries.getAllUsage().executeAsList().map { usage: com.augmentalis.database.Command_usage ->
-            usage.toDTO()
+            usage.toCommandUsageDTO()
         }
     }
 
     override suspend fun getForCommand(commandId: String): List<CommandUsageDTO> =
         withContext(Dispatchers.Default) {
             queries.getUsageForCommand(commandId).executeAsList().map { usage: com.augmentalis.database.Command_usage ->
-                usage.toDTO()
+                usage.toCommandUsageDTO()
             }
         }
 
     override suspend fun getForContext(contextKey: String): List<CommandUsageDTO> =
         withContext(Dispatchers.Default) {
             queries.getUsageForContext(contextKey).executeAsList().map { usage: com.augmentalis.database.Command_usage ->
-                usage.toDTO()
+                usage.toCommandUsageDTO()
             }
         }
 
@@ -58,12 +58,12 @@ class SQLDelightCommandUsageRepository(
         commandId: String,
         contextKey: String
     ): List<CommandUsageDTO> = withContext(Dispatchers.Default) {
-        queries.getUsageForCommandInContext(commandId, contextKey).executeAsList().map { it.toDTO() }
+        queries.getUsageForCommandInContext(commandId, contextKey).executeAsList().map { it.toCommandUsageDTO() }
     }
 
     override suspend fun getRecent(limit: Long): List<CommandUsageDTO> =
         withContext(Dispatchers.Default) {
-            queries.getRecentUsage(limit).executeAsList().map { it.toDTO() }
+            queries.getRecentUsage(limit).executeAsList().map { it.toCommandUsageDTO() }
         }
 
     override suspend fun countForCommand(commandId: String): Long =

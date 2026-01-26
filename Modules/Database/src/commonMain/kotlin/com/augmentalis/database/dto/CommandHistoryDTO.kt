@@ -25,7 +25,7 @@ data class CommandHistoryDTO(
 /**
  * Extension to convert SQLDelight entity to DTO.
  */
-fun com.augmentalis.database.Command_history_entry.toDTO(): CommandHistoryDTO = CommandHistoryDTO(
+fun com.augmentalis.database.Command_history_entry.toCommandHistoryDTO(): CommandHistoryDTO = CommandHistoryDTO(
     id = id,
     originalText = originalText,
     processedCommand = processedCommand ?: "",

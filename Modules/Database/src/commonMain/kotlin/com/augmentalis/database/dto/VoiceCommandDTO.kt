@@ -67,7 +67,7 @@ data class VoiceCommandDTO(
  * Extension to convert SQLDelight entity to DTO.
  * RENAMED (2025-12-05): Voice_commands -> Commands_static
  */
-fun com.augmentalis.database.Commands_static.toDTO(): VoiceCommandDTO = VoiceCommandDTO(
+fun com.augmentalis.database.Commands_static.toVoiceCommandDTO(): VoiceCommandDTO = VoiceCommandDTO(
     id = id,
     commandId = command_id,
     locale = locale,
