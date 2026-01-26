@@ -29,6 +29,12 @@ class BoundsResolver(private val service: AccessibilityService) {
     private val scrollOffsets = mutableMapOf<String, Pair<Int, Int>>()
 
     /**
+     * Track current package name to detect app changes.
+     * BUG FIX: Auto-clear scroll offsets when app changes.
+     */
+    private var currentPackageName: String? = null
+
+    /**
      * Resolve bounds for a command using layered strategy.
      * Returns fresh, validated bounds or null if element not found.
      *
@@ -146,6 +152,7 @@ class BoundsResolver(private val service: AccessibilityService) {
 
     /**
      * Find a node at a specific screen position.
+     * Note: Caller is responsible for recycling the returned node.
      */
     private fun findNodeAtPosition(root: AccessibilityNodeInfo, x: Int, y: Int): AccessibilityNodeInfo? {
         val rect = Rect()
@@ -162,8 +169,14 @@ class BoundsResolver(private val service: AccessibilityService) {
 
             if (childRect.contains(x, y)) {
                 val found = findNodeAtPosition(child, x, y)
-                if (found != null) return found
-                if (child.isClickable || child.isFocusable) return child
+                if (found != null) {
+                    child.recycle()  // BUG FIX: Recycle child before returning found node
+                    return found
+                }
+                if (child.isClickable || child.isFocusable) {
+                    // Don't recycle - we're returning this child
+                    return child
+                }
             }
             child.recycle()
         }
@@ -222,8 +235,9 @@ class BoundsResolver(private val service: AccessibilityService) {
             ?: return null
 
         val root = service.rootInActiveWindow ?: return null
+        var nodes: List<AccessibilityNodeInfo>? = null
         try {
-            val nodes = root.findAccessibilityNodeInfosByViewId(resourceId)
+            nodes = root.findAccessibilityNodeInfosByViewId(resourceId)
             if (nodes.isNullOrEmpty()) return null
 
             // Find best match (prefer visible, clickable)
@@ -241,11 +255,11 @@ class BoundsResolver(private val service: AccessibilityService) {
             return node?.let {
                 val rect = Rect()
                 it.getBoundsInScreen(rect)
-                // Recycle all nodes
-                nodes.forEach { n -> n.recycle() }
                 Bounds(rect.left, rect.top, rect.right, rect.bottom)
             }
         } finally {
+            // BUG FIX: Always recycle nodes, even when node is null
+            nodes?.forEach { n -> n.recycle() }
             root.recycle()
         }
     }
@@ -275,6 +289,7 @@ class BoundsResolver(private val service: AccessibilityService) {
 
     /**
      * BFS search for a node matching text, description, or hash.
+     * Note: Properly recycles all nodes to prevent memory leaks.
      */
     private fun findNodeByTextOrHash(
         root: AccessibilityNodeInfo,
@@ -283,35 +298,55 @@ class BoundsResolver(private val service: AccessibilityService) {
         targetHash: String?
     ): AccessibilityNodeInfo? {
         val queue = ArrayDeque<AccessibilityNodeInfo>()
+        val toRecycle = mutableListOf<AccessibilityNodeInfo>()
         queue.add(root)
 
-        while (queue.isNotEmpty()) {
-            val node = queue.removeFirst()
+        try {
+            while (queue.isNotEmpty()) {
+                val node = queue.removeFirst()
 
-            // Check text match
-            val nodeText = node.text?.toString() ?: ""
-            val nodeDesc = node.contentDescription?.toString() ?: ""
+                // Check text match
+                val nodeText = node.text?.toString() ?: ""
+                val nodeDesc = node.contentDescription?.toString() ?: ""
 
-            if (nodeText.equals(targetText, ignoreCase = true) ||
-                nodeDesc.equals(targetText, ignoreCase = true) ||
-                (targetDesc != null && nodeDesc.equals(targetDesc, ignoreCase = true))) {
-                if (node.isClickable || node.isFocusable) {
-                    return node
+                if (nodeText.equals(targetText, ignoreCase = true) ||
+                    nodeDesc.equals(targetText, ignoreCase = true) ||
+                    (targetDesc != null && nodeDesc.equals(targetDesc, ignoreCase = true))) {
+                    if (node.isClickable || node.isFocusable) {
+                        // BUG FIX: Recycle remaining queue items before returning
+                        queue.forEach { it.recycle() }
+                        toRecycle.forEach { it.recycle() }
+                        return node
+                    }
+                }
+
+                // Check hash match
+                if (targetHash != null) {
+                    val nodeHash = calculateHash(node)
+                    if (nodeHash == targetHash) {
+                        // BUG FIX: Recycle remaining queue items before returning
+                        queue.forEach { it.recycle() }
+                        toRecycle.forEach { it.recycle() }
+                        return node
+                    }
+                }
+
+                // Add children to queue
+                for (i in 0 until node.childCount) {
+                    node.getChild(i)?.let { queue.add(it) }
+                }
+
+                // BUG FIX: Track processed nodes for recycling (except root, handled by caller)
+                if (node != root) {
+                    toRecycle.add(node)
                 }
             }
-
-            // Check hash match
-            if (targetHash != null) {
-                val nodeHash = calculateHash(node)
-                if (nodeHash == targetHash) return node
-            }
-
-            // Add children to queue
-            for (i in 0 until node.childCount) {
-                node.getChild(i)?.let { queue.add(it) }
-            }
+            return null
+        } finally {
+            // BUG FIX: Recycle all processed nodes on any exit path
+            toRecycle.forEach { it.recycle() }
+            queue.forEach { it.recycle() }
         }
-        return null
     }
 
     /**
@@ -341,6 +376,21 @@ class BoundsResolver(private val service: AccessibilityService) {
      */
     fun clearScrollOffsets() {
         scrollOffsets.clear()
+        Log.v(TAG, "Scroll offsets cleared")
+    }
+
+    /**
+     * Notify resolver of current package for auto-clearing stale offsets.
+     * BUG FIX: Automatically clears scroll offsets when package changes.
+     *
+     * @param packageName Current app package name
+     */
+    fun onPackageChanged(packageName: String?) {
+        if (packageName != null && packageName != currentPackageName) {
+            Log.d(TAG, "Package changed: $currentPackageName -> $packageName, clearing scroll offsets")
+            clearScrollOffsets()
+            currentPackageName = packageName
+        }
     }
 
     /**

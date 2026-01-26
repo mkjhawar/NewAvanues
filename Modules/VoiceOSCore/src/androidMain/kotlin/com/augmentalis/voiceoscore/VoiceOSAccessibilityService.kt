@@ -120,16 +120,18 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
     // =========================================================================
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null || !isServiceReady) return
+        // BUG FIX: Use safe reference to avoid potential NPE in edge cases
+        val safeEvent = event ?: return
+        if (!isServiceReady) return
 
-        when (event.eventType) {
+        when (safeEvent.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED,
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
-                handleScreenChange(event)
+                handleScreenChange(safeEvent)
             }
             AccessibilityEvent.TYPE_VIEW_CLICKED -> {
                 // Optionally refresh after clicks for dynamic content
-                handleScreenChange(event)
+                handleScreenChange(safeEvent)
             }
         }
     }

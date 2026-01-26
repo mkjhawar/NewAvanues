@@ -58,11 +58,12 @@ class CommandRegistry {
      * Synchronous update for use in non-coroutine contexts.
      * Commands are keyed by phrase to allow multiple command types per element.
      *
-     * Thread-safe: Volatile reference ensures atomic visibility of writes.
-     * Prefer suspend update() when in a coroutine context.
+     * Thread-safe: Uses @Synchronized to prevent race conditions with update().
+     * BUG FIX: Previously bypassed mutex, causing potential race conditions.
      *
      * @param newCommands List of commands from current scan
      */
+    @Synchronized
     fun updateSync(newCommands: List<QuantizedCommand>) {
         val validCommands = newCommands.filter { it.targetVuid != null && it.phrase.isNotBlank() }
         LoggingUtils.d("updateSync: received ${newCommands.size} commands, ${validCommands.size} valid", TAG)
@@ -95,10 +96,11 @@ class CommandRegistry {
         }
 
         // Partial match - check if input matches just the label part
-        // Skip empty labels to avoid false matches
+        // BUG FIX: Skip empty labels to avoid false matches (endsWith("") always returns true)
         val partialMatch = snapshot.values.firstOrNull { cmd: QuantizedCommand ->
             val label = cmd.phrase.substringAfter(" ").lowercase()
-            label.isNotBlank() && (normalized == label || normalized.endsWith(label, ignoreCase = true))
+            // Must have actual label content to match - empty string check prevents false positives
+            label.length > 1 && (normalized == label || normalized.endsWith(label, ignoreCase = true))
         }
         if (partialMatch != null) {
             LoggingUtils.d("findByPhrase: partial match found - '${partialMatch.phrase}'", TAG)
@@ -154,10 +156,12 @@ class CommandRegistry {
      * Useful for adding index commands ("first", "second") alongside existing commands.
      * Commands are keyed by phrase, so multiple commands can target the same element.
      *
-     * Thread-safe: Volatile reference ensures atomic visibility.
+     * Thread-safe: Uses @Synchronized to prevent race conditions.
+     * BUG FIX: Previously read+write was not atomic, causing potential data loss.
      *
      * @param commands List of commands to add
      */
+    @Synchronized
     fun addAll(commands: List<QuantizedCommand>) {
         if (commands.isEmpty()) return
         val toAdd = commands

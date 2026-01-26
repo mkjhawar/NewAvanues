@@ -128,6 +128,9 @@ class AndroidScreenExtractor {
 
     /**
      * Traverse child nodes with proper index tracking for lists.
+     *
+     * BUG FIX: List indices are now only assigned to direct children of dynamic
+     * containers, not nested elements. Nested children inherit parent's index.
      */
     private fun traverseChildren(
         node: AccessibilityNodeInfo,
@@ -139,6 +142,10 @@ class AndroidScreenExtractor {
     ) {
         val childCount = node.childCount
 
+        // Check if this node is a dynamic container - its direct children get indices
+        val nodeClassName = node.className?.toString() ?: ""
+        val isThisNodeDynamicContainer = AccessibilityNodeAdapter.isDynamicContainer(nodeClassName)
+
         for (i in 0 until childCount) {
             val child = try {
                 node.getChild(i)
@@ -149,11 +156,15 @@ class AndroidScreenExtractor {
 
             if (child != null) {
                 try {
-                    // Update list index if we're in a list-like container
-                    val childListIndex = if (isInDynamicContainer && currentListIndex == -1) {
-                        i  // First level inside dynamic container gets index
-                    } else {
-                        currentListIndex
+                    // BUG FIX: Only assign list index to DIRECT children of dynamic containers
+                    // Nested elements (grandchildren etc.) inherit the parent's index
+                    val childListIndex = when {
+                        // Direct child of a dynamic container AND no index yet -> assign new index
+                        isThisNodeDynamicContainer && currentListIndex == -1 -> i
+                        // Already have an index (nested element) -> keep it
+                        currentListIndex >= 0 -> currentListIndex
+                        // Not in a dynamic container -> no index
+                        else -> -1
                     }
 
                     traverseNode(
@@ -161,8 +172,8 @@ class AndroidScreenExtractor {
                         elements = elements,
                         depth = depth + 1,
                         listIndex = childListIndex,
-                        isInDynamicContainer = isInDynamicContainer,
-                        containerType = containerType
+                        isInDynamicContainer = isInDynamicContainer || isThisNodeDynamicContainer,
+                        containerType = if (isThisNodeDynamicContainer) nodeClassName else containerType
                     )
                 } finally {
                     // Recycle child node to prevent memory leaks
