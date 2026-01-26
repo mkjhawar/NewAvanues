@@ -422,6 +422,12 @@ class VoiceOSDatabaseManager private constructor(
     /** Raw queries for UserSequence table */
     val userSequenceQueries get() = _database.userSequenceQueries
 
+    /** Raw queries for AppCategoryOverride table */
+    val appCategoryOverrideQueries get() = _database.appCategoryOverrideQueries
+
+    /** Raw queries for AppPatternGroup table */
+    val appPatternGroupQueries get() = _database.appPatternGroupQueries
+
     /** Raw queries for CommandHistory table */
     val commandHistoryQueries get() = _database.commandHistoryQueries
 

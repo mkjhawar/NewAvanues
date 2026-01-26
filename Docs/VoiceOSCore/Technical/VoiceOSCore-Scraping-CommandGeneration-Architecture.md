@@ -381,7 +381,85 @@ enum class AppCategory(val dynamicBehavior: DynamicBehavior) {
 }
 ```
 
-**Pattern Matching Examples:**
+##### Hybrid App Category Classification (4-Layer)
+
+App categories are determined using a hybrid 4-layer classification system, optimized for AOSP/RealWear devices without Play Store:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│           Hybrid App Category Classification                 │
+│              (AndroidAppCategoryProvider)                    │
+└─────────────────────────────────────────────────────────────┘
+                              │
+         ┌────────────────────┼────────────────────┐
+         ▼                    ▼                    ▼
+   ┌───────────┐      ┌─────────────┐      ┌─────────────┐
+   │ L1: ACD   │      │ L2: Package │      │ L3: Perm    │
+   │ Database  │      │ Manager API │      │ Heuristics  │
+   └─────┬─────┘      └──────┬──────┘      └──────┬──────┘
+         │                   │                    │
+   known-apps.acd     ApplicationInfo      SMS→MESSAGING
+   SQLite cache       .category (API26+)   Camera→MEDIA
+   90-95% confidence  85-95% confidence    75% confidence
+         │                   │                    │
+         └────────────────────┴────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │ L4: Pattern     │
+                    │ Matching        │
+                    │ 70% confidence  │
+                    └─────────────────┘
+```
+
+**Classification Layers:**
+
+| Layer | Source | File | Confidence | Best For |
+|-------|--------|------|------------|----------|
+| L1 | ACD Database | `known-apps.acd` → SQLite | 90-95% | AOSP/RealWear |
+| L2 | PackageManager | `ApplicationInfo.category` | 85-95% | Play Store apps |
+| L3 | Permissions | `SEND_SMS` → MESSAGING | 75% | Unknown apps |
+| L4 | Patterns | `AppCategoryClassifier` | 70% | Fallback |
+
+**ACD File Format (AVU-based):**
+
+```
+# known-apps.acd
+ACD:1.0.0:1706300000000:augmentalis
+
+# Exact package mappings
+APC:com.realwear.settings:SETTINGS:system:0.95
+APC:com.microsoft.teams:MESSAGING:system:0.95
+APC:com.google.android.gm:EMAIL:system:0.95
+
+# Pattern groups (fallback)
+APG:EMAIL:gmail|outlook|mail|inbox|protonmail
+APG:MESSAGING:whatsapp|telegram|slack|teams|discord
+```
+
+**Key Files:**
+- `known-apps.acd` - Curated app database (assets)
+- `AppCategoryLoader.kt` - Loads ACD → SQLite
+- `AppCategoryOverride.sq` - SQLite schema
+- `AndroidAppCategoryProvider.kt` - 4-layer classifier
+
+**Usage:**
+
+```kotlin
+// Full hybrid provider (recommended)
+val provider = AndroidAppCategoryProvider.withDatabase(
+    context, categoryRepository, patternRepository
+)
+
+// Legacy provider (PackageManager + patterns only)
+val legacy = AndroidAppCategoryProvider.legacy(context)
+
+// Get category with confidence
+val category = provider.getCategory("com.microsoft.teams")
+val confidence = provider.getConfidence("com.microsoft.teams")
+```
+
+**Pattern Matching Examples (L4 fallback):**
 - `com.google.android.gm` → EMAIL
 - `com.android.settings` → SETTINGS
 - `com.realwear.hmt` → ENTERPRISE
@@ -712,7 +790,10 @@ Enables sharing learned commands between devices.
 | File | Purpose |
 |------|---------|
 | **Classification** | |
-| `AppCategoryClassifier.kt` | Layer 1: App category from package name |
+| `AppCategoryClassifier.kt` | Pattern-based app category classification (L4 fallback) |
+| `AppCategoryLoader.kt` | Loads ACD files into SQLite |
+| `IAppCategoryProvider.kt` | Interface for category providers |
+| `IAppCategoryRepository.kt` | Interface for category persistence |
 | `ContainerClassifier.kt` | Layer 2: Container type classification |
 | `ContentAnalyzer.kt` | Layer 3: Content signal analysis |
 | `ScreenClassifier.kt` | Layer 4: Screen type from element stats |
@@ -743,8 +824,10 @@ Enables sharing learned commands between devices.
 | `ElementExtractor.kt` | Accessibility tree traversal |
 | `DynamicCommandGenerator.kt` | App-level command generation wrapper |
 | `CommandPersistenceManager.kt` | Persistence orchestration |
-| `AndroidAppCategoryProvider.kt` | PackageManager-based category |
+| `AndroidAppCategoryProvider.kt` | Hybrid 4-layer category provider (L1-L4) |
 | `AndroidExportFileProvider.kt` | SAF file operations |
+| **Assets** | |
+| `known-apps.acd` | Curated app category database (AVU format) |
 | **UI** | |
 | `ExportSettingsActivity.kt` | Export UI |
 | `ImportSettingsActivity.kt` | Import UI |
@@ -755,6 +838,8 @@ Enables sharing learned commands between devices.
 |------|---------|
 | `ScrapedAppDTO.kt` | App data transfer object |
 | `IScrapedAppRepository.kt` | App repository interface |
+| `AppCategoryOverride.sq` | App category override table (SQLDelight) |
+| `AppPatternGroup.sq` | Pattern group table (SQLDelight) |
 | `IScrapedElementRepository.kt` | Element repository interface |
 | `DatabaseMigrations.kt` | Schema migrations |
 

@@ -102,10 +102,10 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
     /**
      * App category provider for 4-layer persistence decisions.
-     * Uses PackageManager API (API 26+) with pattern-based fallback.
+     * Uses the app-level provider with full hybrid support (database + PackageManager + patterns).
      */
     private val appCategoryProvider: IAppCategoryProvider by lazy {
-        AndroidAppCategoryProvider(applicationContext)
+        VoiceOSCoreNGApplication.getInstance(applicationContext).appCategoryProvider
     }
 
     /**

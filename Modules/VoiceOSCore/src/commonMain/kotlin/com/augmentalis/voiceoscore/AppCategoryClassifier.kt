@@ -97,15 +97,24 @@ enum class AppCategory(val dynamicBehavior: DynamicBehavior) {
 }
 
 /**
- * Classifies Android application packages into categories based on package name patterns.
+ * Classifies Android application packages into categories using pattern matching.
  *
- * This classifier uses pattern matching against known package name patterns to determine
- * the [AppCategory] of an application. The category is then used by the hybrid persistence
- * system to make intelligent decisions about what commands to persist vs. generate dynamically.
+ * This classifier provides pattern-based classification as a **fallback** when:
+ * - Database lookup (via [AppCategoryLoader]) returns no result
+ * - PackageManager API is unavailable (AOSP without Play Store)
+ *
+ * ## Hybrid Persistence Classification Hierarchy
+ *
+ * 1. **Database Lookup** (highest priority) - ACD file loaded via [AppCategoryLoader]
+ * 2. **PackageManager API** - Android's ApplicationInfo.category (Play Store apps)
+ * 3. **Permission Heuristics** - Infer from requested permissions
+ * 4. **Pattern Matching** (this class) - Substring matching against known patterns
  *
  * ## Usage
+ *
  * ```kotlin
- * val category = AppCategoryClassifier.classifyPackage("com.google.android.gmail")
+ * // Pattern-only classification (fallback)
+ * val category = AppCategoryClassifier.classifyByPattern("com.google.android.gmail")
  * // Returns AppCategory.EMAIL
  *
  * val behavior = category.dynamicBehavior
@@ -113,10 +122,28 @@ enum class AppCategory(val dynamicBehavior: DynamicBehavior) {
  * ```
  *
  * ## Pattern Matching
- * The classifier checks if the package name contains any of the registered patterns.
- * Patterns are checked in order of specificity (more specific patterns first).
+ *
+ * The classifier checks if the package name (lowercase) contains any of the
+ * registered patterns for each category. Categories are checked in order of
+ * specificity (enterprise > settings > email > ... > system).
+ *
+ * Pattern matching provides ~70% confidence classification.
+ *
+ * ## Database-Backed Classification
+ *
+ * For high-confidence classification (~90%), use [AppCategoryLoader] to load
+ * the `known-apps.acd` file into SQLite and query via [IAppCategoryRepository].
+ * The ACD file contains curated entries for RealWear, Microsoft, Google, and
+ * common enterprise apps.
+ *
+ * @see AppCategoryLoader for loading ACD files into database
+ * @see IAppCategoryProvider for platform-specific classification
  */
 object AppCategoryClassifier {
+
+    // ============================================================
+    // Pattern Matching (Fallback Classification)
+    // ============================================================
 
     /**
      * Package name patterns for email applications.
@@ -319,7 +346,10 @@ object AppCategoryClassifier {
     )
 
     /**
-     * Classifies an application package into a category based on its package name.
+     * Classifies an application package into a category using pattern matching only.
+     *
+     * This is a **fallback** classification method. For higher confidence, use
+     * database lookup via [AppCategoryLoader] and [IAppCategoryRepository].
      *
      * The classification is performed by checking if the package name (converted to lowercase)
      * contains any of the registered patterns for each category. Categories are checked in
@@ -328,16 +358,20 @@ object AppCategoryClassifier {
      * @param packageName The full package name of the application (e.g., "com.google.android.gmail").
      * @return The [AppCategory] that best matches the package, or [AppCategory.UNKNOWN] if no match.
      *
+     * ## Confidence
+     * Pattern matching provides ~70% confidence. For ~90% confidence on known apps,
+     * use database lookup first.
+     *
      * ## Examples
      * ```kotlin
-     * classifyPackage("com.google.android.gmail") // EMAIL
-     * classifyPackage("com.whatsapp") // MESSAGING
-     * classifyPackage("com.android.settings") // SETTINGS
-     * classifyPackage("com.realwear.hmt1") // ENTERPRISE
-     * classifyPackage("com.random.app") // UNKNOWN
+     * classifyByPattern("com.google.android.gmail") // EMAIL
+     * classifyByPattern("com.whatsapp") // MESSAGING
+     * classifyByPattern("com.android.settings") // SETTINGS
+     * classifyByPattern("com.realwear.hmt1") // ENTERPRISE
+     * classifyByPattern("com.random.app") // UNKNOWN
      * ```
      */
-    fun classifyPackage(packageName: String): AppCategory {
+    fun classifyByPattern(packageName: String): AppCategory {
         val lowerPackageName = packageName.lowercase()
 
         for ((category, patterns) in categoryPatterns) {
@@ -350,45 +384,72 @@ object AppCategoryClassifier {
     }
 
     /**
-     * Checks if a package belongs to a specific category.
+     * Alias for [classifyByPattern] for backward compatibility.
+     * @deprecated Use [classifyByPattern] for clarity that this is pattern-only classification.
+     */
+    @Deprecated(
+        message = "Use classifyByPattern() for clarity",
+        replaceWith = ReplaceWith("classifyByPattern(packageName)")
+    )
+    fun classifyPackage(packageName: String): AppCategory = classifyByPattern(packageName)
+
+    /**
+     * Checks if a package belongs to a specific category using pattern matching.
      *
      * @param packageName The full package name of the application.
      * @param category The category to check against.
      * @return True if the package belongs to the specified category.
      */
-    fun isCategory(packageName: String, category: AppCategory): Boolean {
-        return classifyPackage(packageName) == category
+    fun isCategoryByPattern(packageName: String, category: AppCategory): Boolean {
+        return classifyByPattern(packageName) == category
     }
 
     /**
-     * Gets the dynamic behavior for a package.
+     * Gets the dynamic behavior for a package using pattern matching.
      *
      * Convenience function that classifies the package and returns its dynamic behavior.
      *
      * @param packageName The full package name of the application.
      * @return The [DynamicBehavior] for the classified category.
      */
-    fun getDynamicBehavior(packageName: String): DynamicBehavior {
-        return classifyPackage(packageName).dynamicBehavior
+    fun getDynamicBehaviorByPattern(packageName: String): DynamicBehavior {
+        return classifyByPattern(packageName).dynamicBehavior
     }
 
     /**
      * Checks if a package's content is mostly static (safe to persist most commands).
+     * Uses pattern matching only.
      *
      * @param packageName The full package name of the application.
      * @return True if the package is classified as having STATIC dynamic behavior.
      */
-    fun isStaticApp(packageName: String): Boolean {
-        return getDynamicBehavior(packageName) == DynamicBehavior.STATIC
+    fun isStaticAppByPattern(packageName: String): Boolean {
+        return getDynamicBehaviorByPattern(packageName) == DynamicBehavior.STATIC
     }
 
     /**
      * Checks if a package's content is mostly dynamic (should minimize persistence).
+     * Uses pattern matching only.
      *
      * @param packageName The full package name of the application.
      * @return True if the package is classified as having MOSTLY_DYNAMIC dynamic behavior.
      */
-    fun isDynamicApp(packageName: String): Boolean {
-        return getDynamicBehavior(packageName) == DynamicBehavior.MOSTLY_DYNAMIC
+    fun isDynamicAppByPattern(packageName: String): Boolean {
+        return getDynamicBehaviorByPattern(packageName) == DynamicBehavior.MOSTLY_DYNAMIC
+    }
+
+    /**
+     * Parse a category string to AppCategory enum.
+     * Used when loading from database/ACD files.
+     *
+     * @param categoryName The category name (e.g., "EMAIL", "MESSAGING")
+     * @return The corresponding [AppCategory], or [AppCategory.UNKNOWN] if not recognized.
+     */
+    fun parseCategory(categoryName: String): AppCategory {
+        return try {
+            AppCategory.valueOf(categoryName.uppercase())
+        } catch (e: IllegalArgumentException) {
+            AppCategory.UNKNOWN
+        }
     }
 }

@@ -15,6 +15,14 @@ import com.augmentalis.voiceoscore.VivokaEngineFactory
 import com.augmentalis.magiccode.plugins.integration.AndroidPluginSystemSetup
 import com.augmentalis.magiccode.plugins.integration.PluginSystemConfig
 import com.augmentalis.magiccode.plugins.integration.PluginSystemSetup
+import com.augmentalis.voiceoscore.AppCategoryLoader
+import com.augmentalis.voiceoscore.IAppCategoryProvider
+import com.augmentalis.voiceoscore.IAppCategoryRepository
+import com.augmentalis.voiceoscore.IAppPatternGroupRepository
+import com.augmentalis.voiceoscoreng.service.AndroidAppCategoryProvider
+import com.augmentalis.voiceoscoreng.service.AndroidAssetReader
+import com.augmentalis.voiceoscoreng.service.SQLDelightAppCategoryOverrideRepository
+import com.augmentalis.voiceoscoreng.service.SQLDelightAppPatternGroupRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -72,6 +80,43 @@ class VoiceOSCoreNGApplication : Application() {
      */
     val scrapedElementRepository: IScrapedElementRepository
         get() = databaseManager.scrapedElements
+
+    // =========================================================================
+    // App Category System (Hybrid Persistence)
+    // =========================================================================
+
+    /**
+     * Repository for app category overrides loaded from ACD files.
+     */
+    val appCategoryRepository: IAppCategoryRepository by lazy {
+        SQLDelightAppCategoryOverrideRepository(databaseManager.getDatabase())
+    }
+
+    /**
+     * Repository for app pattern groups (fallback matching).
+     */
+    val appPatternGroupRepository: IAppPatternGroupRepository by lazy {
+        SQLDelightAppPatternGroupRepository(databaseManager.getDatabase())
+    }
+
+    /**
+     * App category provider with full hybrid 4-layer support.
+     * Use this instead of creating AndroidAppCategoryProvider directly.
+     */
+    val appCategoryProvider: IAppCategoryProvider by lazy {
+        AndroidAppCategoryProvider.withDatabase(
+            this,
+            appCategoryRepository,
+            appPatternGroupRepository
+        )
+    }
+
+    /**
+     * Flag indicating if ACD file has been loaded.
+     */
+    @Volatile
+    var isAcdLoaded: Boolean = false
+        private set
 
     // =========================================================================
     // Universal Plugin Architecture (Phase 4)
@@ -132,10 +177,52 @@ class VoiceOSCoreNGApplication : Application() {
         android.util.Log.d(TAG, "Database initialized: voiceos.db")
 
         // =====================================================================
+        // Initialize App Category System (Hybrid Persistence)
+        // Load known-apps.acd from assets into SQLite
+        // =====================================================================
+        initializeAppCategorySystem()
+
+        // =====================================================================
         // Phase 4: Initialize Universal Plugin Architecture
         // Uses reusable PluginSystemSetup from PluginSystem module
         // =====================================================================
         initializePluginSystem()
+    }
+
+    /**
+     * Initialize the App Category System.
+     *
+     * Loads the known-apps.acd file from assets into SQLite for
+     * hybrid 4-layer app category classification.
+     */
+    private fun initializeAppCategorySystem() {
+        android.util.Log.i(TAG, "Initializing App Category System...")
+
+        applicationScope.launch {
+            try {
+                val assetReader = AndroidAssetReader(this@VoiceOSCoreNGApplication)
+                val loader = AppCategoryLoader(
+                    assetReader,
+                    appCategoryRepository,
+                    appPatternGroupRepository
+                )
+
+                val result = loader.loadFromAssets()
+
+                if (result.success) {
+                    isAcdLoaded = true
+                    if (result.entriesLoaded > 0) {
+                        android.util.Log.i(TAG, "ACD loaded: ${result.entriesLoaded} apps, ${result.patternsLoaded} patterns (v${result.version})")
+                    } else {
+                        android.util.Log.d(TAG, "ACD skipped: ${result.error}")
+                    }
+                } else {
+                    android.util.Log.e(TAG, "ACD load failed: ${result.error}")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "ACD initialization error", e)
+            }
+        }
     }
 
     /**

@@ -57,6 +57,9 @@ kotlin {
                 // AVID - Avanues Voice ID
                 implementation(project(":Modules:AVID"))
 
+                // AVUCodec - Avanues Universal Codec (for ACD parsing)
+                implementation(project(":Modules:AVUCodec"))
+
                 // SpeechRecognition - KMP unified speech module
                 implementation(project(":Modules:SpeechRecognition"))
 

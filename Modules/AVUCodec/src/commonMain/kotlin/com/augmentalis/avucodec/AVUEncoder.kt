@@ -60,6 +60,11 @@ object AVUEncoder {
     const val CODE_CONFIG_KEY = "KEY"       // KEY:name:type:default:description
     const val CODE_HOOK = "HKS"             // HKS:event:handler
 
+    // Protocol codes - App Category Database (ACD Format v1.0)
+    const val CODE_APP_CATEGORY_DB = "ACD"  // ACD:version:timestamp:author (header)
+    const val CODE_APP_PKG_CATEGORY = "APC" // APC:packageName:category:source:confidence
+    const val CODE_APP_PATTERN_GROUP = "APG" // APG:category:pattern1|pattern2|pattern3
+
     private const val DELIMITER = ':'
 
     // ════════════════════════════════════════════════════════════════════════
@@ -498,6 +503,143 @@ object AVUEncoder {
         val type: String,
         val default: String = "",
         val description: String = ""
+    )
+
+    // ════════════════════════════════════════════════════════════════════════
+    // APP CATEGORY DATABASE (ACD Format v1.0)
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Encode app category database header line.
+     *
+     * Format: ACD:version:timestamp:author
+     * Example: ACD:1.0.0:1706300000000:augmentalis
+     */
+    fun encodeAppCategoryHeader(
+        version: String,
+        timestamp: Long,
+        author: String
+    ): String {
+        return "$CODE_APP_CATEGORY_DB:${escape(version)}:$timestamp:${escape(author)}"
+    }
+
+    /**
+     * Encode app package category entry.
+     *
+     * Format: APC:packageName:category:source:confidence
+     * Example: APC:com.realwear.settings:SETTINGS:system:0.95
+     *
+     * @param packageName Full package name (e.g., "com.realwear.settings")
+     * @param category AppCategory enum name (e.g., "SETTINGS", "EMAIL")
+     * @param source Origin of classification: "system", "user", "learned", "imported"
+     * @param confidence Confidence score 0.0-1.0
+     */
+    fun encodeAppPackageCategory(
+        packageName: String,
+        category: String,
+        source: String = "system",
+        confidence: Float = 0.90f
+    ): String {
+        require(packageName.isNotBlank()) { "packageName cannot be blank" }
+        require(category.isNotBlank()) { "category cannot be blank" }
+        return "$CODE_APP_PKG_CATEGORY:${escape(packageName)}:${escape(category)}:${escape(source)}:$confidence"
+    }
+
+    /**
+     * Encode app pattern group for fallback matching.
+     *
+     * Format: APG:category:pattern1|pattern2|pattern3
+     * Example: APG:EMAIL:gmail|outlook|mail|inbox|protonmail
+     *
+     * @param category AppCategory enum name
+     * @param patterns List of substring patterns to match
+     */
+    fun encodeAppPatternGroup(
+        category: String,
+        patterns: List<String>
+    ): String {
+        require(category.isNotBlank()) { "category cannot be blank" }
+        require(patterns.isNotEmpty()) { "patterns list cannot be empty" }
+        return "$CODE_APP_PATTERN_GROUP:${escape(category)}:${patterns.joinToString("|") { escape(it) }}"
+    }
+
+    /**
+     * Encode a complete app category database to ACD format string.
+     *
+     * @param database App category database data
+     * @return ACD format string
+     */
+    fun encodeAppCategoryDatabase(database: AppCategoryDatabaseData): String = buildString {
+        // Header comment
+        appendLine("# Avanues Universal Format v2.0")
+        appendLine("# Type: AppCategoryDatabase")
+        appendLine("# Extension: .acd")
+        appendLine("---")
+        appendLine("schema: avu-2.0")
+        appendLine("version: ${database.version}")
+        appendLine("project: voiceos")
+        appendLine("metadata:")
+        appendLine("  file: ${database.filename}")
+        appendLine("  category: app_category_database")
+        appendLine("  count: ${database.entries.size + database.patternGroups.size}")
+        appendLine("---")
+
+        // Database header
+        appendLine(encodeAppCategoryHeader(database.version, database.timestamp, database.author))
+        appendLine()
+
+        // Group entries by category for readability
+        val groupedEntries = database.entries.groupBy { it.category }
+        groupedEntries.forEach { (category, entries) ->
+            appendLine("# $category")
+            entries.forEach { entry ->
+                appendLine(encodeAppPackageCategory(
+                    entry.packageName,
+                    entry.category,
+                    entry.source,
+                    entry.confidence
+                ))
+            }
+            appendLine()
+        }
+
+        // Pattern groups
+        if (database.patternGroups.isNotEmpty()) {
+            appendLine("# Pattern Groups (fallback matching)")
+            database.patternGroups.forEach { group ->
+                appendLine(encodeAppPatternGroup(group.category, group.patterns))
+            }
+        }
+    }
+
+    /**
+     * App category database data class for encoding.
+     */
+    data class AppCategoryDatabaseData(
+        val version: String,
+        val timestamp: Long,
+        val author: String,
+        val filename: String = "known-apps.acd",
+        val entries: List<AppCategoryEntry> = emptyList(),
+        val patternGroups: List<AppPatternGroup> = emptyList()
+    )
+
+    /**
+     * Single app category entry.
+     */
+    data class AppCategoryEntry(
+        val packageName: String,
+        val category: String,
+        val source: String = "system",
+        val confidence: Float = 0.90f
+    )
+
+    /**
+     * Pattern group for fallback category matching.
+     */
+    data class AppPatternGroup(
+        val category: String,
+        val patterns: List<String>
     )
 
     // ════════════════════════════════════════════════════════════════════════

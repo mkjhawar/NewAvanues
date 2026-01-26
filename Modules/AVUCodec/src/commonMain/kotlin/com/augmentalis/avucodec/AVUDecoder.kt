@@ -334,6 +334,206 @@ object AVUDecoder {
     }
 
     // ════════════════════════════════════════════════════════════════════════
+    // APP CATEGORY DATABASE PARSING (ACD Format v1.0)
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Parse a complete app category database from ACD format string.
+     *
+     * @param content ACD format content
+     * @return Parsed AppCategoryDatabase or null if invalid
+     */
+    fun parseAppCategoryDatabase(content: String): AppCategoryDatabase? {
+        if (content.isBlank()) return null
+
+        val lines = content.lines()
+            .map { it.trim() }
+            .filter { it.isNotBlank() && !it.startsWith("#") && !it.startsWith("---") }
+
+        var version = "1.0.0"
+        var timestamp = 0L
+        var author = ""
+        val entries = mutableListOf<AppCategoryEntry>()
+        val patternGroups = mutableListOf<AppPatternGroup>()
+
+        // Parse YAML-like metadata section
+        var inMetadata = false
+        for (line in lines) {
+            when {
+                line.startsWith("schema:") -> continue
+                line.startsWith("version:") && !inMetadata -> {
+                    version = line.substringAfter("version:").trim()
+                }
+                line.startsWith("metadata:") -> inMetadata = true
+                line.startsWith("project:") || line.startsWith("  ") -> continue
+                else -> {
+                    inMetadata = false
+                    val colonIndex = line.indexOf(':')
+                    if (colonIndex < 0) continue
+
+                    val code = line.substring(0, colonIndex).uppercase()
+                    val value = line.substring(colonIndex + 1)
+
+                    when (code) {
+                        AVUEncoder.CODE_APP_CATEGORY_DB -> {
+                            parseAppCategoryHeader(value)?.let { header ->
+                                version = header.version
+                                timestamp = header.timestamp
+                                author = header.author
+                            }
+                        }
+                        AVUEncoder.CODE_APP_PKG_CATEGORY -> {
+                            parseAppPackageCategory(value)?.let { entries.add(it) }
+                        }
+                        AVUEncoder.CODE_APP_PATTERN_GROUP -> {
+                            parseAppPatternGroup(value)?.let { patternGroups.add(it) }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Validate we have some content
+        if (entries.isEmpty() && patternGroups.isEmpty()) {
+            return null
+        }
+
+        return AppCategoryDatabase(
+            version = version,
+            timestamp = timestamp,
+            author = author,
+            entries = entries,
+            patternGroups = patternGroups
+        )
+    }
+
+    /**
+     * Parse ACD header line.
+     * Format: version:timestamp:author
+     */
+    private fun parseAppCategoryHeader(value: String): AppCategoryDatabaseHeader? {
+        val parts = splitUnescaped(value)
+        if (parts.isEmpty()) return null
+        return AppCategoryDatabaseHeader(
+            version = AVUEncoder.unescape(parts.getOrNull(0) ?: "1.0.0"),
+            timestamp = parts.getOrNull(1)?.toLongOrNull() ?: 0L,
+            author = AVUEncoder.unescape(parts.getOrElse(2) { "" })
+        )
+    }
+
+    /**
+     * Parse APC (App Package Category) line.
+     * Format: packageName:category:source:confidence
+     */
+    private fun parseAppPackageCategory(value: String): AppCategoryEntry? {
+        val parts = splitUnescaped(value)
+        if (parts.size < 2) return null
+        return AppCategoryEntry(
+            packageName = AVUEncoder.unescape(parts[0]),
+            category = AVUEncoder.unescape(parts[1]),
+            source = AVUEncoder.unescape(parts.getOrElse(2) { "system" }),
+            confidence = parts.getOrNull(3)?.toFloatOrNull() ?: 0.90f
+        )
+    }
+
+    /**
+     * Parse APG (App Pattern Group) line.
+     * Format: category:pattern1|pattern2|pattern3
+     */
+    private fun parseAppPatternGroup(value: String): AppPatternGroup? {
+        val parts = splitUnescaped(value)
+        if (parts.size < 2) return null
+        val category = AVUEncoder.unescape(parts[0])
+        val patterns = parts[1].split("|").map { AVUEncoder.unescape(it) }
+        if (patterns.isEmpty()) return null
+        return AppPatternGroup(
+            category = category,
+            patterns = patterns
+        )
+    }
+
+    /**
+     * Check if content is a valid app category database.
+     */
+    fun isAppCategoryDatabase(content: String): Boolean {
+        return content.lines().any { line ->
+            val trimmed = line.trim()
+            trimmed.startsWith("${AVUEncoder.CODE_APP_CATEGORY_DB}:") ||
+                trimmed.contains("AppCategoryDatabase") ||
+                trimmed.startsWith("${AVUEncoder.CODE_APP_PKG_CATEGORY}:")
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // APP CATEGORY DATABASE DATA CLASSES
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Parsed app category database.
+     */
+    data class AppCategoryDatabase(
+        val version: String = "1.0.0",
+        val timestamp: Long = 0L,
+        val author: String = "",
+        val entries: List<AppCategoryEntry> = emptyList(),
+        val patternGroups: List<AppPatternGroup> = emptyList()
+    ) {
+        /**
+         * Get category for a package name (exact match only).
+         */
+        fun getCategoryForPackage(packageName: String): AppCategoryEntry? {
+            return entries.find { it.packageName == packageName }
+        }
+
+        /**
+         * Get category using pattern matching fallback.
+         */
+        fun getCategoryByPattern(packageName: String): String? {
+            val lowerPackage = packageName.lowercase()
+            for (group in patternGroups) {
+                if (group.patterns.any { lowerPackage.contains(it.lowercase()) }) {
+                    return group.category
+                }
+            }
+            return null
+        }
+
+        /**
+         * Get all entries for a specific category.
+         */
+        fun getEntriesForCategory(category: String): List<AppCategoryEntry> {
+            return entries.filter { it.category.equals(category, ignoreCase = true) }
+        }
+    }
+
+    /**
+     * ACD header data.
+     */
+    data class AppCategoryDatabaseHeader(
+        val version: String,
+        val timestamp: Long,
+        val author: String
+    )
+
+    /**
+     * Single app category entry from APC line.
+     */
+    data class AppCategoryEntry(
+        val packageName: String,
+        val category: String,
+        val source: String = "system",
+        val confidence: Float = 0.90f
+    )
+
+    /**
+     * Pattern group from APG line.
+     */
+    data class AppPatternGroup(
+        val category: String,
+        val patterns: List<String>
+    )
+
+    // ════════════════════════════════════════════════════════════════════════
     // PLUGIN MANIFEST DATA CLASSES
     // ════════════════════════════════════════════════════════════════════════
 

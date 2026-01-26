@@ -1,0 +1,53 @@
+-- AppPatternGroup.sq
+-- Pattern groups for fallback app category classification
+-- Part of the Hybrid Persistence system for VoiceOSCore
+
+CREATE TABLE app_pattern_group (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL,             -- AppCategory enum name: EMAIL, MESSAGING, SETTINGS, etc.
+    pattern TEXT NOT NULL,              -- Substring pattern to match in package names
+    priority INTEGER NOT NULL DEFAULT 0, -- Higher priority patterns match first
+    acd_version TEXT,                   -- Version of ACD file that provided this entry
+    created_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_apg_category ON app_pattern_group(category);
+CREATE INDEX idx_apg_pattern ON app_pattern_group(pattern);
+CREATE UNIQUE INDEX idx_apg_unique ON app_pattern_group(category, pattern);
+
+-- Insert pattern
+insert:
+INSERT OR IGNORE INTO app_pattern_group(category, pattern, priority, acd_version, created_at)
+VALUES (?, ?, ?, ?, ?);
+
+-- Get all patterns for a category
+getByCategory:
+SELECT * FROM app_pattern_group WHERE category = ? ORDER BY priority DESC, pattern;
+
+-- Get all patterns
+getAll:
+SELECT * FROM app_pattern_group ORDER BY category, priority DESC, pattern;
+
+-- Find matching patterns for a package name (caller does LIKE match)
+getAllPatterns:
+SELECT DISTINCT category, pattern FROM app_pattern_group ORDER BY priority DESC;
+
+-- Check if pattern exists
+exists:
+SELECT COUNT(*) FROM app_pattern_group WHERE category = ? AND pattern = ?;
+
+-- Delete patterns for a category
+deleteByCategory:
+DELETE FROM app_pattern_group WHERE category = ?;
+
+-- Delete all system patterns (before re-importing ACD)
+deleteAll:
+DELETE FROM app_pattern_group;
+
+-- Count patterns
+count:
+SELECT COUNT(*) FROM app_pattern_group;
+
+-- Count by category
+countByCategory:
+SELECT category, COUNT(*) AS count FROM app_pattern_group GROUP BY category;
