@@ -1,0 +1,310 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "b5b8e3729929e55254f1a022ae702a57",
+    "entities": [
+      {
+        "tableName": "scraped_websites",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`url_hash` TEXT NOT NULL, `url` TEXT NOT NULL, `domain` TEXT NOT NULL, `title` TEXT NOT NULL, `structure_hash` TEXT NOT NULL, `parent_url_hash` TEXT, `scraped_at` INTEGER NOT NULL, `last_accessed_at` INTEGER NOT NULL, `access_count` INTEGER NOT NULL, `is_stale` INTEGER NOT NULL, PRIMARY KEY(`url_hash`))",
+        "fields": [
+          {
+            "fieldPath": "urlHash",
+            "columnName": "url_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "url",
+            "columnName": "url",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "domain",
+            "columnName": "domain",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "structureHash",
+            "columnName": "structure_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentUrlHash",
+            "columnName": "parent_url_hash",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "scrapedAt",
+            "columnName": "scraped_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastAccessedAt",
+            "columnName": "last_accessed_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "accessCount",
+            "columnName": "access_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isStale",
+            "columnName": "is_stale",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "url_hash"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "scraped_web_elements",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `website_url_hash` TEXT NOT NULL, `element_hash` TEXT NOT NULL, `tag_name` TEXT NOT NULL, `xpath` TEXT NOT NULL, `text` TEXT, `aria_label` TEXT, `role` TEXT, `parent_element_hash` TEXT, `clickable` INTEGER NOT NULL, `visible` INTEGER NOT NULL, `bounds` TEXT NOT NULL, FOREIGN KEY(`website_url_hash`) REFERENCES `scraped_websites`(`url_hash`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "websiteUrlHash",
+            "columnName": "website_url_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "elementHash",
+            "columnName": "element_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tagName",
+            "columnName": "tag_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "xpath",
+            "columnName": "xpath",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "ariaLabel",
+            "columnName": "aria_label",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "role",
+            "columnName": "role",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "parentElementHash",
+            "columnName": "parent_element_hash",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "clickable",
+            "columnName": "clickable",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "visible",
+            "columnName": "visible",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bounds",
+            "columnName": "bounds",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_scraped_web_elements_website_url_hash",
+            "unique": false,
+            "columnNames": [
+              "website_url_hash"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_scraped_web_elements_website_url_hash` ON `${TABLE_NAME}` (`website_url_hash`)"
+          },
+          {
+            "name": "index_scraped_web_elements_element_hash",
+            "unique": false,
+            "columnNames": [
+              "element_hash"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_scraped_web_elements_element_hash` ON `${TABLE_NAME}` (`element_hash`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "scraped_websites",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "website_url_hash"
+            ],
+            "referencedColumns": [
+              "url_hash"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "generated_web_commands",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `website_url_hash` TEXT NOT NULL, `element_hash` TEXT NOT NULL, `command_text` TEXT NOT NULL, `synonyms` TEXT NOT NULL, `action` TEXT NOT NULL, `xpath` TEXT NOT NULL, `generated_at` INTEGER NOT NULL, `usage_count` INTEGER NOT NULL, `last_used_at` INTEGER, FOREIGN KEY(`website_url_hash`) REFERENCES `scraped_websites`(`url_hash`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "websiteUrlHash",
+            "columnName": "website_url_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "elementHash",
+            "columnName": "element_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "commandText",
+            "columnName": "command_text",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "synonyms",
+            "columnName": "synonyms",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "action",
+            "columnName": "action",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "xpath",
+            "columnName": "xpath",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generatedAt",
+            "columnName": "generated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usageCount",
+            "columnName": "usage_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastUsedAt",
+            "columnName": "last_used_at",
+            "affinity": "INTEGER",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_generated_web_commands_website_url_hash",
+            "unique": false,
+            "columnNames": [
+              "website_url_hash"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_generated_web_commands_website_url_hash` ON `${TABLE_NAME}` (`website_url_hash`)"
+          },
+          {
+            "name": "index_generated_web_commands_element_hash",
+            "unique": false,
+            "columnNames": [
+              "element_hash"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_generated_web_commands_element_hash` ON `${TABLE_NAME}` (`element_hash`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "scraped_websites",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "website_url_hash"
+            ],
+            "referencedColumns": [
+              "url_hash"
+            ]
+          }
+        ]
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b5b8e3729929e55254f1a022ae702a57')"
+    ]
+  }
+}
