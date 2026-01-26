@@ -197,6 +197,23 @@ object PersistenceDecisionEngine {
     private const val DYNAMIC_APP_STABILITY_THRESHOLD = 70
 
     // ============================================================
+    // App Category Provider (Hybrid 4-Layer)
+    // ============================================================
+
+    /**
+     * Optional app category provider for 4-layer hybrid classification.
+     *
+     * When set, uses the provider's hybrid approach (Database → PackageManager
+     * → Permissions → Patterns) instead of pattern-only classification.
+     *
+     * Set this on app startup after initializing the ACD system:
+     * ```kotlin
+     * PersistenceDecisionEngine.appCategoryProvider = app.appCategoryProvider
+     * ```
+     */
+    var appCategoryProvider: IAppCategoryProvider? = null
+
+    // ============================================================
     // Public API
     // ============================================================
 
@@ -441,8 +458,9 @@ object PersistenceDecisionEngine {
         packageName: String,
         allElements: List<ElementInfo>
     ): PersistenceContext {
-        // Layer 1: App Category Classification
-        val appCategory = AppCategoryClassifier.classifyPackage(packageName)
+        // Layer 1: App Category Classification (Hybrid 4-Layer when provider available)
+        val appCategory = appCategoryProvider?.getCategory(packageName)
+            ?: AppCategoryClassifier.classifyByPattern(packageName)
 
         // Layer 2: Container Behavior Classification
         val containerBehavior = classifyElementContainer(element)
@@ -490,8 +508,9 @@ object PersistenceDecisionEngine {
     ): Map<ElementInfo, PersistenceDecision> {
         if (elements.isEmpty()) return emptyMap()
 
-        // Compute shared classifications once
-        val appCategory = AppCategoryClassifier.classifyPackage(packageName)
+        // Compute shared classifications once (Hybrid 4-Layer when provider available)
+        val appCategory = appCategoryProvider?.getCategory(packageName)
+            ?: AppCategoryClassifier.classifyByPattern(packageName)
         val screenType = ScreenClassifier.classifyScreen(elements, packageName)
 
         // Process each element

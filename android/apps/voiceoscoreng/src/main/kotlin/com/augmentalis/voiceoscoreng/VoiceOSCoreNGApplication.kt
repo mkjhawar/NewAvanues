@@ -19,6 +19,7 @@ import com.augmentalis.voiceoscore.AppCategoryLoader
 import com.augmentalis.voiceoscore.IAppCategoryProvider
 import com.augmentalis.voiceoscore.IAppCategoryRepository
 import com.augmentalis.voiceoscore.IAppPatternGroupRepository
+import com.augmentalis.voiceoscore.PersistenceDecisionEngine
 import com.augmentalis.voiceoscoreng.service.AndroidAppCategoryProvider
 import com.augmentalis.voiceoscoreng.service.AndroidAssetReader
 import com.augmentalis.voiceoscoreng.service.SQLDelightAppCategoryOverrideRepository
@@ -211,6 +212,8 @@ class VoiceOSCoreNGApplication : Application() {
 
                 if (result.success) {
                     isAcdLoaded = true
+                    // Wire provider into PersistenceDecisionEngine for hybrid classification
+                    PersistenceDecisionEngine.appCategoryProvider = appCategoryProvider
                     if (result.entriesLoaded > 0) {
                         android.util.Log.i(TAG, "ACD loaded: ${result.entriesLoaded} apps, ${result.patternsLoaded} patterns (v${result.version})")
                     } else {
@@ -218,6 +221,8 @@ class VoiceOSCoreNGApplication : Application() {
                     }
                 } else {
                     android.util.Log.e(TAG, "ACD load failed: ${result.error}")
+                    // Still wire provider even without ACD - will use L2-L4 layers
+                    PersistenceDecisionEngine.appCategoryProvider = appCategoryProvider
                 }
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "ACD initialization error", e)
