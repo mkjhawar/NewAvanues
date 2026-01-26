@@ -1,0 +1,171 @@
+-- LearnedApp.sq - SQLDelight schema for learned apps
+-- Part of LearnApp module migration from Room to SQLDelight
+-- Author: Agent 1 (LearnApp Migration Specialist)
+-- Date: 2025-11-27
+
+CREATE TABLE IF NOT EXISTS learned_apps (
+    package_name TEXT NOT NULL PRIMARY KEY,
+    app_name TEXT NOT NULL,
+    version_code INTEGER NOT NULL,
+    version_name TEXT NOT NULL,
+    first_learned_at INTEGER NOT NULL,
+    last_updated_at INTEGER NOT NULL,
+    total_screens INTEGER NOT NULL DEFAULT 0,
+    total_elements INTEGER NOT NULL DEFAULT 0,
+    app_hash TEXT NOT NULL,
+    exploration_status TEXT NOT NULL DEFAULT 'PARTIAL',  -- COMPLETE, PARTIAL, FAILED (legacy)
+    -- NEW FIELDS for LearnApp UX improvements (Phase 2)
+    learning_mode TEXT NOT NULL DEFAULT 'AUTO_DETECT',  -- AUTO_DETECT, MANUAL, JUST_IN_TIME
+    status TEXT NOT NULL DEFAULT 'NOT_LEARNED',  -- NOT_LEARNED, LEARNING, LEARNED, FAILED, JIT_ACTIVE
+    progress INTEGER NOT NULL DEFAULT 0,  -- 0-100 percentage
+    command_count INTEGER NOT NULL DEFAULT 0,  -- Number of generated commands
+    screens_explored INTEGER NOT NULL DEFAULT 0,  -- Screens learned so far (for progress tracking)
+    is_auto_detect_enabled INTEGER NOT NULL DEFAULT 1,  -- Boolean: 1 = true, 0 = false
+    -- Phase 2: Pause/Resume state
+    pause_state TEXT NOT NULL DEFAULT 'RUNNING'  -- RUNNING, PAUSED_USER, PAUSED_AUTO
+);
+
+-- Index for faster queries by status (legacy)
+CREATE INDEX IF NOT EXISTS idx_learned_apps_status
+ON learned_apps(exploration_status);
+
+-- Index for faster queries by last updated
+CREATE INDEX IF NOT EXISTS idx_learned_apps_updated
+ON learned_apps(last_updated_at DESC);
+
+-- NEW INDEXES for Phase 2
+CREATE INDEX IF NOT EXISTS idx_learned_apps_new_status
+ON learned_apps(status);
+
+CREATE INDEX IF NOT EXISTS idx_learned_apps_learning_mode
+ON learned_apps(learning_mode);
+
+-- Queries
+
+-- Insert or replace learned app (updated for Phase 2)
+insertLearnedApp:
+INSERT OR REPLACE INTO learned_apps (
+    package_name, app_name, version_code, version_name,
+    first_learned_at, last_updated_at, total_screens, total_elements,
+    app_hash, exploration_status,
+    learning_mode, status, progress, command_count, screens_explored, is_auto_detect_enabled
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Insert learned app (minimal, IGNORE on conflict for idempotency)
+insertLearnedAppMinimal:
+INSERT OR IGNORE INTO learned_apps (
+    package_name, app_name, version_code, version_name,
+    first_learned_at, last_updated_at, total_screens, total_elements,
+    app_hash, exploration_status
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get learned app by package name
+getLearnedApp:
+SELECT * FROM learned_apps WHERE package_name = ?;
+
+-- Update learned app (all fields except package_name)
+updateLearnedApp:
+UPDATE learned_apps
+SET app_name = ?, version_code = ?, version_name = ?,
+    last_updated_at = ?, total_screens = ?, total_elements = ?,
+    app_hash = ?, exploration_status = ?
+WHERE package_name = ?;
+
+-- Get all learned apps
+getAllLearnedApps:
+SELECT * FROM learned_apps ORDER BY last_updated_at DESC;
+
+-- Update app hash
+updateAppHash:
+UPDATE learned_apps
+SET app_hash = ?, last_updated_at = ?
+WHERE package_name = ?;
+
+-- Delete learned app
+deleteLearnedApp:
+DELETE FROM learned_apps WHERE package_name = ?;
+
+-- Count learned apps
+count:
+SELECT COUNT(*) FROM learned_apps;
+
+-- Get apps by status (legacy - uses exploration_status)
+getAppsByStatus:
+SELECT * FROM learned_apps
+WHERE exploration_status = ?
+ORDER BY last_updated_at DESC;
+
+-- NEW QUERIES for Phase 2 --
+
+-- Get apps by new status field
+getByNewStatus:
+SELECT * FROM learned_apps
+WHERE status = ?
+ORDER BY last_updated_at DESC;
+
+-- Get apps by learning mode
+getByLearningMode:
+SELECT * FROM learned_apps
+WHERE learning_mode = ?
+ORDER BY last_updated_at DESC;
+
+-- Get just-in-time active apps
+getJustInTimeApps:
+SELECT * FROM learned_apps
+WHERE status = 'JIT_ACTIVE'
+ORDER BY last_updated_at DESC;
+
+-- Update progress and screens explored
+updateProgress:
+UPDATE learned_apps
+SET progress = ?, screens_explored = ?, last_updated_at = ?
+WHERE package_name = ?;
+
+-- Update status only
+updateStatus:
+UPDATE learned_apps
+SET status = ?, last_updated_at = ?
+WHERE package_name = ?;
+
+-- Update learning mode
+updateLearningMode:
+UPDATE learned_apps
+SET learning_mode = ?, last_updated_at = ?
+WHERE package_name = ?;
+
+-- Update command count
+updateCommandCount:
+UPDATE learned_apps
+SET command_count = ?, last_updated_at = ?
+WHERE package_name = ?;
+
+-- Update auto-detect enabled flag
+updateAutoDetectEnabled:
+UPDATE learned_apps
+SET is_auto_detect_enabled = ?, last_updated_at = ?
+WHERE package_name = ?;
+
+-- FIX (2025-11-30): Atomic update for app stats (prevents read-modify-write race condition)
+-- P1 Issue H1: Previous implementation read then wrote, allowing concurrent modifications
+updateAppStats:
+UPDATE learned_apps
+SET total_screens = ?, total_elements = ?, last_updated_at = ?
+WHERE package_name = ?;
+
+-- FIX (2025-11-30): P3 - Atomic increment for screens_explored
+-- Eliminates race condition when multiple coroutines increment the counter
+-- Uses SQL arithmetic to increment atomically in a single statement
+incrementScreensExplored:
+UPDATE learned_apps
+SET screens_explored = screens_explored + 1, last_updated_at = ?
+WHERE package_name = ?;
+
+-- Phase 2: Pause/Resume state persistence queries
+updatePauseState:
+UPDATE learned_apps
+SET pause_state = ?, last_updated_at = ?
+WHERE package_name = ?;
+
+getPauseState:
+SELECT pause_state FROM learned_apps
+WHERE package_name = ?;

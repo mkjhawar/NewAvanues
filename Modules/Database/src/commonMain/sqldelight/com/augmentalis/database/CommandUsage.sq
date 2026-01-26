@@ -1,0 +1,154 @@
+-- CommandUsage.sq
+-- SQLDelight schema for command usage tracking
+-- Migrated from Room: CommandUsageEntity (LearningDatabase)
+-- Extended with locale, user_input, match_type, execution_time_ms, context_app for CommandManager
+
+CREATE TABLE command_usage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    command_id TEXT NOT NULL,
+    locale TEXT NOT NULL DEFAULT 'en-US',
+    timestamp INTEGER NOT NULL,
+    user_input TEXT NOT NULL DEFAULT '',
+    match_type TEXT NOT NULL DEFAULT 'EXACT',
+    success INTEGER NOT NULL,
+    execution_time_ms INTEGER NOT NULL DEFAULT 0,
+    context_app TEXT,
+    context_key TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX idx_cu_command_id ON command_usage(command_id);
+CREATE INDEX idx_cu_context_key ON command_usage(context_key);
+CREATE INDEX idx_cu_timestamp ON command_usage(timestamp);
+CREATE INDEX idx_cu_success ON command_usage(success);
+CREATE INDEX idx_cu_context_app ON command_usage(context_app);
+
+-- Get all usage records
+getAllUsage:
+SELECT * FROM command_usage ORDER BY timestamp DESC;
+
+-- Get usage by command
+getUsageForCommand:
+SELECT * FROM command_usage WHERE command_id = ? ORDER BY timestamp DESC;
+
+-- Get usage by context
+getUsageForContext:
+SELECT * FROM command_usage WHERE context_key = ? ORDER BY timestamp DESC;
+
+-- Get usage by command and context
+getUsageForCommandInContext:
+SELECT * FROM command_usage WHERE command_id = ? AND context_key = ? ORDER BY timestamp DESC;
+
+-- Count usage for command
+countUsageForCommand:
+SELECT COUNT(*) FROM command_usage WHERE command_id = ?;
+
+-- Count usage for context
+countUsageForContext:
+SELECT COUNT(*) FROM command_usage WHERE context_key = ?;
+
+-- Count total usage
+countTotalUsage:
+SELECT COUNT(*) FROM command_usage;
+
+-- Get success rate for command
+getSuccessRateForCommand:
+SELECT CASE WHEN COUNT(*) = 0 THEN 0.0
+ELSE CAST(SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) AS REAL) / COUNT(*)
+END AS rate FROM command_usage WHERE command_id = ?;
+
+-- Insert usage (basic - for existing callers)
+insertUsage:
+INSERT OR REPLACE INTO command_usage (command_id, context_key, success, timestamp)
+VALUES (?, ?, ?, ?);
+
+-- Insert usage (full - with all fields for CommandManager)
+recordUsage:
+INSERT INTO command_usage (command_id, locale, timestamp, user_input, match_type, success, execution_time_ms, context_app, context_key)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Delete old records (keep recent N)
+deleteOldestRecords:
+DELETE FROM command_usage WHERE id IN (
+    SELECT id FROM command_usage ORDER BY timestamp ASC LIMIT ?
+);
+
+-- Delete all usage
+deleteAllUsage:
+DELETE FROM command_usage;
+
+-- Get recent usage
+getRecentUsage:
+SELECT * FROM command_usage ORDER BY timestamp DESC LIMIT ?;
+
+-- Get last inserted row ID
+lastInsertRowId:
+SELECT last_insert_rowid();
+
+-- ==================== Additional queries for Room compatibility ====================
+
+-- Get most used commands (successful only)
+getMostUsedCommands:
+SELECT command_id, COUNT(*) AS usage_count
+FROM command_usage
+WHERE success = 1
+GROUP BY command_id
+ORDER BY usage_count DESC
+LIMIT ?;
+
+-- Get usage in time period
+getUsageInPeriod:
+SELECT * FROM command_usage
+WHERE timestamp >= ? AND timestamp <= ?
+ORDER BY timestamp DESC;
+
+-- Get success rates for all commands
+getSuccessRates:
+SELECT
+    command_id,
+    COUNT(*) AS total_attempts,
+    SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) AS successful_attempts
+FROM command_usage
+WHERE command_id != 'UNKNOWN'
+GROUP BY command_id
+ORDER BY total_attempts DESC;
+
+-- Get total successful usage count
+getTotalUsageCount:
+SELECT COUNT(*) FROM command_usage WHERE success = 1;
+
+-- Get failed attempts (for debugging)
+getFailedAttempts:
+SELECT * FROM command_usage
+WHERE success = 0
+ORDER BY timestamp DESC
+LIMIT ?;
+
+-- Get average execution time for a command
+getAverageExecutionTime:
+SELECT AVG(execution_time_ms) AS avg_time
+FROM command_usage
+WHERE command_id = ? AND success = 1;
+
+-- Get usage by app context
+getUsageByApp:
+SELECT * FROM command_usage
+WHERE context_app = ?
+ORDER BY timestamp DESC;
+
+-- Delete old records by timestamp
+deleteOldRecords:
+DELETE FROM command_usage WHERE timestamp < ?;
+
+-- Delete all records
+deleteAllRecords:
+DELETE FROM command_usage;
+
+-- Delete records for specific command
+deleteCommandRecords:
+DELETE FROM command_usage WHERE command_id = ?;
+
+-- ==================== Time Decay Queries ====================
+
+-- Note: SQLite doesn't support direct UPDATE with multiplication of non-numeric fields
+-- Command usage table doesn't have a score field, so time decay is not applicable
+-- The decay is managed at the preference level (ContextPreference table)

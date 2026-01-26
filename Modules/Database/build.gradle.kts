@@ -150,7 +150,7 @@ android {
 
 sqldelight {
     databases {
-        create("AvanuesDatabase") {
+        create("VoiceOSDatabase") {
             packageName.set("com.augmentalis.database")
             dialect(libs.sqldelight.sqlite.dialect)
             deriveSchemaFromMigrations.set(false)

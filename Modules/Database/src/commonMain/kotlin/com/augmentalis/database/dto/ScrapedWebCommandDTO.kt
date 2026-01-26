@@ -6,7 +6,7 @@
  */
 package com.augmentalis.database.dto
 
-import com.augmentalis.database.web.Scraped_web_command
+import com.augmentalis.database.Scraped_web_command
 
 /**
  * DTO for scraped web voice commands.

@@ -1,0 +1,344 @@
+-- GeneratedCommand.sq
+-- Voice commands generated from UI elements
+-- RENAMED (2025-12-05): commands_generated -> commands_generated for consistency
+
+CREATE TABLE commands_generated (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    elementHash TEXT NOT NULL,
+    commandText TEXT NOT NULL,
+    actionType TEXT NOT NULL,
+    confidence REAL NOT NULL,
+    synonyms TEXT,
+    isUserApproved INTEGER NOT NULL DEFAULT 0,
+    usageCount INTEGER NOT NULL DEFAULT 0,
+    lastUsed INTEGER,
+    createdAt INTEGER NOT NULL,
+
+    -- P2 Task 3: Package-based pagination (Schema v3)
+    appId TEXT NOT NULL DEFAULT '',
+
+    -- Schema v3: Version tracking (2025-12-13)
+    appVersion TEXT NOT NULL DEFAULT '',
+    versionCode INTEGER NOT NULL DEFAULT 0,
+    lastVerified INTEGER,
+    isDeprecated INTEGER NOT NULL DEFAULT 0,
+
+    -- ADR-014: Unified Learning columns
+    synced_to_ava INTEGER NOT NULL DEFAULT 0,
+    synced_at INTEGER,
+
+    -- Schema v4: Foreign key integrity (2025-12-23)
+    -- Ensures commands are automatically deleted when their element is removed
+    -- Prevents orphaned commands and maintains referential integrity
+    -- FOREIGN KEY (elementHash) REFERENCES scraped_element(elementHash) ON DELETE CASCADE,
+
+    UNIQUE(elementHash, commandText)  -- FIX (2025-12-05): Prevent duplicate commands
+);
+
+CREATE INDEX idx_gc_element ON commands_generated(elementHash);
+CREATE INDEX idx_gc_action ON commands_generated(actionType);
+CREATE INDEX idx_gc_confidence ON commands_generated(confidence);
+
+-- Schema v3: Indexes for new columns
+CREATE INDEX idx_gc_appId ON commands_generated(appId);
+CREATE INDEX idx_gc_versionCode ON commands_generated(versionCode);
+CREATE INDEX idx_gc_deprecated ON commands_generated(isDeprecated);
+
+insert:
+INSERT OR REPLACE INTO commands_generated(
+    elementHash, commandText, actionType, confidence, synonyms,
+    isUserApproved, usageCount, lastUsed, createdAt,
+    appId, appVersion, versionCode, lastVerified, isDeprecated
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getById:
+SELECT * FROM commands_generated WHERE id = ?;
+
+getByElement:
+SELECT * FROM commands_generated WHERE elementHash = ?;
+
+getAll:
+SELECT * FROM commands_generated ORDER BY usageCount DESC;
+
+-- Alias for getAll (for compatibility with agent-generated code)
+getAllCommands:
+SELECT * FROM commands_generated ORDER BY usageCount DESC;
+
+getByActionType:
+SELECT * FROM commands_generated WHERE actionType = ? ORDER BY confidence DESC;
+
+getHighConfidence:
+SELECT * FROM commands_generated WHERE confidence >= ? ORDER BY confidence DESC;
+
+getUserApproved:
+SELECT * FROM commands_generated WHERE isUserApproved = 1;
+
+fuzzySearch:
+SELECT * FROM commands_generated WHERE commandText LIKE '%' || ? || '%';
+
+incrementUsage:
+UPDATE commands_generated SET usageCount = usageCount + 1, lastUsed = ? WHERE id = ?;
+
+markApproved:
+UPDATE commands_generated SET isUserApproved = 1 WHERE id = ?;
+
+updateConfidence:
+UPDATE commands_generated SET confidence = ? WHERE id = ?;
+
+deleteById:
+DELETE FROM commands_generated WHERE id = ?;
+
+deleteByElement:
+DELETE FROM commands_generated WHERE elementHash = ?;
+
+deleteLowQuality:
+DELETE FROM commands_generated WHERE usageCount = 0 AND confidence < ?;
+
+deleteAll:
+DELETE FROM commands_generated;
+
+count:
+SELECT COUNT(*) FROM commands_generated;
+
+-- FIX (2025-12-05): Check if command exists before inserting (Option 2)
+exists:
+SELECT COUNT(*) > 0 FROM commands_generated WHERE elementHash = ? AND commandText = ?;
+
+-- FIX (2025-12-05): Insert only if not exists (more efficient than INSERT OR REPLACE)
+insertIfNotExists:
+INSERT OR IGNORE INTO commands_generated(
+    elementHash, commandText, actionType, confidence, synonyms,
+    isUserApproved, usageCount, lastUsed, createdAt,
+    appId, appVersion, versionCode, lastVerified, isDeprecated
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get commands by package (via join with scraped_element)
+getByPackage:
+SELECT gc.* FROM commands_generated gc
+INNER JOIN scraped_element se ON gc.elementHash = se.elementHash
+WHERE se.appId = ?
+ORDER BY gc.usageCount DESC;
+
+-- Update command (for synonym updates)
+update:
+UPDATE commands_generated
+SET elementHash = ?,
+    commandText = ?,
+    actionType = ?,
+    confidence = ?,
+    synonyms = ?,
+    isUserApproved = ?,
+    usageCount = ?,
+    lastUsed = ?,
+    appId = ?,
+    appVersion = ?,
+    versionCode = ?,
+    lastVerified = ?,
+    isDeprecated = ?
+WHERE id = ?;
+
+-- ==================== ADR-014: Unified Learning Queries ====================
+
+-- Get commands not yet synced to AVA
+getUnsyncedCommands:
+SELECT * FROM commands_generated
+WHERE synced_to_ava = 0 AND confidence >= ?
+ORDER BY isUserApproved DESC, confidence DESC
+LIMIT ?;
+
+-- Get high-confidence unsynced commands
+getHighConfidenceUnsynced:
+SELECT * FROM commands_generated
+WHERE synced_to_ava = 0 AND (isUserApproved = 1 OR confidence >= 0.85)
+ORDER BY isUserApproved DESC, confidence DESC
+LIMIT ?;
+
+-- Get user-approved unsynced commands
+getUserApprovedUnsynced:
+SELECT * FROM commands_generated
+WHERE synced_to_ava = 0 AND isUserApproved = 1
+ORDER BY createdAt DESC
+LIMIT ?;
+
+-- Mark command as synced to AVA
+markSyncedToAva:
+UPDATE commands_generated
+SET synced_to_ava = 1, synced_at = ?
+WHERE id = ?;
+
+-- Batch mark commands as synced
+markBatchSynced:
+UPDATE commands_generated
+SET synced_to_ava = 1, synced_at = ?
+WHERE id IN ?;
+
+-- Count synced commands
+countSynced:
+SELECT COUNT(*) FROM commands_generated WHERE synced_to_ava = 1;
+
+-- Count unsynced commands
+countUnsynced:
+SELECT COUNT(*) FROM commands_generated WHERE synced_to_ava = 0 AND confidence >= ?;
+
+-- Get sync statistics
+getSyncStats:
+SELECT
+    COUNT(*) AS total,
+    SUM(CASE WHEN synced_to_ava = 1 THEN 1 ELSE 0 END) AS synced,
+    SUM(CASE WHEN synced_to_ava = 0 THEN 1 ELSE 0 END) AS pending,
+    SUM(CASE WHEN isUserApproved = 1 THEN 1 ELSE 0 END) AS user_approved,
+    SUM(CASE WHEN confidence >= 0.85 THEN 1 ELSE 0 END) AS high_confidence
+FROM commands_generated;
+
+-- ==================== Schema v3: Version Tracking Queries ====================
+
+-- Get last inserted row ID (required by repository)
+lastInsertRowId:
+SELECT last_insert_rowid();
+
+-- Delete commands by package name
+deleteByPackage:
+DELETE FROM commands_generated WHERE appId = ?;
+
+-- Get commands by app version
+getByAppVersion:
+SELECT * FROM commands_generated
+WHERE appId = ? AND versionCode = ?
+ORDER BY usageCount DESC;
+
+-- Get deprecated commands
+getDeprecated:
+SELECT * FROM commands_generated
+WHERE isDeprecated = 1
+ORDER BY lastVerified DESC;
+
+-- Mark commands as deprecated (for version cleanup)
+markDeprecated:
+UPDATE commands_generated
+SET isDeprecated = 1, lastVerified = ?
+WHERE appId = ? AND versionCode < ?;
+
+-- Clean up old deprecated commands
+deleteDeprecated:
+DELETE FROM commands_generated
+WHERE isDeprecated = 1 AND lastVerified < ?;
+
+-- ==================== Pagination Queries ====================
+
+-- Get all commands with pagination
+getAllPaginated:
+SELECT * FROM commands_generated
+ORDER BY usageCount DESC
+LIMIT ? OFFSET ?;
+
+-- Get commands by package with pagination
+getByPackagePaginated:
+SELECT gc.* FROM commands_generated gc
+INNER JOIN scraped_element se ON gc.elementHash = se.elementHash
+WHERE se.appId = ?
+ORDER BY gc.usageCount DESC
+LIMIT ? OFFSET ?;
+
+-- Get commands by package using keyset pagination (cursor-based)
+getByPackageKeysetPaginated:
+SELECT gc.* FROM commands_generated gc
+INNER JOIN scraped_element se ON gc.elementHash = se.elementHash
+WHERE se.appId = ? AND gc.id > ?
+ORDER BY gc.id ASC
+LIMIT ?;
+
+-- Get commands by action type with pagination
+getByActionTypePaginated:
+SELECT * FROM commands_generated
+WHERE actionType = ?
+ORDER BY confidence DESC
+LIMIT ? OFFSET ?;
+
+-- ==================== Version Management Queries ====================
+
+-- Mark all commands for a specific app version as deprecated
+markVersionDeprecated:
+UPDATE commands_generated
+SET isDeprecated = 1, lastVerified = ?
+WHERE appId = ? AND versionCode = ?;
+
+-- Update command version information
+updateCommandVersion:
+UPDATE commands_generated
+SET versionCode = ?, appVersion = ?, lastVerified = ?, isDeprecated = ?
+WHERE id = ?;
+
+-- Mark a single command as deprecated or active
+updateCommandDeprecated:
+UPDATE commands_generated
+SET isDeprecated = ?
+WHERE id = ?;
+
+-- Delete deprecated commands older than threshold
+deleteDeprecatedCommands:
+DELETE FROM commands_generated
+WHERE isDeprecated = 1 AND lastVerified < ? AND (? = 0 OR isUserApproved = 0);
+
+-- Get deprecated commands for a specific app
+getDeprecatedCommands:
+SELECT * FROM commands_generated
+WHERE appId = ? AND isDeprecated = 1
+ORDER BY lastVerified DESC;
+
+-- Get all deprecated commands grouped by app
+getAllDeprecatedCommands:
+SELECT * FROM commands_generated
+WHERE isDeprecated = 1
+ORDER BY appId, lastVerified DESC;
+
+-- Get deprecated commands filtered by grace period for cleanup
+getDeprecatedCommandsForCleanup:
+SELECT * FROM commands_generated
+WHERE isDeprecated = 1 AND lastVerified < ?
+  AND (? = '' OR appId = ?)
+  AND (? = 0 OR isUserApproved = 0)
+ORDER BY lastVerified ASC
+LIMIT ?;
+
+-- Get only active (non-deprecated) commands for a specific app version
+getActiveCommands:
+SELECT * FROM commands_generated
+WHERE appId = ? AND versionCode = ? AND isDeprecated = 0
+ORDER BY usageCount DESC
+LIMIT ?;
+
+-- Get active commands by version string
+getActiveCommandsByVersion:
+SELECT * FROM commands_generated
+WHERE appId = ? AND appVersion = ? AND isDeprecated = 0
+ORDER BY usageCount DESC
+LIMIT ?;
+
+-- ==================== Database Maintenance ====================
+
+-- Vacuum database to reclaim space
+vacuumDatabase:
+VACUUM;
+
+-- ====================LLM Integration Queries ====================
+
+-- Update command synonyms and confidence from LLM response (Schema v4)
+-- Used after LLM generates enhanced synonyms for better voice recognition
+-- Example: LLM enhances "submit" → ["sign in", "log in", "authenticate"]
+updateSynonymsAndConfidence:
+UPDATE commands_generated
+SET synonyms = ?, confidence = ?
+WHERE id = ?;
+
+-- ==================== Performance Optimization Queries ====================
+
+-- FIX (2025-12-22): P-P0-1 - Batch check existence to prevent N+1 query pattern
+-- Returns elementHashes that already have generated commands
+-- Replaces: for (element in elements) { fuzzySearch(element.hash) }
+-- With: Single batch query for all hashes at once
+batchCheckExistence:
+SELECT DISTINCT elementHash
+FROM commands_generated
+WHERE elementHash IN ?;

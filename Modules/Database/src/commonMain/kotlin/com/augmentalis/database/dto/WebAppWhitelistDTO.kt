@@ -6,7 +6,7 @@
  */
 package com.augmentalis.database.dto
 
-import com.augmentalis.database.web.Web_app_whitelist
+import com.augmentalis.database.Web_app_whitelist
 
 /**
  * DTO for web app whitelist entries.

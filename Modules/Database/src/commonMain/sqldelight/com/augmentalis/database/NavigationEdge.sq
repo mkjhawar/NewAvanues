@@ -1,0 +1,109 @@
+-- NavigationEdge.sq - SQLDelight schema for navigation edges
+-- Part of LearnApp module migration from Room to SQLDelight
+-- Author: Agent 1 (LearnApp Migration Specialist)
+-- Date: 2025-11-27
+
+CREATE TABLE IF NOT EXISTS navigation_edges (
+    edge_id TEXT NOT NULL PRIMARY KEY,
+    package_name TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    from_screen_hash TEXT NOT NULL,
+    clicked_element_uuid TEXT NOT NULL,
+    to_screen_hash TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    FOREIGN KEY (package_name) REFERENCES learned_apps(package_name) ON DELETE CASCADE,
+    FOREIGN KEY (session_id) REFERENCES exploration_sessions(session_id) ON DELETE CASCADE
+);
+
+-- Index for faster queries by package
+CREATE INDEX IF NOT EXISTS idx_navigation_edges_package
+ON navigation_edges(package_name);
+
+-- Index for faster queries by session
+CREATE INDEX IF NOT EXISTS idx_navigation_edges_session
+ON navigation_edges(session_id);
+
+-- Index for faster queries by from screen
+CREATE INDEX IF NOT EXISTS idx_navigation_edges_from
+ON navigation_edges(from_screen_hash);
+
+-- Index for faster queries by to screen
+CREATE INDEX IF NOT EXISTS idx_navigation_edges_to
+ON navigation_edges(to_screen_hash);
+
+-- FIX (2025-11-30): P3 - Compound indexes for common query patterns
+-- These optimize queries that filter by package AND screen hash simultaneously
+-- Example: getEdgesFromScreen(package, from_screen_hash) - now uses compound index
+CREATE INDEX IF NOT EXISTS idx_navigation_edges_pkg_from
+ON navigation_edges(package_name, from_screen_hash);
+
+CREATE INDEX IF NOT EXISTS idx_navigation_edges_pkg_to
+ON navigation_edges(package_name, to_screen_hash);
+
+-- Queries
+
+-- Insert navigation edge
+insertNavigationEdge:
+INSERT OR REPLACE INTO navigation_edges (
+    edge_id, package_name, session_id, from_screen_hash,
+    clicked_element_uuid, to_screen_hash, timestamp
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- Insert multiple navigation edges
+insertNavigationEdges:
+INSERT OR REPLACE INTO navigation_edges (
+    edge_id, package_name, session_id, from_screen_hash,
+    clicked_element_uuid, to_screen_hash, timestamp
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- Get navigation graph for package
+getNavigationGraph:
+SELECT * FROM navigation_edges
+WHERE package_name = ?
+ORDER BY timestamp ASC;
+
+-- Get edges from screen (with package filter for performance)
+getEdgesFromScreen:
+SELECT * FROM navigation_edges
+WHERE package_name = ? AND from_screen_hash = ?
+ORDER BY timestamp ASC;
+
+-- Get edges to screen (with package filter for performance)
+getEdgesToScreen:
+SELECT * FROM navigation_edges
+WHERE package_name = ? AND to_screen_hash = ?
+ORDER BY timestamp ASC;
+
+-- Get outgoing edges from screen (without package filter - for DAO compatibility)
+getOutgoingEdges:
+SELECT * FROM navigation_edges
+WHERE from_screen_hash = ?
+ORDER BY timestamp ASC;
+
+-- Get incoming edges to screen (without package filter - for DAO compatibility)
+getIncomingEdges:
+SELECT * FROM navigation_edges
+WHERE to_screen_hash = ?
+ORDER BY timestamp ASC;
+
+-- Get edges for session
+getEdgesForSession:
+SELECT * FROM navigation_edges
+WHERE session_id = ?
+ORDER BY timestamp ASC;
+
+-- Delete navigation graph for package
+deleteNavigationGraph:
+DELETE FROM navigation_edges WHERE package_name = ?;
+
+-- FIX D-P1-2: Delete navigation edges for a specific session
+deleteNavigationEdgesForSession:
+DELETE FROM navigation_edges WHERE session_id = ?;
+
+-- Count edges for package
+getTotalEdgesForPackage:
+SELECT COUNT(*) FROM navigation_edges WHERE package_name = ?;
+
+-- Count all edges
+count:
+SELECT COUNT(*) FROM navigation_edges;
