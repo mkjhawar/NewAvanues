@@ -11,12 +11,12 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.os.Build
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceos.command.Command
-import com.augmentalis.voiceos.command.CommandDefinition
+import com.augmentalis.voiceoscore.Command
+import com.augmentalis.voiceoscore.CommandDefinition
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import com.augmentalis.voiceos.command.CommandContext as ModelsCommandContext
+import com.augmentalis.voiceoscore.CommandContext as ModelsCommandContext
 
 /**
  * Context manager for command execution

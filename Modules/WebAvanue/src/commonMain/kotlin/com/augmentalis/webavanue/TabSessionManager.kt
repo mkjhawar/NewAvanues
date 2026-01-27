@@ -140,7 +140,7 @@ class TabSessionManager(
                 return false
             }
 
-            val session = sessionResult.getOrNull()!!
+            val session = sessionResult.getOrNull() ?: return false
 
             if (session.isCrashRecovery) {
                 Logger.info("TabSessionManager", "Skipping crash recovery session")
@@ -153,7 +153,7 @@ class TabSessionManager(
                 return false
             }
 
-            val sessionTabs = sessionTabsResult.getOrNull()!!
+            val sessionTabs = sessionTabsResult.getOrNull() ?: return false
 
             repository.closeAllTabs()
 
@@ -199,14 +199,14 @@ class TabSessionManager(
                 return false
             }
 
-            val session = sessionResult.getOrNull()!!
+            val session = sessionResult.getOrNull() ?: return false
 
             val sessionTabsResult = repository.getSessionTabs(session.id)
             if (sessionTabsResult.isFailure || sessionTabsResult.getOrNull()?.isEmpty() != false) {
                 return false
             }
 
-            val sessionTabs = sessionTabsResult.getOrNull()!!
+            val sessionTabs = sessionTabsResult.getOrNull() ?: return false
 
             repository.closeAllTabs()
 

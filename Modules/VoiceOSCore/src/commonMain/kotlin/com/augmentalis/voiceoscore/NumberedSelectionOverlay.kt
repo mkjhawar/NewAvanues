@@ -68,7 +68,7 @@ data class Position(val x: Int, val y: Int)
  * @see IOverlay for the overlay contract
  */
 class NumberedSelectionOverlay(
-    override val id: String = "numbered-selection-overlay-${System.currentTimeMillis()}",
+    override val id: String = "numbered-selection-overlay-${KmpTimeProvider.currentTimeMillis()}",
     style: NumberOverlayStyle = NumberOverlayStyles.DEFAULT,
     private val instructionText: String? = null,
     val maxVisibleBadges: Int = 9
@@ -544,10 +544,10 @@ class NumberedSelectionOverlay(
 }
 
 /**
- * Platform-agnostic time access.
- * Actual implementations provided by platform source sets.
+ * Platform-agnostic time access for KMP.
+ * Note: Named KmpTimeProvider to avoid shadowing java.lang.System
  */
-internal object System {
+internal object KmpTimeProvider {
     private var counter: Long = 0
 
     fun currentTimeMillis(): Long {

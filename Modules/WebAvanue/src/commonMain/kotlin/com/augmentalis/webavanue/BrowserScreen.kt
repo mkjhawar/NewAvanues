@@ -924,7 +924,7 @@ fun BrowserScreen(
         // Shows when askDownloadLocation setting is enabled
         if (showDownloadLocationDialog && pendingDownloadRequest != null && downloadViewModel != null) {
             AskDownloadLocationDialog(
-                filename = pendingDownloadRequest!!.filename,
+                filename = pendingDownloadRequest?.filename ?: "",
                 defaultPath = settings?.downloadPath,
                 selectedPath = customDownloadPath,
                 onLaunchFilePicker = {
@@ -1051,7 +1051,7 @@ fun BrowserScreen(
                         // Navigation commands
                         "go back" -> webViewController.goBack()
                         "go forward" -> webViewController.goForward()
-                        "go home" -> tabViewModel.navigateToUrl(settings!!.homePage)
+                        "go home" -> settings?.homePage?.let { tabViewModel.navigateToUrl(it) }
                         "refresh" -> webViewController.reload()
 
                         // Scrolling commands

@@ -5,7 +5,7 @@
 
 package com.augmentalis.commandmanager.definitions
 
-import com.augmentalis.voiceos.command.*
+import com.augmentalis.voiceoscore.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**

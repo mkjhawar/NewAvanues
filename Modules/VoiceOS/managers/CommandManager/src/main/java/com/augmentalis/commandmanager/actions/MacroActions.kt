@@ -25,7 +25,7 @@ package com.augmentalis.commandmanager.actions
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.util.Log
-import com.augmentalis.voiceos.command.*
+import com.augmentalis.voiceoscore.*
 import kotlinx.coroutines.delay
 
 /**

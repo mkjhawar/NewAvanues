@@ -20,7 +20,7 @@
 package com.augmentalis.commandmanager.routing
 
 import android.content.Context
-import com.augmentalis.voiceos.command.*
+import com.augmentalis.voiceoscore.*
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
 import org.junit.*

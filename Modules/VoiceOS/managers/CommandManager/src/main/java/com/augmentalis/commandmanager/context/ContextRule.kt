@@ -8,7 +8,7 @@
 
 package com.augmentalis.commandmanager.context
 
-import com.augmentalis.voiceos.command.CommandDefinition
+import com.augmentalis.voiceoscore.CommandDefinition
 
 /**
  * Context rule data class

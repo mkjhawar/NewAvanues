@@ -49,6 +49,10 @@ class UniversalIPCEncoder {
         const val CODE_AI_RESPONSE = "AIR"    // AI response
         const val CODE_JSON = "JSN"           // JSON/UI DSL wrapper
 
+        // Intent extras for IPC broadcast
+        const val EXTRA_SOURCE_APP = "com.augmentalis.ipc.EXTRA_SOURCE_APP"
+        const val EXTRA_MESSAGE = "com.augmentalis.ipc.EXTRA_MESSAGE"
+
         // Reserved characters for escaping
         private const val CHAR_DELIMITER = ':'
         private const val CHAR_ESCAPE = '%'

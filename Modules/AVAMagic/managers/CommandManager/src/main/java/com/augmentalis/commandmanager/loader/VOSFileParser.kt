@@ -13,7 +13,7 @@ package com.augmentalis.commandmanager.loader
 
 import android.content.Context
 import android.util.Log
-import com.augmentalis.voiceos.command.VOSCommand
+import com.augmentalis.voiceoscore.VOSCommand
 import com.augmentalis.commandmanager.database.sqldelight.VoiceCommandEntity
 import org.json.JSONArray
 import org.json.JSONException

@@ -22,7 +22,8 @@ import com.augmentalis.hudmanager.core.*
 import com.augmentalis.hudmanager.core.Environment
 import com.augmentalis.hudmanager.spatial.*
 import com.augmentalis.hudmanager.models.*
-import com.augmentalis.devicemanager.sensors.imu.IMUManager
+import com.augmentalis.devicemanager.imu.IMUData
+import com.augmentalis.devicemanager.imu.IMUManager
 import com.augmentalis.hudmanager.stubs.DatabaseModule
 import com.augmentalis.hudmanager.stubs.VOSAccessibilitySvc
 import com.augmentalis.hudmanager.stubs.HUDIntent

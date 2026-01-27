@@ -108,7 +108,7 @@ class DatabaseVersionDaoAdapter(private val database: VoiceOSDatabase) {
 
     // ==================== EXTENSION ====================
 
-    private fun com.augmentalis.database.command.Database_version.toEntity(): DatabaseVersionEntity = DatabaseVersionEntity(
+    private fun com.augmentalis.database.Database_version.toEntity(): DatabaseVersionEntity = DatabaseVersionEntity(
         id = id.toInt(),
         jsonVersion = json_version,
         loadedAt = loaded_at,

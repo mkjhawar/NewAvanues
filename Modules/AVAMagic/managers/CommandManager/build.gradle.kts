@@ -59,7 +59,7 @@ dependencies {
     implementation(project(":Modules:UniversalRPC"))  // Universal RPC Protocol
 
     // KMP Libraries (project dependencies)
-    implementation(project(":Modules:VoiceOS:core:command-models"))
+    implementation(project(":Modules:VoiceOSCore"))
     implementation(project(":Modules:Database"))  // SQLDelight database
 
     // Android

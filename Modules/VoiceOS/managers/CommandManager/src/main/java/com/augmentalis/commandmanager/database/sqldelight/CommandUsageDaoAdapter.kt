@@ -186,7 +186,7 @@ class CommandUsageDaoAdapter(private val database: VoiceOSDatabase) {
 
     // ==================== EXTENSION ====================
 
-    private fun com.augmentalis.database.command.Command_usage.toEntity(): CommandUsageEntity = CommandUsageEntity(
+    private fun com.augmentalis.database.Command_usage.toEntity(): CommandUsageEntity = CommandUsageEntity(
         id = id,
         commandId = command_id,
         locale = locale,

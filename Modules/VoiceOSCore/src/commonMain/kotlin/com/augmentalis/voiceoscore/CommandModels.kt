@@ -59,6 +59,9 @@ enum class CommandSource {
     /** Text-based input */
     TEXT,
 
+    /** App-initiated command */
+    APP,
+
     /** System-generated command */
     SYSTEM,
 

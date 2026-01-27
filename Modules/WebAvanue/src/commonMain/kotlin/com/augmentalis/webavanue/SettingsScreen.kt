@@ -72,11 +72,15 @@ fun SettingsScreen(
                 }
             }
             settings != null -> {
-                SettingsContent(
-                    settings = settings!!,
-                    onUpdateSettings = { viewModel.updateSettings(it) },
-                    modifier = Modifier.padding(paddingValues)
-                )
+                // Capture local value to enable smart cast
+                val currentSettings = settings
+                if (currentSettings != null) {
+                    SettingsContent(
+                        settings = currentSettings,
+                        onUpdateSettings = { viewModel.updateSettings(it) },
+                        modifier = Modifier.padding(paddingValues)
+                    )
+                }
             }
         }
     }
