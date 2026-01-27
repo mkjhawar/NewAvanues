@@ -33,22 +33,22 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // Kotlin Coroutines
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+                implementation(libs.kotlinx.coroutines.core)
 
                 // Kotlin Serialization
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+                implementation(libs.kotlinx.serialization.json)
 
                 // Ktor for HTTP client (cross-platform)
-                implementation("io.ktor:ktor-client-core:2.3.7")
-                implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
             }
         }
 
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
@@ -66,69 +66,69 @@ kotlin {
                 implementation(libs.hilt.android)
 
                 // Android Coroutines
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+                implementation(libs.kotlinx.coroutines.android)
 
                 // TVM Runtime (for MLC LLM) - Android only
                 implementation(files("libs/tvm4j_core.jar"))
 
                 // Android utilities
-                implementation("androidx.core:core-ktx:1.12.0")
+                implementation(libs.androidx.core.ktx)
 
                 // Security (EncryptedSharedPreferences)
-                implementation("androidx.security:security-crypto:1.1.0-alpha06")
+                implementation(libs.androidx.security.crypto)
 
                 // HTTP client for cloud LLM APIs (Android)
-                implementation("com.squareup.okhttp3:okhttp:4.12.0")
-                implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+                implementation(libs.okhttp)
+                implementation(libs.okhttp.logging)
 
                 // Ktor Android engine
-                implementation("io.ktor:ktor-client-okhttp:2.3.7")
+                implementation(libs.ktor.client.okhttp)
 
                 // WorkManager for background downloads
-                implementation("androidx.work:work-runtime-ktx:2.9.0")
+                implementation(libs.androidx.work.runtime.ktx)
 
                 // Apache Commons Compress for .ALM (tar) extraction
-                implementation("org.apache.commons:commons-compress:1.25.0")
+                implementation(libs.commons.compress)
 
                 // LiteRT (TFLite) for Gemma 3n support
-                implementation("org.tensorflow:tensorflow-lite:2.14.0")
+                implementation(libs.tensorflow.lite)
             }
         }
 
         val androidUnitTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("junit:junit:4.13.2")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-                implementation("io.mockk:mockk:1.13.8")
+                implementation(libs.junit)
+                implementation(libs.kotlinx.coroutines.test)
+                implementation(libs.mockk)
             }
         }
 
         val androidInstrumentedTest by getting {
             dependencies {
-                implementation("androidx.test.ext:junit:1.1.5")
-                implementation("androidx.test.espresso:espresso-core:3.5.1")
+                implementation(libs.androidx.test.junit)
+                implementation(libs.androidx.test.espresso.core)
             }
         }
 
         val desktopMain by getting {
             dependencies {
                 // Ktor CIO engine for desktop
-                implementation("io.ktor:ktor-client-cio:2.3.7")
+                implementation("io.ktor:ktor-client-cio:${libs.versions.ktor.get()}")
 
                 // ONNX Runtime for local inference (optional)
-                implementation("com.microsoft.onnxruntime:onnxruntime:1.16.3")
+                implementation("com.microsoft.onnxruntime:onnxruntime:${libs.versions.onnxruntime.get()}")
 
                 // SLF4J for logging
-                implementation("org.slf4j:slf4j-api:2.0.9")
-                implementation("ch.qos.logback:logback-classic:1.4.14")
+                implementation(libs.slf4j.api)
+                implementation(libs.logback.classic)
             }
         }
 
         val desktopTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
     }

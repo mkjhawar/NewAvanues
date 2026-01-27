@@ -56,6 +56,18 @@ gson = "2.10.1"
 neo4j = "5.15.0"  # LearnAppDev only
 okhttp = "4.12.0"  # LearnAppDev only
 
+# AI/ML
+tensorflow-lite = "2.14.0"
+tensorflow-lite-support = "0.4.4"
+commons-compress = "1.25.0"
+
+# Logging (Desktop)
+slf4j = "2.0.9"
+logback = "1.4.14"
+
+# Hilt Extensions
+hilt-work = "1.1.0"
+
 # Testing
 junit = "4.13.2"
 robolectric = "4.11.1"
@@ -162,6 +174,19 @@ gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentry" }
 neo4j-java-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "neo4j" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+okhttp-logging = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp" }
+
+# AI/ML
+tensorflow-lite = { module = "org.tensorflow:tensorflow-lite", version.ref = "tensorflow-lite" }
+tensorflow-lite-support = { module = "org.tensorflow:tensorflow-lite-support", version.ref = "tensorflow-lite-support" }
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
+
+# Logging (Desktop)
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
+# Hilt Extensions
+hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hilt-work" }
 
 # Testing
 junit = { module = "junit:junit", version.ref = "junit" }

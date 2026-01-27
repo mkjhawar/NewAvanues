@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
@@ -33,7 +35,10 @@ class AudioCapture(
     private var recordingJob: Job? = null
     private val _audioFlow = MutableSharedFlow<ByteArray>()
     private val audioFlowInstance: Flow<ByteArray> = _audioFlow.asSharedFlow()
-    
+
+    // Managed coroutine scope for recording (avoids orphaned coroutines)
+    private val recordingScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     @Volatile
     private var isRecording = false
     
@@ -66,8 +71,8 @@ class AudioCapture(
             audioRecord?.startRecording()
             isRecording = true
             
-            // Start recording in coroutine
-            recordingJob = CoroutineScope(Dispatchers.IO).launch {
+            // Start recording in managed coroutine scope
+            recordingJob = recordingScope.launch {
                 readAudioData()
             }
             
@@ -109,6 +114,7 @@ class AudioCapture(
      */
     fun release() {
         stopRecording()
+        recordingScope.cancel() // Cancel the scope to cleanup any pending work
         audioRecord?.release()
         audioRecord = null
         Log.d(TAG, "AudioCapture resources released")

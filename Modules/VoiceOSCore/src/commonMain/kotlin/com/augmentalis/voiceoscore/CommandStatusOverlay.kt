@@ -106,16 +106,19 @@ class CommandStatusOverlay : IOverlay {
     /**
      * Current command text being displayed.
      */
+    @Volatile
     private var currentCommand: String = ""
 
     /**
      * Current message being displayed.
      */
+    @Volatile
     private var currentMessage: String = ""
 
     /**
      * Flag indicating if overlay has been disposed.
      */
+    @Volatile
     private var isDisposed: Boolean = false
 
     // ═══════════════════════════════════════════════════════════════════════

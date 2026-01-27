@@ -132,10 +132,15 @@ class SpeechEngineManager(
     private val _errors = MutableSharedFlow<SpeechError>(replay = 0)
     val errors: SharedFlow<SpeechError> = _errors.asSharedFlow()
 
+    @Volatile
     private var activeEngine: ISpeechEngine? = null
+    @Volatile
     private var activeEngineType: SpeechEngine? = null
+    @Volatile
     private var isMuted = false
+    @Volatile
     private var currentCommands: List<String> = emptyList()
+    @Volatile
     private var currentConfig: SpeechConfig = SpeechConfig()
 
     // Track engine result collection job
@@ -197,7 +202,7 @@ class SpeechEngineManager(
     ): Result<Unit> {
         val createResult = factory.createEngine(engineType)
         if (createResult.isFailure) {
-            return Result.failure(createResult.exceptionOrNull()!!)
+            return Result.failure(createResult.exceptionOrNull() ?: IllegalStateException("Unknown engine creation error"))
         }
 
         var engine = createResult.getOrThrow()

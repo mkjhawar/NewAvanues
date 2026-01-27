@@ -15,6 +15,8 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -95,7 +97,10 @@ class FeedbackManager(private val context: Context) {
     
     // Preferences
     private val preferences: SharedPreferences = context.getSharedPreferences(FEEDBACK_PREFS, Context.MODE_PRIVATE)
-    
+
+    // Managed coroutine scope for feedback operations (avoids orphaned coroutines)
+    private val feedbackScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     // State flows
     private val _feedbackState = MutableStateFlow(FeedbackState())
     val feedbackState: StateFlow<FeedbackState> = _feedbackState.asStateFlow()
@@ -311,7 +316,7 @@ class FeedbackManager(private val context: Context) {
             }
             
             // Reset vibrating state after duration
-            CoroutineScope(Dispatchers.Main).launch {
+            feedbackScope.launch {
                 delay(duration)
                 updateState { it.copy(haptic = it.haptic.copy(isVibrating = false)) }
             }
@@ -340,8 +345,8 @@ class FeedbackManager(private val context: Context) {
             
             // Calculate total pattern duration
             val totalDuration = pattern.pattern.sum()
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
-                kotlinx.coroutines.delay(totalDuration)
+            feedbackScope.launch {
+                delay(totalDuration)
                 updateState { it.copy(haptic = it.haptic.copy(isVibrating = false)) }
             }
             
@@ -386,8 +391,8 @@ class FeedbackManager(private val context: Context) {
             toneGenerator?.startTone(toneType.tone, state.audio.duration.toInt())
             
             // Reset playing state after duration
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
-                kotlinx.coroutines.delay(state.audio.duration)
+            feedbackScope.launch {
+                delay(state.audio.duration)
                 updateState { it.copy(audio = it.audio.copy(isPlaying = false)) }
             }
             
@@ -406,7 +411,7 @@ class FeedbackManager(private val context: Context) {
             
             toneGenerator?.startTone(tone, duration.toInt())
             
-            CoroutineScope(Dispatchers.Main).launch {
+            feedbackScope.launch {
                 delay(duration)
                 updateState { it.copy(audio = it.audio.copy(isPlaying = false)) }
             }
@@ -483,9 +488,9 @@ class FeedbackManager(private val context: Context) {
             updateState { it.copy(visual = it.visual.copy(isAnimating = true)) }
             
             callback.onVisualFeedbackStart(config)
-            
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
-                kotlinx.coroutines.delay(config.duration)
+
+            feedbackScope.launch {
+                delay(config.duration)
                 callback.onVisualFeedbackEnd(config)
                 updateState { it.copy(visual = it.visual.copy(isAnimating = false)) }
             }
@@ -647,6 +652,7 @@ class FeedbackManager(private val context: Context) {
      */
     fun cleanup() {
         try {
+            feedbackScope.cancel() // Cancel all pending coroutines
             toneGenerator?.release()
             toneGenerator = null
             Log.d(TAG, "FeedbackManager cleanup completed")

@@ -85,8 +85,11 @@ data class JitProcessingResult(
  */
 class JitProcessor {
 
+    @Volatile
     private var processingMode: ProcessingMode = ProcessingMode.IMMEDIATE
     private val queue = mutableListOf<ElementInfo>()
+    private val queueLock = Any()
+    @Volatile
     private var processedCount = 0
 
     /**
@@ -143,7 +146,7 @@ class JitProcessor {
     /**
      * Get the current queue size.
      */
-    fun getQueueSize(): Int = queue.size
+    fun getQueueSize(): Int = synchronized(queueLock) { queue.size }
 
     /**
      * Add an element to the processing queue.
@@ -151,14 +154,18 @@ class JitProcessor {
      * @param element Element to queue
      */
     fun queueElement(element: ElementInfo) {
-        queue.add(element)
+        synchronized(queueLock) {
+            queue.add(element)
+        }
     }
 
     /**
      * Clear the processing queue.
      */
     fun clearQueue() {
-        queue.clear()
+        synchronized(queueLock) {
+            queue.clear()
+        }
     }
 
     /**
@@ -167,9 +174,12 @@ class JitProcessor {
      * @return List of processing results
      */
     fun processQueue(): List<JitProcessingResult> {
-        val results = queue.map { processElement(it) }
-        queue.clear()
-        return results
+        val elements = synchronized(queueLock) {
+            val copy = queue.toList()
+            queue.clear()
+            copy
+        }
+        return elements.map { processElement(it) }
     }
 
     /**
@@ -182,7 +192,7 @@ class JitProcessor {
      */
     fun reset() {
         processedCount = 0
-        queue.clear()
+        synchronized(queueLock) { queue.clear() }
         processingMode = ProcessingMode.IMMEDIATE
     }
 

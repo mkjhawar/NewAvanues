@@ -50,9 +50,18 @@ class WhisperContext private constructor(private var ptr: Long) {
         }
     }
 
+    @Suppress("removal")
     protected fun finalize() {
-        runBlocking {
-            release()
+        // Fire-and-forget cleanup in finalizer to avoid blocking/deadlocks
+        // Using scope.launch since runBlocking in finalizers can cause deadlocks
+        if (ptr != 0L) {
+            scope.launch {
+                try {
+                    release()
+                } catch (e: Exception) {
+                    Log.w(LOG_TAG, "Error during finalize release", e)
+                }
+            }
         }
     }
 

@@ -209,6 +209,7 @@ class ConfidenceOverlay : IOverlay {
      */
     val confidenceResult: StateFlow<ConfidenceResult?> = _confidenceResult.asStateFlow()
 
+    @Volatile
     private var _isDisposed = false
 
     // ═══════════════════════════════════════════════════════════════════════

@@ -159,13 +159,15 @@ class FrameworkHandlerRegistryImpl(
  * Global registry instance (for backward compatibility).
  */
 object FrameworkHandlerRegistryGlobal {
+    @Volatile
     private var instance: FrameworkHandlerRegistryImpl? = null
 
     fun getInstance(): FrameworkHandlerRegistryImpl {
-        if (instance == null) {
-            instance = FrameworkHandlerRegistryImpl.withDefaults()
+        return instance ?: synchronized(this) {
+            instance ?: FrameworkHandlerRegistryImpl.withDefaults().also {
+                instance = it
+            }
         }
-        return instance!!
     }
 
     fun register(handler: FrameworkHandler) = getInstance().register(handler)

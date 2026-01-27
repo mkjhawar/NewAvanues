@@ -58,9 +58,11 @@ class VoiceOSCore private constructor(
     private val stateManager = ServiceStateManager()
 
     // Current speech engine
+    @Volatile
     private var speechEngine: ISpeechEngine? = null
 
     // Synonym provider for fuzzy matching
+    @Volatile
     private var activeSynonymProvider: ISynonymProvider? = synonymProvider
 
     /**

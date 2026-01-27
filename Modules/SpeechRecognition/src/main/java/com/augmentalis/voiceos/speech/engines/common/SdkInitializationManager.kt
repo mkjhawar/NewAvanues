@@ -13,6 +13,7 @@ package com.augmentalis.voiceos.speech.engines.common
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.*
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
@@ -65,6 +66,9 @@ object SdkInitializationManager {
     private val stateLocks = ConcurrentHashMap<String, Mutex>()
     private val initializationTimes = ConcurrentHashMap<String, Long>()
     private val failureCount = ConcurrentHashMap<String, Int>()
+
+    // Managed scope for initialization operations (avoids orphaned coroutines)
+    private val initScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     
     /**
      * Initialize SDK with comprehensive error handling and retry logic
@@ -127,12 +131,12 @@ object SdkInitializationManager {
         
         // Update state to initializing
         stateManager[context.sdkName] = InitializationState.INITIALIZING
-        
-        // Create initialization job
-        val job = CoroutineScope(Dispatchers.IO).async {
+
+        // Create initialization job using managed scope (avoids orphaned coroutines)
+        val job = initScope.async {
             executeWithRetry(context, initializationLogic)
         }
-        
+
         initializationJobs[context.sdkName] = job
         
         return try {
@@ -328,15 +332,26 @@ object SdkInitializationManager {
      */
     suspend fun cleanup() {
         Log.d(TAG, "Cleaning up all initialization state")
-        
+
         // Cancel all running jobs
         initializationJobs.values.forEach { it.cancel() }
-        
+
         // Clear all state
         stateManager.clear()
         initializationJobs.clear()
         initializationTimes.clear()
         failureCount.clear()
         stateLocks.clear()
+
+        // Note: initScope is NOT cancelled here to allow future initializations
+        // It uses SupervisorJob so child failures don't affect the scope
+    }
+
+    /**
+     * Shutdown the manager completely (for app termination)
+     */
+    fun shutdown() {
+        Log.d(TAG, "Shutting down SdkInitializationManager")
+        initScope.cancel()
     }
 }

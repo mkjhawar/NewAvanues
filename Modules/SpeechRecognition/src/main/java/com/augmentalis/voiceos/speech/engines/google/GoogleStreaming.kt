@@ -424,29 +424,30 @@ class AudioRecorder(
         android.media.AudioFormat.ENCODING_PCM_16BIT,
         bufferSize * 2
     )
-    
+
     private val _audioFlow = MutableSharedFlow<ByteArray>()
     val audioFlow: SharedFlow<ByteArray> = _audioFlow.asSharedFlow()
-    
+
+    // Managed coroutine scope instead of GlobalScope
+    private val recorderScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var recordingJob: Job? = null
     private val isRecording = AtomicBoolean(false)
-    
+
     fun start() {
         if (audioRecord.state != android.media.AudioRecord.STATE_INITIALIZED) {
             throw IllegalStateException("AudioRecord not initialized")
         }
-        
+
         if (isRecording.get()) {
             return // Already recording
         }
-        
+
         audioRecord.startRecording()
         isRecording.set(true)
-        
-        @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
-        recordingJob = GlobalScope.launch(Dispatchers.IO) {
+
+        recordingJob = recorderScope.launch {
             val buffer = ByteArray(bufferSize)
-            
+
             while (isActive && isRecording.get()) {
                 val read = audioRecord.read(buffer, 0, buffer.size)
                 if (read > 0) {
@@ -455,17 +456,18 @@ class AudioRecorder(
             }
         }
     }
-    
+
     fun stop() {
         isRecording.set(false)
         recordingJob?.cancel()
         audioRecord.stop()
     }
-    
+
     fun release() {
         stop()
+        recorderScope.cancel() // Cancel scope on release
         audioRecord.release()
     }
-    
+
     fun isRecording(): Boolean = isRecording.get()
 }

@@ -158,16 +158,20 @@ object LearnAppDevToggle {
     // ==================== State ====================
 
     /** Current active tier */
+    @Volatile
     private var currentTier: Tier = Tier.LITE
 
     /** Build type: debug or release */
+    @Volatile
     private var isDebugBuild: Boolean = false
 
-    /** Overrides for individual features */
+    /** Overrides for individual features - synchronized access required */
     private val featureOverrides = mutableMapOf<Feature, Boolean>()
+    private val overridesLock = Any()
 
-    /** Listeners for tier changes */
+    /** Listeners for tier changes - synchronized access required */
     private val tierChangeListeners = mutableListOf<(Tier) -> Unit>()
+    private val listenersLock = Any()
 
     // ==================== Configuration ====================
 
@@ -188,7 +192,8 @@ object LearnAppDevToggle {
     fun setTier(tier: Tier) {
         if (currentTier != tier) {
             currentTier = tier
-            tierChangeListeners.forEach { it(tier) }
+            val listeners = synchronized(listenersLock) { tierChangeListeners.toList() }
+            listeners.forEach { it(tier) }
         }
     }
 
@@ -223,14 +228,18 @@ object LearnAppDevToggle {
      * Add a listener for tier changes.
      */
     fun addTierChangeListener(listener: (Tier) -> Unit) {
-        tierChangeListeners.add(listener)
+        synchronized(listenersLock) {
+            tierChangeListeners.add(listener)
+        }
     }
 
     /**
      * Remove a tier change listener.
      */
     fun removeTierChangeListener(listener: (Tier) -> Unit) {
-        tierChangeListeners.remove(listener)
+        synchronized(listenersLock) {
+            tierChangeListeners.remove(listener)
+        }
     }
 
     // ==================== Feature Checking ====================
@@ -240,7 +249,8 @@ object LearnAppDevToggle {
      */
     fun isEnabled(feature: Feature): Boolean {
         // Check for explicit override
-        featureOverrides[feature]?.let { return it }
+        val override = synchronized(overridesLock) { featureOverrides[feature] }
+        override?.let { return it }
 
         // Check tier availability
         if (!feature.isAvailableIn(currentTier)) {
@@ -280,27 +290,33 @@ object LearnAppDevToggle {
      * Override a feature's enabled status.
      */
     fun setOverride(feature: Feature, enabled: Boolean) {
-        featureOverrides[feature] = enabled
+        synchronized(overridesLock) {
+            featureOverrides[feature] = enabled
+        }
     }
 
     /**
      * Remove an override for a feature.
      */
     fun removeOverride(feature: Feature) {
-        featureOverrides.remove(feature)
+        synchronized(overridesLock) {
+            featureOverrides.remove(feature)
+        }
     }
 
     /**
      * Clear all overrides.
      */
     fun clearOverrides() {
-        featureOverrides.clear()
+        synchronized(overridesLock) {
+            featureOverrides.clear()
+        }
     }
 
     /**
      * Get all overrides.
      */
-    fun getOverrides(): Map<Feature, Boolean> = featureOverrides.toMap()
+    fun getOverrides(): Map<Feature, Boolean> = synchronized(overridesLock) { featureOverrides.toMap() }
 
     // ==================== Querying ====================
 
@@ -347,7 +363,7 @@ object LearnAppDevToggle {
     fun reset() {
         currentTier = Tier.LITE
         isDebugBuild = false
-        featureOverrides.clear()
-        tierChangeListeners.clear()
+        synchronized(overridesLock) { featureOverrides.clear() }
+        synchronized(listenersLock) { tierChangeListeners.clear() }
     }
 }

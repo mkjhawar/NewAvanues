@@ -66,6 +66,7 @@ class UIHandler(
      * Current disambiguation state.
      * When non-null, the system is waiting for user to say a number.
      */
+    @Volatile
     private var activeDisambiguation: ActiveDisambiguation? = null
 
     /**
@@ -281,7 +282,8 @@ class UIHandler(
 
             // Single match - execute directly
             result.singleMatch != null -> {
-                executeActionOnElement(result.singleMatch!!, action)
+                result.singleMatch?.let { executeActionOnElement(it, action) }
+                    ?: HandlerResult.failure("Match disappeared unexpectedly")
             }
 
             // Multiple matches - need disambiguation

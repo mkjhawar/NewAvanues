@@ -37,8 +37,12 @@ class CommandOrchestrator(
     private val logger = LoggerFactory.getLogger("CommandOrchestrator")
 
     // AVID assignment tracking for incremental updates
+    // Note: These are accessed from single-threaded command generation, but use synchronized for safety
     private val avidAssignments = mutableMapOf<String, Int>()
+    private val avidLock = Any()
+    @Volatile
     private var nextAvidNumber = 1
+    @Volatile
     private var currentAppPackage: String? = null
 
     /**
@@ -175,15 +179,17 @@ class CommandOrchestrator(
      * Clear AVID assignments. Call when switching apps or resetting state.
      */
     fun clearAvidAssignments() {
-        avidAssignments.clear()
-        nextAvidNumber = 1
-        currentAppPackage = null
+        synchronized(avidLock) {
+            avidAssignments.clear()
+            nextAvidNumber = 1
+            currentAppPackage = null
+        }
     }
 
     /**
      * Get current AVID assignments map (for overlay generation).
      */
-    fun getAvidAssignments(): Map<String, Int> = avidAssignments.toMap()
+    fun getAvidAssignments(): Map<String, Int> = synchronized(avidLock) { avidAssignments.toMap() }
 
     /**
      * Get persistence decision statistics for debugging.

@@ -1005,22 +1005,46 @@ class VivokaEngine(
             // Stop all operations
             stopListening()
 
-            // Cancel coroutines
-            coroutineScope.cancel()
+            // Cancel timeout job before cancelling scope
             timeoutJob?.cancel()
 
-            // Destroy components
+            // Create a dedicated cleanup scope to avoid deadlocks
+            // Note: coroutineScope is cancelled below, so we need a separate scope
+            val cleanupScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+            // Launch cleanup tasks without blocking
+            cleanupScope.launch {
+                try {
+                    learning.destroy()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error destroying learning component", e)
+                }
+            }
+
+            cleanupScope.launch {
+                try {
+                    model.reset()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error resetting model component", e)
+                }
+            }
+
+            cleanupScope.launch {
+                try {
+                    UniversalInitializationManager.instance.shutdownEngine(VIVOKA_ENGINE_NAME)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error shutting down UniversalInitializationManager", e)
+                }
+            }
+
+            // Cancel main coroutine scope
+            coroutineScope.cancel()
+
+            // Destroy synchronous components
             performance.destroy()
-            runBlocking {
-                learning.destroy()
-            }
             audio.reset()
-            runBlocking {
-                model.reset()
-            }
             voiceStateManager.destroy()
             errorRecoveryManager.destroy()
-            //assets.reset()
             config.reset()
 
             // Destroy ASR engine
@@ -1029,8 +1053,11 @@ class VivokaEngine(
             // Clear recognizer
             recognizer = null
             registeredCommands.clear()
-            runBlocking {
-                UniversalInitializationManager.instance.shutdownEngine(VIVOKA_ENGINE_NAME)
+
+            // Cancel cleanup scope after a delay to allow tasks to complete
+            cleanupScope.launch {
+                delay(1000)
+                cleanupScope.cancel()
             }
 
             Log.i(TAG, "Vivoka engine destroyed")

@@ -31,6 +31,7 @@ enum class SpeedLevel {
 class SpeedController(
     initialLevel: SpeedLevel = SpeedLevel.NORMAL
 ) {
+    @Volatile
     private var currentLevel: SpeedLevel = initialLevel
 
     companion object {

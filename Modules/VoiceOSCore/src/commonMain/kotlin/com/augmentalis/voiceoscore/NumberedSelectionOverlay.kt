@@ -78,9 +78,11 @@ class NumberedSelectionOverlay(
     // State
     // ═══════════════════════════════════════════════════════════════════════
 
+    @Volatile
     private var _isVisible: Boolean = false
     override val isVisible: Boolean get() = _isVisible
 
+    @Volatile
     private var _style: NumberOverlayStyle = style
     val style: NumberOverlayStyle get() = _style
 
@@ -90,6 +92,7 @@ class NumberedSelectionOverlay(
      * Current disambiguation display configuration.
      * Platform renderers should use this to determine highlight style, animations, etc.
      */
+    @Volatile
     private var _displayConfig: DisambiguationOverlayConfig = DisambiguationOverlayConfig.DEFAULT
     val displayConfig: DisambiguationOverlayConfig get() = _displayConfig
 
@@ -120,6 +123,7 @@ class NumberedSelectionOverlay(
      */
     val hasOverflow: Boolean get() = _items.size > maxVisibleBadges
 
+    @Volatile
     private var _isDisposed: Boolean = false
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -530,6 +534,7 @@ class NumberedSelectionOverlay(
          * Generate a unique ID for overlay instances.
          * Uses simple counter for KMP compatibility.
          */
+        @Volatile
         private var idCounter: Long = 0
 
         internal fun generateId(): String {

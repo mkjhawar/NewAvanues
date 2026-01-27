@@ -76,10 +76,8 @@ class AndroidSTTEngine(private val context: Context) {
     private val vocabularyCache = ConcurrentHashMap<String, Boolean>()
     // private lateinit var learningStore: RecognitionLearningRepository  // DISABLED
     
-    // Coroutine management  
+    // Coroutine management - consolidated scope with SupervisorJob for failure isolation
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val timeoutScope = CoroutineScope(Dispatchers.IO)
-    private val commandScope = CoroutineScope(Dispatchers.IO)
     private var timeoutJob: Job? = null
     
     // Voice state management
@@ -446,7 +444,7 @@ class AndroidSTTEngine(private val context: Context) {
         
         // Check unmute command
         if (androidConfig.isUnmuteCommand(command)) {
-            commandScope.launch {
+            scope.launch {
                 withContext(Dispatchers.IO) {
                     synchronized(currentRegisteredCommands) {
                         currentRegisteredCommands.clear()
@@ -494,7 +492,7 @@ class AndroidSTTEngine(private val context: Context) {
     private fun handleMuteCommand() {
         androidConfig.setVoiceSleeping(true)
         timeoutJob?.cancel()
-        commandScope.launch {
+        scope.launch {
             withContext(Dispatchers.IO) {
                 synchronized(currentRegisteredCommands) {
                     currentRegisteredCommands.clear()
@@ -651,7 +649,7 @@ class AndroidSTTEngine(private val context: Context) {
      */
     private fun runTimeout() {
         val timeoutMinutes = androidConfig.getVoiceTimeoutMinutes()
-        timeoutJob = timeoutScope.launch {
+        timeoutJob = scope.launch {
             while (androidConfig.isVoiceEnabled() && !androidConfig.isVoiceSleeping()) {
                 delay(30000) // Check every 30 seconds
                 val currentTime = System.currentTimeMillis()
@@ -756,42 +754,55 @@ class AndroidSTTEngine(private val context: Context) {
      */
     fun destroy() {
         Log.d(TAG, "Destroying SOLID AndroidSTTEngine")
-        
-        // Cancel coroutines
+
+        // Cancel timeout job first
         timeoutJob?.cancel()
-        scope.cancel()
-        timeoutScope.cancel()
-        commandScope.cancel()
-        
+
         // Cleanup silence checking
         silenceCheckHandler.removeCallbacks(silenceCheckRunnable)
-        
-        // Destroy components
-        scope.launch {
+
+        // Destroy components synchronously (they should handle their own cleanup)
+        try {
             androidRecognizer.destroy()
-            androidErrorHandler.destroy()
-            learningSystem.destroy()
-            performanceMonitor.destroy()
-            errorRecoveryManager.destroy()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error destroying recognizer", e)
         }
-        
-        // Close learning store - DISABLED: VoiceDataManager dependency
-        // if (::learningStore.isInitialized) {
-        //     // Room handles connection management automatically
-        // }
-        
+        try {
+            androidErrorHandler.destroy()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error destroying error handler", e)
+        }
+        try {
+            learningSystem.destroy()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error destroying learning system", e)
+        }
+        try {
+            performanceMonitor.destroy()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error destroying performance monitor", e)
+        }
+        try {
+            errorRecoveryManager.destroy()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error destroying error recovery manager", e)
+        }
+
         // Clear caches
         commandCache.clear()
         registeredCommands.clear()
         currentRegisteredCommands.clear()
         learnedCommands.clear()
         vocabularyCache.clear()
-        
+
         // Reset state
         isServiceInitialized = false
         androidConfig.reset()
         androidLanguage.reset()
-        
+
+        // Cancel scope last to ensure cleanup completes
+        scope.cancel()
+
         Log.d(TAG, "SOLID AndroidSTTEngine destroyed - all 7 components cleaned up")
     }
 }

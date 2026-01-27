@@ -12,17 +12,9 @@ plugins {
     alias(libs.plugins.sqldelight)
 }
 
-// Version constants
-object Versions {
-    const val coroutines = "1.8.0"
-    const val serialization = "1.6.3"
-    const val datetime = "0.5.0"
-    const val sqldelight = "2.0.1"
-    const val androidxCore = "1.12.0"
-    const val junit = "4.13.2"
-    const val androidxTestJunit = "1.1.5"
-    const val espresso = "3.5.1"
-}
+// Note: Versions now sourced from gradle/libs.versions.toml
+// kotlinx-coroutines = 1.8.1, kotlinx-serialization = 1.6.0, kotlinx-datetime = 0.5.0
+// sqldelight = 2.0.1, androidx-core = 1.12.0, junit = 4.13.2
 
 kotlin {
     androidTarget {
@@ -64,43 +56,43 @@ kotlin {
                 implementation(project(":Modules:SpeechRecognition"))
 
                 // Coroutines
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.coroutines}")
+                implementation(libs.kotlinx.coroutines.core)
 
                 // Atomicfu
                 implementation(libs.kotlinx.atomicfu)
 
                 // Serialization
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${Versions.serialization}")
+                implementation(libs.kotlinx.serialization.json)
 
                 // DateTime
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:${Versions.datetime}")
+                implementation(libs.kotlinx.datetime)
 
                 // SQLDelight
-                implementation("app.cash.sqldelight:coroutines-extensions:${Versions.sqldelight}")
+                implementation(libs.sqldelight.coroutines.extensions)
             }
         }
 
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${Versions.coroutines}")
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
         val androidMain by getting {
             dependencies {
                 // Android Core
-                implementation("androidx.core:core-ktx:${Versions.androidxCore}")
+                implementation(libs.androidx.core.ktx)
 
                 // Compose
-                implementation(platform("androidx.compose:compose-bom:2024.06.00"))
-                implementation("androidx.compose.ui:ui")
-                implementation("androidx.compose.material3:material3")
-                implementation("androidx.compose.material:material-icons-extended")
-                implementation("androidx.compose.ui:ui-tooling-preview")
+                implementation(platform(libs.compose.bom))
+                implementation(libs.compose.ui.ui)
+                implementation(libs.compose.material3)
+                implementation(libs.compose.material.icons.extended)
+                implementation(libs.compose.ui.tooling.preview)
 
                 // SQLDelight Android Driver
-                implementation("app.cash.sqldelight:android-driver:${Versions.sqldelight}")
+                implementation(libs.sqldelight.android.driver)
 
                 // Speech Recognition
                 implementation(project(":Modules:SpeechRecognition"))
@@ -123,14 +115,14 @@ kotlin {
 
         val androidUnitTest by getting {
             dependencies {
-                implementation("junit:junit:${Versions.junit}")
+                implementation(libs.junit)
             }
         }
 
         val androidInstrumentedTest by getting {
             dependencies {
-                implementation("androidx.test.ext:junit:${Versions.androidxTestJunit}")
-                implementation("androidx.test.espresso:espresso-core:${Versions.espresso}")
+                implementation(libs.androidx.test.junit)
+                implementation(libs.androidx.test.espresso.core)
             }
         }
 
@@ -147,7 +139,7 @@ kotlin {
                 iosArm64Main.dependsOn(this)
                 iosSimulatorArm64Main.dependsOn(this)
                 dependencies {
-                    implementation("app.cash.sqldelight:native-driver:${Versions.sqldelight}")
+                    implementation(libs.sqldelight.native.driver)
                     // NLU (CoreML-based)
                     implementation(project(":Modules:AI:NLU"))
                 }
@@ -168,7 +160,7 @@ kotlin {
         val desktopMain by getting {
             dependsOn(commonMain)
             dependencies {
-                implementation("app.cash.sqldelight:sqlite-driver:${Versions.sqldelight}")
+                implementation(libs.sqldelight.sqlite.driver)
                 // LLM (OllamaProvider)
                 implementation(project(":Modules:AI:LLM"))
             }

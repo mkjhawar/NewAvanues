@@ -161,12 +161,15 @@ class OverlayCoordinator {
 
     /**
      * Registered overlays indexed by ID.
+     * Synchronized access required for thread safety.
      */
     private val overlays = mutableMapOf<String, OverlayEntry>()
+    private val overlaysLock = Any()
 
     /**
      * Flag indicating if coordinator has been disposed.
      */
+    @Volatile
     private var isDisposed = false
 
     /**

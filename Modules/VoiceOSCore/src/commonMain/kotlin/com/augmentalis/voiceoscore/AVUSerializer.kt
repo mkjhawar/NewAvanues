@@ -143,10 +143,10 @@ object AVUSerializer {
                             }
                             is ParsedScreen -> {
                                 // Save previous screen if exists
-                                if (currentScreenHash != null) {
+                                currentScreenHash?.let { hash ->
                                     screens.add(
                                         QuantizedScreen(
-                                            currentScreenHash!!,
+                                            hash,
                                             currentScreenTitle ?: "",
                                             currentActivityName,
                                             currentElements.toList()
@@ -174,10 +174,10 @@ object AVUSerializer {
             }
 
             // Add last screen
-            if (currentScreenHash != null) {
+            currentScreenHash?.let { hash ->
                 screens.add(
                     QuantizedScreen(
-                        currentScreenHash!!,
+                        hash,
                         currentScreenTitle ?: "",
                         currentActivityName,
                         currentElements.toList()

@@ -21,6 +21,7 @@ import com.augmentalis.voiceoscore.currentTimeMillis
 import com.augmentalis.voiceoscore.ICommandPersistence
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
@@ -112,7 +113,7 @@ interface IConsentProvider {
 class JITLearner(
     private val persistence: ICommandPersistence? = null,
     private val consentProvider: IConsentProvider? = null,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
     /**
      * Set of VUIDs (resourceIds) for elements that have already been learned.
