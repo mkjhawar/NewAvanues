@@ -77,7 +77,7 @@ dependencies {
     implementation(project(":Modules:SpeechRecognition"))
     // implementation(project(":Modules:AvaMagic:AvaUI:Voice"))  // DISABLED: Module path mapping issue
     // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight
-    // implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))  // DISABLED: SQLDelight generation issues
+implementation(project(":Modules:Localization"))  // KMP Localization module
     
     // Testing
     testImplementation("junit:junit:4.13.2")
