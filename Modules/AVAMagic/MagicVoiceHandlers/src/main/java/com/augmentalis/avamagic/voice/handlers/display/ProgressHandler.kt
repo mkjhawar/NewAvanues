@@ -46,7 +46,7 @@
  * - Detailed info: progress value, bounds, state, message
  */
 
-package com.augmentalis.avamagic.voice.handlers
+package com.augmentalis.avamagic.voice.handlers.display
 
 import android.util.Log
 import com.augmentalis.voiceoscore.ActionCategory

@@ -51,7 +51,7 @@
  * 4. Fuzzy matching for common variations
  */
 
-package com.augmentalis.avamagic.voice.handlers
+package com.augmentalis.avamagic.voice.handlers.input
 
 import android.util.Log
 import com.augmentalis.voiceoscore.ActionCategory

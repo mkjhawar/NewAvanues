@@ -16,7 +16,7 @@
  * Location: CommandManager module handlers
  */
 
-package com.augmentalis.avamagic.voice.handlers
+package com.augmentalis.avamagic.voice.handlers.input
 
 import android.accessibilityservice.AccessibilityService
 import android.os.Build

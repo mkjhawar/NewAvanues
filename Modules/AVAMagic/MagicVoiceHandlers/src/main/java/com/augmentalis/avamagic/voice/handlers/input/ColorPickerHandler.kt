@@ -55,7 +55,7 @@
  * - Hex codes: "FF0000", "#FF0000", "0xFF0000"
  */
 
-package com.augmentalis.avamagic.voice.handlers
+package com.augmentalis.avamagic.voice.handlers.input
 
 import android.util.Log
 import com.augmentalis.voiceoscore.ActionCategory

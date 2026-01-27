@@ -47,7 +47,7 @@
  * - "hide suggestions" / "close" - Close dropdown
  */
 
-package com.augmentalis.avamagic.voice.handlers
+package com.augmentalis.avamagic.voice.handlers.input
 
 import android.util.Log
 import com.augmentalis.voiceoscore.ActionCategory

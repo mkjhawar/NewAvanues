@@ -39,7 +39,7 @@
  * 3. Numbered: "button 1" clicks the first button, "button 2" the second
  * 4. Custom: Match spoken text to any button's label
  */
-package com.augmentalis.avamagic.voice.handlers
+package com.augmentalis.avamagic.voice.handlers.feedback
 
 import com.augmentalis.voiceoscore.ActionCategory
 import com.augmentalis.voiceoscore.BaseHandler

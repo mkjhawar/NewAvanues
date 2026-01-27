@@ -13,7 +13,7 @@
  * - v1.0.0 (2026-01-27): Initial implementation with full tree view support
  */
 
-package com.augmentalis.avamagic.voice.handlers
+package com.augmentalis.avamagic.voice.handlers.display
 
 import android.content.Context
 import android.util.Log

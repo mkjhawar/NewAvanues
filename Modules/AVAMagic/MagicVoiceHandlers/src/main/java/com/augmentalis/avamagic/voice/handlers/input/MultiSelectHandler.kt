@@ -29,7 +29,7 @@
  * When multiple options match a voice command, numbered badges are shown
  * only on matching options, and the user says a number to select.
  */
-package com.augmentalis.avamagic.voice.handlers
+package com.augmentalis.avamagic.voice.handlers.input
 
 import android.util.Log
 import com.augmentalis.voiceoscore.ActionCategory
