@@ -66,10 +66,10 @@ include(":Modules:Actions")                 // Intent handlers, action execution
 include(":Modules:Utilities")       // Platform utilities (DeviceInfo, Logger, FileSystem, etc.)
 include(":Modules:LicenseSDK")      // License validation client
 
-// VoiceOS Core Modules
-// DEPRECATED (2026-01-27) - Consolidated into Modules:Database
+// VoiceOS Core Modules - ALL ARCHIVED (2026-01-27)
+// Consolidated into Modules:VoiceOSCore - see Archive/VoiceOS-CoreLibs-270127/
 // include(":Modules:VoiceOS:core:database")       // ARCHIVED - see archive/legacy/VoiceOS-core-database
-include(":Modules:VoiceOS:core:command-models")    // Used by managers/CommandManager
+// include(":Modules:VoiceOS:core:command-models") // ARCHIVED (2026-01-27) - imports migrated to VoiceOSCore
 
 // DEPRECATED (2026-01-21) - Functionality consolidated into VoiceOSCore
 // These modules are redundant copies with old package names (com.augmentalis.voiceos.*)

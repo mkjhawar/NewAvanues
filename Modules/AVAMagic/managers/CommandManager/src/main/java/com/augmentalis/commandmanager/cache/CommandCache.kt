@@ -15,8 +15,8 @@ import android.content.Context
 import android.util.Log
 import android.util.LruCache
 import com.augmentalis.commandmanager.database.CommandDatabase
-import com.augmentalis.voiceos.command.Command
-import com.augmentalis.voiceos.command.CommandSource
+import com.augmentalis.voiceoscore.Command
+import com.augmentalis.voiceoscore.CommandSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope

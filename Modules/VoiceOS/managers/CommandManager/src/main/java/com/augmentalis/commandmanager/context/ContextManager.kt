@@ -11,12 +11,12 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.os.Build
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceos.command.Command
-import com.augmentalis.voiceos.command.CommandDefinition
+import com.augmentalis.voiceoscore.Command
+import com.augmentalis.voiceoscore.CommandDefinition
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import com.augmentalis.voiceos.command.CommandContext as ModelsCommandContext
+import com.augmentalis.voiceoscore.CommandContext as ModelsCommandContext
 
 /**
  * Context manager for command execution
@@ -552,7 +552,7 @@ interface ContextProvider {
  */
 interface LegacyContextRule {
     val name: String
-    fun evaluate(command: CommandDefinition, context: com.augmentalis.voiceos.command.CommandContext): Boolean
+    fun evaluate(command: CommandDefinition, context: com.augmentalis.voiceoscore.CommandContext): Boolean
 }
 
 /**
@@ -670,7 +670,7 @@ class SystemContextProvider : ContextProvider {
 class TextInputAvailabilityRule : LegacyContextRule {
     override val name = "TextInputAvailabilityRule"
 
-    override fun evaluate(command: CommandDefinition, context: com.augmentalis.voiceos.command.CommandContext): Boolean {
+    override fun evaluate(command: CommandDefinition, context: com.augmentalis.voiceoscore.CommandContext): Boolean {
         // If command requires text input, check if text field is available
         if (command.requiredContext.contains("text_input")) {
             return context.focusedElement?.contains("editable") == true ||
@@ -683,7 +683,7 @@ class TextInputAvailabilityRule : LegacyContextRule {
 class AppSpecificCommandRule : LegacyContextRule {
     override val name = "AppSpecificCommandRule"
 
-    override fun evaluate(command: CommandDefinition, context: com.augmentalis.voiceos.command.CommandContext): Boolean {
+    override fun evaluate(command: CommandDefinition, context: com.augmentalis.voiceoscore.CommandContext): Boolean {
         // Check app-specific command requirements
         for (requirement in command.requiredContext) {
             if (requirement.startsWith("package:")) {
@@ -698,7 +698,7 @@ class AppSpecificCommandRule : LegacyContextRule {
 class UIElementAvailabilityRule : LegacyContextRule {
     override val name = "UIElementAvailabilityRule"
 
-    override fun evaluate(command: CommandDefinition, context: com.augmentalis.voiceos.command.CommandContext): Boolean {
+    override fun evaluate(command: CommandDefinition, context: com.augmentalis.voiceoscore.CommandContext): Boolean {
         // Check if required UI elements are available
         when (command.category) {
             "INPUT" -> {

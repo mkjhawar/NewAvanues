@@ -11,7 +11,7 @@
 
 package com.augmentalis.commandmanager.registry
 
-import com.augmentalis.voiceos.command.*
+import com.augmentalis.voiceoscore.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow

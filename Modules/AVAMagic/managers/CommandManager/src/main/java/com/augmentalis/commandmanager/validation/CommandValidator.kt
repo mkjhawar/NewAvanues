@@ -5,7 +5,7 @@
 
 package com.augmentalis.commandmanager.validation
 
-import com.augmentalis.voiceos.command.*
+import com.augmentalis.voiceoscore.*
 import com.augmentalis.commandmanager.definitions.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow

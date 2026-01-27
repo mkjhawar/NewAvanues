@@ -217,16 +217,22 @@ class TabViewModel(
      * Load all tabs from repository
      *
      * Observes tab changes reactively via Flow
-     * FIX: Prevents multiple collectors with isObservingTabs flag
+     * FIX: Prevents multiple collectors using Mutex for atomic check-and-set
      */
     fun loadTabs() {
-        // FIX P0-C1: Synchronized check-and-set prevents race condition (KMP-compatible)
-        synchronized(this) {
-            if (isObservingTabs) return
-            isObservingTabs = true
-        }
-
         viewModelScope.launch {
+            // FIX: Use Mutex for atomic check-and-set to prevent race condition
+            // This ensures only one observer can be started even with concurrent calls
+            val shouldStart = stateMutex.withLock {
+                if (isObservingTabs) {
+                    false
+                } else {
+                    isObservingTabs = true
+                    true
+                }
+            }
+            if (!shouldStart) return@launch
+
             _isLoading.value = true
             _error.value = null
 
@@ -234,7 +240,7 @@ class TabViewModel(
                 .catch { e ->
                     _error.value = "Failed to load tabs: ${e.message}"
                     _isLoading.value = false
-                    synchronized(this@TabViewModel) { isObservingTabs = false }
+                    stateMutex.withLock { isObservingTabs = false }
                 }
                 .collect { tabList ->
                     // FIX: Wrap entire collect block in try-catch to prevent crashes
@@ -1184,7 +1190,7 @@ class TabViewModel(
                 return false
             }
 
-            val session = sessionResult.getOrNull()!!
+            val session = sessionResult.getOrNull() ?: return false
 
             // Skip crash recovery sessions
             if (session.isCrashRecovery) {
@@ -1199,7 +1205,7 @@ class TabViewModel(
                 return false
             }
 
-            val sessionTabs = sessionTabsResult.getOrNull()!!
+            val sessionTabs = sessionTabsResult.getOrNull() ?: return false
 
             // Close all current tabs
             repository.closeAllTabs()
@@ -1254,7 +1260,7 @@ class TabViewModel(
                 return false
             }
 
-            val session = sessionResult.getOrNull()!!
+            val session = sessionResult.getOrNull() ?: return false
 
             // Get session tabs
             val sessionTabsResult = repository.getSessionTabs(session.id)
@@ -1262,7 +1268,7 @@ class TabViewModel(
                 return false
             }
 
-            val sessionTabs = sessionTabsResult.getOrNull()!!
+            val sessionTabs = sessionTabsResult.getOrNull() ?: return false
 
             // Close all current tabs
             repository.closeAllTabs()
