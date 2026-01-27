@@ -2,9 +2,9 @@ package com.augmentalis.voiceui.core
 
 import androidx.compose.runtime.*
 import com.augmentalis.avidcreator.AvidElementManager
-import com.augmentalis.avidcreator.models.AvidElement
-import com.augmentalis.avidcreator.models.AvidPosition
-import com.augmentalis.avidcreator.models.AvidMetadata
+import com.augmentalis.avidcreator.AvidElement
+import com.augmentalis.avidcreator.AvidPosition
+import com.augmentalis.avidcreator.AvidMetadata
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

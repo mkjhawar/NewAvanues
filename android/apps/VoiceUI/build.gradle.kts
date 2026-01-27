@@ -81,7 +81,6 @@ dependencies {
     implementation("androidx.compose.runtime:runtime-livedata")
     
     // VOS4 Dependencies
-    implementation(project(":Modules:Localization"))  // KMP Localization module
     implementation(project(":Modules:AVID"))
     implementation(project(":Modules:DeviceManager")) // GPU capabilities
     implementation(project(":Modules:AvidCreator")) // AVID element management (moved from VoiceOS/libraries)

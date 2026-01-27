@@ -32,7 +32,6 @@ import com.augmentalis.hudmanager.stubs.voiceui
 import com.augmentalis.hudmanager.settings.HUDSettings
 import com.augmentalis.hudmanager.settings.HUDSettingsManager
 import com.augmentalis.hudmanager.settings.HUDDisplayMode
-import com.augmentalis.localizationmanager.LocalizationModule
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -77,7 +76,11 @@ class HUDManager constructor(
     private val imuManager = IMUManager.getInstance(context)
     private val dataManager = DatabaseModule.getInstance(context)
     private val accessibilityService = VOSAccessibilitySvc.getInstance()
-    private val localizationModule = LocalizationModule.getInstance(context)
+    // Localization stub (LocalizationManager disabled due to SQLDelight issues)
+    private val localizationStub = object {
+        fun translate(key: String, vararg args: Any): String = key
+        fun getCurrentLanguage(): String = "en"
+    }
     
     // Settings management
     private val settingsManager = HUDSettingsManager.getInstance(context)
@@ -211,7 +214,7 @@ class HUDManager constructor(
             // Localize command labels if needed
             val localizedCommands = commands.map { cmd ->
                 if (cmd.translationKey != null) {
-                    cmd.copy(label = localizationModule.translate(cmd.translationKey))
+                    cmd.copy(label = localizationStub.translate(cmd.translationKey))
                 } else {
                     cmd
                 }
@@ -274,8 +277,8 @@ class HUDManager constructor(
             // Localize notification message if it's a translation key
             val localizedNotification = if (notification.isTranslationKey) {
                 notification.copy(
-                    message = localizationModule.translate(notification.message),
-                    languageCode = localizationModule.getCurrentLanguage()
+                    message = localizationStub.translate(notification.message),
+                    languageCode = localizationStub.getCurrentLanguage()
                 )
             } else {
                 notification
@@ -295,10 +298,10 @@ class HUDManager constructor(
     ) {
         hudScope.launch {
             val notification = HUDNotification(
-                message = localizationModule.translate(translationKey, *args),
+                message = localizationStub.translate(translationKey, *args),
                 position = position,
                 priority = priority,
-                languageCode = localizationModule.getCurrentLanguage(),
+                languageCode = localizationStub.getCurrentLanguage(),
                 isTranslationKey = false
             )
             spatialRenderer.renderNotification(notification)
