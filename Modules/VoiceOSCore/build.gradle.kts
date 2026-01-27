@@ -84,8 +84,8 @@ kotlin {
                 // Android Core
                 implementation(libs.androidx.core.ktx)
 
-                // Compose
-                implementation(platform(libs.compose.bom))
+                // Compose (use .get() to resolve provider for platform())
+                implementation(platform(libs.compose.bom.get()))
                 implementation(libs.compose.ui.ui)
                 implementation(libs.compose.material3)
                 implementation(libs.compose.material.icons.extended)
