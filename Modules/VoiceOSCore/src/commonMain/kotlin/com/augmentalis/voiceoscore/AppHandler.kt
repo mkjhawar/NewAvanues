@@ -5,6 +5,7 @@
  * Author: VOS4 Development Team
  * Created: 2026-01-06
  * Updated: 2026-01-09 - Auto-sync with installed apps on initialize
+ * Updated: 2026-01-27 - Added localization support via IAppCommandLocalizer
  *
  * KMP handler for app-level actions (launch, switch, close, etc.).
  * Phase 12 of the VoiceOSCoreNG handler system.
@@ -64,6 +65,38 @@ interface IAppLauncher {
 }
 
 /**
+ * Interface for providing localized app command verbs.
+ *
+ * Implementations should return action verbs in the current device locale.
+ * For example, in German: "öffnen" for "open", "starten" for "start".
+ */
+interface IAppCommandLocalizer {
+    /**
+     * Get localized action verbs for opening apps.
+     * Default English: ["open", "launch", "start"]
+     *
+     * @return List of localized action verbs
+     */
+    fun getOpenVerbs(): List<String>
+
+    /**
+     * Get localized "app" suffix variants.
+     * Default English: ["app", "application"]
+     *
+     * @return List of localized app suffix words
+     */
+    fun getAppSuffixes(): List<String>
+}
+
+/**
+ * Default English localizer for app commands.
+ */
+object DefaultAppCommandLocalizer : IAppCommandLocalizer {
+    override fun getOpenVerbs(): List<String> = listOf("open", "launch", "start")
+    override fun getAppSuffixes(): List<String> = listOf("app", "application")
+}
+
+/**
  * Handler for app-related voice commands.
  *
  * Supports commands like:
@@ -91,20 +124,43 @@ interface IAppLauncher {
  *
  * // Sync with installed apps
  * handler.syncInstalledApps()
+ *
+ * // With localization (e.g., German)
+ * val germanLocalizer = object : IAppCommandLocalizer {
+ *     override fun getOpenVerbs() = listOf("öffnen", "starten", "open", "start")
+ *     override fun getAppSuffixes() = listOf("app", "anwendung")
+ * }
+ * val handlerDe = AppHandler(launcher, germanLocalizer)
  * ```
  *
  * @param appLauncher Platform-specific app launcher (optional, null for simulation mode)
+ * @param localizer Provides localized command verbs (defaults to English)
  */
 class AppHandler(
-    private val appLauncher: IAppLauncher? = null
+    private val appLauncher: IAppLauncher? = null,
+    private val localizer: IAppCommandLocalizer = DefaultAppCommandLocalizer
 ) : BaseHandler() {
 
     override val category: ActionCategory = ActionCategory.APP
 
-    override val supportedActions: List<String> = listOf(
-        "open", "launch", "start",
-        "open app", "launch app", "start app"
-    )
+    /**
+     * Supported actions built from localizer.
+     * Includes base verbs and verb + "app" combinations.
+     */
+    override val supportedActions: List<String> by lazy {
+        val verbs = localizer.getOpenVerbs()
+        val suffixes = localizer.getAppSuffixes()
+
+        // Build list: ["open", "launch", "start", "open app", "launch app", ...]
+        verbs + verbs.flatMap { verb ->
+            suffixes.map { suffix -> "$verb $suffix" }
+        }
+    }
+
+    /**
+     * Cached list of open verbs for command parsing.
+     */
+    private val openVerbs: List<String> by lazy { localizer.getOpenVerbs() }
 
     /**
      * Check if this handler can handle the given action.
@@ -160,6 +216,7 @@ class AppHandler(
      *
      * Supports:
      * - Prefixed commands: "open maps", "launch youtube", "start calculator"
+     * - Localized prefixes based on IAppCommandLocalizer
      * - Bare app names: "maps", "stopwatch", "calculator" (if app is registered)
      *
      * @param command Full command string (e.g., "open maps" or just "maps")
@@ -168,28 +225,23 @@ class AppHandler(
     fun handleCommand(command: String): AppLaunchResult {
         val normalizedCommand = command.lowercase().trim()
 
-        return when {
-            normalizedCommand.startsWith("open ") -> {
-                openApp(normalizedCommand.substringAfter("open "))
+        // Check each localized verb prefix
+        for (verb in openVerbs) {
+            val prefix = "$verb "
+            if (normalizedCommand.startsWith(prefix)) {
+                return openApp(normalizedCommand.substringAfter(prefix).trim())
             }
-            normalizedCommand.startsWith("launch ") -> {
-                openApp(normalizedCommand.substringAfter("launch "))
-            }
-            normalizedCommand.startsWith("start ") -> {
-                openApp(normalizedCommand.substringAfter("start "))
-            }
-            else -> {
-                // Try to open as bare app name (e.g., "stopwatch", "calculator")
-                val app = findApp(normalizedCommand)
-                if (app != null) {
-                    openApp(normalizedCommand)
-                } else {
-                    AppLaunchResult(
-                        success = false,
-                        error = "Unknown app command: $command"
-                    )
-                }
-            }
+        }
+
+        // Try to open as bare app name (e.g., "stopwatch", "calculator")
+        val app = findApp(normalizedCommand)
+        return if (app != null) {
+            openApp(normalizedCommand)
+        } else {
+            AppLaunchResult(
+                success = false,
+                error = "Unknown app command: $command"
+            )
         }
     }
 

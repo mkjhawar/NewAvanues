@@ -58,7 +58,8 @@ internal class AndroidHandlerFactory(
     override fun createHandlers(): List<IHandler> {
         return listOf(
             AndroidGestureHandler(service),
-            SystemHandler(AndroidSystemExecutor(service))
+            SystemHandler(AndroidSystemExecutor(service)),
+            AppHandler(AndroidAppLauncher(service))
         )
     }
 }

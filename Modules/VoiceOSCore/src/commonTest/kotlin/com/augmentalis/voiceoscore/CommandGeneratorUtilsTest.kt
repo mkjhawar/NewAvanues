@@ -105,7 +105,7 @@ class CommandGeneratorUtilsTest {
     @Test
     fun fromElement_validElement_generatesCommand() {
         val element = QuantizedElement(
-            vuid = "test-vuid-123",
+            avid = "test-avid-123",
             label = "Submit",
             type = ElementType.BUTTON,
             actions = "click",
@@ -116,7 +116,7 @@ class CommandGeneratorUtilsTest {
         val command = CommandGeneratorUtils.fromElement(element, "com.test.app")
 
         assertNotNull(command)
-        assertEquals("test-vuid-123", command.elementHash)
+        assertEquals("test-avid-123", command.elementHash)
         assertEquals("click submit", command.commandText)
         assertEquals("click", command.actionType)
         assertTrue(command.confidence > 0.5)
@@ -125,7 +125,7 @@ class CommandGeneratorUtilsTest {
     @Test
     fun fromElement_blankLabel_returnsNull() {
         val element = QuantizedElement(
-            vuid = "test-vuid-123",
+            avid = "test-avid-123",
             label = "",
             type = ElementType.BUTTON,
             actions = "click",
@@ -140,7 +140,7 @@ class CommandGeneratorUtilsTest {
     @Test
     fun fromElement_unlabeledElement_returnsNull() {
         val element = QuantizedElement(
-            vuid = "test-vuid-123",
+            avid = "test-avid-123",
             label = "unlabeled",
             type = ElementType.BUTTON,
             actions = "click",
@@ -155,7 +155,7 @@ class CommandGeneratorUtilsTest {
     @Test
     fun fromElement_noActions_returnsNull() {
         val element = QuantizedElement(
-            vuid = "test-vuid-123",
+            avid = "test-avid-123",
             label = "Label",
             type = ElementType.TEXT,
             actions = "",
@@ -170,7 +170,7 @@ class CommandGeneratorUtilsTest {
     @Test
     fun fromElement_textFieldElement_usesTypeAction() {
         val element = QuantizedElement(
-            vuid = "test-vuid-123",
+            avid = "test-avid-123",
             label = "Username",
             type = ElementType.TEXT_FIELD,
             actions = "click,edit",

@@ -421,112 +421,112 @@ class AppCategoryClassifierTest {
         assertEquals(DynamicBehavior.MIXED, AppCategory.UNKNOWN.dynamicBehavior)
     }
 
-    // =========== isCategory TESTS ===========
+    // =========== isCategoryByPattern TESTS ===========
 
     @Test
-    fun `isCategory should return true for matching category`() {
-        assertTrue(AppCategoryClassifier.isCategory("com.google.android.gm", AppCategory.EMAIL))
+    fun `isCategoryByPattern should return true for matching category`() {
+        assertTrue(AppCategoryClassifier.isCategoryByPattern("com.google.android.gm", AppCategory.EMAIL))
     }
 
     @Test
-    fun `isCategory should return false for non-matching category`() {
-        assertFalse(AppCategoryClassifier.isCategory("com.google.android.gm", AppCategory.MESSAGING))
+    fun `isCategoryByPattern should return false for non-matching category`() {
+        assertFalse(AppCategoryClassifier.isCategoryByPattern("com.google.android.gm", AppCategory.MESSAGING))
     }
 
     @Test
-    fun `isCategory should return true for unknown when package is unrecognized`() {
-        assertTrue(AppCategoryClassifier.isCategory("com.random.app", AppCategory.UNKNOWN))
+    fun `isCategoryByPattern should return true for unknown when package is unrecognized`() {
+        assertTrue(AppCategoryClassifier.isCategoryByPattern("com.random.app", AppCategory.UNKNOWN))
     }
 
-    // =========== getDynamicBehavior TESTS ===========
+    // =========== getDynamicBehaviorByPattern TESTS ===========
 
     @Test
-    fun `getDynamicBehavior should return MOSTLY_DYNAMIC for gmail`() {
-        assertEquals(DynamicBehavior.MOSTLY_DYNAMIC, AppCategoryClassifier.getDynamicBehavior("com.google.android.gm"))
-    }
-
-    @Test
-    fun `getDynamicBehavior should return STATIC for settings`() {
-        assertEquals(DynamicBehavior.STATIC, AppCategoryClassifier.getDynamicBehavior("com.android.settings"))
+    fun `getDynamicBehaviorByPattern should return MOSTLY_DYNAMIC for gmail`() {
+        assertEquals(DynamicBehavior.MOSTLY_DYNAMIC, AppCategoryClassifier.getDynamicBehaviorByPattern("com.google.android.gm"))
     }
 
     @Test
-    fun `getDynamicBehavior should return MIXED for unknown apps`() {
-        assertEquals(DynamicBehavior.MIXED, AppCategoryClassifier.getDynamicBehavior("com.random.unknownapp"))
+    fun `getDynamicBehaviorByPattern should return STATIC for settings`() {
+        assertEquals(DynamicBehavior.STATIC, AppCategoryClassifier.getDynamicBehaviorByPattern("com.android.settings"))
     }
 
     @Test
-    fun `getDynamicBehavior should return MIXED for enterprise apps`() {
-        assertEquals(DynamicBehavior.MIXED, AppCategoryClassifier.getDynamicBehavior("com.realwear.hmt"))
-    }
-
-    // =========== isStaticApp TESTS ===========
-
-    @Test
-    fun `isStaticApp should return true for settings`() {
-        assertTrue(AppCategoryClassifier.isStaticApp("com.android.settings"))
+    fun `getDynamicBehaviorByPattern should return MIXED for unknown apps`() {
+        assertEquals(DynamicBehavior.MIXED, AppCategoryClassifier.getDynamicBehaviorByPattern("com.random.unknownapp"))
     }
 
     @Test
-    fun `isStaticApp should return true for system launcher`() {
-        assertTrue(AppCategoryClassifier.isStaticApp("com.google.android.apps.nexuslauncher"))
+    fun `getDynamicBehaviorByPattern should return MIXED for enterprise apps`() {
+        assertEquals(DynamicBehavior.MIXED, AppCategoryClassifier.getDynamicBehaviorByPattern("com.realwear.hmt"))
+    }
+
+    // =========== isStaticAppByPattern TESTS ===========
+
+    @Test
+    fun `isStaticAppByPattern should return true for settings`() {
+        assertTrue(AppCategoryClassifier.isStaticAppByPattern("com.android.settings"))
     }
 
     @Test
-    fun `isStaticApp should return false for gmail`() {
-        assertFalse(AppCategoryClassifier.isStaticApp("com.google.android.gm"))
+    fun `isStaticAppByPattern should return true for system launcher`() {
+        assertTrue(AppCategoryClassifier.isStaticAppByPattern("com.google.android.apps.nexuslauncher"))
     }
 
     @Test
-    fun `isStaticApp should return false for enterprise app`() {
-        assertFalse(AppCategoryClassifier.isStaticApp("com.realwear.hmt"))
+    fun `isStaticAppByPattern should return false for gmail`() {
+        assertFalse(AppCategoryClassifier.isStaticAppByPattern("com.google.android.gm"))
     }
 
     @Test
-    fun `isStaticApp should return false for unknown app`() {
-        assertFalse(AppCategoryClassifier.isStaticApp("com.random.unknownapp"))
-    }
-
-    // =========== isDynamicApp TESTS ===========
-
-    @Test
-    fun `isDynamicApp should return true for gmail`() {
-        assertTrue(AppCategoryClassifier.isDynamicApp("com.google.android.gm"))
+    fun `isStaticAppByPattern should return false for enterprise app`() {
+        assertFalse(AppCategoryClassifier.isStaticAppByPattern("com.realwear.hmt"))
     }
 
     @Test
-    fun `isDynamicApp should return true for whatsapp`() {
-        assertTrue(AppCategoryClassifier.isDynamicApp("com.whatsapp"))
+    fun `isStaticAppByPattern should return false for unknown app`() {
+        assertFalse(AppCategoryClassifier.isStaticAppByPattern("com.random.unknownapp"))
+    }
+
+    // =========== isDynamicAppByPattern TESTS ===========
+
+    @Test
+    fun `isDynamicAppByPattern should return true for gmail`() {
+        assertTrue(AppCategoryClassifier.isDynamicAppByPattern("com.google.android.gm"))
     }
 
     @Test
-    fun `isDynamicApp should return true for instagram`() {
-        assertTrue(AppCategoryClassifier.isDynamicApp("com.instagram.android"))
+    fun `isDynamicAppByPattern should return true for whatsapp`() {
+        assertTrue(AppCategoryClassifier.isDynamicAppByPattern("com.whatsapp"))
     }
 
     @Test
-    fun `isDynamicApp should return true for chrome browser`() {
-        assertTrue(AppCategoryClassifier.isDynamicApp("com.android.chrome"))
+    fun `isDynamicAppByPattern should return true for instagram`() {
+        assertTrue(AppCategoryClassifier.isDynamicAppByPattern("com.instagram.android"))
     }
 
     @Test
-    fun `isDynamicApp should return false for settings`() {
-        assertFalse(AppCategoryClassifier.isDynamicApp("com.android.settings"))
+    fun `isDynamicAppByPattern should return true for chrome browser`() {
+        assertTrue(AppCategoryClassifier.isDynamicAppByPattern("com.android.chrome"))
     }
 
     @Test
-    fun `isDynamicApp should return false for enterprise app`() {
-        assertFalse(AppCategoryClassifier.isDynamicApp("com.realwear.hmt"))
+    fun `isDynamicAppByPattern should return false for settings`() {
+        assertFalse(AppCategoryClassifier.isDynamicAppByPattern("com.android.settings"))
     }
 
     @Test
-    fun `isDynamicApp should return false for unknown app`() {
-        assertFalse(AppCategoryClassifier.isDynamicApp("com.random.unknownapp"))
+    fun `isDynamicAppByPattern should return false for enterprise app`() {
+        assertFalse(AppCategoryClassifier.isDynamicAppByPattern("com.realwear.hmt"))
     }
 
     @Test
-    fun `isDynamicApp should return false for media app`() {
-        assertFalse(AppCategoryClassifier.isDynamicApp("com.spotify.music"))
+    fun `isDynamicAppByPattern should return false for unknown app`() {
+        assertFalse(AppCategoryClassifier.isDynamicAppByPattern("com.random.unknownapp"))
+    }
+
+    @Test
+    fun `isDynamicAppByPattern should return false for media app`() {
+        assertFalse(AppCategoryClassifier.isDynamicAppByPattern("com.spotify.music"))
     }
 
     // =========== PATTERN PRIORITY TESTS ===========
