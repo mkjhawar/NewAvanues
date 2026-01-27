@@ -44,7 +44,7 @@
  * - "new tab" / "add tab" - Create new tab (if supported)
  */
 
-package com.augmentalis.avamagic.voice.handlers
+package com.augmentalis.avamagic.voice.handlers.navigation
 
 import android.util.Log
 import com.augmentalis.voiceoscore.ActionCategory

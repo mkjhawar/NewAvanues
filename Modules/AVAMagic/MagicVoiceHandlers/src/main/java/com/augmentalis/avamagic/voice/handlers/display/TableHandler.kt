@@ -14,7 +14,7 @@
  * - v1.0.0 (2026-01-27): Initial implementation with table navigation commands
  */
 
-package com.augmentalis.avamagic.voice.handlers
+package com.augmentalis.avamagic.voice.handlers.display
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Context

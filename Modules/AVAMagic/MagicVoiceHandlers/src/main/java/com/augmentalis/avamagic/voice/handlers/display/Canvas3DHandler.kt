@@ -51,7 +51,7 @@
  * - "textured" - Switch to textured render mode
  */
 
-package com.augmentalis.avamagic.voice.handlers
+package com.augmentalis.avamagic.voice.handlers.display
 
 import android.util.Log
 import com.augmentalis.voiceoscore.ActionCategory
