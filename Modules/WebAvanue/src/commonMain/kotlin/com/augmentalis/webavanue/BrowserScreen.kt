@@ -204,7 +204,7 @@ fun BrowserScreen(
     // FIX L15: Tab group state - use rememberSaveable to survive config changes
     // Note: TabGroup is a simple data class, should be serializable for rememberSaveable
     // For now, we keep empty list as groups are not persisted yet - but state survives rotation
-    var tabGroups by rememberSaveable { mutableStateOf<List<com.augmentalis.webavanue.domain.model.TabGroup>>(emptyList()) }
+    var tabGroups by rememberSaveable { mutableStateOf<List<TabGroup>>(emptyList()) }
     var showTabGroupDialog by rememberSaveable { mutableStateOf(false) }
     var showTabGroupAssignmentDialog by rememberSaveable { mutableStateOf(false) }
     var selectedTabForGroupAssignment by rememberSaveable { mutableStateOf<String?>(null) }
@@ -505,7 +505,7 @@ fun BrowserScreen(
                                 // Check WiFi-only setting
                                 if (settings?.downloadOverWiFiOnly == true) {
                                     try {
-                                        val networkChecker = com.augmentalis.webavanue.platform.NetworkChecker()
+                                        val networkChecker = NetworkChecker()
                                         val wifiMessage = networkChecker.getWiFiRequiredMessage()
 
                                         if (wifiMessage != null) {
@@ -835,7 +835,7 @@ fun BrowserScreen(
 
         // SSL Error Dialog
         sslErrorState?.let { state ->
-            com.augmentalis.webavanue.ui.screen.security.SslErrorDialog(
+            SslErrorDialog(
                 sslErrorInfo = state.sslErrorInfo,
                 onGoBack = state.onGoBack,
                 onProceedAnyway = state.onProceedAnyway,
@@ -845,7 +845,7 @@ fun BrowserScreen(
 
         // Permission Request Dialog
         permissionRequestState?.let { state ->
-            com.augmentalis.webavanue.ui.screen.security.PermissionRequestDialog(
+            PermissionRequestDialog(
                 permissionRequest = state.permissionRequest,
                 onAllow = state.onAllow,
                 onDeny = state.onDeny,
@@ -855,7 +855,7 @@ fun BrowserScreen(
 
         // JavaScript Alert Dialog
         jsAlertState?.let { state ->
-            com.augmentalis.webavanue.ui.screen.security.JavaScriptAlertDialog(
+            JavaScriptAlertDialog(
                 domain = state.domain,
                 message = state.message,
                 onDismiss = state.onDismiss
@@ -864,7 +864,7 @@ fun BrowserScreen(
 
         // JavaScript Confirm Dialog
         jsConfirmState?.let { state ->
-            com.augmentalis.webavanue.ui.screen.security.JavaScriptConfirmDialog(
+            JavaScriptConfirmDialog(
                 domain = state.domain,
                 message = state.message,
                 onConfirm = state.onConfirm,
@@ -875,7 +875,7 @@ fun BrowserScreen(
 
         // JavaScript Prompt Dialog
         jsPromptState?.let { state ->
-            com.augmentalis.webavanue.ui.screen.security.JavaScriptPromptDialog(
+            JavaScriptPromptDialog(
                 domain = state.domain,
                 message = state.message,
                 defaultValue = state.defaultValue,
@@ -887,7 +887,7 @@ fun BrowserScreen(
 
         // HTTP Authentication Dialog
         httpAuthState?.let { state ->
-            com.augmentalis.webavanue.ui.screen.security.HttpAuthenticationDialog(
+            HttpAuthenticationDialog(
                 authRequest = state.authRequest,
                 onAuthenticate = state.onAuthenticate,
                 onCancel = state.onCancel,
@@ -923,7 +923,7 @@ fun BrowserScreen(
         // PHASE 4: Download Location Dialog
         // Shows when askDownloadLocation setting is enabled
         if (showDownloadLocationDialog && pendingDownloadRequest != null && downloadViewModel != null) {
-            com.augmentalis.webavanue.ui.screen.download.AskDownloadLocationDialog(
+            AskDownloadLocationDialog(
                 filename = pendingDownloadRequest!!.filename,
                 defaultPath = settings?.downloadPath,
                 selectedPath = customDownloadPath,
@@ -938,7 +938,7 @@ fun BrowserScreen(
                     // Re-check WiFi-only setting (network may have changed while dialog was open)
                     if (settings?.downloadOverWiFiOnly == true) {
                         try {
-                            val networkChecker = com.augmentalis.webavanue.platform.NetworkChecker()
+                            val networkChecker = NetworkChecker()
                             val wifiMessage = networkChecker.getWiFiRequiredMessage()
 
                             if (wifiMessage != null) {
@@ -1043,7 +1043,7 @@ fun BrowserScreen(
         // Supports voice-based navigation: say category names to navigate
         // Interactive - clicking commands executes them
         if (showVoiceHelp && settings != null) {
-            com.augmentalis.webavanue.feature.voice.VoiceCommandsDialog(
+            VoiceCommandsDialog(
                 onDismiss = { showVoiceHelp = false },
                 onCommandExecute = { command ->
                     // Execute the command
@@ -1099,7 +1099,7 @@ fun BrowserScreen(
                             // Extract article and enter reading mode
                             scope.launch {
                                 // Execute JavaScript to extract article
-                                val extractScript = com.augmentalis.webavanue.util.ReadingModeExtractor.getExtractionScript()
+                                val extractScript = ReadingModeExtractor.getExtractionScript()
                                 webViewController.evaluateJavaScript(extractScript) { result ->
                                     // Parse JSON result and set article
                                     try {
@@ -1234,7 +1234,7 @@ fun BrowserScreen(
         TabGroupDialog(
             visible = showTabGroupDialog,
             onSave = { title, color ->
-                val newGroup = com.augmentalis.webavanue.domain.model.TabGroup(
+                val newGroup = TabGroup(
                     id = java.util.UUID.randomUUID().toString(),
                     title = title,
                     color = color,
@@ -1300,73 +1300,6 @@ fun BrowserScreen(
     }
 }
 
-/**
- * Execute a text command
- *
- * Processes voice/text commands and executes corresponding browser actions.
- *
- * @param command Text command to execute
- * @param webViewController Controller for WebView operations
- * @param tabViewModel ViewModel for tab management
- * @param settings Browser settings
- * @param onBookmarks Callback to navigate to bookmarks
- * @param onDownloads Callback to navigate to downloads
- * @param onHistory Callback to navigate to history
- * @param onSettings Callback to navigate to settings
- */
-private fun executeTextCommand(
-    command: String,
-    webViewController: WebViewController,
-    tabViewModel: TabViewModel,
-    settings: com.augmentalis.webavanue.domain.model.BrowserSettings?,
-    onBookmarks: () -> Unit,
-    onDownloads: () -> Unit,
-    onHistory: () -> Unit,
-    onSettings: () -> Unit
-) {
-    val cmd = command.trim().lowercase()
-    when {
-        cmd == "back" || cmd == "go back" -> webViewController.goBack()
-        cmd == "forward" || cmd == "go forward" -> webViewController.goForward()
-        cmd == "refresh" || cmd == "reload" -> webViewController.reload()
-        cmd == "home" || cmd == "go home" -> {
-            val homeUrl = settings?.homePage ?: "https://www.google.com"
-            tabViewModel.navigateToUrl(homeUrl)
-        }
-        cmd == "bookmarks" || cmd == "favorites" -> onBookmarks()
-        cmd == "downloads" -> onDownloads()
-        cmd == "history" -> onHistory()
-        cmd == "settings" -> onSettings()
-        cmd.startsWith("go to ") || cmd.startsWith("open ") -> {
-            val url = cmd.removePrefix("go to ").removePrefix("open ").trim()
-            if (url.isNotBlank()) {
-                val formattedUrl = if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                    "https://$url"
-                } else {
-                    url
-                }
-                tabViewModel.navigateToUrl(formattedUrl)
-            }
-        }
-        cmd.startsWith("search ") -> {
-            val query = cmd.removePrefix("search ").trim()
-            if (query.isNotBlank()) {
-                val searchUrl = "https://www.google.com/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}"
-                tabViewModel.navigateToUrl(searchUrl)
-            }
-        }
-        cmd == "scroll up" -> webViewController.scrollUp()
-        cmd == "scroll down" -> webViewController.scrollDown()
-        cmd == "scroll top" || cmd == "top" -> webViewController.scrollToTop()
-        cmd == "scroll bottom" || cmd == "bottom" -> webViewController.scrollToBottom()
-        cmd == "zoom in" -> webViewController.zoomIn()
-        cmd == "zoom out" -> webViewController.zoomOut()
-        cmd == "new tab" -> tabViewModel.createTab()
-        cmd == "close tab" -> {
-            // Close active tab if exists
-        }
-    }
-}
-
+// Note: executeTextCommand is defined in BrowserTextCommands.kt
 // Note: AddPageDialog, WebViewPlaceholder, and EmptyBrowserState are defined in BrowserScreenDialogs.kt
 

@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class DownloadViewModel(
     private val repository: BrowserRepository,
-    private val downloadQueue: com.augmentalis.webavanue.feature.download.DownloadQueue? = null
+    private val downloadQueue: DownloadQueue? = null
 ) {
     // Coroutine scope
     private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -217,7 +217,7 @@ class DownloadViewModel(
 
                 // Enqueue actual download to platform download queue
                 downloadQueue?.let { queue ->
-                    val request = com.augmentalis.webavanue.feature.download.DownloadRequest(
+                    val request = DownloadRequest(
                         downloadId = download.id, // ✅ important
                         url = url,
                         filename = sanitizedFilename,

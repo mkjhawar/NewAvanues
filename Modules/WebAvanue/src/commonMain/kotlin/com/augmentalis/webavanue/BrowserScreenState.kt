@@ -47,7 +47,7 @@ class BrowserScreenState(
     var showAddToFavoritesDialog: MutableState<Boolean>,
 
     // Tab group state
-    var tabGroups: MutableState<List<com.augmentalis.webavanue.domain.model.TabGroup>>,
+    var tabGroups: MutableState<List<TabGroup>>,
     var showTabGroupDialog: MutableState<Boolean>,
     var showTabGroupAssignmentDialog: MutableState<Boolean>,
     var selectedTabForGroupAssignment: MutableState<String?>,
@@ -88,7 +88,7 @@ fun rememberBrowserScreenState(): BrowserScreenState {
         authUrl = rememberSaveable { mutableStateOf("") },
         authRealm = rememberSaveable { mutableStateOf<String?>(null) },
         showAddToFavoritesDialog = rememberSaveable { mutableStateOf(false) },
-        tabGroups = rememberSaveable { mutableStateOf<List<com.augmentalis.webavanue.domain.model.TabGroup>>(emptyList()) },
+        tabGroups = rememberSaveable { mutableStateOf<List<TabGroup>>(emptyList()) },
         showTabGroupDialog = rememberSaveable { mutableStateOf(false) },
         showTabGroupAssignmentDialog = rememberSaveable { mutableStateOf(false) },
         selectedTabForGroupAssignment = rememberSaveable { mutableStateOf<String?>(null) },

@@ -543,7 +543,7 @@ object OceanComponents {
     }
 
     /**
-     * Ocean-styled Icon component
+     * Ocean-styled Icon component (with tint color)
      */
     @Composable
     fun Icon(
@@ -552,6 +552,33 @@ object OceanComponents {
         modifier: Modifier = Modifier,
         tint: Color = OceanTheme.textPrimary
     ) {
+        androidx.compose.material3.Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            tint = tint
+        )
+    }
+
+    /**
+     * Ocean-styled Icon component (with variant)
+     */
+    @Composable
+    fun Icon(
+        imageVector: androidx.compose.ui.graphics.vector.ImageVector,
+        contentDescription: String?,
+        variant: IconVariant,
+        modifier: Modifier = Modifier
+    ) {
+        val tint = when (variant) {
+            IconVariant.Primary -> OceanDesignTokens.Icon.primary
+            IconVariant.Secondary -> OceanDesignTokens.Icon.secondary
+            IconVariant.Disabled -> OceanDesignTokens.Icon.disabled
+            IconVariant.Success -> OceanDesignTokens.Icon.success
+            IconVariant.Warning -> OceanDesignTokens.Icon.warning
+            IconVariant.Error -> OceanDesignTokens.Icon.error
+            IconVariant.OnPrimary -> OceanDesignTokens.Icon.onPrimary
+        }
         androidx.compose.material3.Icon(
             imageVector = imageVector,
             contentDescription = contentDescription,
@@ -579,7 +606,7 @@ object OceanComponents {
     }
 
     /**
-     * Ocean-styled Surface component
+     * Ocean-styled Surface component (with color)
      */
     @Composable
     fun Surface(
@@ -605,5 +632,61 @@ object OceanComponents {
                 content = content
             )
         }
+    }
+
+    /**
+     * Ocean-styled Surface component (with variant)
+     */
+    @Composable
+    fun Surface(
+        modifier: Modifier = Modifier,
+        variant: SurfaceVariant,
+        shape: Shape? = RoundedCornerShape(OceanTokens.CornerRadius),
+        onClick: (() -> Unit)? = null,
+        content: @Composable () -> Unit
+    ) {
+        val color = when (variant) {
+            SurfaceVariant.Default -> OceanDesignTokens.Surface.default
+            SurfaceVariant.Elevated -> OceanDesignTokens.Surface.elevated
+            SurfaceVariant.Input -> OceanDesignTokens.Surface.input
+            SurfaceVariant.Glass -> OceanDesignTokens.Surface.elevated // Use elevated for glass fallback
+        }
+        val actualShape = shape ?: RoundedCornerShape(OceanTokens.CornerRadius)
+        if (onClick != null) {
+            androidx.compose.material3.Surface(
+                onClick = onClick,
+                modifier = modifier,
+                shape = actualShape,
+                color = color,
+                content = content
+            )
+        } else {
+            androidx.compose.material3.Surface(
+                modifier = modifier,
+                shape = actualShape,
+                color = color,
+                content = content
+            )
+        }
+    }
+
+    /**
+     * Ocean-styled FloatingActionButton component
+     */
+    @Composable
+    fun FloatingActionButton(
+        onClick: () -> Unit,
+        modifier: Modifier = Modifier,
+        containerColor: Color? = null,
+        contentColor: Color? = null,
+        content: @Composable () -> Unit
+    ) {
+        androidx.compose.material3.FloatingActionButton(
+            onClick = onClick,
+            modifier = modifier,
+            containerColor = containerColor ?: OceanTheme.primary,
+            contentColor = contentColor ?: OceanTheme.textOnPrimary,
+            content = content
+        )
     }
 }

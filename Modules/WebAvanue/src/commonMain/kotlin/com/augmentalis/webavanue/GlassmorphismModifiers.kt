@@ -8,9 +8,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-// Import the expect/actual glassmorphism from BlurEffect.kt with an alias
-import com.augmentalis.webavanue.glassmorphism as platformGlassmorphism
-import com.augmentalis.webavanue.supportsBlur
 
 /**
  * Glassmorphism utility modifiers for WebAvanue browser
@@ -31,7 +28,7 @@ import com.augmentalis.webavanue.supportsBlur
  * @param backgroundColor Background/tint color
  */
 @Composable
-fun Modifier.glassmorphism(
+fun Modifier.glassEffect(
     cornerRadius: Dp = 12.dp,
     borderColor: Color = Color(0x262563EB),  // Ocean blue 15% opacity
     borderWidth: Dp = 1.dp,
@@ -41,7 +38,7 @@ fun Modifier.glassmorphism(
     // API 31+: Use real blur effect
     this
         .clip(RoundedCornerShape(cornerRadius))
-        .platformGlassmorphism(
+        .glassmorphism(
             blurRadius = blurRadius,
             backgroundColor = backgroundColor,
             borderColor = borderColor,
@@ -64,7 +61,7 @@ fun Modifier.glassmorphism(
 @Composable
 fun Modifier.glassTab(
     isActive: Boolean = false
-): Modifier = this.glassmorphism(
+): Modifier = this.glassEffect(
     cornerRadius = 8.dp,
     borderColor = if (isActive) {
         Color(0x332563EB)  // Ocean blue 20% opacity for active
@@ -86,7 +83,7 @@ fun Modifier.glassTab(
 @Composable
 fun Modifier.glassBar(
     cornerRadius: Dp = 0.dp  // Typically no rounded corners for full-width bars
-): Modifier = this.glassmorphism(
+): Modifier = this.glassEffect(
     cornerRadius = cornerRadius,
     borderColor = Color(0x1A2563EB),  // Ocean blue 10% opacity
     borderWidth = 1.dp,
@@ -100,7 +97,7 @@ fun Modifier.glassBar(
 @Composable
 fun Modifier.glassCard(
     cornerRadius: Dp = 16.dp
-): Modifier = this.glassmorphism(
+): Modifier = this.glassEffect(
     cornerRadius = cornerRadius,
     borderColor = Color(0x262563EB),  // Ocean blue 15% opacity
     borderWidth = 1.5.dp,
@@ -114,7 +111,7 @@ fun Modifier.glassCard(
 @Composable
 fun Modifier.glassButton(
     isActive: Boolean = false
-): Modifier = this.glassmorphism(
+): Modifier = this.glassEffect(
     cornerRadius = 8.dp,
     borderColor = if (isActive) {
         Color(0x402563EB)  // Ocean blue 25% opacity for active/pressed

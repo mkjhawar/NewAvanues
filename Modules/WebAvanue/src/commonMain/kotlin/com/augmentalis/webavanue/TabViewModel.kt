@@ -935,7 +935,7 @@ class TabViewModel(
      *
      * @param article Extracted article content
      */
-    fun setReadingModeArticle(article: com.augmentalis.webavanue.util.ReadingModeArticle?) {
+    fun setReadingModeArticle(article: ReadingModeArticle?) {
         viewModelScope.launch {
             stateMutex.withLock {
                 _activeTab.value?.let { state ->
@@ -1133,14 +1133,14 @@ class TabViewModel(
                 }
 
                 // Save through repository
-                val session = com.augmentalis.webavanue.domain.model.Session.create(
+                val session = Session.create(
                     activeTabId = activeTabId,
                     tabCount = tabsToSave.size,
                     isCrashRecovery = false
                 )
 
                 val sessionTabs = tabsToSave.map { tab ->
-                    com.augmentalis.webavanue.domain.model.SessionTab.fromTab(
+                    SessionTab.fromTab(
                         sessionId = session.id,
                         tab = tab,
                         isActive = tab.id == activeTabId

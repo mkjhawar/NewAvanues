@@ -24,6 +24,7 @@ import android.webkit.WebSettings
 import android.webkit.WebStorage
 import android.webkit.WebViewClient
 import android.webkit.WebView as AndroidWebView
+import android.webkit.PermissionRequest as WebPermissionRequest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
@@ -115,7 +116,7 @@ actual fun WebViewContainer(
     sessionData: String?,
     onSessionDataChange: (String?) -> Unit,
     securityViewModel: SecurityViewModel?,
-    onDownloadStart: ((DownloadRequest) -> Unit)?,
+    onDownloadStart: ((WebViewDownloadInfo) -> Unit)?,
     initialScale: Float,
     settings: BrowserSettings?,
     isDesktopMode: Boolean,
@@ -335,7 +336,7 @@ actual fun WebViewContainer(
                             }
 
                             override fun shouldOverrideUrlLoading(
-                                view: WebView?,
+                                view: AndroidWebView?,
                                 request: WebResourceRequest?
                             ): Boolean {
                                 val newUrl = request?.url?.toString() ?: return false
@@ -352,7 +353,7 @@ actual fun WebViewContainer(
                             // PHASE 1: SSL Error Handling (CWE-295)
                             // PHASE 3: Integrated with SecurityViewModel and SslErrorDialog
                             override fun onReceivedSslError(
-                                view: WebView?,
+                                view: AndroidWebView?,
                                 handler: SslErrorHandler?,
                                 error: SslError?
                             ) {
@@ -393,7 +394,7 @@ actual fun WebViewContainer(
 
                             // HTTP Authentication (Basic/Digest)
                             override fun onReceivedHttpAuthRequest(
-                                view: WebView?,
+                                view: AndroidWebView?,
                                 handler: android.webkit.HttpAuthHandler?,
                                 host: String?,
                                 realm: String?
@@ -437,7 +438,7 @@ actual fun WebViewContainer(
 
                             // FIX P0-P3: Handle network errors (DNS, connection, timeout)
                             override fun onReceivedError(
-                                view: WebView?,
+                                view: AndroidWebView?,
                                 request: android.webkit.WebResourceRequest?,
                                 error: android.webkit.WebResourceError?
                             ) {
@@ -484,7 +485,7 @@ actual fun WebViewContainer(
 
                             // FIX P0-P4: Handle HTTP errors (4xx, 5xx responses)
                             override fun onReceivedHttpError(
-                                view: WebView?,
+                                view: AndroidWebView?,
                                 request: android.webkit.WebResourceRequest?,
                                 errorResponse: android.webkit.WebResourceResponse?
                             ) {
@@ -510,7 +511,7 @@ actual fun WebViewContainer(
 
                             // FIX P5: Intercept requests for ad/tracker blocking and traffic monitoring
                             override fun shouldInterceptRequest(
-                                view: WebView?,
+                                view: AndroidWebView?,
                                 request: WebResourceRequest?
                             ): WebResourceResponse? {
                                 val url = request?.url?.toString() ?: return null
@@ -567,7 +568,7 @@ actual fun WebViewContainer(
                             // PHASE 3: Integrated with SecurityViewModel and JavaScriptAlertDialog
 
                             override fun onJsAlert(
-                                view: WebView?,
+                                view: AndroidWebView?,
                                 url: String?,
                                 message: String?,
                                 result: JsResult?
@@ -605,7 +606,7 @@ actual fun WebViewContainer(
                             }
 
                             override fun onJsConfirm(
-                                view: WebView?,
+                                view: AndroidWebView?,
                                 url: String?,
                                 message: String?,
                                 result: JsResult?
@@ -647,7 +648,7 @@ actual fun WebViewContainer(
                             }
 
                             override fun onJsPrompt(
-                                view: WebView?,
+                                view: AndroidWebView?,
                                 url: String?,
                                 message: String?,
                                 defaultValue: String?,
@@ -693,7 +694,7 @@ actual fun WebViewContainer(
 
                             // PHASE 1: Permission Request Handling (CWE-276)
                             // PHASE 3: Integrated with SecurityViewModel and PermissionRequestDialog
-                            override fun onPermissionRequest(request: PermissionRequest?) {
+                            override fun onPermissionRequest(request: WebPermissionRequest?) {
                                 if (request == null) return
 
                                 // Extract domain from request origin
@@ -740,7 +741,7 @@ actual fun WebViewContainer(
 
                             // File upload support - onShowFileChooser for <input type="file">
                             override fun onShowFileChooser(
-                                webView: WebView?,
+                                webView: AndroidWebView?,
                                 newFilePathCallback: ValueCallback<Array<Uri>>?,
                                 fileChooserParams: FileChooserParams?
                             ): Boolean {
@@ -779,9 +780,9 @@ actual fun WebViewContainer(
                             val filename = android.webkit.URLUtil.guessFileName(downloadUrl, contentDisposition, mimeType)
                             println("   Filename: $filename")
 
-                            // Create DownloadRequest and call callback if provided
+                            // Create WebViewDownloadInfo and call callback if provided
                             if (onDownloadStart != null) {
-                                val downloadRequest = DownloadRequest(
+                                val downloadInfo = WebViewDownloadInfo(
                                     url = downloadUrl,
                                     filename = filename,
                                     mimeType = mimeType,
@@ -789,7 +790,7 @@ actual fun WebViewContainer(
                                     userAgent = userAgent,
                                     contentDisposition = contentDisposition
                                 )
-                                onDownloadStart(downloadRequest)
+                                onDownloadStart(downloadInfo)
                                 println("   ✅ Download request sent to ViewModel")
                             } else {
                                 // Fallback: Direct download if no callback
@@ -910,12 +911,12 @@ actual fun WebViewContainer(
  * WebViewController - Android implementation
  */
 actual class WebViewController {
-    private var webView: WebView? = null
+    private var webView: AndroidWebView? = null
 
     /**
      * Set WebView instance (called from WebViewContainer)
      */
-    fun setWebView(webView: WebView) {
+    fun setWebView(webView: AndroidWebView) {
         this.webView = webView
     }
 
@@ -1283,7 +1284,7 @@ actual class WebViewController {
 
     // ========== Find in Page ==========
 
-    private var findListener: WebView.FindListener? = null
+    private var findListener: AndroidWebView.FindListener? = null
     private var currentFindQuery: String = ""
 
     /**
@@ -1312,7 +1313,7 @@ actual class WebViewController {
             }
 
             // Set up find listener to get results
-            findListener = WebView.FindListener { activeMatchOrdinal, numberOfMatches, isDoneCounting ->
+            findListener = AndroidWebView.FindListener { activeMatchOrdinal, numberOfMatches, isDoneCounting ->
                 if (isDoneCounting) {
                     // Update results (WebView uses 0-based indexing)
                     onResultsFound(activeMatchOrdinal, numberOfMatches)
