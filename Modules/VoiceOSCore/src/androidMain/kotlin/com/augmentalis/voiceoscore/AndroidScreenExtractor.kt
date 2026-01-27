@@ -74,6 +74,7 @@ class AndroidScreenExtractor {
      * @param listIndex Current list index (-1 if not in list)
      * @param isInDynamicContainer Whether we're inside a dynamic container
      * @param containerType Type of container we're in
+     * @param containerResourceId Resource ID of parent scrollable container (NAV-500 Fix #2)
      */
     private fun traverseNode(
         node: AccessibilityNodeInfo,
@@ -81,7 +82,8 @@ class AndroidScreenExtractor {
         depth: Int,
         listIndex: Int,
         isInDynamicContainer: Boolean,
-        containerType: String
+        containerType: String,
+        containerResourceId: String = ""
     ) {
         // Depth limit to prevent stack overflow
         if (depth > MAX_DEPTH) {
@@ -99,7 +101,7 @@ class AndroidScreenExtractor {
         node.getBoundsInScreen(rect)
         if (rect.width() < MIN_ELEMENT_SIZE || rect.height() < MIN_ELEMENT_SIZE) {
             // Still traverse children - parent might be small but children visible
-            traverseChildren(node, elements, depth, listIndex, isInDynamicContainer, containerType)
+            traverseChildren(node, elements, depth, listIndex, isInDynamicContainer, containerType, containerResourceId)
             return
         }
 
@@ -109,12 +111,21 @@ class AndroidScreenExtractor {
         val effectiveInDynamic = isInDynamicContainer || nodeIsDynamicContainer
         val effectiveContainerType = if (nodeIsDynamicContainer) className else containerType
 
+        // NAV-500 Fix #2: Track container resource ID for scroll offset tracking
+        val nodeResourceId = node.viewIdResourceName ?: ""
+        val effectiveContainerResourceId = if (nodeIsDynamicContainer && nodeResourceId.isNotBlank()) {
+            nodeResourceId  // Use this container's ID
+        } else {
+            containerResourceId  // Inherit parent's container ID
+        }
+
         // Convert to ElementInfo
         val elementInfo = AccessibilityNodeAdapter.toElementInfo(
             node = node,
             listIndex = listIndex,
             isInDynamicContainer = effectiveInDynamic,
-            containerType = effectiveContainerType
+            containerType = effectiveContainerType,
+            containerResourceId = effectiveContainerResourceId
         )
 
         // Add to list if it has useful content for voice commands
@@ -123,7 +134,7 @@ class AndroidScreenExtractor {
         }
 
         // Traverse children
-        traverseChildren(node, elements, depth, listIndex, effectiveInDynamic, effectiveContainerType)
+        traverseChildren(node, elements, depth, listIndex, effectiveInDynamic, effectiveContainerType, effectiveContainerResourceId)
     }
 
     /**
@@ -131,6 +142,8 @@ class AndroidScreenExtractor {
      *
      * BUG FIX: List indices are now only assigned to direct children of dynamic
      * containers, not nested elements. Nested children inherit parent's index.
+     *
+     * NAV-500 Fix #2: Added containerResourceId for scroll offset tracking.
      */
     private fun traverseChildren(
         node: AccessibilityNodeInfo,
@@ -138,7 +151,8 @@ class AndroidScreenExtractor {
         depth: Int,
         currentListIndex: Int,
         isInDynamicContainer: Boolean,
-        containerType: String
+        containerType: String,
+        containerResourceId: String = ""
     ) {
         val childCount = node.childCount
 
@@ -167,13 +181,21 @@ class AndroidScreenExtractor {
                         else -> -1
                     }
 
+                    // NAV-500 Fix #2: Pass container resource ID for scroll tracking
+                    val childContainerResourceId = if (isThisNodeDynamicContainer) {
+                        node.viewIdResourceName ?: containerResourceId
+                    } else {
+                        containerResourceId
+                    }
+
                     traverseNode(
                         node = child,
                         elements = elements,
                         depth = depth + 1,
                         listIndex = childListIndex,
                         isInDynamicContainer = isInDynamicContainer || isThisNodeDynamicContainer,
-                        containerType = if (isThisNodeDynamicContainer) nodeClassName else containerType
+                        containerType = if (isThisNodeDynamicContainer) nodeClassName else containerType,
+                        containerResourceId = childContainerResourceId
                     )
                 } finally {
                     // Recycle child node to prevent memory leaks

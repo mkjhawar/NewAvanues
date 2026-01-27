@@ -93,7 +93,10 @@ object CommandGenerator {
                 "persistenceRule" to decision.ruleApplied.toString(),
                 "persistenceReason" to decision.reason,
                 "listIndex" to element.listIndex.toString(),
-                "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}"
+                "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}",
+                // NAV-500 Fix #2: Scroll tracking metadata for BoundsResolver
+                "containerId" to element.containerResourceId,
+                "scrollOffset" to "${element.scrollOffsetX},${element.scrollOffsetY}"
             )
         )
 
@@ -158,7 +161,10 @@ object CommandGenerator {
                 "label" to label,
                 "isDynamic" to isDynamic.toString(),
                 "listIndex" to element.listIndex.toString(),
-                "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}"
+                "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}",
+                // NAV-500 Fix #2: Scroll tracking metadata for BoundsResolver
+                "containerId" to element.containerResourceId,
+                "scrollOffset" to "${element.scrollOffsetX},${element.scrollOffsetY}"
             )
         )
 
@@ -239,7 +245,10 @@ object CommandGenerator {
                     "label" to label,
                     "contentDescription" to element.contentDescription,
                     "resourceId" to element.resourceId,
-                    "className" to element.className
+                    "className" to element.className,
+                    // NAV-500 Fix #2: Scroll tracking metadata
+                    "containerId" to element.containerResourceId,
+                    "scrollOffset" to "${element.scrollOffsetX},${element.scrollOffsetY}"
                 )
             )
         }
@@ -340,7 +349,10 @@ object CommandGenerator {
                     "label" to label,
                     "contentDescription" to element.contentDescription,
                     "resourceId" to element.resourceId,
-                    "className" to element.className
+                    "className" to element.className,
+                    // NAV-500 Fix #2: Scroll tracking metadata
+                    "containerId" to element.containerResourceId,
+                    "scrollOffset" to "${element.scrollOffsetX},${element.scrollOffsetY}"
                 )
             )
         }
@@ -388,7 +400,10 @@ object CommandGenerator {
                     "isLabelCommand" to "true",
                     "listIndex" to element.listIndex.toString(),
                     "originalLabel" to label,
-                    "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}"
+                    "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}",
+                    // NAV-500 Fix #2: Scroll tracking metadata
+                    "containerId" to element.containerResourceId,
+                    "scrollOffset" to "${element.scrollOffsetX},${element.scrollOffsetY}"
                 )
             )
         }

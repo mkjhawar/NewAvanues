@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 /**
  * VoiceOS Accessibility Service - Entry point for accessibility events on Android.
@@ -55,6 +56,11 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
     // Service state
     private var isServiceReady = false
 
+    // NAV-500 Fix #1: Event debouncing to prevent excessive processing
+    private var lastEventProcessTime = 0L
+    private var pendingScreenChangeJob: Job? = null
+    private var currentPackageName: String? = null
+
     // =========================================================================
     // Abstract methods - to be implemented by app-level service
     // =========================================================================
@@ -76,6 +82,13 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
      * App-level service can update UI, speech engine, etc.
      */
     protected open fun onCommandsUpdated(commands: List<QuantizedCommand>) {}
+
+    /**
+     * Get the BoundsResolver instance for scroll offset tracking.
+     * App-level service should provide this for accurate click coordinates.
+     * NAV-500 Fix #2: Required for scroll offset tracking.
+     */
+    protected open fun getBoundsResolver(): BoundsResolver? = null
 
     /**
      * Called when a command is executed.
@@ -131,13 +144,101 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
         if (!isServiceReady) return
 
         when (safeEvent.eventType) {
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED,
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                // Window change = new screen, process immediately
+                handleScreenChangeDebounced(safeEvent, forceImmediate = true)
+            }
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
-                handleScreenChange(safeEvent)
+                // NAV-500 Fix #1: Debounce content changes to prevent excessive processing
+                // on rapidly updating screens like Device Info app
+                handleScreenChangeDebounced(safeEvent, forceImmediate = false)
+            }
+            AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
+                // NAV-500 Fix #2: Track scroll events for accurate click coordinates
+                handleScrollEvent(safeEvent)
             }
             AccessibilityEvent.TYPE_VIEW_CLICKED -> {
-                // Optionally refresh after clicks for dynamic content
-                handleScreenChange(safeEvent)
+                // Refresh after clicks for dynamic content
+                handleScreenChangeDebounced(safeEvent, forceImmediate = false)
+            }
+        }
+    }
+
+    /**
+     * NAV-500 Fix #1: Debounced screen change handler.
+     *
+     * For rapidly changing screens (like Device Info app), this prevents
+     * excessive processing by debouncing content change events.
+     *
+     * @param event The accessibility event
+     * @param forceImmediate If true, bypasses debouncing (for window state changes)
+     */
+    private fun handleScreenChangeDebounced(event: AccessibilityEvent, forceImmediate: Boolean) {
+        val now = System.currentTimeMillis()
+        val debounceMs = DeviceCapabilityManager.getContentDebounceMs()
+
+        // Check for package change - notify BoundsResolver to clear stale scroll offsets
+        val packageName = event.packageName?.toString()
+        if (packageName != null && packageName != currentPackageName) {
+            currentPackageName = packageName
+            getBoundsResolver()?.onPackageChanged(packageName)
+            // Package change = always process immediately
+            handleScreenChange(event)
+            lastEventProcessTime = now
+            return
+        }
+
+        // For window state changes, process immediately
+        if (forceImmediate) {
+            pendingScreenChangeJob?.cancel()
+            handleScreenChange(event)
+            lastEventProcessTime = now
+            return
+        }
+
+        // Debounce: skip if too recent
+        if (now - lastEventProcessTime < debounceMs) {
+            // Cancel any pending job and schedule a new one
+            pendingScreenChangeJob?.cancel()
+            pendingScreenChangeJob = serviceScope.launch {
+                kotlinx.coroutines.delay(debounceMs)
+                handleScreenChange(event)
+                lastEventProcessTime = System.currentTimeMillis()
+            }
+            return
+        }
+
+        // Process immediately and update timestamp
+        pendingScreenChangeJob?.cancel()
+        handleScreenChange(event)
+        lastEventProcessTime = now
+    }
+
+    /**
+     * NAV-500 Fix #2: Handle scroll events to track scroll offsets.
+     *
+     * When a scrollable container scrolls, we update BoundsResolver with
+     * the new scroll position so click coordinates can be adjusted.
+     */
+    private fun handleScrollEvent(event: AccessibilityEvent) {
+        val boundsResolver = getBoundsResolver() ?: return
+
+        // Extract scroll information from the event
+        val source = event.source ?: return
+        try {
+            val resourceId = source.viewIdResourceName ?: ""
+            val scrollX = event.scrollX
+            val scrollY = event.scrollY
+
+            // Only update if we have valid scroll position
+            if (scrollX >= 0 || scrollY >= 0) {
+                boundsResolver.updateScrollOffset(resourceId, scrollX, scrollY)
+                Log.v(TAG, "Scroll event: $resourceId -> ($scrollX, $scrollY)")
+            }
+        } finally {
+            @Suppress("DEPRECATION")
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                source.recycle()
             }
         }
     }
@@ -214,9 +315,11 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
     private fun configureServiceInfo() {
         serviceInfo = serviceInfo?.apply {
             // Monitor all event types we care about
+            // NAV-500 Fix #2: Added TYPE_VIEW_SCROLLED for scroll tracking
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
                     AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
-                    AccessibilityEvent.TYPE_VIEW_CLICKED
+                    AccessibilityEvent.TYPE_VIEW_CLICKED or
+                    AccessibilityEvent.TYPE_VIEW_SCROLLED
 
             // Get all windows for multi-window support
             flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
@@ -229,11 +332,12 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
             // Feedback type
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
 
-            // Reasonable notification timeout
-            notificationTimeout = 100
+            // NAV-500 Fix #1: Increase notification timeout based on device speed
+            // to reduce event cascade on rapidly changing screens
+            notificationTimeout = DeviceCapabilityManager.getContentDebounceMs()
         }
 
-        Log.d(TAG, "Service info configured")
+        Log.d(TAG, "Service info configured with debounce: ${DeviceCapabilityManager.getContentDebounceMs()}ms")
     }
 
     // =========================================================================
@@ -249,6 +353,39 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
      * Get the screen extractor for manual extraction.
      */
     fun getScreenExtractor(): AndroidScreenExtractor = screenExtractor
+
+    // =========================================================================
+    // Developer settings API
+    // =========================================================================
+
+    /**
+     * Set a custom debounce value for accessibility events.
+     * NAV-500 Fix #1: Developer setting for tuning event processing rate.
+     *
+     * @param debounceMs Custom debounce in milliseconds (50-1000ms recommended)
+     *                   Pass null to reset to auto-detected device-appropriate value
+     */
+    fun setDebounceMs(debounceMs: Long?) {
+        DeviceCapabilityManager.setUserDebounceMs(debounceMs)
+        Log.d(TAG, "Debounce set to: ${debounceMs ?: "auto (${DeviceCapabilityManager.getContentDebounceMs()}ms)"}")
+
+        // Update notification timeout if debounce changed
+        serviceInfo = serviceInfo?.apply {
+            notificationTimeout = DeviceCapabilityManager.getContentDebounceMs()
+        }
+    }
+
+    /**
+     * Get current debounce value in milliseconds.
+     *
+     * @return Current debounce value (user override or auto-detected)
+     */
+    fun getDebounceMs(): Long = DeviceCapabilityManager.getContentDebounceMs()
+
+    /**
+     * Get the current device speed classification.
+     */
+    fun getDeviceSpeed(): DeviceCapabilityManager.DeviceSpeed = DeviceCapabilityManager.getDeviceSpeed()
 
     /**
      * Force a screen refresh.

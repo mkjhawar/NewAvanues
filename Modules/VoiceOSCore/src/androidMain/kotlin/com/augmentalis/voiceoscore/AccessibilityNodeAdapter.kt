@@ -42,13 +42,15 @@ object AccessibilityNodeAdapter {
      * @param listIndex Position in list (-1 if not in list)
      * @param isInDynamicContainer Whether this node is inside a dynamic container
      * @param containerType The type of container if in one
+     * @param containerResourceId Resource ID of parent scrollable container (NAV-500 Fix #2)
      * @return ElementInfo representation of the node
      */
     fun toElementInfo(
         node: AccessibilityNodeInfo,
         listIndex: Int = -1,
         isInDynamicContainer: Boolean = false,
-        containerType: String = ""
+        containerType: String = "",
+        containerResourceId: String = ""
     ): ElementInfo {
         val rect = Rect()
         node.getBoundsInScreen(rect)
@@ -84,6 +86,8 @@ object AccessibilityNodeAdapter {
             isInDynamicContainer = isInDynamicContainer,
             containerType = containerType,
             listIndex = listIndex,
+            // NAV-500 Fix #2: Container resource ID for scroll tracking
+            containerResourceId = containerResourceId,
             // Compose semantics (if available via extras)
             semanticsRole = extractSemanticsRole(node),
             stateDescription = node.stateDescription?.toString() ?: "",

@@ -72,7 +72,11 @@ data class ElementInfo(
     // Dynamic content detection (for static/dynamic UI separation)
     val isInDynamicContainer: Boolean = false, // True if inside RecyclerView/ListView
     val containerType: String = "",           // Container class (RecyclerView, ListView, etc.)
-    val listIndex: Int = -1                   // Position in list (-1 if not in list)
+    val listIndex: Int = -1,                  // Position in list (-1 if not in list)
+    // NAV-500 Fix #2: Scroll tracking for accurate click coordinates
+    val containerResourceId: String = "",     // Resource ID of parent scrollable container
+    val scrollOffsetX: Int = 0,               // Scroll offset X at time of extraction
+    val scrollOffsetY: Int = 0                // Scroll offset Y at time of extraction
 ) {
     /**
      * Legacy alias for avid (deprecated, use avid directly).
