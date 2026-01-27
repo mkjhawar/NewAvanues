@@ -83,9 +83,9 @@ dependencies {
     
     // VOS4 Dependencies - Direct integration with existing systems
     implementation(project(":Modules:DeviceManager"))       // For IMU integration
-    implementation(project(":Modules:AVID"))                                  // For unique identifiers
-    // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight       // For data persistence
-    // implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))  // DISABLED: Migrated to KMP Localization
+    implementation(project(":Modules:AVID"))                // For unique identifiers
+    implementation(project(":Modules:Localization"))        // KMP Localization module
+    // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight
     // implementation(project(":apps:SpeechRecognition"))        // For voice command data - TEMP: Has compilation errors
     // implementation(project(":Modules:VoiceOS:VoiceOSCore")) // VoiceOSCore is now application - cannot depend on it
     // implementation(project(":apps:VoiceUI"))                  // For HUD rendering - TEMP: Has compilation errors
