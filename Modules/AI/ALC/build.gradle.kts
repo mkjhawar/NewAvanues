@@ -10,12 +10,17 @@ group = "com.augmentalis.alc"
 version = "2.0.0"
 
 // Desktop CLI executable configuration (via jvm target)
-tasks.register<JavaExec>("runCli") {
-    group = "application"
-    description = "Run the AVA Model Manager CLI"
-    mainClass.set("com.augmentalis.alc.cli.ALCModelToolKt")
-    classpath = kotlin.targets.getByName<org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget>("desktop")
-        .compilations.getByName("main").runtimeDependencyFiles
+// Only register when native targets are enabled (desktop target exists)
+afterEvaluate {
+    if (kotlin.targets.findByName("desktop") != null) {
+        tasks.register<JavaExec>("runCli") {
+            group = "application"
+            description = "Run the AVA Model Manager CLI"
+            mainClass.set("com.augmentalis.alc.cli.ALCModelToolKt")
+            classpath = kotlin.targets.getByName<org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget>("desktop")
+                .compilations.getByName("main").runtimeDependencyFiles
+        }
+    }
 }
 
 kotlin {

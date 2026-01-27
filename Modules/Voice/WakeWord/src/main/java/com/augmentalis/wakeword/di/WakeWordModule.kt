@@ -6,8 +6,8 @@
 package com.augmentalis.wakeword.di
 
 import android.content.Context
-import com.augmentalis.llm.security.ApiKeyManager
-import com.augmentalis.wakeword.detector.WakeWordDetector
+import com.augmentalis.wakeword.IWakeWordDetector
+import com.augmentalis.wakeword.detector.PhonemeWakeWordDetector
 import com.augmentalis.wakeword.settings.WakeWordSettingsRepository
 import dagger.Module
 import dagger.Provides
@@ -20,7 +20,7 @@ import javax.inject.Singleton
  * Hilt Dependency Injection Module for Wake Word Feature
  *
  * Provides:
- * - WakeWordDetector (singleton)
+ * - IWakeWordDetector (PhonemeWakeWordDetector implementation)
  * - WakeWordSettingsRepository (singleton)
  *
  * @author Manoj Jhawar
@@ -32,10 +32,9 @@ object WakeWordModule {
     @Provides
     @Singleton
     fun provideWakeWordDetector(
-        @ApplicationContext context: Context,
-        apiKeyManager: ApiKeyManager
-    ): WakeWordDetector {
-        return WakeWordDetector(context, apiKeyManager)
+        @ApplicationContext context: Context
+    ): IWakeWordDetector {
+        return PhonemeWakeWordDetector(context)
     }
 
     @Provides

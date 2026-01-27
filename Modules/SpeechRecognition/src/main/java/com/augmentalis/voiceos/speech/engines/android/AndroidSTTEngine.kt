@@ -763,7 +763,7 @@ class AndroidSTTEngine(private val context: Context) {
 
         // Destroy components synchronously (they should handle their own cleanup)
         try {
-            androidRecognizer.destroy()
+            kotlinx.coroutines.runBlocking { androidRecognizer.destroy() }
         } catch (e: Exception) {
             Log.w(TAG, "Error destroying recognizer", e)
         }

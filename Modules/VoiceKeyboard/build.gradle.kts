@@ -75,9 +75,9 @@ dependencies {
     
     // VOS4 Modules
     implementation(project(":Modules:SpeechRecognition"))
-    implementation(project(":Modules:AvaMagic:AvaUI:Voice"))
+    // implementation(project(":Modules:AvaMagic:AvaUI:Voice"))  // DISABLED: Module path mapping issue
     // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight
-    implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))
+    // implementation(project(":Modules:VoiceOS:managers:LocalizationManager"))  // DISABLED: SQLDelight generation issues
     
     // Testing
     testImplementation("junit:junit:4.13.2")

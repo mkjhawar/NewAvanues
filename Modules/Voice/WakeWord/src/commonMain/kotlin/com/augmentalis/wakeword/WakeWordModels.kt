@@ -11,46 +11,58 @@ import kotlinx.datetime.Clock
 /**
  * Wake word detection configuration and models (KMP-compatible)
  *
- * Supports Porcupine wake word engine for hands-free "Hey AVA" activation.
+ * Supports phoneme-based wake word detection for hands-free "Hey AVA" activation.
  *
  * @author Manoj Jhawar
  */
 
 /**
  * Wake word keyword options
+ *
+ * Each keyword includes its IPA phoneme pattern for phoneme-based detection.
+ * Phoneme patterns use ARPAbet notation (CMU dictionary compatible).
  */
-enum class WakeWordKeyword(val displayName: String, val porcupineKeyword: String) {
+enum class WakeWordKeyword(
+    val displayName: String,
+    val phonemePattern: String
+) {
     /**
-     * "Hey AVA" wake word (custom trained)
+     * "Hey AVA" wake word
+     * IPA: /heɪ ˈɑːvə/
      */
-    HEY_AVA("Hey AVA", "hey-ava"),
+    HEY_AVA("Hey AVA", "HH EY1 AA1 V AH0"),
 
     /**
-     * "OK AVA" wake word (custom trained)
+     * "OK AVA" wake word
+     * IPA: /oʊˈkeɪ ˈɑːvə/
      */
-    OK_AVA("OK AVA", "ok-ava"),
+    OK_AVA("OK AVA", "OW1 K EY1 AA1 V AH0"),
 
     /**
-     * Built-in "Hey Google" style (for testing)
+     * "Computer" wake word
+     * IPA: /kəmˈpjuːtər/
      */
-    JARVIS("Jarvis", "jarvis"),
+    COMPUTER("Computer", "K AH0 M P Y UW1 T ER0"),
 
     /**
-     * Built-in "Alexa" style (for testing)
+     * Custom user-defined wake word (phoneme pattern set at runtime)
      */
-    ALEXA("Alexa", "alexa"),
-
-    /**
-     * Built-in "Computer" (for testing)
-     */
-    COMPUTER("Computer", "computer");
+    CUSTOM("Custom", "");
 
     companion object {
         /**
-         * Get keyword from Porcupine keyword string
+         * Get keyword from display name
          */
-        fun fromPorcupineKeyword(keyword: String): WakeWordKeyword? {
-            return entries.firstOrNull { it.porcupineKeyword == keyword }
+        fun fromDisplayName(name: String): WakeWordKeyword? {
+            return entries.firstOrNull { it.displayName.equals(name, ignoreCase = true) }
+        }
+
+        /**
+         * Create custom wake word with user-defined phoneme pattern
+         */
+        fun custom(displayName: String, phonemePattern: String): WakeWordKeyword {
+            // Note: For truly custom keywords, use CUSTOM and set pattern via settings
+            return CUSTOM
         }
     }
 }
@@ -118,7 +130,7 @@ enum class WakeWordState {
     UNINITIALIZED,
 
     /**
-     * Initializing Porcupine engine
+     * Initializing phoneme detection engine
      */
     INITIALIZING,
 

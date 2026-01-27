@@ -42,9 +42,6 @@ dependencies {
     implementation(project(":Modules:AVA:core:Domain"))
     implementation(project(":Modules:AVA:core:Utils"))
 
-    // LLM module for ApiKeyManager (Porcupine API key)
-    implementation(project(":Modules:AI:LLM"))
-
     // Hilt Dependency Injection
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
@@ -61,10 +58,6 @@ dependencies {
 
     // Lifecycle ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1")
-
-    // Porcupine Wake Word Engine
-    // Free tier with access key: https://picovoice.ai/platform/porcupine/
-    implementation("ai.picovoice:porcupine-android:3.0.2")
 
     // Logging (provided by Common module)
     // Timber is now provided via Common module's androidMain

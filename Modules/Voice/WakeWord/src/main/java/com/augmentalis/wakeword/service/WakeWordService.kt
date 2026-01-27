@@ -18,9 +18,9 @@ import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
+import com.augmentalis.wakeword.IWakeWordDetector
 import com.augmentalis.wakeword.R
 import com.augmentalis.wakeword.WakeWordSettings
-import com.augmentalis.wakeword.detector.WakeWordDetector
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -94,7 +94,7 @@ class WakeWordService : Service() {
     }
 
     @Inject
-    lateinit var wakeWordDetector: WakeWordDetector
+    lateinit var wakeWordDetector: IWakeWordDetector
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var currentSettings: WakeWordSettings? = null

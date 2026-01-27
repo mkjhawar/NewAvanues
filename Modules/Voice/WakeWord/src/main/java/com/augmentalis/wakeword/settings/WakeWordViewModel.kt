@@ -13,7 +13,7 @@ import com.augmentalis.wakeword.WakeWordKeyword
 import com.augmentalis.wakeword.WakeWordSettings
 import com.augmentalis.wakeword.WakeWordState
 import com.augmentalis.wakeword.WakeWordStats
-import com.augmentalis.wakeword.detector.WakeWordDetector
+import com.augmentalis.wakeword.IWakeWordDetector
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -29,7 +29,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class WakeWordViewModel @Inject constructor(
-    private val detector: WakeWordDetector,
+    private val detector: IWakeWordDetector,
     private val settingsRepository: WakeWordSettingsRepository
 ) : ViewModel() {
 
