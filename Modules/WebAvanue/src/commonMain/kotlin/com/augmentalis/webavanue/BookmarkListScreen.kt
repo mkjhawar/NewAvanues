@@ -191,6 +191,7 @@ fun BookmarkListScreen(
     }
 
     // Add/Edit Bookmark Dialog
+    // FIX: Added onCreateFolder callback to persist new folders to database
     if (showAddDialog || editingFavorite != null) {
         val initialFolderName = editingFavorite?.folderId?.let { fid ->
             folders.find { it.id == fid }?.name
@@ -216,6 +217,10 @@ fun BookmarkListScreen(
                 }
                 showAddDialog = false
                 editingFavorite = null
+            },
+            // FIX: Create folder in database when user creates new folder
+            onCreateFolder = { folderName ->
+                viewModel.createFolder(folderName)
             }
         )
     }

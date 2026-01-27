@@ -22,11 +22,14 @@ import com.augmentalis.webavanue.Favorite
  * - Create new folder option
  * - Validation
  *
+ * FIX: Added onCreateFolder callback to persist new folders to database before saving bookmark.
+ *
  * @param bookmark Existing bookmark to edit (null for new bookmark)
  * @param folders List of available folder names
  * @param initialFolderName Initial folder name for editing (resolved from folderId)
  * @param onDismiss Callback when dialog is dismissed
  * @param onSave Callback when bookmark is saved (url, title, folderName)
+ * @param onCreateFolder Callback to create a new folder in the database (returns folder name on success)
  * @param modifier Modifier for customization
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,6 +40,7 @@ fun AddBookmarkDialog(
     initialFolderName: String? = null,
     onDismiss: () -> Unit,
     onSave: (url: String, title: String, folder: String?) -> Unit,
+    onCreateFolder: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var url by remember { mutableStateOf(bookmark?.url ?: "") }
@@ -207,11 +211,14 @@ fun AddBookmarkDialog(
     )
 
     // New folder dialog
+    // FIX: Now calls onCreateFolder to persist folder to database before setting it as selected
     if (showNewFolderDialog) {
         NewFolderDialog(
             existingFolders = folders,
             onDismiss = { showNewFolderDialog = false },
             onConfirm = { newFolder ->
+                // FIX: Create folder in database first, then set as selected
+                onCreateFolder?.invoke(newFolder)
                 selectedFolder = newFolder
                 showNewFolderDialog = false
             }

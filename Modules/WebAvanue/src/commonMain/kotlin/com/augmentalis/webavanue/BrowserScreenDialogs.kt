@@ -5,6 +5,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
@@ -16,9 +20,11 @@ import com.augmentalis.webavanue.OceanTextButton
 /**
  * AddPageDialog - Dialog for adding a new page with URL input
  *
+ * FIX: URL validation now happens inside the dialog, keeping it open if validation fails.
+ *
  * @param url Current URL value
  * @param onUrlChange Callback when URL changes
- * @param onConfirm Callback when user confirms (creates new tab)
+ * @param onConfirm Callback when user confirms with validated URL (url: String)
  * @param onDismiss Callback when dialog is dismissed
  */
 @Composable
@@ -29,13 +35,48 @@ fun AddPageDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // FIX: Track validation error state inside dialog
+    var validationError by remember { mutableStateOf<String?>(null) }
+
+    // FIX: Validate URL before confirming - keep dialog open if invalid
+    fun validateAndConfirm() {
+        // Clear previous error
+        validationError = null
+
+        // Allow blank URLs (creates new blank tab)
+        if (url.isBlank()) {
+            onConfirm()
+            return
+        }
+
+        // Format URL with scheme if needed
+        val formattedUrl = if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            "https://$url"
+        } else {
+            url
+        }
+
+        // Validate using UrlValidation
+        val result = UrlValidation.validate(formattedUrl, allowBlank = true)
+        when (result) {
+            is UrlValidation.UrlValidationResult.Valid -> {
+                // URL is valid - proceed with confirm
+                onConfirm()
+            }
+            is UrlValidation.UrlValidationResult.Invalid -> {
+                // URL is invalid - show error, keep dialog open
+                validationError = result.error.userMessage
+            }
+        }
+    }
+
     OceanDialog(
         onDismissRequest = onDismiss,
         title = "Add New Page",
         modifier = modifier,
         confirmButton = {
             OceanTextButton(
-                onClick = onConfirm,
+                onClick = { validateAndConfirm() },
                 isPrimary = true
             ) {
                 Text("Add Page")
@@ -61,14 +102,22 @@ fun AddPageDialog(
 
             OutlinedTextField(
                 value = url,
-                onValueChange = onUrlChange,
+                onValueChange = { newValue ->
+                    onUrlChange(newValue)
+                    // Clear error when user types
+                    validationError = null
+                },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text("example.com or google.com")
                 },
                 singleLine = true,
+                isError = validationError != null,
+                supportingText = validationError?.let { error ->
+                    { Text(error, color = MaterialTheme.colorScheme.error) }
+                },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                keyboardActions = KeyboardActions(onGo = { onConfirm() }),
+                keyboardActions = KeyboardActions(onGo = { validateAndConfirm() }),
                 colors = OceanDialogDefaults.outlinedTextFieldColors()
             )
         }
