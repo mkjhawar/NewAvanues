@@ -14,7 +14,7 @@
  * - v1.0.0 (2026-01-27): Initial implementation with file upload voice commands
  */
 
-package com.augmentalis.commandmanager.handlers
+package com.augmentalis.avamagic.voice.handlers
 
 import android.app.Activity
 import android.content.Context

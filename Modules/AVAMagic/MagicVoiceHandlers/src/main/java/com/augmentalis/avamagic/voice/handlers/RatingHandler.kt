@@ -14,7 +14,7 @@
  * - v1.0.0 (2026-01-27): Initial implementation with full rating command support
  */
 
-package com.augmentalis.commandmanager.handlers
+package com.augmentalis.avamagic.voice.handlers
 
 import android.util.Log
 import com.augmentalis.commandmanager.CommandHandler
