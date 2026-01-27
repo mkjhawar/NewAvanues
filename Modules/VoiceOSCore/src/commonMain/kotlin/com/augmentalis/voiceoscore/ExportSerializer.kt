@@ -108,13 +108,15 @@ object ExportSerializer {
      * Useful for preview before import.
      *
      * @param json JSON string
-     * @return ExportManifest or null if invalid
+     * @return ExportManifest or null if invalid (error is logged)
      */
     fun getManifest(json: String): ExportManifest? {
         return try {
             val pkg = importJson.decodeFromString<ExportPackage>(json)
             pkg.manifest
         } catch (e: Exception) {
+            // Log the error to aid debugging - silent failures are hard to diagnose
+            LoggingUtils.w("Failed to parse export manifest: ${e.message}", "ExportSerializer", e)
             null
         }
     }

@@ -142,11 +142,14 @@ class HandlerRegistry : IHandlerRegistry {
     /**
      * Get all registered handlers across all categories.
      *
-     * @return List of all registered handlers
+     * Returns a defensive copy to prevent ConcurrentModificationException
+     * if callers iterate while handlers are modified.
+     *
+     * @return List of all registered handlers (defensive copy)
      */
     override suspend fun getAllHandlers(): List<IHandler> {
         mutex.withLock {
-            return handlers.values.flatten()
+            return handlers.values.flatten().toList()
         }
     }
 
@@ -221,20 +224,39 @@ class HandlerRegistry : IHandlerRegistry {
     /**
      * Initialize all registered handlers.
      *
+     * Tracks critical handler failures and logs them with higher severity.
+     * Critical categories: SYSTEM, NAVIGATION, UI
+     *
      * @return Number of handlers successfully initialized
      */
     override suspend fun initializeAll(): Int {
         val allHandlers = mutex.withLock { handlers.values.flatten().toList() }
         var successCount = 0
+        val failedCritical = mutableListOf<String>()
 
         allHandlers.forEach { handler ->
             try {
                 handler.initialize()
                 successCount++
             } catch (e: Exception) {
-                // Log error but continue initializing other handlers
-                LoggingUtils.w("Failed to initialize ${handler::class.simpleName}: ${e.message}", "HandlerRegistry", e)
+                val handlerName = handler::class.simpleName ?: "Unknown"
+                val isCritical = handler.category in listOf(
+                    ActionCategory.SYSTEM,
+                    ActionCategory.NAVIGATION,
+                    ActionCategory.UI
+                )
+
+                if (isCritical) {
+                    failedCritical.add(handlerName)
+                    LoggingUtils.e("CRITICAL: Failed to initialize $handlerName: ${e.message}", "HandlerRegistry", e)
+                } else {
+                    LoggingUtils.w("Failed to initialize $handlerName: ${e.message}", "HandlerRegistry", e)
+                }
             }
+        }
+
+        if (failedCritical.isNotEmpty()) {
+            LoggingUtils.e("WARNING: ${failedCritical.size} critical handlers failed to initialize: $failedCritical", "HandlerRegistry")
         }
 
         return successCount

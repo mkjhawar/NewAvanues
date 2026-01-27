@@ -66,8 +66,8 @@ dependencies {
     // For standalone: uses composite build substitution (see settings.gradle.kts)
     implementation(project(":Modules:VoiceOSCore"))
 
-    // VoiceOS Database (SQLDelight) - for command persistence
-    implementation(project(":Modules:VoiceOS:core:database"))
+    // Unified Database (SQLDelight) - for command persistence
+    implementation(project(":Modules:Database"))
 
     // PluginSystem - Universal Plugin Architecture (Phase 4)
     implementation(project(":Modules:PluginSystem"))

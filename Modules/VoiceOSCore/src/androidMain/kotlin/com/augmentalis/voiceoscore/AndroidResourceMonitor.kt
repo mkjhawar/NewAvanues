@@ -214,10 +214,13 @@ class AndroidResourceMonitor(
             // Read total CPU time from /proc/stat
             BufferedReader(FileReader("/proc/stat")).use { reader ->
                 val line = reader.readLine()
-                val tokens = line.split("\\s+".toRegex())
-                if (tokens.isNotEmpty() && tokens[0] == "cpu") {
-                    for (i in 1 until minOf(tokens.size, 9)) {
-                        totalCpuTime += tokens[i].toLongOrNull() ?: 0L
+                // Null check: readLine() returns null if file is empty or at EOF
+                if (line != null) {
+                    val tokens = line.split("\\s+".toRegex())
+                    if (tokens.isNotEmpty() && tokens[0] == "cpu") {
+                        for (i in 1 until minOf(tokens.size, 9)) {
+                            totalCpuTime += tokens[i].toLongOrNull() ?: 0L
+                        }
                     }
                 }
             }
@@ -225,11 +228,14 @@ class AndroidResourceMonitor(
             // Read app CPU time from /proc/[pid]/stat
             BufferedReader(FileReader("/proc/$pid/stat")).use { reader ->
                 val line = reader.readLine()
-                val tokens = line.split("\\s+".toRegex())
-                if (tokens.size >= 15) {
-                    val utime = tokens[13].toLongOrNull() ?: 0L
-                    val stime = tokens[14].toLongOrNull() ?: 0L
-                    appCpuTime = utime + stime
+                // Null check: readLine() returns null if file is empty or at EOF
+                if (line != null) {
+                    val tokens = line.split("\\s+".toRegex())
+                    if (tokens.size >= 15) {
+                        val utime = tokens[13].toLongOrNull() ?: 0L
+                        val stime = tokens[14].toLongOrNull() ?: 0L
+                        appCpuTime = utime + stime
+                    }
                 }
             }
         } catch (e: Exception) {

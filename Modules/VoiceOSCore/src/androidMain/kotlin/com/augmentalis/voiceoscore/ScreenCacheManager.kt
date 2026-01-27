@@ -116,8 +116,11 @@ class ScreenCacheManager(
         // including recycled item content which changes on scroll)
         val childDepthLimit = if (isScrollableContainer) depth + 2 else maxDepth
         for (i in 0 until node.childCount) {
-            node.getChild(i)?.let { child ->
+            val child = node.getChild(i) ?: continue
+            try {
                 collectElementSignatures(child, signatures, depth + 1, childDepthLimit)
+            } finally {
+                // Guaranteed cleanup even if exception occurs during recursion
                 child.recycle()
             }
         }

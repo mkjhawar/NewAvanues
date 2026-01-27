@@ -19,6 +19,7 @@ import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.launch
 
 /**
  * Dispatcher for executing gestures via AccessibilityService.
@@ -60,10 +61,13 @@ class AndroidGestureDispatcher(
      * Click on an AccessibilityNodeInfo using its action if available,
      * falls back to gesture if not clickable.
      *
+     * IMPORTANT: This is a suspend function to avoid blocking the main thread.
+     * For non-coroutine contexts, use clickNodeAsync() with a callback.
+     *
      * @param node The node to click
      * @return true if click was successful
      */
-    fun clickNode(node: AccessibilityNodeInfo): Boolean {
+    suspend fun clickNode(node: AccessibilityNodeInfo): Boolean {
         // Try native click action first
         if (node.isClickable) {
             val result = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
@@ -78,12 +82,48 @@ class AndroidGestureDispatcher(
         node.getBoundsInScreen(rect)
         val bounds = Bounds(rect.left, rect.top, rect.right, rect.bottom)
 
-        // Use runBlocking for sync context - in real usage call suspend version
         return try {
-            kotlinx.coroutines.runBlocking { click(bounds) }
+            click(bounds)
         } catch (e: Exception) {
             Log.e(TAG, "Error clicking node: ${e.message}")
             false
+        }
+    }
+
+    /**
+     * Click on an AccessibilityNodeInfo with callback for non-coroutine contexts.
+     * This avoids ANR by not blocking the calling thread.
+     *
+     * @param node The node to click
+     * @param scope CoroutineScope to launch the click operation
+     * @param onResult Callback with the result (true if successful)
+     */
+    fun clickNodeAsync(
+        node: AccessibilityNodeInfo,
+        scope: kotlinx.coroutines.CoroutineScope,
+        onResult: (Boolean) -> Unit
+    ) {
+        scope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            val result = clickNode(node)
+            onResult(result)
+        }
+    }
+
+    /**
+     * Synchronous click using native action only (no gesture fallback).
+     * Use this when you need a sync API and native click is sufficient.
+     * Will NOT cause ANR as it only uses performAction().
+     *
+     * @param node The node to click
+     * @return true if native click was successful, false if node not clickable or action failed
+     */
+    fun clickNodeSync(node: AccessibilityNodeInfo): Boolean {
+        if (!node.isClickable) {
+            Log.d(TAG, "Node not clickable, sync click unavailable")
+            return false
+        }
+        return node.performAction(AccessibilityNodeInfo.ACTION_CLICK).also { result ->
+            Log.d(TAG, "Clicked via ACTION_CLICK (sync): $result")
         }
     }
 

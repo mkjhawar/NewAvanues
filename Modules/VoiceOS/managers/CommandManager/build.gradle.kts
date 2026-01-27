@@ -60,7 +60,7 @@ dependencies {
 
     // KMP Libraries (project dependencies)
     implementation(project(":Modules:VoiceOS:core:command-models"))
-    implementation(project(":Modules:VoiceOS:core:database"))  // SQLDelight database
+    implementation(project(":Modules:Database"))  // SQLDelight database
 
     // Android
     implementation("androidx.core:core-ktx:1.12.0")

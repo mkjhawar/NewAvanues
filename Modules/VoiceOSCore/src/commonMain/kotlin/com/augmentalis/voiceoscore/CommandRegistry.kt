@@ -13,9 +13,13 @@ import kotlin.concurrent.Volatile
  *
  * Thread-safety strategy:
  * - Uses immutable snapshot pattern with @Volatile reference
- * - Writes are protected by mutex and replace the entire map atomically
+ * - ALL writes are protected by mutex (both suspend and sync versions)
  * - Reads access the volatile snapshot directly (no locking needed)
  * - This provides consistent reads without blocking and safe concurrent writes
+ *
+ * Performance optimization:
+ * - Caches lowercase phrases during registration to avoid repeated string operations
+ * - Direct key lookup is O(1), partial match is O(n) but with cached labels
  *
  * IMPORTANT: Commands are keyed by PHRASE (not targetVuid) to allow multiple
  * command types to coexist for the same element:
@@ -36,7 +40,14 @@ class CommandRegistry {
     @Volatile
     private var commandsSnapshot: Map<String, QuantizedCommand> = emptyMap()
 
-    private val mutex = Mutex() // Protects concurrent writes
+    /**
+     * Cached lowercase labels for partial matching (avoids repeated string operations).
+     * Key: phrase.lowercase(), Value: label portion lowercase
+     */
+    @Volatile
+    private var labelCache: Map<String, String> = emptyMap()
+
+    private val mutex = Mutex() // Protects ALL concurrent writes
 
     /**
      * Update registry with new commands, replacing all existing.
@@ -48,9 +59,7 @@ class CommandRegistry {
      */
     suspend fun update(newCommands: List<QuantizedCommand>) {
         mutex.withLock {
-            commandsSnapshot = newCommands
-                .filter { it.targetVuid != null && it.phrase.isNotBlank() }
-                .associateBy { it.phrase.lowercase() }
+            updateInternal(newCommands)
         }
     }
 
@@ -58,20 +67,50 @@ class CommandRegistry {
      * Synchronous update for use in non-coroutine contexts.
      * Commands are keyed by phrase to allow multiple command types per element.
      *
-     * Thread-safe: Uses @Synchronized to prevent race conditions with update().
-     * BUG FIX: Previously bypassed mutex, causing potential race conditions.
+     * Thread-safe: Uses mutex via tryLock with spinlock fallback.
+     * This ensures consistency with the suspend update() method.
      *
      * @param newCommands List of commands from current scan
      */
-    @Synchronized
     fun updateSync(newCommands: List<QuantizedCommand>) {
-        val validCommands = newCommands.filter { it.targetVuid != null && it.phrase.isNotBlank() }
-        LoggingUtils.d("updateSync: received ${newCommands.size} commands, ${validCommands.size} valid", TAG)
-        if (validCommands.isNotEmpty()) {
-            LoggingUtils.d("updateSync: first 3 commands: ${validCommands.take(3).map { "'${it.phrase}'" }}", TAG)
+        // Spin until we acquire the mutex (avoids mixing @Synchronized with Mutex)
+        while (!mutex.tryLock()) {
+            // Brief yield to avoid busy-wait
+            Thread.yield()
         }
-        // Key by phrase (lowercase) to allow multiple commands per targetVuid
-        commandsSnapshot = validCommands.associateBy { it.phrase.lowercase() }
+        try {
+            updateInternal(newCommands)
+        } finally {
+            mutex.unlock()
+        }
+    }
+
+    /**
+     * Internal update logic - must be called while holding the mutex.
+     */
+    private fun updateInternal(newCommands: List<QuantizedCommand>) {
+        val validCommands = newCommands.filter { it.targetVuid != null && it.phrase.isNotBlank() }
+        LoggingUtils.d("update: received ${newCommands.size} commands, ${validCommands.size} valid", TAG)
+        if (validCommands.isNotEmpty()) {
+            LoggingUtils.d("update: first 3 commands: ${validCommands.take(3).map { "'${it.phrase}'" }}", TAG)
+        }
+
+        // Build command map and label cache together for efficiency
+        val newSnapshot = mutableMapOf<String, QuantizedCommand>()
+        val newLabelCache = mutableMapOf<String, String>()
+
+        for (cmd in validCommands) {
+            val key = cmd.phrase.lowercase()
+            newSnapshot[key] = cmd
+            // Cache the label portion (everything after first space)
+            val label = cmd.phrase.substringAfter(" ").lowercase()
+            if (label.length > 1) {
+                newLabelCache[key] = label
+            }
+        }
+
+        commandsSnapshot = newSnapshot
+        labelCache = newLabelCache
     }
 
     /**
@@ -86,6 +125,7 @@ class CommandRegistry {
     fun findByPhrase(phrase: String): QuantizedCommand? {
         val normalized = phrase.lowercase().trim()
         val snapshot = commandsSnapshot // Read volatile once
+        val labels = labelCache // Read volatile once
         LoggingUtils.d("findByPhrase('$phrase'): searching ${snapshot.size} commands", TAG)
 
         // Direct key lookup (O(1) - commands are keyed by phrase)
@@ -95,19 +135,20 @@ class CommandRegistry {
             return exactMatch
         }
 
-        // Partial match - check if input matches just the label part
+        // Partial match using cached labels (avoids repeated string operations)
         // BUG FIX: Skip empty labels to avoid false matches (endsWith("") always returns true)
-        val partialMatch = snapshot.values.firstOrNull { cmd: QuantizedCommand ->
-            val label = cmd.phrase.substringAfter(" ").lowercase()
-            // Must have actual label content to match - empty string check prevents false positives
-            label.length > 1 && (normalized == label || normalized.endsWith(label, ignoreCase = true))
+        for ((key, label) in labels) {
+            if (normalized == label || normalized.endsWith(label, ignoreCase = true)) {
+                val match = snapshot[key]
+                if (match != null) {
+                    LoggingUtils.d("findByPhrase: partial match found - '${match.phrase}'", TAG)
+                    return match
+                }
+            }
         }
-        if (partialMatch != null) {
-            LoggingUtils.d("findByPhrase: partial match found - '${partialMatch.phrase}'", TAG)
-        } else {
-            LoggingUtils.d("findByPhrase: no match for '$phrase'. Available: ${snapshot.keys.take(5)}", TAG)
-        }
-        return partialMatch
+
+        LoggingUtils.d("findByPhrase: no match for '$phrase'. Available: ${snapshot.keys.take(5)}", TAG)
+        return null
     }
 
     companion object {
@@ -156,28 +197,59 @@ class CommandRegistry {
      * Useful for adding index commands ("first", "second") alongside existing commands.
      * Commands are keyed by phrase, so multiple commands can target the same element.
      *
-     * Thread-safe: Uses @Synchronized to prevent race conditions.
-     * BUG FIX: Previously read+write was not atomic, causing potential data loss.
+     * Thread-safe: Uses mutex via tryLock with spinlock fallback.
+     * This ensures consistency with the suspend update() method.
      *
      * @param commands List of commands to add
      */
-    @Synchronized
     fun addAll(commands: List<QuantizedCommand>) {
         if (commands.isEmpty()) return
-        val toAdd = commands
-            .filter { it.targetVuid != null && it.phrase.isNotBlank() }
-            .associateBy { it.phrase.lowercase() }
-        LoggingUtils.d("addAll: adding ${toAdd.size} commands: ${toAdd.keys.take(5)}", TAG)
-        commandsSnapshot = commandsSnapshot + toAdd
+
+        // Spin until we acquire the mutex
+        while (!mutex.tryLock()) {
+            Thread.yield()
+        }
+        try {
+            val toAdd = commands
+                .filter { it.targetVuid != null && it.phrase.isNotBlank() }
+
+            if (toAdd.isEmpty()) return
+
+            val newSnapshot = commandsSnapshot.toMutableMap()
+            val newLabelCache = labelCache.toMutableMap()
+
+            for (cmd in toAdd) {
+                val key = cmd.phrase.lowercase()
+                newSnapshot[key] = cmd
+                val label = cmd.phrase.substringAfter(" ").lowercase()
+                if (label.length > 1) {
+                    newLabelCache[key] = label
+                }
+            }
+
+            LoggingUtils.d("addAll: adding ${toAdd.size} commands: ${toAdd.take(5).map { it.phrase }}", TAG)
+            commandsSnapshot = newSnapshot
+            labelCache = newLabelCache
+        } finally {
+            mutex.unlock()
+        }
     }
 
     /**
      * Clear all commands.
      *
-     * Thread-safe: Volatile reference ensures atomic visibility.
+     * Thread-safe: Uses mutex for consistency with other write operations.
      */
     fun clear() {
-        commandsSnapshot = emptyMap()
+        while (!mutex.tryLock()) {
+            Thread.yield()
+        }
+        try {
+            commandsSnapshot = emptyMap()
+            labelCache = emptyMap()
+        } finally {
+            mutex.unlock()
+        }
     }
 
     /**

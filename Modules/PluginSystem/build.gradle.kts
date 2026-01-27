@@ -42,8 +42,8 @@ kotlin {
                 // UniversalRPC - for RPC service integration
                 api(project(":Modules:UniversalRPC"))
 
-                // VoiceOS Database - for repository interfaces
-                api(project(":Modules:VoiceOS:core:database"))
+                // Unified Database - for repository interfaces
+                api(project(":Modules:Database"))
 
                 // YAML parsing
                 implementation("net.mamoe.yamlkt:yamlkt:0.13.0")

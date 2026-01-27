@@ -46,7 +46,7 @@ android {
 
 dependencies {
     // Database module (for GeneratedCommandDTO and VoiceOSDatabaseManager)
-    implementation(project(":Modules:VoiceOS:core:database"))
+    implementation(project(":Modules:Database"))
 
     // AVID module (for unique identifiers - migrated from UUIDCreator)
     implementation(project(":Modules:AVID"))

@@ -74,7 +74,7 @@ kotlin {
                 implementation(libs.androidx.core.ktx)
 
                 // SQLDelight KMP Database
-                implementation(project(":Modules:VoiceOS:core:database"))
+                implementation(project(":Modules:Database"))
 
                 // Compatibility Support
                 implementation("androidx.multidex:multidex:2.0.1")

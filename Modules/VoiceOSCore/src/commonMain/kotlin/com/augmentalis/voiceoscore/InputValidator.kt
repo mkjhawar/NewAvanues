@@ -102,6 +102,17 @@ object InputValidator {
 
     /**
      * Validate text input
+     *
+     * SECURITY NOTE: SQL injection protection is handled at the database layer
+     * using parameterized queries (SQLDelight). This validator focuses on:
+     * - Length limits to prevent buffer overflow / resource exhaustion
+     * - XSS protection for content that may be displayed in WebViews
+     *
+     * Keyword-based SQL filtering was removed because:
+     * 1. It's bypassable (Unicode variants, encoding, case tricks)
+     * 2. It causes false positives for legitimate data
+     * 3. Parameterized queries are the proper defense
+     *
      * @throws IllegalArgumentException if invalid
      */
     fun validateTextInput(text: String?) {
@@ -112,7 +123,7 @@ object InputValidator {
             "Text input too long: ${text.length} > $MAX_TEXT_INPUT_LENGTH"
         }
 
-        // Check for XSS attempts
+        // Check for XSS attempts (relevant for WebView display)
         require(!text.contains("<script", ignoreCase = true)) {
             "Text contains potential XSS attack"
         }
@@ -120,13 +131,9 @@ object InputValidator {
             "Text contains potential XSS attack"
         }
 
-        // Check for SQL injection attempts
-        val sqlKeywords = listOf("DROP", "DELETE", "INSERT", "UPDATE", "SELECT", "';", "--;", "/*", "*/")
-        for (keyword in sqlKeywords) {
-            require(!text.contains(keyword, ignoreCase = true)) {
-                "Text contains potential SQL injection pattern: $keyword"
-            }
-        }
+        // Note: SQL injection is prevented by using parameterized queries at the
+        // database layer (SQLDelight). Keyword filtering here would be ineffective
+        // and cause false positives for legitimate user input.
     }
 
     /**
@@ -226,22 +233,24 @@ object InputValidator {
 
     /**
      * Sanitize text input by removing potentially dangerous characters.
-     * Use when you need to accept input but make it safe.
+     * Use when you need to accept input but make it safe for display.
+     *
+     * SECURITY NOTE: This sanitizes for XSS in WebView contexts.
+     * SQL injection is prevented by parameterized queries at the database layer,
+     * NOT by string sanitization (which is bypassable and causes false positives).
      *
      * @param text Input text to sanitize
-     * @return Sanitized text
+     * @return Sanitized text safe for display
      */
     fun sanitizeTextInput(text: String?): String {
         if (text.isNullOrBlank()) return ""
 
         return text
+            // XSS protection for WebView display
             .replace("<script", "", ignoreCase = true)
             .replace("</script>", "", ignoreCase = true)
             .replace("javascript:", "", ignoreCase = true)
-            .replace("'", "''")  // Escape single quotes for SQL
-            .replace("--", "")   // Remove SQL comment markers
-            .replace("/*", "")
-            .replace("*/", "")
-            .take(MAX_TEXT_INPUT_LENGTH)  // Truncate to max length
+            // Length limit to prevent resource exhaustion
+            .take(MAX_TEXT_INPUT_LENGTH)
     }
 }

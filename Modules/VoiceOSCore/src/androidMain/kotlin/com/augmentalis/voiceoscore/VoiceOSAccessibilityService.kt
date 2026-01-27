@@ -106,8 +106,14 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         Log.i(TAG, "Service destroying")
-        serviceScope.cancel()
-        isServiceReady = false
+        try {
+            // Cancel all pending coroutines to prevent task leaks
+            serviceScope.cancel()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error cancelling service scope: ${e.message}")
+        } finally {
+            isServiceReady = false
+        }
         super.onDestroy()
     }
 

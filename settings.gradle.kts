@@ -67,7 +67,8 @@ include(":Modules:Utilities")       // Platform utilities (DeviceInfo, Logger, F
 include(":Modules:LicenseSDK")      // License validation client
 
 // VoiceOS Core Modules
-include(":Modules:VoiceOS:core:database")          // CRITICAL - used by VoiceOSCore, voiceoscoreng, managers
+// DEPRECATED (2026-01-27) - Consolidated into Modules:Database
+// include(":Modules:VoiceOS:core:database")       // ARCHIVED - see archive/legacy/VoiceOS-core-database
 include(":Modules:VoiceOS:core:command-models")    // Used by managers/CommandManager
 
 // DEPRECATED (2026-01-21) - Functionality consolidated into VoiceOSCore
