@@ -465,15 +465,46 @@ class BrowserRepositoryImpl(
     }
 
     override suspend fun createFolder(folder: FavoriteFolder): Result<FavoriteFolder> = withContext(Dispatchers.IO) {
-        Result.success(folder)
+        try {
+            queries.insertFavoriteFolder(folder.toDbModel())
+            Napier.d("Created folder: ${folder.name} (${folder.id})", tag = "BrowserRepository")
+            Result.success(folder)
+        } catch (e: Exception) {
+            Napier.e("Failed to create folder: ${e.message}", e, tag = "BrowserRepository")
+            Result.failure(e)
+        }
     }
 
     override suspend fun getAllFolders(): Result<List<FavoriteFolder>> = withContext(Dispatchers.IO) {
-        Result.success(emptyList())
+        try {
+            val folders = queries.selectAllFolders().executeAsList().map { it.toDomainModel() }
+            Napier.d("Loaded ${folders.size} folders", tag = "BrowserRepository")
+            Result.success(folders)
+        } catch (e: Exception) {
+            Napier.e("Failed to load folders: ${e.message}", e, tag = "BrowserRepository")
+            Result.failure(e)
+        }
     }
 
     override suspend fun deleteFolder(folderId: String, deleteContents: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
-        Result.success(Unit)
+        try {
+            if (deleteContents) {
+                // Delete all favorites in the folder
+                queries.deleteFavoritesInFolder(folderId)
+                Napier.d("Deleted favorites in folder: $folderId", tag = "BrowserRepository")
+            } else {
+                // Clear folder_id from favorites (orphan them)
+                queries.clearFolderFromFavorites(folderId)
+                Napier.d("Cleared folder from favorites: $folderId", tag = "BrowserRepository")
+            }
+            // Delete the folder itself
+            queries.deleteFolderById(folderId)
+            Napier.d("Deleted folder: $folderId", tag = "BrowserRepository")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Napier.e("Failed to delete folder: ${e.message}", e, tag = "BrowserRepository")
+            Result.failure(e)
+        }
     }
 
     // ==================== History Operations ====================
