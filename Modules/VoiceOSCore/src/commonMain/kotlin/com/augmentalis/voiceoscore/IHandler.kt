@@ -4,6 +4,7 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2026-01-06
+ * Updated: 2026-01-27 - Added getVoicePhrases() for dynamic speech engine registration
  *
  * KMP interface for action handlers.
  * Follows Single Responsibility Principle - each handler handles one category of actions.
@@ -108,6 +109,16 @@ interface IHandler {
         // Default empty implementation
         // Handlers override if needed
     }
+
+    /**
+     * Get voice phrases to register with the speech engine.
+     *
+     * Override this to provide dynamic phrases (e.g., installed app names).
+     * These phrases will be registered with the speech engine during initialization.
+     *
+     * @return List of voice phrases for speech recognition (empty by default)
+     */
+    fun getVoicePhrases(): List<String> = emptyList()
 }
 
 /**

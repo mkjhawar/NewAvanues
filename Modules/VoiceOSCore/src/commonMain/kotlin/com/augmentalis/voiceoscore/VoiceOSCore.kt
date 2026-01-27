@@ -15,6 +15,7 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Created: 2026-01-17
  * Updated: 2026-01-19 - Merged VoiceOSCoreNG into unified VoiceOSCore
+ * Updated: 2026-01-27 - Added handler phrase collection for speech engine (app commands)
  */
 package com.augmentalis.voiceoscore
 
@@ -142,22 +143,30 @@ class VoiceOSCore private constructor(
                         println("[VoiceOSCore] Speech engine initialization failed: ${initResult.exceptionOrNull()?.message}")
                     }
 
-                    // Register static commands with speech engine for voice recognition
+                    // Register static commands and handler phrases with speech engine for voice recognition
                     if (initResult?.isSuccess == true) {
-                        stateManager.transition(ServiceState.Initializing(0.7f, "Registering static commands with speech engine"))
+                        stateManager.transition(ServiceState.Initializing(0.7f, "Registering commands with speech engine"))
                         try {
+                            // Get static command phrases
                             val staticPhrases = staticCommandPersistence?.getAllPhrases() ?: StaticCommandRegistry.allPhrases()
-                            if (staticPhrases.isNotEmpty()) {
-                                val updateResult = speechEngine?.updateCommands(staticPhrases)
+
+                            // Collect voice phrases from all handlers (e.g., app names from AppHandler)
+                            val handlerPhrases = handlers.flatMap { it.getVoicePhrases() }
+
+                            // Combine all phrases
+                            val allPhrases = (staticPhrases + handlerPhrases).distinct()
+
+                            if (allPhrases.isNotEmpty()) {
+                                val updateResult = speechEngine?.updateCommands(allPhrases)
                                 if (updateResult?.isSuccess == true) {
-                                    println("[VoiceOSCore] Registered ${staticPhrases.size} static command phrases with speech engine")
+                                    println("[VoiceOSCore] Registered ${allPhrases.size} phrases with speech engine (${staticPhrases.size} static, ${handlerPhrases.size} from handlers)")
                                 } else {
-                                    println("[VoiceOSCore] Failed to register static commands with speech engine: ${updateResult?.exceptionOrNull()?.message}")
+                                    println("[VoiceOSCore] Failed to register commands with speech engine: ${updateResult?.exceptionOrNull()?.message}")
                                 }
                             }
                         } catch (e: Exception) {
-                            println("[VoiceOSCore] Error registering static commands: ${e.message}")
-                            // Continue - static commands can still be processed, just not speech-recognized
+                            println("[VoiceOSCore] Error registering commands: ${e.message}")
+                            // Continue - commands can still be processed, just not speech-recognized
                         }
                     }
 

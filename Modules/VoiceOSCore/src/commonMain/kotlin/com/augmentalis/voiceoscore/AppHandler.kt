@@ -5,15 +5,14 @@
  * Author: VOS4 Development Team
  * Created: 2026-01-06
  * Updated: 2026-01-09 - Auto-sync with installed apps on initialize
- * Updated: 2026-01-27 - Added localization support via IAppCommandLocalizer
+ * Updated: 2026-01-27 - Load localized verbs from database via IStaticCommandPersistence
+ * Updated: 2026-01-27 - Added getVoicePhrases() override for speech engine registration
  *
  * KMP handler for app-level actions (launch, switch, close, etc.).
- * Phase 12 of the VoiceOSCoreNG handler system.
+ * Localized command verbs (open, launch, start) are loaded from .avu files
+ * via the static command persistence layer.
  */
 package com.augmentalis.voiceoscore
-
-import com.augmentalis.voiceoscore.CommandActionType
-import com.augmentalis.voiceoscore.QuantizedCommand
 
 /**
  * Information about an installed application.
@@ -65,44 +64,18 @@ interface IAppLauncher {
 }
 
 /**
- * Interface for providing localized app command verbs.
- *
- * Implementations should return action verbs in the current device locale.
- * For example, in German: "öffnen" for "open", "starten" for "start".
- */
-interface IAppCommandLocalizer {
-    /**
-     * Get localized action verbs for opening apps.
-     * Default English: ["open", "launch", "start"]
-     *
-     * @return List of localized action verbs
-     */
-    fun getOpenVerbs(): List<String>
-
-    /**
-     * Get localized "app" suffix variants.
-     * Default English: ["app", "application"]
-     *
-     * @return List of localized app suffix words
-     */
-    fun getAppSuffixes(): List<String>
-}
-
-/**
- * Default English localizer for app commands.
- */
-object DefaultAppCommandLocalizer : IAppCommandLocalizer {
-    override fun getOpenVerbs(): List<String> = listOf("open", "launch", "start")
-    override fun getAppSuffixes(): List<String> = listOf("app", "application")
-}
-
-/**
  * Handler for app-related voice commands.
  *
  * Supports commands like:
  * - "open maps" / "open Google Maps"
  * - "launch youtube" / "launch YouTube"
  * - "start camera" / "start Camera"
+ *
+ * Command verbs are loaded from the database (via IStaticCommandPersistence)
+ * which reads from locale-specific .avu files. This enables localization:
+ * - English: "open", "launch", "start"
+ * - German: "öffne", "öffnen", "starte"
+ * - Spanish: "abrir", "iniciar", "lanzar"
  *
  * Apps can be found by:
  * - Display name (e.g., "Google Maps")
@@ -111,56 +84,59 @@ object DefaultAppCommandLocalizer : IAppCommandLocalizer {
  *
  * Usage:
  * ```kotlin
- * val handler = AppHandler(androidAppLauncher)
+ * val handler = AppHandler(androidAppLauncher, staticCommandPersistence)
  *
  * // Handle voice command
  * val result = handler.handleCommand("open maps")
  * if (result.success) {
  *     println("Opened ${result.app?.displayName}")
  * }
- *
- * // Register custom app
- * handler.registerApp(AppInfo("com.myapp", "My App", listOf("myapp")))
- *
- * // Sync with installed apps
- * handler.syncInstalledApps()
- *
- * // With localization (e.g., German)
- * val germanLocalizer = object : IAppCommandLocalizer {
- *     override fun getOpenVerbs() = listOf("öffnen", "starten", "open", "start")
- *     override fun getAppSuffixes() = listOf("app", "anwendung")
- * }
- * val handlerDe = AppHandler(launcher, germanLocalizer)
  * ```
  *
  * @param appLauncher Platform-specific app launcher (optional, null for simulation mode)
- * @param localizer Provides localized command verbs (defaults to English)
+ * @param persistence Static command persistence for loading localized verbs (optional)
  */
 class AppHandler(
     private val appLauncher: IAppLauncher? = null,
-    private val localizer: IAppCommandLocalizer = DefaultAppCommandLocalizer
+    private val persistence: IStaticCommandPersistence? = null
 ) : BaseHandler() {
+
+    companion object {
+        /** Command ID for app open verbs in .avu files */
+        const val COMMAND_ID_OPEN_APP = "OPEN_APP"
+
+        /** Command ID for app suffix words in .avu files */
+        const val COMMAND_ID_APP_SUFFIX = "APP_SUFFIX"
+
+        /** Default English verbs (fallback if database not available) */
+        private val DEFAULT_OPEN_VERBS = listOf("open", "launch", "start")
+
+        /** Default English suffixes (fallback if database not available) */
+        private val DEFAULT_APP_SUFFIXES = listOf("app", "application")
+    }
 
     override val category: ActionCategory = ActionCategory.APP
 
     /**
-     * Supported actions built from localizer.
-     * Includes base verbs and verb + "app" combinations.
+     * Open verbs loaded from database or defaults.
+     * Populated during initialize().
      */
-    override val supportedActions: List<String> by lazy {
-        val verbs = localizer.getOpenVerbs()
-        val suffixes = localizer.getAppSuffixes()
-
-        // Build list: ["open", "launch", "start", "open app", "launch app", ...]
-        verbs + verbs.flatMap { verb ->
-            suffixes.map { suffix -> "$verb $suffix" }
-        }
-    }
+    private var openVerbs: List<String> = DEFAULT_OPEN_VERBS
 
     /**
-     * Cached list of open verbs for command parsing.
+     * App suffix words loaded from database or defaults.
+     * Populated during initialize().
      */
-    private val openVerbs: List<String> by lazy { localizer.getOpenVerbs() }
+    private var appSuffixes: List<String> = DEFAULT_APP_SUFFIXES
+
+    /**
+     * Supported actions built from loaded verbs.
+     * Includes base verbs and verb + "app" combinations.
+     */
+    override val supportedActions: List<String>
+        get() = openVerbs + openVerbs.flatMap { verb ->
+            appSuffixes.map { suffix -> "$verb $suffix" }
+        }
 
     /**
      * Check if this handler can handle the given action.
@@ -188,9 +164,6 @@ class AppHandler(
      */
     private val appRegistry = mutableMapOf<String, AppInfo>()
 
-    // No hardcoded apps - all apps come from AndroidAppLauncher.getInstalledApps()
-    // which dynamically discovers installed apps with their aliases
-
     /**
      * Execute an app command.
      *
@@ -216,7 +189,7 @@ class AppHandler(
      *
      * Supports:
      * - Prefixed commands: "open maps", "launch youtube", "start calculator"
-     * - Localized prefixes based on IAppCommandLocalizer
+     * - Localized prefixes loaded from database
      * - Bare app names: "maps", "stopwatch", "calculator" (if app is registered)
      *
      * @param command Full command string (e.g., "open maps" or just "maps")
@@ -225,7 +198,7 @@ class AppHandler(
     fun handleCommand(command: String): AppLaunchResult {
         val normalizedCommand = command.lowercase().trim()
 
-        // Check each localized verb prefix
+        // Check each verb prefix (localized from database)
         for (verb in openVerbs) {
             val prefix = "$verb "
             if (normalizedCommand.startsWith(prefix)) {
@@ -332,6 +305,50 @@ class AppHandler(
     fun getAppCount(): Int = appRegistry.size
 
     /**
+     * Get all app command phrases for speech engine registration.
+     *
+     * Generates phrases by combining each open verb with each app name/alias.
+     * For example: ["open WhatsApp", "launch WhatsApp", "open Spotify", "launch Spotify", ...]
+     *
+     * These phrases should be registered with the speech engine so it can
+     * recognize app launch commands.
+     *
+     * @return List of all valid app command phrases
+     */
+    override fun getVoicePhrases(): List<String> = getAppPhrases()
+
+    /**
+     * Get all app command phrases for speech engine registration.
+     *
+     * Generates phrases by combining each open verb with each app name/alias.
+     * For example: ["open WhatsApp", "launch WhatsApp", "open Spotify", "launch Spotify", ...]
+     *
+     * These phrases should be registered with the speech engine so it can
+     * recognize app launch commands.
+     *
+     * @return List of all valid app command phrases
+     */
+    fun getAppPhrases(): List<String> {
+        val phrases = mutableListOf<String>()
+
+        for (app in appRegistry.values) {
+            // Add phrases with display name
+            for (verb in openVerbs) {
+                phrases.add("$verb ${app.displayName.lowercase()}")
+            }
+
+            // Add phrases with each alias
+            for (alias in app.aliases) {
+                for (verb in openVerbs) {
+                    phrases.add("$verb ${alias.lowercase()}")
+                }
+            }
+        }
+
+        return phrases.distinct()
+    }
+
+    /**
      * Sync registry with installed apps from the launcher.
      *
      * Fetches installed apps from the platform launcher and adds them
@@ -346,11 +363,45 @@ class AppHandler(
     /**
      * Initialize the handler.
      *
-     * Syncs with installed apps from the platform launcher to enable
-     * voice commands for all installed apps (e.g., "open Stopwatch").
+     * 1. Loads localized command verbs from database (OPEN_APP, APP_SUFFIX)
+     * 2. Syncs with installed apps from the platform launcher
      */
     override suspend fun initialize() {
+        // Load localized verbs from database
+        loadLocalizedVerbs()
+
+        // Sync installed apps
         syncInstalledApps()
-        println("[AppHandler] Synced ${appRegistry.size} apps from device")
+
+        LoggingUtils.d("[AppHandler] Initialized with ${openVerbs.size} verbs, ${appRegistry.size} apps", "AppHandler")
+    }
+
+    /**
+     * Load localized command verbs from static command persistence.
+     * Falls back to English defaults if persistence unavailable.
+     */
+    private suspend fun loadLocalizedVerbs() {
+        if (persistence == null) {
+            LoggingUtils.d("[AppHandler] No persistence, using default verbs", "AppHandler")
+            return
+        }
+
+        try {
+            // Load OPEN_APP verbs (open, launch, start, etc.)
+            val verbSynonyms = persistence.getSynonymsForCommand(COMMAND_ID_OPEN_APP)
+            if (verbSynonyms.isNotEmpty()) {
+                openVerbs = verbSynonyms
+                LoggingUtils.d("[AppHandler] Loaded ${verbSynonyms.size} open verbs from database", "AppHandler")
+            }
+
+            // Load APP_SUFFIX words (app, application, etc.)
+            val suffixSynonyms = persistence.getSynonymsForCommand(COMMAND_ID_APP_SUFFIX)
+            if (suffixSynonyms.isNotEmpty()) {
+                appSuffixes = suffixSynonyms
+                LoggingUtils.d("[AppHandler] Loaded ${suffixSynonyms.size} app suffixes from database", "AppHandler")
+            }
+        } catch (e: Exception) {
+            LoggingUtils.w("[AppHandler] Failed to load localized verbs, using defaults: ${e.message}", "AppHandler")
+        }
     }
 }

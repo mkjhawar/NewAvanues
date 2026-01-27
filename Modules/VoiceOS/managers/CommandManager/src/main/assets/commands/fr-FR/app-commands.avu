@@ -1,0 +1,21 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# App launching commands for French
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: fr-FR
+project: voiceos
+metadata:
+  category: app
+  display_name: Commandes d'applications
+  description: Commandes vocales pour lancer des applications
+  command_count: 2
+---
+CAT:app:Commandes d'applications:Commandes vocales pour lancer des applications
+CMD:OPEN_APP:ouvrir
+CMD:APP_SUFFIX:app
+---
+SYN:OPEN_APP:[ouvrir,ouvre,lancer,lance,démarrer,démarre,open,launch,start]
+SYN:APP_SUFFIX:[app,application,programme]

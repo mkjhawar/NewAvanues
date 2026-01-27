@@ -55,6 +55,22 @@ interface IStaticCommandPersistence {
      * @return List of all trigger phrases and synonyms
      */
     suspend fun getAllPhrases(): List<String>
+
+    /**
+     * Get a static command by its ID.
+     *
+     * @param commandId The command identifier (e.g., "OPEN_APP", "SCROLL_DOWN")
+     * @return StaticCommandMatch if found, null otherwise
+     */
+    suspend fun getCommandById(commandId: String): StaticCommandMatch?
+
+    /**
+     * Get all synonyms for a command ID.
+     *
+     * @param commandId The command identifier
+     * @return List of synonyms including the trigger phrase, or empty if not found
+     */
+    suspend fun getSynonymsForCommand(commandId: String): List<String>
 }
 
 /**
