@@ -1,7 +1,7 @@
 // Author: Manoj Jhawar
 // Purpose: Motion prediction to compensate for display latency
 
-package com.augmentalis.devicemanager.sensors.imu
+package com.augmentalis.devicemanager.imu
 
 import kotlin.math.*
 

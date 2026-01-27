@@ -1,7 +1,7 @@
 // Author: Manoj Jhawar
 // Purpose: Mathematical utilities for IMU data processing
 
-package com.augmentalis.devicemanager.sensors.imu
+package com.augmentalis.devicemanager.imu
 
 import kotlin.math.*
 

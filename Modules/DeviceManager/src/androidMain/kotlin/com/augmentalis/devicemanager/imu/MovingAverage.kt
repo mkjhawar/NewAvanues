@@ -10,7 +10,7 @@
  * Based on proven legacy algorithm for cursor movement filtering
  */
 
-package com.augmentalis.devicemanager.sensors.imu
+package com.augmentalis.devicemanager.imu
 
 /**
  * MovingAverage class calculates a smoothed average of the input data using the

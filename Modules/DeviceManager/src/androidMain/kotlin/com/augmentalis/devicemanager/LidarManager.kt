@@ -1,7 +1,7 @@
 // Author: Manoj Jhawar
 // Purpose: Comprehensive LiDAR and ToF sensor management for depth sensing, 3D scanning, and environmental mapping
 
-package com.augmentalis.devicemanager.sensors
+package com.augmentalis.devicemanager
 
 import android.Manifest
 import android.annotation.SuppressLint

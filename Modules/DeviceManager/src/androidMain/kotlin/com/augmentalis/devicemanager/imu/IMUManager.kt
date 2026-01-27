@@ -1,7 +1,7 @@
 // Author: Manoj Jhawar
 // Purpose: Centralized IMU data management for all VOS4 applications
 
-package com.augmentalis.devicemanager.sensors.imu
+package com.augmentalis.devicemanager.imu
 
 import android.content.Context
 import android.content.Context.WINDOW_SERVICE

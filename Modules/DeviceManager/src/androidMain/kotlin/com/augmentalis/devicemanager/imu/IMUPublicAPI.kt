@@ -6,7 +6,7 @@ package com.augmentalis.devicemanager.imu
 
 import android.content.Context
 import android.util.Log
-import com.augmentalis.devicemanager.sensors.imu.*
+import com.augmentalis.devicemanager.imu.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

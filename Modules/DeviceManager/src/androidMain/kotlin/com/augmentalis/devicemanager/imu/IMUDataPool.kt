@@ -1,4 +1,4 @@
-package com.augmentalis.devicemanager.sensors.imu
+package com.augmentalis.devicemanager.imu
 
 import java.util.LinkedList
 

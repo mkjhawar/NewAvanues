@@ -1,7 +1,7 @@
 // Author: Manoj Jhawar
 // Purpose: User calibration and personalization for IMU tracking
 
-package com.augmentalis.devicemanager.sensors.imu
+package com.augmentalis.devicemanager.imu
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers

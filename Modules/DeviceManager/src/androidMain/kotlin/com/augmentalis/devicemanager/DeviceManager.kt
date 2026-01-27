@@ -30,8 +30,8 @@ import com.augmentalis.devicemanager.network.UwbManager
 import com.augmentalis.devicemanager.network.NfcManager
 import com.augmentalis.devicemanager.network.CellularManager
 import com.augmentalis.devicemanager.network.UsbNetworkManager
-import com.augmentalis.devicemanager.sensors.LidarManager
-import com.augmentalis.devicemanager.sensors.imu.IMUManager
+import com.augmentalis.devicemanager.LidarManager
+import com.augmentalis.devicemanager.imu.IMUManager
 import com.augmentalis.devicemanager.security.BiometricManager
 import com.augmentalis.devicemanager.accessibility.TTSManager
 import com.augmentalis.devicemanager.accessibility.FeedbackManager

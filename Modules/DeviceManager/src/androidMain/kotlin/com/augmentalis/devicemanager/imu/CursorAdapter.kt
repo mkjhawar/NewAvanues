@@ -9,7 +9,7 @@
  * Purpose: Adapter to connect cursor applications with centralized IMUManager
  */
 
-package com.augmentalis.devicemanager.sensors.imu
+package com.augmentalis.devicemanager.imu
 
 import android.content.Context
 import kotlinx.coroutines.CoroutineScope

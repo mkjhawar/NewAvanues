@@ -27,7 +27,7 @@ import com.augmentalis.devicemanager.DeviceManager
 import com.augmentalis.devicemanager.deviceinfo.detection.DeviceDetector
 import com.augmentalis.devicemanager.audio.AudioService
 import com.augmentalis.devicemanager.smartdevices.FoldableDeviceManager
-import com.augmentalis.devicemanager.sensors.imu.IMUManager
+import com.augmentalis.devicemanager.imu.IMUManager
 import com.augmentalis.devicemanager.network.BluetoothManager
 import com.augmentalis.devicemanager.network.WiFiManager
 import com.augmentalis.devicemanager.network.UwbManager

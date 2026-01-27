@@ -1,7 +1,7 @@
 // Author: Manoj Jhawar
 // Purpose: Adaptive filtering for IMU data with dynamic noise reduction
 
-package com.augmentalis.devicemanager.sensors.imu
+package com.augmentalis.devicemanager.imu
 
 import kotlin.math.*
 

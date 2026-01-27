@@ -289,7 +289,7 @@ fun NetworkTab(deviceManager: DeviceManager) {
  */
 @Composable
 fun SensorsTab(deviceManager: DeviceManager) {
-    val lidarState = deviceManager.lidar?.lidarState?.collectAsStateWithLifecycle()?.value ?: com.augmentalis.devicemanager.sensors.LidarManager.LidarState()
+    val lidarState = deviceManager.lidar?.lidarState?.collectAsStateWithLifecycle()?.value ?: com.augmentalis.devicemanager.LidarManager.LidarState()
     
     LazyColumn(
         modifier = Modifier.fillMaxSize(),

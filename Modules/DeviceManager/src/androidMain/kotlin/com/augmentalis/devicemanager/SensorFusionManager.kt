@@ -14,7 +14,7 @@
  * - v1.0.0 (2025-10-09): Initial creation with Kalman filtering and complementary filter
  */
 
-package com.augmentalis.devicemanager.sensors
+package com.augmentalis.devicemanager
 
 import android.content.Context
 import android.hardware.Sensor
@@ -22,10 +22,10 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.util.Log
-import com.augmentalis.devicemanager.sensors.imu.EulerAngles
-import com.augmentalis.devicemanager.sensors.imu.Quaternion
-import com.augmentalis.devicemanager.sensors.imu.Vector3
-import com.augmentalis.devicemanager.sensors.imu.slerp
+import com.augmentalis.devicemanager.imu.EulerAngles
+import com.augmentalis.devicemanager.imu.Quaternion
+import com.augmentalis.devicemanager.imu.Vector3
+import com.augmentalis.devicemanager.imu.slerp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

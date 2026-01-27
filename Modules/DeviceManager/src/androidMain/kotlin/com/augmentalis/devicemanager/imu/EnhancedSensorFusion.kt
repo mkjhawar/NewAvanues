@@ -1,7 +1,7 @@
 // Author: Manoj Jhawar
 // Purpose: Advanced sensor fusion for high-quality orientation tracking
 
-package com.augmentalis.devicemanager.sensors.imu
+package com.augmentalis.devicemanager.imu
 
 import kotlin.math.*
 
