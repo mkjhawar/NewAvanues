@@ -45,7 +45,7 @@
  * - Word numbers: "fifty", "twenty five"
  */
 
-package com.augmentalis.commandmanager.handlers
+package com.augmentalis.avamagic.voice.handlers
 
 import android.util.Log
 import com.augmentalis.voiceoscore.ActionCategory

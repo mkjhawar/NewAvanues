@@ -102,7 +102,11 @@ include(":Modules:VoiceOS:managers:HUDManager")
 include(":Modules:VoiceOS:managers:CommandManager")
 include(":Modules:VoiceOS:managers:VoiceDataManager")
 // include(":Modules:VoiceOS:managers:LocalizationManager")  // Migrated to KMP
+
 include(":Modules:Localization")                             // KMP Localization module
+
+
+
 
 // Top-level Shared Modules (consolidated from VoiceOS/libraries and AvaMagic)
 include(":Modules:DeviceManager")                       // Device info, sensors, audio, network
@@ -159,6 +163,7 @@ include(":Modules:AvaMagic:AvaUI:AssetManager")         // Asset management
 
 // AvaUI Platform Renderers
 include(":Modules:AvaMagic:AvaUI:Renderers:Android")    // Android Compose renderer
+include(":Modules:AvaMagic:MagicVoiceHandlers")          // Voice command handlers for AVAMagic UI
 
 // Android Apps
 include(":android:apps:webavanue")
