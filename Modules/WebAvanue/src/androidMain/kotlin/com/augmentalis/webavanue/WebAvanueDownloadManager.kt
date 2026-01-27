@@ -15,6 +15,8 @@ import androidx.core.content.ContextCompat
 import com.augmentalis.webavanue.BrowserSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,6 +47,9 @@ class WebAvanueDownloadManager(
     private val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     private val _downloadStates = MutableStateFlow<Map<Long, DownloadState>>(emptyMap())
     val downloadStates: StateFlow<Map<Long, DownloadState>> = _downloadStates.asStateFlow()
+
+    // Managed coroutine scope for download monitoring (avoids orphaned coroutines)
+    private val monitorScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
         private const val TAG = "WebAvanueDownloadManager"
@@ -133,7 +138,7 @@ class WebAvanueDownloadManager(
      * CRITICAL FIX: Adds detailed state logging
      */
     private fun monitorDownload(downloadId: Long) {
-        CoroutineScope(Dispatchers.IO).launch {
+        monitorScope.launch {
             val query = DownloadManager.Query().setFilterById(downloadId)
 
             while (true) {
@@ -252,6 +257,13 @@ class WebAvanueDownloadManager(
         _downloadStates.value = _downloadStates.value.toMutableMap().apply {
             put(downloadId, state)
         }
+    }
+
+    /**
+     * Clean up resources when manager is no longer needed
+     */
+    fun destroy() {
+        monitorScope.cancel()
     }
 }
 

@@ -10,6 +10,7 @@ import com.augmentalis.webavanue.data.db.BrowserDatabase
 import com.augmentalis.webavanue.EncryptionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory as SQLCipherSupportFactory
 
 /**
@@ -60,9 +61,17 @@ private fun createEncryptedDriver(context: Context): SqlDriver {
         // Using runBlocking is acceptable here as this is a one-time migration that must complete
         // before the app can use the database. Alternative would be to defer app startup,
         // but that adds complexity without benefit for a one-time operation.
+        // Added timeout protection to prevent indefinite blocking on very large databases
         runBlocking(Dispatchers.IO) {
             try {
-                migratePlaintextToEncrypted(context, passphrase)
+                // 5 minute timeout for migration - should be sufficient for most databases
+                // If migration times out, app will fallback to plaintext and user can retry
+                withTimeout(5 * 60 * 1000L) {
+                    migratePlaintextToEncrypted(context, passphrase)
+                }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                println("DatabaseDriver: Migration timed out after 5 minutes - will retry on next launch")
+                // Don't rethrow - let app continue with plaintext DB
             } catch (e: Exception) {
                 println("DatabaseDriver: Migration failed - will retry on next launch: ${e.message}")
                 // Don't rethrow - let app continue with plaintext DB if migration fails

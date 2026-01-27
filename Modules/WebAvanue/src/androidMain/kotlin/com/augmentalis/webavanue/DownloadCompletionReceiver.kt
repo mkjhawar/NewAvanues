@@ -8,6 +8,7 @@ import com.augmentalis.webavanue.DownloadStatus
 import com.augmentalis.webavanue.BrowserRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
@@ -79,8 +80,12 @@ class DownloadCompletionReceiver : BroadcastReceiver() {
             return
         }
 
+        // Use goAsync() pattern to allow coroutine work in BroadcastReceiver
+        // This prevents ANR by extending the allowed execution time
+        val pendingResult = goAsync()
+
         // Update repository based on status
-        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 // Find our download by DownloadManager ID
                 val download = repository.getDownloadByManagerId(downloadId)
@@ -134,6 +139,9 @@ class DownloadCompletionReceiver : BroadcastReceiver() {
                 }
             } catch (e: Exception) {
                 println("DownloadCompletionReceiver: Error updating download: ${e.message}")
+            } finally {
+                // Signal that async work is complete
+                pendingResult.finish()
             }
         }
     }
