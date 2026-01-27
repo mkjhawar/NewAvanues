@@ -21,17 +21,18 @@ import com.augmentalis.webavanue.OceanTextButton
  * AddPageDialog - Dialog for adding a new page with URL input
  *
  * FIX: URL validation now happens inside the dialog, keeping it open if validation fails.
+ * The dialog validates the URL synchronously before calling onConfirm.
  *
  * @param url Current URL value
  * @param onUrlChange Callback when URL changes
- * @param onConfirm Callback when user confirms with validated URL (url: String)
+ * @param onConfirm Callback when user confirms with validated URL - receives the formatted/validated URL
  * @param onDismiss Callback when dialog is dismissed
  */
 @Composable
 fun AddPageDialog(
     url: String,
     onUrlChange: (String) -> Unit,
-    onConfirm: () -> Unit,
+    onConfirm: (validatedUrl: String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -45,12 +46,14 @@ fun AddPageDialog(
 
         // Allow blank URLs (creates new blank tab)
         if (url.isBlank()) {
-            onConfirm()
+            onConfirm("")
             return
         }
 
         // Format URL with scheme if needed
-        val formattedUrl = if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        val formattedUrl = if (!url.startsWith("http://") && !url.startsWith("https://") &&
+            !url.startsWith("avanues://") && !url.startsWith("about:") &&
+            !url.startsWith("file://") && !url.startsWith("data:")) {
             "https://$url"
         } else {
             url
@@ -60,8 +63,8 @@ fun AddPageDialog(
         val result = UrlValidation.validate(formattedUrl, allowBlank = true)
         when (result) {
             is UrlValidation.UrlValidationResult.Valid -> {
-                // URL is valid - proceed with confirm
-                onConfirm()
+                // URL is valid - pass the normalized URL to confirm
+                onConfirm(result.normalizedUrl)
             }
             is UrlValidation.UrlValidationResult.Invalid -> {
                 // URL is invalid - show error, keep dialog open

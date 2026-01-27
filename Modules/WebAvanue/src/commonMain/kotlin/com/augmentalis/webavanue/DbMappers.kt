@@ -61,6 +61,28 @@ internal fun com.augmentalis.webavanue.data.Favorite.toDomainModel() = Favorite(
     visitCount = visit_count.toInt(), position = position.toInt(), tags = emptyList()
 )
 
+// ==================== Favorite Folder Mappers ====================
+
+internal fun FavoriteFolder.toDbModel() = com.augmentalis.webavanue.data.Favorite_folder(
+    id = id,
+    name = name,
+    parent_id = parentId,
+    icon = icon,
+    color = color,
+    created_at = createdAt.toEpochMilliseconds(),
+    position = position.toLong()
+)
+
+internal fun com.augmentalis.webavanue.data.Favorite_folder.toDomainModel() = FavoriteFolder(
+    id = id,
+    name = name,
+    parentId = parent_id,
+    icon = icon,
+    color = color,
+    createdAt = Instant.fromEpochMilliseconds(created_at),
+    position = position.toInt()
+)
+
 // ==================== History Mappers ====================
 
 internal fun HistoryEntry.toDbModel() = com.augmentalis.webavanue.data.History_entry(

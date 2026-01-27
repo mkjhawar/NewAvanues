@@ -1174,21 +1174,18 @@ fun BrowserScreen(
         }
 
         // Add Page Dialog
+        // FIX: Dialog now validates URL internally and only calls onConfirm with validated URL
         if (showAddPageDialog) {
             AddPageDialog(
                 url = newPageUrl,
                 onUrlChange = { newPageUrl = it },
-                onConfirm = {
-                    if (newPageUrl.isNotBlank()) {
-                        val formattedUrl = if (!newPageUrl.startsWith("http://") && !newPageUrl.startsWith("https://")) {
-                            "https://$newPageUrl"
-                        } else {
-                            newPageUrl
-                        }
+                onConfirm = { validatedUrl ->
+                    // URL is already validated by the dialog - create tab with validated URL
+                    if (validatedUrl.isNotBlank()) {
                         // FIX BUG #4: Apply global desktop mode when creating new tabs
                         tabViewModel.createTab(
-                            url = formattedUrl,
-                            title = formattedUrl,
+                            url = validatedUrl,
+                            title = validatedUrl,
                             isDesktopMode = settings?.useDesktopMode == true
                         )
                     } else {

@@ -289,6 +289,40 @@ WHERE title LIKE '%' || ? || '%'
    OR description LIKE '%' || ? || '%'
 ORDER BY visit_count DESC;
 
+-- Folder queries
+insertFavoriteFolder:
+INSERT OR REPLACE INTO favorite_folder VALUES ?;
+
+selectAllFolders:
+SELECT * FROM favorite_folder ORDER BY position, name;
+
+selectFolderById:
+SELECT * FROM favorite_folder WHERE id = ?;
+
+selectFoldersByParent:
+SELECT * FROM favorite_folder WHERE parent_id = ? ORDER BY position, name;
+
+selectRootFolders:
+SELECT * FROM favorite_folder WHERE parent_id IS NULL ORDER BY position, name;
+
+updateFolder:
+UPDATE favorite_folder SET
+    name = ?,
+    parent_id = ?,
+    icon = ?,
+    color = ?,
+    position = ?
+WHERE id = ?;
+
+deleteFolderById:
+DELETE FROM favorite_folder WHERE id = ?;
+
+deleteFavoritesInFolder:
+DELETE FROM favorite WHERE folder_id = ?;
+
+clearFolderFromFavorites:
+UPDATE favorite SET folder_id = NULL WHERE folder_id = ?;
+
 -- History queries
 insertHistoryEntry:
 INSERT OR REPLACE INTO history_entry VALUES ?;
