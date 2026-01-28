@@ -8,6 +8,9 @@ import java.util.ArrayDeque
 
 private const val TAG = "BoundsResolver"
 
+// Suppress recycle() deprecation - Android 14+ handles cleanup automatically
+@Suppress("DEPRECATION")
+
 /**
  * Hybrid layered bounds resolution for click execution.
  *

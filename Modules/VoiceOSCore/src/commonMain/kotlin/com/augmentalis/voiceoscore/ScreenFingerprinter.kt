@@ -1,3 +1,5 @@
+@file:Suppress("UNNECESSARY_SAFE_CALL", "USELESS_ELVIS") // Defensive null handling
+
 /**
  * ScreenFingerprinter.kt - Screen identity fingerprinting
  *

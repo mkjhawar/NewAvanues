@@ -1,3 +1,5 @@
+@file:Suppress("UNNECESSARY_SAFE_CALL", "USELESS_ELVIS") // Defensive null handling
+
 /**
  * DangerDetector.kt - Dangerous element detection
  *

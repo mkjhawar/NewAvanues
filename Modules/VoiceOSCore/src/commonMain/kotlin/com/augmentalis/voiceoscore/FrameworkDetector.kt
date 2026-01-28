@@ -1,3 +1,5 @@
+@file:Suppress("UNUSED_PARAMETER") // packageName reserved for future use
+
 /*
  * Copyright (c) 2026 Augmentalis. All rights reserved.
  *

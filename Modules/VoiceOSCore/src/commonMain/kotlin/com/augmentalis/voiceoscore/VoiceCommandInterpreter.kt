@@ -1,3 +1,5 @@
+@file:Suppress("UNUSED_PARAMETER") // replacePrefix reserved for future rule expansion
+
 /**
  * VoiceCommandInterpreter.kt - Rule-based voice command interpretation
  *

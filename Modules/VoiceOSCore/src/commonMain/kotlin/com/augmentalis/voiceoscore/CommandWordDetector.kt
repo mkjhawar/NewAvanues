@@ -275,15 +275,13 @@ class CommandWordDetector(
 
         var cmdIndex = 0
         var startTextIndex = -1
-        var endTextIndex = -1
 
         for (i in textWords.indices) {
             if (textWords[i] == cmdWords[cmdIndex]) {
                 if (cmdIndex == 0) startTextIndex = i
                 cmdIndex++
                 if (cmdIndex == cmdWords.size) {
-                    endTextIndex = i
-                    return Pair(startTextIndex, endTextIndex)
+                    return Pair(startTextIndex, i)
                 }
             }
         }

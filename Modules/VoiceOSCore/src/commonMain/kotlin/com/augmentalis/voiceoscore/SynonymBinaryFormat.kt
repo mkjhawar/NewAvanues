@@ -1,3 +1,5 @@
+@file:Suppress("UNUSED_VARIABLE") // Variables used for documentation/debugging
+
 /**
  * SynonymBinaryFormat.kt - Binary format for synonym packs (.qsyn)
  *

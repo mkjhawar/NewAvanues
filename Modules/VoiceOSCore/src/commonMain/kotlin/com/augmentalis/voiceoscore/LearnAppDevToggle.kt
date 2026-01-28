@@ -1,3 +1,5 @@
+@file:Suppress("NOTHING_TO_INLINE") // Inline used for API clarity
+
 package com.augmentalis.voiceoscore
 
 /**

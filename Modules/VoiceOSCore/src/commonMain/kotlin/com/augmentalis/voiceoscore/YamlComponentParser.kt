@@ -1,3 +1,5 @@
+@file:Suppress("UNUSED_VARIABLE", "UNUSED_VALUE") // currentSection tracks parsing state for debugging
+
 /**
  * YamlComponentParser.kt - YAML parser for component definitions
  *

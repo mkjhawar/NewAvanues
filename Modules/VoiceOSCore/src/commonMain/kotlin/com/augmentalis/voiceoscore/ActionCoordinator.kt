@@ -89,6 +89,7 @@ class ActionCoordinator(
             }
 
             // Initialize all handlers
+            @Suppress("UNUSED_VARIABLE")
             val initCount = handlerRegistry.initializeAll()
 
             _state.value = CoordinatorState.READY

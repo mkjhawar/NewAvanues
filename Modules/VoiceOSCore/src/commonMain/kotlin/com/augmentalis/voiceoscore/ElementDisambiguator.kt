@@ -1,3 +1,5 @@
+@file:Suppress("UNUSED_PARAMETER") // Parameters reserved for future use
+
 /**
  * ElementDisambiguator.kt - Handles disambiguation of duplicate UI elements
  *

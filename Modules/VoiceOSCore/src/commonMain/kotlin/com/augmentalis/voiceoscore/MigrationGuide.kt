@@ -1,3 +1,5 @@
+@file:Suppress("UNUSED_PARAMETER") // API compatibility stubs
+
 /**
  * MigrationGuide.kt - Complete migration documentation for VoiceOSCoreNG
  *

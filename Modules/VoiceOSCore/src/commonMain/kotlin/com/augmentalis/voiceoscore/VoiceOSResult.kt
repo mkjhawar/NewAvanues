@@ -1,3 +1,5 @@
+@file:Suppress("UNCHECKED_CAST", "USELESS_CAST") // Required for generic type transformations
+
 /**
  * VoiceOSResult.kt - Standardized error handling for VoiceOS (KMP Library)
  *

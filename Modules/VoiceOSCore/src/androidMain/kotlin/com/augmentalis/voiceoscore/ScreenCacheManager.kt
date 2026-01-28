@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION") // recycle() deprecated in Android 14+
+
 package com.augmentalis.voiceoscore
 
 import android.content.res.Resources

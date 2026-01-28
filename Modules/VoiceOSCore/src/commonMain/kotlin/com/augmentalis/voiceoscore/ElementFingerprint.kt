@@ -28,6 +28,7 @@ object ElementFingerprint {
      * @param contentDesc Accessibility content description (optional)
      * @return Fingerprint string in format "BTN:a3f2e1c9"
      */
+    @Suppress("UNUSED_PARAMETER") // Reserved for future package-specific fingerprinting
     fun generate(
         className: String,
         packageName: String,
