@@ -1,20 +1,18 @@
 /**
- * VoiceOSCore - Unified KMP Voice Control Module
+ * CommandManager - Standalone KMP Voice Command Management Module
+ *
+ * Provides command registration, matching, execution, and persistence
+ * for voice-controlled applications.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Created: 2026-01-17
+ * Created: 2026-01-28
  */
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.sqldelight)
 }
-
-// Note: Versions now sourced from gradle/libs.versions.toml
-// kotlinx-coroutines = 1.8.1, kotlinx-serialization = 1.6.0, kotlinx-datetime = 0.5.0
-// sqldelight = 2.0.1, androidx-core = 1.12.0, junit = 4.13.2
 
 kotlin {
     androidTarget {
@@ -46,17 +44,8 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                // CommandManager - Voice command API
-                api(project(":Modules:CommandManager"))
-
                 // AVID - Avanues Voice ID
                 implementation(project(":Modules:AVID"))
-
-                // AVUCodec - Avanues Universal Codec (for ACD parsing)
-                implementation(project(":Modules:AVUCodec"))
-
-                // SpeechRecognition - KMP unified speech module
-                implementation(project(":Modules:SpeechRecognition"))
 
                 // Coroutines
                 implementation(libs.kotlinx.coroutines.core)
@@ -69,9 +58,6 @@ kotlin {
 
                 // DateTime
                 implementation(libs.kotlinx.datetime)
-
-                // SQLDelight
-                implementation(libs.sqldelight.coroutines.extensions)
             }
         }
 
@@ -86,46 +72,12 @@ kotlin {
             dependencies {
                 // Android Core
                 implementation(libs.androidx.core.ktx)
-
-                // Compose (use .get() to resolve provider for platform())
-                implementation(platform(libs.compose.bom.get()))
-                implementation(libs.compose.ui.ui)
-                implementation(libs.compose.material3)
-                implementation(libs.compose.material.icons.extended)
-                implementation(libs.compose.ui.tooling.preview)
-
-                // SQLDelight Android Driver
-                implementation(libs.sqldelight.android.driver)
-
-                // Speech Recognition
-                implementation(project(":Modules:SpeechRecognition"))
-
-                // Vivoka SDK
-                implementation(project(":vivoka:Android"))
-
-                // NLU and LLM
-                implementation(project(":Modules:AI:NLU"))
-                implementation(project(":Modules:AI:LLM"))
-
-                // AVA Core Utils
-                implementation(project(":Modules:AVA:core:Utils"))
-
-                // Unified Database - for command persistence and scraping repositories
-                // (Consolidated from VoiceOS:core:database into Modules:Database)
-                implementation(project(":Modules:Database"))
             }
         }
 
         val androidUnitTest by getting {
             dependencies {
                 implementation(libs.junit)
-            }
-        }
-
-        val androidInstrumentedTest by getting {
-            dependencies {
-                implementation(libs.androidx.test.junit)
-                implementation(libs.androidx.test.espresso.core)
             }
         }
 
@@ -141,11 +93,6 @@ kotlin {
                 iosX64Main.dependsOn(this)
                 iosArm64Main.dependsOn(this)
                 iosSimulatorArm64Main.dependsOn(this)
-                dependencies {
-                    implementation(libs.sqldelight.native.driver)
-                    // NLU (CoreML-based)
-                    implementation(project(":Modules:AI:NLU"))
-                }
             }
 
             val iosX64Test by getting
@@ -162,11 +109,6 @@ kotlin {
         // Desktop source sets
         val desktopMain by getting {
             dependsOn(commonMain)
-            dependencies {
-                implementation(libs.sqldelight.sqlite.driver)
-                // LLM (OllamaProvider)
-                implementation(project(":Modules:AI:LLM"))
-            }
         }
 
         val desktopTest by getting {
@@ -176,7 +118,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.voiceoscore"
+    namespace = "com.augmentalis.commandmanager"
     compileSdk = 34
 
     defaultConfig {
@@ -186,21 +128,5 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    buildFeatures {
-        compose = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
-    }
-}
-
-sqldelight {
-    databases {
-        create("VoiceOSDatabase") {
-            packageName.set("com.augmentalis.database")
-        }
     }
 }

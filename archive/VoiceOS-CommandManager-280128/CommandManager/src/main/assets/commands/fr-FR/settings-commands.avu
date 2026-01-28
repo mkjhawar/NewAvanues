@@ -1,0 +1,29 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: settings-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: fr-FR
+project: voiceos
+metadata:
+  category: settings
+  display_name: Settings
+  description: Voice commands for quick access to settings screens
+  command_count: 6
+---
+CAT:settings:Settings:Voice commands for quick access to settings screens
+CMD:OPEN_CONNECTION:ouvrir connections
+CMD:OPEN_SOUND:ouvrir sound
+CMD:OPEN_DISPLAY:ouvrir display
+CMD:OPEN_SECURITY:ouvrir security
+CMD:OPEN_ABOUT:ouvrir about
+CMD:OPEN_SETTINGS:ouvrir paramètres
+---
+SYN:OPEN_CONNECTION:[connections,network paramètres,connectivity,connection paramètres,network options,wireless paramètres,internet paramètres,network menu,connection menu,connectivity paramètres,network configuration,wireless configuration,internet configuration,connection options]
+SYN:OPEN_SOUND:[sound paramètres,audio paramètres,volume paramètres,sound options,audio options,sound menu,audio menu,sound preferences,audio preferences,sound control,audio control,volume control,sound configuration,audio configuration]
+SYN:OPEN_DISPLAY:[display paramètres,écran paramètres,display options,écran options,display menu,écran menu,display preferences,écran preferences,visual paramètres,display control,écran control,display configuration,écran configuration,luminosité paramètres]
+SYN:OPEN_SECURITY:[security paramètres,privacy paramètres,security options,privacy options,security menu,privacy menu,security preferences,privacy preferences,protection paramètres,safety paramètres,security control,privacy control,security configuration,privacy configuration]
+SYN:OPEN_ABOUT:[about device,device info,system info,about phone,device information,system information,about system,phone info,about menu,device details,system details,phone details,device specifications,system specifications]
+SYN:OPEN_SETTINGS:[paramètres,preferences,configuration,options,system paramètres,device paramètres,setup,control panel,paramètres menu,preferences menu,ouvrir preferences,ouvrir configuration,ouvrir options,afficher paramètres]

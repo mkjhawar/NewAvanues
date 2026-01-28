@@ -1,0 +1,23 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: menu-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: en-US
+project: voiceos
+metadata:
+  category: menu
+  display_name: Menu Navigation
+  description: Voice commands for menu navigation
+  command_count: 3
+---
+CAT:menu:Menu Navigation:Voice commands for menu navigation
+CMD:MENU:menu
+CMD:BACK:back
+CMD:RETURN_TO_DASHBOARD:return to dashboard
+---
+SYN:MENU:[open menu,main menu,menu options,show menu,menu list,navigation menu,options menu,menu bar,menu screen,menu page,display menu,bring up menu,access menu,menu please]
+SYN:BACK:[go back,return,previous,back button,navigate back,go previous,back page,previous page,last page,return previous,step back,move back,go backwards,navigate backwards]
+SYN:RETURN_TO_DASHBOARD:[return to setup,go to dashboard,dashboard,main dashboard,control panel,home dashboard,setup screen,main screen,control screen,setup dashboard,go to setup,return to main,main control,primary dashboard]

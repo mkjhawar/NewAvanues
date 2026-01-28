@@ -1,0 +1,31 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: cursor-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: de-DE
+project: voiceos
+metadata:
+  category: cursor
+  display_name: Cursor Control
+  description: Voice commands for cursor control and manipulation
+  command_count: 7
+---
+CAT:cursor:Cursor Control:Voice commands for cursor control and manipulation
+CMD:SELECT:auswählen
+CMD:HAND_CURSOR:hand Cursor
+CMD:NORMAL_CURSOR:normal Cursor
+CMD:CHANGE_CURSOR:change Cursor
+CMD:CENTER_CURSOR:center Cursor
+CMD:SHOW_CURSOR:zeigen Cursor
+CMD:HIDE_CURSOR:verstecken Cursor
+---
+SYN:SELECT:[choose,pick,highlight,mark,elect,auswählen item,choose this,pick this,choose this one,pick this item,take this,gehen with this,auswählen this thing,pick out this one,choose that there]
+SYN:HAND_CURSOR:[hand pointer,pointing hand,finger pointer,pointer Cursor,finger Cursor,pointing Cursor,hand curser,pointer mode,finger mode,hand mode,point Cursor,hand type Cursor,pointing finger,finger point]
+SYN:NORMAL_CURSOR:[standard Cursor,regular Cursor,default Cursor,ordinary Cursor,basic Cursor,normal curser,standard curser,regular curser,default curser,basic curser,plain Cursor,usual Cursor,standard pointer,regular pointer]
+SYN:CHANGE_CURSOR:[switch Cursor,modify Cursor,alter Cursor,Cursor change,Cursor switch,change curser,switch curser,modify curser,alter curser,curser change,swap Cursor,change the Cursor,switch the Cursor,modify the Cursor]
+SYN:CENTER_CURSOR:[Cursor center,center pointer,middle Cursor,center curser,curser center,middle curser,Cursor middle,center the Cursor,put Cursor in center,Cursor to center,center that Cursor,middle of Cursor,Cursor dead center,center it hoch]
+SYN:SHOW_CURSOR:[display Cursor,Cursor visible,make Cursor visible,Cursor zeigen,reveal Cursor,zeigen curser,display curser,curser visible,make curser visible,reveal curser,zeigen the Cursor,display the Cursor,make Cursor appear,bring hoch Cursor]
+SYN:HIDE_CURSOR:[Cursor verstecken,make Cursor invisible,Cursor invisible,conceal Cursor,remove Cursor,verstecken curser,curser verstecken,make curser invisible,conceal curser,remove curser,verstecken the Cursor,conceal the Cursor,make Cursor disappear,Cursor away]

@@ -51,6 +51,7 @@ include(":Modules:AI:ALC")      // Adaptive LLM Coordinator (local inference)
 
 // Top-level Modules (cross-platform KMP)
 include(":Modules:AVID")                  // Avanues Voice ID - unified identifier system
+include(":Modules:CommandManager")        // KMP Command management - registration, matching, execution
 include(":Modules:Database")              // Unified KMP database - VoiceOS, WebAvanue, AVID persistence
 // include(":Modules:VUID")               // DEPRECATED - replaced by AVID module
 
@@ -99,11 +100,12 @@ include(":android:apps:VoiceUI")
 
 // VoiceOS Managers (remaining in VoiceOS - VoiceOS-specific)
 include(":Modules:VoiceOS:managers:HUDManager")
-include(":Modules:VoiceOS:managers:CommandManager")
+// include(":Modules:VoiceOS:managers:CommandManager")       // ARCHIVED (2026-01-28) - see archive/VoiceOS-CommandManager-280128
 // include(":Modules:VoiceOS:managers:VoiceDataManager")     // ARCHIVED (2026-01-28) - see archive/VoiceOS-VoiceDataManager-280128
 include(":Modules:VoiceDataManager")                         // KMP VoiceDataManager module (replacement)
 // include(":Modules:VoiceOS:managers:LocalizationManager")  // ARCHIVED (2026-01-28) - see archive/VoiceOS-LocalizationManager-280128
 include(":Modules:LocalizationManager")                      // KMP LocalizationManager module (replacement)
+include(":Modules:Localization")                             // KMP Localization module (used by VoiceKeyboard)
 
 // Top-level Shared Modules (consolidated from VoiceOS/libraries and AvaMagic)
 include(":Modules:DeviceManager")                       // Device info, sensors, audio, network

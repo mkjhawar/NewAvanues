@@ -1,0 +1,35 @@
+# AVU Format v1.0
+# Type: VOICE
+# Extension: .avu
+# Converted from: navigation-commands.vos
+---
+schema: avu-vos-1.0
+version: 1.0.0
+locale: de-DE
+project: voiceos
+metadata:
+  category: navigation
+  display_name: Navigation
+  description: Voice commands for navigating the system and apps
+  command_count: 9
+---
+CAT:navigation:Navigation:Voice commands for navigating the system and apps
+CMD:NAVIGATE_HOME:navigieren Startseite
+CMD:OPEN_RECENT_APPS:öffnen kürzlich apps
+CMD:OPEN_SETTINGS:öffnen Einstellungen
+CMD:OPEN_CONNECTION:öffnen connections
+CMD:OPEN_SOUND:öffnen sound
+CMD:OPEN_DISPLAY:öffnen display
+CMD:OPEN_SECURITY:öffnen security
+CMD:OPEN_ABOUT:öffnen about
+CMD:GO_BACK:navigieren zurück
+---
+SYN:NAVIGATE_HOME:[gehen Startseite,return Startseite,Startseite Bildschirm,main Bildschirm,öffnen app drawer,Startseite page,main page,gehen to Startseite,zurück to Startseite,Startseite button,navigieren to Startseite,return to Startseite,gehen zurück Startseite,take me Startseite]
+SYN:OPEN_RECENT_APPS:[kürzlich apps,kürzlich applications,app switcher,task switcher,kürzlich programs,kürzlich tasks,app history,öffnen kürzlich,switch apps,kürzlich list,kürzlich applications bitte,zeigen kürzlich apps,display kürzlich apps,view kürzlich apps]
+SYN:OPEN_SETTINGS:[Einstellungen,preferences,configuration,options,system Einstellungen,device Einstellungen,setup,control panel,Einstellungen Menü,preferences Menü,öffnen preferences,öffnen configuration,öffnen options,zeigen Einstellungen]
+SYN:OPEN_CONNECTION:[connections,network Einstellungen,connectivity,connection Einstellungen,network options,wireless Einstellungen,internet Einstellungen,network Menü,connection Menü,connectivity Einstellungen,network configuration,wireless configuration,internet configuration,connection options]
+SYN:OPEN_SOUND:[sound Einstellungen,audio Einstellungen,Lautstärke Einstellungen,sound options,audio options,sound Menü,audio Menü,sound preferences,audio preferences,sound control,audio control,Lautstärke control,sound configuration,audio configuration]
+SYN:OPEN_DISPLAY:[display Einstellungen,Bildschirm Einstellungen,display options,Bildschirm options,display Menü,Bildschirm Menü,display preferences,Bildschirm preferences,visual Einstellungen,display control,Bildschirm control,display configuration,Bildschirm configuration,Helligkeit Einstellungen]
+SYN:OPEN_SECURITY:[security Einstellungen,privacy Einstellungen,security options,privacy options,security Menü,privacy Menü,security preferences,privacy preferences,protection Einstellungen,safety Einstellungen,security control,privacy control,security configuration,privacy configuration]
+SYN:OPEN_ABOUT:[about device,device info,system info,about phone,device information,system information,about system,phone info,about Menü,device details,system details,phone details,device specifications,system specifications]
+SYN:GO_BACK:[gehen zurück,return,vorherige page,zurück,zurück button,gehen vorherige,navigieren vorherige,zurück page,vorherige,letzte page,return to vorherige,gehen to vorherige,step zurück,move zurück]
