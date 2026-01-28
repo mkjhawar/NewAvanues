@@ -101,8 +101,8 @@ include(":android:apps:VoiceUI")
 include(":Modules:VoiceOS:managers:HUDManager")
 include(":Modules:VoiceOS:managers:CommandManager")
 include(":Modules:VoiceOS:managers:VoiceDataManager")
-include(":Modules:VoiceOS:managers:LocalizationManager")     // Fixed SQLDelight imports - compiles now
-include(":Modules:Localization")                             // KMP Localization module
+// include(":Modules:VoiceOS:managers:LocalizationManager")  // ARCHIVED (2026-01-28) - see archive/VoiceOS-LocalizationManager-280128
+include(":Modules:Localization")                             // KMP Localization module (replacement)
 
 // Top-level Shared Modules (consolidated from VoiceOS/libraries and AvaMagic)
 include(":Modules:DeviceManager")                       // Device info, sensors, audio, network
