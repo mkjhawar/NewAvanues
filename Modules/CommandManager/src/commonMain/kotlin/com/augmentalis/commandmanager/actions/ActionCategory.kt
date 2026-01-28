@@ -7,16 +7,13 @@
  *
  * Categorizes action handlers for priority-based dispatch.
  */
-package com.augmentalis.commandmanager.actions
-
-import kotlinx.serialization.Serializable
+package com.augmentalis.commandmanager
 
 /**
  * Categories of actions that can be handled.
  *
- * Used by HandlerRegistry to prioritize handler lookup.
+ * Used by [HandlerRegistry] to prioritize handler lookup.
  */
-@Serializable
 enum class ActionCategory {
     /**
      * System-level actions (settings, power, etc.)

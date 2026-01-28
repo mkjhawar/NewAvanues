@@ -47,6 +47,12 @@ kotlin {
                 // AVID - Avanues Voice ID
                 implementation(project(":Modules:AVID"))
 
+                // SpeechRecognition - for speech engine adapters
+                implementation(project(":Modules:SpeechRecognition"))
+
+                // AVUCodec - for AVU encoding/decoding
+                implementation(project(":Modules:AVUCodec"))
+
                 // Coroutines
                 implementation(libs.kotlinx.coroutines.core)
 

@@ -1,7 +1,9 @@
+package com.augmentalis.commandmanager
+
 /**
- * CommandManager - Command Action Types
+ * Command Action Type - Action types for voice commands.
  *
- * Defines action types for voice commands.
+ * Defines the action a command performs on a UI element or system.
  *
  * Categories:
  * - Element Actions: CLICK, LONG_CLICK, TYPE, SCROLL_*
@@ -10,15 +12,7 @@
  * - System: OPEN_SETTINGS, NOTIFICATIONS, SCREENSHOT, FLASHLIGHT_*
  * - VoiceOS: VOICE_*, DICTATION_*, SHOW_COMMANDS
  * - App Launch: OPEN_APP
- *
- * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Created: 2026-01-28
  */
-package com.augmentalis.commandmanager.actions
-
-import kotlinx.serialization.Serializable
-
-@Serializable
 enum class CommandActionType {
     // ═══════════════════════════════════════════════════════════════════
     // Element Actions (UI interaction)
@@ -216,7 +210,7 @@ enum class CommandActionType {
         fun fromString(value: String): CommandActionType {
             return try {
                 valueOf(value.uppercase())
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 CLICK
             }
         }
