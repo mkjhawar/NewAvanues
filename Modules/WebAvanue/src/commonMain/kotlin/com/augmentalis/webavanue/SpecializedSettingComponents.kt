@@ -51,43 +51,72 @@ fun ThemeSettingItem(
 }
 
 /**
- * Search engine setting item with dropdown
+ * Search engine setting item with dropdown and custom URL support
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchEngineSettingItem(
     currentEngine: BrowserSettings.SearchEngine,
+    customEngineName: String = "Custom",
+    customEngineUrl: String = "",
     onEngineSelected: (BrowserSettings.SearchEngine) -> Unit,
+    onCustomNameChanged: ((String) -> Unit)? = null,
+    onCustomUrlChanged: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        OutlinedTextField(
-            value = currentEngine.name,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Search Engine") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth()
-        )
-        ExposedDropdownMenu(
+    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+        ExposedDropdownMenuBox(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onExpandedChange = { expanded = it },
+            modifier = Modifier.fillMaxWidth()
         ) {
-            BrowserSettings.SearchEngine.entries.forEach { engine ->
-                DropdownMenuItem(
-                    text = { Text(engine.name) },
-                    onClick = {
-                        onEngineSelected(engine)
-                        expanded = false
-                    }
-                )
+            OutlinedTextField(
+                value = if (currentEngine == BrowserSettings.SearchEngine.CUSTOM) customEngineName else currentEngine.name,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Search Engine") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.menuAnchor().fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                BrowserSettings.SearchEngine.entries.forEach { engine ->
+                    DropdownMenuItem(
+                        text = { Text(if (engine == BrowserSettings.SearchEngine.CUSTOM) "Custom..." else engine.name) },
+                        onClick = {
+                            onEngineSelected(engine)
+                            expanded = false
+                        }
+                    )
+                }
             }
+        }
+
+        // Show custom URL configuration when CUSTOM is selected
+        if (currentEngine == BrowserSettings.SearchEngine.CUSTOM) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = customEngineName,
+                onValueChange = { onCustomNameChanged?.invoke(it) },
+                label = { Text("Engine Name") },
+                placeholder = { Text("My Search Engine") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = customEngineUrl,
+                onValueChange = { onCustomUrlChanged?.invoke(it) },
+                label = { Text("Search URL") },
+                placeholder = { Text("https://example.com/search?q=%s") },
+                supportingText = { Text("Use %s where the search query should go") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
         }
     }
 }
