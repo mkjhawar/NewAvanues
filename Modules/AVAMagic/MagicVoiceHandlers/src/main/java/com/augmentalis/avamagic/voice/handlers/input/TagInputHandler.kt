@@ -847,27 +847,6 @@ class TagInputHandler(
         return WORD_NUMBERS[trimmed]
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Voice Phrases for Speech Engine Registration
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            "add tag",
-            "add",
-            "remove tag",
-            "delete",
-            "remove last",
-            "delete last",
-            "clear all tags",
-            "clear tags",
-            "select tag",
-            "tag",
-            "first tag",
-            "last tag",
-            "edit tag"
-        )
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

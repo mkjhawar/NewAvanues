@@ -664,22 +664,6 @@ class PaginationHandler(
         return null
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Voice Phrases for Speech Engine Registration
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            "page", "go to page", "jump to page",
-            "next page", "next",
-            "previous page", "previous", "back",
-            "first page", "beginning",
-            "last page", "end",
-            "show per page", "items per page",
-            "twenty per page", "fifty per page",
-            "refresh", "reload"
-        )
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

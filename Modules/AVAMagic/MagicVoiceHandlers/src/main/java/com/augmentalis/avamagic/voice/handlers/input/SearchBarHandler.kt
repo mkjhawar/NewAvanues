@@ -626,28 +626,6 @@ class SearchBarHandler(
         return executor.findFocused()
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Voice Phrases for Speech Engine Registration
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            "search for",
-            "find",
-            "search",
-            "go",
-            "submit",
-            "type",
-            "clear search",
-            "clear",
-            "voice search",
-            "filter by",
-            "recent searches",
-            "show history",
-            "suggestion",
-            "search suggestion"
-        )
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

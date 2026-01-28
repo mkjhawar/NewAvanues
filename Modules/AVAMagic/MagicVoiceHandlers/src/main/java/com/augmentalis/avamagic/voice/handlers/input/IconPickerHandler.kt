@@ -749,31 +749,6 @@ class IconPickerHandler(
         return null
     }
 
-    // ===============================================================================
-    // Voice Phrases for Speech Engine Registration
-    // ===============================================================================
-
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            "select",
-            "choose",
-            "search",
-            "find",
-            "icon one",
-            "icon two",
-            "icon three",
-            "next",
-            "previous",
-            "back",
-            "next page",
-            "previous page",
-            "category",
-            "show all",
-            "all icons",
-            "clear selection",
-            "deselect"
-        )
-    }
 }
 
 // ===================================================================================

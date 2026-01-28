@@ -2,38 +2,32 @@
  * ToggleHandler.kt
  *
  * Created: 2026-01-27 00:00 PST
- * Last Modified: 2026-01-27 00:00 PST
+ * Last Modified: 2026-01-28 00:00 PST
  * Author: VOS4 Development Team
- * Version: 1.0.0
+ * Version: 2.0.0
  *
  * Purpose: Voice command handler for VoiceOS toggle/switch controls
  * Features: Turn on/off, enable/disable, toggle switches by name or focus
- * Location: CommandManager module
+ * Location: MagicVoiceHandlers module
  *
  * Changelog:
+ * - v2.0.0 (2026-01-28): Migrated to BaseHandler pattern with executor
  * - v1.0.0 (2026-01-27): Initial implementation for toggle voice commands
  */
 
 package com.augmentalis.avamagic.voice.handlers.input
 
-import android.accessibilityservice.AccessibilityService
-import android.content.Context
-import android.os.Bundle
 import android.util.Log
-import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.commandmanager.CommandHandler
-import com.augmentalis.commandmanager.CommandRegistry
-import com.augmentalis.commandmanager.processor.NodeFinder
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import com.augmentalis.voiceoscore.ActionCategory
+import com.augmentalis.voiceoscore.BaseHandler
+import com.augmentalis.voiceoscore.HandlerResult
+import com.augmentalis.voiceoscore.QuantizedCommand
 
 /**
  * Voice command handler for toggle/switch controls
  *
  * Routes commands to toggle UI elements (switches, checkboxes, toggles)
- * via AccessibilityService.
+ * via executor pattern.
  *
  * Supported Commands:
  * - "turn on [name]" / "enable [name]" - turn on toggle by name
@@ -42,33 +36,18 @@ import kotlinx.coroutines.cancel
  * - "on" / "off" - for focused toggle
  * - "toggle" - flip focused toggle
  *
- * Design:
- * - Command parsing and routing only (no UI logic)
- * - Uses AccessibilityService for toggle manipulation
- * - Thread-safe singleton pattern
- * - Implements CommandHandler for CommandRegistry integration
+ * Thread Safety:
+ * - All operations are suspend functions
+ * - State modifications are atomic via executor
+ *
+ * @param executor Platform-specific executor for toggle operations
  */
-class ToggleHandler private constructor(
-    private val context: Context
-) : CommandHandler {
+class ToggleHandler(
+    private val executor: ToggleExecutor
+) : BaseHandler() {
 
     companion object {
         private const val TAG = "ToggleHandler"
-        private const val MODULE_ID = "toggle_handler"
-
-        @Volatile
-        private var instance: ToggleHandler? = null
-
-        /**
-         * Get singleton instance
-         */
-        fun getInstance(context: Context): ToggleHandler {
-            return instance ?: synchronized(this) {
-                instance ?: ToggleHandler(context.applicationContext).also {
-                    instance = it
-                }
-            }
-        }
 
         // Command patterns for voice recognition
         private val TURN_ON_PREFIXES = listOf("turn on", "enable")
@@ -77,164 +56,327 @@ class ToggleHandler private constructor(
         private val STANDALONE_ON = setOf("on")
         private val STANDALONE_OFF = setOf("off")
         private val STANDALONE_TOGGLE = setOf("toggle")
-
-        // Toggle-related class names for accessibility node detection
-        private val TOGGLE_CLASS_NAMES = setOf(
-            "android.widget.Switch",
-            "android.widget.ToggleButton",
-            "android.widget.CheckBox",
-            "android.widget.CompoundButton",
-            "androidx.appcompat.widget.SwitchCompat",
-            "com.google.android.material.switchmaterial.SwitchMaterial",
-            "androidx.compose.material.Switch",
-            "androidx.compose.material3.Switch"
-        )
     }
 
-    // CommandHandler interface implementation
-    override val moduleId: String = "togglehandler"
+    override val category: ActionCategory = ActionCategory.UI
 
-    override val supportedCommands: List<String> = listOf(
+    override val supportedActions: List<String> = listOf(
         // Named toggle commands
-        "turn on [name]",
-        "turn off [name]",
-        "enable [name]",
-        "disable [name]",
-        "toggle [name]",
-        "switch [name]",
+        "turn on", "turn off",
+        "enable", "disable",
+        "toggle", "switch",
 
         // Focused toggle commands (standalone)
-        "on",
-        "off",
-        "toggle"
+        "on", "off"
     )
 
-    private val commandScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
-    // Integration state
-    private var isInitialized = false
-    private var accessibilityService: AccessibilityService? = null
-
-    init {
-        initialize()
-        // Register with CommandRegistry automatically
-        CommandRegistry.registerHandler(moduleId, this)
-    }
-
     /**
-     * Initialize command handler
+     * Callback for voice feedback when toggle state changes
      */
-    fun initialize(): Boolean {
-        if (isInitialized) {
-            Log.w(TAG, "Already initialized")
-            return true
-        }
+    var onToggleChanged: ((toggleName: String, newState: Boolean) -> Unit)? = null
 
-        return try {
-            isInitialized = true
-            Log.d(TAG, "ToggleHandler initialized")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize", e)
-            false
-        }
-    }
+    override suspend fun execute(
+        command: QuantizedCommand,
+        params: Map<String, Any>
+    ): HandlerResult {
+        val normalizedAction = command.phrase.lowercase().trim()
 
-    /**
-     * Set accessibility service reference for toggle operations
-     */
-    fun setAccessibilityService(service: AccessibilityService?) {
-        this.accessibilityService = service
-        Log.d(TAG, "AccessibilityService ${if (service != null) "set" else "cleared"}")
-    }
-
-    /**
-     * CommandHandler interface: Check if this handler can process the command
-     * (command is already normalized by CommandRegistry)
-     */
-    override fun canHandle(command: String): Boolean {
-        return when {
-            // Named toggle commands
-            TURN_ON_PREFIXES.any { command.startsWith(it) } -> true
-            TURN_OFF_PREFIXES.any { command.startsWith(it) } -> true
-            TOGGLE_PREFIXES.any { command.startsWith(it) } -> true
-
-            // Standalone commands for focused toggle
-            command in STANDALONE_ON -> true
-            command in STANDALONE_OFF -> true
-            command in STANDALONE_TOGGLE -> true
-
-            else -> false
-        }
-    }
-
-    /**
-     * CommandHandler interface: Execute the command
-     * (command is already normalized by CommandRegistry)
-     */
-    override suspend fun handleCommand(command: String): Boolean {
-        if (!isInitialized) {
-            Log.w(TAG, "Not initialized for command processing")
-            return false
-        }
-
-        Log.d(TAG, "Processing toggle command: '$command'")
+        Log.d(TAG, "Processing toggle command: $normalizedAction")
 
         return try {
             when {
                 // "turn on [name]" or "enable [name]"
-                TURN_ON_PREFIXES.any { command.startsWith(it) } -> {
-                    val name = extractToggleName(command, TURN_ON_PREFIXES)
+                TURN_ON_PREFIXES.any { normalizedAction.startsWith(it) } -> {
+                    val name = extractToggleName(normalizedAction, TURN_ON_PREFIXES)
                     if (name.isNotEmpty()) {
-                        turnOnToggle(name)
+                        handleTurnOn(name)
                     } else {
-                        // No name provided, try focused toggle
-                        setFocusedToggleState(true)
+                        handleSetFocusedToggle(true)
                     }
                 }
 
                 // "turn off [name]" or "disable [name]"
-                TURN_OFF_PREFIXES.any { command.startsWith(it) } -> {
-                    val name = extractToggleName(command, TURN_OFF_PREFIXES)
+                TURN_OFF_PREFIXES.any { normalizedAction.startsWith(it) } -> {
+                    val name = extractToggleName(normalizedAction, TURN_OFF_PREFIXES)
                     if (name.isNotEmpty()) {
-                        turnOffToggle(name)
+                        handleTurnOff(name)
                     } else {
-                        // No name provided, try focused toggle
-                        setFocusedToggleState(false)
+                        handleSetFocusedToggle(false)
                     }
                 }
 
                 // "toggle [name]" or "switch [name]"
-                TOGGLE_PREFIXES.any { command.startsWith(it) } -> {
-                    val name = extractToggleName(command, TOGGLE_PREFIXES)
+                TOGGLE_PREFIXES.any { normalizedAction.startsWith(it) } -> {
+                    val name = extractToggleName(normalizedAction, TOGGLE_PREFIXES)
                     if (name.isNotEmpty()) {
-                        flipToggle(name)
+                        handleFlipToggle(name)
                     } else {
-                        // No name provided, try focused toggle
-                        flipFocusedToggle()
+                        handleFlipFocusedToggle()
                     }
                 }
 
                 // Standalone "on" - set focused toggle to on
-                command in STANDALONE_ON -> setFocusedToggleState(true)
+                normalizedAction in STANDALONE_ON -> handleSetFocusedToggle(true)
 
                 // Standalone "off" - set focused toggle to off
-                command in STANDALONE_OFF -> setFocusedToggleState(false)
+                normalizedAction in STANDALONE_OFF -> handleSetFocusedToggle(false)
 
                 // Standalone "toggle" - flip focused toggle
-                command in STANDALONE_TOGGLE -> flipFocusedToggle()
+                normalizedAction in STANDALONE_TOGGLE -> handleFlipFocusedToggle()
 
-                else -> false
+                else -> HandlerResult.notHandled()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error processing command: $command", e)
-            false
+            Log.e(TAG, "Error processing toggle command", e)
+            HandlerResult.failure("Error: ${e.message}", recoverable = true)
         }
     }
 
-    /**
-     * Extract toggle name from command by removing prefix
-     */
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Command Handlers
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    private suspend fun handleTurnOn(name: String): HandlerResult {
+        val result = executor.turnOnToggle(name)
+
+        return when (result) {
+            is ToggleResult.Success -> {
+                onToggleChanged?.invoke(result.toggleName, true)
+                HandlerResult.Success(
+                    message = "'$name' turned on",
+                    data = mapOf(
+                        "toggleName" to result.toggleName,
+                        "newState" to true
+                    )
+                )
+            }
+            is ToggleResult.AlreadyInState -> {
+                HandlerResult.Success(
+                    message = "'$name' is already on",
+                    data = mapOf(
+                        "toggleName" to result.toggleName,
+                        "state" to result.state
+                    )
+                )
+            }
+            is ToggleResult.NotFound -> {
+                HandlerResult.failure(
+                    reason = "Toggle '$name' not found",
+                    recoverable = true
+                )
+            }
+            is ToggleResult.Error -> {
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = true
+                )
+            }
+            ToggleResult.NoAccessibility -> {
+                HandlerResult.failure(
+                    reason = "Accessibility service not available",
+                    recoverable = false
+                )
+            }
+            ToggleResult.NoFocusedToggle -> {
+                HandlerResult.Failure(
+                    reason = "No focused toggle found",
+                    recoverable = true,
+                    suggestedAction = "Focus on a toggle first"
+                )
+            }
+        }
+    }
+
+    private suspend fun handleTurnOff(name: String): HandlerResult {
+        val result = executor.turnOffToggle(name)
+
+        return when (result) {
+            is ToggleResult.Success -> {
+                onToggleChanged?.invoke(result.toggleName, false)
+                HandlerResult.Success(
+                    message = "'$name' turned off",
+                    data = mapOf(
+                        "toggleName" to result.toggleName,
+                        "newState" to false
+                    )
+                )
+            }
+            is ToggleResult.AlreadyInState -> {
+                HandlerResult.Success(
+                    message = "'$name' is already off",
+                    data = mapOf(
+                        "toggleName" to result.toggleName,
+                        "state" to result.state
+                    )
+                )
+            }
+            is ToggleResult.NotFound -> {
+                HandlerResult.failure(
+                    reason = "Toggle '$name' not found",
+                    recoverable = true
+                )
+            }
+            is ToggleResult.Error -> {
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = true
+                )
+            }
+            ToggleResult.NoAccessibility -> {
+                HandlerResult.failure(
+                    reason = "Accessibility service not available",
+                    recoverable = false
+                )
+            }
+            ToggleResult.NoFocusedToggle -> {
+                HandlerResult.failure(
+                    reason = "No focused toggle found",
+                    recoverable = true
+                )
+            }
+        }
+    }
+
+    private suspend fun handleFlipToggle(name: String): HandlerResult {
+        val result = executor.flipToggle(name)
+
+        return when (result) {
+            is ToggleResult.Success -> {
+                onToggleChanged?.invoke(result.toggleName, result.newState)
+                HandlerResult.Success(
+                    message = "'$name' toggled ${if (result.newState) "on" else "off"}",
+                    data = mapOf(
+                        "toggleName" to result.toggleName,
+                        "newState" to result.newState
+                    )
+                )
+            }
+            is ToggleResult.NotFound -> {
+                HandlerResult.failure(
+                    reason = "Toggle '$name' not found",
+                    recoverable = true
+                )
+            }
+            is ToggleResult.Error -> {
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = true
+                )
+            }
+            is ToggleResult.AlreadyInState -> {
+                HandlerResult.success(message = "'$name' is ${if (result.state) "on" else "off"}")
+            }
+            ToggleResult.NoAccessibility -> {
+                HandlerResult.failure(
+                    reason = "Accessibility service not available",
+                    recoverable = false
+                )
+            }
+            ToggleResult.NoFocusedToggle -> {
+                HandlerResult.failure(
+                    reason = "No focused toggle found",
+                    recoverable = true
+                )
+            }
+        }
+    }
+
+    private suspend fun handleSetFocusedToggle(targetState: Boolean): HandlerResult {
+        val result = executor.setFocusedToggleState(targetState)
+
+        return when (result) {
+            is ToggleResult.Success -> {
+                onToggleChanged?.invoke(result.toggleName, targetState)
+                HandlerResult.Success(
+                    message = "Toggle turned ${if (targetState) "on" else "off"}",
+                    data = mapOf(
+                        "toggleName" to result.toggleName,
+                        "newState" to targetState
+                    )
+                )
+            }
+            is ToggleResult.AlreadyInState -> {
+                HandlerResult.success(
+                    message = "Toggle is already ${if (targetState) "on" else "off"}"
+                )
+            }
+            ToggleResult.NoFocusedToggle -> {
+                HandlerResult.Failure(
+                    reason = "No focused toggle found",
+                    recoverable = true,
+                    suggestedAction = "Focus on a toggle first, or say 'turn on WiFi'"
+                )
+            }
+            is ToggleResult.NotFound -> {
+                HandlerResult.failure(
+                    reason = "Toggle not found",
+                    recoverable = true
+                )
+            }
+            is ToggleResult.Error -> {
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = true
+                )
+            }
+            ToggleResult.NoAccessibility -> {
+                HandlerResult.failure(
+                    reason = "Accessibility service not available",
+                    recoverable = false
+                )
+            }
+        }
+    }
+
+    private suspend fun handleFlipFocusedToggle(): HandlerResult {
+        val result = executor.flipFocusedToggle()
+
+        return when (result) {
+            is ToggleResult.Success -> {
+                onToggleChanged?.invoke(result.toggleName, result.newState)
+                HandlerResult.Success(
+                    message = "Toggle flipped ${if (result.newState) "on" else "off"}",
+                    data = mapOf(
+                        "toggleName" to result.toggleName,
+                        "newState" to result.newState
+                    )
+                )
+            }
+            ToggleResult.NoFocusedToggle -> {
+                HandlerResult.Failure(
+                    reason = "No focused toggle found",
+                    recoverable = true,
+                    suggestedAction = "Focus on a toggle first"
+                )
+            }
+            is ToggleResult.NotFound -> {
+                HandlerResult.failure(
+                    reason = "Toggle not found",
+                    recoverable = true
+                )
+            }
+            is ToggleResult.Error -> {
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = true
+                )
+            }
+            is ToggleResult.AlreadyInState -> {
+                HandlerResult.success(message = "Toggle is ${if (result.state) "on" else "off"}")
+            }
+            ToggleResult.NoAccessibility -> {
+                HandlerResult.failure(
+                    reason = "Accessibility service not available",
+                    recoverable = false
+                )
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Helper Methods
+    // ═══════════════════════════════════════════════════════════════════════════
+
     private fun extractToggleName(command: String, prefixes: List<String>): String {
         for (prefix in prefixes) {
             if (command.startsWith(prefix)) {
@@ -243,417 +385,17 @@ class ToggleHandler private constructor(
         }
         return ""
     }
-
-    /**
-     * Turn on a toggle by name
-     * Finds the toggle element and sets it to checked/on state
-     */
-    private fun turnOnToggle(name: String): Boolean {
-        Log.d(TAG, "Turning on toggle: '$name'")
-
-        val service = accessibilityService ?: run {
-            Log.e(TAG, "AccessibilityService not available")
-            return false
-        }
-
-        val rootNode = service.rootInActiveWindow ?: run {
-            Log.e(TAG, "No active window")
-            return false
-        }
-
-        return try {
-            val toggleNode = findToggleByName(rootNode, name)
-
-            if (toggleNode != null) {
-                val isCurrentlyChecked = toggleNode.isChecked
-
-                if (isCurrentlyChecked) {
-                    Log.d(TAG, "Toggle '$name' is already on")
-                    true
-                } else {
-                    val success = performToggleAction(toggleNode)
-                    Log.d(TAG, "Toggle '$name' turned on: $success")
-                    success
-                }
-            } else {
-                Log.w(TAG, "Toggle '$name' not found")
-                false
-            }
-        } finally {
-            rootNode.recycle()
-        }
-    }
-
-    /**
-     * Turn off a toggle by name
-     * Finds the toggle element and sets it to unchecked/off state
-     */
-    private fun turnOffToggle(name: String): Boolean {
-        Log.d(TAG, "Turning off toggle: '$name'")
-
-        val service = accessibilityService ?: run {
-            Log.e(TAG, "AccessibilityService not available")
-            return false
-        }
-
-        val rootNode = service.rootInActiveWindow ?: run {
-            Log.e(TAG, "No active window")
-            return false
-        }
-
-        return try {
-            val toggleNode = findToggleByName(rootNode, name)
-
-            if (toggleNode != null) {
-                val isCurrentlyChecked = toggleNode.isChecked
-
-                if (!isCurrentlyChecked) {
-                    Log.d(TAG, "Toggle '$name' is already off")
-                    true
-                } else {
-                    val success = performToggleAction(toggleNode)
-                    Log.d(TAG, "Toggle '$name' turned off: $success")
-                    success
-                }
-            } else {
-                Log.w(TAG, "Toggle '$name' not found")
-                false
-            }
-        } finally {
-            rootNode.recycle()
-        }
-    }
-
-    /**
-     * Flip a toggle by name (toggle its current state)
-     */
-    private fun flipToggle(name: String): Boolean {
-        Log.d(TAG, "Flipping toggle: '$name'")
-
-        val service = accessibilityService ?: run {
-            Log.e(TAG, "AccessibilityService not available")
-            return false
-        }
-
-        val rootNode = service.rootInActiveWindow ?: run {
-            Log.e(TAG, "No active window")
-            return false
-        }
-
-        return try {
-            val toggleNode = findToggleByName(rootNode, name)
-
-            if (toggleNode != null) {
-                val success = performToggleAction(toggleNode)
-                val newState = if (toggleNode.isChecked) "off" else "on"
-                Log.d(TAG, "Toggle '$name' flipped to $newState: $success")
-                success
-            } else {
-                Log.w(TAG, "Toggle '$name' not found")
-                false
-            }
-        } finally {
-            rootNode.recycle()
-        }
-    }
-
-    /**
-     * Set focused toggle to specified state
-     */
-    private fun setFocusedToggleState(targetState: Boolean): Boolean {
-        Log.d(TAG, "Setting focused toggle to: ${if (targetState) "on" else "off"}")
-
-        val service = accessibilityService ?: run {
-            Log.e(TAG, "AccessibilityService not available")
-            return false
-        }
-
-        val rootNode = service.rootInActiveWindow ?: run {
-            Log.e(TAG, "No active window")
-            return false
-        }
-
-        return try {
-            val focusedToggle = findFocusedToggle(rootNode)
-
-            if (focusedToggle != null) {
-                val isCurrentlyChecked = focusedToggle.isChecked
-
-                if (isCurrentlyChecked == targetState) {
-                    Log.d(TAG, "Focused toggle is already ${if (targetState) "on" else "off"}")
-                    true
-                } else {
-                    val success = performToggleAction(focusedToggle)
-                    Log.d(TAG, "Focused toggle set to ${if (targetState) "on" else "off"}: $success")
-                    success
-                }
-            } else {
-                Log.w(TAG, "No focused toggle found")
-                false
-            }
-        } finally {
-            rootNode.recycle()
-        }
-    }
-
-    /**
-     * Flip the focused toggle (toggle its current state)
-     */
-    private fun flipFocusedToggle(): Boolean {
-        Log.d(TAG, "Flipping focused toggle")
-
-        val service = accessibilityService ?: run {
-            Log.e(TAG, "AccessibilityService not available")
-            return false
-        }
-
-        val rootNode = service.rootInActiveWindow ?: run {
-            Log.e(TAG, "No active window")
-            return false
-        }
-
-        return try {
-            val focusedToggle = findFocusedToggle(rootNode)
-
-            if (focusedToggle != null) {
-                val wasChecked = focusedToggle.isChecked
-                val success = performToggleAction(focusedToggle)
-                val newState = if (wasChecked) "off" else "on"
-                Log.d(TAG, "Focused toggle flipped to $newState: $success")
-                success
-            } else {
-                Log.w(TAG, "No focused toggle found")
-                false
-            }
-        } finally {
-            rootNode.recycle()
-        }
-    }
-
-    /**
-     * Find a toggle node by its name/text/description
-     * Searches the accessibility tree for toggleable elements matching the name
-     */
-    private fun findToggleByName(rootNode: AccessibilityNodeInfo, name: String): AccessibilityNodeInfo? {
-        val lowerName = name.lowercase()
-
-        // Search strategy 1: Find toggle by text/content description
-        val matches = NodeFinder.findNodesMatching(rootNode) { node ->
-            isToggleNode(node) && matchesName(node, lowerName)
-        }
-
-        if (matches.isNotEmpty()) {
-            // Recycle non-first matches
-            matches.drop(1).forEach { it.recycle() }
-            return matches.first()
-        }
-
-        // Search strategy 2: Find toggle associated with a label
-        val labelMatches = findToggleByAssociatedLabel(rootNode, lowerName)
-        if (labelMatches != null) {
-            return labelMatches
-        }
-
-        // Search strategy 3: Find any checkable node matching name
-        val checkableMatches = NodeFinder.findNodesMatching(rootNode) { node ->
-            node.isCheckable && matchesName(node, lowerName)
-        }
-
-        if (checkableMatches.isNotEmpty()) {
-            checkableMatches.drop(1).forEach { it.recycle() }
-            return checkableMatches.first()
-        }
-
-        return null
-    }
-
-    /**
-     * Find toggle associated with a label text
-     * Handles cases where the toggle itself has no text but is next to a label
-     */
-    private fun findToggleByAssociatedLabel(rootNode: AccessibilityNodeInfo, name: String): AccessibilityNodeInfo? {
-        // Find text nodes matching the name
-        val textNodes = NodeFinder.findNodesMatching(rootNode) { node ->
-            val nodeText = node.text?.toString()?.lowercase() ?: ""
-            val nodeDesc = node.contentDescription?.toString()?.lowercase() ?: ""
-            nodeText.contains(name) || nodeDesc.contains(name)
-        }
-
-        for (textNode in textNodes) {
-            // Look for a toggle sibling
-            val parent = textNode.parent
-            if (parent != null) {
-                for (i in 0 until parent.childCount) {
-                    val sibling = parent.getChild(i)
-                    if (sibling != null && sibling != textNode && isToggleNode(sibling)) {
-                        // Found a toggle sibling
-                        textNode.recycle()
-                        parent.recycle()
-                        return sibling
-                    }
-                    sibling?.recycle()
-                }
-                parent.recycle()
-            }
-            textNode.recycle()
-        }
-
-        return null
-    }
-
-    /**
-     * Find the currently focused toggle element
-     */
-    private fun findFocusedToggle(rootNode: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        // Try accessibility focus first
-        val accessibilityFocused = rootNode.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
-        if (accessibilityFocused != null && isToggleNode(accessibilityFocused)) {
-            return accessibilityFocused
-        }
-        accessibilityFocused?.recycle()
-
-        // Try input focus
-        val inputFocused = rootNode.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-        if (inputFocused != null && isToggleNode(inputFocused)) {
-            return inputFocused
-        }
-        inputFocused?.recycle()
-
-        // Search for focused toggle in tree
-        val focusedToggle = NodeFinder.findNodesMatching(rootNode) { node ->
-            (node.isFocused || node.isAccessibilityFocused) && isToggleNode(node)
-        }
-
-        if (focusedToggle.isNotEmpty()) {
-            focusedToggle.drop(1).forEach { it.recycle() }
-            return focusedToggle.first()
-        }
-
-        return null
-    }
-
-    /**
-     * Check if a node is a toggle-type control (switch, checkbox, toggle button)
-     */
-    private fun isToggleNode(node: AccessibilityNodeInfo): Boolean {
-        // Check if checkable
-        if (node.isCheckable) {
-            return true
-        }
-
-        // Check class name
-        val className = node.className?.toString() ?: ""
-        if (TOGGLE_CLASS_NAMES.any { className.contains(it, ignoreCase = true) }) {
-            return true
-        }
-
-        // Check for common toggle-related content descriptions
-        val contentDesc = node.contentDescription?.toString()?.lowercase() ?: ""
-        if (contentDesc.contains("switch") ||
-            contentDesc.contains("toggle") ||
-            contentDesc.contains("checkbox")) {
-            return true
-        }
-
-        return false
-    }
-
-    /**
-     * Check if node text/description matches the search name
-     */
-    private fun matchesName(node: AccessibilityNodeInfo, name: String): Boolean {
-        val nodeText = node.text?.toString()?.lowercase() ?: ""
-        val nodeDesc = node.contentDescription?.toString()?.lowercase() ?: ""
-        val nodeHint = node.hintText?.toString()?.lowercase() ?: ""
-
-        return nodeText.contains(name) ||
-               nodeDesc.contains(name) ||
-               nodeHint.contains(name) ||
-               name.contains(nodeText.ifEmpty { "###" }) ||
-               name.contains(nodeDesc.ifEmpty { "###" })
-    }
-
-    /**
-     * Perform the toggle action on a node
-     * Tries multiple methods: click, ACTION_CLICK, setChecked
-     */
-    private fun performToggleAction(node: AccessibilityNodeInfo): Boolean {
-        // Method 1: Try ACTION_CLICK (most common)
-        if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
-            Log.d(TAG, "Toggle via ACTION_CLICK")
-            return true
-        }
-
-        // Method 2: Try to find and click parent if node is not clickable
-        if (!node.isClickable) {
-            var parent = node.parent
-            var attempts = 0
-            while (parent != null && attempts < 5) {
-                if (parent.isClickable) {
-                    val success = parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    parent.recycle()
-                    if (success) {
-                        Log.d(TAG, "Toggle via parent ACTION_CLICK")
-                        return true
-                    }
-                }
-                val grandparent = parent.parent
-                parent.recycle()
-                parent = grandparent
-                attempts++
-            }
-            parent?.recycle()
-        }
-
-        // Method 3: Try ACTION_SELECT
-        if (node.performAction(AccessibilityNodeInfo.ACTION_SELECT)) {
-            Log.d(TAG, "Toggle via ACTION_SELECT")
-            return true
-        }
-
-        // Method 4: Try setting checked state directly (API 21+)
-        val bundle = Bundle()
-        bundle.putBoolean(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE.toString(), !node.isChecked)
-        if (node.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, bundle)) {
-            Log.d(TAG, "Toggle via ACTION_SET_SELECTION")
-            return true
-        }
-
-        Log.w(TAG, "All toggle methods failed")
-        return false
-    }
-
-    /**
-     * Get handler status
-     */
-    fun getStatus(): ToggleHandlerStatus {
-        return ToggleHandlerStatus(
-            isInitialized = isInitialized,
-            hasAccessibilityService = accessibilityService != null,
-            commandsSupported = supportedCommands.size
-        )
-    }
-
-    /**
-     * Cleanup resources
-     */
-    fun dispose() {
-        // Unregister from CommandRegistry
-        CommandRegistry.unregisterHandler(moduleId)
-        commandScope.cancel()
-        accessibilityService = null
-        instance = null
-        Log.d(TAG, "ToggleHandler disposed")
-    }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Supporting Types
+// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Toggle handler status
  */
 data class ToggleHandlerStatus(
-    val isInitialized: Boolean,
-    val hasAccessibilityService: Boolean,
-    val commandsSupported: Int
+    val hasAccessibilityService: Boolean
 )
 
 /**
@@ -666,4 +408,49 @@ sealed class ToggleResult {
     data class Error(val message: String) : ToggleResult()
     object NoAccessibility : ToggleResult()
     object NoFocusedToggle : ToggleResult()
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Platform Executor Interface
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Platform-specific executor for toggle operations.
+ *
+ * Implementations should:
+ * 1. Find toggle components (Switch, CheckBox, ToggleButton) in accessibility tree
+ * 2. Set toggle states (on/off)
+ * 3. Find toggles by name or focus state
+ */
+interface ToggleExecutor {
+
+    /**
+     * Turn on a toggle by name.
+     */
+    suspend fun turnOnToggle(name: String): ToggleResult
+
+    /**
+     * Turn off a toggle by name.
+     */
+    suspend fun turnOffToggle(name: String): ToggleResult
+
+    /**
+     * Flip a toggle's state by name.
+     */
+    suspend fun flipToggle(name: String): ToggleResult
+
+    /**
+     * Set the focused toggle to a specific state.
+     */
+    suspend fun setFocusedToggleState(targetState: Boolean): ToggleResult
+
+    /**
+     * Flip the focused toggle's state.
+     */
+    suspend fun flipFocusedToggle(): ToggleResult
+
+    /**
+     * Get handler status.
+     */
+    suspend fun getStatus(): ToggleHandlerStatus
 }

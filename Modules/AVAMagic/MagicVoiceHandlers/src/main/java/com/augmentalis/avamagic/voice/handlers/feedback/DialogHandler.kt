@@ -431,23 +431,6 @@ class DialogHandler(
             ?: if (buttons.size > 1) buttons.first() else null
     }
 
-    /**
-     * Get voice phrases to register with the speech engine.
-     * Includes dynamic button labels if a dialog is active.
-     */
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            // Positive responses
-            "yes", "confirm", "ok", "okay", "accept", "proceed", "agree",
-            // Negative responses
-            "no", "cancel", "dismiss", "decline", "reject", "deny",
-            // Close commands
-            "close", "close dialog",
-            // Numbered selection
-            "button one", "button two", "button three",
-            "option one", "option two", "option three"
-        )
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -644,22 +644,6 @@ class BreadcrumbHandler(
         }
     }
 
-    // ===============================================================================
-    // Voice Phrases for Speech Engine Registration
-    // ===============================================================================
-
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            "go to",
-            "navigate to",
-            "breadcrumb",
-            "level",
-            "home", "root", "start",
-            "back", "up", "parent",
-            "back 2 levels", "back 3 levels",
-            "current", "where am I"
-        )
-    }
 }
 
 // ===================================================================================

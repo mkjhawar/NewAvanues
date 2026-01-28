@@ -489,7 +489,7 @@ class SliderHandler(
      * - "7.5" -> 7.5 (absolute)
      * - "twenty five" -> 25.0 (absolute)
      */
-    private fun parseValue(input: String): ParsedValue? {
+    private fun parseValue(input: String): SliderParsedValue? {
         val trimmed = input.trim().lowercase()
 
         // Check for percentage suffix
@@ -506,12 +506,12 @@ class SliderHandler(
 
         // Try direct numeric parsing
         valueStr.toDoubleOrNull()?.let {
-            return ParsedValue(it, isPercentage)
+            return SliderParsedValue(it, isPercentage)
         }
 
         // Try word number parsing
         parseWordNumber(valueStr)?.let {
-            return ParsedValue(it.toDouble(), isPercentage)
+            return SliderParsedValue(it.toDouble(), isPercentage)
         }
 
         return null
@@ -548,24 +548,6 @@ class SliderHandler(
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Voice Phrases for Speech Engine Registration
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            "set to",
-            "set volume to",
-            "set brightness to",
-            "increase", "increase by",
-            "decrease", "decrease by",
-            "raise", "lower",
-            "turn up", "turn down",
-            "minimum", "min",
-            "maximum", "max",
-            "halfway", "middle"
-        )
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -582,9 +564,9 @@ private enum class SliderPreset {
 }
 
 /**
- * Parsed numeric value with percentage flag.
+ * Parsed numeric value with percentage flag for SliderHandler.
  */
-private data class ParsedValue(
+data class SliderParsedValue(
     val value: Double,
     val isPercentage: Boolean
 )

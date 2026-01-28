@@ -2,40 +2,27 @@
  * FileUploadHandler.kt
  *
  * Created: 2026-01-27 00:00 PST
- * Last Modified: 2026-01-27 00:00 PST
+ * Last Modified: 2026-01-28 00:00 PST
  * Author: VOS4 Development Team
- * Version: 1.0.0
+ * Version: 2.0.0
  *
  * Purpose: Voice command handler for file upload and file picker operations
  * Features: File picker triggering, upload management, file selection cancellation
- * Location: CommandManager module (handlers package)
+ * Location: MagicVoiceHandlers module
  *
  * Changelog:
+ * - v2.0.0 (2026-01-28): Migrated to BaseHandler pattern with executor
  * - v1.0.0 (2026-01-27): Initial implementation with file upload voice commands
  */
 
 package com.augmentalis.avamagic.voice.handlers.input
 
-import android.app.Activity
-import android.content.Context
-import android.content.Intent
 import android.net.Uri
-import android.os.Build
-import android.provider.DocumentsContract
 import android.util.Log
-import androidx.activity.result.ActivityResultLauncher
-import com.augmentalis.commandmanager.CommandHandler
-import com.augmentalis.commandmanager.CommandRegistry
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.concurrent.atomic.AtomicBoolean
+import com.augmentalis.voiceoscore.ActionCategory
+import com.augmentalis.voiceoscore.BaseHandler
+import com.augmentalis.voiceoscore.HandlerResult
+import com.augmentalis.voiceoscore.QuantizedCommand
 
 /**
  * Voice command handler for file upload operations.
@@ -47,54 +34,23 @@ import java.util.concurrent.atomic.AtomicBoolean
  * - Confirming upload ("upload")
  *
  * Design:
- * - Singleton pattern for global access
- * - Implements CommandHandler for CommandRegistry integration
- * - Thread-safe state management using StateFlow and AtomicBoolean
- * - Delegates file picker operations to registered listeners
+ * - Implements BaseHandler for VoiceOS integration
+ * - Delegates file operations to FileUploadExecutor
+ * - Thread-safe via coroutine execution
  *
  * Thread Safety:
- * - All public methods are thread-safe
- * - State changes use atomic operations
- * - Coroutine scope managed with SupervisorJob
+ * - All operations are suspend functions
+ * - State modifications are atomic via executor
  *
- * @since 1.0.0
+ * @param executor Platform-specific executor for file upload operations
+ * @since 2.0.0
  */
-class FileUploadHandler private constructor(
-    private val context: Context
-) : CommandHandler {
+class FileUploadHandler(
+    private val executor: FileUploadExecutor
+) : BaseHandler() {
 
     companion object {
         private const val TAG = "FileUploadHandler"
-        private const val MODULE_ID = "file_upload"
-
-        @Volatile
-        private var instance: FileUploadHandler? = null
-
-        /**
-         * Get singleton instance
-         *
-         * Thread-safe: Uses double-checked locking pattern.
-         *
-         * @param context Application context (will be converted to applicationContext)
-         * @return Singleton FileUploadHandler instance
-         */
-        fun getInstance(context: Context): FileUploadHandler {
-            return instance ?: synchronized(this) {
-                instance ?: FileUploadHandler(context.applicationContext).also {
-                    instance = it
-                }
-            }
-        }
-
-        /**
-         * Reset singleton instance (for testing only)
-         */
-        internal fun resetInstance() {
-            synchronized(this) {
-                instance?.dispose()
-                instance = null
-            }
-        }
 
         // Command patterns for matching
         private val FILE_PICKER_COMMANDS = setOf(
@@ -132,10 +88,9 @@ class FileUploadHandler private constructor(
         )
     }
 
-    // CommandHandler interface implementation
-    override val moduleId: String = "fileupload"
+    override val category: ActionCategory = ActionCategory.UI
 
-    override val supportedCommands: List<String> = listOf(
+    override val supportedActions: List<String> = listOf(
         // File picker commands
         "upload file",
         "choose file",
@@ -167,557 +122,215 @@ class FileUploadHandler private constructor(
         "submit file"
     )
 
-    // Coroutine scope for async operations
-    private val handlerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
-    // State management
-    private val _uploadState = MutableStateFlow(FileUploadState())
-    val uploadState: StateFlow<FileUploadState> = _uploadState.asStateFlow()
-
-    // Upload operation state
-    private val isUploading = AtomicBoolean(false)
-    private val isPickerOpen = AtomicBoolean(false)
-
-    // Integration state
-    private var isInitialized = false
-    private var isRegistered = false
-
-    // Listener for file operations
-    private var fileOperationListener: FileOperationListener? = null
-
-    // Activity result launcher reference (set by hosting activity)
-    private var filePickerLauncher: ActivityResultLauncher<Intent>? = null
-
-    init {
-        initialize()
-        // Register with CommandRegistry automatically
-        CommandRegistry.registerHandler(moduleId, this)
-    }
-
     /**
-     * Initialize the handler
-     *
-     * @return true if initialization successful, false otherwise
+     * Callback for voice feedback when file operations complete
      */
-    fun initialize(): Boolean {
-        if (isInitialized) {
-            Log.w(TAG, "Already initialized")
-            return true
-        }
+    var onFileOperationCompleted: ((operation: String, success: Boolean) -> Unit)? = null
 
-        return try {
-            isInitialized = true
-            Log.d(TAG, "FileUploadHandler initialized")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize", e)
-            false
-        }
-    }
+    override suspend fun execute(
+        command: QuantizedCommand,
+        params: Map<String, Any>
+    ): HandlerResult {
+        val normalizedAction = command.phrase.lowercase().trim()
 
-    /**
-     * Register commands with VOS4 system
-     *
-     * @return true if registration successful, false otherwise
-     */
-    fun registerCommands(): Boolean {
-        if (!isInitialized) {
-            Log.e(TAG, "Not initialized")
-            return false
-        }
-
-        if (isRegistered) {
-            Log.w(TAG, "Commands already registered")
-            return true
-        }
-
-        return try {
-            isRegistered = true
-            Log.d(TAG, "Registered ${supportedCommands.size} voice commands for file upload")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to register commands", e)
-            false
-        }
-    }
-
-    /**
-     * Unregister commands from system
-     */
-    fun unregisterCommands() {
-        if (!isRegistered) return
-
-        try {
-            isRegistered = false
-            Log.d(TAG, "Commands unregistered")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error unregistering commands", e)
-        }
-    }
-
-    /**
-     * Set file operation listener
-     *
-     * @param listener Listener to receive file operation callbacks
-     */
-    fun setFileOperationListener(listener: FileOperationListener?) {
-        this.fileOperationListener = listener
-    }
-
-    /**
-     * Set file picker launcher for activity result handling
-     *
-     * @param launcher ActivityResultLauncher for file picker intent
-     */
-    fun setFilePickerLauncher(launcher: ActivityResultLauncher<Intent>?) {
-        this.filePickerLauncher = launcher
-    }
-
-    /**
-     * Handle file selected from picker
-     *
-     * Called by hosting activity when file picker returns a result.
-     *
-     * @param uri URI of the selected file
-     */
-    fun onFileSelected(uri: Uri?) {
-        isPickerOpen.set(false)
-
-        if (uri == null) {
-            Log.d(TAG, "File selection cancelled by user")
-            _uploadState.value = _uploadState.value.copy(
-                selectedFile = null,
-                status = UploadStatus.IDLE,
-                errorMessage = null
-            )
-            fileOperationListener?.onFileSelectionCancelled()
-            return
-        }
-
-        Log.d(TAG, "File selected: $uri")
-
-        // Get file info
-        val fileInfo = getFileInfo(uri)
-
-        _uploadState.value = _uploadState.value.copy(
-            selectedFile = fileInfo,
-            status = UploadStatus.FILE_SELECTED,
-            errorMessage = null
-        )
-
-        fileOperationListener?.onFileSelected(fileInfo)
-    }
-
-    // ========== CommandHandler Interface Implementation ==========
-
-    /**
-     * Check if this handler can process the command
-     * (command is already normalized by CommandRegistry)
-     *
-     * @param command Normalized command text (lowercase, trimmed)
-     * @return true if this handler can process the command
-     */
-    override fun canHandle(command: String): Boolean {
-        return when {
-            FILE_PICKER_COMMANDS.contains(command) -> true
-            CANCEL_UPLOAD_COMMANDS.contains(command) -> true
-            REMOVE_FILE_COMMANDS.contains(command) -> true
-            CONFIRM_UPLOAD_COMMANDS.contains(command) -> true
-            else -> false
-        }
-    }
-
-    /**
-     * Execute the command
-     * (command is already normalized by CommandRegistry)
-     *
-     * @param command Normalized command text (lowercase, trimmed)
-     * @return true if command was successfully executed
-     */
-    override suspend fun handleCommand(command: String): Boolean {
-        if (!isInitialized) {
-            Log.w(TAG, "Not initialized for command processing")
-            return false
-        }
-
-        Log.d(TAG, "Processing voice command: '$command'")
+        Log.d(TAG, "Processing file upload command: $normalizedAction")
 
         return try {
             when {
-                FILE_PICKER_COMMANDS.contains(command) -> openFilePicker()
-                CANCEL_UPLOAD_COMMANDS.contains(command) -> cancelUpload()
-                REMOVE_FILE_COMMANDS.contains(command) -> removeFile()
-                CONFIRM_UPLOAD_COMMANDS.contains(command) -> confirmUpload()
+                FILE_PICKER_COMMANDS.contains(normalizedAction) -> handleOpenFilePicker()
+                CANCEL_UPLOAD_COMMANDS.contains(normalizedAction) -> handleCancelUpload()
+                REMOVE_FILE_COMMANDS.contains(normalizedAction) -> handleRemoveFile()
+                CONFIRM_UPLOAD_COMMANDS.contains(normalizedAction) -> handleConfirmUpload()
                 else -> {
-                    Log.w(TAG, "Unknown command: $command")
-                    false
+                    Log.w(TAG, "Unknown command: $normalizedAction")
+                    HandlerResult.notHandled()
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error processing command: $command", e)
-            false
+            Log.e(TAG, "Error processing command: $normalizedAction", e)
+            HandlerResult.failure("Error: ${e.message}", recoverable = true)
         }
     }
 
-    // ========== File Operations ==========
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Command Handlers
+    // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Open file picker
-     *
-     * Launches system file picker for file selection.
-     *
-     * @return true if picker was successfully opened
+     * Handle open file picker command
      */
-    private suspend fun openFilePicker(): Boolean {
-        if (isPickerOpen.get()) {
-            Log.w(TAG, "File picker already open")
-            return false
-        }
+    private suspend fun handleOpenFilePicker(): HandlerResult {
+        val result = executor.openFilePicker()
 
-        return withContext(Dispatchers.Main) {
-            try {
-                val intent = createFilePickerIntent()
-
-                // Try using launcher first
-                val launcher = filePickerLauncher
-                if (launcher != null) {
-                    launcher.launch(intent)
-                    isPickerOpen.set(true)
-                    _uploadState.value = _uploadState.value.copy(
-                        status = UploadStatus.PICKER_OPEN
-                    )
-                    Log.d(TAG, "File picker opened via launcher")
-                    true
-                } else {
-                    // Fallback: Notify listener to handle intent
-                    val handled = fileOperationListener?.onOpenFilePicker(intent) ?: false
-                    if (handled) {
-                        isPickerOpen.set(true)
-                        _uploadState.value = _uploadState.value.copy(
-                            status = UploadStatus.PICKER_OPEN
-                        )
-                        Log.d(TAG, "File picker opened via listener")
-                    } else {
-                        Log.e(TAG, "No launcher or listener available to open file picker")
-                    }
-                    handled
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to open file picker", e)
-                _uploadState.value = _uploadState.value.copy(
-                    status = UploadStatus.ERROR,
-                    errorMessage = "Failed to open file picker: ${e.message}"
+        return when (result) {
+            is FileUploadResult.PickerOpened -> {
+                onFileOperationCompleted?.invoke("open_picker", true)
+                HandlerResult.Success(
+                    message = "File picker opened",
+                    data = mapOf("operation" to "open_picker")
                 )
-                false
             }
-        }
-    }
-
-    /**
-     * Create intent for file picker
-     *
-     * @return Intent configured for file selection
-     */
-    private fun createFilePickerIntent(): Intent {
-        return Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "*/*"
-
-            // Allow multiple MIME types
-            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf(
-                "image/*",
-                "video/*",
-                "audio/*",
-                "application/pdf",
-                "application/msword",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                "application/vnd.ms-excel",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "text/*",
-                "*/*"
-            ))
-
-            // For Android 11+, use Downloads directory as initial location
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                putExtra(DocumentsContract.EXTRA_INITIAL_URI,
-                    Uri.parse("content://com.android.externalstorage.documents/document/primary:Download"))
+            is FileUploadResult.PickerAlreadyOpen -> {
+                HandlerResult.Success(
+                    message = "File picker is already open",
+                    data = mapOf("operation" to "open_picker", "alreadyOpen" to true)
+                )
             }
-        }
-    }
-
-    /**
-     * Cancel current upload operation
-     *
-     * @return true if cancellation was successful
-     */
-    private suspend fun cancelUpload(): Boolean {
-        return withContext(Dispatchers.Main) {
-            val currentStatus = _uploadState.value.status
-
-            when (currentStatus) {
-                UploadStatus.UPLOADING -> {
-                    // Cancel active upload
-                    isUploading.set(false)
-                    _uploadState.value = _uploadState.value.copy(
-                        status = UploadStatus.CANCELLED,
-                        progress = 0f,
-                        errorMessage = null
-                    )
-                    fileOperationListener?.onUploadCancelled()
-                    Log.d(TAG, "Upload cancelled")
-                    true
-                }
-
-                UploadStatus.PICKER_OPEN -> {
-                    // Close picker
-                    isPickerOpen.set(false)
-                    _uploadState.value = _uploadState.value.copy(
-                        status = UploadStatus.IDLE
-                    )
-                    fileOperationListener?.onFileSelectionCancelled()
-                    Log.d(TAG, "File picker cancelled")
-                    true
-                }
-
-                UploadStatus.FILE_SELECTED -> {
-                    // Clear selection
-                    _uploadState.value = FileUploadState()
-                    fileOperationListener?.onFileRemoved()
-                    Log.d(TAG, "File selection cleared")
-                    true
-                }
-
-                else -> {
-                    Log.w(TAG, "Nothing to cancel (current status: $currentStatus)")
-                    false
-                }
+            is FileUploadResult.Error -> {
+                onFileOperationCompleted?.invoke("open_picker", false)
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = true
+                )
             }
-        }
-    }
-
-    /**
-     * Remove currently selected file
-     *
-     * @return true if file was removed
-     */
-    private suspend fun removeFile(): Boolean {
-        return withContext(Dispatchers.Main) {
-            val currentFile = _uploadState.value.selectedFile
-
-            if (currentFile == null) {
-                Log.w(TAG, "No file selected to remove")
-                return@withContext false
+            is FileUploadResult.NoLauncherAvailable -> {
+                HandlerResult.Failure(
+                    reason = "No file picker launcher available",
+                    recoverable = false,
+                    suggestedAction = "Register a file picker launcher first"
+                )
             }
-
-            _uploadState.value = _uploadState.value.copy(
-                selectedFile = null,
-                status = UploadStatus.IDLE,
-                progress = 0f,
-                errorMessage = null
+            else -> HandlerResult.failure(
+                reason = "Unexpected result from file picker",
+                recoverable = true
             )
-
-            fileOperationListener?.onFileRemoved()
-            Log.d(TAG, "File removed: ${currentFile.name}")
-            true
         }
     }
 
     /**
-     * Confirm and start upload
-     *
-     * @return true if upload was started
+     * Handle cancel upload command
      */
-    private suspend fun confirmUpload(): Boolean {
-        return withContext(Dispatchers.Main) {
-            val currentState = _uploadState.value
+    private suspend fun handleCancelUpload(): HandlerResult {
+        val result = executor.cancelUpload()
 
-            if (currentState.selectedFile == null) {
-                Log.w(TAG, "No file selected for upload")
-                _uploadState.value = currentState.copy(
-                    status = UploadStatus.ERROR,
-                    errorMessage = "No file selected. Say 'upload file' to select a file first."
+        return when (result) {
+            is FileUploadResult.UploadCancelled -> {
+                onFileOperationCompleted?.invoke("cancel_upload", true)
+                HandlerResult.Success(
+                    message = "Upload cancelled",
+                    data = mapOf("operation" to "cancel_upload")
                 )
-                return@withContext false
             }
-
-            if (isUploading.get()) {
-                Log.w(TAG, "Upload already in progress")
-                return@withContext false
+            is FileUploadResult.PickerClosed -> {
+                onFileOperationCompleted?.invoke("close_picker", true)
+                HandlerResult.Success(
+                    message = "File picker closed",
+                    data = mapOf("operation" to "close_picker")
+                )
             }
-
-            // Start upload
-            isUploading.set(true)
-            _uploadState.value = currentState.copy(
-                status = UploadStatus.UPLOADING,
-                progress = 0f,
-                errorMessage = null
+            is FileUploadResult.SelectionCleared -> {
+                onFileOperationCompleted?.invoke("clear_selection", true)
+                HandlerResult.Success(
+                    message = "File selection cleared",
+                    data = mapOf("operation" to "clear_selection")
+                )
+            }
+            is FileUploadResult.NothingToCancel -> {
+                HandlerResult.Success(
+                    message = "Nothing to cancel",
+                    data = mapOf("operation" to "cancel", "nothingToCancel" to true)
+                )
+            }
+            is FileUploadResult.Error -> {
+                onFileOperationCompleted?.invoke("cancel_upload", false)
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = true
+                )
+            }
+            else -> HandlerResult.failure(
+                reason = "Unexpected result from cancel operation",
+                recoverable = true
             )
+        }
+    }
 
-            val result = fileOperationListener?.onUploadConfirmed(currentState.selectedFile) ?: false
+    /**
+     * Handle remove file command
+     */
+    private suspend fun handleRemoveFile(): HandlerResult {
+        val result = executor.removeFile()
 
-            if (result) {
-                Log.d(TAG, "Upload started for: ${currentState.selectedFile.name}")
-            } else {
-                isUploading.set(false)
-                _uploadState.value = _uploadState.value.copy(
-                    status = UploadStatus.ERROR,
-                    errorMessage = "Failed to start upload"
+        return when (result) {
+            is FileUploadResult.FileRemoved -> {
+                onFileOperationCompleted?.invoke("remove_file", true)
+                HandlerResult.Success(
+                    message = "File '${result.fileName}' removed",
+                    data = mapOf(
+                        "operation" to "remove_file",
+                        "fileName" to result.fileName
+                    )
                 )
-                Log.e(TAG, "Failed to start upload")
             }
-
-            result
-        }
-    }
-
-    // ========== Upload Progress Updates ==========
-
-    /**
-     * Update upload progress
-     *
-     * Called by upload implementation to update progress.
-     *
-     * @param progress Progress value (0.0 to 1.0)
-     */
-    fun updateProgress(progress: Float) {
-        val clampedProgress = progress.coerceIn(0f, 1f)
-        _uploadState.value = _uploadState.value.copy(
-            progress = clampedProgress
-        )
-    }
-
-    /**
-     * Mark upload as completed
-     *
-     * @param uploadedUri URI of the uploaded file (if applicable)
-     */
-    fun onUploadComplete(uploadedUri: Uri? = null) {
-        isUploading.set(false)
-        _uploadState.value = _uploadState.value.copy(
-            status = UploadStatus.COMPLETED,
-            progress = 1f,
-            uploadedUri = uploadedUri,
-            errorMessage = null
-        )
-        fileOperationListener?.onUploadCompleted(uploadedUri)
-        Log.d(TAG, "Upload completed: $uploadedUri")
-    }
-
-    /**
-     * Mark upload as failed
-     *
-     * @param error Error message
-     */
-    fun onUploadFailed(error: String) {
-        isUploading.set(false)
-        _uploadState.value = _uploadState.value.copy(
-            status = UploadStatus.ERROR,
-            errorMessage = error
-        )
-        fileOperationListener?.onUploadFailed(error)
-        Log.e(TAG, "Upload failed: $error")
-    }
-
-    // ========== Utility Methods ==========
-
-    /**
-     * Get file info from URI
-     *
-     * @param uri File URI
-     * @return FileInfo with file details
-     */
-    private fun getFileInfo(uri: Uri): FileInfo {
-        var name = "Unknown"
-        var size = 0L
-        var mimeType = "application/octet-stream"
-
-        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                // Get display name
-                val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                if (nameIndex >= 0) {
-                    name = cursor.getString(nameIndex) ?: "Unknown"
-                }
-
-                // Get size
-                val sizeIndex = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE)
-                if (sizeIndex >= 0) {
-                    size = cursor.getLong(sizeIndex)
-                }
+            is FileUploadResult.NoFileSelected -> {
+                HandlerResult.Failure(
+                    reason = "No file selected to remove",
+                    recoverable = true,
+                    suggestedAction = "Select a file first by saying 'upload file'"
+                )
             }
+            is FileUploadResult.Error -> {
+                onFileOperationCompleted?.invoke("remove_file", false)
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = true
+                )
+            }
+            else -> HandlerResult.failure(
+                reason = "Unexpected result from remove operation",
+                recoverable = true
+            )
         }
+    }
 
-        // Get MIME type
-        context.contentResolver.getType(uri)?.let {
-            mimeType = it
+    /**
+     * Handle confirm upload command
+     */
+    private suspend fun handleConfirmUpload(): HandlerResult {
+        val result = executor.confirmUpload()
+
+        return when (result) {
+            is FileUploadResult.UploadStarted -> {
+                onFileOperationCompleted?.invoke("start_upload", true)
+                HandlerResult.Success(
+                    message = "Upload started for '${result.fileName}'",
+                    data = mapOf(
+                        "operation" to "start_upload",
+                        "fileName" to result.fileName
+                    )
+                )
+            }
+            is FileUploadResult.NoFileSelected -> {
+                HandlerResult.Failure(
+                    reason = "No file selected for upload",
+                    recoverable = true,
+                    suggestedAction = "Say 'upload file' to select a file first"
+                )
+            }
+            is FileUploadResult.UploadAlreadyInProgress -> {
+                HandlerResult.Success(
+                    message = "Upload already in progress",
+                    data = mapOf("operation" to "start_upload", "alreadyInProgress" to true)
+                )
+            }
+            is FileUploadResult.Error -> {
+                onFileOperationCompleted?.invoke("start_upload", false)
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = true
+                )
+            }
+            else -> HandlerResult.failure(
+                reason = "Unexpected result from upload operation",
+                recoverable = true
+            )
         }
-
-        return FileInfo(
-            uri = uri,
-            name = name,
-            size = size,
-            mimeType = mimeType
-        )
-    }
-
-    /**
-     * Check if ready for operation
-     *
-     * @return true if handler is initialized and registered
-     */
-    fun isReady(): Boolean = isInitialized && isRegistered
-
-    /**
-     * Get current upload state
-     *
-     * @return Current FileUploadState
-     */
-    fun getState(): FileUploadState = _uploadState.value
-
-    /**
-     * Get handler status
-     *
-     * @return FileUploadHandlerStatus with current state information
-     */
-    fun getStatus(): FileUploadHandlerStatus {
-        return FileUploadHandlerStatus(
-            isInitialized = isInitialized,
-            isRegistered = isRegistered,
-            isUploading = isUploading.get(),
-            isPickerOpen = isPickerOpen.get(),
-            hasSelectedFile = _uploadState.value.selectedFile != null,
-            currentStatus = _uploadState.value.status,
-            commandsSupported = supportedCommands.size
-        )
-    }
-
-    /**
-     * Reset upload state
-     *
-     * Clears all upload state to initial values.
-     */
-    fun resetState() {
-        isUploading.set(false)
-        isPickerOpen.set(false)
-        _uploadState.value = FileUploadState()
-        Log.d(TAG, "Upload state reset")
-    }
-
-    /**
-     * Cleanup resources
-     */
-    fun dispose() {
-        unregisterCommands()
-        CommandRegistry.unregisterHandler(moduleId)
-        handlerScope.cancel()
-        fileOperationListener = null
-        filePickerLauncher = null
-        instance = null
-        Log.d(TAG, "FileUploadHandler disposed")
     }
 }
 
-// ========== Data Classes ==========
+// ═══════════════════════════════════════════════════════════════════════════════
+// Supporting Data Classes
+// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Information about a selected file
@@ -812,98 +425,168 @@ data class FileUploadState(
 /**
  * Status of the FileUploadHandler
  *
- * @property isInitialized Whether handler is initialized
- * @property isRegistered Whether commands are registered
  * @property isUploading Whether upload is in progress
  * @property isPickerOpen Whether file picker is open
  * @property hasSelectedFile Whether a file is selected
  * @property currentStatus Current upload status
- * @property commandsSupported Number of supported commands
  */
 data class FileUploadHandlerStatus(
-    val isInitialized: Boolean,
-    val isRegistered: Boolean,
     val isUploading: Boolean,
     val isPickerOpen: Boolean,
     val hasSelectedFile: Boolean,
-    val currentStatus: UploadStatus,
-    val commandsSupported: Int
+    val currentStatus: UploadStatus
 )
 
-// ========== Listener Interface ==========
+// ═══════════════════════════════════════════════════════════════════════════════
+// Result Sealed Class
+// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Listener for file operation events
- *
- * Implement this interface to receive callbacks for file upload operations.
+ * Result type for file upload operations
  */
-interface FileOperationListener {
+sealed class FileUploadResult {
+    /** File picker was opened successfully */
+    object PickerOpened : FileUploadResult()
+
+    /** File picker is already open */
+    object PickerAlreadyOpen : FileUploadResult()
+
+    /** File picker was closed */
+    object PickerClosed : FileUploadResult()
+
+    /** No file picker launcher is available */
+    object NoLauncherAvailable : FileUploadResult()
+
+    /** File was selected */
+    data class FileSelected(val fileInfo: FileInfo) : FileUploadResult()
+
+    /** No file is currently selected */
+    object NoFileSelected : FileUploadResult()
+
+    /** File was removed from selection */
+    data class FileRemoved(val fileName: String) : FileUploadResult()
+
+    /** File selection was cleared */
+    object SelectionCleared : FileUploadResult()
+
+    /** Upload was started */
+    data class UploadStarted(val fileName: String) : FileUploadResult()
+
+    /** Upload is already in progress */
+    object UploadAlreadyInProgress : FileUploadResult()
+
+    /** Upload was cancelled */
+    object UploadCancelled : FileUploadResult()
+
+    /** Nothing to cancel */
+    object NothingToCancel : FileUploadResult()
+
+    /** Upload completed successfully */
+    data class UploadCompleted(val uploadedUri: Uri?) : FileUploadResult()
+
+    /** Upload failed */
+    data class UploadFailed(val message: String) : FileUploadResult()
+
+    /** Generic error */
+    data class Error(val message: String) : FileUploadResult()
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Platform Executor Interface
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Platform-specific executor for file upload operations.
+ *
+ * Implementations should:
+ * 1. Manage file picker launcher (ActivityResultLauncher)
+ * 2. Handle file selection via content resolver
+ * 3. Manage upload state and progress
+ * 4. Perform actual file upload operations
+ *
+ * Activity Integration:
+ * The executor implementation should be created in the Activity/Fragment
+ * that hosts the file picker launcher, and should manage:
+ * - ActivityResultLauncher registration
+ * - Content resolver access
+ * - Upload service/API integration
+ */
+interface FileUploadExecutor {
+
     /**
-     * Called when file picker should be opened
+     * Open the file picker.
      *
-     * @param intent Intent for file picker
-     * @return true if picker was opened, false otherwise
+     * @return Result indicating if picker was opened
      */
-    fun onOpenFilePicker(intent: Intent): Boolean
+    suspend fun openFilePicker(): FileUploadResult
 
     /**
-     * Called when a file has been selected
+     * Cancel the current upload or close picker.
      *
-     * @param fileInfo Information about the selected file
+     * @return Result indicating what was cancelled
      */
-    fun onFileSelected(fileInfo: FileInfo)
+    suspend fun cancelUpload(): FileUploadResult
 
     /**
-     * Called when file selection was cancelled
-     */
-    fun onFileSelectionCancelled()
-
-    /**
-     * Called when selected file was removed
-     */
-    fun onFileRemoved()
-
-    /**
-     * Called when upload is confirmed and should start
+     * Remove the currently selected file.
      *
-     * @param fileInfo File to upload
-     * @return true if upload was started, false otherwise
+     * @return Result indicating if file was removed
      */
-    fun onUploadConfirmed(fileInfo: FileInfo): Boolean
+    suspend fun removeFile(): FileUploadResult
 
     /**
-     * Called when upload was cancelled
+     * Confirm and start the upload.
+     *
+     * @return Result indicating if upload was started
      */
-    fun onUploadCancelled()
+    suspend fun confirmUpload(): FileUploadResult
 
     /**
-     * Called when upload completed successfully
+     * Get current upload state.
+     *
+     * @return Current file upload state
+     */
+    suspend fun getState(): FileUploadState
+
+    /**
+     * Get handler status.
+     *
+     * @return Current handler status
+     */
+    suspend fun getStatus(): FileUploadHandlerStatus
+
+    /**
+     * Handle file selected callback from picker.
+     *
+     * Called by the Activity when file picker returns a result.
+     *
+     * @param uri URI of the selected file, or null if cancelled
+     */
+    suspend fun onFileSelected(uri: Uri?)
+
+    /**
+     * Update upload progress.
+     *
+     * @param progress Progress value (0.0 to 1.0)
+     */
+    suspend fun updateProgress(progress: Float)
+
+    /**
+     * Mark upload as completed.
      *
      * @param uploadedUri URI of the uploaded file (if applicable)
      */
-    fun onUploadCompleted(uploadedUri: Uri?)
+    suspend fun onUploadComplete(uploadedUri: Uri?)
 
     /**
-     * Called when upload failed
+     * Mark upload as failed.
      *
      * @param error Error message
      */
-    fun onUploadFailed(error: String)
-}
+    suspend fun onUploadFailed(error: String)
 
-/**
- * Default implementation of FileOperationListener
- *
- * Provides empty implementations for all methods.
- * Extend this class to override only the methods you need.
- */
-open class DefaultFileOperationListener : FileOperationListener {
-    override fun onOpenFilePicker(intent: Intent): Boolean = false
-    override fun onFileSelected(fileInfo: FileInfo) {}
-    override fun onFileSelectionCancelled() {}
-    override fun onFileRemoved() {}
-    override fun onUploadConfirmed(fileInfo: FileInfo): Boolean = false
-    override fun onUploadCancelled() {}
-    override fun onUploadCompleted(uploadedUri: Uri?) {}
-    override fun onUploadFailed(error: String) {}
+    /**
+     * Reset state to initial values.
+     */
+    suspend fun resetState()
 }

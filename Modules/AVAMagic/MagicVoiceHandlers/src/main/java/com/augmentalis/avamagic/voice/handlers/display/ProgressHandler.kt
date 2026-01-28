@@ -850,23 +850,6 @@ class ProgressHandler(
         }
     }
 
-    // ===============================================================================
-    // Voice Phrases for Speech Engine Registration
-    // ===============================================================================
-
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            "progress", "status",
-            "what's the progress", "what is the progress",
-            "how much left", "remaining",
-            "time left", "eta", "estimated time",
-            "cancel", "stop",
-            "pause", "wait",
-            "resume", "continue",
-            "retry", "try again",
-            "details", "more info"
-        )
-    }
 }
 
 // ===================================================================================

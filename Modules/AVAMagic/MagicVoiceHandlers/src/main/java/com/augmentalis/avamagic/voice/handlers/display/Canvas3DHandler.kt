@@ -824,34 +824,6 @@ class Canvas3DHandler(
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Voice Phrases for Speech Engine Registration
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            // Rotation
-            "rotate left", "rotate right",
-            "rotate up", "rotate down",
-            "spin", "auto rotate", "stop spinning",
-            // Zoom
-            "zoom in", "zoom out",
-            "zoom fifty percent", "zoom one hundred percent",
-            // View presets
-            "reset view", "home",
-            "front view", "back view",
-            "left view", "right view",
-            "top view", "bottom view",
-            "isometric view",
-            // Pan
-            "pan left", "pan right",
-            "pan up", "pan down",
-            // Selection
-            "select", "deselect", "clear selection",
-            // Render modes
-            "wireframe", "solid", "textured"
-        )
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

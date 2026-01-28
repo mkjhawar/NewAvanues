@@ -974,7 +974,7 @@ class RangeSliderHandler(
      * - "7.5" -> 7.5 (absolute)
      * - "twenty five" -> 25.0 (absolute)
      */
-    private fun parseValue(input: String): ParsedValue? {
+    private fun parseValue(input: String): RangeParsedValue? {
         val trimmed = input.trim().lowercase()
 
         // Check for percentage suffix
@@ -991,12 +991,12 @@ class RangeSliderHandler(
 
         // Try direct numeric parsing
         valueStr.toDoubleOrNull()?.let {
-            return ParsedValue(it, isPercentage)
+            return RangeParsedValue(it, isPercentage)
         }
 
         // Try word number parsing
         parseWordNumber(valueStr)?.let {
-            return ParsedValue(it.toDouble(), isPercentage)
+            return RangeParsedValue(it.toDouble(), isPercentage)
         }
 
         return null
@@ -1033,30 +1033,6 @@ class RangeSliderHandler(
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Voice Phrases for Speech Engine Registration
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            "set range",
-            "set price range",
-            "set minimum to",
-            "set low to",
-            "set maximum to",
-            "set high to",
-            "increase minimum",
-            "increase low",
-            "decrease minimum",
-            "decrease low",
-            "increase maximum",
-            "increase high",
-            "decrease maximum",
-            "decrease high",
-            "reset range",
-            "full range"
-        )
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1064,9 +1040,9 @@ class RangeSliderHandler(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Parsed numeric value with percentage flag.
+ * Parsed numeric value with percentage flag for RangeSliderHandler.
  */
-private data class ParsedValue(
+private data class RangeParsedValue(
     val value: Double,
     val isPercentage: Boolean
 )

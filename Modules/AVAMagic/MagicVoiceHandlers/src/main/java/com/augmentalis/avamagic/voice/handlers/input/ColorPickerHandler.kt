@@ -916,39 +916,6 @@ class ColorPickerHandler(
         return null
     }
 
-    // ===============================================================================
-    // Voice Phrases for Speech Engine Registration
-    // ===============================================================================
-
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            // Named colors
-            "set color to red",
-            "set color to blue",
-            "set color to green",
-            "set color to yellow",
-            "set color to orange",
-            "set color to purple",
-            "set color to white",
-            "set color to black",
-            "red", "blue", "green", "yellow",
-            // RGB channels
-            "set red to", "red",
-            "set green to", "green",
-            "set blue to", "blue",
-            // Alpha
-            "set opacity to", "opacity",
-            "set alpha to", "alpha",
-            // Brightness
-            "lighter", "brighten",
-            "darker", "darken",
-            // Saturation
-            "more saturated", "saturate",
-            "less saturated", "desaturate",
-            // Hex
-            "hex"
-        )
-    }
 }
 
 // ===================================================================================

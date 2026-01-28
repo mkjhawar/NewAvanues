@@ -13,28 +13,16 @@
  * - Accessibility service integration for DatePicker updates
  * - Voice feedback for selected dates
  *
- * Location: CommandManager module handlers
+ * Location: MagicVoiceHandlers module
  */
 
 package com.augmentalis.avamagic.voice.handlers.input
 
-import android.accessibilityservice.AccessibilityService
-import android.os.Build
-import android.os.Bundle
 import android.util.Log
-import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.commandmanager.CommandHandler
-import com.augmentalis.commandmanager.CommandRegistry
 import com.augmentalis.voiceoscore.ActionCategory
 import com.augmentalis.voiceoscore.BaseHandler
-import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.HandlerResult
-import com.augmentalis.voiceoscore.IHandler
 import com.augmentalis.voiceoscore.QuantizedCommand
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -57,27 +45,14 @@ import java.util.regex.Pattern
  *
  * Thread Safety:
  * - All operations execute on Main dispatcher
- * - AccessibilityService operations are synchronized
+ * - AccessibilityService operations are synchronized via executor
  */
-class DatePickerHandler private constructor() : BaseHandler(), CommandHandler {
+class DatePickerHandler(
+    private val executor: DatePickerExecutor
+) : BaseHandler() {
 
     companion object {
         private const val TAG = "DatePickerHandler"
-        private const val MODULE_ID = "datepicker"
-
-        @Volatile
-        private var instance: DatePickerHandler? = null
-
-        /**
-         * Get singleton instance
-         */
-        fun getInstance(): DatePickerHandler {
-            return instance ?: synchronized(this) {
-                instance ?: DatePickerHandler().also {
-                    instance = it
-                }
-            }
-        }
 
         // Date pattern constants
         private val MONTH_NAMES = mapOf(
@@ -104,7 +79,7 @@ class DatePickerHandler private constructor() : BaseHandler(), CommandHandler {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // IHandler Implementation (BaseHandler)
+    // BaseHandler Implementation
     // ═══════════════════════════════════════════════════════════════════════════
 
     override val category: ActionCategory = ActionCategory.UI
@@ -124,57 +99,18 @@ class DatePickerHandler private constructor() : BaseHandler(), CommandHandler {
     )
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // CommandHandler Implementation (for CommandRegistry)
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    override val moduleId: String = MODULE_ID
-
-    override val supportedCommands: List<String> = listOf(
-        "set date to [date]",
-        "today",
-        "tomorrow",
-        "yesterday",
-        "next week",
-        "next month",
-        "previous month",
-        "last month",
-        "next year",
-        "previous year",
-        "last year"
-    )
-
-    // ═══════════════════════════════════════════════════════════════════════════
     // State
     // ═══════════════════════════════════════════════════════════════════════════
 
-    private val handlerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private var accessibilityService: AccessibilityService? = null
-    private var isInitialized = false
-
     // Current date state (for relative operations)
     private var currentDate: Calendar = Calendar.getInstance()
-
-    // Callback for voice feedback
-    var onDateSelected: ((String) -> Unit)? = null
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Initialization
     // ═══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Initialize with accessibility service reference
-     */
-    fun initializeWithService(service: AccessibilityService? = null) {
-        accessibilityService = service
-        if (!isInitialized) {
-            CommandRegistry.registerHandler(moduleId, this)
-            isInitialized = true
-            Log.d(TAG, "DatePickerHandler initialized")
-        }
-    }
-
     override suspend fun initialize() {
-        initializeWithService(null)
+        Log.d(TAG, "DatePickerHandler initialized")
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -182,41 +118,7 @@ class DatePickerHandler private constructor() : BaseHandler(), CommandHandler {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * CommandHandler interface: Check if this handler can process the command
-     */
-    override fun canHandle(command: String): Boolean {
-        val normalized = command.lowercase().trim()
-        return when {
-            normalized.startsWith("set date to ") -> true
-            normalized == "today" -> true
-            normalized == "tomorrow" -> true
-            normalized == "yesterday" -> true
-            normalized == "next week" -> true
-            normalized == "next month" -> true
-            normalized == "previous month" || normalized == "last month" -> true
-            normalized == "next year" -> true
-            normalized == "previous year" || normalized == "last year" -> true
-            else -> false
-        }
-    }
-
-    /**
-     * CommandHandler interface: Execute the command
-     */
-    override suspend fun handleCommand(command: String): Boolean {
-        val result = execute(
-            QuantizedCommand(
-                phrase = command,
-                actionType = CommandActionType.EXECUTE,
-                targetAvid = null,
-                confidence = 1.0f
-            )
-        )
-        return result.isSuccess
-    }
-
-    /**
-     * IHandler execute implementation
+     * BaseHandler execute implementation
      */
     override suspend fun execute(
         command: QuantizedCommand,
@@ -368,49 +270,21 @@ class DatePickerHandler private constructor() : BaseHandler(), CommandHandler {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Accessibility Service Integration
+    // Executor Integration
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Apply date to focused DatePicker via accessibility service
+     * Apply date via executor
      */
     private suspend fun applyDate(calendar: Calendar): HandlerResult {
-        val service = accessibilityService
-        if (service == null) {
-            Log.w(TAG, "AccessibilityService not available")
-            return HandlerResult.failure(
-                reason = "Accessibility service not available",
-                recoverable = false
-            )
-        }
+        val result = executor.setDate(
+            year = calendar.get(Calendar.YEAR),
+            month = calendar.get(Calendar.MONTH),
+            day = calendar.get(Calendar.DAY_OF_MONTH)
+        )
 
-        val rootNode = service.rootInActiveWindow
-        if (rootNode == null) {
-            Log.w(TAG, "No active window found")
-            return HandlerResult.failure(
-                reason = "No active window found",
-                recoverable = true
-            )
-        }
-
-        try {
-            // Find focused DatePicker or Calendar widget
-            val datePickerNode = findDatePickerNode(rootNode)
-            if (datePickerNode == null) {
-                rootNode.recycle()
-                return HandlerResult.failure(
-                    reason = "No date picker found. Please focus a date picker first.",
-                    recoverable = true,
-                    suggestedAction = "Tap on a date picker to focus it"
-                )
-            }
-
-            // Apply the date
-            val success = setDateOnNode(datePickerNode, calendar)
-            datePickerNode.recycle()
-            rootNode.recycle()
-
-            if (success) {
+        return when (result) {
+            is DatePickerResult.Success -> {
                 // Update internal state
                 currentDate = calendar
 
@@ -418,11 +292,8 @@ class DatePickerHandler private constructor() : BaseHandler(), CommandHandler {
                 val dateFormat = SimpleDateFormat("MMMM d, yyyy", Locale.getDefault())
                 val formattedDate = dateFormat.format(calendar.time)
 
-                // Provide voice feedback
-                onDateSelected?.invoke(formattedDate)
-
                 Log.i(TAG, "Date set to: $formattedDate")
-                return HandlerResult.success(
+                HandlerResult.Success(
                     message = "Date set to $formattedDate",
                     data = mapOf(
                         "year" to calendar.get(Calendar.YEAR),
@@ -431,161 +302,27 @@ class DatePickerHandler private constructor() : BaseHandler(), CommandHandler {
                         "formatted" to formattedDate
                     )
                 )
-            } else {
-                return HandlerResult.failure(
-                    reason = "Could not set date on picker",
-                    recoverable = true
+            }
+            is DatePickerResult.NoDatePickerFound -> {
+                HandlerResult.failure(
+                    reason = "No date picker found. Please focus a date picker first.",
+                    recoverable = true,
+                    suggestedAction = "Tap on a date picker to focus it"
                 )
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error applying date", e)
-            rootNode.recycle()
-            return HandlerResult.failure(
-                reason = "Error setting date: ${e.message}",
-                recoverable = true
-            )
-        }
-    }
-
-    /**
-     * Find DatePicker or Calendar widget in the accessibility tree
-     */
-    private fun findDatePickerNode(rootNode: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        // Try to find focused node first
-        val focusedNode = rootNode.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-        if (focusedNode != null && isDatePickerNode(focusedNode)) {
-            return focusedNode
-        }
-        focusedNode?.recycle()
-
-        // Search for DatePicker by class name
-        return findNodeByClassName(rootNode, listOf(
-            "android.widget.DatePicker",
-            "android.widget.CalendarView",
-            "androidx.appcompat.widget.AppCompatDatePicker",
-            "com.google.android.material.datepicker.MaterialCalendar"
-        ))
-    }
-
-    /**
-     * Check if node is a DatePicker
-     */
-    private fun isDatePickerNode(node: AccessibilityNodeInfo): Boolean {
-        val className = node.className?.toString() ?: return false
-        return className.contains("DatePicker", ignoreCase = true) ||
-               className.contains("CalendarView", ignoreCase = true) ||
-               className.contains("Calendar", ignoreCase = true)
-    }
-
-    /**
-     * Find node by class name (recursive search)
-     */
-    private fun findNodeByClassName(
-        rootNode: AccessibilityNodeInfo,
-        classNames: List<String>
-    ): AccessibilityNodeInfo? {
-        val className = rootNode.className?.toString()
-        if (className != null && classNames.any { className.equals(it, ignoreCase = true) }) {
-            return rootNode
-        }
-
-        for (i in 0 until rootNode.childCount) {
-            val child = rootNode.getChild(i) ?: continue
-            val found = findNodeByClassName(child, classNames)
-            if (found != null) {
-                if (found != child) child.recycle()
-                return found
+            is DatePickerResult.ServiceUnavailable -> {
+                HandlerResult.failure(
+                    reason = "Accessibility service not available",
+                    recoverable = false
+                )
             }
-            child.recycle()
-        }
-
-        return null
-    }
-
-    /**
-     * Set date on DatePicker node
-     */
-    private fun setDateOnNode(node: AccessibilityNodeInfo, calendar: Calendar): Boolean {
-        // Try using ACTION_SET_SELECTION with date bundle (API 21+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            val bundle = Bundle().apply {
-                putInt("android.widget.DatePicker.year", calendar.get(Calendar.YEAR))
-                putInt("android.widget.DatePicker.month", calendar.get(Calendar.MONTH))
-                putInt("android.widget.DatePicker.day", calendar.get(Calendar.DAY_OF_MONTH))
+            is DatePickerResult.Failure -> {
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = result.recoverable
+                )
             }
-
-            // Try SET_TEXT action with date value
-            val success = node.performAction(
-                AccessibilityNodeInfo.ACTION_SET_TEXT,
-                bundle
-            )
-            if (success) return true
         }
-
-        // Fallback: Try clicking on date elements within the picker
-        return setDateByNavigatingPicker(node, calendar)
-    }
-
-    /**
-     * Fallback: Navigate the date picker by clicking elements
-     */
-    private fun setDateByNavigatingPicker(node: AccessibilityNodeInfo, calendar: Calendar): Boolean {
-        val day = calendar.get(Calendar.DAY_OF_MONTH).toString()
-
-        // Find and click the day element
-        val dayNode = findNodeByText(node, day)
-        if (dayNode != null) {
-            val success = dayNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            dayNode.recycle()
-            return success
-        }
-
-        Log.w(TAG, "Could not find day element: $day")
-        return false
-    }
-
-    /**
-     * Find node by text content
-     */
-    private fun findNodeByText(rootNode: AccessibilityNodeInfo, text: String): AccessibilityNodeInfo? {
-        val nodeText = rootNode.text?.toString()
-        val contentDesc = rootNode.contentDescription?.toString()
-
-        if (nodeText == text || contentDesc == text) {
-            return rootNode
-        }
-
-        for (i in 0 until rootNode.childCount) {
-            val child = rootNode.getChild(i) ?: continue
-            val found = findNodeByText(child, text)
-            if (found != null) {
-                if (found != child) child.recycle()
-                return found
-            }
-            child.recycle()
-        }
-
-        return null
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Voice Phrases for Speech Engine Registration
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            "set date to",
-            "today",
-            "tomorrow",
-            "yesterday",
-            "next week",
-            "next month",
-            "previous month",
-            "last month",
-            "next year",
-            "previous year",
-            "last year"
-        )
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -593,20 +330,9 @@ class DatePickerHandler private constructor() : BaseHandler(), CommandHandler {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Update accessibility service reference
-     */
-    fun setAccessibilityService(service: AccessibilityService?) {
-        accessibilityService = service
-    }
-
-    /**
      * Cleanup resources
      */
     override suspend fun dispose() {
-        CommandRegistry.unregisterHandler(moduleId)
-        handlerScope.cancel()
-        accessibilityService = null
-        instance = null
         Log.d(TAG, "DatePickerHandler disposed")
     }
 }
@@ -623,4 +349,39 @@ private enum class RelativeDate {
     PREVIOUS_MONTH,
     NEXT_YEAR,
     PREVIOUS_YEAR
+}
+
+/**
+ * Executor interface for DatePicker operations.
+ * Implementations handle platform-specific accessibility interactions.
+ */
+interface DatePickerExecutor {
+    /**
+     * Set date on the focused DatePicker widget
+     * @param year The year to set
+     * @param month The month to set (0-indexed, Calendar.JANUARY = 0)
+     * @param day The day of month to set
+     * @return DatePickerResult indicating success or failure
+     */
+    suspend fun setDate(year: Int, month: Int, day: Int): DatePickerResult
+}
+
+/**
+ * Result type for DatePicker operations
+ */
+sealed class DatePickerResult {
+    /** Date was successfully set */
+    data object Success : DatePickerResult()
+
+    /** No DatePicker widget found in focus */
+    data object NoDatePickerFound : DatePickerResult()
+
+    /** Accessibility service is not available */
+    data object ServiceUnavailable : DatePickerResult()
+
+    /** Operation failed with message */
+    data class Failure(
+        val message: String,
+        val recoverable: Boolean = true
+    ) : DatePickerResult()
 }

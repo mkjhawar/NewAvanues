@@ -2,30 +2,31 @@
  * RatingHandler.kt
  *
  * Created: 2026-01-27
- * Last Modified: 2026-01-27
+ * Last Modified: 2026-01-28
  * Author: VOS4 Development Team
- * Version: 1.0.0
+ * Version: 2.0.0
  *
  * Purpose: Voice command handler for rating controls - set, adjust, and clear ratings
  * Features: Star rating commands with natural language parsing
- * Location: CommandManager module
+ * Location: MagicVoiceHandlers module
  *
  * Changelog:
+ * - v2.0.0 (2026-01-28): Migrated to BaseHandler pattern with executor
  * - v1.0.0 (2026-01-27): Initial implementation with full rating command support
  */
 
 package com.augmentalis.avamagic.voice.handlers.input
 
 import android.util.Log
-import com.augmentalis.commandmanager.CommandHandler
-import com.augmentalis.commandmanager.CommandRegistry
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import com.augmentalis.voiceoscore.ActionCategory
+import com.augmentalis.voiceoscore.BaseHandler
+import com.augmentalis.voiceoscore.HandlerResult
+import com.augmentalis.voiceoscore.QuantizedCommand
 
 /**
  * Voice command handler for rating controls.
+ *
+ * Routes commands to set, adjust, or clear rating values via executor pattern.
  *
  * Supported Commands:
  * - "rate [N] stars" - set rating to N stars
@@ -37,31 +38,18 @@ import kotlinx.coroutines.cancel
  * - "maximum rating" / "full stars" - set to max (5 stars)
  * - "minimum rating" - set to minimum (1 star)
  *
- * Design:
- * - Command parsing and routing only
- * - Delegates execution to RatingActions
- * - Implements CommandHandler for CommandRegistry integration
+ * Thread Safety:
+ * - All operations are suspend functions
+ * - State modifications are atomic via executor
  *
- * @since 1.0.0
+ * @param executor Platform-specific executor for rating operations
  */
-class RatingHandler private constructor() : CommandHandler {
+class RatingHandler(
+    private val executor: RatingExecutor
+) : BaseHandler() {
 
     companion object {
         private const val TAG = "RatingHandler"
-
-        @Volatile
-        private var instance: RatingHandler? = null
-
-        /**
-         * Get singleton instance
-         */
-        fun getInstance(): RatingHandler {
-            return instance ?: synchronized(this) {
-                instance ?: RatingHandler().also {
-                    instance = it
-                }
-            }
-        }
 
         // Rating configuration
         const val MIN_RATING = 1
@@ -93,10 +81,9 @@ class RatingHandler private constructor() : CommandHandler {
         private val MIN_COMMANDS = setOf("minimum rating", "min rating", "one star", "1 star", "lowest rating")
     }
 
-    // CommandHandler interface implementation
-    override val moduleId: String = "rating"
+    override val category: ActionCategory = ActionCategory.UI
 
-    override val supportedCommands: List<String> = listOf(
+    override val supportedActions: List<String> = listOf(
         // Set rating commands
         "rate [N] stars",
         "rate [N]",
@@ -121,218 +108,243 @@ class RatingHandler private constructor() : CommandHandler {
         "minimum rating"
     )
 
-    private val handlerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
-    // State
-    private var isInitialized = false
-    private var currentRating = DEFAULT_RATING
-
-    // Listener for rating changes
-    private var ratingChangeListener: RatingChangeListener? = null
-
-    init {
-        initialize()
-        CommandRegistry.registerHandler(moduleId, this)
-    }
-
     /**
-     * Initialize the rating handler
+     * Callback for voice feedback when rating changes
      */
-    fun initialize(): Boolean {
-        if (isInitialized) {
-            Log.w(TAG, "Already initialized")
-            return true
-        }
+    var onRatingChanged: ((previousRating: Int, newRating: Int) -> Unit)? = null
 
-        return try {
-            isInitialized = true
-            Log.d(TAG, "RatingHandler initialized")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize", e)
-            false
-        }
-    }
+    override suspend fun execute(
+        command: QuantizedCommand,
+        params: Map<String, Any>
+    ): HandlerResult {
+        val normalizedAction = command.phrase.lowercase().trim()
 
-    /**
-     * Set a listener for rating changes
-     */
-    fun setRatingChangeListener(listener: RatingChangeListener?) {
-        ratingChangeListener = listener
-    }
-
-    /**
-     * CommandHandler interface: Check if this handler can process the command
-     */
-    override fun canHandle(command: String): Boolean {
-        return when {
-            command.startsWith("rate ") -> true
-            command in CLEAR_COMMANDS -> true
-            command in INCREASE_COMMANDS -> true
-            command in DECREASE_COMMANDS -> true
-            command in MAX_COMMANDS -> true
-            command in MIN_COMMANDS -> true
-            STARS_PATTERN.matches(command) -> true
-            else -> false
-        }
-    }
-
-    /**
-     * CommandHandler interface: Execute the command
-     */
-    override suspend fun handleCommand(command: String): Boolean {
-        if (!isInitialized) {
-            Log.w(TAG, "Not initialized for command processing")
-            return false
-        }
-
-        Log.d(TAG, "Processing rating command: '$command'")
+        Log.d(TAG, "Processing rating command: '$normalizedAction'")
 
         return try {
             when {
                 // Clear rating
-                command in CLEAR_COMMANDS -> clearRating()
+                normalizedAction in CLEAR_COMMANDS -> handleClearRating()
 
                 // Increase rating
-                command in INCREASE_COMMANDS -> increaseRating()
+                normalizedAction in INCREASE_COMMANDS -> handleIncreaseRating()
 
                 // Decrease rating
-                command in DECREASE_COMMANDS -> decreaseRating()
+                normalizedAction in DECREASE_COMMANDS -> handleDecreaseRating()
 
                 // Maximum rating
-                command in MAX_COMMANDS -> setRating(MAX_RATING)
+                normalizedAction in MAX_COMMANDS -> handleSetRating(MAX_RATING)
 
                 // Minimum rating
-                command in MIN_COMMANDS -> setRating(MIN_RATING)
+                normalizedAction in MIN_COMMANDS -> handleSetRating(MIN_RATING)
 
                 // "rate N stars" or "rate N"
-                command.startsWith("rate ") -> {
-                    val match = RATE_PATTERN.find(command)
+                normalizedAction.startsWith("rate ") -> {
+                    val match = RATE_PATTERN.find(normalizedAction)
                     if (match != null) {
                         val numberWord = match.groupValues[1]
                         val rating = parseNumber(numberWord)
                         if (rating != null) {
-                            setRating(rating)
+                            handleSetRating(rating)
                         } else {
-                            Log.w(TAG, "Could not parse rating number: $numberWord")
-                            false
+                            HandlerResult.failure(
+                                reason = "Could not parse rating number: $numberWord",
+                                recoverable = true
+                            )
                         }
                     } else {
-                        Log.w(TAG, "Command did not match rate pattern: $command")
-                        false
+                        HandlerResult.failure(
+                            reason = "Could not parse rate command: $normalizedAction",
+                            recoverable = true
+                        )
                     }
                 }
 
                 // "N stars"
-                STARS_PATTERN.matches(command) -> {
-                    val match = STARS_PATTERN.find(command)
+                STARS_PATTERN.matches(normalizedAction) -> {
+                    val match = STARS_PATTERN.find(normalizedAction)
                     if (match != null) {
                         val numberWord = match.groupValues[1]
                         val rating = parseNumber(numberWord)
                         if (rating != null) {
-                            setRating(rating)
+                            handleSetRating(rating)
                         } else {
-                            Log.w(TAG, "Could not parse stars number: $numberWord")
-                            false
+                            HandlerResult.failure(
+                                reason = "Could not parse stars number: $numberWord",
+                                recoverable = true
+                            )
                         }
                     } else {
-                        false
+                        HandlerResult.notHandled()
                     }
                 }
 
-                else -> false
+                else -> HandlerResult.notHandled()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error processing command: $command", e)
-            false
+            Log.e(TAG, "Error processing rating command", e)
+            HandlerResult.failure("Error: ${e.message}", recoverable = true)
         }
     }
 
-    /**
-     * Set the rating to a specific value
-     *
-     * @param rating The rating value (1-5, or 0 to clear)
-     * @return true if rating was set successfully
-     */
-    fun setRating(rating: Int): Boolean {
-        return if (rating == 0 || rating in MIN_RATING..MAX_RATING) {
-            val previousRating = currentRating
-            currentRating = rating
-            Log.i(TAG, "Rating set to $rating stars")
-            notifyRatingChanged(previousRating, currentRating)
-            true
-        } else {
-            Log.w(TAG, "Invalid rating value: $rating (must be $MIN_RATING-$MAX_RATING or 0)")
-            false
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Command Handlers
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    private suspend fun handleSetRating(rating: Int): HandlerResult {
+        if (rating != 0 && rating !in MIN_RATING..MAX_RATING) {
+            return HandlerResult.failure(
+                reason = "Invalid rating value: $rating (must be $MIN_RATING-$MAX_RATING)",
+                recoverable = true
+            )
+        }
+
+        val result = executor.setRating(rating)
+
+        return when (result) {
+            is RatingResult.Success -> {
+                onRatingChanged?.invoke(result.previousRating, result.newRating)
+                HandlerResult.Success(
+                    message = "Rating set to ${result.newRating} stars",
+                    data = mapOf(
+                        "previousRating" to result.previousRating,
+                        "newRating" to result.newRating
+                    )
+                )
+            }
+            is RatingResult.Error -> {
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = true
+                )
+            }
+            RatingResult.NoAccessibility -> {
+                HandlerResult.failure(
+                    reason = "Accessibility service not available",
+                    recoverable = false
+                )
+            }
+            RatingResult.NoRatingWidget -> {
+                HandlerResult.Failure(
+                    reason = "No rating widget found",
+                    recoverable = true,
+                    suggestedAction = "Focus on a rating control first"
+                )
+            }
         }
     }
 
-    /**
-     * Clear the current rating
-     *
-     * @return true if rating was cleared successfully
-     */
-    fun clearRating(): Boolean {
-        val previousRating = currentRating
-        currentRating = DEFAULT_RATING
-        Log.i(TAG, "Rating cleared")
-        notifyRatingChanged(previousRating, currentRating)
-        return true
-    }
+    private suspend fun handleClearRating(): HandlerResult {
+        val result = executor.clearRating()
 
-    /**
-     * Increase the rating by one star
-     *
-     * @return true if rating was increased successfully
-     */
-    fun increaseRating(): Boolean {
-        return if (currentRating < MAX_RATING) {
-            val previousRating = currentRating
-            // If no rating, start at minimum
-            currentRating = if (currentRating == DEFAULT_RATING) MIN_RATING else currentRating + 1
-            Log.i(TAG, "Rating increased to $currentRating stars")
-            notifyRatingChanged(previousRating, currentRating)
-            true
-        } else {
-            Log.w(TAG, "Rating already at maximum ($MAX_RATING stars)")
-            false
+        return when (result) {
+            is RatingResult.Success -> {
+                onRatingChanged?.invoke(result.previousRating, result.newRating)
+                HandlerResult.Success(
+                    message = "Rating cleared",
+                    data = mapOf(
+                        "previousRating" to result.previousRating,
+                        "newRating" to result.newRating
+                    )
+                )
+            }
+            is RatingResult.Error -> {
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = true
+                )
+            }
+            RatingResult.NoAccessibility -> {
+                HandlerResult.failure(
+                    reason = "Accessibility service not available",
+                    recoverable = false
+                )
+            }
+            RatingResult.NoRatingWidget -> {
+                HandlerResult.Failure(
+                    reason = "No rating widget found",
+                    recoverable = true,
+                    suggestedAction = "Focus on a rating control first"
+                )
+            }
         }
     }
 
-    /**
-     * Decrease the rating by one star
-     *
-     * @return true if rating was decreased successfully
-     */
-    fun decreaseRating(): Boolean {
-        return if (currentRating > MIN_RATING) {
-            val previousRating = currentRating
-            currentRating -= 1
-            Log.i(TAG, "Rating decreased to $currentRating stars")
-            notifyRatingChanged(previousRating, currentRating)
-            true
-        } else if (currentRating == MIN_RATING) {
-            // Decreasing from minimum clears the rating
-            clearRating()
-        } else {
-            Log.w(TAG, "No rating to decrease")
-            false
+    private suspend fun handleIncreaseRating(): HandlerResult {
+        val result = executor.increaseRating()
+
+        return when (result) {
+            is RatingResult.Success -> {
+                onRatingChanged?.invoke(result.previousRating, result.newRating)
+                HandlerResult.Success(
+                    message = "Rating increased to ${result.newRating} stars",
+                    data = mapOf(
+                        "previousRating" to result.previousRating,
+                        "newRating" to result.newRating
+                    )
+                )
+            }
+            is RatingResult.Error -> {
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = true
+                )
+            }
+            RatingResult.NoAccessibility -> {
+                HandlerResult.failure(
+                    reason = "Accessibility service not available",
+                    recoverable = false
+                )
+            }
+            RatingResult.NoRatingWidget -> {
+                HandlerResult.Failure(
+                    reason = "No rating widget found",
+                    recoverable = true,
+                    suggestedAction = "Focus on a rating control first"
+                )
+            }
         }
     }
 
-    /**
-     * Get the current rating
-     *
-     * @return Current rating (0 = no rating, 1-5 = stars)
-     */
-    fun getCurrentRating(): Int = currentRating
+    private suspend fun handleDecreaseRating(): HandlerResult {
+        val result = executor.decreaseRating()
 
-    /**
-     * Check if there is a current rating
-     *
-     * @return true if a rating is set
-     */
-    fun hasRating(): Boolean = currentRating > DEFAULT_RATING
+        return when (result) {
+            is RatingResult.Success -> {
+                onRatingChanged?.invoke(result.previousRating, result.newRating)
+                HandlerResult.Success(
+                    message = "Rating decreased to ${result.newRating} stars",
+                    data = mapOf(
+                        "previousRating" to result.previousRating,
+                        "newRating" to result.newRating
+                    )
+                )
+            }
+            is RatingResult.Error -> {
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = true
+                )
+            }
+            RatingResult.NoAccessibility -> {
+                HandlerResult.failure(
+                    reason = "Accessibility service not available",
+                    recoverable = false
+                )
+            }
+            RatingResult.NoRatingWidget -> {
+                HandlerResult.Failure(
+                    reason = "No rating widget found",
+                    recoverable = true,
+                    suggestedAction = "Focus on a rating control first"
+                )
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Helper Methods
+    // ═══════════════════════════════════════════════════════════════════════════
 
     /**
      * Parse a number from text (supports both digits and words)
@@ -344,60 +356,90 @@ class RatingHandler private constructor() : CommandHandler {
         val normalized = text.lowercase().trim()
         return WORD_TO_NUMBER[normalized]
     }
-
-    /**
-     * Notify listener of rating change
-     */
-    private fun notifyRatingChanged(previousRating: Int, newRating: Int) {
-        ratingChangeListener?.onRatingChanged(previousRating, newRating)
-    }
-
-    /**
-     * Get handler status
-     */
-    fun getStatus(): RatingHandlerStatus {
-        return RatingHandlerStatus(
-            isInitialized = isInitialized,
-            currentRating = currentRating,
-            commandsSupported = supportedCommands.size
-        )
-    }
-
-    /**
-     * Check if handler is ready
-     */
-    fun isReady(): Boolean = isInitialized
-
-    /**
-     * Cleanup resources
-     */
-    fun dispose() {
-        CommandRegistry.unregisterHandler(moduleId)
-        handlerScope.cancel()
-        ratingChangeListener = null
-        instance = null
-        Log.d(TAG, "RatingHandler disposed")
-    }
 }
 
-/**
- * Listener interface for rating changes
- */
-interface RatingChangeListener {
-    /**
-     * Called when the rating changes
-     *
-     * @param previousRating The previous rating value
-     * @param newRating The new rating value
-     */
-    fun onRatingChanged(previousRating: Int, newRating: Int)
-}
+// ═══════════════════════════════════════════════════════════════════════════════
+// Supporting Types
+// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Status information for RatingHandler
+ * Rating handler status
  */
 data class RatingHandlerStatus(
-    val isInitialized: Boolean,
+    val hasAccessibilityService: Boolean,
     val currentRating: Int,
-    val commandsSupported: Int
+    val hasRating: Boolean
 )
+
+/**
+ * Rating operation result
+ */
+sealed class RatingResult {
+    data class Success(val previousRating: Int, val newRating: Int) : RatingResult()
+    data class Error(val message: String) : RatingResult()
+    object NoAccessibility : RatingResult()
+    object NoRatingWidget : RatingResult()
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Platform Executor Interface
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Platform-specific executor for rating operations.
+ *
+ * Implementations should:
+ * 1. Find rating components (RatingBar, SeekBar) in accessibility tree
+ * 2. Set rating values (1-5 stars or 0 to clear)
+ * 3. Get current rating state
+ */
+interface RatingExecutor {
+
+    /**
+     * Set the rating to a specific value.
+     *
+     * @param rating The rating value (1-5, or 0 to clear)
+     * @return The result of the operation
+     */
+    suspend fun setRating(rating: Int): RatingResult
+
+    /**
+     * Clear the current rating.
+     *
+     * @return The result of the operation
+     */
+    suspend fun clearRating(): RatingResult
+
+    /**
+     * Increase the rating by one star.
+     *
+     * @return The result of the operation
+     */
+    suspend fun increaseRating(): RatingResult
+
+    /**
+     * Decrease the rating by one star.
+     *
+     * @return The result of the operation
+     */
+    suspend fun decreaseRating(): RatingResult
+
+    /**
+     * Get the current rating value.
+     *
+     * @return Current rating (0 = no rating, 1-5 = stars)
+     */
+    suspend fun getCurrentRating(): Int
+
+    /**
+     * Check if a rating is currently set.
+     *
+     * @return true if a rating is set
+     */
+    suspend fun hasRating(): Boolean
+
+    /**
+     * Get handler status.
+     */
+    suspend fun getStatus(): RatingHandlerStatus
+}

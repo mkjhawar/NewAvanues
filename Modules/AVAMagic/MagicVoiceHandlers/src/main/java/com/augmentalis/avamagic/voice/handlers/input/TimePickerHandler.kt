@@ -2,12 +2,13 @@
  * TimePickerHandler.kt
  *
  * Created: 2026-01-27 00:00 PST
+ * Last Modified: 2026-01-28 00:00 PST
  * Author: VOS4 Development Team
- * Version: 1.0.0
+ * Version: 2.0.0
  *
  * Purpose: Voice command handler for TimePicker widget interactions
  * Features: Time setting, hour/minute adjustment, AM/PM toggle, preset times
- * Location: CommandManager module - handlers package
+ * Location: MagicVoiceHandlers module
  *
  * Supported Commands:
  * - "set time to [time]" - e.g., "set time to 3:30 PM"
@@ -20,64 +21,39 @@
  * - "increase minute" / "decrease minute" - increment/decrement minute
  *
  * Changelog:
+ * - v2.0.0 (2026-01-28): Migrated to BaseHandler pattern with executor
  * - v1.0.0 (2026-01-27): Initial implementation with full time picker support
  */
 
 package com.augmentalis.avamagic.voice.handlers.input
 
-import android.accessibilityservice.AccessibilityService
-import android.content.Context
-import android.os.Bundle
 import android.util.Log
-import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.commandmanager.CommandHandler
-import com.augmentalis.commandmanager.CommandRegistry
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.withContext
+import com.augmentalis.voiceoscore.ActionCategory
+import com.augmentalis.voiceoscore.BaseHandler
+import com.augmentalis.voiceoscore.HandlerResult
+import com.augmentalis.voiceoscore.QuantizedCommand
 import java.util.Calendar
 import java.util.Locale
-import java.util.concurrent.atomic.AtomicReference
 import java.util.regex.Pattern
 
 /**
  * Voice command handler for TimePicker widget interactions.
  *
- * Design:
- * - Implements CommandHandler for CommandRegistry integration
- * - Singleton pattern for consistent state management
- * - Thread-safe with atomic references
- * - Supports both 12-hour and 24-hour time formats
- * - Natural language time parsing
+ * Routes commands to set time, adjust hour/minute, toggle AM/PM,
+ * or set preset times via executor pattern.
  *
- * Time Picker Detection:
- * - Searches for TimePicker/NumberPicker nodes via accessibility
- * - Supports Android standard TimePicker and MaterialTimePicker
- * - Falls back to text-based hour/minute input fields
+ * Thread Safety:
+ * - All operations are suspend functions
+ * - State modifications are atomic via executor
+ *
+ * @param executor Platform-specific executor for time picker operations
  */
-class TimePickerHandler private constructor(
-    private val context: Context
-) : CommandHandler {
+class TimePickerHandler(
+    private val executor: TimePickerExecutor
+) : BaseHandler() {
 
     companion object {
         private const val TAG = "TimePickerHandler"
-        private const val MODULE_ID = "timepicker"
-
-        @Volatile
-        private var instance: TimePickerHandler? = null
-
-        /**
-         * Get singleton instance
-         */
-        fun getInstance(context: Context): TimePickerHandler {
-            return instance ?: synchronized(this) {
-                instance ?: TimePickerHandler(context.applicationContext).also {
-                    instance = it
-                }
-            }
-        }
 
         // Time parsing patterns
         private val TIME_PATTERN_12H = Pattern.compile(
@@ -111,23 +87,11 @@ class TimePickerHandler private constructor(
             "thirty" to 30, "forty" to 40, "forty-five" to 45, "forty five" to 45,
             "fifty" to 50, "fifty-nine" to 59, "fifty nine" to 59
         )
-
-        // Command prefixes
-        private val TIME_PREFIXES = setOf(
-            "set time", "time", "set the time"
-        )
-        private val HOUR_PREFIXES = setOf(
-            "set hour", "hour", "set the hour"
-        )
-        private val MINUTE_PREFIXES = setOf(
-            "set minute", "set minutes", "minute", "minutes"
-        )
     }
 
-    // CommandHandler interface implementation
-    override val moduleId: String = MODULE_ID
+    override val category: ActionCategory = ActionCategory.UI
 
-    override val supportedCommands: List<String> = listOf(
+    override val supportedActions: List<String> = listOf(
         // Time setting commands
         "set time to [time]",
         "set time to [hour]:[minute] [AM/PM]",
@@ -170,107 +134,18 @@ class TimePickerHandler private constructor(
         "midday"
     )
 
-    private val handlerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private val accessibilityServiceRef = AtomicReference<AccessibilityService?>(null)
-
-    // Track current time picker state
-    private var currentHour: Int = 12
-    private var currentMinute: Int = 0
-    private var isAM: Boolean = true
-    private var is24HourFormat: Boolean = false
-
-    private var isInitialized = false
-
-    init {
-        initialize()
-        // Register with CommandRegistry
-        CommandRegistry.registerHandler(moduleId, this)
-    }
-
     /**
-     * Initialize the handler
+     * Callback for voice feedback when time changes
      */
-    fun initialize(): Boolean {
-        if (isInitialized) {
-            Log.w(TAG, "Already initialized")
-            return true
-        }
+    var onTimeChanged: ((hour: Int, minute: Int, isAM: Boolean) -> Unit)? = null
 
-        return try {
-            // Initialize with current time
-            val calendar = Calendar.getInstance()
-            currentHour = calendar.get(Calendar.HOUR)
-            if (currentHour == 0) currentHour = 12
-            currentMinute = calendar.get(Calendar.MINUTE)
-            isAM = calendar.get(Calendar.AM_PM) == Calendar.AM
+    override suspend fun execute(
+        command: QuantizedCommand,
+        params: Map<String, Any>
+    ): HandlerResult {
+        val normalized = command.phrase.lowercase().trim()
 
-            isInitialized = true
-            Log.d(TAG, "TimePickerHandler initialized")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize", e)
-            false
-        }
-    }
-
-    /**
-     * Set the accessibility service reference
-     */
-    fun setAccessibilityService(service: AccessibilityService?) {
-        accessibilityServiceRef.set(service)
-    }
-
-    /**
-     * CommandHandler interface: Check if this handler can process the command
-     */
-    override fun canHandle(command: String): Boolean {
-        val normalized = command.lowercase().trim()
-
-        return when {
-            // Time setting commands
-            normalized.startsWith("set time") -> true
-            normalized.contains("time to") -> true
-
-            // Hour commands
-            normalized.startsWith("set hour") -> true
-            normalized == "increase hour" || normalized == "hour up" || normalized == "next hour" -> true
-            normalized == "decrease hour" || normalized == "hour down" || normalized == "previous hour" -> true
-            HOUR_PATTERN.matcher(normalized).find() -> true
-
-            // Minute commands
-            normalized.startsWith("set minute") -> true
-            normalized == "increase minute" || normalized == "minute up" || normalized == "next minute" -> true
-            normalized == "decrease minute" || normalized == "minute down" || normalized == "previous minute" -> true
-            MINUTE_PATTERN.matcher(normalized).find() -> true
-
-            // AM/PM commands
-            normalized == "am" || normalized == "a.m." -> true
-            normalized == "pm" || normalized == "p.m." -> true
-            normalized == "morning" -> true
-            normalized == "afternoon" || normalized == "evening" -> true
-            normalized.contains("switch to am") || normalized.contains("switch to pm") -> true
-            normalized == "toggle am pm" || normalized == "toggle am/pm" -> true
-
-            // Preset commands
-            normalized == "now" || normalized == "current time" -> true
-            normalized == "noon" || normalized == "midday" -> true
-            normalized == "midnight" -> true
-
-            else -> false
-        }
-    }
-
-    /**
-     * CommandHandler interface: Execute the command
-     */
-    override suspend fun handleCommand(command: String): Boolean {
-        if (!isInitialized) {
-            Log.w(TAG, "Handler not initialized")
-            return false
-        }
-
-        val normalized = command.lowercase().trim()
-        Log.d(TAG, "Processing command: '$normalized'")
+        Log.d(TAG, "Processing time picker command: '$normalized'")
 
         return try {
             when {
@@ -321,24 +196,23 @@ class TimePickerHandler private constructor(
                 normalized == "noon" || normalized == "midday" -> handleSetNoon()
                 normalized == "midnight" -> handleSetMidnight()
 
-                else -> {
-                    Log.w(TAG, "Unhandled command: $normalized")
-                    false
-                }
+                else -> HandlerResult.notHandled()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error handling command: $command", e)
-            false
+            Log.e(TAG, "Error processing time picker command", e)
+            HandlerResult.failure("Error: ${e.message}", recoverable = true)
         }
     }
 
-    // ==================== Time Setting Handlers ====================
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Time Setting Handlers
+    // ═══════════════════════════════════════════════════════════════════════════
 
     /**
      * Handle "set time to [time]" command
      * Parses natural language time expressions
      */
-    private suspend fun handleSetTime(command: String): Boolean {
+    private suspend fun handleSetTime(command: String): HandlerResult {
         // Extract time part from command
         val timeStr = command
             .replace("set time to", "")
@@ -348,13 +222,13 @@ class TimePickerHandler private constructor(
 
         val parsedTime = parseTimeExpression(timeStr)
         return if (parsedTime != null) {
-            currentHour = parsedTime.hour
-            currentMinute = parsedTime.minute
-            isAM = parsedTime.isAM
-            applyTimeToWidget()
+            val result = executor.setTime(parsedTime.hour, parsedTime.minute, parsedTime.isAM)
+            handleTimeResult(result, "Time set")
         } else {
-            Log.w(TAG, "Failed to parse time: $timeStr")
-            false
+            HandlerResult.failure(
+                reason = "Could not parse time: $timeStr",
+                recoverable = true
+            )
         }
     }
 
@@ -378,10 +252,10 @@ class TimePickerHandler private constructor(
             if (hour !in 1..12 || minute !in 0..59) return null
 
             val isAM = when {
-                period == null -> this.isAM // Keep current AM/PM
+                period == null -> true // Default to AM if not specified
                 period.startsWith("a") -> true
                 period.startsWith("p") -> false
-                else -> this.isAM
+                else -> true
             }
 
             return ParsedTime(hour, minute, isAM)
@@ -411,25 +285,25 @@ class TimePickerHandler private constructor(
             phrase.contains("half past") -> {
                 val hourStr = phrase.replace("half past", "").trim()
                 val hour = parseHourWord(hourStr)
-                if (hour != null) ParsedTime(hour, 30, isAM) else null
+                if (hour != null) ParsedTime(hour, 30, true) else null
             }
             phrase.contains("quarter past") -> {
                 val hourStr = phrase.replace("quarter past", "").trim()
                 val hour = parseHourWord(hourStr)
-                if (hour != null) ParsedTime(hour, 15, isAM) else null
+                if (hour != null) ParsedTime(hour, 15, true) else null
             }
             phrase.contains("quarter to") -> {
                 val hourStr = phrase.replace("quarter to", "").trim()
                 val hour = parseHourWord(hourStr)
                 if (hour != null) {
                     val prevHour = if (hour == 1) 12 else hour - 1
-                    ParsedTime(prevHour, 45, isAM)
+                    ParsedTime(prevHour, 45, true)
                 } else null
             }
             phrase == "o'clock" || phrase.endsWith(" o'clock") -> {
                 val hourStr = phrase.replace("o'clock", "").trim()
                 val hour = parseHourWord(hourStr)
-                if (hour != null) ParsedTime(hour, 0, isAM) else null
+                if (hour != null) ParsedTime(hour, 0, true) else null
             }
             else -> null
         }
@@ -477,18 +351,20 @@ class TimePickerHandler private constructor(
         }
     }
 
-    // ==================== Hour Handlers ====================
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Hour Handlers
+    // ═══════════════════════════════════════════════════════════════════════════
 
     /**
      * Handle "set hour to [N]" command
      */
-    private suspend fun handleSetHour(command: String): Boolean {
+    private suspend fun handleSetHour(command: String): HandlerResult {
         val matcher = HOUR_PATTERN.matcher(command)
         if (matcher.find()) {
             val hour = matcher.group(1)?.toIntOrNull()
             if (hour != null && hour in 1..12) {
-                currentHour = hour
-                return applyTimeToWidget()
+                val result = executor.setHour(hour)
+                return handleTimeResult(result, "Hour set to $hour")
             }
         }
 
@@ -502,52 +378,46 @@ class TimePickerHandler private constructor(
 
         val hour = parseHourWord(hourStr)
         if (hour != null) {
-            currentHour = hour
-            return applyTimeToWidget()
+            val result = executor.setHour(hour)
+            return handleTimeResult(result, "Hour set to $hour")
         }
 
-        Log.w(TAG, "Failed to parse hour from: $command")
-        return false
+        return HandlerResult.failure(
+            reason = "Could not parse hour from: $command",
+            recoverable = true
+        )
     }
 
     /**
      * Increase hour by 1
      */
-    private suspend fun handleIncreaseHour(): Boolean {
-        currentHour = if (currentHour == 12) 1 else currentHour + 1
-        // Toggle AM/PM when rolling over
-        if (currentHour == 12) {
-            isAM = !isAM
-        }
-        Log.d(TAG, "Increased hour to: $currentHour ${if (isAM) "AM" else "PM"}")
-        return applyTimeToWidget()
+    private suspend fun handleIncreaseHour(): HandlerResult {
+        val result = executor.increaseHour()
+        return handleTimeResult(result, "Hour increased")
     }
 
     /**
      * Decrease hour by 1
      */
-    private suspend fun handleDecreaseHour(): Boolean {
-        currentHour = if (currentHour == 1) 12 else currentHour - 1
-        // Toggle AM/PM when rolling back
-        if (currentHour == 11) {
-            isAM = !isAM
-        }
-        Log.d(TAG, "Decreased hour to: $currentHour ${if (isAM) "AM" else "PM"}")
-        return applyTimeToWidget()
+    private suspend fun handleDecreaseHour(): HandlerResult {
+        val result = executor.decreaseHour()
+        return handleTimeResult(result, "Hour decreased")
     }
 
-    // ==================== Minute Handlers ====================
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Minute Handlers
+    // ═══════════════════════════════════════════════════════════════════════════
 
     /**
      * Handle "set minute to [N]" command
      */
-    private suspend fun handleSetMinute(command: String): Boolean {
+    private suspend fun handleSetMinute(command: String): HandlerResult {
         val matcher = MINUTE_PATTERN.matcher(command)
         if (matcher.find()) {
             val minute = matcher.group(1)?.toIntOrNull()
             if (minute != null && minute in 0..59) {
-                currentMinute = minute
-                return applyTimeToWidget()
+                val result = executor.setMinute(minute)
+                return handleTimeResult(result, "Minute set to $minute")
             }
         }
 
@@ -564,411 +434,142 @@ class TimePickerHandler private constructor(
 
         val convertedMinute = convertWordsToNumbers(minuteStr).trim().toIntOrNull()
         if (convertedMinute != null && convertedMinute in 0..59) {
-            currentMinute = convertedMinute
-            return applyTimeToWidget()
+            val result = executor.setMinute(convertedMinute)
+            return handleTimeResult(result, "Minute set to $convertedMinute")
         }
 
-        Log.w(TAG, "Failed to parse minute from: $command")
-        return false
+        return HandlerResult.failure(
+            reason = "Could not parse minute from: $command",
+            recoverable = true
+        )
     }
 
     /**
      * Increase minute by 1
      */
-    private suspend fun handleIncreaseMinute(): Boolean {
-        currentMinute = (currentMinute + 1) % 60
-        // Roll over hour when minute wraps
-        if (currentMinute == 0) {
-            handleIncreaseHour()
-        }
-        Log.d(TAG, "Increased minute to: $currentMinute")
-        return applyTimeToWidget()
+    private suspend fun handleIncreaseMinute(): HandlerResult {
+        val result = executor.increaseMinute()
+        return handleTimeResult(result, "Minute increased")
     }
 
     /**
      * Decrease minute by 1
      */
-    private suspend fun handleDecreaseMinute(): Boolean {
-        currentMinute = if (currentMinute == 0) 59 else currentMinute - 1
-        // Roll back hour when minute wraps
-        if (currentMinute == 59) {
-            handleDecreaseHour()
-        }
-        Log.d(TAG, "Decreased minute to: $currentMinute")
-        return applyTimeToWidget()
+    private suspend fun handleDecreaseMinute(): HandlerResult {
+        val result = executor.decreaseMinute()
+        return handleTimeResult(result, "Minute decreased")
     }
 
-    // ==================== AM/PM Handlers ====================
+    // ═══════════════════════════════════════════════════════════════════════════
+    // AM/PM Handlers
+    // ═══════════════════════════════════════════════════════════════════════════
 
     /**
      * Set to AM
      */
-    private suspend fun handleSetAM(): Boolean {
-        isAM = true
-        Log.d(TAG, "Set to AM")
-        return applyTimeToWidget()
+    private suspend fun handleSetAM(): HandlerResult {
+        val result = executor.setAM()
+        return handleTimeResult(result, "Set to AM")
     }
 
     /**
      * Set to PM
      */
-    private suspend fun handleSetPM(): Boolean {
-        isAM = false
-        Log.d(TAG, "Set to PM")
-        return applyTimeToWidget()
+    private suspend fun handleSetPM(): HandlerResult {
+        val result = executor.setPM()
+        return handleTimeResult(result, "Set to PM")
     }
 
     /**
      * Toggle AM/PM
      */
-    private suspend fun handleToggleAMPM(): Boolean {
-        isAM = !isAM
-        Log.d(TAG, "Toggled to: ${if (isAM) "AM" else "PM"}")
-        return applyTimeToWidget()
+    private suspend fun handleToggleAMPM(): HandlerResult {
+        val result = executor.toggleAMPM()
+        return handleTimeResult(result, "AM/PM toggled")
     }
 
-    // ==================== Preset Time Handlers ====================
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Preset Time Handlers
+    // ═══════════════════════════════════════════════════════════════════════════
 
     /**
      * Set to current system time
      */
-    private suspend fun handleSetCurrentTime(): Boolean {
+    private suspend fun handleSetCurrentTime(): HandlerResult {
         val calendar = Calendar.getInstance()
-        currentHour = calendar.get(Calendar.HOUR)
-        if (currentHour == 0) currentHour = 12
-        currentMinute = calendar.get(Calendar.MINUTE)
-        isAM = calendar.get(Calendar.AM_PM) == Calendar.AM
-        Log.d(TAG, "Set to current time: $currentHour:${String.format(Locale.US, "%02d", currentMinute)} ${if (isAM) "AM" else "PM"}")
-        return applyTimeToWidget()
+        var hour = calendar.get(Calendar.HOUR)
+        if (hour == 0) hour = 12
+        val minute = calendar.get(Calendar.MINUTE)
+        val isAM = calendar.get(Calendar.AM_PM) == Calendar.AM
+
+        val result = executor.setTime(hour, minute, isAM)
+        return handleTimeResult(result, "Set to current time")
     }
 
     /**
      * Set to noon (12:00 PM)
      */
-    private suspend fun handleSetNoon(): Boolean {
-        currentHour = 12
-        currentMinute = 0
-        isAM = false
-        Log.d(TAG, "Set to noon: 12:00 PM")
-        return applyTimeToWidget()
+    private suspend fun handleSetNoon(): HandlerResult {
+        val result = executor.setTime(12, 0, false)
+        return handleTimeResult(result, "Set to noon")
     }
 
     /**
      * Set to midnight (12:00 AM)
      */
-    private suspend fun handleSetMidnight(): Boolean {
-        currentHour = 12
-        currentMinute = 0
-        isAM = true
-        Log.d(TAG, "Set to midnight: 12:00 AM")
-        return applyTimeToWidget()
+    private suspend fun handleSetMidnight(): HandlerResult {
+        val result = executor.setTime(12, 0, true)
+        return handleTimeResult(result, "Set to midnight")
     }
 
-    // ==================== Widget Interaction ====================
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Result Handling
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Apply the current time state to the TimePicker widget via accessibility
-     */
-    private suspend fun applyTimeToWidget(): Boolean {
-        return withContext(Dispatchers.Main) {
-            val service = accessibilityServiceRef.get()
-            if (service == null) {
-                Log.w(TAG, "AccessibilityService not available")
-                return@withContext false
+    private fun handleTimeResult(result: TimePickerResult, successMessage: String): HandlerResult {
+        return when (result) {
+            is TimePickerResult.Success -> {
+                onTimeChanged?.invoke(result.hour, result.minute, result.isAM)
+                val formattedTime = "${result.hour}:${String.format(Locale.US, "%02d", result.minute)} ${if (result.isAM) "AM" else "PM"}"
+                HandlerResult.Success(
+                    message = "$successMessage: $formattedTime",
+                    data = mapOf(
+                        "hour" to result.hour,
+                        "minute" to result.minute,
+                        "isAM" to result.isAM,
+                        "formatted" to formattedTime
+                    )
+                )
             }
-
-            try {
-                val rootNode = service.rootInActiveWindow
-                if (rootNode == null) {
-                    Log.w(TAG, "Root node not available")
-                    return@withContext false
-                }
-
-                // Try different strategies to find and interact with TimePicker
-                val success = findAndUpdateTimePicker(rootNode) ||
-                             findAndUpdateNumberPickers(rootNode) ||
-                             findAndUpdateTimeInputFields(rootNode)
-
-                rootNode.recycle()
-
-                if (success) {
-                    Log.i(TAG, "Time set to: $currentHour:${String.format(Locale.US, "%02d", currentMinute)} ${if (isAM) "AM" else "PM"}")
-                } else {
-                    Log.w(TAG, "Failed to find TimePicker widget")
-                }
-
-                success
-            } catch (e: Exception) {
-                Log.e(TAG, "Error applying time to widget", e)
-                false
+            is TimePickerResult.Error -> {
+                HandlerResult.failure(
+                    reason = result.message,
+                    recoverable = true
+                )
+            }
+            TimePickerResult.NoAccessibility -> {
+                HandlerResult.failure(
+                    reason = "Accessibility service not available",
+                    recoverable = false
+                )
+            }
+            TimePickerResult.NoTimePickerWidget -> {
+                HandlerResult.Failure(
+                    reason = "No time picker widget found",
+                    recoverable = true,
+                    suggestedAction = "Focus on a time picker first"
+                )
             }
         }
-    }
-
-    /**
-     * Find TimePicker widget and update it
-     */
-    private fun findAndUpdateTimePicker(rootNode: AccessibilityNodeInfo): Boolean {
-        // Look for TimePicker class
-        val timePickerNodes = findNodesByClassName(rootNode, "android.widget.TimePicker")
-        if (timePickerNodes.isEmpty()) {
-            // Also try MaterialTimePicker
-            val materialPickers = findNodesByClassName(rootNode, "com.google.android.material.timepicker.TimePickerView")
-            if (materialPickers.isNotEmpty()) {
-                return updateMaterialTimePicker(materialPickers.first())
-            }
-            return false
-        }
-
-        val timePicker = timePickerNodes.first()
-        return updateStandardTimePicker(timePicker)
-    }
-
-    /**
-     * Update standard Android TimePicker
-     */
-    private fun updateStandardTimePicker(timePicker: AccessibilityNodeInfo): Boolean {
-        // Find hour and minute NumberPickers within TimePicker
-        val numberPickers = findNodesByClassName(timePicker, "android.widget.NumberPicker")
-
-        if (numberPickers.size >= 2) {
-            val hourPicker = numberPickers[0]
-            val minutePicker = numberPickers[1]
-            val amPmPicker = if (numberPickers.size >= 3) numberPickers[2] else null
-
-            // Update hour
-            updateNumberPickerValue(hourPicker, currentHour)
-
-            // Update minute
-            updateNumberPickerValue(minutePicker, currentMinute)
-
-            // Update AM/PM if present (12-hour format)
-            amPmPicker?.let {
-                updateNumberPickerValue(it, if (isAM) 0 else 1)
-            }
-
-            return true
-        }
-
-        return false
-    }
-
-    /**
-     * Update Material Design TimePicker
-     */
-    private fun updateMaterialTimePicker(timePicker: AccessibilityNodeInfo): Boolean {
-        // Material TimePicker uses clickable chip views for hour/minute
-        // Find hour and minute text views
-        val textNodes = findNodesByClassName(timePicker, "android.widget.TextView")
-
-        for (node in textNodes) {
-            val text = node.text?.toString() ?: continue
-            val contentDesc = node.contentDescription?.toString()?.lowercase() ?: ""
-
-            // Check if this is hour or minute field
-            when {
-                contentDesc.contains("hour") -> {
-                    setNodeText(node, currentHour.toString())
-                }
-                contentDesc.contains("minute") -> {
-                    setNodeText(node, String.format(Locale.US, "%02d", currentMinute))
-                }
-            }
-        }
-
-        // Handle AM/PM toggle
-        val buttonNodes = findNodesByClassName(timePicker, "android.widget.Button")
-        for (node in buttonNodes) {
-            val text = node.text?.toString()?.lowercase() ?: continue
-            if ((text == "am" && !isAM) || (text == "pm" && isAM)) {
-                node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            }
-        }
-
-        return true
-    }
-
-    /**
-     * Find and update individual NumberPicker widgets
-     */
-    private fun findAndUpdateNumberPickers(rootNode: AccessibilityNodeInfo): Boolean {
-        val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
-
-        // Need at least 2 NumberPickers for hour and minute
-        if (numberPickers.size < 2) return false
-
-        // Heuristic: first picker is hour, second is minute
-        // This may need adjustment based on picker order in different apps
-        val hourPicker = numberPickers[0]
-        val minutePicker = numberPickers[1]
-
-        updateNumberPickerValue(hourPicker, currentHour)
-        updateNumberPickerValue(minutePicker, currentMinute)
-
-        // Handle AM/PM picker if present
-        if (numberPickers.size >= 3) {
-            updateNumberPickerValue(numberPickers[2], if (isAM) 0 else 1)
-        }
-
-        return true
-    }
-
-    /**
-     * Find and update EditText/input fields for time
-     */
-    private fun findAndUpdateTimeInputFields(rootNode: AccessibilityNodeInfo): Boolean {
-        val editTextNodes = findNodesByClassName(rootNode, "android.widget.EditText")
-
-        var hourUpdated = false
-        var minuteUpdated = false
-
-        for (node in editTextNodes) {
-            val hint = node.hintText?.toString()?.lowercase() ?: ""
-            val contentDesc = node.contentDescription?.toString()?.lowercase() ?: ""
-
-            when {
-                hint.contains("hour") || contentDesc.contains("hour") -> {
-                    if (setNodeText(node, currentHour.toString())) {
-                        hourUpdated = true
-                    }
-                }
-                hint.contains("minute") || contentDesc.contains("minute") -> {
-                    if (setNodeText(node, String.format(Locale.US, "%02d", currentMinute))) {
-                        minuteUpdated = true
-                    }
-                }
-            }
-        }
-
-        // Handle AM/PM buttons or spinners
-        val buttonNodes = findNodesByClassName(rootNode, "android.widget.Button")
-        for (node in buttonNodes) {
-            val text = node.text?.toString()?.lowercase() ?: continue
-            if (text == "am" || text == "pm") {
-                if ((text == "am" && !isAM) || (text == "pm" && isAM)) {
-                    node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                }
-            }
-        }
-
-        return hourUpdated || minuteUpdated
-    }
-
-    /**
-     * Update NumberPicker value using scroll actions
-     */
-    private fun updateNumberPickerValue(picker: AccessibilityNodeInfo, targetValue: Int): Boolean {
-        // Try to get current value from the picker
-        val currentText = picker.text?.toString()?.toIntOrNull()
-
-        if (currentText != null && currentText == targetValue) {
-            return true // Already at target value
-        }
-
-        // Use ACTION_SCROLL_FORWARD/BACKWARD to change value
-        // This is a simplified approach - full implementation would
-        // calculate direction and number of scrolls needed
-
-        // Try setting text directly first (works on some pickers)
-        val bundle = Bundle().apply {
-            putCharSequence(
-                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
-                targetValue.toString()
-            )
-        }
-
-        if (picker.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, bundle)) {
-            return true
-        }
-
-        // Fallback: try clicking to focus, then scroll
-        picker.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-
-        // Look for editable child
-        for (i in 0 until picker.childCount) {
-            val child = picker.getChild(i)
-            if (child?.isEditable == true) {
-                setNodeText(child, targetValue.toString())
-                child.recycle()
-                return true
-            }
-            child?.recycle()
-        }
-
-        return false
-    }
-
-    /**
-     * Set text on an accessibility node
-     */
-    private fun setNodeText(node: AccessibilityNodeInfo, text: String): Boolean {
-        val bundle = Bundle().apply {
-            putCharSequence(
-                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
-                text
-            )
-        }
-        return node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, bundle)
-    }
-
-    /**
-     * Find nodes by class name recursively
-     */
-    private fun findNodesByClassName(
-        rootNode: AccessibilityNodeInfo,
-        className: String
-    ): List<AccessibilityNodeInfo> {
-        val results = mutableListOf<AccessibilityNodeInfo>()
-        findNodesByClassNameRecursive(rootNode, className, results)
-        return results
-    }
-
-    private fun findNodesByClassNameRecursive(
-        node: AccessibilityNodeInfo,
-        className: String,
-        results: MutableList<AccessibilityNodeInfo>
-    ) {
-        if (node.className?.toString() == className) {
-            results.add(node)
-        }
-
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            findNodesByClassNameRecursive(child, className, results)
-        }
-    }
-
-    /**
-     * Get current time state
-     */
-    fun getCurrentTimeState(): TimeState {
-        return TimeState(
-            hour = currentHour,
-            minute = currentMinute,
-            isAM = isAM,
-            formatted = "$currentHour:${String.format(Locale.US, "%02d", currentMinute)} ${if (isAM) "AM" else "PM"}"
-        )
-    }
-
-    /**
-     * Check if handler is ready
-     */
-    fun isReady(): Boolean = isInitialized
-
-    /**
-     * Cleanup resources
-     */
-    fun dispose() {
-        CommandRegistry.unregisterHandler(moduleId)
-        handlerScope.cancel()
-        accessibilityServiceRef.set(null)
-        instance = null
-        Log.d(TAG, "TimePickerHandler disposed")
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Supporting Types
+// ═══════════════════════════════════════════════════════════════════════════════
+
 /**
- * Parsed time data class
+ * Parsed time data class (internal)
  */
 private data class ParsedTime(
     val hour: Int,      // 1-12
@@ -985,3 +586,123 @@ data class TimeState(
     val isAM: Boolean,
     val formatted: String
 )
+
+/**
+ * Time picker handler status
+ */
+data class TimePickerHandlerStatus(
+    val hasAccessibilityService: Boolean,
+    val currentTime: TimeState?
+)
+
+/**
+ * Time picker operation result
+ */
+sealed class TimePickerResult {
+    data class Success(val hour: Int, val minute: Int, val isAM: Boolean) : TimePickerResult()
+    data class Error(val message: String) : TimePickerResult()
+    object NoAccessibility : TimePickerResult()
+    object NoTimePickerWidget : TimePickerResult()
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Platform Executor Interface
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Platform-specific executor for time picker operations.
+ *
+ * Implementations should:
+ * 1. Find TimePicker/NumberPicker widgets in accessibility tree
+ * 2. Update hour, minute, and AM/PM values
+ * 3. Support both standard Android and Material TimePicker
+ */
+interface TimePickerExecutor {
+
+    /**
+     * Set the complete time.
+     *
+     * @param hour Hour (1-12)
+     * @param minute Minute (0-59)
+     * @param isAM True for AM, false for PM
+     * @return The result of the operation
+     */
+    suspend fun setTime(hour: Int, minute: Int, isAM: Boolean): TimePickerResult
+
+    /**
+     * Set the hour value.
+     *
+     * @param hour Hour (1-12)
+     * @return The result of the operation
+     */
+    suspend fun setHour(hour: Int): TimePickerResult
+
+    /**
+     * Set the minute value.
+     *
+     * @param minute Minute (0-59)
+     * @return The result of the operation
+     */
+    suspend fun setMinute(minute: Int): TimePickerResult
+
+    /**
+     * Increase the hour by 1.
+     *
+     * @return The result of the operation
+     */
+    suspend fun increaseHour(): TimePickerResult
+
+    /**
+     * Decrease the hour by 1.
+     *
+     * @return The result of the operation
+     */
+    suspend fun decreaseHour(): TimePickerResult
+
+    /**
+     * Increase the minute by 1.
+     *
+     * @return The result of the operation
+     */
+    suspend fun increaseMinute(): TimePickerResult
+
+    /**
+     * Decrease the minute by 1.
+     *
+     * @return The result of the operation
+     */
+    suspend fun decreaseMinute(): TimePickerResult
+
+    /**
+     * Set to AM.
+     *
+     * @return The result of the operation
+     */
+    suspend fun setAM(): TimePickerResult
+
+    /**
+     * Set to PM.
+     *
+     * @return The result of the operation
+     */
+    suspend fun setPM(): TimePickerResult
+
+    /**
+     * Toggle AM/PM.
+     *
+     * @return The result of the operation
+     */
+    suspend fun toggleAMPM(): TimePickerResult
+
+    /**
+     * Get the current time state.
+     *
+     * @return Current time state or null if not available
+     */
+    suspend fun getCurrentTimeState(): TimeState?
+
+    /**
+     * Get handler status.
+     */
+    suspend fun getStatus(): TimePickerHandlerStatus
+}

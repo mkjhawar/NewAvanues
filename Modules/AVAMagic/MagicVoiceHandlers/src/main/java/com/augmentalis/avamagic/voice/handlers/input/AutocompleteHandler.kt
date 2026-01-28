@@ -704,31 +704,6 @@ class AutocompleteHandler(
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Voice Phrases for Speech Engine Registration
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            "select",
-            "choose",
-            "first option",
-            "second option",
-            "third option",
-            "last option",
-            "option one",
-            "option two",
-            "pick one",
-            "pick two",
-            "type",
-            "clear",
-            "clear input",
-            "show suggestions",
-            "show options",
-            "hide suggestions",
-            "close"
-        )
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

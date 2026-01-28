@@ -819,24 +819,6 @@ class StepperHandler(
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Voice Phrases for Speech Engine Registration
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            "set to",
-            "set quantity to",
-            "set amount to",
-            "increase", "plus", "add one",
-            "decrease", "minus", "subtract one",
-            "increase by", "add",
-            "decrease by", "subtract",
-            "minimum", "min",
-            "maximum", "max",
-            "reset"
-        )
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

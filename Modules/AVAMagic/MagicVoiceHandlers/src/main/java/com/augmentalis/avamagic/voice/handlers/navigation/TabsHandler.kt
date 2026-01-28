@@ -759,21 +759,6 @@ class TabsHandler(
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Voice Phrases for Speech Engine Registration
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    override fun getVoicePhrases(): List<String> {
-        return listOf(
-            "tab", "go to tab",
-            "switch to tab",
-            "first tab", "second tab", "third tab", "last tab",
-            "next tab", "previous tab", "prev tab",
-            "right", "left",
-            "close tab", "close",
-            "new tab", "add tab"
-        )
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
