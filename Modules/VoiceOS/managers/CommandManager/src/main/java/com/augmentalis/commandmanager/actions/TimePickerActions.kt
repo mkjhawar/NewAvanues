@@ -18,7 +18,7 @@ import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 import java.util.Calendar
 import java.util.Locale
 

@@ -12,15 +12,15 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.voiceoscoreng.VoiceOSCoreNGApplication
-import com.augmentalis.voiceoscore.VoiceOSCore
-import com.augmentalis.voiceoscore.createForAndroid
-import com.augmentalis.voiceoscore.QuantizedCommand
-import com.augmentalis.voiceoscore.CommandRegistry
-import com.augmentalis.voiceoscore.ElementFingerprint
-import com.augmentalis.voiceoscore.ServiceConfiguration
-import com.augmentalis.voiceoscore.ServiceState
-import com.augmentalis.voiceoscore.ICommandPersistence
-import com.augmentalis.voiceoscore.AppVersionInfo
+import com.augmentalis.commandmanager.VoiceOSCore
+import com.augmentalis.commandmanager.createForAndroid
+import com.augmentalis.commandmanager.QuantizedCommand
+import com.augmentalis.commandmanager.CommandRegistry
+import com.augmentalis.commandmanager.ElementFingerprint
+import com.augmentalis.commandmanager.ServiceConfiguration
+import com.augmentalis.commandmanager.ServiceState
+import com.augmentalis.commandmanager.ICommandPersistence
+import com.augmentalis.commandmanager.AppVersionInfo
 import com.augmentalis.database.repositories.IScrapedAppRepository
 import com.augmentalis.database.repositories.IScrapedElementRepository
 import kotlinx.coroutines.*
@@ -28,15 +28,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import com.augmentalis.voiceoscore.ScreenHashRepository
-import com.augmentalis.voiceoscore.ScreenHashRepositoryImpl
-import com.augmentalis.voiceoscore.ScreenInfo
+import com.augmentalis.commandmanager.ScreenHashRepository
+import com.augmentalis.commandmanager.ScreenHashRepositoryImpl
+import com.augmentalis.commandmanager.ScreenInfo
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
-import com.augmentalis.voiceoscore.DeviceCapabilityManager
-import com.augmentalis.voiceoscore.TimingOperation
-import com.augmentalis.voiceoscore.StaticCommandRegistry
-import com.augmentalis.voiceoscore.IAppCategoryProvider
+import com.augmentalis.commandmanager.DeviceCapabilityManager
+import com.augmentalis.commandmanager.TimingOperation
+import com.augmentalis.commandmanager.StaticCommandRegistry
+import com.augmentalis.commandmanager.IAppCategoryProvider
 
 private const val TAG = "VoiceOSA11yService"
 
@@ -234,7 +234,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
          */
         fun isListening(): Boolean {
             return instance?.voiceOSCore?.state?.value?.let { state ->
-                state is com.augmentalis.voiceoscore.ServiceState.Listening
+                state is com.augmentalis.commandmanager.ServiceState.Listening
             } ?: false
         }
 
@@ -529,7 +529,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 val packageName = event.packageName?.toString() ?: rootNode.packageName?.toString() ?: "unknown"
 
                 // Extract current visible elements
-                val elements = mutableListOf<com.augmentalis.voiceoscore.ElementInfo>()
+                val elements = mutableListOf<com.augmentalis.commandmanager.ElementInfo>()
                 val hierarchy = mutableListOf<HierarchyNode>()
                 val seenHashes = mutableSetOf<String>()
                 val duplicates = mutableListOf<DuplicateInfo>()
@@ -1027,7 +1027,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         val startTime = System.currentTimeMillis()
 
         // Extract elements using ElementExtractor
-        val elements = mutableListOf<com.augmentalis.voiceoscore.ElementInfo>()
+        val elements = mutableListOf<com.augmentalis.commandmanager.ElementInfo>()
         val hierarchy = mutableListOf<HierarchyNode>()
         val seenHashes = mutableSetOf<String>()
         val duplicates = mutableListOf<DuplicateInfo>()

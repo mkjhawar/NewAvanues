@@ -6,13 +6,13 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
-import com.augmentalis.voiceoscore.AppCategory
-import com.augmentalis.voiceoscore.AppCategoryClassifier
-import com.augmentalis.voiceoscore.AppCategoryEntry
-import com.augmentalis.voiceoscore.IAppCategoryProvider
-import com.augmentalis.voiceoscore.IAppCategoryRepository
-import com.augmentalis.voiceoscore.IAppPatternGroupRepository
-import com.augmentalis.voiceoscore.getCategoryWithPatternFallback
+import com.augmentalis.commandmanager.AppCategory
+import com.augmentalis.commandmanager.AppCategoryClassifier
+import com.augmentalis.commandmanager.AppCategoryEntry
+import com.augmentalis.commandmanager.IAppCategoryProvider
+import com.augmentalis.commandmanager.IAppCategoryRepository
+import com.augmentalis.commandmanager.IAppPatternGroupRepository
+import com.augmentalis.commandmanager.getCategoryWithPatternFallback
 import kotlinx.coroutines.runBlocking
 
 /**

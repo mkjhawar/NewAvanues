@@ -17,7 +17,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.Build
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 
 /**
  * Editing actions implementation

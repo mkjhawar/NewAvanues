@@ -11,7 +11,7 @@
 
 package com.augmentalis.commandmanager.actions
 
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 // ACTION_SELECT_ALL import removed
 import android.accessibilityservice.AccessibilityService
 import android.content.Context

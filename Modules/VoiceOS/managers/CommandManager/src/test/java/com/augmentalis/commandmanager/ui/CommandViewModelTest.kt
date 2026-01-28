@@ -12,7 +12,7 @@ package com.augmentalis.commandmanager.ui
 import android.content.Context
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.Observer
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler

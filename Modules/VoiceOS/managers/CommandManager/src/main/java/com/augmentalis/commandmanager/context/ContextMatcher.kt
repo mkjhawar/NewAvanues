@@ -8,7 +8,7 @@
 
 package com.augmentalis.commandmanager.context
 
-import com.augmentalis.voiceoscore.CommandDefinition
+import com.augmentalis.commandmanager.CommandDefinition
 
 /**
  * Context matcher for matching commands to contexts

@@ -467,12 +467,12 @@ fun <T> Flow<T>.withStartupDelay(delayMillis: Long): Flow<T> {
 /**
  * Type alias for element list flows.
  */
-typealias ElementFlow = Flow<List<com.augmentalis.voiceoscore.QuantizedElement>>
+typealias ElementFlow = Flow<List<com.augmentalis.commandmanager.QuantizedElement>>
 
 /**
  * Type alias for command list flows.
  */
-typealias CommandFlow = Flow<List<com.augmentalis.voiceoscore.QuantizedCommand>>
+typealias CommandFlow = Flow<List<com.augmentalis.commandmanager.QuantizedCommand>>
 
 // =============================================================================
 // Convenience Functions

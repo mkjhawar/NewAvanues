@@ -8,7 +8,7 @@ package com.augmentalis.commandmanager.processor
 import android.content.Context
 import android.util.Log
 import com.augmentalis.commandmanager.actions.*
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 import com.augmentalis.commandmanager.definitions.CommandDefinitions
 import com.augmentalis.commandmanager.loader.DatabaseCommandResolver
 import java.util.concurrent.ConcurrentHashMap

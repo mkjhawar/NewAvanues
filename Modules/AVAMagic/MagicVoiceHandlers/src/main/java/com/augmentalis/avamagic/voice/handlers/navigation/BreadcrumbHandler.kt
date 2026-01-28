@@ -46,11 +46,11 @@
 package com.augmentalis.avamagic.voice.handlers.navigation
 
 import android.util.Log
-import com.augmentalis.voiceoscore.ActionCategory
-import com.augmentalis.voiceoscore.BaseHandler
-import com.augmentalis.voiceoscore.Bounds
-import com.augmentalis.voiceoscore.HandlerResult
-import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.commandmanager.ActionCategory
+import com.augmentalis.commandmanager.BaseHandler
+import com.augmentalis.commandmanager.Bounds
+import com.augmentalis.commandmanager.HandlerResult
+import com.augmentalis.commandmanager.QuantizedCommand
 
 /**
  * Voice command handler for Breadcrumb navigation interactions.

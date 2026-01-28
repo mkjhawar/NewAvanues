@@ -14,8 +14,8 @@ package com.augmentalis.magiccode.plugins.builtin
 import com.augmentalis.magiccode.plugins.sdk.BasePlugin
 import com.augmentalis.magiccode.plugins.universal.*
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.*
-import com.augmentalis.voiceoscore.ActionResult
-import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.commandmanager.ActionResult
+import com.augmentalis.commandmanager.QuantizedCommand
 
 /**
  * System Command Handler Plugin - Handles system-level actions.
@@ -384,7 +384,7 @@ class SystemCommandPlugin(
 
     companion object {
         /** Plugin ID for registration and discovery */
-        const val PLUGIN_ID = "com.augmentalis.voiceoscore.handler.system"
+        const val PLUGIN_ID = "com.augmentalis.commandmanager.handler.system"
     }
 }
 

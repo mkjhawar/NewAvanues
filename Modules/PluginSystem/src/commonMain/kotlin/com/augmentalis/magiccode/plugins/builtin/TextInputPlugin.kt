@@ -14,8 +14,8 @@ package com.augmentalis.magiccode.plugins.builtin
 import com.augmentalis.magiccode.plugins.sdk.BasePlugin
 import com.augmentalis.magiccode.plugins.universal.*
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.*
-import com.augmentalis.voiceoscore.ActionResult
-import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.commandmanager.ActionResult
+import com.augmentalis.commandmanager.QuantizedCommand
 
 /**
  * Text Input Handler Plugin - Handles text input and keyboard actions.
@@ -461,7 +461,7 @@ class TextInputPlugin(
 
     companion object {
         /** Plugin ID for registration and discovery */
-        const val PLUGIN_ID = "com.augmentalis.voiceoscore.handler.textinput"
+        const val PLUGIN_ID = "com.augmentalis.commandmanager.handler.textinput"
 
         /** Maximum allowed input length for security */
         private const val MAX_INPUT_LENGTH = 10000

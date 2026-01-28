@@ -1,11 +1,11 @@
 package com.augmentalis.voiceoscoreng.service
 
 import android.util.Log
-import com.augmentalis.voiceoscore.ElementInfo
-import com.augmentalis.voiceoscore.QuantizedCommand
-import com.augmentalis.voiceoscore.HashUtils
-import com.augmentalis.voiceoscore.AppVersionInfo
-import com.augmentalis.voiceoscore.ICommandPersistence
+import com.augmentalis.commandmanager.ElementInfo
+import com.augmentalis.commandmanager.QuantizedCommand
+import com.augmentalis.commandmanager.HashUtils
+import com.augmentalis.commandmanager.AppVersionInfo
+import com.augmentalis.commandmanager.ICommandPersistence
 import com.augmentalis.database.dto.ScrapedAppDTO
 import com.augmentalis.database.dto.ScrapedElementDTO
 import com.augmentalis.database.repositories.IScrapedAppRepository

@@ -16,7 +16,7 @@ import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.repositories.CommandStats
 import com.augmentalis.database.repositories.ICommandUsageRepository
 import com.augmentalis.database.repositories.IContextPreferenceRepository
-import com.augmentalis.voiceoscore.CommandDefinition
+import com.augmentalis.commandmanager.CommandDefinition
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.ln

@@ -18,10 +18,10 @@ package com.augmentalis.magiccode.plugins.android
 
 import android.util.Log
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.*
-import com.augmentalis.voiceoscore.ActionResult
-import com.augmentalis.voiceoscore.IHandler
-import com.augmentalis.voiceoscore.QuantizedCommand
-import com.augmentalis.voiceoscore.QuantizedElement
+import com.augmentalis.commandmanager.ActionResult
+import com.augmentalis.commandmanager.IHandler
+import com.augmentalis.commandmanager.QuantizedCommand
+import com.augmentalis.commandmanager.QuantizedElement
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -294,13 +294,13 @@ class PluginHandlerBridge(
  */
 object HandlerMigrationMap {
     val mappings = mapOf(
-        "NavigationHandler" to "com.augmentalis.voiceoscore.handler.navigation",
-        "UIHandler" to "com.augmentalis.voiceoscore.handler.uiinteraction",
-        "InputHandler" to "com.augmentalis.voiceoscore.handler.textinput",
-        "SystemHandler" to "com.augmentalis.voiceoscore.handler.system",
-        "GestureHandler" to "com.augmentalis.voiceoscore.handler.gesture",
-        "SelectHandler" to "com.augmentalis.voiceoscore.handler.selection",
-        "AppHandler" to "com.augmentalis.voiceoscore.handler.applauncher"
+        "NavigationHandler" to "com.augmentalis.commandmanager.handler.navigation",
+        "UIHandler" to "com.augmentalis.commandmanager.handler.uiinteraction",
+        "InputHandler" to "com.augmentalis.commandmanager.handler.textinput",
+        "SystemHandler" to "com.augmentalis.commandmanager.handler.system",
+        "GestureHandler" to "com.augmentalis.commandmanager.handler.gesture",
+        "SelectHandler" to "com.augmentalis.commandmanager.handler.selection",
+        "AppHandler" to "com.augmentalis.commandmanager.handler.applauncher"
     )
 
     /**

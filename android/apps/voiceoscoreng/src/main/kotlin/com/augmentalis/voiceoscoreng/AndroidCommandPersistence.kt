@@ -11,9 +11,9 @@ package com.augmentalis.voiceoscoreng
 
 import com.augmentalis.database.dto.GeneratedCommandDTO
 import com.augmentalis.database.repositories.IGeneratedCommandRepository
-import com.augmentalis.voiceoscore.CommandActionType
-import com.augmentalis.voiceoscore.ICommandPersistence
-import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.commandmanager.CommandActionType
+import com.augmentalis.commandmanager.ICommandPersistence
+import com.augmentalis.commandmanager.QuantizedCommand
 
 /**
  * Android implementation of ICommandPersistence using SQLDelight.

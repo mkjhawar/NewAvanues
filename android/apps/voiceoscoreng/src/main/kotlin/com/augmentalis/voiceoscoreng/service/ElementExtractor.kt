@@ -3,10 +3,10 @@ package com.augmentalis.voiceoscoreng.service
 import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.Bounds
-import com.augmentalis.voiceoscore.CommandGenerator
-import com.augmentalis.voiceoscore.ElementInfo
-import com.augmentalis.voiceoscore.HashUtils
+import com.augmentalis.commandmanager.Bounds
+import com.augmentalis.commandmanager.CommandGenerator
+import com.augmentalis.commandmanager.ElementInfo
+import com.augmentalis.commandmanager.HashUtils
 
 private const val TAG = "ElementExtractor"
 

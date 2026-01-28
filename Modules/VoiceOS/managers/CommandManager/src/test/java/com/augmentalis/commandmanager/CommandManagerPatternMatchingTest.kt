@@ -11,8 +11,8 @@
 package com.augmentalis.commandmanager
 
 import android.content.Context
-import com.augmentalis.voiceoscore.Command
-import com.augmentalis.voiceoscore.CommandSource
+import com.augmentalis.commandmanager.Command
+import com.augmentalis.commandmanager.CommandSource
 import io.mockk.mockk
 import io.mockk.coEvery
 import kotlinx.coroutines.test.runTest

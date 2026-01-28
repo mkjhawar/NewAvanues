@@ -2,15 +2,15 @@ package com.augmentalis.voiceoscoreng.service
 
 import android.content.pm.PackageManager
 import android.util.Log
-import com.augmentalis.voiceoscore.AppVersionInfo
-import com.augmentalis.voiceoscore.CommandOrchestrator
-import com.augmentalis.voiceoscore.CommandRegistry
-import com.augmentalis.voiceoscore.CoreCommandResult
-import com.augmentalis.voiceoscore.ElementInfo
-import com.augmentalis.voiceoscore.ICommandPersistence
-import com.augmentalis.voiceoscore.IncrementalCommandResult
-import com.augmentalis.voiceoscore.QuantizedCommand
-import com.augmentalis.voiceoscore.UICommandGenerator
+import com.augmentalis.commandmanager.AppVersionInfo
+import com.augmentalis.commandmanager.CommandOrchestrator
+import com.augmentalis.commandmanager.CommandRegistry
+import com.augmentalis.commandmanager.CoreCommandResult
+import com.augmentalis.commandmanager.ElementInfo
+import com.augmentalis.commandmanager.ICommandPersistence
+import com.augmentalis.commandmanager.IncrementalCommandResult
+import com.augmentalis.commandmanager.QuantizedCommand
+import com.augmentalis.commandmanager.UICommandGenerator
 import com.augmentalis.database.repositories.IScrapedAppRepository
 import com.augmentalis.database.repositories.IScrapedElementRepository
 import kotlinx.coroutines.CoroutineScope

@@ -5,7 +5,7 @@
 
 package com.augmentalis.commandmanager.history
 
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow

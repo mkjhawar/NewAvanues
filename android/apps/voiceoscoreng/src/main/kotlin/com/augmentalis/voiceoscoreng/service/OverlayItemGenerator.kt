@@ -1,8 +1,8 @@
 package com.augmentalis.voiceoscoreng.service
 
-import com.augmentalis.voiceoscore.CommandGenerator
-import com.augmentalis.voiceoscore.ElementFingerprint
-import com.augmentalis.voiceoscore.ElementInfo
+import com.augmentalis.commandmanager.CommandGenerator
+import com.augmentalis.commandmanager.ElementFingerprint
+import com.augmentalis.commandmanager.ElementInfo
 
 /**
  * Generates overlay items for numbered badge display.

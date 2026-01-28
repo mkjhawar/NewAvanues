@@ -41,11 +41,11 @@
  */
 package com.augmentalis.avamagic.voice.handlers.feedback
 
-import com.augmentalis.voiceoscore.ActionCategory
-import com.augmentalis.voiceoscore.BaseHandler
-import com.augmentalis.voiceoscore.ElementInfo
-import com.augmentalis.voiceoscore.HandlerResult
-import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.commandmanager.ActionCategory
+import com.augmentalis.commandmanager.BaseHandler
+import com.augmentalis.commandmanager.ElementInfo
+import com.augmentalis.commandmanager.HandlerResult
+import com.augmentalis.commandmanager.QuantizedCommand
 
 /**
  * Handler for dialog confirmation interactions.

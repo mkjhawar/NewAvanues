@@ -13,7 +13,7 @@
 
 package com.augmentalis.commandmanager.actions
 
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 import android.accessibilityservice.AccessibilityService
 import android.annotation.SuppressLint
 import android.content.Context

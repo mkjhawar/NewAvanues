@@ -12,10 +12,10 @@ package com.augmentalis.commandmanager.routing
 
 import android.content.Context
 import android.util.Log
-import com.augmentalis.voiceoscore.Command
-import com.augmentalis.voiceoscore.CommandResult
-import com.augmentalis.voiceoscore.CommandError
-import com.augmentalis.voiceoscore.ErrorCode
+import com.augmentalis.commandmanager.Command
+import com.augmentalis.commandmanager.CommandResult
+import com.augmentalis.commandmanager.CommandError
+import com.augmentalis.commandmanager.ErrorCode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

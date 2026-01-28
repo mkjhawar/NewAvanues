@@ -15,8 +15,8 @@ package com.augmentalis.magiccode.plugins.builtin
 import com.augmentalis.magiccode.plugins.sdk.BasePlugin
 import com.augmentalis.magiccode.plugins.universal.*
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.*
-import com.augmentalis.voiceoscore.ActionResult
-import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.commandmanager.ActionResult
+import com.augmentalis.commandmanager.QuantizedCommand
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -287,7 +287,7 @@ class NavigationHandlerPlugin(
 
     companion object {
         /** Plugin ID for registration and discovery */
-        const val PLUGIN_ID = "com.augmentalis.voiceoscore.handler.navigation"
+        const val PLUGIN_ID = "com.augmentalis.commandmanager.handler.navigation"
     }
 }
 

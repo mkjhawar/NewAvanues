@@ -11,8 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.augmentalis.voiceoscore.LearnAppConfig
-import com.augmentalis.voiceoscore.LearnAppDevToggle
+import com.augmentalis.commandmanager.LearnAppConfig
+import com.augmentalis.commandmanager.LearnAppDevToggle
 
 /**
  * Developer settings screen for VoiceOSCoreNG test app.

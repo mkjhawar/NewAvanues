@@ -13,8 +13,8 @@ package com.augmentalis.commandmanager.processor
 import android.content.Context
 import com.augmentalis.commandmanager.database.CommandDatabase
 import com.augmentalis.commandmanager.database.sqldelight.VoiceCommandEntity
-import com.augmentalis.voiceoscore.CommandContext
-import com.augmentalis.voiceoscore.CommandSource
+import com.augmentalis.commandmanager.CommandContext
+import com.augmentalis.commandmanager.CommandSource
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*

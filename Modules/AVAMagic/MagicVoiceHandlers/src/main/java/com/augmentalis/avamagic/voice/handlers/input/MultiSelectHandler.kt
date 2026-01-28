@@ -32,15 +32,15 @@
 package com.augmentalis.avamagic.voice.handlers.input
 
 import android.util.Log
-import com.augmentalis.voiceoscore.ActionCategory
-import com.augmentalis.voiceoscore.BaseHandler
-import com.augmentalis.voiceoscore.Bounds
-import com.augmentalis.voiceoscore.DisambiguationResult
-import com.augmentalis.voiceoscore.ElementDisambiguator
-import com.augmentalis.voiceoscore.ElementInfo
-import com.augmentalis.voiceoscore.HandlerResult
-import com.augmentalis.voiceoscore.NumberedMatch
-import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.commandmanager.ActionCategory
+import com.augmentalis.commandmanager.BaseHandler
+import com.augmentalis.commandmanager.Bounds
+import com.augmentalis.commandmanager.DisambiguationResult
+import com.augmentalis.commandmanager.ElementDisambiguator
+import com.augmentalis.commandmanager.ElementInfo
+import com.augmentalis.commandmanager.HandlerResult
+import com.augmentalis.commandmanager.NumberedMatch
+import com.augmentalis.commandmanager.QuantizedCommand
 
 /**
  * Handler for multi-select component voice interactions.

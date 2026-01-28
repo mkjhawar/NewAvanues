@@ -13,9 +13,9 @@ import android.util.Log
 import com.augmentalis.magiccode.plugins.builtin.*
 import com.augmentalis.magiccode.plugins.universal.*
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.*
-import com.augmentalis.voiceoscore.ActionResult
-import com.augmentalis.voiceoscore.QuantizedCommand
-import com.augmentalis.voiceoscore.QuantizedElement
+import com.augmentalis.commandmanager.ActionResult
+import com.augmentalis.commandmanager.QuantizedCommand
+import com.augmentalis.commandmanager.QuantizedElement
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

@@ -32,7 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 import com.augmentalis.voiceoscoreng.service.AndroidExportFileProvider
 import com.augmentalis.voiceoscoreng.ui.theme.VoiceOSCoreNGTheme
 import kotlinx.coroutines.launch

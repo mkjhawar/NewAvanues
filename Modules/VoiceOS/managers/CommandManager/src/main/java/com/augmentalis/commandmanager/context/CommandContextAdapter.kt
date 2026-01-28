@@ -10,7 +10,7 @@
 package com.augmentalis.commandmanager.context
 
 import java.util.Calendar
-import com.augmentalis.voiceoscore.CommandContext as UnifiedCommandContext
+import com.augmentalis.commandmanager.CommandContext as UnifiedCommandContext
 
 /**
  * Adapter for migrating between legacy sealed class and unified data class.

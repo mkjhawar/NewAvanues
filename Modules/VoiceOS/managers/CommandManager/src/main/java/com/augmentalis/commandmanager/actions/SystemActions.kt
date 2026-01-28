@@ -11,7 +11,7 @@
 
 package com.augmentalis.commandmanager.actions
 
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 // Removed ACTION_BACKUP_AND_RESET_SETTINGS import
 import android.Manifest
 import android.accessibilityservice.AccessibilityService

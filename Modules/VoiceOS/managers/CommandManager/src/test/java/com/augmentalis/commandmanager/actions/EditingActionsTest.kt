@@ -22,7 +22,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.Build
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
 import org.junit.*

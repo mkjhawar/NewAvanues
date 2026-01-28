@@ -10,8 +10,8 @@
 package com.augmentalis.magiccode.plugins.universal.data
 
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.ScreenContext
-import com.augmentalis.voiceoscore.QuantizedCommand
-import com.augmentalis.voiceoscore.QuantizedElement
+import com.augmentalis.commandmanager.QuantizedCommand
+import com.augmentalis.commandmanager.QuantizedElement
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

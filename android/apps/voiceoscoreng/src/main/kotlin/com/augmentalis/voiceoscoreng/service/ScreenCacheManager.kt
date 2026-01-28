@@ -2,10 +2,10 @@ package com.augmentalis.voiceoscoreng.service
 
 import android.content.res.Resources
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.QuantizedCommand
-import com.augmentalis.voiceoscore.HashUtils
-import com.augmentalis.voiceoscore.ScreenHashRepository
-import com.augmentalis.voiceoscore.ScreenInfo
+import com.augmentalis.commandmanager.QuantizedCommand
+import com.augmentalis.commandmanager.HashUtils
+import com.augmentalis.commandmanager.ScreenHashRepository
+import com.augmentalis.commandmanager.ScreenInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

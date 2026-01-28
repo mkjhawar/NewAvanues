@@ -1,6 +1,6 @@
 package com.augmentalis.commandmanager.actions
 
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.*

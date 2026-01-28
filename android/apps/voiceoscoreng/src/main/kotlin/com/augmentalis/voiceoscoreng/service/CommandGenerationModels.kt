@@ -1,7 +1,7 @@
 package com.augmentalis.voiceoscoreng.service
 
-import com.augmentalis.voiceoscore.DisplayCommand
-import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.commandmanager.DisplayCommand
+import com.augmentalis.commandmanager.QuantizedCommand
 
 /**
  * App-specific data models for command generation results.

@@ -20,9 +20,9 @@ package com.augmentalis.magiccode.plugins.integration
 import com.augmentalis.magiccode.plugins.builtin.*
 import com.augmentalis.magiccode.plugins.universal.*
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.*
-import com.augmentalis.voiceoscore.ActionResult
-import com.augmentalis.voiceoscore.CommandActionType
-import com.augmentalis.voiceoscore.ElementType
+import com.augmentalis.commandmanager.ActionResult
+import com.augmentalis.commandmanager.CommandActionType
+import com.augmentalis.commandmanager.ElementType
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -286,7 +286,7 @@ class HandlerPluginIntegrationTest {
             supportedPhrases = listOf("click")
         ) {
             override fun getConfidence(
-                command: com.augmentalis.voiceoscore.QuantizedCommand,
+                command: com.augmentalis.commandmanager.QuantizedCommand,
                 context: HandlerContext
             ): Float = 0.5f
         }
@@ -296,7 +296,7 @@ class HandlerPluginIntegrationTest {
             supportedPhrases = listOf("click")
         ) {
             override fun getConfidence(
-                command: com.augmentalis.voiceoscore.QuantizedCommand,
+                command: com.augmentalis.commandmanager.QuantizedCommand,
                 context: HandlerContext
             ): Float = 0.95f
         }

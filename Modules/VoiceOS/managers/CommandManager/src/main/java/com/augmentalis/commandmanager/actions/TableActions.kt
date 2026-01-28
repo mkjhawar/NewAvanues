@@ -12,7 +12,7 @@
 
 package com.augmentalis.commandmanager.actions
 
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.os.Bundle

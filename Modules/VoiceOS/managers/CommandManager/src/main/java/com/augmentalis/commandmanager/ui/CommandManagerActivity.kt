@@ -81,7 +81,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 import com.augmentalis.commandmanager.processor.CommandProcessor
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat

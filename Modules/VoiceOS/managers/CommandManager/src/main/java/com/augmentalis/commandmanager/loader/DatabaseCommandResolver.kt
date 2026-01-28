@@ -16,8 +16,8 @@ import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.repositories.IVoiceCommandRepository
 import com.augmentalis.database.dto.VoiceCommandDTO
-import com.augmentalis.voiceoscore.CommandContext
-import com.augmentalis.voiceoscore.CommandDefinition
+import com.augmentalis.commandmanager.CommandContext
+import com.augmentalis.commandmanager.CommandDefinition
 import org.json.JSONArray
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

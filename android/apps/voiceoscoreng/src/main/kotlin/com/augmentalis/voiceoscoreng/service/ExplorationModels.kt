@@ -1,7 +1,7 @@
 package com.augmentalis.voiceoscoreng.service
 
-import com.augmentalis.voiceoscore.ElementInfo
-import com.augmentalis.voiceoscore.DisplayCommand
+import com.augmentalis.commandmanager.ElementInfo
+import com.augmentalis.commandmanager.DisplayCommand
 
 /**
  * Data models for accessibility exploration results.
@@ -69,4 +69,4 @@ data class DeduplicationStats(
     val duplicateElements: List<DuplicateInfo>
 )
 
-// DisplayCommand is in VoiceOSCore module (com.augmentalis.voiceoscore.DisplayCommand)
+// DisplayCommand is in VoiceOSCore module (com.augmentalis.commandmanager.DisplayCommand)

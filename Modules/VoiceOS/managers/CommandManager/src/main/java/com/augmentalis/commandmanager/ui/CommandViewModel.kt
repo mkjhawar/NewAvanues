@@ -16,7 +16,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 import com.augmentalis.commandmanager.processor.CommandProcessor
 import com.augmentalis.commandmanager.history.CommandHistory
 import kotlinx.coroutines.delay

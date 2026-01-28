@@ -8,7 +8,7 @@ package com.augmentalis.commandmanager
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.augmentalis.voiceoscore.*
+import com.augmentalis.commandmanager.*
 import com.augmentalis.commandmanager.actions.*
 import com.augmentalis.universalrpc.service.UniversalIPCEncoder
 import com.augmentalis.commandmanager.loader.CommandLoader
