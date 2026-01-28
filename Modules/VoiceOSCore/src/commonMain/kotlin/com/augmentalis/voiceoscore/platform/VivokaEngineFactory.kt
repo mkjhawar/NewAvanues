@@ -19,6 +19,15 @@ package com.augmentalis.voiceoscore
 expect object VivokaEngineFactory {
 
     /**
+     * Initialize the factory with platform-specific context.
+     * On Android, this should be called with Application context.
+     * On other platforms, this is a no-op.
+     *
+     * @param context Platform-specific context (Android Context, or Any for other platforms)
+     */
+    fun initialize(context: Any)
+
+    /**
      * Check if Vivoka is available on this platform.
      */
     fun isAvailable(): Boolean

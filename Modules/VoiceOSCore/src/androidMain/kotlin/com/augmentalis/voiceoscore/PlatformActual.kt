@@ -98,9 +98,19 @@ private class AndroidLogger(private val tag: String) : Logger {
 actual object DeviceCapabilityManager {
     private var cachedSpeed: DeviceSpeed? = null
     private var userDebounceMs: Long? = null
+    private var contextRef: android.content.Context? = null
 
     actual enum class DeviceSpeed {
         FAST, MEDIUM, SLOW
+    }
+
+    /**
+     * Initialize with Android context for accurate device detection.
+     */
+    actual fun init(context: Any) {
+        val androidContext = context as? android.content.Context
+            ?: throw IllegalArgumentException("DeviceCapabilityManager.init requires Android Context")
+        contextRef = androidContext.applicationContext
     }
 
     actual fun getContentDebounceMs(): Long {
@@ -199,6 +209,17 @@ actual object DeviceCapabilityManager {
 // ═══════════════════════════════════════════════════════════════════
 
 actual object VivokaEngineFactory {
+    private var applicationContext: android.content.Context? = null
+
+    /**
+     * Initialize the factory with Android Application context.
+     */
+    actual fun initialize(context: Any) {
+        val androidContext = context as? android.content.Context
+            ?: throw IllegalArgumentException("VivokaEngineFactory.initialize requires Android Context")
+        applicationContext = androidContext.applicationContext
+    }
+
     actual fun isAvailable(): Boolean = false
 
     actual fun create(config: VivokaConfig): IVivokaEngine =

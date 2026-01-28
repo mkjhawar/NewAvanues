@@ -21,6 +21,13 @@ import com.augmentalis.voiceoscore.platform.StubVivokaEngine
  */
 actual object VivokaEngineFactory {
     /**
+     * No-op on Desktop - no initialization needed.
+     */
+    actual fun initialize(context: Any) {
+        // No-op on Desktop
+    }
+
+    /**
      * Vivoka is not available on Desktop.
      */
     actual fun isAvailable(): Boolean = false

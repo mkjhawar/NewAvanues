@@ -1,22 +1,19 @@
 /**
- * DeviceCapabilityManager.desktop.kt - Desktop actual implementation
+ * DeviceCapabilityManager.ios.kt - iOS actual implementation
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
- * Created: 2026-01-22
+ * Created: 2026-01-28
  *
- * Desktop implementation of DeviceCapabilityManager.
- * Assumes desktop machines are generally fast devices.
+ * iOS implementation of DeviceCapabilityManager.
+ * iOS devices are generally well-optimized, so we default to FAST.
  */
 package com.augmentalis.voiceoscore
 
-import com.augmentalis.voiceoscore.platform.TimingConfig
-import com.augmentalis.voiceoscore.platform.TimingOperation
-
 /**
- * Desktop implementation of DeviceCapabilityManager.
+ * iOS implementation of DeviceCapabilityManager.
  *
- * Desktop devices are typically well-resourced, so we default to FAST
+ * iOS devices are typically well-optimized, so we default to FAST
  * configuration with option for user override.
  */
 actual object DeviceCapabilityManager {
@@ -31,13 +28,13 @@ actual object DeviceCapabilityManager {
     private var userOverrideDebounce: Long? = null
 
     /**
-     * No-op on Desktop - no initialization needed.
+     * No-op on iOS - no initialization needed.
      */
     actual fun init(context: Any) {
-        // No-op on Desktop
+        // No-op on iOS
     }
 
-    // Default timing configurations - Desktop uses FAST timings
+    // Default timing configurations - iOS uses FAST timings
     private val fastTimings = mapOf(
         TimingOperation.CONTENT_CHANGE to TimingConfig(debounceMs = 100, minIntervalMs = 50, canSkip = false),
         TimingOperation.SCROLL to TimingConfig(debounceMs = 50, minIntervalMs = 30, canSkip = true),
@@ -86,7 +83,8 @@ actual object DeviceCapabilityManager {
     actual fun getDeviceSpeed(): DeviceSpeed {
         cachedSpeed?.let { return it }
 
-        val speed = detectDeviceSpeed()
+        // iOS devices are generally fast
+        val speed = DeviceSpeed.FAST
         cachedSpeed = speed
         return speed
     }
@@ -114,53 +112,5 @@ actual object DeviceCapabilityManager {
             DeviceSpeed.SLOW -> slowTimings
         }
         return timings[operation] ?: TimingConfig(debounceMs = 200, minIntervalMs = 100)
-    }
-
-    /**
-     * Detect device speed using JVM runtime properties.
-     * Desktop machines are generally fast, but we check memory and CPU.
-     */
-    private fun detectDeviceSpeed(): DeviceSpeed {
-        val memoryScore = getMemoryScore()
-        val cpuScore = getCpuScore()
-
-        // Weighted average (memory is most important)
-        val totalScore = (memoryScore * 0.6f) + (cpuScore * 0.4f)
-
-        return when {
-            totalScore >= 0.7f -> DeviceSpeed.FAST
-            totalScore >= 0.4f -> DeviceSpeed.MEDIUM
-            else -> DeviceSpeed.SLOW
-        }
-    }
-
-    /**
-     * Score based on JVM max memory.
-     */
-    private fun getMemoryScore(): Float {
-        val runtime = Runtime.getRuntime()
-        val maxMemoryGB = runtime.maxMemory() / (1024.0 * 1024.0 * 1024.0)
-
-        return when {
-            maxMemoryGB >= 4.0 -> 1.0f   // 4GB+ heap = high-end
-            maxMemoryGB >= 2.0 -> 0.8f   // 2GB+ heap = good
-            maxMemoryGB >= 1.0 -> 0.6f   // 1GB+ heap = decent
-            maxMemoryGB >= 0.5 -> 0.4f   // 512MB+ heap = limited
-            else -> 0.2f                  // <512MB = very constrained
-        }
-    }
-
-    /**
-     * Score based on CPU cores.
-     */
-    private fun getCpuScore(): Float {
-        val cores = Runtime.getRuntime().availableProcessors()
-        return when {
-            cores >= 8 -> 1.0f
-            cores >= 6 -> 0.8f
-            cores >= 4 -> 0.6f
-            cores >= 2 -> 0.4f
-            else -> 0.2f
-        }
     }
 }

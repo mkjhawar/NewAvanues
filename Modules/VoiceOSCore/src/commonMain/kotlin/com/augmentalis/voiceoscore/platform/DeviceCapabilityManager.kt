@@ -35,6 +35,15 @@ expect object DeviceCapabilityManager {
     }
 
     /**
+     * Initialize with platform-specific context.
+     * On Android, this should be called with Application context for accurate device detection.
+     * On other platforms, this is a no-op.
+     *
+     * @param context Platform-specific context (Android Context, or Any for other platforms)
+     */
+    fun init(context: Any)
+
+    /**
      * Get optimal debounce delay for content changes.
      * Priority: User override > Device capability > Default
      *

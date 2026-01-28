@@ -17,6 +17,13 @@ package com.augmentalis.voiceoscore
  */
 actual object VivokaEngineFactory {
     /**
+     * No-op on iOS - no initialization needed.
+     */
+    actual fun initialize(context: Any) {
+        // No-op on iOS
+    }
+
+    /**
      * Vivoka is not available on iOS.
      */
     actual fun isAvailable(): Boolean = false
