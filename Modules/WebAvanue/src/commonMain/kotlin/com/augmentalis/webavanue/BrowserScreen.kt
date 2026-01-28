@@ -27,6 +27,8 @@ import com.augmentalis.webavanue.OceanTheme
 import com.augmentalis.webavanue.OceanComponents
 import com.augmentalis.webavanue.IconVariant
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +55,147 @@ import com.augmentalis.webavanue.DownloadViewModel
 import com.augmentalis.webavanue.BrowserSettings
 import com.augmentalis.webavanue.BrowserVoiceOSCallback
 import kotlinx.coroutines.launch
+
+/**
+ * Consolidated UI state for BrowserScreen.
+ * All saveable UI state fields are grouped here for easier state management
+ * and to survive configuration changes via rememberSaveable.
+ */
+data class BrowserScreenState(
+    // Session restore
+    val showSessionRestoreDialog: Boolean = false,
+    val sessionRestoreTabCount: Int = 0,
+
+    // URL input
+    val urlInput: String = "",
+
+    // Voice UI state
+    val isListening: Boolean = false,
+    val showTextCommand: Boolean = false,
+    val showVoiceHelp: Boolean = false,
+    val isScrollFrozen: Boolean = false,
+    val lastVoiceCommand: String? = null,
+
+    // Tab/navigation state
+    val showTabSwitcher: Boolean = false,
+    val showSpatialTabSwitcher: Boolean = false,
+    val showSpatialFavorites: Boolean = false,
+    val isCommandBarVisible: Boolean = false,
+    val isHeadlessMode: Boolean = false,
+
+    // Add Page dialog
+    val showAddPageDialog: Boolean = false,
+    val newPageUrl: String = "",
+
+    // Basic Auth dialog
+    val showBasicAuthDialog: Boolean = false,
+    val authUrl: String = "",
+    val authRealm: String? = null,
+
+    // Add to Favorites dialog
+    val showAddToFavoritesDialog: Boolean = false,
+
+    // Tab groups
+    val tabGroups: List<TabGroup> = emptyList(),
+    val showTabGroupDialog: Boolean = false,
+    val showTabGroupAssignmentDialog: Boolean = false,
+    val selectedTabForGroupAssignment: String? = null,
+
+    // Download location dialog
+    val showDownloadLocationDialog: Boolean = false,
+    val pendingDownloadSourceUrl: String? = null,
+    val pendingDownloadSourceTitle: String? = null,
+    val customDownloadPath: String? = null
+) {
+    companion object {
+        /**
+         * Custom Saver for BrowserScreenState using listSaver.
+         * Converts the state to a list of primitives for saving and restores it.
+         * Note: TabGroup list is saved as serialized strings (id|title|color|collapsed|position).
+         */
+        val Saver: Saver<BrowserScreenState, *> = listSaver(
+            save = { state ->
+                listOf(
+                    state.showSessionRestoreDialog,
+                    state.sessionRestoreTabCount,
+                    state.urlInput,
+                    state.isListening,
+                    state.showTextCommand,
+                    state.showVoiceHelp,
+                    state.isScrollFrozen,
+                    state.lastVoiceCommand ?: "",
+                    state.showTabSwitcher,
+                    state.showSpatialTabSwitcher,
+                    state.showSpatialFavorites,
+                    state.isCommandBarVisible,
+                    state.isHeadlessMode,
+                    state.showAddPageDialog,
+                    state.newPageUrl,
+                    state.showBasicAuthDialog,
+                    state.authUrl,
+                    state.authRealm ?: "",
+                    state.showAddToFavoritesDialog,
+                    state.tabGroups.joinToString(";") { group ->
+                        "${group.id}|${group.title}|${group.color}|${group.isCollapsed}|${group.position}"
+                    },
+                    state.showTabGroupDialog,
+                    state.showTabGroupAssignmentDialog,
+                    state.selectedTabForGroupAssignment ?: "",
+                    state.showDownloadLocationDialog,
+                    state.pendingDownloadSourceUrl ?: "",
+                    state.pendingDownloadSourceTitle ?: "",
+                    state.customDownloadPath ?: ""
+                )
+            },
+            restore = { list ->
+                BrowserScreenState(
+                    showSessionRestoreDialog = list[0] as Boolean,
+                    sessionRestoreTabCount = list[1] as Int,
+                    urlInput = list[2] as String,
+                    isListening = list[3] as Boolean,
+                    showTextCommand = list[4] as Boolean,
+                    showVoiceHelp = list[5] as Boolean,
+                    isScrollFrozen = list[6] as Boolean,
+                    lastVoiceCommand = (list[7] as String).ifEmpty { null },
+                    showTabSwitcher = list[8] as Boolean,
+                    showSpatialTabSwitcher = list[9] as Boolean,
+                    showSpatialFavorites = list[10] as Boolean,
+                    isCommandBarVisible = list[11] as Boolean,
+                    isHeadlessMode = list[12] as Boolean,
+                    showAddPageDialog = list[13] as Boolean,
+                    newPageUrl = list[14] as String,
+                    showBasicAuthDialog = list[15] as Boolean,
+                    authUrl = list[16] as String,
+                    authRealm = (list[17] as String).ifEmpty { null },
+                    showAddToFavoritesDialog = list[18] as Boolean,
+                    tabGroups = (list[19] as String).let { serialized ->
+                        if (serialized.isEmpty()) emptyList()
+                        else serialized.split(";").mapNotNull { groupStr ->
+                            val parts = groupStr.split("|")
+                            if (parts.size >= 5) {
+                                TabGroup(
+                                    id = parts[0],
+                                    title = parts[1],
+                                    color = TabGroupColor.fromString(parts[2]),
+                                    isCollapsed = parts[3].toBooleanStrictOrNull() ?: false,
+                                    position = parts[4].toIntOrNull() ?: 0,
+                                    createdAt = kotlinx.datetime.Clock.System.now()
+                                )
+                            } else null
+                        }
+                    },
+                    showTabGroupDialog = list[20] as Boolean,
+                    showTabGroupAssignmentDialog = list[21] as Boolean,
+                    selectedTabForGroupAssignment = (list[22] as String).ifEmpty { null },
+                    showDownloadLocationDialog = list[23] as Boolean,
+                    pendingDownloadSourceUrl = (list[24] as String).ifEmpty { null },
+                    pendingDownloadSourceTitle = (list[25] as String).ifEmpty { null },
+                    customDownloadPath = (list[26] as String).ifEmpty { null }
+                )
+            }
+        )
+    }
+}
 
 /**
  * BrowserScreen - Main browser screen
