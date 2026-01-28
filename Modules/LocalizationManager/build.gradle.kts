@@ -1,8 +1,9 @@
 /**
- * Localization Module - KMP Cross-platform localization
+ * LocalizationManager Module - KMP Cross-platform localization
  *
  * Provides multi-language support for all Avanues applications.
  * Supports 42+ languages with translation key-value system.
+ * Replaces the archived VoiceOS/managers/LocalizationManager.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */

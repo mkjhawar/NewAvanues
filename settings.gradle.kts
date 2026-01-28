@@ -102,7 +102,7 @@ include(":Modules:VoiceOS:managers:HUDManager")
 include(":Modules:VoiceOS:managers:CommandManager")
 include(":Modules:VoiceOS:managers:VoiceDataManager")
 // include(":Modules:VoiceOS:managers:LocalizationManager")  // ARCHIVED (2026-01-28) - see archive/VoiceOS-LocalizationManager-280128
-include(":Modules:Localization")                             // KMP Localization module (replacement)
+include(":Modules:LocalizationManager")                      // KMP LocalizationManager module (replacement)
 
 // Top-level Shared Modules (consolidated from VoiceOS/libraries and AvaMagic)
 include(":Modules:DeviceManager")                       // Device info, sensors, audio, network
