@@ -10,6 +10,9 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.platform.TimingConfig
+import com.augmentalis.voiceoscore.platform.TimingOperation
+
 /**
  * Desktop implementation of DeviceCapabilityManager.
  *

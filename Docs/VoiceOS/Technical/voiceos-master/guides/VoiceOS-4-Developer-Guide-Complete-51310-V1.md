@@ -1656,8 +1656,9 @@ companion object {
 ```
 
 **Packages (lowercase):**
+
 ```kotlin
-package com.augmentalis.commandmanager
+package com.augmentalis.voiceoscore
 package com.augmentalis.voiceaccessibility.database
 ```
 

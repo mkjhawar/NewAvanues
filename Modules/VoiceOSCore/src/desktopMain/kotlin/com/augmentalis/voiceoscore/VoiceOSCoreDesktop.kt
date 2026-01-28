@@ -10,6 +10,9 @@
 
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.voice.PlatformProvider
+import com.augmentalis.voiceoscore.voice.VoiceOSCore
+
 /**
  * VoiceOSCoreDesktop - Desktop/JVM-specific platform implementation.
  *

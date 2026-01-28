@@ -11,7 +11,7 @@
  * IMPORTANT: User must grant notification access permission in Settings.
  */
 
-package com.augmentalis.commandmanager.notifications
+package com.augmentalis.voiceoscore.notifications
 
 import android.app.Notification
 import android.content.Intent

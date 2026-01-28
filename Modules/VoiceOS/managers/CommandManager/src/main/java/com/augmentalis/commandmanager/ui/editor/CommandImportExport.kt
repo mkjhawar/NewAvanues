@@ -4,13 +4,13 @@
  * Handles serialization and deserialization of voice commands to/from JSON format
  */
 
-package com.augmentalis.commandmanager.ui.editor
+package com.augmentalis.voiceoscore.ui.editor
 
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import com.augmentalis.commandmanager.registry.ActionType
-import com.augmentalis.commandmanager.registry.VoiceCommand
+import com.augmentalis.voiceoscore.registry.ActionType
+import com.augmentalis.voiceoscore.registry.VoiceCommand
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File

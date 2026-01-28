@@ -4,9 +4,9 @@
  * Provides 15+ pre-built templates organized by category
  */
 
-package com.augmentalis.commandmanager.ui.editor
+package com.augmentalis.voiceoscore.ui.editor
 
-import com.augmentalis.commandmanager.registry.ActionType
+import com.augmentalis.voiceoscore.registry.ActionType
 
 /**
  * Repository for command templates

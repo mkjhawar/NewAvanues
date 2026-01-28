@@ -29,8 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.augmentalis.commandmanager.LearnAppConfig
-import com.augmentalis.commandmanager.LearnAppDevToggle
+import com.augmentalis.voiceoscore.LearnAppConfig
+import com.augmentalis.voiceoscore.LearnAppDevToggle
 import com.augmentalis.voiceoscoreng.ui.DeveloperSettingsScreen
 import com.augmentalis.voiceoscoreng.ui.ScanningCallbacks
 import com.augmentalis.voiceoscoreng.service.OverlayService

@@ -661,7 +661,7 @@ Create a new action class in `actions/` directory:
 
 ```kotlin
 // File: actions/MyCustomActions.kt
-package com.augmentalis.commandmanager.actions
+package com.augmentalis.voiceoscore.actions
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Context

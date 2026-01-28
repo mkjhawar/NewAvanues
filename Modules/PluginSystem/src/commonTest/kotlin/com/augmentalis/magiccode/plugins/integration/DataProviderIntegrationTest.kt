@@ -14,23 +14,20 @@ package com.augmentalis.magiccode.plugins.integration
 
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.*
 import com.augmentalis.magiccode.plugins.universal.data.*
-import com.augmentalis.commandmanager.CommandActionType
-import com.augmentalis.commandmanager.ElementType
-import com.augmentalis.commandmanager.QuantizedCommand
-import com.augmentalis.commandmanager.QuantizedElement
+import com.augmentalis.voiceoscore.CommandActionType
+import com.augmentalis.voiceoscore.element.ElementType
+import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.voiceoscore.QuantizedElement
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue

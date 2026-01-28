@@ -11,7 +11,7 @@
 package com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore
 
 import com.augmentalis.magiccode.plugins.universal.UniversalPlugin
-import com.augmentalis.commandmanager.QuantizedElement
+import com.augmentalis.voiceoscore.QuantizedElement
 
 /**
  * Overlay Plugin contract for rendering accessibility overlays.

@@ -6,6 +6,8 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.CommandActionType
+import com.augmentalis.voiceoscore.QuantizedCommand
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

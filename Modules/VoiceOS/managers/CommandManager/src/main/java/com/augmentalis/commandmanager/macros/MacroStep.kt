@@ -13,7 +13,7 @@
  * - Loop steps (repeat sequences)
  * - Variable steps (store/retrieve data)
  */
-package com.augmentalis.commandmanager.macros
+package com.augmentalis.voiceoscore.macros
 
 /**
  * MacroStep - Base sealed class for all macro step types

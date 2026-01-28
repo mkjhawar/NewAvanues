@@ -51,7 +51,7 @@ include(":Modules:AI:ALC")      // Adaptive LLM Coordinator (local inference)
 
 // Top-level Modules (cross-platform KMP)
 include(":Modules:AVID")                  // Avanues Voice ID - unified identifier system
-include(":Modules:CommandManager")        // KMP Command management - registration, matching, execution
+//include(":Modules:CommandManager")        // KMP Command management - registration, matching, execution
 include(":Modules:Database")              // Unified KMP database - VoiceOS, WebAvanue, AVID persistence
 // include(":Modules:VUID")               // DEPRECATED - replaced by AVID module
 

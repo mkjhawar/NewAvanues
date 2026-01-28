@@ -21,7 +21,7 @@
  * @author VOS4 Development Team
  */
 
-package com.augmentalis.commandmanager.dynamic
+package com.augmentalis.voiceoscore.dynamic
 
 import android.util.Log
 import java.util.concurrent.ConcurrentHashMap

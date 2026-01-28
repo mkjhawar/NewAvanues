@@ -12,7 +12,7 @@
  * - Accessibility service reference
  * - Execution metadata
  */
-package com.augmentalis.commandmanager.macros
+package com.augmentalis.voiceoscore.macros
 
 import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityNodeInfo

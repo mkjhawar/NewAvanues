@@ -10,6 +10,10 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.interfaces.IVivokaEngine
+import com.augmentalis.voiceoscore.interfaces.VivokaConfig
+import com.augmentalis.voiceoscore.platform.StubVivokaEngine
+
 /**
  * Desktop Vivoka engine factory implementation.
  *

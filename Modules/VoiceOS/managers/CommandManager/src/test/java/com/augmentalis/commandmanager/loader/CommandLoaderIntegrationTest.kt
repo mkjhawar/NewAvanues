@@ -13,14 +13,14 @@
  * - v1.0.0 (2025-10-23): Initial integration test suite for CommandLoader
  */
 
-package com.augmentalis.commandmanager.loader
+package com.augmentalis.voiceoscore.loader
 
 import android.content.Context
-import com.augmentalis.commandmanager.database.CommandDatabase
-import com.augmentalis.commandmanager.database.DatabaseVersionDao
-import com.augmentalis.commandmanager.database.sqldelight.DatabaseVersionEntity
-import com.augmentalis.commandmanager.database.VoiceCommandDao
-import com.augmentalis.commandmanager.database.sqldelight.VoiceCommandEntity
+import com.augmentalis.voiceoscore.database.CommandDatabase
+import com.augmentalis.voiceoscore.database.DatabaseVersionDao
+import com.augmentalis.voiceoscore.database.sqldelight.DatabaseVersionEntity
+import com.augmentalis.voiceoscore.database.VoiceCommandDao
+import com.augmentalis.voiceoscore.database.sqldelight.VoiceCommandEntity
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
 import org.junit.After

@@ -26,8 +26,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.augmentalis.commandmanager.accessibility.IVoiceOSCallback
-import com.augmentalis.commandmanager.accessibility.IVoiceOSService
+import com.augmentalis.voiceoscore.accessibility.IVoiceOSCallback
+import com.augmentalis.voiceoscore.accessibility.IVoiceOSService
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.CoroutineScope

@@ -13,7 +13,7 @@
 package com.augmentalis.voiceoscoreng.service
 
 import android.content.Context
-import com.augmentalis.commandmanager.IAssetReader
+import com.augmentalis.voiceoscore.IAssetReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException

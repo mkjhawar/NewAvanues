@@ -23,9 +23,8 @@ import com.augmentalis.magiccode.plugins.universal.data.CommandHistoryEntry
 import com.augmentalis.magiccode.plugins.universal.data.ContextPreference
 import com.augmentalis.magiccode.plugins.universal.data.NavigationGraph
 import com.augmentalis.magiccode.plugins.universal.data.RankedCommand
-import com.augmentalis.commandmanager.CommandActionType
-import com.augmentalis.commandmanager.QuantizedCommand
-import com.augmentalis.commandmanager.QuantizedElement
+import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.voiceoscore.QuantizedElement
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

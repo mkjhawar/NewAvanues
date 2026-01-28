@@ -18,12 +18,12 @@
  *
  * Architecture: Tests PluginManager for Q12 Plugin System (Phase 4.1)
  */
-package com.augmentalis.commandmanager.plugins
+package com.augmentalis.voiceoscore.plugins
 
 import android.content.Context
-import com.augmentalis.commandmanager.dynamic.VoiceCommand
-import com.augmentalis.commandmanager.dynamic.CommandResult
-import com.augmentalis.commandmanager.dynamic.ErrorCode
+import com.augmentalis.voiceoscore.dynamic.VoiceCommand
+import com.augmentalis.voiceoscore.dynamic.CommandResult
+import com.augmentalis.voiceoscore.dynamic.ErrorCode
 import io.mockk.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

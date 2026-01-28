@@ -8,14 +8,14 @@
  * 3. Resolution: user locale → English fallback → null
  */
 
-package com.augmentalis.commandmanager.loader
+package com.augmentalis.voiceoscore.loader
 
 import android.content.Context
 import android.util.Log
-import com.augmentalis.commandmanager.database.CommandDatabase
-import com.augmentalis.commandmanager.database.sqldelight.DatabaseVersionDaoAdapter
-import com.augmentalis.commandmanager.database.sqldelight.DatabaseVersionEntity
-import com.augmentalis.commandmanager.database.sqldelight.VoiceCommandDaoAdapter
+import com.augmentalis.voiceoscore.database.CommandDatabase
+import com.augmentalis.voiceoscore.database.sqldelight.DatabaseVersionDaoAdapter
+import com.augmentalis.voiceoscore.database.sqldelight.DatabaseVersionEntity
+import com.augmentalis.voiceoscore.database.sqldelight.VoiceCommandDaoAdapter
 import java.io.FileNotFoundException
 import java.util.Locale
 

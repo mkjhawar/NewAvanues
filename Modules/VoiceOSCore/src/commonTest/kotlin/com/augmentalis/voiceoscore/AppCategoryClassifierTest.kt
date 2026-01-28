@@ -1,5 +1,8 @@
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.classifier.AppCategory
+import com.augmentalis.voiceoscore.classifier.AppCategoryClassifier
+import com.augmentalis.voiceoscore.classifier.DynamicBehavior
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

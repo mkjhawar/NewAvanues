@@ -1,6 +1,5 @@
 package com.augmentalis.voiceoscoreng.service
 
-import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -46,8 +45,8 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import android.util.Log
+import com.augmentalis.voiceoscore.ScreenInfo
 import com.augmentalis.voiceoscoreng.MainActivity
-import com.augmentalis.voiceoscoreng.app.R
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
@@ -1064,7 +1063,7 @@ private fun DebugFabCollapsed(
  */
 @Composable
 private fun DebugMetricsPanel(
-    screenInfo: com.augmentalis.commandmanager.ScreenInfo?,
+    screenInfo: ScreenInfo?,
     numberedItems: List<OverlayStateManager.NumberOverlayItem>,
     numbersMode: OverlayStateManager.NumbersOverlayMode,
     isConnected: Boolean,

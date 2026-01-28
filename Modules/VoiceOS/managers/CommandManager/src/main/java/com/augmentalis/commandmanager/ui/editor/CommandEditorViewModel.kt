@@ -4,17 +4,17 @@
  * MVVM architecture with state management for command creation/editing
  */
 
-package com.augmentalis.commandmanager.ui.editor
+package com.augmentalis.voiceoscore.ui.editor
 
 import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.augmentalis.commandmanager.registry.ActionType
-import com.augmentalis.commandmanager.registry.ConflictInfo
-import com.augmentalis.commandmanager.registry.DynamicCommandRegistry
-import com.augmentalis.commandmanager.registry.VoiceCommand
+import com.augmentalis.voiceoscore.registry.ActionType
+import com.augmentalis.voiceoscore.registry.ConflictInfo
+import com.augmentalis.voiceoscore.registry.DynamicCommandRegistry
+import com.augmentalis.voiceoscore.registry.VoiceCommand
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

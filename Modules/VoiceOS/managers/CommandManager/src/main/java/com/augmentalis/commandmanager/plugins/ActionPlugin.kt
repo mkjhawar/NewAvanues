@@ -14,11 +14,11 @@
  * @author VOS4 Development Team
  */
 
-package com.augmentalis.commandmanager.plugins
+package com.augmentalis.voiceoscore.plugins
 
 import android.content.Context
-import com.augmentalis.commandmanager.dynamic.VoiceCommand
-import com.augmentalis.commandmanager.dynamic.CommandResult
+import com.augmentalis.voiceoscore.dynamic.VoiceCommand
+import com.augmentalis.voiceoscore.dynamic.CommandResult
 
 /**
  * Interface that all action plugins must implement

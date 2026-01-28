@@ -8,7 +8,7 @@
  * @author VOS4 Development Team
  */
 
-package com.augmentalis.commandmanager.dynamic
+package com.augmentalis.voiceoscore.dynamic
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantReadWriteLock

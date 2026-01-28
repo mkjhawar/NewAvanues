@@ -9,6 +9,8 @@
 
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.element.ElementInfo
+
 /**
  * Desktop (JVM) implementation of currentTimeMillis.
  * Uses System.currentTimeMillis().

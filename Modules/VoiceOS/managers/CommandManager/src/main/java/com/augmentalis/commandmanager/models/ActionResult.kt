@@ -3,7 +3,7 @@
  * Direct implementation without interfaces for zero overhead
  */
 
-package com.augmentalis.commandmanager.models
+package com.augmentalis.voiceoscore.models
 
 /**
  * Result from executing a command action

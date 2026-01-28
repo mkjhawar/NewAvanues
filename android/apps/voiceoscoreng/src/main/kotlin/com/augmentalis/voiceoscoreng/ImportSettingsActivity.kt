@@ -17,7 +17,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,7 +31,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import com.augmentalis.commandmanager.*
+import com.augmentalis.voiceoscore.AppImportPreview
+import com.augmentalis.voiceoscore.CommandImporter
+import com.augmentalis.voiceoscore.ExportPackage
+import com.augmentalis.voiceoscore.ImportPreview
+import com.augmentalis.voiceoscore.ImportStrategy
+import com.augmentalis.voiceoscore.ExportParseException
+import com.augmentalis.voiceoscore.ExportSerializer
+import com.augmentalis.voiceoscore.ExportVersionException
 import com.augmentalis.voiceoscoreng.service.AndroidExportFileProvider
 import com.augmentalis.voiceoscoreng.ui.theme.VoiceOSCoreNGTheme
 import kotlinx.coroutines.launch

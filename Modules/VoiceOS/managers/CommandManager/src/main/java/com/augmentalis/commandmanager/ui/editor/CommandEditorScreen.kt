@@ -8,7 +8,7 @@
  * - Material Design 3 styling
  */
 
-package com.augmentalis.commandmanager.ui.editor
+package com.augmentalis.voiceoscore.ui.editor
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,7 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.augmentalis.commandmanager.registry.VoiceCommand
+import com.augmentalis.voiceoscore.registry.VoiceCommand
 
 /**
  * Main command editor screen

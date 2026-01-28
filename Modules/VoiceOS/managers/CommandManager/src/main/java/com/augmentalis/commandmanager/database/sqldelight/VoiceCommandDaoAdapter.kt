@@ -5,7 +5,7 @@
  * Provides the same API as Room VoiceCommandDao for backward compatibility
  */
 
-package com.augmentalis.commandmanager.database.sqldelight
+package com.augmentalis.voiceoscore.database.sqldelight
 
 import com.augmentalis.database.VoiceOSDatabase
 import com.augmentalis.database.dto.VoiceCommandDTO

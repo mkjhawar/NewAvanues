@@ -8,7 +8,7 @@
  * - Success/failure feedback
  */
 
-package com.augmentalis.commandmanager.ui.editor
+package com.augmentalis.voiceoscore.ui.editor
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -25,9 +25,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.augmentalis.commandmanager.registry.ConflictInfo
-import com.augmentalis.commandmanager.registry.ConflictType
-import com.augmentalis.commandmanager.registry.VoiceCommand
+import com.augmentalis.voiceoscore.registry.ConflictInfo
+import com.augmentalis.voiceoscore.registry.ConflictType
+import com.augmentalis.voiceoscore.registry.VoiceCommand
 
 /**
  * Command testing panel screen

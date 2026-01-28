@@ -13,7 +13,7 @@
  * - v1.0.0 (2025-10-10): Initial implementation with thread-safe operations
  */
 
-package com.augmentalis.commandmanager
+package com.augmentalis.voiceoscore
 
 import android.util.Log
 import java.util.concurrent.ConcurrentHashMap

@@ -6,6 +6,9 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.serialization.SynonymSet
+import com.augmentalis.voiceoscore.synonym.SynonymEntry
+import com.augmentalis.voiceoscore.synonym.SynonymMap
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

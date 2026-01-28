@@ -436,8 +436,9 @@ mv Modules/VoiceOS/managers/CommandManager/src/.../CommandRegistry.kt \
 All manager files need package updates:
 
 **FROM:**
+
 ```kotlin
-package com.augmentalis.commandmanager
+package com.augmentalis.voiceoscore
 package com.augmentalis.commandmanager.actions
 package com.augmentalis.commandmanager.validation
 // etc.

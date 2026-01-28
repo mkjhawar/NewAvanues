@@ -13,8 +13,8 @@
 package com.augmentalis.voiceoscoreng.service
 
 import com.augmentalis.database.VoiceOSDatabase
-import com.augmentalis.commandmanager.AppCategoryEntry
-import com.augmentalis.commandmanager.IAppCategoryRepository
+import com.augmentalis.voiceoscore.AppCategoryEntry
+import com.augmentalis.voiceoscore.IAppCategoryRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

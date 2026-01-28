@@ -10,8 +10,6 @@
 package com.augmentalis.magiccode.plugins.android.data
 
 import com.augmentalis.database.dto.CommandHistoryDTO
-import com.augmentalis.database.dto.ContextPreferenceDTO
-import com.augmentalis.database.dto.ScreenContextDTO
 import com.augmentalis.database.dto.ScreenTransitionDTO
 import com.augmentalis.database.repositories.ICommandHistoryRepository
 import com.augmentalis.database.repositories.IContextPreferenceRepository
@@ -27,12 +25,11 @@ import com.augmentalis.magiccode.plugins.universal.data.NavigationEdge
 import com.augmentalis.magiccode.plugins.universal.data.NavigationGraph
 import com.augmentalis.magiccode.plugins.universal.data.NavigationNode
 import com.augmentalis.magiccode.plugins.universal.data.RankedCommand
-import com.augmentalis.commandmanager.CommandActionType
-import com.augmentalis.commandmanager.QuantizedCommand
-import com.augmentalis.commandmanager.QuantizedElement
+import com.augmentalis.voiceoscore.CommandActionType
+import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.voiceoscore.QuantizedElement
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow

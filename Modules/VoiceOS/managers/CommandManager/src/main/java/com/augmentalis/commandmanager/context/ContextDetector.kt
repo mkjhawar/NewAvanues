@@ -6,7 +6,7 @@
  * Part of Week 4 - Context-Aware Commands implementation
  */
 
-package com.augmentalis.commandmanager.context
+package com.augmentalis.voiceoscore.context
 
 import android.Manifest
 import android.accessibilityservice.AccessibilityService

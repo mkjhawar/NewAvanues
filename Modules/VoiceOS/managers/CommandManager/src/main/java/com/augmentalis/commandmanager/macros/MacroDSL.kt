@@ -11,7 +11,7 @@
  * - Readable syntax
  * - Compile-time validation
  */
-package com.augmentalis.commandmanager.macros
+package com.augmentalis.voiceoscore.macros
 
 import java.util.UUID
 

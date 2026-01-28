@@ -25,12 +25,12 @@
  * @since 2025-10-13
  */
 
-package com.augmentalis.commandmanager.loader
+package com.augmentalis.voiceoscore.loader
 
 import android.content.Context
 import android.util.Log
-import com.augmentalis.commandmanager.database.CommandDatabase
-import com.augmentalis.commandmanager.database.sqldelight.VoiceCommandEntity
+import com.augmentalis.voiceoscore.database.CommandDatabase
+import com.augmentalis.voiceoscore.database.sqldelight.VoiceCommandEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

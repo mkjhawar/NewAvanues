@@ -6,6 +6,11 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.command.CommandGeneratorUtils
+import com.augmentalis.voiceoscore.command.ElementCategory
+import com.augmentalis.voiceoscore.element.ElementType
+import com.augmentalis.voiceoscore.interfaces.GeneratedCommand
+import com.augmentalis.voiceoscore.QuantizedElement
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

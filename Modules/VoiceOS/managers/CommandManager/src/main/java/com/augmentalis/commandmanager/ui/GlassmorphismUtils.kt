@@ -7,7 +7,7 @@
  * 
  * Provides glassmorphism visual effects matching VOS4 design system
  */
-package com.augmentalis.commandmanager.ui
+package com.augmentalis.voiceoscore.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

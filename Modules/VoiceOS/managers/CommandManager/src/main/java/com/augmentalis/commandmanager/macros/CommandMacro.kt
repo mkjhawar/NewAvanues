@@ -11,7 +11,7 @@
  * - Metadata (name, description, author)
  * - Validation and constraints
  */
-package com.augmentalis.commandmanager.macros
+package com.augmentalis.voiceoscore.macros
 
 /**
  * Command Macro

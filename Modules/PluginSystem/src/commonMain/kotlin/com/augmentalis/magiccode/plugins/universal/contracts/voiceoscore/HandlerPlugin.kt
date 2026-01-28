@@ -11,9 +11,9 @@
 package com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore
 
 import com.augmentalis.magiccode.plugins.universal.UniversalPlugin
-import com.augmentalis.commandmanager.ActionResult
-import com.augmentalis.commandmanager.QuantizedCommand
-import com.augmentalis.commandmanager.QuantizedElement
+import com.augmentalis.voiceoscore.ActionResult
+import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.voiceoscore.QuantizedElement
 
 /**
  * Handler Plugin contract for executing voice/gaze commands.

@@ -378,7 +378,7 @@ parcelable PluginInfo {
 **Location:** `VoiceOS/modules/managers/CommandManager/src/main/java/com/augmentalis/commandmanager/loader/CompactJsonParser.kt`
 
 ```kotlin
-package com.augmentalis.commandmanager.loader
+package com.augmentalis.voiceoscore.loader
 
 import org.json.JSONObject
 import com.augmentalis.commandmanager.dynamic.VoiceCommand
@@ -503,7 +503,7 @@ class CompactJsonParser {
 **Location:** `VoiceOS/modules/managers/CommandManager/src/main/java/com/augmentalis/commandmanager/service/CommandRegistryService.kt`
 
 ```kotlin
-package com.augmentalis.commandmanager.service
+package com.augmentalis.voiceoscore.service
 
 import android.app.Service
 import android.content.Intent
@@ -748,8 +748,8 @@ class CommandRegistryService : Service() {
     private fun validatePlugin(pluginInfo: PluginInfo): Boolean {
         // For now, just check basic fields are present
         return pluginInfo.id.isNotBlank() &&
-               pluginInfo.name.isNotBlank() &&
-               pluginInfo.version.matches(Regex("\\d+\\.\\d+\\.\\d+"))
+                pluginInfo.name.isNotBlank() &&
+                pluginInfo.version.matches(Regex("\\d+\\.\\d+\\.\\d+"))
     }
 
     /**

@@ -11,7 +11,7 @@
  * Phase 2.4c: Dynamic Command Updates
  */
 
-package com.augmentalis.commandmanager.ui
+package com.augmentalis.voiceoscore.ui
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -29,9 +29,9 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.augmentalis.commandmanager.CommandManager
-import com.augmentalis.commandmanager.database.CommandDatabase
-import com.augmentalis.commandmanager.loader.CommandLoader
+import com.augmentalis.voiceoscore.CommandManager
+import com.augmentalis.voiceoscore.database.CommandDatabase
+import com.augmentalis.voiceoscore.loader.CommandLoader
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*

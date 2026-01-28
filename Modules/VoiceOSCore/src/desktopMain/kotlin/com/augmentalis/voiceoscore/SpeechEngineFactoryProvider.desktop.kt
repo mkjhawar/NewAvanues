@@ -9,6 +9,12 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.interfaces.EngineFeature
+import com.augmentalis.voiceoscore.interfaces.EngineRequirements
+import com.augmentalis.voiceoscore.interfaces.ISpeechEngine
+import com.augmentalis.voiceoscore.interfaces.ISpeechEngineFactory
+import com.augmentalis.voiceoscore.speech.SpeechEngine
+
 /**
  * Desktop speech engine factory provider implementation.
  */

@@ -46,8 +46,6 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                // CommandManager - Voice command API
-                api(project(":Modules:CommandManager"))
 
                 // AVID - Avanues Voice ID
                 implementation(project(":Modules:AVID"))

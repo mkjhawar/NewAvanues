@@ -8,7 +8,7 @@
  * - Import template into wizard
  */
 
-package com.augmentalis.commandmanager.ui.editor
+package com.augmentalis.voiceoscore.ui.editor
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -495,14 +495,14 @@ private fun Modifier.verticalScrollableContainer(): Modifier {
 /**
  * Get icon for action type
  */
-private fun getActionTypeIcon(actionType: com.augmentalis.commandmanager.registry.ActionType): androidx.compose.ui.graphics.vector.ImageVector {
+private fun getActionTypeIcon(actionType: com.augmentalis.voiceoscore.registry.ActionType): androidx.compose.ui.graphics.vector.ImageVector {
     return when (actionType) {
-        com.augmentalis.commandmanager.registry.ActionType.LAUNCH_APP -> Icons.Default.Apps
-        com.augmentalis.commandmanager.registry.ActionType.NAVIGATE -> Icons.Default.Navigation
-        com.augmentalis.commandmanager.registry.ActionType.SYSTEM_COMMAND -> Icons.Default.Settings
-        com.augmentalis.commandmanager.registry.ActionType.CUSTOM_ACTION -> Icons.Default.Extension
-        com.augmentalis.commandmanager.registry.ActionType.TEXT_EDITING -> Icons.Default.Edit
-        com.augmentalis.commandmanager.registry.ActionType.MEDIA_CONTROL -> Icons.Default.MusicNote
-        com.augmentalis.commandmanager.registry.ActionType.ACCESSIBILITY -> Icons.Default.Accessibility
+        com.augmentalis.voiceoscore.registry.ActionType.LAUNCH_APP -> Icons.Default.Apps
+        com.augmentalis.voiceoscore.registry.ActionType.NAVIGATE -> Icons.Default.Navigation
+        com.augmentalis.voiceoscore.registry.ActionType.SYSTEM_COMMAND -> Icons.Default.Settings
+        com.augmentalis.voiceoscore.registry.ActionType.CUSTOM_ACTION -> Icons.Default.Extension
+        com.augmentalis.voiceoscore.registry.ActionType.TEXT_EDITING -> Icons.Default.Edit
+        com.augmentalis.voiceoscore.registry.ActionType.MEDIA_CONTROL -> Icons.Default.MusicNote
+        com.augmentalis.voiceoscore.registry.ActionType.ACCESSIBILITY -> Icons.Default.Accessibility
     }
 }

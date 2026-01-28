@@ -8,7 +8,7 @@
  * Callback interface for service lifecycle events
  * Duplicated in CommandManager to avoid circular dependency with VoiceAccessibility
  */
-package com.augmentalis.commandmanager.monitor
+package com.augmentalis.voiceoscore.monitor
 
 /**
  * Callback interface for CommandManager service events

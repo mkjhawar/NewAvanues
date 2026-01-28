@@ -1,8 +1,8 @@
 package com.augmentalis.voiceoscoreng.service
 
-import com.augmentalis.commandmanager.ElementFingerprint
-import com.augmentalis.commandmanager.DisplayCommand
-import com.augmentalis.commandmanager.ElementInfo
+import com.augmentalis.voiceoscore.ElementFingerprint
+import com.augmentalis.voiceoscore.DisplayCommand
+import com.augmentalis.voiceoscore.ElementInfo
 
 /**
  * Generates AVU (Avanues Universal) format output.

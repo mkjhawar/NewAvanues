@@ -8,17 +8,17 @@
  * New code should import directly from the sqldelight package.
  */
 
-package com.augmentalis.commandmanager.database
+package com.augmentalis.voiceoscore.database
 
-import com.augmentalis.commandmanager.database.sqldelight.CommandSuccessRate
-import com.augmentalis.commandmanager.database.sqldelight.CommandUsageDaoAdapter
-import com.augmentalis.commandmanager.database.sqldelight.CommandUsageEntity
-import com.augmentalis.commandmanager.database.sqldelight.CommandUsageStats
-import com.augmentalis.commandmanager.database.sqldelight.DatabaseVersionDaoAdapter
-import com.augmentalis.commandmanager.database.sqldelight.DatabaseVersionEntity
-import com.augmentalis.commandmanager.database.sqldelight.LocaleStats
-import com.augmentalis.commandmanager.database.sqldelight.VoiceCommandDaoAdapter
-import com.augmentalis.commandmanager.database.sqldelight.VoiceCommandEntity
+import com.augmentalis.voiceoscore.database.sqldelight.CommandSuccessRate
+import com.augmentalis.voiceoscore.database.sqldelight.CommandUsageDaoAdapter
+import com.augmentalis.voiceoscore.database.sqldelight.CommandUsageEntity
+import com.augmentalis.voiceoscore.database.sqldelight.CommandUsageStats
+import com.augmentalis.voiceoscore.database.sqldelight.DatabaseVersionDaoAdapter
+import com.augmentalis.voiceoscore.database.sqldelight.DatabaseVersionEntity
+import com.augmentalis.voiceoscore.database.sqldelight.LocaleStats
+import com.augmentalis.voiceoscore.database.sqldelight.VoiceCommandDaoAdapter
+import com.augmentalis.voiceoscore.database.sqldelight.VoiceCommandEntity
 
 // ==================== Entity Type Aliases ====================
 

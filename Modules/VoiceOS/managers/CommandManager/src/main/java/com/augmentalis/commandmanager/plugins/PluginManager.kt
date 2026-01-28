@@ -16,7 +16,7 @@
  * @author VOS4 Development Team
  */
 
-package com.augmentalis.commandmanager.plugins
+package com.augmentalis.voiceoscore.plugins
 
 import android.content.Context
 import android.content.pm.PackageInfo
@@ -32,9 +32,9 @@ import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import com.augmentalis.commandmanager.dynamic.VoiceCommand
-import com.augmentalis.commandmanager.dynamic.CommandResult
-import com.augmentalis.commandmanager.dynamic.ErrorCode
+import com.augmentalis.voiceoscore.dynamic.VoiceCommand
+import com.augmentalis.voiceoscore.dynamic.CommandResult
+import com.augmentalis.voiceoscore.dynamic.ErrorCode
 import org.json.JSONObject
 import java.io.FileInputStream
 import java.util.jar.JarFile

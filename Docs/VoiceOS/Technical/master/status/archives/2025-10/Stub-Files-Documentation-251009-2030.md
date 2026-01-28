@@ -31,8 +31,9 @@ During build error fixes from previous incomplete work, one stub file was create
 2. `CommandContext` data class (simple version, not the sealed class)
 
 **Code:**
+
 ```kotlin
-package com.augmentalis.commandmanager.models
+package com.augmentalis.voiceoscore.models
 
 data class CommandDefinition(
     val id: String,

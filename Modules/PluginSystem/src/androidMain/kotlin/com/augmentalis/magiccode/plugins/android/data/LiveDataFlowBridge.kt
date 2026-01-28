@@ -12,6 +12,8 @@ package com.augmentalis.magiccode.plugins.android.data
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
+import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.voiceoscore.QuantizedElement
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -467,12 +469,12 @@ fun <T> Flow<T>.withStartupDelay(delayMillis: Long): Flow<T> {
 /**
  * Type alias for element list flows.
  */
-typealias ElementFlow = Flow<List<com.augmentalis.commandmanager.QuantizedElement>>
+typealias ElementFlow = Flow<List<QuantizedElement>>
 
 /**
  * Type alias for command list flows.
  */
-typealias CommandFlow = Flow<List<com.augmentalis.commandmanager.QuantizedCommand>>
+typealias CommandFlow = Flow<List<QuantizedCommand>>
 
 // =============================================================================
 // Convenience Functions

@@ -11,12 +11,12 @@
  * Uses the core:database VoiceOSDatabase for persistence.
  */
 
-package com.augmentalis.commandmanager.database
+package com.augmentalis.voiceoscore.database
 
 import android.content.Context
-import com.augmentalis.commandmanager.database.sqldelight.CommandUsageDaoAdapter
-import com.augmentalis.commandmanager.database.sqldelight.DatabaseVersionDaoAdapter
-import com.augmentalis.commandmanager.database.sqldelight.VoiceCommandDaoAdapter
+import com.augmentalis.voiceoscore.database.sqldelight.CommandUsageDaoAdapter
+import com.augmentalis.voiceoscore.database.sqldelight.DatabaseVersionDaoAdapter
+import com.augmentalis.voiceoscore.database.sqldelight.VoiceCommandDaoAdapter
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabase
 

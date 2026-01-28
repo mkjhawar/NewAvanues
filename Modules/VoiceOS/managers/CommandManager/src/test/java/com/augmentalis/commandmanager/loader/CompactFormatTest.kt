@@ -7,9 +7,9 @@
  * - Database integration with compact commands
  */
 
-package com.augmentalis.commandmanager.loader
+package com.augmentalis.voiceoscore.loader
 
-import com.augmentalis.commandmanager.database.sqldelight.VoiceCommandEntity
+import com.augmentalis.voiceoscore.database.sqldelight.VoiceCommandEntity
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*

@@ -9,6 +9,9 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.synonym.DefaultSynonymPaths
+import com.augmentalis.voiceoscore.synonym.ISynonymPaths
+
 /**
  * Desktop synonym paths provider implementation.
  *

@@ -8,11 +8,11 @@
  * Purpose: Verify database integration and command resolution
  */
 
-package com.augmentalis.commandmanager.loader
+package com.augmentalis.voiceoscore.loader
 
 import android.content.Context
-import com.augmentalis.commandmanager.database.CommandDatabase
-import com.augmentalis.commandmanager.database.sqldelight.VoiceCommandEntity
+import com.augmentalis.voiceoscore.database.CommandDatabase
+import com.augmentalis.voiceoscore.database.sqldelight.VoiceCommandEntity
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Before

@@ -33,13 +33,13 @@ package com.augmentalis.magiccode.plugins.builtin
 import com.augmentalis.magiccode.plugins.sdk.BasePlugin
 import com.augmentalis.magiccode.plugins.universal.*
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.*
-import com.augmentalis.commandmanager.ActionResult
-import com.augmentalis.commandmanager.Bounds
-import com.augmentalis.commandmanager.DisambiguationResult
-import com.augmentalis.commandmanager.ElementDisambiguator
-import com.augmentalis.commandmanager.ElementInfo
-import com.augmentalis.commandmanager.NumberedMatch
-import com.augmentalis.commandmanager.QuantizedCommand
+import com.augmentalis.voiceoscore.ActionResult
+import com.augmentalis.voiceoscore.Bounds
+import com.augmentalis.voiceoscore.DisambiguationResult
+import com.augmentalis.voiceoscore.ElementDisambiguator
+import com.augmentalis.voiceoscore.ElementInfo
+import com.augmentalis.voiceoscore.NumberedMatch
+import com.augmentalis.voiceoscore.QuantizedCommand
 
 /**
  * UI Interaction Handler Plugin - Handles all UI element interactions.

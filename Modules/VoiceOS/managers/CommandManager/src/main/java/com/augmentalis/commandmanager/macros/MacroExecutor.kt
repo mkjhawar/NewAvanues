@@ -13,7 +13,7 @@
  * - Timeout protection
  * - Execution tracking
  */
-package com.augmentalis.commandmanager.macros
+package com.augmentalis.voiceoscore.macros
 
 import android.accessibilityservice.AccessibilityService
 import android.util.Log

@@ -4,10 +4,10 @@
  * Provides reusable command templates for common voice command patterns
  */
 
-package com.augmentalis.commandmanager.ui.editor
+package com.augmentalis.voiceoscore.ui.editor
 
 import android.os.Parcelable
-import com.augmentalis.commandmanager.registry.ActionType
+import com.augmentalis.voiceoscore.registry.ActionType
 import kotlinx.parcelize.Parcelize
 
 /**

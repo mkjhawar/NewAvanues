@@ -8,7 +8,7 @@
  * @author VOS4 Development Team
  */
 
-package com.augmentalis.commandmanager.dynamic
+package com.augmentalis.voiceoscore.dynamic
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize

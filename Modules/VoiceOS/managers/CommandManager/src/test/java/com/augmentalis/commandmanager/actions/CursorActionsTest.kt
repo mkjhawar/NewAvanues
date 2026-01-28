@@ -14,7 +14,7 @@
  *
  * Architecture: Tests CursorActions object delegation to VoiceCursorAPI
  */
-package com.augmentalis.commandmanager.actions
+package com.augmentalis.voiceoscore.actions
 
 import android.content.Context
 import com.augmentalis.voiceos.cursor.VoiceCursorAPI

@@ -8,7 +8,7 @@
  * Contains context information used for intelligent command routing
  * Based on Q4 Decision: Context-Aware Routing with Smart Dispatcher
  */
-package com.augmentalis.commandmanager.routing
+package com.augmentalis.voiceoscore.routing
 
 /**
  * Context information for command routing

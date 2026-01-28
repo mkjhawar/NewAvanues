@@ -13,7 +13,7 @@
  * - v1.0.0 (2025-10-10): Initial implementation for CommandRegistry infrastructure
  */
 
-package com.augmentalis.commandmanager
+package com.augmentalis.voiceoscore
 
 /**
  * Interface for command handlers in the VOS4 command routing system.

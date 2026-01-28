@@ -725,7 +725,7 @@ private val BROWSER_PACKAGES = setOf(
  *
  * @return CommandContext with current state snapshot
  */
-private fun createCommandContext(): com.augmentalis.commandmanager.models.CommandContext {
+private fun createCommandContext(): com.augmentalis.voiceoscore.models.CommandContext {
     val root = rootInActiveWindow
 
     return com.augmentalis.commandmanager.models.CommandContext(

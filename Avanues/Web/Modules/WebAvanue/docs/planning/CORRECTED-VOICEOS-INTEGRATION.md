@@ -240,8 +240,8 @@ data class ActionResult(
     /**
      * Convert to CommandResult for VoiceOS
      */
-    fun toCommandResult(command: com.augmentalis.commandmanager.models.Command):
-        com.augmentalis.commandmanager.models.CommandResult {
+    fun toCommandResult(command: com.augmentalis.voiceoscore.models.Command):
+            com.augmentalis.voiceoscore.models.CommandResult {
         return com.augmentalis.commandmanager.models.CommandResult(
             success = success,
             command = command,

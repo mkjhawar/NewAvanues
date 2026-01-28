@@ -16,14 +16,14 @@
  * - v1.0.0 (2025-01-26 02:30 PST): Initial voice command integration
  */
 
-package com.augmentalis.commandmanager.handlers
+package com.augmentalis.voiceoscore.handlers
 
 import android.content.Context
 import android.util.Log
-import com.augmentalis.commandmanager.CommandHandler
-import com.augmentalis.commandmanager.CommandRegistry
-import com.augmentalis.commandmanager.actions.CursorActions
-import com.augmentalis.commandmanager.actions.CursorDirection
+import com.augmentalis.voiceoscore.CommandHandler
+import com.augmentalis.voiceoscore.CommandRegistry
+import com.augmentalis.voiceoscore.actions.CursorActions
+import com.augmentalis.voiceoscore.actions.CursorDirection
 import com.augmentalis.voiceos.cursor.core.CursorType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

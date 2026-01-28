@@ -1,7 +1,7 @@
 package com.augmentalis.voiceoscoreng.service
 
-import com.augmentalis.commandmanager.ElementInfo
-import com.augmentalis.commandmanager.DisplayCommand
+import com.augmentalis.voiceoscore.ElementInfo
+import com.augmentalis.voiceoscore.DisplayCommand
 
 /**
  * Data models for accessibility exploration results.

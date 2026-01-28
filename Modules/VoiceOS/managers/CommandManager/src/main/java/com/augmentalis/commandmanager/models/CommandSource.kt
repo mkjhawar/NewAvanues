@@ -7,7 +7,7 @@
  *
  * Defines the source of a command
  */
-package com.augmentalis.commandmanager.models
+package com.augmentalis.voiceoscore.models
 
 /**
  * Source of a command

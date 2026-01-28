@@ -6,7 +6,7 @@
  * Code-Reviewed-By: CCA
  * Created: 2025-10-09
  */
-package com.augmentalis.commandmanager.processor
+package com.augmentalis.voiceoscore.processor
 
 import android.graphics.Rect
 import android.util.Log

@@ -10,7 +10,7 @@
  * @author VOS4 Development Team
  */
 
-package com.augmentalis.commandmanager.plugins
+package com.augmentalis.voiceoscore.plugins
 
 import android.os.FileObserver
 import android.util.Log

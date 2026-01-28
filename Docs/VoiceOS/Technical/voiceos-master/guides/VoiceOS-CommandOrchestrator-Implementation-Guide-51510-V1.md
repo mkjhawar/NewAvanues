@@ -1326,35 +1326,35 @@ class CommandOrchestratorImplTest {
 ```kotlin
 @Test
 fun `executeCommand - Tier 1 success with valid command`() = runTest {
-    // Given
-    orchestrator.initialize(mockContext)
-    orchestrator.setTierExecutors(
-        commandManager = mockCommandManager,
-        voiceCommandProcessor = mockVoiceCommandProcessor,
-        actionCoordinator = mockActionCoordinator,
-        accessibilityService = mockAccessibilityService
-    )
+        // Given
+        orchestrator.initialize(mockContext)
+        orchestrator.setTierExecutors(
+            commandManager = mockCommandManager,
+            voiceCommandProcessor = mockVoiceCommandProcessor,
+            actionCoordinator = mockActionCoordinator,
+            accessibilityService = mockAccessibilityService
+        )
 
-    val commandResult = mockk<com.augmentalis.commandmanager.models.CommandResult>()
-    every { commandResult.success } returns true
-    every { commandResult.message } returns "Command executed"
-    coEvery { mockCommandManager.executeCommand(any()) } returns commandResult
+        val commandResult = mockk<com.augmentalis.voiceoscore.models.CommandResult>()
+        every { commandResult.success } returns true
+        every { commandResult.message } returns "Command executed"
+        coEvery { mockCommandManager.executeCommand(any()) } returns commandResult
 
-    val context = CommandContext(packageName = "com.test.app")
+        val context = CommandContext(packageName = "com.test.app")
 
-    // When
-    val result = orchestrator.executeCommand("test command", 0.8f, context)
+        // When
+        val result = orchestrator.executeCommand("test command", 0.8f, context)
 
-    // Then
-    assertTrue(result is CommandResult.Success)
-    assertEquals(1, (result as CommandResult.Success).tier)
-    assertEquals(1L, orchestrator.getMetrics().tier1SuccessCount)
+        // Then
+        assertTrue(result is CommandResult.Success)
+        assertEquals(1, (result as CommandResult.Success).tier)
+        assertEquals(1L, orchestrator.getMetrics().tier1SuccessCount)
 
-    // Verify tier execution
-    coVerify(exactly = 1) { mockCommandManager.executeCommand(any()) }
-    coVerify(exactly = 0) { mockVoiceCommandProcessor.processCommand(any()) }
-    coVerify(exactly = 0) { mockActionCoordinator.executeAction(any()) }
-}
+        // Verify tier execution
+        coVerify(exactly = 1) { mockCommandManager.executeCommand(any()) }
+        coVerify(exactly = 0) { mockVoiceCommandProcessor.processCommand(any()) }
+        coVerify(exactly = 0) { mockActionCoordinator.executeAction(any()) }
+    }
 ```
 
 #### Pattern 2: Testing Tier Fallback
@@ -1362,31 +1362,31 @@ fun `executeCommand - Tier 1 success with valid command`() = runTest {
 ```kotlin
 @Test
 fun `executeCommand - fallback from Tier 1 to Tier 2`() = runTest {
-    // Given
-    orchestrator.initialize(mockContext)
-    orchestrator.setTierExecutors(mockCommandManager, mockVoiceCommandProcessor, null, null)
+        // Given
+        orchestrator.initialize(mockContext)
+        orchestrator.setTierExecutors(mockCommandManager, mockVoiceCommandProcessor, null, null)
 
-    // Tier 1 fails
-    val tier1Result = mockk<com.augmentalis.commandmanager.models.CommandResult>()
-    every { tier1Result.success } returns false
-    coEvery { mockCommandManager.executeCommand(any()) } returns tier1Result
+        // Tier 1 fails
+        val tier1Result = mockk<com.augmentalis.voiceoscore.models.CommandResult>()
+        every { tier1Result.success } returns false
+        coEvery { mockCommandManager.executeCommand(any()) } returns tier1Result
 
-    // Tier 2 succeeds
-    val tier2Result = mockk<com.augmentalis.voiceoscore.scraping.CommandResult>()
-    every { tier2Result.success } returns true
-    coEvery { mockVoiceCommandProcessor.processCommand(any()) } returns tier2Result
+        // Tier 2 succeeds
+        val tier2Result = mockk<com.augmentalis.voiceoscore.scraping.CommandResult>()
+        every { tier2Result.success } returns true
+        coEvery { mockVoiceCommandProcessor.processCommand(any()) } returns tier2Result
 
-    // When
-    val result = orchestrator.executeCommand("test", 0.9f, CommandContext())
+        // When
+        val result = orchestrator.executeCommand("test", 0.9f, CommandContext())
 
-    // Then
-    assertTrue(result is CommandResult.Success)
-    assertEquals(2, (result as CommandResult.Success).tier)
+        // Then
+        assertTrue(result is CommandResult.Success)
+        assertEquals(2, (result as CommandResult.Success).tier)
 
-    // Verify both tiers were called
-    coVerify(exactly = 1) { mockCommandManager.executeCommand(any()) }
-    coVerify(exactly = 1) { mockVoiceCommandProcessor.processCommand(any()) }
-}
+        // Verify both tiers were called
+        coVerify(exactly = 1) { mockCommandManager.executeCommand(any()) }
+        coVerify(exactly = 1) { mockVoiceCommandProcessor.processCommand(any()) }
+    }
 ```
 
 #### Pattern 3: Testing Events
@@ -1394,27 +1394,27 @@ fun `executeCommand - fallback from Tier 1 to Tier 2`() = runTest {
 ```kotlin
 @Test
 fun `executeCommand - emits execution started and completed events`() = runTest {
-    // Given
-    orchestrator.initialize(mockContext)
-    orchestrator.setTierExecutors(mockCommandManager, null, null, null)
+        // Given
+        orchestrator.initialize(mockContext)
+        orchestrator.setTierExecutors(mockCommandManager, null, null, null)
 
-    val commandResult = mockk<com.augmentalis.commandmanager.models.CommandResult>()
-    every { commandResult.success } returns true
-    coEvery { mockCommandManager.executeCommand(any()) } returns commandResult
+        val commandResult = mockk<com.augmentalis.voiceoscore.models.CommandResult>()
+        every { commandResult.success } returns true
+        coEvery { mockCommandManager.executeCommand(any()) } returns commandResult
 
-    val events = mutableListOf<CommandEvent>()
-    val job = launch {
-        orchestrator.commandEvents.take(2).toList(events)
+        val events = mutableListOf<CommandEvent>()
+        val job = launch {
+            orchestrator.commandEvents.take(2).toList(events)
+        }
+
+        // When
+        orchestrator.executeCommand("test", 0.9f, CommandContext())
+        job.join()
+
+        // Then
+        assertTrue(events.any { it is CommandEvent.ExecutionStarted })
+        assertTrue(events.any { it is CommandEvent.ExecutionCompleted })
     }
-
-    // When
-    orchestrator.executeCommand("test", 0.9f, CommandContext())
-    job.join()
-
-    // Then
-    assertTrue(events.any { it is CommandEvent.ExecutionStarted })
-    assertTrue(events.any { it is CommandEvent.ExecutionCompleted })
-}
 ```
 
 #### Pattern 4: Testing Metrics
@@ -1422,25 +1422,25 @@ fun `executeCommand - emits execution started and completed events`() = runTest 
 ```kotlin
 @Test
 fun `executeCommand - increments correct metrics counters`() = runTest {
-    // Given
-    orchestrator.initialize(mockContext)
-    orchestrator.setTierExecutors(mockCommandManager, null, null, null)
+        // Given
+        orchestrator.initialize(mockContext)
+        orchestrator.setTierExecutors(mockCommandManager, null, null, null)
 
-    val commandResult = mockk<com.augmentalis.commandmanager.models.CommandResult>()
-    every { commandResult.success } returns true
-    coEvery { mockCommandManager.executeCommand(any()) } returns commandResult
+        val commandResult = mockk<com.augmentalis.voiceoscore.models.CommandResult>()
+        every { commandResult.success } returns true
+        coEvery { mockCommandManager.executeCommand(any()) } returns commandResult
 
-    // When
-    orchestrator.executeCommand("test1", 0.9f, CommandContext())
-    orchestrator.executeCommand("test2", 0.9f, CommandContext())
+        // When
+        orchestrator.executeCommand("test1", 0.9f, CommandContext())
+        orchestrator.executeCommand("test2", 0.9f, CommandContext())
 
-    // Then
-    val metrics = orchestrator.getMetrics()
-    assertEquals(2L, metrics.totalCommandsExecuted)
-    assertEquals(2L, metrics.tier1SuccessCount)
-    assertEquals(0L, metrics.tier2SuccessCount)
-    assertEquals(0L, metrics.failureCount)
-}
+        // Then
+        val metrics = orchestrator.getMetrics()
+        assertEquals(2L, metrics.totalCommandsExecuted)
+        assertEquals(2L, metrics.tier1SuccessCount)
+        assertEquals(0L, metrics.tier2SuccessCount)
+        assertEquals(0L, metrics.failureCount)
+    }
 ```
 
 #### Pattern 5: Testing Fallback Mode

@@ -20,8 +20,9 @@ import com.augmentalis.magiccode.plugins.builtin.*
 import com.augmentalis.magiccode.plugins.universal.*
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.HandlerContext
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.ScreenContext
-import com.augmentalis.commandmanager.ActionResult
-import com.augmentalis.commandmanager.QuantizedCommand
+import com.augmentalis.voiceoscore.ActionResult
+import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.voiceoscore.CommandActionType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -308,7 +309,7 @@ class AndroidCommandDispatcher(
         val quantizedCommand = QuantizedCommand(
             avid = "",
             phrase = command,
-            actionType = com.augmentalis.commandmanager.CommandActionType.CLICK,
+            actionType = CommandActionType.CLICK,
             targetAvid = null,
             confidence = 1.0f
         )

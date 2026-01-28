@@ -14,7 +14,7 @@
  * and cannot be modified without app update.
  */
 
-package com.augmentalis.commandmanager.loader
+package com.augmentalis.voiceoscore.loader
 
 import android.content.Context
 import android.os.FileObserver

@@ -10,9 +10,8 @@
  */
 package com.augmentalis.magiccode.plugins.universal.contracts.ai
 
-import com.augmentalis.magiccode.plugins.universal.PluginCapability
 import com.augmentalis.magiccode.plugins.universal.UniversalPlugin
-import com.augmentalis.commandmanager.QuantizedElement
+import com.augmentalis.voiceoscore.QuantizedElement
 import kotlinx.serialization.Serializable
 
 /**

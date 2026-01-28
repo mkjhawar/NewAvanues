@@ -10,9 +10,9 @@
  * @author VOS4 Development Team
  */
 
-package com.augmentalis.commandmanager.plugins
+package com.augmentalis.voiceoscore.plugins
 
-import com.augmentalis.commandmanager.dynamic.CommandCategory
+import com.augmentalis.voiceoscore.dynamic.CommandCategory
 
 /**
  * API for discovering available actions and plugins

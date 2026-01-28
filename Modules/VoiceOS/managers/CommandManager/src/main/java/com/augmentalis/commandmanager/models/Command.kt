@@ -7,7 +7,7 @@
  *
  * Represents a command to be executed
  */
-package com.augmentalis.commandmanager.models
+package com.augmentalis.voiceoscore.models
 
 /**
  * A command to be executed by the CommandManager

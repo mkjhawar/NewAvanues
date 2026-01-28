@@ -16,7 +16,7 @@
  * - AVA AI: com.augmentalis.ava.IPC.COMMAND
  * - AvaConnect: com.augmentalis.avaconnect.IPC.COMMAND
  */
-package com.augmentalis.commandmanager.routing
+package com.augmentalis.voiceoscore.routing
 
 import android.util.Log
 

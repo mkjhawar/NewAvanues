@@ -1,5 +1,10 @@
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.classifier.AppCategory
+import com.augmentalis.voiceoscore.classifier.ContainerBehavior
+import com.augmentalis.voiceoscore.element.Bounds
+import com.augmentalis.voiceoscore.element.ElementInfo
+import com.augmentalis.voiceoscore.persistence.PersistenceDecisionEngine
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

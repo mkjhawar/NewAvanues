@@ -259,9 +259,10 @@ REASONING:
 #### Fix Implementation
 
 **Step 1: Create SQLDelight adapter**
+
 ```kotlin
 // New file: CommandDatabaseAdapter.kt
-package com.augmentalis.commandmanager.database
+package com.augmentalis.voiceoscore.database
 
 import com.augmentalis.database.VoiceOSDatabaseManager
 import kotlinx.coroutines.Dispatchers

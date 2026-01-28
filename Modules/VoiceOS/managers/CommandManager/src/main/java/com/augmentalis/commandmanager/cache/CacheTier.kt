@@ -8,7 +8,7 @@
  * Defines the 3-tier caching architecture for command resolution
  * Based on Q3 Decision: Tiered Caching (Tier 1/2/3)
  */
-package com.augmentalis.commandmanager.cache
+package com.augmentalis.voiceoscore.cache
 
 /**
  * Cache tiers for command resolution

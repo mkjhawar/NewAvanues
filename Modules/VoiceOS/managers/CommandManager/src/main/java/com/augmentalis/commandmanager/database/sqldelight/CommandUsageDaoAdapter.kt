@@ -5,7 +5,7 @@
  * Provides the same API as Room CommandUsageDao for backward compatibility
  */
 
-package com.augmentalis.commandmanager.database.sqldelight
+package com.augmentalis.voiceoscore.database.sqldelight
 
 import com.augmentalis.database.VoiceOSDatabase
 import kotlinx.coroutines.Dispatchers

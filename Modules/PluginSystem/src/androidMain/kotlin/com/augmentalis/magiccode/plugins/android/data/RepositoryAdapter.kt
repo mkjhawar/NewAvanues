@@ -10,19 +10,16 @@
 package com.augmentalis.magiccode.plugins.android.data
 
 import com.augmentalis.database.dto.ContextPreferenceDTO
-import com.augmentalis.database.dto.ScrapedAppDTO
 import com.augmentalis.database.dto.VoiceCommandDTO
 import com.augmentalis.database.repositories.IContextPreferenceRepository
 import com.augmentalis.database.repositories.IScrapedAppRepository
 import com.augmentalis.database.repositories.IVoiceCommandRepository
-import com.augmentalis.commandmanager.CommandActionType
-import com.augmentalis.commandmanager.ElementType
-import com.augmentalis.commandmanager.QuantizedCommand
-import com.augmentalis.commandmanager.QuantizedElement
+import com.augmentalis.voiceoscore.CommandActionType
+import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.voiceoscore.QuantizedElement
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn

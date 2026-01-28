@@ -10,7 +10,7 @@
  * 6. Save command
  */
 
-package com.augmentalis.commandmanager.ui.editor
+package com.augmentalis.voiceoscore.ui.editor
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -29,7 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.augmentalis.commandmanager.registry.ActionType
+import com.augmentalis.voiceoscore.registry.ActionType
 
 /**
  * Command creation wizard main screen
@@ -405,7 +405,7 @@ private fun TestStep(
     @Suppress("UNUSED_PARAMETER") wizardState: WizardState
 ) {
     var testPhrase by remember { mutableStateOf("") }
-    var testResults by remember { mutableStateOf<List<com.augmentalis.commandmanager.registry.VoiceCommand>>(emptyList()) }
+    var testResults by remember { mutableStateOf<List<com.augmentalis.voiceoscore.registry.VoiceCommand>>(emptyList()) }
 
     Column(
         modifier = Modifier

@@ -8,6 +8,8 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.logging.Logger
+
 /**
  * JVM logger factory implementation
  *

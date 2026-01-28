@@ -12,13 +12,13 @@
  * @author VOS4 Development Team
  */
 
-package com.augmentalis.commandmanager.plugins
+package com.augmentalis.voiceoscore.plugins
 
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
-import com.augmentalis.commandmanager.dynamic.CommandResult
-import com.augmentalis.commandmanager.dynamic.ErrorCode
+import com.augmentalis.voiceoscore.dynamic.CommandResult
+import com.augmentalis.voiceoscore.dynamic.ErrorCode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

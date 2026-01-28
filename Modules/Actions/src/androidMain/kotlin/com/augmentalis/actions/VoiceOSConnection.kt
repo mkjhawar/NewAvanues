@@ -9,8 +9,8 @@ import android.os.IBinder
 import android.os.RemoteException
 import android.provider.Settings
 import android.util.Log
-import com.augmentalis.commandmanager.accessibility.IVoiceOSCallback
-import com.augmentalis.commandmanager.accessibility.IVoiceOSService
+import com.augmentalis.voiceoscore.accessibility.IVoiceOSCallback
+import com.augmentalis.voiceoscore.accessibility.IVoiceOSService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext

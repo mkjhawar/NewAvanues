@@ -11,13 +11,13 @@
  * - Priority-based ranking
  */
 
-package com.augmentalis.commandmanager.loader
+package com.augmentalis.voiceoscore.loader
 
 import android.util.Log
-import com.augmentalis.commandmanager.database.sqldelight.CommandUsageDaoAdapter
-import com.augmentalis.commandmanager.database.sqldelight.CommandUsageEntity
-import com.augmentalis.commandmanager.database.sqldelight.VoiceCommandDaoAdapter
-import com.augmentalis.commandmanager.database.sqldelight.VoiceCommandEntity
+import com.augmentalis.voiceoscore.database.sqldelight.CommandUsageDaoAdapter
+import com.augmentalis.voiceoscore.database.sqldelight.CommandUsageEntity
+import com.augmentalis.voiceoscore.database.sqldelight.VoiceCommandDaoAdapter
+import com.augmentalis.voiceoscore.database.sqldelight.VoiceCommandEntity
 
 /**
  * Command resolver with fallback support

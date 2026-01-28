@@ -13,12 +13,12 @@
  * - v1.0.0 (2025-10-23): Initial test suite for multi-language support
  */
 
-package com.augmentalis.commandmanager
+package com.augmentalis.voiceoscore
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.augmentalis.commandmanager.loader.CommandLoader
-import com.augmentalis.commandmanager.loader.CommandLocalizer
+import com.augmentalis.voiceoscore.loader.CommandLoader
+import com.augmentalis.voiceoscore.loader.CommandLocalizer
 import io.mockk.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest

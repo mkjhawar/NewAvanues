@@ -8,7 +8,7 @@
  * @author VOS4 Development Team
  */
 
-package com.augmentalis.commandmanager.dynamic
+package com.augmentalis.voiceoscore.dynamic
 
 /**
  * Listener interface for command registration events

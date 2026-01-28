@@ -11,7 +11,8 @@
 package com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore
 
 import com.augmentalis.magiccode.plugins.universal.UniversalPlugin
-import com.augmentalis.commandmanager.QuantizedCommand
+import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.voiceoscore.CommandActionType
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -332,7 +333,7 @@ interface CommandPersistencePlugin : UniversalPlugin {
  */
 data class CommandQuery(
     val packageName: String? = null,
-    val actionType: com.augmentalis.commandmanager.CommandActionType? = null,
+    val actionType: CommandActionType? = null,
     val minConfidence: Float? = null,
     val phraseContains: String? = null,
     val targetAvid: String? = null,

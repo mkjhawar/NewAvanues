@@ -8,6 +8,8 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.logging.LogLevel
+import com.augmentalis.voiceoscore.logging.Logger
 import java.io.PrintStream
 
 /**

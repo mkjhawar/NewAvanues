@@ -13,7 +13,7 @@
  * - v1.0.0 (2025-10-10): Initial test suite for CommandRegistry
  */
 
-package com.augmentalis.commandmanager
+package com.augmentalis.voiceoscore
 
 import kotlinx.coroutines.runBlocking
 import org.junit.After

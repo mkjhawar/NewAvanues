@@ -14,13 +14,12 @@ import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.graphics.Rect
 import android.os.Build
-import android.os.Bundle
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.magiccode.plugins.android.ServiceRegistry
 import com.augmentalis.magiccode.plugins.builtin.UIInteractionExecutor
-import com.augmentalis.commandmanager.Bounds
-import com.augmentalis.commandmanager.ElementFingerprint
-import com.augmentalis.commandmanager.ElementInfo
+import com.augmentalis.voiceoscore.Bounds
+import com.augmentalis.voiceoscore.ElementFingerprint
+import com.augmentalis.voiceoscore.ElementInfo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume

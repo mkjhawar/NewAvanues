@@ -19,7 +19,7 @@
  * - v1.0.0: Initial version
  */
 
-package com.augmentalis.commandmanager.actions
+package com.augmentalis.voiceoscore.actions
 
 import android.content.Context
 import android.content.Intent
