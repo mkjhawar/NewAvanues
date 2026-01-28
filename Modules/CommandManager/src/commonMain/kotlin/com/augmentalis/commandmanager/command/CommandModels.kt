@@ -1,31 +1,81 @@
 /**
  * VoiceOS Command Models
  *
- * Re-exports from CommandManager and provides VoiceOSCore-specific extensions
- * with richer type support (Map<String, Any> vs Map<String, String>).
+ * Core command types for the CommandManager module.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Migrated: 2026-01-28
  */
 package com.augmentalis.commandmanager
 
-// Re-export types from CommandManager that don't need extension
-// These are directly usable by VoiceOSCore
-typealias VOSCommand = com.augmentalis.commandmanager.VOSCommand
-typealias CommandSource = com.augmentalis.commandmanager.CommandSource
-typealias ErrorCode = com.augmentalis.commandmanager.ErrorCode
-typealias ParameterType = com.augmentalis.commandmanager.ParameterType
-typealias CommandCategory = com.augmentalis.commandmanager.CommandCategory
-typealias EventType = com.augmentalis.commandmanager.EventType
-typealias CommandInfo = com.augmentalis.commandmanager.CommandInfo
-typealias CommandStats = com.augmentalis.commandmanager.CommandStats
-typealias AccessibilityActions = com.augmentalis.commandmanager.AccessibilityActions
-
-// VoiceOSCore-specific versions with Map<String, Any> support
-// These extend CommandManager types for richer runtime capabilities
+/**
+ * Source of a voice command.
+ */
+enum class CommandSource {
+    VOICE,
+    TEXT,
+    GESTURE,
+    BUTTON,
+    KEYBOARD,
+    SYSTEM,
+    EXTERNAL,
+    UNKNOWN
+}
 
 /**
- * VoiceOSCore Command with Any-typed parameters for runtime flexibility.
+ * Types of command parameters.
+ */
+enum class ParameterType {
+    STRING,
+    NUMBER,
+    BOOLEAN,
+    DATE,
+    TIME,
+    DURATION,
+    CONTACT,
+    LOCATION,
+    APP_NAME,
+    FILE_PATH,
+    URL,
+    CUSTOM
+}
+
+/**
+ * Types of command lifecycle events.
+ */
+enum class EventType {
+    COMMAND_RECEIVED,
+    COMMAND_RECOGNIZED,
+    COMMAND_MATCHED,
+    COMMAND_EXECUTING,
+    COMMAND_COMPLETED,
+    COMMAND_FAILED,
+    COMMAND_CANCELLED,
+    FEEDBACK_PROVIDED
+}
+
+/**
+ * Error codes for command execution failures.
+ */
+enum class ErrorCode {
+    NONE,
+    UNKNOWN,
+    INVALID_COMMAND,
+    COMMAND_NOT_FOUND,
+    PERMISSION_DENIED,
+    NETWORK_ERROR,
+    TIMEOUT,
+    PARSE_ERROR,
+    EXECUTION_FAILED,
+    CANCELLED,
+    NOT_SUPPORTED,
+    RESOURCE_NOT_FOUND,
+    INVALID_PARAMETER,
+    SERVICE_UNAVAILABLE
+}
+
+/**
+ * Command with Any-typed parameters for runtime flexibility.
  */
 data class Command(
     val id: String,
@@ -61,47 +111,53 @@ data class CommandContext(
     val focusedElement: String? = null,
     val customData: Map<String, Any> = emptyMap()
 ) {
-    // Re-use constants from CommandManager
     object AppCategories {
-        const val PRODUCTIVITY = com.augmentalis.commandmanager.CommandContext.AppCategories.PRODUCTIVITY
-        const val SOCIAL = com.augmentalis.commandmanager.CommandContext.AppCategories.SOCIAL
-        const val MEDIA = com.augmentalis.commandmanager.CommandContext.AppCategories.MEDIA
-        const val COMMUNICATION = com.augmentalis.commandmanager.CommandContext.AppCategories.COMMUNICATION
-        const val BROWSER = com.augmentalis.commandmanager.CommandContext.AppCategories.BROWSER
-        const val SHOPPING = com.augmentalis.commandmanager.CommandContext.AppCategories.SHOPPING
-        const val NAVIGATION = com.augmentalis.commandmanager.CommandContext.AppCategories.NAVIGATION
-        const val GAMES = com.augmentalis.commandmanager.CommandContext.AppCategories.GAMES
-        const val SYSTEM = com.augmentalis.commandmanager.CommandContext.AppCategories.SYSTEM
-        const val UNKNOWN = com.augmentalis.commandmanager.CommandContext.AppCategories.UNKNOWN
+        const val PRODUCTIVITY = "productivity"
+        const val SOCIAL = "social"
+        const val MEDIA = "media"
+        const val COMMUNICATION = "communication"
+        const val BROWSER = "browser"
+        const val SHOPPING = "shopping"
+        const val NAVIGATION = "navigation"
+        const val GAMES = "games"
+        const val SYSTEM = "system"
+        const val UNKNOWN = "unknown"
     }
 
     object LocationTypes {
-        const val HOME = com.augmentalis.commandmanager.CommandContext.LocationTypes.HOME
-        const val WORK = com.augmentalis.commandmanager.CommandContext.LocationTypes.WORK
-        const val PUBLIC = com.augmentalis.commandmanager.CommandContext.LocationTypes.PUBLIC
-        const val VEHICLE = com.augmentalis.commandmanager.CommandContext.LocationTypes.VEHICLE
-        const val OUTDOOR = com.augmentalis.commandmanager.CommandContext.LocationTypes.OUTDOOR
-        const val UNKNOWN = com.augmentalis.commandmanager.CommandContext.LocationTypes.UNKNOWN
+        const val HOME = "home"
+        const val WORK = "work"
+        const val PUBLIC = "public"
+        const val VEHICLE = "vehicle"
+        const val OUTDOOR = "outdoor"
+        const val UNKNOWN = "unknown"
     }
 
     object ActivityTypes {
-        const val WALKING = com.augmentalis.commandmanager.CommandContext.ActivityTypes.WALKING
-        const val RUNNING = com.augmentalis.commandmanager.CommandContext.ActivityTypes.RUNNING
-        const val DRIVING = com.augmentalis.commandmanager.CommandContext.ActivityTypes.DRIVING
-        const val STATIONARY = com.augmentalis.commandmanager.CommandContext.ActivityTypes.STATIONARY
-        const val CYCLING = com.augmentalis.commandmanager.CommandContext.ActivityTypes.CYCLING
-        const val UNKNOWN = com.augmentalis.commandmanager.CommandContext.ActivityTypes.UNKNOWN
+        const val WALKING = "walking"
+        const val RUNNING = "running"
+        const val DRIVING = "driving"
+        const val STATIONARY = "stationary"
+        const val CYCLING = "cycling"
+        const val UNKNOWN = "unknown"
     }
 
     object TimeOfDay {
-        const val EARLY_MORNING = com.augmentalis.commandmanager.CommandContext.TimeOfDay.EARLY_MORNING
-        const val MORNING = com.augmentalis.commandmanager.CommandContext.TimeOfDay.MORNING
-        const val AFTERNOON = com.augmentalis.commandmanager.CommandContext.TimeOfDay.AFTERNOON
-        const val EVENING = com.augmentalis.commandmanager.CommandContext.TimeOfDay.EVENING
-        const val NIGHT = com.augmentalis.commandmanager.CommandContext.TimeOfDay.NIGHT
-        const val LATE_NIGHT = com.augmentalis.commandmanager.CommandContext.TimeOfDay.LATE_NIGHT
+        const val EARLY_MORNING = "early_morning"
+        const val MORNING = "morning"
+        const val AFTERNOON = "afternoon"
+        const val EVENING = "evening"
+        const val NIGHT = "night"
+        const val LATE_NIGHT = "late_night"
 
-        fun fromHour(hour: Int): String = com.augmentalis.commandmanager.CommandContext.TimeOfDay.fromHour(hour)
+        fun fromHour(hour: Int): String = when (hour) {
+            in 5..7 -> EARLY_MORNING
+            in 8..11 -> MORNING
+            in 12..16 -> AFTERNOON
+            in 17..20 -> EVENING
+            in 21..23 -> NIGHT
+            else -> LATE_NIGHT
+        }
     }
 
     fun isWeekday(): Boolean = dayOfWeek?.let { it in 2..6 } ?: false
