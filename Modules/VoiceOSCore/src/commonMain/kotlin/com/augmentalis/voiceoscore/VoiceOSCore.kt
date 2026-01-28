@@ -20,6 +20,7 @@
 package com.augmentalis.voiceoscore
 
 import kotlinx.coroutines.flow.*
+import kotlin.collections.flatMap
 
 /**
  * Main facade for VoiceOSCore.
@@ -82,6 +83,11 @@ class VoiceOSCore private constructor(
      */
     val speechResults: Flow<SpeechResult>
         get() = speechEngine?.results ?: emptyFlow()
+
+    /**
+     * Installed app phrases list
+     */
+    private val appHandlerPhrases = mutableListOf<String>()
 
     /**
      * Initialize the core.
@@ -152,6 +158,9 @@ class VoiceOSCore private constructor(
 
                             // Collect voice phrases from all handlers (e.g., app names from AppHandler)
                             val handlerPhrases = handlers.flatMap { it.getVoicePhrases() }
+                            if (appHandlerPhrases.isEmpty()) {
+                                appHandlerPhrases.addAll(handlerPhrases)
+                            }
 
                             // Combine all phrases
                             val allPhrases = (staticPhrases + handlerPhrases).distinct()
@@ -300,7 +309,7 @@ class VoiceOSCore private constructor(
         val engine = speechEngine ?: return Result.failure(
             IllegalStateException("No speech engine configured")
         )
-        return engine.updateCommands(commands)
+        return engine.updateCommands(commands + appHandlerPhrases)
     }
 
     /**
@@ -325,7 +334,7 @@ class VoiceOSCore private constructor(
             // Optionally update speech engine grammar
             if (updateSpeechEngine && speechEngine != null) {
                 val phrases = commands.map { it.phrase }
-                speechEngine?.updateCommands(phrases)
+                speechEngine?.updateCommands(phrases + appHandlerPhrases)
             }
 
             Result.success(Unit)
