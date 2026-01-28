@@ -9,6 +9,7 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.commandmanager.CommandResult
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 

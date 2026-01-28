@@ -10,6 +10,8 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.commandmanager.CommandResult
+
 /**
  * Interface for command execution metrics collection.
  * Enables dependency injection and no-op implementations for testing.
