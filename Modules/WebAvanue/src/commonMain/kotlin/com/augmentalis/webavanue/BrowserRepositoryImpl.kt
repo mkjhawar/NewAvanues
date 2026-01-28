@@ -465,15 +465,49 @@ class BrowserRepositoryImpl(
     }
 
     override suspend fun createFolder(folder: FavoriteFolder): Result<FavoriteFolder> = withContext(Dispatchers.IO) {
-        Result.success(folder)
+        try {
+            queries.insertFavoriteFolder(folder.toDbModel())
+            Napier.d("Created folder: ${folder.name} (${folder.id})", tag = "BrowserRepository")
+            Result.success(folder)
+        } catch (e: Exception) {
+            Napier.e("Failed to create folder: ${e.message}", e, tag = "BrowserRepository")
+            Result.failure(e)
+        }
     }
 
     override suspend fun getAllFolders(): Result<List<FavoriteFolder>> = withContext(Dispatchers.IO) {
-        Result.success(emptyList())
+        try {
+            val folders = queries.selectAllFolders().executeAsList().map { it.toDomainModel() }
+            Napier.d("Loaded ${folders.size} folders", tag = "BrowserRepository")
+            Result.success(folders)
+        } catch (e: Exception) {
+            Napier.e("Failed to load folders: ${e.message}", e, tag = "BrowserRepository")
+            Result.failure(e)
+        }
     }
 
     override suspend fun deleteFolder(folderId: String, deleteContents: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
-        Result.success(Unit)
+        try {
+            // FIX: Wrap all operations in transaction to prevent partial deletes
+            database.transaction {
+                if (deleteContents) {
+                    // Delete all favorites in the folder
+                    queries.deleteFavoritesInFolder(folderId)
+                    Napier.d("Deleted favorites in folder: $folderId", tag = "BrowserRepository")
+                } else {
+                    // Clear folder_id from favorites (orphan them)
+                    queries.clearFolderFromFavorites(folderId)
+                    Napier.d("Cleared folder from favorites: $folderId", tag = "BrowserRepository")
+                }
+                // Delete the folder itself
+                queries.deleteFolderById(folderId)
+            }
+            Napier.d("Deleted folder: $folderId", tag = "BrowserRepository")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Napier.e("Failed to delete folder: ${e.message}", e, tag = "BrowserRepository")
+            Result.failure(e)
+        }
     }
 
     // ==================== History Operations ====================
@@ -905,17 +939,65 @@ class BrowserRepositoryImpl(
 
     override suspend fun clearAllData(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            // PHASE 1: ACID Transaction (Data Integrity Fix)
-            // Wrap all deletes to ensure complete data wipe or rollback
-            database.transactionWithResult {
+            // FIX: Include settings reset in transaction to ensure atomic clear
+            // All data operations happen together - either all succeed or all rollback
+            database.transaction {
                 queries.deleteAllTabs()
                 queries.deleteAllHistory()
                 queries.selectAllFavorites().executeAsList().forEach { queries.deleteFavorite(it.id) }
+                // Reset settings to defaults within the same transaction
+                val defaultSettings = BrowserSettings.default()
+                queries.updateSettings(
+                    theme = defaultSettings.theme.name,
+                    font_size = defaultSettings.fontSize.name,
+                    force_zoom = if (defaultSettings.forceZoom) 1L else 0L,
+                    show_images = if (defaultSettings.showImages) 1L else 0L,
+                    use_desktop_mode = if (defaultSettings.useDesktopMode) 1L else 0L,
+                    block_popups = if (defaultSettings.blockPopups) 1L else 0L,
+                    block_ads = if (defaultSettings.blockAds) 1L else 0L,
+                    block_trackers = if (defaultSettings.blockTrackers) 1L else 0L,
+                    do_not_track = if (defaultSettings.doNotTrack) 1L else 0L,
+                    clear_cache_on_exit = if (defaultSettings.clearCacheOnExit) 1L else 0L,
+                    clear_history_on_exit = if (defaultSettings.clearHistoryOnExit) 1L else 0L,
+                    clear_cookies_on_exit = if (defaultSettings.clearCookiesOnExit) 1L else 0L,
+                    enable_cookies = if (defaultSettings.enableCookies) 1L else 0L,
+                    enable_javascript = if (defaultSettings.enableJavaScript) 1L else 0L,
+                    enable_webrtc = if (defaultSettings.enableWebRTC) 1L else 0L,
+                    default_search_engine = defaultSettings.defaultSearchEngine.name,
+                    search_suggestions = if (defaultSettings.searchSuggestions) 1L else 0L,
+                    voice_search = if (defaultSettings.voiceSearch) 1L else 0L,
+                    home_page = defaultSettings.homePage,
+                    new_tab_page = defaultSettings.newTabPage.name,
+                    restore_tabs_on_startup = if (defaultSettings.restoreTabsOnStartup) 1L else 0L,
+                    open_links_in_background = if (defaultSettings.openLinksInBackground) 1L else 0L,
+                    open_links_in_new_tab = if (defaultSettings.openLinksInNewTab) 1L else 0L,
+                    download_path = defaultSettings.downloadPath,
+                    ask_download_location = if (defaultSettings.askDownloadLocation) 1L else 0L,
+                    download_over_wifi_only = if (defaultSettings.downloadOverWiFiOnly) 1L else 0L,
+                    sync_enabled = if (defaultSettings.syncEnabled) 1L else 0L,
+                    sync_bookmarks = if (defaultSettings.syncBookmarks) 1L else 0L,
+                    sync_history = if (defaultSettings.syncHistory) 1L else 0L,
+                    sync_passwords = if (defaultSettings.syncPasswords) 1L else 0L,
+                    sync_settings = if (defaultSettings.syncSettings) 1L else 0L,
+                    hardware_acceleration = if (defaultSettings.hardwareAcceleration) 1L else 0L,
+                    preload_pages = if (defaultSettings.preloadPages) 1L else 0L,
+                    data_saver = if (defaultSettings.dataSaver) 1L else 0L,
+                    auto_play = defaultSettings.autoPlay.name,
+                    text_reflow = if (defaultSettings.textReflow) 1L else 0L,
+                    enable_voice_commands = if (defaultSettings.enableVoiceCommands) 1L else 0L,
+                    ai_summaries = if (defaultSettings.aiSummaries) 1L else 0L,
+                    ai_translation = if (defaultSettings.aiTranslation) 1L else 0L,
+                    read_aloud = if (defaultSettings.readAloud) 1L else 0L
+                )
             }
-            resetSettings()
             refreshTabs()
             refreshFavorites()
             refreshHistory()
+            // Refresh settings state - load from DB to update _settings StateFlow
+            val dbSettings = queries.selectSettings().executeAsOneOrNull()
+            if (dbSettings != null) {
+                _settings.value = dbSettings.toDomainModel()
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -1049,18 +1131,21 @@ class BrowserRepositoryImpl(
 
     override suspend fun saveSession(session: Session, tabs: List<SessionTab>): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            // Insert session
-            queries.insertSession(
-                id = session.id,
-                timestamp = session.timestamp.toEpochMilliseconds(),
-                active_tab_id = session.activeTabId,
-                tab_count = session.tabCount.toLong(),
-                is_crash_recovery = if (session.isCrashRecovery) 1L else 0L
-            )
+            // FIX: Wrap session + tabs insertion in transaction to prevent orphaned sessions
+            database.transaction {
+                // Insert session
+                queries.insertSession(
+                    id = session.id,
+                    timestamp = session.timestamp.toEpochMilliseconds(),
+                    active_tab_id = session.activeTabId,
+                    tab_count = session.tabCount.toLong(),
+                    is_crash_recovery = if (session.isCrashRecovery) 1L else 0L
+                )
 
-            // Insert all session tabs
-            tabs.forEach { sessionTab ->
-                queries.insertSessionTab(sessionTab.toDbModel())
+                // Insert all session tabs
+                tabs.forEach { sessionTab ->
+                    queries.insertSessionTab(sessionTab.toDbModel())
+                }
             }
 
             Napier.d("Saved session ${session.id} with ${tabs.size} tabs", tag = "BrowserRepository")

@@ -11,13 +11,13 @@
 
 package com.augmentalis.commandmanager.actions
 
-import com.augmentalis.voiceos.command.*
+import com.augmentalis.voiceoscore.*
 import android.accessibilityservice.AccessibilityService
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceos.command.AccessibilityActions.ACTION_SELECT_ALL
+import com.augmentalis.voiceoscore.AccessibilityActions.ACTION_SELECT_ALL
 
 /**
  * Text manipulation command actions

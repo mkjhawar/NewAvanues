@@ -81,7 +81,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.augmentalis.voiceos.command.*
+import com.augmentalis.voiceoscore.*
 import com.augmentalis.commandmanager.processor.CommandProcessor
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -530,12 +530,11 @@ internal fun CommandCategoriesCard(
 ) {
     val categories = listOf(
         CommandCategory.NAVIGATION to Icons.Default.Navigation,
-        CommandCategory.TEXT to Icons.Default.TextFields,
+        CommandCategory.ACCESSIBILITY to Icons.Default.TextFields,
         CommandCategory.MEDIA to Icons.Default.PlayArrow,
         CommandCategory.SYSTEM to Icons.Default.Settings,
-        CommandCategory.APP to Icons.Default.Apps,
-        CommandCategory.VOICE to Icons.Default.Mic,
-        CommandCategory.GESTURE to Icons.Default.TouchApp,
+        CommandCategory.APP_LAUNCH to Icons.Default.Apps,
+        CommandCategory.VOICE_CONTROL to Icons.Default.Mic,
         CommandCategory.CUSTOM to Icons.Default.Build
     )
     
@@ -599,14 +598,12 @@ private fun CategoryButton(
 ) {
     val categoryColor = when (category) {
         CommandCategory.NAVIGATION -> CommandColors.CategoryNavigation
-        CommandCategory.TEXT -> CommandColors.CategoryText
+        CommandCategory.ACCESSIBILITY -> CommandColors.CategoryText
         CommandCategory.MEDIA -> CommandColors.CategoryMedia
         CommandCategory.SYSTEM -> CommandColors.CategorySystem
-        CommandCategory.APP -> CommandColors.CategoryApp
-        CommandCategory.VOICE -> CommandColors.CategoryVoice
-        CommandCategory.GESTURE -> CommandColors.CategoryGesture
+        CommandCategory.APP_LAUNCH -> CommandColors.CategoryApp
+        CommandCategory.VOICE_CONTROL -> CommandColors.CategoryVoice
         CommandCategory.CUSTOM -> CommandColors.CategoryCustom
-        else -> CommandColors.GlassPrimary
     }
     
     Card(

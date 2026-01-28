@@ -66,10 +66,10 @@ include(":Modules:Actions")                 // Intent handlers, action execution
 include(":Modules:Utilities")       // Platform utilities (DeviceInfo, Logger, FileSystem, etc.)
 include(":Modules:LicenseSDK")      // License validation client
 
-// VoiceOS Core Modules
-// DEPRECATED (2026-01-27) - Consolidated into Modules:Database
+// VoiceOS Core Modules - ALL ARCHIVED (2026-01-27)
+// Consolidated into Modules:VoiceOSCore - see Archive/VoiceOS-CoreLibs-270127/
 // include(":Modules:VoiceOS:core:database")       // ARCHIVED - see archive/legacy/VoiceOS-core-database
-include(":Modules:VoiceOS:core:command-models")    // Used by managers/CommandManager
+// include(":Modules:VoiceOS:core:command-models") // ARCHIVED (2026-01-27) - imports migrated to VoiceOSCore
 
 // DEPRECATED (2026-01-21) - Functionality consolidated into VoiceOSCore
 // These modules are redundant copies with old package names (com.augmentalis.voiceos.*)
@@ -101,7 +101,7 @@ include(":android:apps:VoiceUI")
 include(":Modules:VoiceOS:managers:HUDManager")
 include(":Modules:VoiceOS:managers:CommandManager")
 include(":Modules:VoiceOS:managers:VoiceDataManager")
-// include(":Modules:VoiceOS:managers:LocalizationManager")  // Migrated to KMP
+include(":Modules:VoiceOS:managers:LocalizationManager")     // Fixed SQLDelight imports - compiles now
 include(":Modules:Localization")                             // KMP Localization module
 
 // Top-level Shared Modules (consolidated from VoiceOS/libraries and AvaMagic)
@@ -159,6 +159,7 @@ include(":Modules:AvaMagic:AvaUI:AssetManager")         // Asset management
 
 // AvaUI Platform Renderers
 include(":Modules:AvaMagic:AvaUI:Renderers:Android")    // Android Compose renderer
+include(":Modules:AvaMagic:MagicVoiceHandlers")          // Voice command handlers for AVAMagic UI
 
 // Android Apps
 include(":android:apps:webavanue")

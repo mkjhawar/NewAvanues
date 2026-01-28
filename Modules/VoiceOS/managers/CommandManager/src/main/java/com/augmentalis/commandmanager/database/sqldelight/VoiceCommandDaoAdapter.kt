@@ -9,7 +9,6 @@ package com.augmentalis.commandmanager.database.sqldelight
 
 import com.augmentalis.database.VoiceOSDatabase
 import com.augmentalis.database.dto.VoiceCommandDTO
-import com.augmentalis.database.dto.toDTO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -271,7 +270,7 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
     // ==================== EXTENSION ====================
 
     // RENAMED (2025-12-05): Voice_commands -> Commands_static
-    private fun com.augmentalis.database.command.Commands_static.toEntity(): VoiceCommandEntity = VoiceCommandEntity(
+    private fun com.augmentalis.database.Commands_static.toEntity(): VoiceCommandEntity = VoiceCommandEntity(
         uid = this.id,
         id = this.command_id,
         locale = this.locale,

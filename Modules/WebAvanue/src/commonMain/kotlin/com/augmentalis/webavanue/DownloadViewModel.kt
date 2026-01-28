@@ -55,6 +55,9 @@ class DownloadViewModel(
 
     /**
      * Setup progress monitoring
+     *
+     * FIX: Now persists status updates to repository so downloads show correct status
+     * after app restart or when viewing download list.
      */
     private fun setupProgressMonitoring() {
         downloadQueue?.let { queue ->
@@ -65,17 +68,24 @@ class DownloadViewModel(
 
                     val updatedDownloads = _downloads.value.map { download ->
                         progressMap[download.id]?.let { progress ->
-                            download.copy(
+                            val updated = download.copy(
                                 downloadedSize = progress.bytesDownloaded,
                                 fileSize = progress.bytesTotal,
                                 status = progress.status,
-                                filepath = progress.localPath, // ✅
+                                filepath = progress.localPath,
                                 completedAt = if (progress.isComplete) kotlinx.datetime.Clock.System.now() else download.completedAt,
                                 lastProgressUpdate = System.currentTimeMillis()
                             )
+
+                            // FIX: Persist status changes to repository
+                            if (download.status != progress.status) {
+                                persistDownloadUpdate(updated)
+                            }
+
+                            updated
                         } ?: download
                     }
-                    Logger.warn("DownloadViewModel", "setupProgressMonitoring Download progress : - $updatedDownloads")
+                    Logger.info("DownloadViewModel", "Download progress updated: ${updatedDownloads.size} downloads")
                     _downloads.value = updatedDownloads
                     updateActiveDownloads()
                 }
@@ -84,12 +94,51 @@ class DownloadViewModel(
     }
 
     /**
-     * Load all downloads
+     * Persist download update to repository
+     *
+     * FIX: Helper method to save download status changes to repository
+     */
+    private fun persistDownloadUpdate(download: Download) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.updateDownload(download)
+                    .onSuccess {
+                        Logger.info("DownloadViewModel", "Download status persisted: ${download.id} -> ${download.status}")
+                    }
+                    .onFailure { e ->
+                        Logger.error("DownloadViewModel", "Failed to persist download status: ${e.message}", e)
+                    }
+            } catch (e: Exception) {
+                Logger.error("DownloadViewModel", "Error persisting download: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * Load all downloads from repository
+     *
+     * FIX: Now actually loads downloads from repository instead of just clearing state.
+     * Downloads status is properly loaded and will be updated by progress monitoring.
      */
     fun loadDownloads() {
-        // Stub: Downloads not yet implemented in repository
-        _downloads.value = emptyList()
-        _activeDownloads.value = emptyList()
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+            try {
+                repository.getAllDownloads()
+                    .onSuccess { downloads ->
+                        _downloads.value = downloads
+                        updateActiveDownloads()
+                        Logger.info("DownloadViewModel", "Loaded ${downloads.size} downloads from repository")
+                    }
+                    .onFailure { e ->
+                        Logger.error("DownloadViewModel", "Failed to load downloads: ${e.message}", e)
+                        _error.value = "Failed to load downloads"
+                        // Keep existing downloads on error
+                    }
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 
     /**

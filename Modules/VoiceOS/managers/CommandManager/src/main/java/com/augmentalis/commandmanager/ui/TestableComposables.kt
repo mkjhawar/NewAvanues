@@ -14,7 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.augmentalis.voiceos.command.*
+import com.augmentalis.voiceoscore.*
 
 /**
  * CommandManagerContent - Wrapper for CommandManagerScreen for testing

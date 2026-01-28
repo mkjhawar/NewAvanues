@@ -17,8 +17,8 @@ package com.augmentalis.voiceos.cursor.helper
 
 import android.content.Context
 import android.util.Log
-import com.augmentalis.devicemanager.sensors.imu.CursorAdapter
-import com.augmentalis.devicemanager.sensors.imu.IMUManager
+import com.augmentalis.devicemanager.imu.CursorAdapter
+import com.augmentalis.devicemanager.imu.IMUManager
 import com.augmentalis.voiceos.cursor.core.CursorOffset
 import com.augmentalis.voiceos.cursor.core.PositionManager
 import kotlinx.coroutines.CoroutineScope

@@ -8,7 +8,7 @@
 
 package com.augmentalis.commandmanager.context
 
-import com.augmentalis.voiceos.command.CommandDefinition
+import com.augmentalis.voiceoscore.CommandDefinition
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow

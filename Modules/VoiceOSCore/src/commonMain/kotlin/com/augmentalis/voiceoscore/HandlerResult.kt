@@ -101,14 +101,25 @@ sealed class HandlerResult {
     companion object {
         /**
          * Create success result.
+         *
+         * @param message Optional feedback message
+         * @param data Optional result data map
          */
-        fun success(message: String? = null): HandlerResult = Success(message)
+        fun success(message: String? = null, data: Map<String, Any?> = emptyMap()): HandlerResult =
+            Success(message, data)
 
         /**
          * Create failure result.
+         *
+         * @param reason Failure reason
+         * @param recoverable Whether the action can be retried
+         * @param suggestedAction Optional suggested alternative action
          */
-        fun failure(reason: String, recoverable: Boolean = true): HandlerResult =
-            Failure(reason, recoverable)
+        fun failure(
+            reason: String,
+            recoverable: Boolean = true,
+            suggestedAction: String? = null
+        ): HandlerResult = Failure(reason, recoverable, suggestedAction)
 
         /**
          * Create not handled result.

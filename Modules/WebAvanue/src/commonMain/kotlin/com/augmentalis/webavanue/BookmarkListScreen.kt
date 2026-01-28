@@ -191,6 +191,7 @@ fun BookmarkListScreen(
     }
 
     // Add/Edit Bookmark Dialog
+    // FIX: Added onCreateFolder callback to persist new folders to database
     if (showAddDialog || editingFavorite != null) {
         val initialFolderName = editingFavorite?.folderId?.let { fid ->
             folders.find { it.id == fid }?.name
@@ -205,10 +206,10 @@ fun BookmarkListScreen(
             },
             onSave = { url, title, folderName ->
                 val folderId = folders.find { it.name == folderName }?.id
-                if (editingFavorite != null) {
-                    val updated = editingFavorite!!.copy(url = url, title = title, folderId = folderId)
+                editingFavorite?.let { favorite ->
+                    val updated = favorite.copy(url = url, title = title, folderId = folderId)
                     viewModel.updateFavorite(updated)
-                } else {
+                } ?: run {
                     // FIX: Use async addFavorite with duplicate prevention
                     scope.launch {
                         viewModel.addFavorite(url = url, title = title, folderId = folderId)
@@ -216,6 +217,10 @@ fun BookmarkListScreen(
                 }
                 showAddDialog = false
                 editingFavorite = null
+            },
+            // FIX: Create folder in database when user creates new folder
+            onCreateFolder = { folderName ->
+                viewModel.createFolder(folderName)
             }
         )
     }
