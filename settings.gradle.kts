@@ -100,7 +100,8 @@ include(":android:apps:VoiceUI")
 // VoiceOS Managers (remaining in VoiceOS - VoiceOS-specific)
 include(":Modules:VoiceOS:managers:HUDManager")
 include(":Modules:VoiceOS:managers:CommandManager")
-include(":Modules:VoiceOS:managers:VoiceDataManager")
+// include(":Modules:VoiceOS:managers:VoiceDataManager")     // ARCHIVED (2026-01-28) - see archive/VoiceOS-VoiceDataManager-280128
+include(":Modules:VoiceDataManager")                         // KMP VoiceDataManager module (replacement)
 // include(":Modules:VoiceOS:managers:LocalizationManager")  // ARCHIVED (2026-01-28) - see archive/VoiceOS-LocalizationManager-280128
 include(":Modules:LocalizationManager")                      // KMP LocalizationManager module (replacement)
 
