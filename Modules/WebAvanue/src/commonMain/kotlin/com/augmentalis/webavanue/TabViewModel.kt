@@ -575,8 +575,19 @@ class TabViewModel(
             // Treat as search query - use configured search engine
             else -> {
                 val encoded = encodeUrl(trimmed)
-                val searchEngine = _settings.value?.defaultSearchEngine ?: BrowserSettings.SearchEngine.GOOGLE
-                "${searchEngine.baseUrl}?${searchEngine.queryParam}=$encoded"
+                val settings = _settings.value
+                val searchEngine = settings?.defaultSearchEngine ?: BrowserSettings.SearchEngine.GOOGLE
+
+                if (searchEngine == BrowserSettings.SearchEngine.CUSTOM) {
+                    val customUrl = settings?.customSearchEngineUrl ?: ""
+                    if (customUrl.isNotBlank() && customUrl.contains("%s")) {
+                        customUrl.replace("%s", encoded)
+                    } else {
+                        "${BrowserSettings.SearchEngine.GOOGLE.baseUrl}?${BrowserSettings.SearchEngine.GOOGLE.queryParam}=$encoded"
+                    }
+                } else {
+                    "${searchEngine.baseUrl}?${searchEngine.queryParam}=$encoded"
+                }
             }
         }
     }

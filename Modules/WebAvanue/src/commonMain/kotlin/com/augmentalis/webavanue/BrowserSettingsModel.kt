@@ -41,6 +41,8 @@ data class BrowserSettings(
 
     // Search Settings
     val defaultSearchEngine: SearchEngine = SearchEngine.GOOGLE,
+    val customSearchEngineName: String = "Custom",
+    val customSearchEngineUrl: String = "",
     val searchSuggestions: Boolean = true,
     val voiceSearch: Boolean = true,
 

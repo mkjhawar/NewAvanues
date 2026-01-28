@@ -162,6 +162,8 @@ internal fun com.augmentalis.webavanue.data.Browser_settings.toDomainModel() = B
     enableCookies = enable_cookies != 0L, enableJavaScript = enable_javascript != 0L,
     enableWebRTC = enable_webrtc != 0L,
     defaultSearchEngine = safeEnumValueOf(default_search_engine, BrowserSettings.SearchEngine.GOOGLE),
+    customSearchEngineName = custom_search_engine_name,
+    customSearchEngineUrl = custom_search_engine_url,
     searchSuggestions = search_suggestions != 0L, voiceSearch = voice_search != 0L,
     homePage = home_page, newTabPage = safeEnumValueOf(new_tab_page, BrowserSettings.NewTabPage.BLANK),
     restoreTabsOnStartup = restore_tabs_on_startup != 0L,

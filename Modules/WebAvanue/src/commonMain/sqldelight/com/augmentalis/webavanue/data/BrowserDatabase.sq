@@ -119,6 +119,8 @@ CREATE TABLE IF NOT EXISTS browser_settings (
     enable_javascript INTEGER NOT NULL DEFAULT 1,
     enable_webrtc INTEGER NOT NULL DEFAULT 0,
     default_search_engine TEXT NOT NULL DEFAULT 'GOOGLE',
+    custom_search_engine_name TEXT NOT NULL DEFAULT 'Custom',
+    custom_search_engine_url TEXT NOT NULL DEFAULT '',
     search_suggestions INTEGER NOT NULL DEFAULT 1,
     voice_search INTEGER NOT NULL DEFAULT 1,
     home_page TEXT NOT NULL DEFAULT 'https://www.google.com',

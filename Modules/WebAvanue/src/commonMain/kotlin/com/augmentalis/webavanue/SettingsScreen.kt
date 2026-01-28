@@ -113,7 +113,11 @@ private fun SettingsContent(
         item {
             SearchEngineSettingItem(
                 currentEngine = settings.defaultSearchEngine,
-                onEngineSelected = { onUpdateSettings(settings.copy(defaultSearchEngine = it)) }
+                customEngineName = settings.customSearchEngineName,
+                customEngineUrl = settings.customSearchEngineUrl,
+                onEngineSelected = { onUpdateSettings(settings.copy(defaultSearchEngine = it)) },
+                onCustomNameChanged = { onUpdateSettings(settings.copy(customSearchEngineName = it)) },
+                onCustomUrlChanged = { onUpdateSettings(settings.copy(customSearchEngineUrl = it)) }
             )
         }
         item {
