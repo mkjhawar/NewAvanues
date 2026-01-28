@@ -447,6 +447,8 @@ UPDATE browser_settings SET
     enable_javascript = ?,
     enable_webrtc = ?,
     default_search_engine = ?,
+    custom_search_engine_name = ?,
+    custom_search_engine_url = ?,
     search_suggestions = ?,
     voice_search = ?,
     home_page = ?,
