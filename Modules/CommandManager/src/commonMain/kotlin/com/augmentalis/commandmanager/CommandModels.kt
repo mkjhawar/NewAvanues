@@ -1,8 +1,8 @@
 /**
- * CommandManager - Core Command Models
+ * CommandManager - Complete Command Models
  *
- * Pure Kotlin data models for voice command processing.
- * This module provides the API contract - implementations are in VoiceOSCore.
+ * Full-featured data models for voice command processing and execution.
+ * This is the source of truth - all apps should import from here.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Created: 2026-01-28
@@ -13,12 +13,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * Voice OS command structure.
- *
  * Used by command parsers to represent commands from .vos and JSON files.
- *
- * @property action Unique action ID (e.g., "NAVIGATE_FORWARD", "VOLUME_UP")
- * @property cmd Primary command text (e.g., "forward", "increase volume")
- * @property syn List of synonyms (e.g., ["next", "advance", "go forward"])
  */
 @Serializable
 data class VOSCommand(
@@ -29,14 +24,6 @@ data class VOSCommand(
 
 /**
  * Represents a command to be executed by the voice system.
- *
- * @property id Unique identifier for the command
- * @property text Human-readable command text
- * @property source Where the command originated from
- * @property context Additional context about the command environment
- * @property parameters Command-specific parameters
- * @property timestamp When the command was created (milliseconds since epoch)
- * @property confidence Confidence score for the command recognition (0.0-1.0)
  */
 @Serializable
 data class Command(
@@ -54,57 +41,107 @@ data class Command(
  */
 @Serializable
 enum class CommandSource {
-    /** Voice recognition input */
-    VOICE,
-
-    /** Gesture-based input */
-    GESTURE,
-
-    /** Text-based input */
-    TEXT,
-
-    /** App-initiated command */
-    APP,
-
-    /** System-generated command */
-    SYSTEM,
-
-    /** External API or plugin */
-    EXTERNAL
+    VOICE, GESTURE, TEXT, APP, SYSTEM, EXTERNAL
 }
 
 /**
  * Context information about the command execution environment.
- *
- * @property packageName Package name of the active application
- * @property activityName Activity name of the active screen
- * @property appCategory Category of the current app
- * @property viewId View identifier of the focused element
- * @property screenContent Text content visible on screen
- * @property hasEditableFields Whether the screen has editable text fields
- * @property hasScrollableContent Whether the screen has scrollable content
- * @property focusedElement Description of the currently focused UI element
+ * Full-featured context with location, activity, time, and device awareness.
  */
 @Serializable
 data class CommandContext(
+    // App context
     val packageName: String? = null,
     val activityName: String? = null,
     val appCategory: String? = null,
+
+    // Screen context
     val viewId: String? = null,
     val screenContent: String? = null,
+    val screenElements: List<String> = emptyList(),
     val hasEditableFields: Boolean = false,
     val hasScrollableContent: Boolean = false,
-    val focusedElement: String? = null
-)
+    val hasClickableElements: Boolean = false,
+
+    // Location context
+    val userLocation: String? = null,
+    val locationConfidence: Float = 1.0f,
+
+    // Activity context
+    val activityType: String? = null,
+    val activityConfidence: Float = 1.0f,
+
+    // Time context
+    val timeOfDay: String? = null,
+    val hour: Int? = null,
+    val dayOfWeek: Int? = null,
+
+    // Device state
+    val deviceState: Map<String, String> = emptyMap(),
+
+    // Focused element
+    val focusedElement: String? = null,
+
+    // Custom data
+    val customData: Map<String, String> = emptyMap()
+) {
+    object AppCategories {
+        const val PRODUCTIVITY = "productivity"
+        const val SOCIAL = "social"
+        const val MEDIA = "media"
+        const val COMMUNICATION = "communication"
+        const val BROWSER = "browser"
+        const val SHOPPING = "shopping"
+        const val NAVIGATION = "navigation"
+        const val GAMES = "games"
+        const val SYSTEM = "system"
+        const val UNKNOWN = "unknown"
+    }
+
+    object LocationTypes {
+        const val HOME = "home"
+        const val WORK = "work"
+        const val PUBLIC = "public"
+        const val VEHICLE = "vehicle"
+        const val OUTDOOR = "outdoor"
+        const val UNKNOWN = "unknown"
+    }
+
+    object ActivityTypes {
+        const val WALKING = "walking"
+        const val RUNNING = "running"
+        const val DRIVING = "driving"
+        const val STATIONARY = "stationary"
+        const val CYCLING = "cycling"
+        const val UNKNOWN = "unknown"
+    }
+
+    object TimeOfDay {
+        const val EARLY_MORNING = "early_morning"
+        const val MORNING = "morning"
+        const val AFTERNOON = "afternoon"
+        const val EVENING = "evening"
+        const val NIGHT = "night"
+        const val LATE_NIGHT = "late_night"
+
+        fun fromHour(hour: Int): String = when (hour) {
+            in 5..7 -> EARLY_MORNING
+            in 8..11 -> MORNING
+            in 12..16 -> AFTERNOON
+            in 17..20 -> EVENING
+            in 21..23 -> NIGHT
+            else -> LATE_NIGHT
+        }
+    }
+
+    fun isWeekday(): Boolean = dayOfWeek?.let { it in 2..6 } ?: false
+    fun isWeekend(): Boolean = dayOfWeek?.let { it == 1 || it == 7 } ?: false
+    fun isLocationConfident(threshold: Float = 0.7f): Boolean = locationConfidence >= threshold
+    fun isActivityConfident(threshold: Float = 0.7f): Boolean = activityConfidence >= threshold
+}
 
 /**
  * Result of a command execution.
- *
- * @property success Whether the command executed successfully
- * @property commandId The command ID that was executed
- * @property response Human-readable response message
- * @property errorCode Error code if execution failed
- * @property executionTimeMs Time taken to execute (milliseconds)
  */
 @Serializable
 data class CommandResult(
@@ -112,6 +149,8 @@ data class CommandResult(
     val commandId: String,
     val response: String? = null,
     val errorCode: ErrorCode? = null,
+    val errorMessage: String? = null,
+    val errorDetails: String? = null,
     val executionTimeMs: Long = 0
 )
 
@@ -120,49 +159,23 @@ data class CommandResult(
  */
 @Serializable
 enum class ErrorCode {
-    /** Command not found in registry */
+    MODULE_NOT_AVAILABLE,
     COMMAND_NOT_FOUND,
-
-    /** Invalid parameters provided */
     INVALID_PARAMETERS,
-
-    /** Permission denied for this operation */
     PERMISSION_DENIED,
-
-    /** Command execution failed */
     EXECUTION_FAILED,
-
-    /** Operation timed out */
     TIMEOUT,
-
-    /** Command not recognized */
+    NETWORK_ERROR,
+    UNKNOWN,
     UNKNOWN_COMMAND,
-
-    /** Required context missing */
     MISSING_CONTEXT,
-
-    /** Operation was cancelled */
     CANCELLED,
-
-    /** Accessibility service not available */
     NO_ACCESSIBILITY_SERVICE,
-
-    /** Action execution failed */
-    ACTION_FAILED,
-
-    /** Unknown error */
-    UNKNOWN
+    ACTION_FAILED
 }
 
 /**
  * Definition of a registered command.
- *
- * @property id Unique command identifier
- * @property name Display name of the command
- * @property description What the command does
- * @property category Command category for organization
- * @property patterns Recognition patterns for this command
- * @property supportedLanguages Supported language codes
  */
 @Serializable
 data class CommandDefinition(
@@ -171,35 +184,111 @@ data class CommandDefinition(
     val description: String,
     val category: String,
     val patterns: List<String>,
-    val supportedLanguages: List<String> = listOf("en")
+    val parameters: List<CommandParameter> = emptyList(),
+    val requiredPermissions: List<String> = emptyList(),
+    val supportedLanguages: List<String> = listOf("en"),
+    val requiredContext: Set<String> = emptySet()
 )
+
+/**
+ * Definition of a command parameter.
+ */
+@Serializable
+data class CommandParameter(
+    val name: String,
+    val type: ParameterType,
+    val required: Boolean = false,
+    val defaultValue: String? = null,
+    val description: String? = null
+)
+
+/**
+ * Supported parameter types.
+ */
+@Serializable
+enum class ParameterType {
+    STRING, NUMBER, BOOLEAN, LIST, MAP, CUSTOM
+}
 
 /**
  * Command categories for organization.
  */
 @Serializable
 enum class CommandCategory {
-    /** Navigation commands (back, forward, scroll) */
     NAVIGATION,
-
-    /** System commands (volume, brightness) */
     SYSTEM,
-
-    /** App control commands (open, close) */
     APP_CONTROL,
-
-    /** Text editing commands (select, copy, paste) */
     TEXT_EDITING,
-
-    /** UI interaction commands (click, tap) */
     UI_INTERACTION,
-
-    /** Media control commands (play, pause) */
     MEDIA,
-
-    /** Communication commands (call, message) */
     COMMUNICATION,
-
-    /** Custom user-defined commands */
     CUSTOM
+}
+
+/**
+ * Entry in command execution history.
+ */
+@Serializable
+data class CommandHistoryEntry(
+    val commandId: String,
+    val commandText: String,
+    val success: Boolean,
+    val timestamp: Long
+)
+
+/**
+ * Event emitted during command lifecycle.
+ */
+@Serializable
+data class CommandEvent(
+    val type: EventType,
+    val commandId: String? = null,
+    val commandText: String? = null,
+    val message: String? = null,
+    val timestamp: Long
+)
+
+/**
+ * Types of command lifecycle events.
+ */
+@Serializable
+enum class EventType {
+    COMMAND_RECEIVED,
+    COMMAND_EXECUTING,
+    COMMAND_COMPLETED,
+    COMMAND_FAILED,
+    COMMAND_REGISTERED,
+    COMMAND_UNREGISTERED
+}
+
+/**
+ * Basic information about a command.
+ */
+@Serializable
+data class CommandInfo(
+    val id: String,
+    val name: String,
+    val category: String,
+    val isCustom: Boolean = false,
+    val usageCount: Int = 0
+)
+
+/**
+ * Statistics about command usage.
+ */
+@Serializable
+data class CommandStats(
+    val totalCommands: Int,
+    val successfulCommands: Int,
+    val failedCommands: Int,
+    val averageExecutionTime: Long,
+    val topCommands: List<String>
+)
+
+/**
+ * Accessibility action constants.
+ */
+object AccessibilityActions {
+    const val ACTION_SELECT_ALL = 0x10000
+    const val ACTION_BACKUP_AND_RESET_SETTINGS = 0x20000
 }

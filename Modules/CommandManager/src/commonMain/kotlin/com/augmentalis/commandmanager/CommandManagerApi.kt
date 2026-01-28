@@ -185,31 +185,7 @@ interface CommandEventListener {
     fun onCommandFailed(command: Command, error: ErrorCode)
 }
 
-/**
- * Command lifecycle event.
- *
- * @property type Type of event
- * @property command Associated command
- * @property result Command result (if applicable)
- * @property timestamp When the event occurred
- */
-data class CommandEvent(
-    val type: CommandEventType,
-    val command: Command,
-    val result: CommandResult? = null,
-    val timestamp: Long = System.currentTimeMillis()
-)
-
-/**
- * Types of command lifecycle events.
- */
-enum class CommandEventType {
-    RECEIVED,
-    EXECUTING,
-    COMPLETED,
-    FAILED,
-    CANCELLED
-}
+// CommandEvent and EventType are defined in CommandModels.kt
 
 /**
  * Unified CommandManager facade interface.
