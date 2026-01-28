@@ -7,8 +7,15 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Created: 2026-01-28
  */
-package com.augmentalis.commandmanager
+package com.augmentalis.commandmanager.interfaces
 
+import com.augmentalis.commandmanager.models.Command
+import com.augmentalis.commandmanager.models.CommandCategory
+import com.augmentalis.commandmanager.models.CommandContext
+import com.augmentalis.commandmanager.models.CommandDefinition
+import com.augmentalis.commandmanager.models.CommandEvent
+import com.augmentalis.commandmanager.models.CommandResult
+import com.augmentalis.commandmanager.models.ErrorCode
 import kotlinx.coroutines.flow.Flow
 
 /**

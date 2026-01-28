@@ -7,7 +7,7 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Created: 2026-01-28
  */
-package com.augmentalis.commandmanager
+package com.augmentalis.commandmanager.actions
 
 import kotlinx.serialization.Serializable
 
