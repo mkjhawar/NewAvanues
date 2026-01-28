@@ -151,6 +151,7 @@ object AppCategoryClassifier {
      */
     private val emailPatterns = listOf(
         "gmail",
+        "android.gm", // Gmail's actual package: com.google.android.gm
         "outlook",
         "yahoo.mail",
         "mail",
@@ -171,11 +172,13 @@ object AppCategoryClassifier {
         "whatsapp",
         "telegram",
         "messenger",
+        "messaging", // Android Messages: com.google.android.apps.messaging
         "messages",
         "slack",
         "teams",
         "discord",
         "signal",
+        "securesms", // Signal's package: org.thoughtcrime.securesms
         "viber",
         "wechat",
         "line",
@@ -195,12 +198,14 @@ object AppCategoryClassifier {
         "twitter",
         "facebook",
         "tiktok",
+        "musically", // TikTok's package: com.zhiliaoapp.musically
         "linkedin",
         "snapchat",
         "pinterest",
         "reddit",
         "tumblr",
         "threads",
+        "barcelona", // Threads' package: com.instagram.barcelona
         "mastodon",
         "social"
     )
@@ -267,6 +272,7 @@ object AppCategoryClassifier {
         "firefox",
         "browser",
         "edge",
+        "emmx", // Edge's package: com.microsoft.emmx
         "opera",
         "safari",
         "brave",

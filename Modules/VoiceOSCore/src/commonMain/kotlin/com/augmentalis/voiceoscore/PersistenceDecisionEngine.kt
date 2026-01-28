@@ -324,6 +324,16 @@ object PersistenceDecisionEngine {
         // Rule 5: Email/Messaging/Social with ScrollView - context dependent
         // ============================================================
         if (appCategory in listOf(AppCategory.EMAIL, AppCategory.MESSAGING, AppCategory.SOCIAL)) {
+            // Elements with dynamic patterns should NOT be persisted regardless of navigation status
+            if (contentSignal.hasDynamicPatterns) {
+                return PersistenceDecision(
+                    shouldPersist = false,
+                    reason = "Dynamic app (${appCategory.name}) - element contains dynamic patterns (timestamps, status, etc.)",
+                    ruleApplied = 5,
+                    confidence = 0.85f
+                )
+            }
+
             // Check for stable navigation elements
             val isNavigationElement = screenType == ScreenType.NAVIGATION_SCREEN ||
                     (contentSignal.textLength == TextLength.SHORT && contentSignal.hasResourceId)

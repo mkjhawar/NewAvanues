@@ -388,7 +388,12 @@ class PersistenceDecisionEngineTest {
         )
         assertFalse(decision.shouldPersist)
         assertEquals(5, decision.ruleApplied)
-        assertTrue(decision.reason.contains("stability") || decision.reason.contains("criteria"))
+        assertTrue(
+            decision.reason.contains("stability") ||
+            decision.reason.contains("criteria") ||
+            decision.reason.contains("dynamic patterns"),
+            "Reason should mention stability, criteria, or dynamic patterns: ${decision.reason}"
+        )
     }
 
     @Test
