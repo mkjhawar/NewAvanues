@@ -1,5 +1,3 @@
-@file:Suppress("UNUSED_VARIABLE", "UNUSED_VALUE") // currentSection tracks parsing state for debugging
-
 /**
  * YamlComponentParser.kt - YAML parser for component definitions
  *
@@ -39,7 +37,6 @@ class YamlComponentParser {
     private fun parseYamlToMap(yaml: String): Map<String, Any> {
         val result = mutableMapOf<String, Any>()
         val lines = yaml.lines()
-        var currentSection: String? = null
         var currentIndent = 0
         val sectionStack = mutableListOf<Pair<String, MutableMap<String, Any>>>()
 
@@ -62,7 +59,6 @@ class YamlComponentParser {
                 if (value.isEmpty()) {
                     // Start of new section
                     if (indent == 0) {
-                        currentSection = key
                         result[key] = mutableMapOf<String, Any>()
                         sectionStack.clear()
                         sectionStack.add(key to (result[key] as MutableMap<String, Any>))

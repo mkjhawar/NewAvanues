@@ -81,7 +81,7 @@ package com.augmentalis.voiceoscore
  *
  * @param id Unique identifier for this overlay instance
  */
-class ContextMenuOverlay(
+open class ContextMenuOverlay(
     id: String
 ) : BaseOverlay(id, OverlayType.FLOATING) {
 
@@ -485,7 +485,6 @@ class ContextMenuOverlay(
      * Called when menu items or title are updated.
      * Platform implementations should refresh the menu display.
      */
-    @Suppress("RedundantModalityModifier") // Intended for subclass override
     protected open fun onMenuUpdated() {
         // Platform implementations override this to refresh UI
     }
@@ -494,7 +493,6 @@ class ContextMenuOverlay(
      * Called when highlight state changes.
      * Platform implementations should update visual highlight.
      */
-    @Suppress("RedundantModalityModifier") // Intended for subclass override
     protected open fun onHighlightChanged() {
         // Platform implementations override this to update highlight
     }

@@ -1,4 +1,4 @@
-@file:Suppress("USELESS_CAST", "UNCHECKED_CAST") // YAML parsing requires runtime type handling
+@file:Suppress("USELESS_CAST", "UNCHECKED_CAST", "CAST_NEVER_SUCCEEDS") // YAML parsing requires runtime type handling
 
 /**
  * YamlThemeParser.kt - YAML theme file parser for VoiceOSCoreNG

@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION") // AccessibilityEvent.obtain() deprecated in API 34+ but needed for compatibility
+
 /**
  * VoiceOSAccessibilityService.kt - Main Android Accessibility Service
  *
