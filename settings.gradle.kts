@@ -92,14 +92,14 @@ include(":Modules:LicenseSDK")      // License validation client
 // VoiceOS Apps
 // LearnApp and LearnAppDev removed - functionality integrated into VoiceOSCore (2025-12-23)
 // VoiceOS legacy app archived to archive/deprecated/VoiceOS-LegacyApp-260121/ (2026-01-21)
+// Modules/VoiceOS ARCHIVED (2026-01-29) - see archive/VoiceOS-Module-290129/
 include(":android:apps:VoiceRecognition")
-// include(":Modules:VoiceOS:apps:VoiceOS")  // ARCHIVED - use voiceoscoreng instead
 include(":android:apps:VoiceCursor")
 include(":android:apps:VoiceOSIPCTest")
 include(":android:apps:VoiceUI")
 
-// VoiceOS Managers (remaining in VoiceOS - VoiceOS-specific)
-include(":Modules:VoiceOS:managers:HUDManager")
+// VoiceOS Managers - ARCHIVED (2026-01-29)
+// include(":Modules:VoiceOS:managers:HUDManager")  // ARCHIVED - see archive/VoiceOS-Module-290129/
 // include(":Modules:VoiceOS:managers:CommandManager")       // ARCHIVED (2026-01-28) - see archive/VoiceOS-CommandManager-280128
 // include(":Modules:VoiceOS:managers:VoiceDataManager")     // ARCHIVED (2026-01-28) - see archive/VoiceOS-VoiceDataManager-280128
 include(":Modules:VoiceDataManager")                         // KMP VoiceDataManager module (replacement)
@@ -166,4 +166,4 @@ include(":Modules:AvaMagic:MagicVoiceHandlers")          // Voice command handle
 
 // Android Apps
 include(":android:apps:webavanue")
-include(":android:apps:voiceoscoreng")  // VoiceOSCoreNG test app
+include(":android:apps:VoiceOS")  // VoiceOS main app (formerly voiceoscoreng)
