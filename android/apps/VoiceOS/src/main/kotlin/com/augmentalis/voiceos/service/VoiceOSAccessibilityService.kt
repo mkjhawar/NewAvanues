@@ -611,6 +611,10 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     /**
      * Handle incremental content updates from scroll/list changes.
      * Uses dynamic debounce based on device capability.
+     *
+     * GMAIL FIX: Detects significant screen changes (like inbox → email detail)
+     * by comparing element structure. If the screen changed significantly,
+     * clears overlays before updating to prevent stale badges.
      */
     private fun handleContentUpdate(event: AccessibilityEvent) {
         // Get dynamic debounce based on device capability
@@ -628,6 +632,18 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 val rootNode = rootInActiveWindow ?: return@launch
                 val packageName = event.packageName?.toString() ?: rootNode.packageName?.toString() ?: "unknown"
 
+                // GMAIL FIX: Check if screen structure changed significantly
+                // This detects in-app navigation (inbox → detail) that doesn't fire WINDOW_STATE_CHANGED
+                val newScreenHash = screenCacheManager.generateScreenHash(rootNode)
+                val isSignificantChange = currentScreenHash != null && newScreenHash != currentScreenHash
+
+                if (isSignificantChange) {
+                    Log.d(TAG, "Significant screen change detected in content update: ${currentScreenHash?.take(8)} -> ${newScreenHash.take(8)}")
+                    // Clear stale overlay items from previous screen
+                    OverlayStateManager.clearOverlayItems()
+                    currentScreenHash = newScreenHash
+                }
+
                 // Extract current visible elements
                 val elements = mutableListOf<ElementInfo>()
                 val hierarchy = mutableListOf<HierarchyNode>()
@@ -639,11 +655,23 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
                 if (elements.isEmpty()) {
                     Log.v(TAG, "No elements extracted during content update")
+                    // If no elements, clear overlays to prevent stale badges
+                    if (OverlayStateManager.numberedOverlayItems.value.isNotEmpty()) {
+                        OverlayStateManager.clearOverlayItems()
+                    }
                     return@launch
                 }
 
                 // Derive labels for elements
                 val elementLabels = ElementExtractor.deriveElementLabels(elements, hierarchy)
+
+                // GMAIL FIX: If significant change, use fresh generation instead of incremental
+                // This prevents number preservation from a completely different screen
+                if (isSignificantChange) {
+                    Log.d(TAG, "Using fresh command generation due to significant screen change")
+                    // Clear command registry and regenerate fresh
+                    commandRegistry.clear()
+                }
 
                 // Generate/merge commands using incremental generator
                 val commandResult = dynamicCommandGenerator.generateCommandsIncremental(
@@ -651,7 +679,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     hierarchy = hierarchy,
                     elementLabels = elementLabels,
                     packageName = packageName,
-                    existingCommands = commandRegistry.all(),
+                    existingCommands = if (isSignificantChange) emptyList() else commandRegistry.all(),
                     updateSpeechEngine = { phrases ->
                         serviceScope.launch {
                             try {
@@ -663,7 +691,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     }
                 )
 
-                Log.d(TAG, "Incremental update: ${commandResult.totalCommands} commands (${elements.size} elements)")
+                Log.d(TAG, "Incremental update: ${commandResult.totalCommands} commands (${elements.size} elements)${if (isSignificantChange) " [fresh]" else ""}")
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error in content update", e)
