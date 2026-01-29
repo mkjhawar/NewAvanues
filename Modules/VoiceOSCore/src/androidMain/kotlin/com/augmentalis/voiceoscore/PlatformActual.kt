@@ -213,6 +213,7 @@ actual object VivokaEngineFactory {
 
     /**
      * Initialize the factory with Android Application context.
+     * Must be called once from Application.onCreate() before creating engines.
      */
     actual fun initialize(context: Any) {
         val androidContext = context as? android.content.Context
@@ -220,10 +221,61 @@ actual object VivokaEngineFactory {
         applicationContext = androidContext.applicationContext
     }
 
-    actual fun isAvailable(): Boolean = false
+    /**
+     * Check if Vivoka is available on Android.
+     * Returns true if Context is initialized and Vivoka SDK classes are available.
+     */
+    actual fun isAvailable(): Boolean {
+        if (applicationContext == null) return false
 
-    actual fun create(config: VivokaConfig): IVivokaEngine =
-        StubVivokaEngine("Vivoka SDK not available on this build")
+        // Check if Vivoka SDK is available via reflection
+        return try {
+            Class.forName("com.vivoka.vsdk.asr.csdk.recognizer.Recognizer")
+            true
+        } catch (e: ClassNotFoundException) {
+            false
+        }
+    }
+
+    /**
+     * Create Android-specific Vivoka engine.
+     *
+     * @param config Vivoka configuration
+     * @return IVivokaEngine implementation (VivokaAndroidEngine or StubVivokaEngine)
+     */
+    actual fun create(config: VivokaConfig): IVivokaEngine {
+        val context = applicationContext
+            ?: throw IllegalStateException(
+                "VivokaEngineFactory not initialized. " +
+                "Call VivokaEngineFactory.initialize(context) in Application.onCreate()"
+            )
+
+        return if (isAvailable()) {
+            VivokaAndroidEngine(context, config)
+        } else {
+            // Return stub if Vivoka SDK is not available
+            StubVivokaEngine("Vivoka SDK not available. Ensure vivoka-sdk dependency is included.")
+        }
+    }
+
+    /**
+     * Create engine with explicit context (for cases where app context isn't set).
+     * Useful for testing or late initialization.
+     */
+    fun createWithContext(context: android.content.Context, config: VivokaConfig): IVivokaEngine {
+        val appContext = context.applicationContext
+
+        // Also store it for future calls
+        if (applicationContext == null) {
+            applicationContext = appContext
+        }
+
+        return if (isAvailable()) {
+            VivokaAndroidEngine(appContext, config)
+        } else {
+            StubVivokaEngine("Vivoka SDK not available. Ensure vivoka-sdk dependency is included.")
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -231,29 +283,107 @@ actual object VivokaEngineFactory {
 // ═══════════════════════════════════════════════════════════════════
 
 actual object SpeechEngineFactoryProvider {
-    actual fun create(): ISpeechEngineFactory = AndroidSpeechEngineFactory
+    actual fun create(): ISpeechEngineFactory = AndroidSpeechEngineFactory()
 }
 
-private object AndroidSpeechEngineFactory : ISpeechEngineFactory {
+/**
+ * Android speech engine factory implementation.
+ *
+ * Provides access to Android-supported speech engines:
+ * - ANDROID_STT (native)
+ * - VOSK (offline)
+ * - WHISPER (offline)
+ * - VIVOKA (commercial, if SDK available)
+ * - GOOGLE_CLOUD (online, requires API key)
+ * - AZURE (online, requires subscription)
+ */
+internal class AndroidSpeechEngineFactory : ISpeechEngineFactory {
 
-    override fun getAvailableEngines(): List<SpeechEngine> =
-        listOf(SpeechEngine.ANDROID_STT, SpeechEngine.VOSK)
+    override fun getAvailableEngines(): List<SpeechEngine> {
+        return listOf(
+            SpeechEngine.ANDROID_STT,
+            SpeechEngine.VOSK,
+            SpeechEngine.WHISPER,
+            SpeechEngine.GOOGLE_CLOUD,
+            SpeechEngine.AZURE
+        ).filter { isEngineAvailable(it) }
+    }
 
     override fun isEngineAvailable(engine: SpeechEngine): Boolean {
-        return engine == SpeechEngine.ANDROID_STT || engine == SpeechEngine.VOSK
+        return when (engine) {
+            SpeechEngine.ANDROID_STT -> true // Always available on Android
+            SpeechEngine.VOSK -> true // Requires model download
+            SpeechEngine.WHISPER -> true // Requires model download
+            SpeechEngine.VIVOKA -> VivokaEngineFactory.isAvailable()
+            SpeechEngine.GOOGLE_CLOUD -> true // Requires API key
+            SpeechEngine.AZURE -> true // Requires subscription
+            SpeechEngine.APPLE_SPEECH -> false // iOS only
+        }
     }
 
     override fun createEngine(engine: SpeechEngine): Result<ISpeechEngine> {
-        return Result.failure(UnsupportedOperationException("Engine creation not implemented"))
+        return when (engine) {
+            SpeechEngine.VIVOKA -> {
+                if (VivokaEngineFactory.isAvailable()) {
+                    Result.success(VivokaEngineFactory.create(VivokaConfig.DEFAULT))
+                } else {
+                    Result.failure(UnsupportedOperationException("Vivoka SDK not available"))
+                }
+            }
+            else -> {
+                // TODO: Implement actual engine creation for other engines
+                Result.failure(UnsupportedOperationException("Engine $engine not yet implemented"))
+            }
+        }
     }
 
-    override fun getRecommendedEngine(): SpeechEngine = SpeechEngine.ANDROID_STT
+    override fun getRecommendedEngine(): SpeechEngine {
+        // Prefer offline-capable engines, then native
+        return when {
+            isEngineAvailable(SpeechEngine.VIVOKA) -> SpeechEngine.VIVOKA
+            isEngineAvailable(SpeechEngine.VOSK) -> SpeechEngine.VOSK
+            else -> SpeechEngine.ANDROID_STT
+        }
+    }
 
     override fun getEngineFeatures(engine: SpeechEngine): Set<EngineFeature> {
         return when (engine) {
-            SpeechEngine.ANDROID_STT -> setOf(EngineFeature.CONTINUOUS_RECOGNITION)
-            SpeechEngine.VOSK -> setOf(EngineFeature.OFFLINE_MODE, EngineFeature.CUSTOM_VOCABULARY)
-            else -> emptySet()
+            SpeechEngine.ANDROID_STT -> setOf(
+                EngineFeature.CONTINUOUS_RECOGNITION,
+                EngineFeature.LANGUAGE_DETECTION
+            )
+            SpeechEngine.VOSK -> setOf(
+                EngineFeature.OFFLINE_MODE,
+                EngineFeature.CONTINUOUS_RECOGNITION,
+                EngineFeature.CUSTOM_VOCABULARY
+            )
+            SpeechEngine.WHISPER -> setOf(
+                EngineFeature.OFFLINE_MODE,
+                EngineFeature.WORD_TIMESTAMPS,
+                EngineFeature.LANGUAGE_DETECTION,
+                EngineFeature.TRANSLATION,
+                EngineFeature.PUNCTUATION
+            )
+            SpeechEngine.VIVOKA -> setOf(
+                EngineFeature.OFFLINE_MODE,
+                EngineFeature.CONTINUOUS_RECOGNITION,
+                EngineFeature.WAKE_WORD,
+                EngineFeature.CUSTOM_VOCABULARY
+            )
+            SpeechEngine.GOOGLE_CLOUD -> setOf(
+                EngineFeature.CONTINUOUS_RECOGNITION,
+                EngineFeature.WORD_TIMESTAMPS,
+                EngineFeature.SPEAKER_DIARIZATION,
+                EngineFeature.PUNCTUATION
+            )
+            SpeechEngine.AZURE -> setOf(
+                EngineFeature.CONTINUOUS_RECOGNITION,
+                EngineFeature.WORD_TIMESTAMPS,
+                EngineFeature.SPEAKER_DIARIZATION,
+                EngineFeature.TRANSLATION,
+                EngineFeature.PUNCTUATION
+            )
+            SpeechEngine.APPLE_SPEECH -> emptySet() // Not available on Android
         }
     }
 
@@ -264,21 +394,56 @@ private object AndroidSpeechEngineFactory : ISpeechEngineFactory {
                 requiresModelDownload = false,
                 modelSizeMB = 0,
                 requiresNetwork = true,
-                requiresApiKey = false
+                requiresApiKey = false,
+                notes = "Uses device's native speech recognizer"
             )
             SpeechEngine.VOSK -> EngineRequirements(
                 permissions = listOf("android.permission.RECORD_AUDIO"),
                 requiresModelDownload = true,
                 modelSizeMB = 50,
                 requiresNetwork = false,
-                requiresApiKey = false
+                requiresApiKey = false,
+                notes = "Download language model for offline recognition"
             )
-            else -> EngineRequirements(
+            SpeechEngine.WHISPER -> EngineRequirements(
+                permissions = listOf("android.permission.RECORD_AUDIO"),
+                requiresModelDownload = true,
+                modelSizeMB = 230,
+                requiresNetwork = false,
+                requiresApiKey = false,
+                notes = "Download Whisper model (tiny/base/small/medium)"
+            )
+            SpeechEngine.VIVOKA -> EngineRequirements(
+                permissions = listOf("android.permission.RECORD_AUDIO"),
+                requiresModelDownload = true,
+                modelSizeMB = 60,
+                requiresNetwork = false,
+                requiresApiKey = false,
+                notes = "Requires Vivoka commercial license"
+            )
+            SpeechEngine.GOOGLE_CLOUD -> EngineRequirements(
+                permissions = listOf("android.permission.RECORD_AUDIO", "android.permission.INTERNET"),
+                requiresModelDownload = false,
+                modelSizeMB = 0,
+                requiresNetwork = true,
+                requiresApiKey = true,
+                notes = "Requires Google Cloud API key"
+            )
+            SpeechEngine.AZURE -> EngineRequirements(
+                permissions = listOf("android.permission.RECORD_AUDIO", "android.permission.INTERNET"),
+                requiresModelDownload = false,
+                modelSizeMB = 0,
+                requiresNetwork = true,
+                requiresApiKey = true,
+                notes = "Requires Azure subscription key"
+            )
+            SpeechEngine.APPLE_SPEECH -> EngineRequirements(
                 permissions = emptyList(),
                 requiresModelDownload = false,
                 modelSizeMB = 0,
                 requiresNetwork = false,
-                requiresApiKey = false
+                requiresApiKey = false,
+                notes = "Not available on Android"
             )
         }
     }
