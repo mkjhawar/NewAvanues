@@ -5,6 +5,7 @@ import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.ElementInfo
 import com.augmentalis.voiceoscore.ElementFingerprint
 import com.augmentalis.voiceoscore.currentTimeMillis
+import com.augmentalis.voiceoscore.util.NumberToWords
 
 /**
  * Command Generator - Creates voice commands from UI elements.
@@ -286,12 +287,13 @@ object CommandGenerator {
 
     /**
      * Generate numeric commands for list items.
-     * Creates commands with raw numbers "1", "2", "3"... so users can simply say
-     * the number shown in the overlay badge to click that item.
+     * Creates commands with BOTH digit ("1") and word ("one") forms so users can say
+     * either the number shown in the overlay badge or the spoken word to click that item.
      *
-     * IMPORTANT: This is SEPARATE from generateListIndexCommands() which creates
-     * ordinal words ("first", "second"). Numeric commands are what users see
-     * in the numbered overlay badges.
+     * Examples:
+     *   Item 1: registers "1" and "one"
+     *   Item 21: registers "21" and "twenty one"
+     *   Item 100: registers "100" and "one hundred"
      *
      * @param listItems Elements that are list items (have listIndex >= 0)
      * @param packageName Host application package name
@@ -320,41 +322,50 @@ object CommandGenerator {
             .filterNotNull()
             .sortedBy { it.listIndex }
 
-        return bestElementPerIndex.mapIndexed { visualIndex, element ->
+        return bestElementPerIndex.flatMapIndexed { visualIndex, element ->
             // Visual index is 1-based (matches overlay badge numbers)
             val number = visualIndex + 1
             val avid = generateAvid(element, packageName)
 
-            // Derive label for fallback search - prioritize text, then contentDescription
+            // Derive label for fallback search
             val label = when {
                 element.text.isNotBlank() -> element.text
                 element.contentDescription.isNotBlank() -> element.contentDescription
                 else -> ""
             }
 
-            QuantizedCommand(
-                avid = "",
-                phrase = number.toString(),  // Raw number: "1", "2", "3"
-                actionType = CommandActionType.CLICK,
-                targetAvid = avid,
-                confidence = 0.9f,  // High confidence for numeric commands
-                metadata = mapOf(
-                    "packageName" to packageName,
-                    "elementHash" to deriveElementHash(element),
-                    "isNumericCommand" to "true",
-                    "numericIndex" to number.toString(),
-                    "listIndex" to element.listIndex.toString(),
-                    "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}",
-                    // Additional metadata for BoundsResolver fallback layers
-                    "label" to label,
-                    "contentDescription" to element.contentDescription,
-                    "resourceId" to element.resourceId,
-                    "className" to element.className,
-                    // NAV-500 Fix #2: Scroll tracking metadata
-                    "containerId" to element.containerResourceId,
-                    "scrollOffset" to "${element.scrollOffsetX},${element.scrollOffsetY}"
-                )
+            // Generate both digit and word forms
+            val digitPhrase = number.toString()  // "1", "21", "100"
+            val wordPhrase = NumberToWords.convert(number)  // "one", "twenty one", "one hundred"
+
+            val baseMetadata = mapOf(
+                "packageName" to packageName,
+                "elementHash" to deriveElementHash(element),
+                "isNumericCommand" to "true",
+                "numericIndex" to number.toString(),
+                "digitForm" to digitPhrase,
+                "wordForm" to wordPhrase,
+                "listIndex" to element.listIndex.toString(),
+                "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}",
+                "label" to label,
+                "contentDescription" to element.contentDescription,
+                "resourceId" to element.resourceId,
+                "className" to element.className,
+                "containerId" to element.containerResourceId,
+                "scrollOffset" to "${element.scrollOffsetX},${element.scrollOffsetY}"
             )
+
+            // Create commands for both forms
+            listOf(digitPhrase, wordPhrase).map { phrase ->
+                QuantizedCommand(
+                    avid = "",
+                    phrase = phrase,
+                    actionType = CommandActionType.CLICK,
+                    targetAvid = avid,
+                    confidence = 0.9f,  // High confidence for numeric commands
+                    metadata = baseMetadata
+                )
+            }
         }
     }
 

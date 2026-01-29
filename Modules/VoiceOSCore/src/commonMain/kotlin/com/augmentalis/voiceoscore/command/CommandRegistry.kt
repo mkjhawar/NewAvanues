@@ -1,8 +1,10 @@
 package com.augmentalis.voiceoscore
 
 import com.augmentalis.voiceoscore.LoggingUtils
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeout
 import kotlin.concurrent.Volatile
 
 /**
@@ -30,7 +32,17 @@ import kotlin.concurrent.Volatile
  */
 class CommandRegistry {
     /**
-     * Immutable snapshot of commands, keyed by phrase (lowercase).
+     * Atomic snapshot of commands and label cache.
+     * Using a single reference ensures consistent reads without the risk of
+     * reading commands from one update and labelCache from another.
+     */
+    private data class CommandSnapshot(
+        val commands: Map<String, QuantizedCommand>,
+        val labelCache: Map<String, String>
+    )
+
+    /**
+     * Immutable snapshot of commands and labels.
      * Volatile ensures visibility of writes across threads.
      * All reads see a consistent snapshot; writes replace atomically.
      *
@@ -38,14 +50,7 @@ class CommandRegistry {
      * Value: QuantizedCommand
      */
     @Volatile
-    private var commandsSnapshot: Map<String, QuantizedCommand> = emptyMap()
-
-    /**
-     * Cached lowercase labels for partial matching (avoids repeated string operations).
-     * Key: phrase.lowercase(), Value: label portion lowercase
-     */
-    @Volatile
-    private var labelCache: Map<String, String> = emptyMap()
+    private var snapshot: CommandSnapshot = CommandSnapshot(emptyMap(), emptyMap())
 
     private val mutex = Mutex() // Protects ALL concurrent writes
 
@@ -67,21 +72,19 @@ class CommandRegistry {
      * Synchronous update for use in non-coroutine contexts.
      * Commands are keyed by phrase to allow multiple command types per element.
      *
-     * Thread-safe: Uses mutex via tryLock with spinlock fallback.
-     * This ensures consistency with the suspend update() method.
+     * Thread-safe: Uses runBlocking with timeout to acquire the mutex.
+     * This avoids spinlock issues that could cause command execution to stop
+     * after repeated app switches.
      *
      * @param newCommands List of commands from current scan
      */
     fun updateSync(newCommands: List<QuantizedCommand>) {
-        // Spin until we acquire the mutex (avoids mixing @Synchronized with Mutex)
-        while (!mutex.tryLock()) {
-            // Brief yield to avoid busy-wait
-            Thread.yield()
-        }
-        try {
-            updateInternal(newCommands)
-        } finally {
-            mutex.unlock()
+        runBlocking {
+            withTimeout(5000L) {
+                mutex.withLock {
+                    updateInternal(newCommands)
+                }
+            }
         }
     }
 
@@ -96,12 +99,12 @@ class CommandRegistry {
         }
 
         // Build command map and label cache together for efficiency
-        val newSnapshot = mutableMapOf<String, QuantizedCommand>()
+        val newCommands = mutableMapOf<String, QuantizedCommand>()
         val newLabelCache = mutableMapOf<String, String>()
 
         for (cmd in validCommands) {
             val key = cmd.phrase.lowercase()
-            newSnapshot[key] = cmd
+            newCommands[key] = cmd
             // Cache the label portion (everything after first space)
             val label = cmd.phrase.substringAfter(" ").lowercase()
             if (label.length > 1) {
@@ -109,8 +112,8 @@ class CommandRegistry {
             }
         }
 
-        commandsSnapshot = newSnapshot
-        labelCache = newLabelCache
+        // Single atomic write ensures consistent reads
+        snapshot = CommandSnapshot(newCommands, newLabelCache)
     }
 
     /**
@@ -124,12 +127,11 @@ class CommandRegistry {
      */
     fun findByPhrase(phrase: String): QuantizedCommand? {
         val normalized = phrase.lowercase().trim()
-        val snapshot = commandsSnapshot // Read volatile once
-        val labels = labelCache // Read volatile once
-        LoggingUtils.d("findByPhrase('$phrase'): searching ${snapshot.size} commands", TAG)
+        val snap = snapshot // Single atomic read
+        LoggingUtils.d("findByPhrase('$phrase'): searching ${snap.commands.size} commands", TAG)
 
         // Direct key lookup (O(1) - commands are keyed by phrase)
-        val exactMatch = snapshot[normalized]
+        val exactMatch = snap.commands[normalized]
         if (exactMatch != null) {
             LoggingUtils.d("findByPhrase: exact match found - '${exactMatch.phrase}'", TAG)
             return exactMatch
@@ -137,9 +139,9 @@ class CommandRegistry {
 
         // Partial match using cached labels (avoids repeated string operations)
         // BUG FIX: Skip empty labels to avoid false matches (endsWith("") always returns true)
-        for ((key, label) in labels) {
+        for ((key, label) in snap.labelCache) {
             if (normalized == label || normalized.endsWith(label, ignoreCase = true)) {
-                val match = snapshot[key]
+                val match = snap.commands[key]
                 if (match != null) {
                     LoggingUtils.d("findByPhrase: partial match found - '${match.phrase}'", TAG)
                     return match
@@ -147,7 +149,7 @@ class CommandRegistry {
             }
         }
 
-        LoggingUtils.d("findByPhrase: no match for '$phrase'. Available: ${snapshot.keys.take(5)}", TAG)
+        LoggingUtils.d("findByPhrase: no match for '$phrase'. Available: ${snap.commands.keys.take(5)}", TAG)
         return null
     }
 
@@ -165,7 +167,7 @@ class CommandRegistry {
      * @return First matching QuantizedCommand or null
      */
     fun findByVuid(vuid: String): QuantizedCommand? {
-        return commandsSnapshot.values.firstOrNull { it.targetVuid == vuid }
+        return snapshot.commands.values.firstOrNull { it.targetVuid == vuid }
     }
 
     /**
@@ -178,7 +180,7 @@ class CommandRegistry {
      * @return List of commands targeting this element
      */
     fun findAllByVuid(vuid: String): List<QuantizedCommand> {
-        return commandsSnapshot.values.filter { it.targetVuid == vuid }
+        return snapshot.commands.values.filter { it.targetVuid == vuid }
     }
 
     /**
@@ -189,7 +191,7 @@ class CommandRegistry {
      * @return List of all commands
      */
     fun all(): List<QuantizedCommand> {
-        return commandsSnapshot.values.toList()
+        return snapshot.commands.values.toList()
     }
 
     /**
@@ -197,58 +199,58 @@ class CommandRegistry {
      * Useful for adding index commands ("first", "second") alongside existing commands.
      * Commands are keyed by phrase, so multiple commands can target the same element.
      *
-     * Thread-safe: Uses mutex via tryLock with spinlock fallback.
-     * This ensures consistency with the suspend update() method.
+     * Thread-safe: Uses runBlocking with timeout to acquire the mutex.
+     * This avoids spinlock issues that could cause command execution to stop
+     * after repeated app switches.
      *
      * @param commands List of commands to add
      */
     fun addAll(commands: List<QuantizedCommand>) {
         if (commands.isEmpty()) return
 
-        // Spin until we acquire the mutex
-        while (!mutex.tryLock()) {
-            Thread.yield()
-        }
-        try {
-            val toAdd = commands
-                .filter { it.targetVuid != null && it.phrase.isNotBlank() }
+        runBlocking {
+            withTimeout(5000L) {
+                mutex.withLock {
+                    val toAdd = commands
+                        .filter { it.targetVuid != null && it.phrase.isNotBlank() }
 
-            if (toAdd.isEmpty()) return
+                    if (toAdd.isEmpty()) return@withLock
 
-            val newSnapshot = commandsSnapshot.toMutableMap()
-            val newLabelCache = labelCache.toMutableMap()
+                    val snap = snapshot // Single atomic read
+                    val newCommands = snap.commands.toMutableMap()
+                    val newLabelCache = snap.labelCache.toMutableMap()
 
-            for (cmd in toAdd) {
-                val key = cmd.phrase.lowercase()
-                newSnapshot[key] = cmd
-                val label = cmd.phrase.substringAfter(" ").lowercase()
-                if (label.length > 1) {
-                    newLabelCache[key] = label
+                    for (cmd in toAdd) {
+                        val key = cmd.phrase.lowercase()
+                        newCommands[key] = cmd
+                        val label = cmd.phrase.substringAfter(" ").lowercase()
+                        if (label.length > 1) {
+                            newLabelCache[key] = label
+                        }
+                    }
+
+                    LoggingUtils.d("addAll: adding ${toAdd.size} commands: ${toAdd.take(5).map { it.phrase }}", TAG)
+                    // Single atomic write ensures consistent reads
+                    snapshot = CommandSnapshot(newCommands, newLabelCache)
                 }
             }
-
-            LoggingUtils.d("addAll: adding ${toAdd.size} commands: ${toAdd.take(5).map { it.phrase }}", TAG)
-            commandsSnapshot = newSnapshot
-            labelCache = newLabelCache
-        } finally {
-            mutex.unlock()
         }
     }
 
     /**
      * Clear all commands.
      *
-     * Thread-safe: Uses mutex for consistency with other write operations.
+     * Thread-safe: Uses runBlocking with timeout to acquire the mutex.
+     * This avoids spinlock issues that could cause command execution to stop
+     * after repeated app switches.
      */
     fun clear() {
-        while (!mutex.tryLock()) {
-            Thread.yield()
-        }
-        try {
-            commandsSnapshot = emptyMap()
-            labelCache = emptyMap()
-        } finally {
-            mutex.unlock()
+        runBlocking {
+            withTimeout(5000L) {
+                mutex.withLock {
+                    snapshot = CommandSnapshot(emptyMap(), emptyMap())
+                }
+            }
         }
     }
 
@@ -257,5 +259,5 @@ class CommandRegistry {
      *
      * Thread-safe: Reads from immutable snapshot.
      */
-    val size: Int get() = commandsSnapshot.size
+    val size: Int get() = snapshot.commands.size
 }

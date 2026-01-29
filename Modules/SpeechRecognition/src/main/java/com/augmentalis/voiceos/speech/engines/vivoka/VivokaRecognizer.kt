@@ -36,6 +36,12 @@ class VivokaRecognizer(
     companion object {
         private const val TAG = "VivokaRecognizer"
         private const val PROCESSING_DELAY = 200L
+
+        /**
+         * Vivoka SDK returns confidence in 0-10000 range.
+         * This constant is used to normalize to 0.0-1.0 range.
+         */
+        private const val VIVOKA_MAX_CONFIDENCE = 10000f
     }
 
     // Configuration
@@ -110,15 +116,17 @@ class VivokaRecognizer(
             }
 
             val command = cleanString(first.text ?: "")
-            val confidence = first.confidence
+            val rawConfidence = first.confidence  // Vivoka returns 0-10000
+            // Normalize to 0.0-1.0 for comparison with threshold
+            val normalizedConfidence = (rawConfidence.toFloat() / VIVOKA_MAX_CONFIDENCE).coerceIn(0f, 1f)
 
-            Log.d(TAG, "Hypothesis: command='$command', confidence=$confidence, threshold=${config.confidenceThreshold}")
+            Log.d(TAG, "Hypothesis: command='$command', rawConfidence=$rawConfidence, normalized=$normalizedConfidence, threshold=${config.confidenceThreshold}")
 
-            if (confidence < config.confidenceThreshold) {
+            if (normalizedConfidence < config.confidenceThreshold) {
                 onPartialResultListener?.invoke(command)
                 recognitionProcessingJob?.cancel()
                 onModeSwitch(RecognizerMode.COMMAND)
-                return RecognitionProcessingResult.lowConfidence(command, confidence)
+                return RecognitionProcessingResult.lowConfidence(command, rawConfidence)
             }
 
             // Wake from sleep (unmute) takes precedence.
@@ -137,7 +145,7 @@ class VivokaRecognizer(
                 return if (isStop) {
                     RecognitionProcessingResult.dictationEnd()
                 } else {
-                    val speechResult = createRecognitionResult(command, confidence, true)
+                    val speechResult = createRecognitionResult(command, rawConfidence, true)
                     _resultFlow.value = speechResult
                     Log.d(TAG, "SPEECH_TEST: processRecognitionResult speechResult = $speechResult")
                     onResultListener?.invoke(speechResult)
@@ -156,7 +164,7 @@ class VivokaRecognizer(
                     RecognitionProcessingResult.dictationStart()
                 }
                 else -> {
-                    val speechResult = createRecognitionResult(command, confidence, true)
+                    val speechResult = createRecognitionResult(command, rawConfidence, true)
                     startCommandProcessing(speechResult) // keep async stability behavior
                     onModeSwitch(RecognizerMode.COMMAND)
                     RecognitionProcessingResult.regularCommand(speechResult)
