@@ -11,6 +11,11 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.Command
+import com.augmentalis.voiceoscore.CommandError
+import com.augmentalis.voiceoscore.CommandResult
+import com.augmentalis.voiceoscore.CommandSource
+import com.augmentalis.voiceoscore.ErrorCode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

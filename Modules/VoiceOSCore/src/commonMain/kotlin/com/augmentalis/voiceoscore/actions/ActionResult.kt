@@ -1,12 +1,13 @@
 /**
  * ActionResult.kt - Action execution results
  *
- * Re-exports ActionResult from voiceoscore and adds VoiceOSCore-specific extensions.
+ * Re-exports ActionResult from CommandManager and adds VoiceOSCore-specific extensions.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Migrated: 2026-01-28
  */
 package com.augmentalis.voiceoscore
+
 
 /**
  * Result of an action execution.
