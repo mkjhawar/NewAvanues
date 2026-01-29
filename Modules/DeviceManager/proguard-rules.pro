@@ -29,11 +29,6 @@
 -keep class androidx.camera.** { *; }
 -keepclassmembers class androidx.camera.** { *; }
 
-# Media3/ExoPlayer
--keep class androidx.media3.** { *; }
--keepclassmembers class androidx.media3.** { *; }
--dontwarn androidx.media3.**
-
 # Window Manager for foldables
 -keep class androidx.window.** { *; }
 -keepclassmembers class androidx.window.** { *; }

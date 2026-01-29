@@ -136,11 +136,6 @@ kotlin {
                 implementation("androidx.camera:camera-lifecycle:1.3.1")
                 implementation("androidx.camera:camera-view:1.3.1")
 
-                // Media3 for advanced audio/video
-                implementation("androidx.media3:media3-exoplayer:1.2.1")
-                implementation("androidx.media3:media3-ui:1.2.1")
-                implementation("androidx.media3:media3-session:1.2.1")
-
                 // WorkManager for background tasks
                 implementation("androidx.work:work-runtime-ktx:2.9.0")
             }

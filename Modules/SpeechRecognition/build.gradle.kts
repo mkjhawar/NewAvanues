@@ -100,10 +100,8 @@ kotlin {
                 implementation("androidx.activity:activity-compose:1.8.2")
                 implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
-                // Android Audio
+                // Android Audio (legacy media library for basic audio support)
                 implementation("androidx.media:media:1.7.0")
-                implementation("androidx.media3:media3-exoplayer:1.2.1")
-                implementation("androidx.media3:media3-session:1.2.1")
 
                 // Compatibility and Fallback Support
                 implementation("androidx.multidex:multidex:2.0.1")
