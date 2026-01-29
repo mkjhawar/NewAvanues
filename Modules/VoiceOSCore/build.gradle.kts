@@ -89,7 +89,8 @@ kotlin {
                 implementation(platform(libs.compose.bom.get()))
                 implementation(libs.compose.ui.ui)
                 implementation(libs.compose.material3)
-                implementation(libs.compose.material.icons.extended)
+                // material-icons-extended removed to reduce APK size (~15MB)
+                // Icons are now provided as vector drawables in VoiceOS app
                 implementation(libs.compose.ui.tooling.preview)
 
                 // SQLDelight Android Driver

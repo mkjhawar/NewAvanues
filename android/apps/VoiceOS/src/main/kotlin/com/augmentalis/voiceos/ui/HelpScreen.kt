@@ -27,9 +27,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
+import com.augmentalis.voiceos.ui.icons.VoiceOSIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -164,7 +164,7 @@ private fun QuickTipCard() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                Icons.AutoMirrored.Filled.HelpOutline,
+                VoiceOSIcons.helpOutline(),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -244,7 +244,7 @@ private fun CategoryCard(
                 }
 
                 Icon(
-                    if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    if (isExpanded) VoiceOSIcons.expandLess() else VoiceOSIcons.expandMore(),
                     contentDescription = if (isExpanded) "Collapse" else "Expand"
                 )
             }
@@ -325,16 +325,17 @@ private fun CommandItem(
 /**
  * Get icon for category based on ID.
  */
+@Composable
 private fun getCategoryIcon(categoryId: String): ImageVector {
     return when (categoryId) {
-        "navigation" -> Icons.Default.Navigation
-        "app_control" -> Icons.Default.Apps
-        "ui_interaction" -> Icons.Default.TouchApp
-        "text_input" -> Icons.Default.Keyboard
+        "navigation" -> VoiceOSIcons.navigation()
+        "app_control" -> VoiceOSIcons.apps()
+        "ui_interaction" -> VoiceOSIcons.touchApp()
+        "text_input" -> VoiceOSIcons.keyboard()
         "system" -> Icons.Default.Settings
-        "media" -> Icons.Default.PlayCircle
-        "voiceos" -> Icons.Default.Mic
-        else -> Icons.AutoMirrored.Filled.HelpOutline
+        "media" -> VoiceOSIcons.playCircle()
+        "voiceos" -> VoiceOSIcons.mic()
+        else -> VoiceOSIcons.helpOutline()
     }
 }
 
@@ -354,7 +355,7 @@ fun HelpFab(
         contentColor = MaterialTheme.colorScheme.onTertiaryContainer
     ) {
         Icon(
-            Icons.AutoMirrored.Filled.HelpOutline,
+            VoiceOSIcons.helpOutline(),
             contentDescription = "Voice Command Help"
         )
     }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.augmentalis.voiceos.ui.icons.VoiceOSIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -340,7 +341,7 @@ private fun AccessibilitySettingsScreen(onBack: () -> Unit) {
                         ) {
                             Text("Rescan Everything", color = Color(0xFFEF4444))
                             Icon(
-                                Icons.Default.DeleteSweep,
+                                VoiceOSIcons.deleteSweep(),
                                 contentDescription = null,
                                 tint = Color(0xFFEF4444),
                                 modifier = Modifier.size(20.dp)
