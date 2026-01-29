@@ -1541,6 +1541,549 @@ class XmlThemeImporter(context: Context) {
 
 ---
 
-**Document Version**: 3.1.0
-**Last Updated**: 2025-10-27
+## Chapter 11: Speech Recognition Confidence Handling
+
+### Overview
+
+VoiceOS supports multiple speech recognition engines with different confidence scales. The system normalizes all confidence values to enable consistent threshold comparisons.
+
+### Engine Confidence Scales
+
+| Engine | Native Scale | Normalized Scale |
+|--------|-------------|------------------|
+| **Vivoka SDK** | 0-10000 | 0.0-1.0 |
+| **Google Cloud** | 0.0-1.0 | 0.0-1.0 (pass-through) |
+| **VOSK** | Log-likelihood | 0.0-1.0 (sigmoid) |
+| **Android STT** | 0.0-1.0 | 0.0-1.0 (pass-through) |
+| **Whisper** | 0.0-1.0 | 0.0-1.0 (pass-through) |
+
+### Confidence Normalization
+
+**File**: `SpeechRecognition/src/.../ConfidenceScorer.kt`
+
+```kotlin
+fun normalizeConfidence(rawScore: Float, engine: RecognitionEngine): Float {
+    return when (engine) {
+        RecognitionEngine.VIVOKA -> {
+            // Vivoka uses 0-10000 scale
+            (rawScore / 10000f).coerceIn(0f, 1f)
+        }
+        RecognitionEngine.VOSK -> {
+            // Sigmoid normalization for log-likelihood
+            (1f / (1f + exp(-rawScore))).coerceIn(0f, 1f)
+        }
+        else -> rawScore.coerceIn(0f, 1f)
+    }
+}
+```
+
+### Vivoka Integration
+
+The Vivoka SDK returns confidence in the 0-10000 range. This is normalized before threshold comparison:
+
+**File**: `SpeechRecognition/src/.../vivoka/VivokaRecognizer.kt`
+
+```kotlin
+companion object {
+    private const val VIVOKA_MAX_CONFIDENCE = 10000f
+}
+
+// In processRecognitionResult():
+val rawConfidence = first.confidence  // 0-10000 from Vivoka SDK
+val normalizedConfidence = (rawConfidence.toFloat() / VIVOKA_MAX_CONFIDENCE).coerceIn(0f, 1f)
+
+// Compare normalized value against threshold (0.0-1.0)
+if (normalizedConfidence < config.confidenceThreshold) {
+    // Reject low-confidence result
+}
+```
+
+### Confidence Thresholds
+
+```kotlin
+object ConfidenceScorer {
+    const val THRESHOLD_HIGH = 0.85f    // Execute immediately
+    const val THRESHOLD_MEDIUM = 0.70f  // Ask confirmation
+    const val THRESHOLD_LOW = 0.50f     // Show alternatives
+    // Below 0.50 = Rejected
+}
+```
+
+---
+
+## Chapter 12: Numeric Voice Commands
+
+### Overview
+
+VoiceOS supports numeric voice commands in both digit form ("1", "100") and word form ("one", "one hundred"). This enables natural speech recognition for numbered items.
+
+### NumberToWords Utility
+
+**File**: `VoiceOSCore/src/commonMain/kotlin/com/augmentalis/voiceoscore/util/NumberToWords.kt`
+
+```kotlin
+object NumberToWords {
+    // Convert number to words
+    fun convert(number: Int): String
+
+    // Parse words back to number
+    fun parse(words: String): Int?
+
+    // Handle suffixes (percent, dollars, etc.)
+    fun convertWithSuffix(numberWithSuffix: String): String?
+    fun parseWithSuffix(words: String): String?
+}
+```
+
+### Conversion Examples
+
+| Number | Word Form |
+|--------|-----------|
+| 1 | one |
+| 21 | twenty one |
+| 100 | one hundred |
+| 101 | one hundred one |
+| 143 | one hundred forty three |
+| 1000 | one thousand |
+| 1234 | one thousand two hundred thirty four |
+
+### Suffix Support
+
+```kotlin
+// Percentages
+NumberToWords.convertWithSuffix("143%")  // "one hundred forty three percent"
+
+// Currency
+NumberToWords.convertWithSuffix("$50")   // "fifty dollars"
+NumberToWords.convertWithSuffix("£100")  // "one hundred pounds"
+
+// Units
+NumberToWords.convertWithSuffix("25°C")  // "twenty five degrees celsius"
+NumberToWords.convertWithSuffix("100GB") // "one hundred gigabytes"
+
+// Reverse parsing
+NumberToWords.parseWithSuffix("one hundred forty three percent")  // "143%"
+```
+
+### Regional Number Systems
+
+VoiceOS supports multiple number systems for international users:
+
+```kotlin
+enum class NumberSystem {
+    WESTERN,    // thousand, million, billion, trillion
+    INDIAN,     // thousand, lakh, crore, arab, kharab
+    EAST_ASIAN  // thousand, wan (万), yi (亿)
+}
+
+// Set default system
+NumberToWords.defaultSystem = NumberSystem.INDIAN
+
+// Or specify per conversion
+NumberToWords.convert(10000000, NumberSystem.INDIAN)  // "one crore"
+NumberToWords.convert(10000000, NumberSystem.WESTERN) // "ten million"
+```
+
+#### Indian Number System Examples
+
+| Number | Western | Indian |
+|--------|---------|--------|
+| 1,000 | one thousand | one thousand |
+| 100,000 | one hundred thousand | one lakh |
+| 10,00,000 | one million | ten lakh |
+| 1,00,00,000 | ten million | one crore |
+| 1,00,00,00,000 | one billion | one arab |
+
+#### Number Formatting
+
+```kotlin
+// Western: 1,234,567,890
+NumberToWords.formatWithGrouping(1234567890, NumberSystem.WESTERN)
+
+// Indian: 1,23,45,67,890
+NumberToWords.formatWithGrouping(1234567890, NumberSystem.INDIAN)
+```
+
+### Comprehensive Currency Support
+
+VoiceOS supports 50+ currencies organized by region:
+
+#### Americas
+- USD ($, US$) - US dollars
+- CAD (C$) - Canadian dollars
+- MXN (MX$) - Mexican pesos
+- BRL (R$) - Brazilian reais
+
+#### Europe
+- EUR (€) - Euros
+- GBP (£) - British pounds
+- CHF - Swiss francs
+- RUB (₽) - Russian rubles
+- TRY (₺) - Turkish lira
+
+#### Asia - East
+- JPY (¥) - Japanese yen
+- CNY (CN¥, 元, RMB) - Chinese yuan
+- KRW (₩) - Korean won
+- TWD (NT$) - Taiwan dollars
+- HKD (HK$) - Hong Kong dollars
+
+#### Asia - South
+- INR (₹, Rs) - Indian rupees
+- PKR - Pakistani rupees
+- BDT (৳) - Bangladeshi taka
+- LKR - Sri Lankan rupees
+
+#### Middle East
+- SAR - Saudi riyals
+- AED - UAE dirhams
+- ILS (₪) - Israeli shekels
+
+#### Crypto
+- BTC (₿) - Bitcoin
+- ETH (Ξ) - Ethereum
+
+#### Currency Conversion Examples
+
+```kotlin
+// Automatic system detection based on currency
+NumberToWords.convertCurrency(500000, "INR")  // "five lakh indian rupees"
+NumberToWords.convertCurrency(500000, "USD")  // "five hundred thousand us dollars"
+
+// With explicit system
+NumberToWords.convertWithSuffix("₹50,00,000", NumberSystem.INDIAN)
+// "fifty lakh rupees"
+```
+
+### Supported Unit Suffixes
+
+#### Percentage & Temperature
+- % (percent)
+- °, °C, °F, K (degrees)
+
+#### Length
+- **Metric**: km, m, cm, mm, μm, nm
+- **Imperial**: mi, yd, ft, in
+
+#### Weight
+- **Metric**: kg, g, mg, μg, t (tonnes)
+- **Imperial**: lb, lbs, oz, st (stone)
+
+#### Volume
+- **Metric**: L, ml, cl
+- **Imperial**: gal, qt, pt, fl oz
+
+#### Data Storage
+- B, KB, MB, GB, TB, PB
+- KiB, MiB, GiB, TiB (binary)
+
+#### Frequency & Speed
+- Hz, kHz, MHz, GHz
+- mph, km/h, m/s, fps
+- kbps, Mbps, Gbps
+
+#### Power & Energy
+- W, kW, MW
+- Wh, kWh
+- V, mV, A, mA, mAh
+
+#### Display
+- px, pt, dp, sp, dpi, ppi
+
+#### Audio & Pressure
+- dB, dBA
+- Pa, kPa, psi, bar, atm
+
+### Command Registration
+
+Numeric commands are registered with both forms:
+
+**File**: `VoiceOSCore/src/commonMain/kotlin/com/augmentalis/voiceoscore/command/CommandGenerator.kt`
+
+```kotlin
+fun generateNumericCommands(listItems: List<ElementInfo>, packageName: String): List<QuantizedCommand> {
+    return bestElementPerIndex.flatMapIndexed { visualIndex, element ->
+        val number = visualIndex + 1
+        val digitPhrase = number.toString()           // "1", "21", "100"
+        val wordPhrase = NumberToWords.convert(number) // "one", "twenty one", "one hundred"
+
+        // Register BOTH forms for the same target
+        listOf(digitPhrase, wordPhrase).map { phrase ->
+            QuantizedCommand(
+                phrase = phrase,
+                actionType = CommandActionType.CLICK,
+                targetAvid = avid,
+                confidence = 0.9f,
+                metadata = mapOf(
+                    "isNumericCommand" to "true",
+                    "digitForm" to digitPhrase,
+                    "wordForm" to wordPhrase
+                )
+            )
+        }
+    }
+}
+```
+
+### "And" Tolerance
+
+The parser tolerates the word "and" in spoken numbers:
+
+```kotlin
+// Both are valid:
+NumberToWords.parse("one hundred and forty three")  // 143
+NumberToWords.parse("one hundred forty three")      // 143
+```
+
+---
+
+## Chapter 13: Command Registry and App Switching
+
+### Overview
+
+The CommandRegistry stores voice commands for the current screen. Proper management is critical to prevent stale commands and memory issues when switching apps.
+
+### CommandRegistry Architecture
+
+**File**: `VoiceOSCore/src/commonMain/kotlin/com/augmentalis/voiceoscore/command/CommandRegistry.kt`
+
+```kotlin
+class CommandRegistry {
+    // Atomic snapshot pattern for thread-safety
+    private data class CommandSnapshot(
+        val commands: Map<String, QuantizedCommand>,
+        val labelCache: Map<String, String>
+    )
+
+    @Volatile
+    private var snapshot: CommandSnapshot = CommandSnapshot(emptyMap(), emptyMap())
+
+    // Single atomic read for consistent state
+    fun findByPhrase(phrase: String): QuantizedCommand? {
+        val snap = snapshot  // Atomic read
+        // Use snap.commands and snap.labelCache
+    }
+}
+```
+
+### Thread Safety
+
+The registry uses:
+1. **Atomic snapshot pattern**: Single `@Volatile` reference ensures consistent reads
+2. **Coroutine mutex**: Protects concurrent writes
+3. **Timeout protection**: Prevents indefinite blocking
+
+```kotlin
+fun updateSync(newCommands: List<QuantizedCommand>) {
+    runBlocking {
+        withTimeout(5000L) {
+            mutex.withLock {
+                updateInternal(newCommands)
+            }
+        }
+    }
+}
+```
+
+### App Switch Handling
+
+When the user switches apps, stale commands must be cleared:
+
+**File**: `VoiceOSCore/src/androidMain/kotlin/com/augmentalis/voiceoscore/VoiceOSAccessibilityService.kt`
+
+```kotlin
+if (packageName != null && packageName != currentPackageName) {
+    currentPackageName = packageName
+    getBoundsResolver()?.onPackageChanged(packageName)
+
+    // CRITICAL: Clear stale commands before loading new ones
+    getActionCoordinator().clearDynamicCommands()
+
+    handleScreenChange(event)
+}
+```
+
+### Why Clearing Is Important
+
+Without clearing:
+- Commands accumulate (100+ per app × 4 apps = 400+ stale commands)
+- Stale VUID pointers reference destroyed UI elements
+- `findByPhrase()` searches through irrelevant commands
+- Memory usage grows unbounded
+- Click actions may target wrong elements
+
+---
+
+## Chapter 14: Device Info App and Rapid Content Changes
+
+### Overview
+
+Apps with rapidly updating content (Device Info, CPU monitors, stock tickers) can overwhelm the accessibility system. VoiceOS uses debouncing and device capability detection to handle this.
+
+### DeviceCapabilityManager
+
+**File**: `VoiceOSCore/src/commonMain/kotlin/com/augmentalis/voiceoscore/platform/DeviceCapabilityManager.kt`
+
+```kotlin
+expect object DeviceCapabilityManager {
+    enum class DeviceSpeed { FAST, MEDIUM, SLOW }
+
+    fun getContentDebounceMs(): Long
+    fun getScrollDebounceMs(): Long
+    fun setUserDebounceMs(ms: Long?)
+    fun getDeviceSpeed(): DeviceSpeed
+}
+```
+
+### Debounce Values by Device Speed
+
+| Device Speed | Content Debounce | Scroll Debounce |
+|-------------|-----------------|-----------------|
+| FAST | 100ms | 50ms |
+| MEDIUM | 200ms | 100ms |
+| SLOW | 300ms | 150ms |
+
+### Event Debouncing
+
+**File**: `VoiceOSAccessibilityService.kt`
+
+```kotlin
+private fun handleScreenChangeDebounced(event: AccessibilityEvent, forceImmediate: Boolean) {
+    val now = System.currentTimeMillis()
+    val debounceMs = DeviceCapabilityManager.getContentDebounceMs()
+
+    // Skip if too recent (debounce)
+    if (now - lastEventProcessTime < debounceMs) {
+        pendingScreenChangeJob?.cancel()
+        pendingScreenChangeJob = serviceScope.launch {
+            delay(debounceMs)
+            handleScreenChange(event)
+        }
+        return
+    }
+
+    handleScreenChange(event)
+    lastEventProcessTime = now
+}
+```
+
+### Screen Fingerprinting
+
+To avoid reprocessing unchanged screens:
+
+```kotlin
+private val screenFingerprinter = ScreenFingerprinter()
+private var lastScreenHash: String = ""
+
+// In handleScreenChange():
+val screenHash = screenFingerprinter.calculateFingerprint(elements)
+if (screenHash == lastScreenHash) {
+    return  // Screen unchanged, skip processing
+}
+lastScreenHash = screenHash
+```
+
+### Developer Settings
+
+Developers can tune debounce for specific scenarios:
+
+```kotlin
+// Increase debounce for Device Info app
+service.setDebounceMs(500L)
+
+// Reset to auto-detection
+service.setDebounceMs(null)
+
+// Check current value
+val current = service.getDebounceMs()
+```
+
+### Best Practices for Rapid-Update Apps
+
+1. **Increase debounce**: Set 300-500ms for CPU/memory monitors
+2. **Use incremental updates**: Only reprocess changed regions
+3. **Disable aggressive scanning**: `DeviceCapabilityManager.supportsAggressiveScanning()`
+4. **Consider app-specific profiles**: Different debounce per package name
+
+---
+
+## Chapter 15: Overlay Number Management
+
+### Overview
+
+VoiceOS displays numbered overlays on screen elements to enable voice selection. Proper management prevents stale overlays and incorrect clicks.
+
+### Overlay Lifecycle
+
+1. **Screen Change**: Clear all existing overlays
+2. **Element Extraction**: Identify clickable elements
+3. **Number Assignment**: Assign sequential numbers
+4. **Overlay Rendering**: Display badges on elements
+5. **Voice Command**: User says number
+6. **Bounds Resolution**: Map number to screen coordinates
+7. **Click Execution**: Perform click at coordinates
+
+### Clearing Overlays
+
+Overlays must be cleared on:
+- App switch (package change)
+- Screen transition (activity change)
+- Major scroll events
+- Explicit "numbers off" command
+
+```kotlin
+// On package change
+if (packageName != currentPackageName) {
+    clearOverlayNumbers()
+    getActionCoordinator().clearDynamicCommands()
+}
+```
+
+### Bounds Resolution Layers
+
+**File**: `VoiceOSCore/src/androidMain/kotlin/com/augmentalis/voiceoscore/BoundsResolver.kt`
+
+The BoundsResolver uses 4 fallback layers:
+
+1. **Metadata Bounds (0-1ms)**: Use cached bounds from command metadata
+2. **Delta Compensation (1-2ms)**: Adjust for scroll offset changes
+3. **Resource ID Search (5-10ms)**: Find element by resource ID
+4. **Full Tree Search (50-100ms)**: Search entire accessibility tree
+
+### Scroll Offset Tracking
+
+```kotlin
+// Track scroll events
+private fun handleScrollEvent(event: AccessibilityEvent) {
+    val resourceId = source.viewIdResourceName ?: ""
+    val scrollX = event.scrollX
+    val scrollY = event.scrollY
+
+    boundsResolver.updateScrollOffset(resourceId, scrollX, scrollY)
+}
+```
+
+### Preventing Duplicate Numbers
+
+The CommandGenerator ensures one number per unique list index:
+
+```kotlin
+val bestElementPerIndex = listItems
+    .filter { it.listIndex >= 0 }
+    .groupBy { it.listIndex }
+    .mapValues { (_, elements) ->
+        // Pick best element per index
+        elements.maxByOrNull { element ->
+            var score = 0
+            if (element.isClickable) score += 100
+            if (element.isInDynamicContainer) score += 50
+            score
+        }
+    }
+```
+
+---
+
+**Document Version**: 3.2.0
+**Last Updated**: 2026-01-29
 **Maintained by**: Manoj Jhawar, manoj@ideahq.net

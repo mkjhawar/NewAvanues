@@ -184,6 +184,11 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
         if (packageName != null && packageName != currentPackageName) {
             currentPackageName = packageName
             getBoundsResolver()?.onPackageChanged(packageName)
+
+            // Clear stale commands from previous app before loading new ones
+            // This prevents command accumulation and stale VUID references
+            getActionCoordinator().clearDynamicCommands()
+
             // Package change = always process immediately
             handleScreenChange(event)
             lastEventProcessTime = now

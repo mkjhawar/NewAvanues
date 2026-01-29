@@ -86,8 +86,9 @@ class ConfidenceScorer {
         // VOSK acoustic score normalization parameters
         private const val VOSK_ACOUSTIC_SCALE = 1.0f
 
-        // Vivoka SDK score scale
-        private const val VIVOKA_MAX_SCORE = 100f
+        // Vivoka SDK score scale (0-10000 range, NOT 0-100)
+        // The Vivoka SDK returns confidence values between 0 and 10000
+        private const val VIVOKA_MAX_SCORE = 10000f
     }
 
     /**
