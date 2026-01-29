@@ -18,6 +18,13 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Only include 64-bit ARM architecture to reduce APK size
+        // Removes armeabi-v7a (~32-bit ARM), x86, x86_64 (emulator architectures)
+        // This reduces APK size from ~345MB to ~120MB
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
     buildTypes {
