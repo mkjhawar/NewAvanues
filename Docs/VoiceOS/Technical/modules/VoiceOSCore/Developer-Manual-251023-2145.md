@@ -16,6 +16,7 @@
 5. [Integration Points](#integration-points)
 6. [API Reference](#api-reference)
 7. [Testing Guide](#testing-guide)
+8. [APK Size Optimization](#apk-size-optimization)
 
 ---
 
@@ -2349,6 +2350,164 @@ Log.d(TAG, "Database has ${commands.size} commands")
 ```kotlin
 val isRunning = VoiceOSService.isServiceRunning()
 Log.d(TAG, "Service running: $isRunning")
+```
+
+---
+
+## APK Size Optimization
+
+### Overview
+
+The VoiceOS APK includes multiple native libraries and ML frameworks that significantly impact the final package size. This section documents the size breakdown and optimization strategies.
+
+### APK Size Breakdown (as of 2026-01-29)
+
+#### Total Size: ~173 MB (arm64-v8a only)
+
+| Component | Size | Description |
+|-----------|------|-------------|
+| **Native Libraries** | ~76 MB | Vivoka SDK, ONNX, TensorFlow, SQLCipher |
+| **DEX Files** | ~97 MB | Compiled Kotlin/Java code |
+
+#### Native Library Details (lib/arm64-v8a/)
+
+| Library | Size | Purpose |
+|---------|------|---------|
+| `libonnxruntime.so` | 16 MB | ONNX Runtime for AI/ML inference |
+| `libnds_asr5.so` | 7 MB | Vivoka ASR (speech recognition) |
+| `libnds_asr5_stub_textproc.so` | 7 MB | Vivoka text processing |
+| `libtextproc.so` | 5.5 MB | Text processing engine |
+| `libvocon_pron.so` | 5 MB | Vivoka pronunciation |
+| `libtensorflowlite_jni.so` | 3.8 MB | TensorFlow Lite inference |
+| `libsqlcipher.so` | 3.8 MB | Encrypted SQLite database |
+| `libdd_common.so` | 3.8 MB | Vivoka common library |
+| `libvocon_asr2.so` | 1.9 MB | Vivoka ASR v2 |
+| Other Vivoka libs | ~22 MB | Audio, lexicon, cloud services |
+
+#### DEX File Details (~97 MB total)
+
+| File | Size | Likely Content |
+|------|------|----------------|
+| `classes.dex` | 32.7 MB | Main app + core dependencies |
+| `classes23.dex` | 20.4 MB | ONNX Runtime Java bindings |
+| `classes24.dex` | 9.8 MB | TensorFlow Lite bindings |
+| `classes25.dex` | 8.3 MB | Firebase/Analytics |
+| `classes26.dex` | 8.2 MB | Compose + Material |
+| Other DEX files | ~17 MB | App code, utilities |
+
+### Large Dependencies
+
+| Dependency | Est. Size | Module | Purpose |
+|------------|-----------|--------|---------|
+| ONNX Runtime | ~20 MB | AI:NLU | ML inference for NLU |
+| TensorFlow Lite | ~15 MB | AI:NLU | Alternative ML inference |
+| Firebase BOM | ~10 MB | App | Config, analytics |
+| Compose + Icons | ~15 MB | App | UI framework |
+| Media3/ExoPlayer | ~8 MB | SpeechRecognition | Audio playback |
+| Hilt/Dagger | ~5 MB | App | Dependency injection |
+| Vivoka SDK | ~54 MB | SpeechRecognition | Offline speech recognition |
+
+### ABI Filtering
+
+The app is configured to include only `arm64-v8a` architecture to reduce APK size:
+
+```kotlin
+// android/apps/VoiceOS/build.gradle.kts
+android {
+    defaultConfig {
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
+    }
+}
+```
+
+**Impact of ABI filtering:**
+- Before (all ABIs): ~343 MB
+- After (arm64-v8a only): ~173 MB
+- Savings: **170 MB (50%)**
+
+### Size Optimization Strategies
+
+#### 1. Replace material-icons-extended
+
+The `material-icons-extended` library (~8 MB) contains thousands of icons. Replace with specific icon imports:
+
+```kotlin
+// Instead of:
+implementation("androidx.compose.material:material-icons-extended")
+
+// Use specific icons:
+implementation("androidx.compose.material:material-icons-core")
+// Then copy only needed icons to local project
+```
+
+#### 2. Make AI:NLU Optional
+
+If on-device NLU isn't required, exclude the AI:NLU module to remove ONNX and TensorFlow:
+
+```kotlin
+// In app build.gradle.kts, use feature flags:
+if (project.hasProperty("includeNLU")) {
+    implementation(project(":Modules:AI:NLU"))
+}
+```
+
+#### 3. Enable R8 Minification (Release Builds)
+
+```kotlin
+buildTypes {
+    release {
+        isMinifyEnabled = true
+        isShrinkResources = true
+        proguardFiles(
+            getDefaultProguardFile("proguard-android-optimize.txt"),
+            "proguard-rules.pro"
+        )
+    }
+}
+```
+
+#### 4. Use App Bundles for Play Store
+
+```bash
+./gradlew :android:apps:VoiceOS:bundleRelease
+```
+
+App Bundles allow Google Play to generate optimized APKs per device, further reducing download size.
+
+#### 5. Lazy Load Speech Engines
+
+Only initialize Vivoka when needed:
+
+```kotlin
+// Check availability before initialization
+if (VivokaEngineFactory.isAvailable()) {
+    val engine = VivokaEngineFactory.create(config)
+    // Use engine
+}
+```
+
+### Size Targets
+
+| Build Type | Target Size | Notes |
+|------------|-------------|-------|
+| Debug APK | ~173 MB | Current (arm64-v8a only) |
+| Release APK | ~120 MB | With R8 minification |
+| App Bundle | ~80 MB | Per-device optimization |
+| Lite Build (no NLU) | ~60 MB | Without AI:NLU module |
+
+### Monitoring APK Size
+
+Use the APK Analyzer in Android Studio or command line:
+
+```bash
+# List largest files in APK
+unzip -l VoiceOS-debug.apk | awk '{print $1, $4}' | sort -rn | head -30
+
+# Analyze with bundletool
+bundletool build-apks --bundle=app.aab --output=app.apks
+bundletool get-size total --apks=app.apks
 ```
 
 ---
