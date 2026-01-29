@@ -161,6 +161,12 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     /** VoiceOSCore facade for voice command processing */
     private var voiceOSCore: VoiceOSCore? = null
 
+    /**
+     * Speech collection job - tracked separately for restart capability.
+     * This job collects from speechResults Flow and can be restarted if it fails.
+     */
+    private var speechCollectionJob: Job? = null
+
     companion object {
         private var instance: VoiceOSAccessibilityService? = null
 
@@ -235,6 +241,21 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             return instance?.voiceOSCore?.state?.value?.let { state ->
                 state is ServiceState.Listening
             } ?: false
+        }
+
+        /**
+         * Restart speech collection.
+         * Use this to recover if speech recognition stops working.
+         */
+        fun restartSpeechCollection() {
+            instance?.restartSpeechCollection()
+        }
+
+        /**
+         * Check if speech collection is active.
+         */
+        fun isSpeechCollectionActive(): Boolean {
+            return instance?.speechCollectionJob?.isActive ?: false
         }
 
         // ===== Continuous Monitoring Controls =====
@@ -429,24 +450,104 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     Log.e(TAG, "Failed to auto-start voice listening", e)
                 }
 
-                // Observe speech results
-                voiceOSCore?.speechResults?.collect { speechResult ->
-                    Log.d(TAG, "Speech result: ${speechResult.text} (confidence: ${speechResult.confidence})")
-                    // Update transcription for UI display
-                    _lastTranscription.value = speechResult.text
-                    if (speechResult.isFinal) {
-                        if (!handleVoiceOSControlCommand(speechResult.text.lowercase().trim())) {
-                            voiceOSCore?.processCommand(speechResult.text, speechResult.confidence)
-                        }
-                        // Clear transcription after processing
-                        kotlinx.coroutines.delay(2000)
-                        _lastTranscription.value = null
-                    }
-                }
+                // Start speech collection in a separate supervised job
+                // This allows the collection to be restarted if it fails
+                startSpeechCollection()
+
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize VoiceOSCore facade", e)
             }
         }
+    }
+
+    /**
+     * Start speech result collection in a separate coroutine.
+     *
+     * This method handles the Flow collection from speechResults with proper
+     * error handling and automatic restart capability. The collection runs
+     * in its own Job so that:
+     * 1. Exceptions in collection don't kill the entire service scope
+     * 2. Command processing happens in child coroutines to not block collection
+     * 3. The collection can be restarted if it fails unexpectedly
+     *
+     * FIX: Addresses the issue where commands stop executing after 15-20 minutes
+     * because the Flow collector would silently stop on exceptions or scope issues.
+     */
+    private fun startSpeechCollection() {
+        // Cancel any existing collection job
+        speechCollectionJob?.cancel()
+
+        speechCollectionJob = serviceScope.launch {
+            var consecutiveFailures = 0
+            val maxConsecutiveFailures = 5
+            val baseRestartDelayMs = 1000L
+
+            while (isActive && consecutiveFailures < maxConsecutiveFailures) {
+                try {
+                    Log.d(TAG, "Starting speech result collection (attempt ${consecutiveFailures + 1})")
+
+                    voiceOSCore?.speechResults?.collect { speechResult ->
+                        Log.d(TAG, "Speech result: ${speechResult.text} (confidence: ${speechResult.confidence})")
+
+                        // Update transcription for UI display immediately
+                        _lastTranscription.value = speechResult.text
+
+                        if (speechResult.isFinal) {
+                            // Process command in a SEPARATE child coroutine
+                            // This prevents the delay from blocking the collector
+                            launch {
+                                try {
+                                    if (!handleVoiceOSControlCommand(speechResult.text.lowercase().trim())) {
+                                        voiceOSCore?.processCommand(speechResult.text, speechResult.confidence)
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Error processing command: ${speechResult.text}", e)
+                                }
+
+                                // Clear transcription after processing (in this child coroutine)
+                                delay(2000)
+                                _lastTranscription.value = null
+                            }
+                        }
+                    }
+
+                    // If collect completes normally (shouldn't happen with SharedFlow), break
+                    Log.w(TAG, "Speech collection completed unexpectedly")
+                    break
+
+                } catch (e: CancellationException) {
+                    // Normal cancellation - don't restart
+                    Log.d(TAG, "Speech collection cancelled")
+                    throw e
+                } catch (e: Exception) {
+                    consecutiveFailures++
+                    Log.e(TAG, "Speech collection failed (failure $consecutiveFailures/$maxConsecutiveFailures)", e)
+
+                    if (consecutiveFailures < maxConsecutiveFailures) {
+                        // Exponential backoff before restart
+                        val delayMs = baseRestartDelayMs * consecutiveFailures
+                        Log.d(TAG, "Restarting speech collection in ${delayMs}ms...")
+                        delay(delayMs)
+                    }
+                }
+            }
+
+            if (consecutiveFailures >= maxConsecutiveFailures) {
+                Log.e(TAG, "Speech collection stopped after $maxConsecutiveFailures consecutive failures")
+                _isVoiceListening.value = false
+            }
+        }
+
+        Log.d(TAG, "Speech collection job started: ${speechCollectionJob?.isActive}")
+    }
+
+    /**
+     * Restart speech collection manually.
+     * Can be called from developer tools or after recovering from an error state.
+     */
+    fun restartSpeechCollection() {
+        Log.d(TAG, "Manual restart of speech collection requested")
+        startSpeechCollection()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -942,6 +1043,11 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         } catch (e: Exception) {
             Log.w(TAG, "Error unregistering receiver", e)
         }
+
+        // Cancel speech collection job first to stop Flow collection cleanly
+        speechCollectionJob?.cancel()
+        speechCollectionJob = null
+        Log.d(TAG, "Speech collection job cancelled")
 
         serviceScope.launch {
             try {
