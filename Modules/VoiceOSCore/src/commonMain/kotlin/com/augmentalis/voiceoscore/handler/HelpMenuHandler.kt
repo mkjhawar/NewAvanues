@@ -4,14 +4,33 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2026-01-06
+ * Updated: 2026-01-29 - Integrated with comprehensive HelpCommandDataProvider
  *
  * KMP handler for displaying available voice commands and help information.
  * Supports command search and category-based help organization.
+ *
+ * ## Usage:
+ * ```kotlin
+ * val handler = HelpMenuHandler()
+ *
+ * // Show all help
+ * val result = handler.handleCommand("help")
+ *
+ * // Search commands
+ * val searchResult = handler.handleCommand("help volume")
+ *
+ * // Get rich help data for UI
+ * val richCategories = handler.getRichCategories()
+ * ```
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.voiceoscore.help.HelpCommandDataProvider
+import com.augmentalis.voiceoscore.help.HelpCategory as RichHelpCategory
+import com.augmentalis.voiceoscore.help.HelpCommand as RichHelpCommand
+
 /**
- * Represents a category of help commands.
+ * Represents a category of help commands (legacy format).
  *
  * @param name The category name (e.g., "Navigation", "Selection")
  * @param commands List of commands in this category
@@ -22,7 +41,7 @@ data class HelpCategory(
 )
 
 /**
- * Represents a single help command entry.
+ * Represents a single help command entry (legacy format).
  *
  * @param phrase The voice command phrase
  * @param description Human-readable description of what the command does
@@ -57,58 +76,13 @@ data class HelpResult(
  * - Displaying all available commands by category
  * - Searching for specific commands
  * - Registering custom command categories
+ *
+ * This handler uses HelpCommandDataProvider for comprehensive command data
+ * while maintaining backward compatibility with the legacy HelpCategory/HelpCommand format.
  */
 class HelpMenuHandler {
 
-    private val categories = mutableListOf<HelpCategory>()
-
-    init {
-        registerDefaultCategories()
-    }
-
-    /**
-     * Registers the default help categories with standard voice commands.
-     */
-    private fun registerDefaultCategories() {
-        categories.add(
-            HelpCategory(
-                name = "Navigation",
-                commands = listOf(
-                    HelpCommand("go back", "Navigate to previous screen"),
-                    HelpCommand("go home", "Return to home screen"),
-                    HelpCommand("scroll up/down", "Scroll the current view"),
-                    HelpCommand("open [app]", "Open an application by name")
-                )
-            )
-        )
-
-        categories.add(
-            HelpCategory(
-                name = "Selection",
-                commands = listOf(
-                    HelpCommand(
-                        phrase = "tap [number]",
-                        description = "Tap numbered element",
-                        examples = listOf("tap 3", "tap five")
-                    ),
-                    HelpCommand("select all", "Select all text"),
-                    HelpCommand("copy", "Copy selected text to clipboard"),
-                    HelpCommand("paste", "Paste from clipboard")
-                )
-            )
-        )
-
-        categories.add(
-            HelpCategory(
-                name = "Cursor",
-                commands = listOf(
-                    HelpCommand("cursor up/down/left/right", "Move cursor in direction"),
-                    HelpCommand("click", "Click at cursor position"),
-                    HelpCommand("cursor faster/slower", "Adjust cursor speed")
-                )
-            )
-        )
-    }
+    private val customCategories = mutableListOf<HelpCategory>()
 
     /**
      * Handles a help-related voice command.
@@ -135,10 +109,10 @@ class HelpMenuHandler {
     /**
      * Shows all available help categories and commands.
      *
-     * @return HelpResult with all categories
+     * @return HelpResult with all categories (legacy format)
      */
     fun showAllHelp(): HelpResult {
-        return HelpResult(success = true, categories = categories.toList())
+        return HelpResult(success = true, categories = getCategories())
     }
 
     /**
@@ -150,24 +124,16 @@ class HelpMenuHandler {
      * @return HelpResult with matching commands or error if none found
      */
     fun searchHelp(query: String): HelpResult {
-        val normalizedQuery = query.lowercase().trim()
-        val results = mutableListOf<HelpCommand>()
+        // Use rich search from provider
+        val richResults = HelpCommandDataProvider.searchCommands(query)
 
-        for (category in categories) {
-            for (cmd in category.commands) {
-                if (cmd.phrase.contains(normalizedQuery) ||
-                    cmd.description.lowercase().contains(normalizedQuery)
-                ) {
-                    results.add(cmd)
-                }
-            }
+        if (richResults.isEmpty()) {
+            return HelpResult(success = false, error = "No help found for: $query")
         }
 
-        return if (results.isEmpty()) {
-            HelpResult(success = false, error = "No help found for: $query")
-        } else {
-            HelpResult(success = true, searchResults = results)
-        }
+        // Convert to legacy format
+        val results = richResults.map { it.toLegacyCommand() }
+        return HelpResult(success = true, searchResults = results)
     }
 
     /**
@@ -178,20 +144,84 @@ class HelpMenuHandler {
      * @param category The category to register
      */
     fun registerCategory(category: HelpCategory) {
-        categories.add(category)
+        customCategories.add(category)
     }
 
     /**
-     * Gets all registered help categories.
+     * Gets all registered help categories (legacy format).
+     *
+     * Combines built-in categories from HelpCommandDataProvider with custom categories.
      *
      * @return Immutable list of all categories
      */
-    fun getCategories(): List<HelpCategory> = categories.toList()
+    fun getCategories(): List<HelpCategory> {
+        val builtInCategories = HelpCommandDataProvider.getCategories().map { it.toLegacyCategory() }
+        return builtInCategories + customCategories
+    }
 
     /**
      * Gets the count of registered categories.
      *
      * @return Number of categories
      */
-    fun getCategoryCount(): Int = categories.size
+    fun getCategoryCount(): Int = HelpCommandDataProvider.getCategories().size + customCategories.size
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Rich Data Access (for modern UI)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Gets all categories with rich data (for modern UI).
+     *
+     * Returns the full HelpCategory data including icons, colors, and variations.
+     *
+     * @return List of rich help categories
+     */
+    fun getRichCategories(): List<RichHelpCategory> = HelpCommandDataProvider.getCategories()
+
+    /**
+     * Gets quick reference data for table view.
+     *
+     * @return List of quick reference entries
+     */
+    fun getQuickReference() = HelpCommandDataProvider.getQuickReference()
+
+    /**
+     * Gets total command count.
+     */
+    fun getTotalCommandCount(): Int = HelpCommandDataProvider.getTotalCommandCount()
+
+    /**
+     * Searches commands with rich data.
+     *
+     * @param query Search query
+     * @return List of matching rich commands
+     */
+    fun searchRichCommands(query: String): List<RichHelpCommand> =
+        HelpCommandDataProvider.searchCommands(query)
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Extension Functions for Format Conversion
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Convert rich HelpCategory to legacy format.
+ */
+private fun RichHelpCategory.toLegacyCategory(): HelpCategory {
+    return HelpCategory(
+        name = this.title,
+        commands = this.commands.map { it.toLegacyCommand() }
+    )
+}
+
+/**
+ * Convert rich HelpCommand to legacy format.
+ */
+private fun RichHelpCommand.toLegacyCommand(): HelpCommand {
+    return HelpCommand(
+        phrase = this.primaryPhrase,
+        description = this.description,
+        examples = this.variations
+    )
 }
