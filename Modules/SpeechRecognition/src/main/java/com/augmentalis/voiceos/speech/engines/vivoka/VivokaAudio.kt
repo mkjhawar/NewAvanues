@@ -23,13 +23,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.augmentalis.voiceisolation.VoiceIsolation
 
 /**
  * Manages audio pipeline for the Vivoka engine including recording, processing, and recovery
  */
 class VivokaAudio(
     private val context: Context,
-    private val coroutineScope: CoroutineScope
+    private val coroutineScope: CoroutineScope,
+    private val voiceIsolation: VoiceIsolation? = null
 ) {
     
     companion object {
@@ -43,6 +45,11 @@ class VivokaAudio(
     private var pipeline: Pipeline? = null
     private var audioRecorder: AudioRecorder? = null
     private var recognizer: Recognizer? = null
+
+    // VoiceIsolation is initialized externally via initializeVoiceIsolation()
+    // since Vivoka's AudioRecorder handles audio session internally
+    @Volatile
+    private var isVoiceIsolationInitialized = false
     
     // Silence detection for dictation
     private val silenceCheckHandler = Handler(Looper.getMainLooper())
@@ -93,12 +100,47 @@ class VivokaAudio(
             
             Log.d(TAG, "Audio pipeline initialized successfully")
             true
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize audio pipeline", e)
             audioErrorListener?.invoke("Audio pipeline initialization failed: ${e.message}", SpeechErrorCodes.AUDIO_PIPELINE_ERROR)
             false
         }
+    }
+
+    /**
+     * Initialize VoiceIsolation with the audio session ID.
+     * Call this after audio recording starts to enable hardware-level audio processing.
+     *
+     * @param audioSessionId The audio session ID from the audio recorder
+     * @return true if initialization succeeded
+     */
+    fun initializeVoiceIsolation(audioSessionId: Int): Boolean {
+        return try {
+            voiceIsolation?.let { isolation ->
+                val success = isolation.initialize(audioSessionId)
+                isVoiceIsolationInitialized = success
+                if (success) {
+                    Log.d(TAG, "VoiceIsolation initialized with audio session $audioSessionId")
+                } else {
+                    Log.w(TAG, "VoiceIsolation initialization failed")
+                }
+                success
+            } ?: run {
+                Log.d(TAG, "VoiceIsolation not provided - skipping initialization")
+                true
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize VoiceIsolation", e)
+            false
+        }
+    }
+
+    /**
+     * Check if VoiceIsolation is active and processing audio.
+     */
+    fun isVoiceIsolationActive(): Boolean {
+        return voiceIsolation?.isEnabled() == true && isVoiceIsolationInitialized
     }
     
     /**
@@ -306,7 +348,9 @@ class VivokaAudio(
             "hasRecognizer" to (recognizer != null),
             "recoveryCount" to pipelineRecoveryCount,
             "lastError" to (lastPipelineError ?: "none"),
-            "isHealthy" to isPipelineHealthy()
+            "isHealthy" to isPipelineHealthy(),
+            "voiceIsolationEnabled" to (voiceIsolation?.isEnabled() == true),
+            "voiceIsolationActive" to isVoiceIsolationActive()
         )
     }
     
@@ -418,25 +462,29 @@ class VivokaAudio(
      */
     fun reset() {
         Log.d(TAG, "Resetting audio system")
-        
+
         try {
             // Stop all audio operations
             stopSilenceDetection()
             stopPipeline()
-            
+
+            // Release VoiceIsolation resources
+            voiceIsolation?.release()
+            isVoiceIsolationInitialized = false
+
             // Reset state
             isPipelineRunning = false
             isRecording = false
             isRecovering = false
             pipelineRecoveryCount = 0
             lastPipelineError = null
-            
+
             // Clear references
             recognizer = null
             silenceDetectionCallback = null
-            
+
             Log.d(TAG, "Audio system reset completed")
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "Error during audio system reset", e)
         }

@@ -18,13 +18,15 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
+import com.augmentalis.voiceisolation.VoiceIsolation
 
 /**
  * Manages streaming audio recognition for Google Cloud Speech.
  * Handles audio recording, buffering, and real-time speech processing.
  */
 class GoogleStreaming(
-    private val performanceMonitor: PerformanceMonitor
+    private val performanceMonitor: PerformanceMonitor,
+    private val voiceIsolation: VoiceIsolation? = null
 ) {
     
     companion object {
@@ -257,8 +259,17 @@ class GoogleStreaming(
                 val audioBuffer = mutableListOf<ByteArray>()
                 
                 // Collect audio data and process in chunks
-                audioRecorder?.audioFlow?.collect { audioData ->
+                audioRecorder?.audioFlow?.collect { rawAudioData ->
                     if (isRecognizing.get()) {
+                        // Apply VoiceIsolation preprocessing if available
+                        val audioData = voiceIsolation?.let { isolation ->
+                            if (isolation.isEnabled()) {
+                                isolation.process(rawAudioData)
+                            } else {
+                                rawAudioData
+                            }
+                        } ?: rawAudioData
+
                         synchronized(audioBuffer) {
                             audioBuffer.add(audioData)
                             

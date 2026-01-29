@@ -119,6 +119,9 @@ kotlin {
                 // DeviceManager
                 implementation(project(":Modules:DeviceManager"))
 
+                // VoiceIsolation - Audio preprocessing (noise suppression, echo cancellation, AGC)
+                implementation(project(":Modules:VoiceIsolation"))
+
                 // Vivoka VSDK - compileOnly
                 compileOnly(files("${rootDir}/vivoka/vsdk-6.0.0.aar"))
                 compileOnly(files("${rootDir}/vivoka/vsdk-csdk-asr-2.0.0.aar"))
