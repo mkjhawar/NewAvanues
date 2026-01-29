@@ -224,10 +224,13 @@ object OverlayStateManager {
      * Update overlay items incrementally, preserving numbers for existing items.
      * Used for scroll/content changes where we want stable numbering.
      *
+     * GMAIL FIX: Prevents duplicate numbers by tracking used numbers and
+     * only preserving numbers that don't conflict.
+     *
      * Strategy:
-     * - Items with matching AVID keep their existing number
-     * - New items get numbers from the incoming list
-     * - This provides visual stability during scrolling
+     * - Items with matching AVID keep their existing number (if not already used)
+     * - New items get sequential numbers avoiding conflicts
+     * - This provides visual stability during scrolling without duplicates
      *
      * @param newItems Items from the current screen state
      */
@@ -244,25 +247,46 @@ object OverlayStateManager {
         // Build map of AVID -> existing number for preservation
         val existingNumbers = currentItems.associateBy({ it.avid }, { it.number })
 
-        // Merge: preserve numbers for items that were already visible
-        val mergedItems = newItems.map { item ->
+        // Track used numbers to prevent duplicates
+        val usedNumbers = mutableSetOf<Int>()
+        val mergedItems = mutableListOf<NumberOverlayItem>()
+
+        // First pass: assign preserved numbers to items that have matching AVIDs
+        newItems.forEach { item ->
             val existingNumber = existingNumbers[item.avid]
-            if (existingNumber != null) {
-                // Preserve the existing number for visual stability
-                item.copy(number = existingNumber)
+            if (existingNumber != null && !usedNumbers.contains(existingNumber)) {
+                // Preserve the existing number for visual stability (only if not already used)
+                mergedItems.add(item.copy(number = existingNumber))
+                usedNumbers.add(existingNumber)
             } else {
-                // New item - use the number from the incoming list
-                item
+                // Will assign new number in second pass
+                mergedItems.add(item)
             }
         }
 
-        _numberedOverlayItems.value = mergedItems
+        // Second pass: assign new numbers to items that need them
+        var nextNumber = 1
+        val finalItems = mergedItems.map { item ->
+            if (usedNumbers.contains(item.number)) {
+                // Already has a valid preserved number
+                item
+            } else {
+                // Find next available number
+                while (usedNumbers.contains(nextNumber)) {
+                    nextNumber++
+                }
+                usedNumbers.add(nextNumber)
+                item.copy(number = nextNumber)
+            }
+        }
+
+        _numberedOverlayItems.value = finalItems
         updateNumbersOverlayVisibility()
 
-        if (mergedItems.isNotEmpty()) {
-            val preservedCount = mergedItems.count { existingNumbers.containsKey(it.avid) }
-            val newCount = mergedItems.size - preservedCount
-            Log.d(TAG, "Incremental overlay update: ${mergedItems.size} items ($preservedCount preserved, $newCount new)")
+        if (finalItems.isNotEmpty()) {
+            val preservedCount = finalItems.count { existingNumbers[it.avid] == it.number }
+            val newCount = finalItems.size - preservedCount
+            Log.d(TAG, "Incremental overlay update: ${finalItems.size} items ($preservedCount preserved, $newCount new)")
         }
     }
 
