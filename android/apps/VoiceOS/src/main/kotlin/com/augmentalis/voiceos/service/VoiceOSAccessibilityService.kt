@@ -62,6 +62,16 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     /**
+     * Dedicated scope for speech collection - runs on IO dispatcher to avoid
+     * starvation when accessibility events flood Dispatchers.Default.
+     *
+     * DEVICE INFO FIX: When apps like Device Info send rapid accessibility events,
+     * they overwhelm Dispatchers.Default. By running speech collection on IO,
+     * we ensure the collector always has CPU time to process speech results.
+     */
+    private val speechScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    /**
      * Broadcast receiver for controlling numbers overlay via adb commands.
      * Usage: adb shell am broadcast -a com.augmentalis.voiceos.SET_NUMBERS_MODE --es mode "ON"
      */
@@ -472,12 +482,17 @@ class VoiceOSAccessibilityService : AccessibilityService() {
      *
      * FIX: Addresses the issue where commands stop executing after 15-20 minutes
      * because the Flow collector would silently stop on exceptions or scope issues.
+     *
+     * DEVICE INFO FIX: Uses dedicated speechScope (Dispatchers.IO) instead of
+     * serviceScope (Dispatchers.Default) to avoid starvation when rapid
+     * accessibility events flood the default dispatcher.
      */
     private fun startSpeechCollection() {
         // Cancel any existing collection job
         speechCollectionJob?.cancel()
 
-        speechCollectionJob = serviceScope.launch {
+        // Use speechScope (IO) instead of serviceScope (Default) to avoid starvation
+        speechCollectionJob = speechScope.launch {
             var consecutiveFailures = 0
             val maxConsecutiveFailures = 5
             val baseRestartDelayMs = 1000L
@@ -1072,10 +1087,11 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             Log.w(TAG, "Error unregistering receiver", e)
         }
 
-        // Cancel speech collection job first to stop Flow collection cleanly
+        // Cancel speech collection job and scope first to stop Flow collection cleanly
         speechCollectionJob?.cancel()
         speechCollectionJob = null
-        Log.d(TAG, "Speech collection job cancelled")
+        speechScope.cancel()
+        Log.d(TAG, "Speech collection job and scope cancelled")
 
         serviceScope.launch {
             try {
