@@ -53,7 +53,7 @@ data class SpeechConfig(
     val mode: SpeechMode = SpeechMode.DYNAMIC_COMMAND,
     val engine: SpeechEngine = SpeechEngine.VOSK,
     val enableVAD: Boolean = true,
-    val confidenceThreshold: Float = 0.7f,
+    val confidenceThreshold: Float = 0.45f,
     val maxRecordingDuration: Long = 30000,
     val timeoutDuration: Long = 5000,
     val dictationTimeout: Long = 2000,

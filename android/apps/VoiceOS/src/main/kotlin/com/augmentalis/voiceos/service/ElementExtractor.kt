@@ -102,7 +102,7 @@ object ElementExtractor {
         val hash = HashUtils.calculateHash(hashInput).take(16)
 
         if (seenHashes.contains(hash)) {
-            Log.d(TAG, "DUPLICATE FOUND: hash=$hash class=${element.className.substringAfterLast(".")} text='${element.text.take(20)}'")
+            //Log.d(TAG, "DUPLICATE FOUND: hash=$hash class=${element.className.substringAfterLast(".")} text='${element.text.take(20)}'")
             duplicates.add(
                 DuplicateInfo(
                     hash = hash,
@@ -164,7 +164,7 @@ object ElementExtractor {
         listItems: List<ElementInfo>,
         allElements: List<ElementInfo>
     ): List<ElementInfo> {
-        Log.d(TAG, "findTopLevelListItems: ${listItems.size} items with listIndex >= 0")
+        //Log.d(TAG, "findTopLevelListItems: ${listItems.size} items with listIndex >= 0")
 
         // Filter for elements that look like actual list item rows
         // Email rows in Gmail typically have:
@@ -193,24 +193,14 @@ object ElementExtractor {
             val reasonableHeight = height in 60..300
 
             val isEmailRow = looksLikeEmailRow && reasonableHeight
-
-            if (isEmailRow) {
-                val label = CommandGenerator.extractShortLabel(element) ?: "?"
-                Log.d(TAG, "  EMAIL ROW: '$label' bounds=(${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}) h=$height")
-            }
-
             isEmailRow
         }
-
-        Log.d(TAG, "findTopLevelListItems: found ${emailRows.size} email rows")
-
         // Deduplicate by listIndex (keep first/best per row)
         val deduped = emailRows
             .groupBy { it.listIndex }
             .mapNotNull { (_, elements) -> elements.firstOrNull() }
             .sortedBy { it.bounds.top }
 
-        Log.d(TAG, "findTopLevelListItems: ${deduped.size} unique rows after dedup")
 
         return deduped
     }

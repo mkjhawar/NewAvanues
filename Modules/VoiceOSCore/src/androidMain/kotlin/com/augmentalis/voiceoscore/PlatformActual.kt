@@ -6,6 +6,7 @@
  */
 package com.augmentalis.voiceoscore
 
+import android.annotation.SuppressLint
 import android.util.Log
 import java.security.MessageDigest
 
@@ -95,6 +96,7 @@ private class AndroidLogger(private val tag: String) : Logger {
 // DeviceCapabilityManager
 // ═══════════════════════════════════════════════════════════════════
 
+@SuppressLint("StaticFieldLeak")
 actual object DeviceCapabilityManager {
     private var cachedSpeed: DeviceSpeed? = null
     private var userDebounceMs: Long? = null
