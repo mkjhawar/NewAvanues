@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.augmentalis.voiceos.ui.icons.VoiceOSIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -172,7 +173,7 @@ fun MainScreen() {
                             leadingIcon = {
                                 Icon(
                                     if (tier == LearnAppDevToggle.Tier.DEV)
-                                        Icons.Default.Code
+                                        VoiceOSIcons.code()
                                     else
                                         Icons.Default.Person,
                                     contentDescription = null,
@@ -261,7 +262,7 @@ private fun DrawerContent(
         // Test Mode Section
         DrawerSection(title = "Test Mode") {
             DrawerToggleItem(
-                icon = Icons.Default.Science,
+                icon = VoiceOSIcons.science(),
                 title = if (testModeEnabled) "Disable Test Mode" else "Enable Test Mode",
                 subtitle = if (testModeEnabled) "All features unlocked" else "Unlock all features",
                 checked = testModeEnabled,
@@ -282,7 +283,7 @@ private fun DrawerContent(
         var continuousMonitoringEnabled by remember { mutableStateOf(true) }
         DrawerSection(title = "Scanning") {
             DrawerToggleItem(
-                icon = Icons.Default.Sync,
+                icon = VoiceOSIcons.sync(),
                 title = "Continuous Monitoring",
                 subtitle = if (continuousMonitoringEnabled) "Auto-scan on screen change" else "Manual scanning only",
                 checked = continuousMonitoringEnabled,
@@ -301,7 +302,7 @@ private fun DrawerContent(
                 }
             )
             DrawerActionItem(
-                icon = Icons.Default.DeleteSweep,
+                icon = VoiceOSIcons.deleteSweep(),
                 title = "Rescan Everything",
                 subtitle = "Clear all cached screens",
                 onClick = {
@@ -326,7 +327,7 @@ private fun DrawerContent(
                 }
             )
             DrawerActionItem(
-                icon = Icons.Default.Stop,
+                icon = VoiceOSIcons.stop(),
                 title = "Stop Scanner Overlay",
                 subtitle = "Remove floating button",
                 onClick = {
@@ -347,7 +348,7 @@ private fun DrawerContent(
                 onClick = onOpenSettings
             )
             DrawerActionItem(
-                icon = Icons.Default.Accessibility,
+                icon = VoiceOSIcons.accessibility(),
                 title = "Accessibility Settings",
                 subtitle = "System accessibility options",
                 onClick = {
@@ -597,7 +598,7 @@ private fun ScannerControlCard() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    Icons.Default.Scanner,
+                    VoiceOSIcons.scanner(),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -639,7 +640,7 @@ private fun ScannerControlCard() {
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Icon(Icons.Default.Accessibility, contentDescription = null)
+                    Icon(VoiceOSIcons.accessibility(), contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Enable Accessibility Service")
                 }
@@ -664,7 +665,7 @@ private fun ScannerControlCard() {
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Icon(Icons.Default.Layers, contentDescription = null)
+                    Icon(VoiceOSIcons.layers(), contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Enable Overlay Permission")
                 }
@@ -723,7 +724,7 @@ private fun StatusChip(label: String, enabled: Boolean) {
         label = { Text(label, style = MaterialTheme.typography.labelSmall) },
         leadingIcon = {
             Icon(
-                if (enabled) Icons.Default.CheckCircle else Icons.Default.Error,
+                if (enabled) Icons.Default.CheckCircle else VoiceOSIcons.error(),
                 contentDescription = null,
                 tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(16.dp)
@@ -747,7 +748,7 @@ private fun InstructionsCard() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    Icons.Default.Help,
+                    VoiceOSIcons.help(),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -790,7 +791,7 @@ private fun FeatureStatusCard() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    Icons.Default.Checklist,
+                    VoiceOSIcons.checklist(),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -827,7 +828,7 @@ private fun FeatureStatusCard() {
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Icon(
-                        if (enabled) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                        if (enabled) Icons.Default.CheckCircle else VoiceOSIcons.cancel(),
                         contentDescription = if (enabled) "Enabled" else "Disabled",
                         tint = if (enabled)
                             MaterialTheme.colorScheme.primary

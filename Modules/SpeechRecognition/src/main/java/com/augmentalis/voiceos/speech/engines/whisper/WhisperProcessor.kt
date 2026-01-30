@@ -24,6 +24,8 @@ import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.sqrt
+import com.augmentalis.voiceisolation.VoiceIsolation
+import com.augmentalis.voiceisolation.VoiceIsolationConfig
 
 /**
  * Whisper processing modes
@@ -59,7 +61,8 @@ data class AudioBufferInfo(
  */
 class WhisperProcessor(
     private val audioStateManager: AudioStateManager,
-    private val performanceMonitor: PerformanceMonitor
+    private val performanceMonitor: PerformanceMonitor,
+    private val voiceIsolation: VoiceIsolation? = null
 ) {
     
     companion object {
@@ -221,12 +224,21 @@ class WhisperProcessor(
                     val audioData = buffer.copyOf(bytesRead)
                     
                     // Apply noise reduction if enabled
-                    val processedAudio = if (noiseReductionLevel > 0f) {
+                    val noiseReducedAudio = if (noiseReductionLevel > 0f) {
                         applyNoiseReduction(audioData)
                     } else {
                         audioData
                     }
-                    
+
+                    // Apply VoiceIsolation preprocessing if available
+                    val processedAudio = voiceIsolation?.let { isolation ->
+                        if (isolation.isEnabled()) {
+                            isolation.process(noiseReducedAudio)
+                        } else {
+                            noiseReducedAudio
+                        }
+                    } ?: noiseReducedAudio
+
                     // Perform Voice Activity Detection
                     val hasVoice = performVAD(processedAudio)
                     

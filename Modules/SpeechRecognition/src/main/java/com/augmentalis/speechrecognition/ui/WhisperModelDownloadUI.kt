@@ -22,7 +22,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -220,7 +222,7 @@ private fun StorageInfoCard(modelManager: WhisperModelManager) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.Storage,
+                    imageVector = SpeechIcons.storage(),
                     contentDescription = "Storage",
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.onSecondaryContainer
@@ -287,7 +289,7 @@ private fun DownloadStateCard(
                         // Cancel button
                         IconButton(onClick = onCancel) {
                             Icon(
-                                imageVector = Icons.Default.Cancel,
+                                imageVector = SpeechIcons.cancel(),
                                 contentDescription = "Cancel",
                                 tint = MaterialTheme.colorScheme.error
                             )
@@ -357,7 +359,7 @@ private fun DownloadStateCard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Error,
+                            imageVector = SpeechIcons.error(),
                             contentDescription = "Error",
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(24.dp)
@@ -511,7 +513,7 @@ private fun ModelCard(
                         )
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Download,
+                            imageVector = SpeechIcons.download(),
                             contentDescription = "Download",
                             modifier = Modifier.size(16.dp)
                         )

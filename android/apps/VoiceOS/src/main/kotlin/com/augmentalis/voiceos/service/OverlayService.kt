@@ -18,8 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Mic
+import com.augmentalis.voiceos.ui.icons.VoiceOSIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.animation.core.animateFloatAsState
@@ -799,7 +798,7 @@ private fun NumbersInstructionPanel(
         ) {
             // Mic icon
             Icon(
-                imageVector = Icons.Default.Mic,
+                imageVector = VoiceOSIcons.mic(),
                 contentDescription = "Voice",
                 tint = Color(0xFF2196F3),
                 modifier = Modifier.size(28.dp)
@@ -900,7 +899,7 @@ private fun DebugFabOverlay(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Mic,
+                        imageVector = VoiceOSIcons.mic(),
                         contentDescription = null,
                         tint = Color(0xFF10B981),
                         modifier = Modifier.size(16.dp)
@@ -1028,7 +1027,7 @@ private fun DebugFabCollapsed(
                 )
             } else {
                 Icon(
-                    imageVector = Icons.Default.Mic,
+                    imageVector = VoiceOSIcons.mic(),
                     contentDescription = "Debug",
                     tint = if (isVoiceListening) Color(0xFF10B981) else Color.White,
                     modifier = Modifier.size(24.dp)
@@ -1178,7 +1177,7 @@ private fun DebugMetricsPanel(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Mic,
+                        imageVector = VoiceOSIcons.mic(),
                         contentDescription = null,
                         tint = if (isVoiceListening) Color(0xFF10B981) else Color(0xFF6B7280),
                         modifier = Modifier.size(12.dp)

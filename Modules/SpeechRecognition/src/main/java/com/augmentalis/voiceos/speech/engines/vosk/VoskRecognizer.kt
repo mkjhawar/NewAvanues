@@ -18,6 +18,7 @@ import com.augmentalis.voiceos.speech.engines.common.ServiceState
 import org.vosk.Model
 import org.vosk.Recognizer
 import org.vosk.android.SpeechService
+import com.augmentalis.voiceisolation.VoiceIsolation
 
 /**
  * Dual recognizer manager for VOSK engine.
@@ -25,7 +26,8 @@ import org.vosk.android.SpeechService
  */
 class VoskRecognizer(
     private val serviceState: ServiceState,
-    private val config: VoskConfig
+    private val config: VoskConfig,
+    private val voiceIsolation: VoiceIsolation? = null
 ) {
     
     companion object {
@@ -59,6 +61,10 @@ class VoskRecognizer(
     // Error tracking
     private var lastError: String? = null
     private val errorHistory = mutableListOf<RecognizerError>()
+
+    // VoiceIsolation state
+    @Volatile
+    private var isVoiceIsolationInitialized = false
     
     /**
      * Initialize both recognizers
@@ -410,23 +416,27 @@ class VoskRecognizer(
         synchronized(recognizerLock) {
             try {
                 Log.d(TAG, "Cleaning up recognizer resources...")
-                
+
                 // Stop speech service
                 safeSpeechServiceCleanup()
                 speechService = null
-                
+
+                // Release VoiceIsolation resources
+                voiceIsolation?.release()
+                isVoiceIsolationInitialized = false
+
                 // Close recognizers
                 safeCloseRecognizer(commandRecognizer)
                 safeCloseRecognizer(dictationRecognizer)
-                
+
                 // Reset state
                 commandRecognizer = null
                 dictationRecognizer = null
                 currentRecognizer = null
                 isInitialized = false
-                
+
                 Log.d(TAG, "Recognizer cleanup completed")
-                
+
             } catch (e: Exception) {
                 Log.e(TAG, "Error during recognizer cleanup: ${e.message}")
             }
@@ -462,6 +472,44 @@ class VoskRecognizer(
     }
     
     /**
+     * Initialize VoiceIsolation with the audio session ID.
+     * Call this before starting recognition to enable hardware-level audio processing.
+     *
+     * Note: Vosk's SpeechService handles audio internally, so this should be called
+     * with the audio session ID from the app's audio manager if available.
+     *
+     * @param audioSessionId The audio session ID from the audio system
+     * @return true if initialization succeeded
+     */
+    fun initializeVoiceIsolation(audioSessionId: Int): Boolean {
+        return try {
+            voiceIsolation?.let { isolation ->
+                val success = isolation.initialize(audioSessionId)
+                isVoiceIsolationInitialized = success
+                if (success) {
+                    Log.d(TAG, "VoiceIsolation initialized with audio session $audioSessionId")
+                } else {
+                    Log.w(TAG, "VoiceIsolation initialization failed")
+                }
+                success
+            } ?: run {
+                Log.d(TAG, "VoiceIsolation not provided - skipping initialization")
+                true
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize VoiceIsolation", e)
+            false
+        }
+    }
+
+    /**
+     * Check if VoiceIsolation is active and processing audio.
+     */
+    fun isVoiceIsolationActive(): Boolean {
+        return voiceIsolation?.isEnabled() == true && isVoiceIsolationInitialized
+    }
+
+    /**
      * Get diagnostic information
      */
     fun getDiagnostics(): Map<String, Any> {
@@ -477,7 +525,9 @@ class VoskRecognizer(
             "timeSinceLastSwitch" to (System.currentTimeMillis() - lastModeSwitch),
             "errorCount" to errorHistory.size,
             "lastError" to (lastError ?: "none"),
-            "grammarConstraintsEnabled" to config.isGrammarConstraintsEnabled()
+            "grammarConstraintsEnabled" to config.isGrammarConstraintsEnabled(),
+            "voiceIsolationEnabled" to (voiceIsolation?.isEnabled() == true),
+            "voiceIsolationActive" to isVoiceIsolationActive()
         )
     }
     

@@ -96,7 +96,8 @@ kotlin {
                 implementation("androidx.compose.ui:ui:1.5.4")
                 implementation("androidx.compose.ui:ui-tooling-preview:1.5.4")
                 implementation("androidx.compose.material3:material3:1.1.2")
-                implementation("androidx.compose.material:material-icons-extended:1.5.4")
+                // Using material-icons-core + vector drawables to reduce APK size
+                implementation("androidx.compose.material:material-icons-core:1.5.4")
                 implementation("androidx.activity:activity-compose:1.8.2")
                 implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
@@ -118,6 +119,9 @@ kotlin {
 
                 // DeviceManager
                 implementation(project(":Modules:DeviceManager"))
+
+                // VoiceIsolation - Audio preprocessing (noise suppression, echo cancellation, AGC)
+                implementation(project(":Modules:VoiceIsolation"))
 
                 // Vivoka VSDK - compileOnly
                 compileOnly(files("${rootDir}/vivoka/vsdk-6.0.0.aar"))

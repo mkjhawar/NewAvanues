@@ -59,6 +59,7 @@ include(":Modules:Database")              // Unified KMP database - VoiceOS, Web
 include(":Modules:VoiceOSCore")            // Unified KMP voice control (consolidates Voice:Core + VoiceOS)
 // include(":Modules:Voice:Core")          // DEPRECATED - use VoiceOSCore (archived)
 include(":Modules:Voice:WakeWord")         // Wake word detection
+include(":Modules:VoiceIsolation")         // Audio preprocessing (noise suppression, echo cancellation, AGC)
 
 // Actions Module (cross-platform KMP)
 include(":Modules:Actions")                 // Intent handlers, action execution

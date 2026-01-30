@@ -5,6 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.augmentalis.voiceos.ui.icons.VoiceOSIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -195,7 +196,7 @@ fun DeveloperSettingsScreen(
                         onClick = scanningCallbacks.onRescanEverything,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.Default.DeleteSweep, contentDescription = null)
+                        Icon(VoiceOSIcons.deleteSweep(), contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Clear All")
                     }
@@ -236,7 +237,7 @@ fun DeveloperSettingsScreen(
                     ) {
                         Text(name)
                         Icon(
-                            if (enabled) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                            if (enabled) Icons.Default.CheckCircle else VoiceOSIcons.cancel(),
                             contentDescription = if (enabled) "Enabled" else "Disabled",
                             tint = if (enabled)
                                 MaterialTheme.colorScheme.primary
