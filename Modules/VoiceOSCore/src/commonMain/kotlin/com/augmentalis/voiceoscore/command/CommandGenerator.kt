@@ -266,7 +266,6 @@ object CommandGenerator {
      */
     fun extractShortLabel(element: ElementInfo): String? {
         val text = element.text.ifBlank { element.contentDescription }
-        println("[generateListLabelCommands extractShortLabel] label = $text")
         if (text.isBlank()) return null
 
         // Email pattern: "Unread, , , SenderName, , Subject..."
