@@ -497,7 +497,9 @@ private fun NumbersOverlayContent() {
     ) {
         // Draw numbered badge for each item
         items.forEach { item ->
-            NumberBadge(item)
+            key(item.avid) {
+                NumberBadge(item)
+            }
         }
 
         // Instruction panel at bottom

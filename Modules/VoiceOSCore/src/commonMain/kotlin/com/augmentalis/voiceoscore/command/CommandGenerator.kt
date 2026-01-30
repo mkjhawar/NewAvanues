@@ -192,8 +192,10 @@ object CommandGenerator {
         listItems: List<ElementInfo>,
         packageName: String
     ): List<QuantizedCommand> {
-        val ordinals = listOf("first", "second", "third", "fourth", "fifth",
-            "sixth", "seventh", "eighth", "ninth", "tenth")
+        val ordinals = listOf(
+            "first", "second", "third", "fourth", "fifth",
+            "sixth", "seventh", "eighth", "ninth", "tenth"
+        )
 
         // Group by listIndex and keep only the best element per index
         // This prevents duplicates when multiple elements share the same listIndex
@@ -264,6 +266,7 @@ object CommandGenerator {
      */
     fun extractShortLabel(element: ElementInfo): String? {
         val text = element.text.ifBlank { element.contentDescription }
+        println("[generateListLabelCommands extractShortLabel] label = $text")
         if (text.isBlank()) return null
 
         // Email pattern: "Unread, , , SenderName, , Subject..."
@@ -271,6 +274,14 @@ object CommandGenerator {
             val parts = text.split(",").map { it.trim() }
             // Find first non-empty part after "Unread"
             for (i in 1 until parts.size) {
+                if (parts[i].isNotBlank() && parts[i].length in 2..30) {
+                    return parts[i]
+                }
+            }
+        } else if (text.startsWith(", , ,")) {// Email pattern: ", , , SenderName, , Subject..."
+            val parts = text.split(",").map { it.trim() }
+            // Find first non-empty part after "Unread"
+            for (i in 0 until parts.size) {
                 if (parts[i].isNotBlank() && parts[i].length in 2..30) {
                     return parts[i]
                 }
@@ -386,6 +397,7 @@ object CommandGenerator {
 
         return listItems.filter { it.listIndex >= 0 }.mapNotNull { element ->
             val label = extractShortLabel(element)
+            println("[generateListLabelCommands] label = $label")
 
             // Skip if no label extracted or label already seen (avoid duplicates)
             if (label.isNullOrBlank()) return@mapNotNull null
@@ -467,29 +479,29 @@ object CommandGenerator {
     }
 
     /**
-    * Normalizes a RealWear ML script string by trimming the input around the first supported delimiter.
-    *
-    * This function searches for the first delimiter (in the order defined by [PARSE_DESCRIPTION_DELIMITERS])
-    * that appears in [text]. If a delimiter is found, the input is split into exactly two parts using
-    * `split(delimiter, limit = 2)`.
-    *
-    * Selection logic:
-    * - If the original [text] contains `"hf_"`, the function returns the substring *after* the first
-    *   encountered delimiter (i.e., `parts[1]`).
-    * - Otherwise, it returns the substring *before* the first encountered delimiter (i.e., `parts[0]`).
-    *
-    * If no delimiter from [PARSE_DESCRIPTION_DELIMITERS] is present, the input is returned unchanged.
-    *
-    * Notes / edge cases:
-    * - If the delimiter exists but is at the beginning or end of the string, the returned value may be
-    *   an empty string.
-    * - The delimiter search is order-dependent: if multiple delimiters are present, only the first match
-    *   according to [PARSE_DESCRIPTION_DELIMITERS] is used.
-    * - The `"hf_"` check is performed on the original [text], not on the split parts.
-    *
-    * @param text Raw ML script or description text to normalize.
-    * @return A normalized string segment based on the delimiter and `"hf_"` presence rules.
-    */
+     * Normalizes a RealWear ML script string by trimming the input around the first supported delimiter.
+     *
+     * This function searches for the first delimiter (in the order defined by [PARSE_DESCRIPTION_DELIMITERS])
+     * that appears in [text]. If a delimiter is found, the input is split into exactly two parts using
+     * `split(delimiter, limit = 2)`.
+     *
+     * Selection logic:
+     * - If the original [text] contains `"hf_"`, the function returns the substring *after* the first
+     *   encountered delimiter (i.e., `parts[1]`).
+     * - Otherwise, it returns the substring *before* the first encountered delimiter (i.e., `parts[0]`).
+     *
+     * If no delimiter from [PARSE_DESCRIPTION_DELIMITERS] is present, the input is returned unchanged.
+     *
+     * Notes / edge cases:
+     * - If the delimiter exists but is at the beginning or end of the string, the returned value may be
+     *   an empty string.
+     * - The delimiter search is order-dependent: if multiple delimiters are present, only the first match
+     *   according to [PARSE_DESCRIPTION_DELIMITERS] is used.
+     * - The `"hf_"` check is performed on the original [text], not on the split parts.
+     *
+     * @param text Raw ML script or description text to normalize.
+     * @return A normalized string segment based on the delimiter and `"hf_"` presence rules.
+     */
     private fun normalizeRealWearMlScript(text: String): String {
         // Find the first delimiter from our list that exists in the current processedText
         val foundDelimiter = PARSE_DESCRIPTION_DELIMITERS.firstOrNull { text.contains(it) }

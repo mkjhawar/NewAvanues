@@ -214,6 +214,8 @@ object OverlayStateManager {
      */
     fun clearOverlayItems() {
         if (_numberedOverlayItems.value.isNotEmpty()) {
+            avidToNumber.clear()
+            maxAssignedNumber = 0
             Log.d(TAG, "Clearing ${_numberedOverlayItems.value.size} overlay items")
             _numberedOverlayItems.value = emptyList()
             updateNumbersOverlayVisibility()
@@ -234,60 +236,50 @@ object OverlayStateManager {
      *
      * @param newItems Items from the current screen state
      */
+    private val avidToNumber = linkedMapOf<String, Int>()  // preserves insertion order (optional)
+    private var maxAssignedNumber = 0
     fun updateNumberedOverlayItemsIncremental(newItems: List<NumberOverlayItem>) {
-        val currentItems = _numberedOverlayItems.value
 
-        if (currentItems.isEmpty()) {
-            // First load - just set directly
-            _numberedOverlayItems.value = newItems
+        if (newItems.isEmpty()) {
+            _numberedOverlayItems.value = emptyList()
             updateNumbersOverlayVisibility()
             return
         }
 
-        // Build map of AVID -> existing number for preservation
-        val existingNumbers = currentItems.associateBy({ it.avid }, { it.number })
+        // 1) Sort visible items in a stable "screen order"
+        val sortedNewItems = newItems.sortedWith(compareBy<NumberOverlayItem>({ it.top }, { it.left }))
 
-        // Track used numbers to prevent duplicates
-        val usedNumbers = mutableSetOf<Int>()
-        val mergedItems = mutableListOf<NumberOverlayItem>()
-
-        // First pass: assign preserved numbers to items that have matching AVIDs
-        newItems.forEach { item ->
-            val existingNumber = existingNumbers[item.avid]
-            if (existingNumber != null && !usedNumbers.contains(existingNumber)) {
-                // Preserve the existing number for visual stability (only if not already used)
-                mergedItems.add(item.copy(number = existingNumber))
-                usedNumbers.add(existingNumber)
-            } else {
-                // Will assign new number in second pass
-                mergedItems.add(item)
+        // 2) Assign numbers using global cache (avid -> number)
+        val finalItems = sortedNewItems.map { item ->
+            val number = avidToNumber[item.avid] ?: run {
+                maxAssignedNumber += 1
+                avidToNumber[item.avid] = maxAssignedNumber
+                maxAssignedNumber
             }
+            item.copy(number = number)
         }
 
-        // Second pass: assign new numbers to items that need them
-        var nextNumber = 1
-        val finalItems = mergedItems.map { item ->
-            if (usedNumbers.contains(item.number)) {
-                // Already has a valid preserved number
-                item
-            } else {
-                // Find next available number
-                while (usedNumbers.contains(nextNumber)) {
-                    nextNumber++
-                }
-                usedNumbers.add(nextNumber)
-                item.copy(number = nextNumber)
-            }
-        }
-
+        // 3) No duplicates possible because each avid maps to exactly 1 number
         _numberedOverlayItems.value = finalItems
         updateNumbersOverlayVisibility()
 
-        if (finalItems.isNotEmpty()) {
-            val preservedCount = finalItems.count { existingNumbers[it.avid] == it.number }
-            val newCount = finalItems.size - preservedCount
-            Log.d(TAG, "Incremental overlay update: ${finalItems.size} items ($preservedCount preserved, $newCount new)")
+        trimCacheIfNeeded()
+    }
+
+    private fun trimCacheIfNeeded() {
+        if (avidToNumber.size <= 500) return
+
+        // remove oldest entries (LRU-ish because LinkedHashMap keeps order)
+        val removeCount = avidToNumber.size - 500
+        val iterator = avidToNumber.entries.iterator()
+        repeat(removeCount) {
+            if (iterator.hasNext()) {
+                iterator.next()
+                iterator.remove()
+            }
         }
+
+        // NOTE: maxAssignedNumber keeps increasing; that’s OK for uniqueness.
     }
 
     /**

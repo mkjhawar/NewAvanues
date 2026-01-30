@@ -45,7 +45,7 @@ class ScreenCacheManager(
      */
     fun generateScreenHash(rootNode: AccessibilityNodeInfo): String {
         val elements = mutableListOf<String>()
-        collectElementSignatures(rootNode, elements, maxDepth = 5)
+        collectElementSignatures(rootNode, elements, maxDepth = 8)
 
         // Include screen dimensions in hash for orientation/freeform support
         val displayMetrics = resources.displayMetrics
