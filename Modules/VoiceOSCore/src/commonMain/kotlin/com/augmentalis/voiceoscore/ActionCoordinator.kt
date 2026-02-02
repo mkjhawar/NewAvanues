@@ -611,11 +611,6 @@ class ActionCoordinator(
             append(metrics.getDebugInfo())
         }
     }
-
-    /**
-     * Platform-specific currentTimeMillis.
-     */
-    private fun currentTimeMillis(): Long = com.augmentalis.voiceoscore.currentTimeMillis()
 }
 
 /**
