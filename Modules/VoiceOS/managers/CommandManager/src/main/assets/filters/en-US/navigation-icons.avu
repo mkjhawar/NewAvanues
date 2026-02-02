@@ -1,0 +1,79 @@
+# Avanues Universal Format v2.0
+# Type: ICONS
+# Extension: .avu
+---
+schema: avu-2.0
+version: 1.0.0
+locale: en-US
+project: voiceos
+metadata:
+  file: navigation-icons.avu
+  category: navigation_icons
+  count: 50
+---
+ICN:menu:navigation:Navigation menu
+ICN:more:navigation:More options
+ICN:options:navigation:Options menu
+ICN:settings:navigation:Settings
+ICN:back:navigation:Go back
+ICN:forward:navigation:Go forward
+ICN:home:navigation:Home
+ICN:close:navigation:Close
+ICN:refresh:navigation:Refresh
+ICN:reload:navigation:Reload
+ICN:search:navigation:Search
+ICN:filter:navigation:Filter
+ICN:sort:navigation:Sort
+---
+ICN:add:action:Add new
+ICN:new:action:New item
+ICN:create:action:Create
+ICN:edit:action:Edit
+ICN:delete:action:Delete
+ICN:remove:action:Remove
+ICN:save:action:Save
+ICN:cancel:action:Cancel
+ICN:share:action:Share
+ICN:send:action:Send
+ICN:download:action:Download
+ICN:upload:action:Upload
+ICN:attach:action:Attach
+ICN:copy:action:Copy
+ICN:paste:action:Paste
+---
+ICN:call:communication:Call
+ICN:meet:communication:Meet
+ICN:video:communication:Video
+ICN:camera:communication:Camera
+ICN:mic:communication:Microphone
+ICN:mute:communication:Mute
+ICN:unmute:communication:Unmute
+ICN:compose:communication:Compose
+ICN:reply:communication:Reply
+ICN:archive:communication:Archive
+ICN:trash:communication:Trash
+ICN:spam:communication:Spam
+---
+ICN:play:media:Play
+ICN:pause:media:Pause
+ICN:stop:media:Stop
+ICN:skip:media:Skip
+ICN:previous:media:Previous
+ICN:next:media:Next
+ICN:volume:media:Volume
+ICN:record:media:Record
+---
+ICN:star:status:Star
+ICN:favorite:status:Favorite
+ICN:bookmark:status:Bookmark
+ICN:pin:status:Pin
+ICN:flag:status:Flag
+ICN:label:status:Label
+ICN:like:status:Like
+ICN:love:status:Love
+---
+ICN:help:help:Help
+ICN:info:help:Info
+ICN:about:help:About
+ICN:feedback:help:Feedback
+ICN:support:help:Support

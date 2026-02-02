@@ -17,22 +17,9 @@ object CommandGenerator {
     private val PARSE_DESCRIPTION_DELIMITERS = listOf(":", "|", ",", ".")
 
     // ===== GARBAGE TEXT FILTERS =====
-    // Patterns that indicate non-voice-command content
-    // NOTE: These are language-agnostic patterns. Localized garbage words
-    // should be added to LOCALIZED_GARBAGE_WORDS for each supported locale.
-
-    /**
-     * Words that when repeated indicate garbage text (e.g., "comma comma com")
-     * Keyed by locale code (en, de, es, fr, etc.)
-     */
-    private val LOCALIZED_REPETITIVE_WORDS = mapOf(
-        "en" to setOf("comma", "dot", "dash", "space", "tab", "enter", "null", "undefined", "nan", "true", "false"),
-        "de" to setOf("komma", "punkt", "strich", "leerzeichen", "tab", "eingabe", "null", "undefiniert", "wahr", "falsch"),
-        "es" to setOf("coma", "punto", "guion", "espacio", "tab", "enter", "nulo", "indefinido", "verdadero", "falso"),
-        "fr" to setOf("virgule", "point", "tiret", "espace", "tab", "entrer", "nul", "indéfini", "vrai", "faux"),
-        "zh" to setOf("逗号", "句号", "空格", "制表符", "回车", "空", "未定义", "真", "假"),
-        "ja" to setOf("コンマ", "ピリオド", "スペース", "タブ", "エンター", "ヌル", "未定義", "真", "偽")
-    )
+    // Filter data loaded from external AVU files via FilterFileLoader.
+    // This allows updates without recompiling.
+    // Files: assets/filters/{locale}/garbage-words.avu, navigation-icons.avu
 
     /**
      * Language-agnostic garbage patterns (work for any locale)
@@ -55,91 +42,28 @@ object CommandGenerator {
     )
 
     /**
-     * Known garbage exact matches (language-agnostic programming terms)
-     */
-    private val GARBAGE_EXACT = setOf(
-        "undefined", "null", "nan", "NaN", "NULL",
-        "[object object]", "[Object object]",
-        "function", "error", "exception",
-        "...", "---", "___", "true", "false", ""
-    )
-
-    /**
      * Get repetitive words for the current locale.
-     * Falls back to English if locale not found.
+     * Loaded from AVU files via FilterFileLoader.
      */
     private fun getRepetitiveWords(locale: String = "en"): Set<String> {
-        val langCode = locale.take(2).lowercase()
-        return LOCALIZED_REPETITIVE_WORDS[langCode] ?: LOCALIZED_REPETITIVE_WORDS["en"]!!
+        return FilterFileLoader.getRepetitiveWords(locale)
     }
 
     /**
-     * Known navigation/action icon labels that are valid single-word commands.
-     * These come from contentDescription on icon buttons.
-     * Localized for multiple languages.
+     * Get exact garbage strings for the current locale.
+     * Loaded from AVU files via FilterFileLoader.
      */
-    private val LOCALIZED_NAVIGATION_ICONS = mapOf(
-        "en" to setOf(
-            // Navigation
-            "menu", "more", "options", "settings", "back", "forward", "home", "close",
-            "refresh", "reload", "search", "filter", "sort",
-            // Actions
-            "add", "new", "create", "edit", "delete", "remove", "save", "cancel",
-            "share", "send", "download", "upload", "attach", "copy", "paste",
-            // Communication
-            "call", "meet", "video", "camera", "mic", "mute", "unmute",
-            "compose", "reply", "archive", "trash", "spam",
-            // Media
-            "play", "pause", "stop", "skip", "previous", "next", "volume",
-            // Status
-            "star", "favorite", "bookmark", "pin", "flag", "label",
-            // Help
-            "help", "info", "about", "feedback"
-        ),
-        "de" to setOf(
-            "menü", "mehr", "optionen", "einstellungen", "zurück", "vorwärts", "startseite", "schließen",
-            "aktualisieren", "suchen", "filtern", "sortieren",
-            "hinzufügen", "neu", "erstellen", "bearbeiten", "löschen", "entfernen", "speichern", "abbrechen",
-            "teilen", "senden", "herunterladen", "hochladen", "anhängen", "kopieren", "einfügen",
-            "anrufen", "video", "kamera", "mikrofon", "stummschalten",
-            "verfassen", "antworten", "archivieren", "papierkorb",
-            "abspielen", "pause", "stopp", "überspringen", "vorherige", "nächste", "lautstärke",
-            "stern", "favorit", "lesezeichen",
-            "hilfe", "info", "über"
-        ),
-        "es" to setOf(
-            "menú", "más", "opciones", "ajustes", "atrás", "adelante", "inicio", "cerrar",
-            "actualizar", "buscar", "filtrar", "ordenar",
-            "añadir", "nuevo", "crear", "editar", "eliminar", "quitar", "guardar", "cancelar",
-            "compartir", "enviar", "descargar", "subir", "adjuntar", "copiar", "pegar",
-            "llamar", "vídeo", "cámara", "micrófono", "silenciar",
-            "redactar", "responder", "archivar", "papelera",
-            "reproducir", "pausar", "detener", "saltar", "anterior", "siguiente", "volumen",
-            "estrella", "favorito", "marcador",
-            "ayuda", "información", "acerca"
-        ),
-        "fr" to setOf(
-            "menu", "plus", "options", "paramètres", "retour", "avancer", "accueil", "fermer",
-            "actualiser", "rechercher", "filtrer", "trier",
-            "ajouter", "nouveau", "créer", "modifier", "supprimer", "retirer", "enregistrer", "annuler",
-            "partager", "envoyer", "télécharger", "téléverser", "joindre", "copier", "coller",
-            "appeler", "vidéo", "caméra", "micro", "muet",
-            "composer", "répondre", "archiver", "corbeille",
-            "lecture", "pause", "arrêter", "passer", "précédent", "suivant", "volume",
-            "étoile", "favori", "signet",
-            "aide", "info", "à propos"
-        )
-    )
+    private fun getExactGarbage(locale: String = "en"): Set<String> {
+        return FilterFileLoader.getExactGarbage(locale)
+    }
 
     /**
      * Get navigation icon labels for the current locale.
+     * Loaded from AVU files via FilterFileLoader.
      * Returns a combined set of current locale + English (fallback).
      */
     private fun getNavigationIcons(locale: String = "en"): Set<String> {
-        val langCode = locale.take(2).lowercase()
-        val localized = LOCALIZED_NAVIGATION_ICONS[langCode] ?: emptySet()
-        val english = LOCALIZED_NAVIGATION_ICONS["en"]!!
-        return localized + english  // Combine both for better coverage
+        return FilterFileLoader.getNavigationIcons(locale)
     }
 
     /**
@@ -288,8 +212,9 @@ object CommandGenerator {
         // Empty or very short (single char)
         if (trimmed.length <= 1) return true
 
-        // Exact matches (language-agnostic programming terms)
-        if (GARBAGE_EXACT.any { it.equals(trimmed, ignoreCase = true) }) return true
+        // Exact matches (loaded from AVU files)
+        val exactGarbage = getExactGarbage(locale)
+        if (exactGarbage.any { it.equals(trimmed, ignoreCase = true) }) return true
 
         // Pattern matches (language-agnostic patterns)
         if (GARBAGE_PATTERNS.any { it.matches(trimmed) }) return true

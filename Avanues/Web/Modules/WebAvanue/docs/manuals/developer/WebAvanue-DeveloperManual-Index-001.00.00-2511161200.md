@@ -37,6 +37,7 @@
 
 ### Feature Reference
 - [Complete Feature Reference](features/WebAvanue-FeatureReference-001.00.00-2512011200.md) - All 100+ features with implementation details
+- [Voice Command Garbage Filtering](features/WebAvanue-VoiceCommand-GarbageFiltering-001.00.00-2602021200.md) - Garbage filtering & icon command support
 
 ### Advanced Topics
 - [Chapter 19: SQLDelight Integration](19-SQLDelight-Integration.md)

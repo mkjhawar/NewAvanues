@@ -1,0 +1,72 @@
+# Avanues Universal Format v2.0
+# Type: ICONS
+# Extension: .avu
+---
+schema: avu-2.0
+version: 1.0.0
+locale: es-ES
+project: voiceos
+metadata:
+  file: navigation-icons.avu
+  category: navigation_icons
+  count: 42
+---
+ICN:menú:navigation:Navigation menu
+ICN:más:navigation:More options
+ICN:opciones:navigation:Options menu
+ICN:ajustes:navigation:Settings
+ICN:atrás:navigation:Go back
+ICN:adelante:navigation:Go forward
+ICN:inicio:navigation:Home
+ICN:cerrar:navigation:Close
+ICN:actualizar:navigation:Refresh
+ICN:buscar:navigation:Search
+ICN:filtrar:navigation:Filter
+ICN:ordenar:navigation:Sort
+---
+ICN:añadir:action:Add new
+ICN:nuevo:action:New item
+ICN:crear:action:Create
+ICN:editar:action:Edit
+ICN:eliminar:action:Delete
+ICN:quitar:action:Remove
+ICN:guardar:action:Save
+ICN:cancelar:action:Cancel
+ICN:compartir:action:Share
+ICN:enviar:action:Send
+ICN:descargar:action:Download
+ICN:subir:action:Upload
+ICN:adjuntar:action:Attach
+ICN:copiar:action:Copy
+ICN:pegar:action:Paste
+---
+ICN:llamar:communication:Call
+ICN:vídeo:communication:Video
+ICN:cámara:communication:Camera
+ICN:micrófono:communication:Microphone
+ICN:silenciar:communication:Mute
+ICN:redactar:communication:Compose
+ICN:responder:communication:Reply
+ICN:archivar:communication:Archive
+ICN:papelera:communication:Trash
+---
+ICN:reproducir:media:Play
+ICN:pausar:media:Pause
+ICN:detener:media:Stop
+ICN:saltar:media:Skip
+ICN:anterior:media:Previous
+ICN:siguiente:media:Next
+ICN:volumen:media:Volume
+ICN:grabar:media:Record
+---
+ICN:estrella:status:Star
+ICN:favorito:status:Favorite
+ICN:marcador:status:Bookmark
+ICN:fijar:status:Pin
+ICN:etiquetar:status:Flag
+---
+ICN:ayuda:help:Help
+ICN:información:help:Info
+ICN:acerca:help:About
+ICN:comentarios:help:Feedback
+ICN:soporte:help:Support
