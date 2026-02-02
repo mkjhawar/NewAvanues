@@ -220,118 +220,267 @@ Current gesture support:
 
 ---
 
-## 6. Recommendations for Enhancement
+## 6. Recommendations for Enhancement (Prioritized)
 
-### 6.1 High Priority Enhancements
+### Ranking Methodology
 
-#### 6.1.1 Command Confidence Scoring & Feedback
+Recommendations ranked by combined score:
+- **Effort**: Implementation complexity (lower = better)
+- **Benefit**: User-facing value (higher = better)
+- **Battery**: Power consumption impact (lower/negative = better)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    Enhancement Priority Matrix                               │
+├──────────────────────────────┬────────┬─────────┬─────────┬────────────────┤
+│ Enhancement                  │ Effort │ Benefit │ Battery │ Priority Score │
+├──────────────────────────────┼────────┼─────────┼─────────┼────────────────┤
+│ Grammar Size Management      │ Low    │ High    │ SAVES   │ ★★★★★ (1st)   │
+│ Event Prioritization         │ Low    │ High    │ SAVES   │ ★★★★★ (2nd)   │
+│ Screen Hash Skip Enhancement │ Low    │ High    │ SAVES   │ ★★★★☆ (3rd)   │
+│ Confidence Feedback          │ Medium │ High    │ Minimal │ ★★★★☆ (4th)   │
+│ Error Recovery/Diagnostics   │ Low    │ Medium  │ Minimal │ ★★★☆☆ (5th)   │
+│ Adaptive Throttling          │ High   │ High    │ Medium  │ ★★★☆☆ (6th)   │
+│ Multi-Gesture Chaining       │ High   │ Medium  │ Low     │ ★★☆☆☆ (7th)   │
+│ Custom Command Definitions   │ High   │ Medium  │ Low     │ ★★☆☆☆ (8th)   │
+│ Command Prediction           │ High   │ Medium  │ HIGH    │ ★☆☆☆☆ (9th)   │
+│ Multi-Language Support       │ V.High │ Regional│ HIGH    │ ★☆☆☆☆ (10th)  │
+└──────────────────────────────┴────────┴─────────┴─────────┴────────────────┘
+```
+
+---
+
+### Tier 1: Implement First (Low Effort, High Benefit, Saves Battery)
+
+#### 6.1.1 Grammar Size Management ⭐ HIGHEST PRIORITY
+
+**Effort:** Low | **Benefit:** High | **Battery:** SAVES power
+
+**Current Gap:** All extracted commands added to grammar, causing slow compilation.
+
+**Why Prioritize:** Directly reduces CPU usage and compilation time. Fewer commands = faster recognition = less battery drain.
+
+**Implementation:**
+```kotlin
+// In CommandGenerator or CommandOrchestrator
+private const val MAX_GRAMMAR_SIZE = 100
+
+fun generateCommands(...): List<QuantizedCommand> {
+    val allCommands = /* generate all commands */
+
+    // Sort by relevance: clickable > visible > has label
+    return allCommands
+        .sortedByDescending { it.relevanceScore }
+        .take(MAX_GRAMMAR_SIZE)
+}
+```
+
+**Estimated Impact:**
+- Grammar compilation: 50-70% faster
+- CPU usage: 30-40% reduction during updates
+- Battery: Measurable improvement on continuous-event apps
+
+---
+
+#### 6.1.2 Accessibility Event Prioritization ⭐ HIGH PRIORITY
+
+**Effort:** Low | **Benefit:** High | **Battery:** SAVES power
+
+**Current Gap:** All events processed equally, wasting CPU on irrelevant updates.
+
+**Why Prioritize:** Reduces unnecessary processing. System-generated events (animations, progress bars) don't need command updates.
+
+**Implementation:**
+```kotlin
+// In VoiceOSAccessibilityService.onAccessibilityEvent()
+private fun shouldProcessEvent(event: AccessibilityEvent): Boolean {
+    // Skip system UI updates (status bar, navigation)
+    if (event.packageName == "com.android.systemui") return false
+
+    // Skip non-interactive event sources
+    val source = event.source ?: return false
+    if (!source.isVisibleToUser) return false
+
+    // Skip if screen hash unchanged (coalescing)
+    val newHash = computeScreenHash(source)
+    if (newHash == lastScreenHash) return false
+    lastScreenHash = newHash
+
+    return true
+}
+```
+
+**Estimated Impact:**
+- Event processing: 40-60% reduction
+- CPU usage: 25-35% reduction
+- Battery: Significant improvement on animation-heavy apps
+
+---
+
+#### 6.1.3 Screen Hash Skip Enhancement ⭐ HIGH PRIORITY
+
+**Effort:** Very Low | **Benefit:** High | **Battery:** SAVES power
+
+**Current Gap:** Screen hash comparison exists but could be used earlier in the pipeline.
+
+**Why Prioritize:** Already have the infrastructure. Just move the check earlier to skip more work.
+
+**Implementation:**
+```kotlin
+// Move hash check to BEFORE element extraction
+private fun handleContentUpdate(event: AccessibilityEvent) {
+    val rootNode = rootInActiveWindow ?: return
+
+    // EARLY EXIT: Skip if screen unchanged
+    val quickHash = computeQuickHash(rootNode)
+    if (quickHash == lastQuickHash) {
+        Log.v(TAG, "Screen unchanged, skipping update")
+        return
+    }
+    lastQuickHash = quickHash
+
+    // Now proceed with expensive extraction...
+}
+```
+
+**Estimated Impact:**
+- Duplicate processing: Eliminated
+- CPU usage: 20-30% reduction on static screens
+- Battery: Noticeable improvement
+
+---
+
+### Tier 2: Implement Second (Medium Effort, High Benefit, Low Battery)
+
+#### 6.2.1 Command Confidence Feedback
+
+**Effort:** Medium | **Benefit:** High | **Battery:** Minimal
 
 **Current Gap:** Commands execute without surfacing recognition confidence to users.
 
-**Recommendation:**
-- Display visual feedback when recognition confidence is low (< 0.7)
-- Implement "Did you mean..." confirmation for ambiguous matches
-- Track per-command success rates to tune grammar weighting
+**Why This Tier:** Requires UI changes but significantly improves user trust.
 
 **Implementation:**
 ```kotlin
 // In speech result processing
-if (speechResult.confidence < CONFIDENCE_THRESHOLD) {
-    showConfirmationDialog(speechResult.text, alternatives)
-} else {
-    executeCommand(speechResult.text)
-}
-```
-
-#### 6.1.2 Adaptive Throttling Based on App Behavior
-
-**Current Gap:** Throttling uses static device-speed tiers.
-
-**Recommendation:**
-- Learn per-app event patterns dynamically
-- Auto-detect "continuous-event apps" and apply stricter throttling
-- Reduce throttling for apps with infrequent UI updates
-
-**Implementation:**
-```kotlin
-class AdaptiveThrottleManager {
-    private val appEventRates = mutableMapOf<String, EventRateStats>()
-
-    fun getThrottleMs(packageName: String): Long {
-        val stats = appEventRates[packageName] ?: return defaultThrottleMs
-        return when {
-            stats.eventsPerSecond > 10 -> AGGRESSIVE_THROTTLE  // 2000ms
-            stats.eventsPerSecond > 5 -> MODERATE_THROTTLE     // 1000ms
-            else -> LIGHT_THROTTLE                              // 500ms
-        }
+when {
+    speechResult.confidence >= 0.85 -> {
+        executeCommand(speechResult.text)  // High confidence: execute
+    }
+    speechResult.confidence >= 0.6 -> {
+        showConfirmation(speechResult.text)  // Medium: confirm
+    }
+    else -> {
+        showDidYouMean(alternatives)  // Low: suggest alternatives
     }
 }
 ```
 
-#### 6.1.3 Command Prediction & Preloading
+---
 
-**Current Gap:** Grammar is compiled reactively on screen changes.
+#### 6.2.2 Error Recovery & Diagnostics
 
-**Recommendation:**
-- Predict likely next screens based on navigation patterns
-- Preload grammar for anticipated commands
-- Cache screen element structures for frequently visited screens
+**Effort:** Low | **Benefit:** Medium | **Battery:** Minimal
 
-### 6.2 Medium Priority Enhancements
+**Current Gap:** Limited visibility into speech collection health.
 
-#### 6.2.1 Multi-Gesture Command Chaining
+**Why This Tier:** Low effort, helps debugging, doesn't impact normal operation.
+
+**Implementation:**
+```kotlin
+// Add to VoiceOSAccessibilityService
+private val healthMetrics = SpeechHealthMetrics()
+
+data class SpeechHealthMetrics(
+    var totalResults: Long = 0,
+    var consecutiveFailures: Int = 0,
+    var lastSuccessTime: Long = 0,
+    var throttledUpdates: Long = 0
+)
+
+// Expose via StateFlow for UI monitoring
+val healthStatus: StateFlow<SpeechHealthMetrics> = _healthMetrics.asStateFlow()
+```
+
+---
+
+### Tier 3: Implement Later (Higher Effort, Trade-offs)
+
+#### 6.3.1 Adaptive Throttling Based on App Behavior
+
+**Effort:** Medium-High | **Benefit:** High | **Battery:** Medium cost
+
+**Current Gap:** Throttling uses static device-speed tiers.
+
+**Why This Tier:** Requires event rate tracking which itself consumes resources.
+
+**Trade-off Analysis:**
+```
++ Benefit: Better UX on well-behaved apps (lower throttle)
++ Benefit: Better stability on problematic apps (higher throttle)
+- Cost: Continuous event rate monitoring
+- Cost: State storage per app
+- Risk: May over-throttle legitimate rapid interactions
+```
+
+**Only implement if:** Current static throttling proves insufficient after Tier 1/2 fixes.
+
+---
+
+#### 6.3.2 Multi-Gesture Command Chaining
+
+**Effort:** High | **Benefit:** Medium (power users) | **Battery:** Low
 
 **Current Gap:** Each gesture maps to a single command.
 
-**Recommendation:**
-- Support compound commands: "Select item 3 and delete"
-- Enable macro recording for repetitive operations
-- Context-aware command suggestions
+**Why This Tier:** Complex grammar changes, limited audience, but low runtime cost.
 
-**Example Grammar:**
+**Example:**
 ```
-"[action] [target] and [action]"
-"Select {item} and {action}"
-"Repeat last command"
+"Select item 3 and delete"  → click(item3) + click(delete)
+"Scroll down and select first" → scroll + click(first)
 ```
 
-#### 6.2.2 Accessibility Event Prioritization
+---
 
-**Current Gap:** All events processed equally.
+### Tier 4: Consider Carefully (High Cost or Limited Benefit)
 
-**Recommendation:**
-- Prioritize user-initiated events over system-generated
-- Implement event coalescing for rapid sequential changes
-- Skip updates when screen hash unchanged
+#### 6.4.1 Command Prediction & Preloading ⚠️ HIGH BATTERY COST
 
-#### 6.2.3 Grammar Size Management
+**Effort:** High | **Benefit:** Medium | **Battery:** HIGH
 
-**Current Gap:** All extracted commands added to grammar.
+**Why Deprioritize:**
+- Background processing for prediction drains battery
+- Preloading grammar requires memory
+- Marginal benefit: current reactive approach works
+- Risk: Predictions wrong = wasted work
 
-**Recommendation:**
-- Limit grammar to top N most relevant commands
-- Implement hierarchical command loading
-- Lazy grammar compilation for rarely-used categories
+**Only implement if:** Users report noticeable lag on screen transitions AND Tier 1-2 fixes don't help.
 
-### 6.3 Lower Priority Enhancements
+---
 
-#### 6.3.1 Error Recovery & Diagnostics
+#### 6.4.2 Custom Command Definitions
 
-- Add telemetry for speech collection failures
-- Implement health checks for freeze detection
-- User-facing status indicators
+**Effort:** High | **Benefit:** Medium (niche) | **Battery:** Low
 
-#### 6.3.2 Custom Command Definitions
+**Why Deprioritize:**
+- Requires full UI for command editor
+- Storage and grammar integration
+- Limited audience (power users only)
 
-- Allow users to define custom voice shortcuts
-- Support app-specific command overrides
-- Import/export command configurations
+---
 
-#### 6.3.3 Multi-Language Support
+#### 6.4.3 Multi-Language Support ⚠️ VERY HIGH EFFORT
 
-- Detect device language and load appropriate models
-- Support language switching mid-session
-- Handle mixed-language UI elements
+**Effort:** Very High | **Benefit:** Regional | **Battery:** HIGH
+
+**Why Deprioritize:**
+- Requires additional speech models per language
+- Larger APK size
+- More memory usage
+- Only benefits non-English users
+
+**Only implement if:** Product expansion to non-English markets is planned.
 
 ---
 
@@ -358,12 +507,35 @@ class AdaptiveThrottleManager {
 
 VoiceOS successfully implements its core function of extracting voice commands from UI elements and executing gestures. The recent fixes for voice command freeze have significantly improved reliability under continuous event load.
 
-The recommended enhancements would improve:
-1. **User Experience**: Confidence feedback, command chaining
-2. **Reliability**: Adaptive throttling, health monitoring
-3. **Performance**: Grammar management, event prioritization
+### Recommended Implementation Order
 
-Implementation priority should focus on adaptive throttling and confidence feedback as these directly address user-facing issues.
+**Phase 1 (Immediate - Low effort, battery savings):**
+1. Grammar Size Management - Cap commands at ~100, sort by relevance
+2. Event Prioritization - Skip system UI, non-visible elements
+3. Screen Hash Skip Enhancement - Move check before extraction
+
+**Phase 2 (Short-term - User experience):**
+4. Confidence Feedback - Visual indicators for recognition quality
+5. Error Diagnostics - Health metrics for debugging
+
+**Phase 3 (If needed - Higher complexity):**
+6. Adaptive Throttling - Only if static throttling insufficient
+7. Multi-Gesture Chaining - Power user feature
+
+**Defer (High cost/low ROI):**
+- Command Prediction (battery drain)
+- Multi-Language (scope expansion)
+
+### Expected Impact of Phase 1
+
+| Metric | Before | After Phase 1 |
+|--------|--------|---------------|
+| Grammar compilation time | 100% | ~40% |
+| Events processed | 100% | ~50% |
+| CPU during continuous events | 100% | ~60% |
+| Battery drain (continuous apps) | High | Moderate |
+
+Phase 1 enhancements provide the best ROI: minimal code changes with measurable performance and battery improvements.
 
 ---
 
