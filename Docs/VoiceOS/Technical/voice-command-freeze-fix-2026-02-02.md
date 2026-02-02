@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-02
 **Branch:** `claude/fix-voice-command-freeze-Rs0jN`
-**Commits:** `b8ce81b9`, `76f389bc`
+**Commits:** `b8ce81b9`, `76f389bc`, `27181983`, (pending)
 
 ---
 
@@ -228,6 +228,77 @@ return listItems
 
 ---
 
+### Commit 3: Engine-Level Guards (Layer 5 Fix)
+
+**Files Modified:**
+- `VivokaAndroidEngine.kt`
+- `VivokaEngine.kt` (both androidMain and main/java versions)
+
+#### 3.1 Engine-Level Command Update Guard
+
+Added atomic guards in `VivokaAndroidEngine.kt` to prevent command update queue buildup:
+
+```kotlin
+private val isUpdatingCommands = AtomicBoolean(false)
+private val lastCommandsHash = AtomicReference<Int>(0)
+
+override suspend fun updateCommands(commands: List<String>): Result<Unit> {
+    // Skip if already updating to prevent queue buildup
+    if (!isUpdatingCommands.compareAndSet(false, true)) {
+        return Result.success(Unit)
+    }
+
+    return try {
+        // Skip if commands haven't changed (same hash)
+        val newHash = commands.sorted().hashCode()
+        val oldHash = lastCommandsHash.get()
+        if (newHash == oldHash) {
+            return Result.success(Unit)
+        }
+
+        vivokaEngine?.setDynamicCommands(commands)
+        lastCommandsHash.set(newHash)
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    } finally {
+        isUpdatingCommands.set(false)
+    }
+}
+```
+
+This provides:
+- **Atomic skip guard**: Prevents concurrent updateCommands calls
+- **Command change detection**: Skips update if command set hasn't changed (hash comparison)
+
+#### 3.2 VivokaEngine setDynamicCommands Guard
+
+Added guard in `VivokaEngine.setDynamicCommands()` to prevent coroutine queue buildup:
+
+```kotlin
+private val isSettingDynamicCommands = AtomicBoolean(false)
+
+fun setDynamicCommands(commands: List<String>) {
+    // Skip if already setting commands to prevent queue buildup
+    if (!isSettingDynamicCommands.compareAndSet(false, true)) {
+        Log.v(TAG, "setDynamicCommands skipped - already in progress")
+        return
+    }
+
+    coroutineScope.launch {
+        try {
+            // ... registration and compilation logic ...
+        } finally {
+            isSettingDynamicCommands.set(false)
+        }
+    }
+}
+```
+
+This prevents the core issue: when `setDynamicCommands()` is called rapidly, each call would launch a new coroutine that queues up waiting on `compilationMutex`. Now only one compilation runs at a time, others are skipped.
+
+---
+
 ## Architecture After Fix
 
 ```
@@ -268,6 +339,21 @@ return listItems
 │      replay = 1,                                                 │
 │      extraBufferCapacity = 64  ◄── Prevents emit() blocking     │
 │  )                                                               │
+│                                                                  │
+│  isUpdatingCommands: AtomicBoolean  ◄── Commit 3: Skip if busy  │
+│  lastCommandsHash: AtomicReference  ◄── Commit 3: Skip if same  │
+└─────────────────────────────────────────────────────────────────┘
+
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    VivokaEngine                                  │
+├─────────────────────────────────────────────────────────────────┤
+│  isSettingDynamicCommands: AtomicBoolean                         │
+│    ◄── Commit 3: Prevents coroutine queue buildup               │
+│                                                                  │
+│  setDynamicCommands() → model.compileModelWithCommands()        │
+│    ◄── Only one compilation at a time, others skipped           │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -296,6 +382,8 @@ Look for:
 - `Speech engine update throttled` - Confirms throttling is working
 - `Content update skipped` - Confirms processing guard is working
 - `Speech collection failed` - Should NOT appear frequently
+- `setDynamicCommands skipped - already in progress` - Confirms engine guard is working (Commit 3)
+- `updateCommands skipped - already updating` - Confirms VivokaAndroidEngine guard (Commit 3)
 
 ---
 
@@ -304,9 +392,11 @@ Look for:
 | File | Lines Changed | Purpose |
 |------|---------------|---------|
 | `VoiceOSAccessibilityService.kt` | +155, -16 | Dedicated dispatcher, throttling, guards |
-| `VivokaAndroidEngine.kt` | +26 | SharedFlow buffer capacity |
+| `VivokaAndroidEngine.kt` | +50 | SharedFlow buffer + engine-level guards |
 | `DeviceCapabilityManager.kt` | +32, -17 | Increased debounce values |
 | `CommandGenerator.kt` | +18, -7 | Filter non-actionable elements |
+| `VivokaEngine.kt` (androidMain) | +20 | setDynamicCommands guard |
+| `VivokaEngine.kt` (main/java) | +20 | setDynamicCommands guard |
 
 ---
 

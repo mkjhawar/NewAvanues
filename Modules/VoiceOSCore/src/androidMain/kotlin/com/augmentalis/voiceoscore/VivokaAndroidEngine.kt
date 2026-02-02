@@ -26,6 +26,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Status of the Vivoka SDK models on external storage.
@@ -112,6 +114,19 @@ class VivokaAndroidEngine(
     // Direct reference to SpeechRecognition's VivokaEngine (same as VoiceOSCore uses)
     private var vivokaEngine: VivokaEngine? = null
     private val pathResolver = VivokaPathResolver(context)
+
+    /**
+     * FIX: Engine-level guards to prevent command update queue buildup.
+     *
+     * When continuous accessibility events trigger rapid updateCommands calls,
+     * the underlying VivokaEngine.setDynamicCommands() launches new coroutines
+     * that queue up waiting on compilationMutex. These guards prevent that:
+     *
+     * - isUpdatingCommands: Atomic flag to skip if already updating
+     * - lastCommands: Track last command set to skip redundant updates
+     */
+    private val isUpdatingCommands = AtomicBoolean(false)
+    private val lastCommandsHash = AtomicReference<Int>(0)
 
     /**
      * Check if Vivoka models are available at external storage paths.
@@ -277,12 +292,37 @@ class VivokaAndroidEngine(
         }
     }
 
+    /**
+     * Update dynamic commands with engine-level guards.
+     *
+     * FIX: Prevents command update queue buildup that causes voice freeze:
+     * 1. Skips if already updating (atomic guard)
+     * 2. Skips if command set hasn't changed (hash comparison)
+     * 3. Uses try-finally to ensure lock is always released
+     */
     override suspend fun updateCommands(commands: List<String>): Result<Unit> {
+        // FIX: Skip if already updating to prevent queue buildup
+        if (!isUpdatingCommands.compareAndSet(false, true)) {
+            // Already updating - skip this call
+            return Result.success(Unit)
+        }
+
         return try {
+            // FIX: Skip if commands haven't changed (same hash)
+            val newHash = commands.sorted().hashCode()
+            val oldHash = lastCommandsHash.get()
+            if (newHash == oldHash) {
+                // Commands unchanged - skip update
+                return Result.success(Unit)
+            }
+
             vivokaEngine?.setDynamicCommands(commands)
+            lastCommandsHash.set(newHash)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
+        } finally {
+            isUpdatingCommands.set(false)
         }
     }
 
