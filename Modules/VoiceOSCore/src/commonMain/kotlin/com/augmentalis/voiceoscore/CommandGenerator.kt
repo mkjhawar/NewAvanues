@@ -16,6 +16,322 @@ object CommandGenerator {
 
     private val PARSE_DESCRIPTION_DELIMITERS = listOf(":", "|", ",", ".")
 
+    // ===== GARBAGE TEXT FILTERS =====
+    // Patterns that indicate non-voice-command content
+    // NOTE: These are language-agnostic patterns. Localized garbage words
+    // should be added to LOCALIZED_GARBAGE_WORDS for each supported locale.
+
+    /**
+     * Words that when repeated indicate garbage text (e.g., "comma comma com")
+     * Keyed by locale code (en, de, es, fr, etc.)
+     */
+    private val LOCALIZED_REPETITIVE_WORDS = mapOf(
+        "en" to setOf("comma", "dot", "dash", "space", "tab", "enter", "null", "undefined", "nan", "true", "false"),
+        "de" to setOf("komma", "punkt", "strich", "leerzeichen", "tab", "eingabe", "null", "undefiniert", "wahr", "falsch"),
+        "es" to setOf("coma", "punto", "guion", "espacio", "tab", "enter", "nulo", "indefinido", "verdadero", "falso"),
+        "fr" to setOf("virgule", "point", "tiret", "espace", "tab", "entrer", "nul", "indéfini", "vrai", "faux"),
+        "zh" to setOf("逗号", "句号", "空格", "制表符", "回车", "空", "未定义", "真", "假"),
+        "ja" to setOf("コンマ", "ピリオド", "スペース", "タブ", "エンター", "ヌル", "未定義", "真", "偽")
+    )
+
+    /**
+     * Language-agnostic garbage patterns (work for any locale)
+     */
+    private val GARBAGE_PATTERNS = listOf(
+        // CSS class-like patterns: "btn-primary", "flex-row"
+        Regex("^[a-z]+(-[a-z]+){2,}$", RegexOption.IGNORE_CASE),
+        // Base64/hash-like strings (long alphanumeric without spaces)
+        Regex("^[A-Za-z0-9+/=]{20,}$"),
+        // Hex strings
+        Regex("^(0x)?[a-f0-9]{8,}$", RegexOption.IGNORE_CASE),
+        // Just punctuation or whitespace (language-agnostic)
+        Regex("^[\\s\\p{Punct}]+$"),
+        // UUID-like patterns
+        Regex("^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$", RegexOption.IGNORE_CASE),
+        // Package names (com.example.app)
+        Regex("^[a-z]+\\.[a-z]+\\.[a-z]+", RegexOption.IGNORE_CASE),
+        // Object toString patterns: [object Object], Object@hash
+        Regex("^\\[?object\\s*\\w*\\]?$|^\\w+@[a-f0-9]+$", RegexOption.IGNORE_CASE)
+    )
+
+    /**
+     * Known garbage exact matches (language-agnostic programming terms)
+     */
+    private val GARBAGE_EXACT = setOf(
+        "undefined", "null", "nan", "NaN", "NULL",
+        "[object object]", "[Object object]",
+        "function", "error", "exception",
+        "...", "---", "___", "true", "false", ""
+    )
+
+    /**
+     * Get repetitive words for the current locale.
+     * Falls back to English if locale not found.
+     */
+    private fun getRepetitiveWords(locale: String = "en"): Set<String> {
+        val langCode = locale.take(2).lowercase()
+        return LOCALIZED_REPETITIVE_WORDS[langCode] ?: LOCALIZED_REPETITIVE_WORDS["en"]!!
+    }
+
+    /**
+     * Known navigation/action icon labels that are valid single-word commands.
+     * These come from contentDescription on icon buttons.
+     * Localized for multiple languages.
+     */
+    private val LOCALIZED_NAVIGATION_ICONS = mapOf(
+        "en" to setOf(
+            // Navigation
+            "menu", "more", "options", "settings", "back", "forward", "home", "close",
+            "refresh", "reload", "search", "filter", "sort",
+            // Actions
+            "add", "new", "create", "edit", "delete", "remove", "save", "cancel",
+            "share", "send", "download", "upload", "attach", "copy", "paste",
+            // Communication
+            "call", "meet", "video", "camera", "mic", "mute", "unmute",
+            "compose", "reply", "archive", "trash", "spam",
+            // Media
+            "play", "pause", "stop", "skip", "previous", "next", "volume",
+            // Status
+            "star", "favorite", "bookmark", "pin", "flag", "label",
+            // Help
+            "help", "info", "about", "feedback"
+        ),
+        "de" to setOf(
+            "menü", "mehr", "optionen", "einstellungen", "zurück", "vorwärts", "startseite", "schließen",
+            "aktualisieren", "suchen", "filtern", "sortieren",
+            "hinzufügen", "neu", "erstellen", "bearbeiten", "löschen", "entfernen", "speichern", "abbrechen",
+            "teilen", "senden", "herunterladen", "hochladen", "anhängen", "kopieren", "einfügen",
+            "anrufen", "video", "kamera", "mikrofon", "stummschalten",
+            "verfassen", "antworten", "archivieren", "papierkorb",
+            "abspielen", "pause", "stopp", "überspringen", "vorherige", "nächste", "lautstärke",
+            "stern", "favorit", "lesezeichen",
+            "hilfe", "info", "über"
+        ),
+        "es" to setOf(
+            "menú", "más", "opciones", "ajustes", "atrás", "adelante", "inicio", "cerrar",
+            "actualizar", "buscar", "filtrar", "ordenar",
+            "añadir", "nuevo", "crear", "editar", "eliminar", "quitar", "guardar", "cancelar",
+            "compartir", "enviar", "descargar", "subir", "adjuntar", "copiar", "pegar",
+            "llamar", "vídeo", "cámara", "micrófono", "silenciar",
+            "redactar", "responder", "archivar", "papelera",
+            "reproducir", "pausar", "detener", "saltar", "anterior", "siguiente", "volumen",
+            "estrella", "favorito", "marcador",
+            "ayuda", "información", "acerca"
+        ),
+        "fr" to setOf(
+            "menu", "plus", "options", "paramètres", "retour", "avancer", "accueil", "fermer",
+            "actualiser", "rechercher", "filtrer", "trier",
+            "ajouter", "nouveau", "créer", "modifier", "supprimer", "retirer", "enregistrer", "annuler",
+            "partager", "envoyer", "télécharger", "téléverser", "joindre", "copier", "coller",
+            "appeler", "vidéo", "caméra", "micro", "muet",
+            "composer", "répondre", "archiver", "corbeille",
+            "lecture", "pause", "arrêter", "passer", "précédent", "suivant", "volume",
+            "étoile", "favori", "signet",
+            "aide", "info", "à propos"
+        )
+    )
+
+    /**
+     * Get navigation icon labels for the current locale.
+     * Returns a combined set of current locale + English (fallback).
+     */
+    private fun getNavigationIcons(locale: String = "en"): Set<String> {
+        val langCode = locale.take(2).lowercase()
+        val localized = LOCALIZED_NAVIGATION_ICONS[langCode] ?: emptySet()
+        val english = LOCALIZED_NAVIGATION_ICONS["en"]!!
+        return localized + english  // Combine both for better coverage
+    }
+
+    /**
+     * Check if an element is likely an icon button (small, clickable, has contentDescription).
+     * Icon buttons should allow single-word commands.
+     *
+     * @param element The element to check
+     * @param locale The locale for navigation icon matching (default: "en")
+     */
+    fun isIconElement(element: ElementInfo, locale: String = "en"): Boolean {
+        // Must be clickable
+        if (!element.isClickable) return false
+
+        // Must have contentDescription but no visible text
+        if (element.contentDescription.isBlank()) return false
+        if (element.text.isNotBlank() && element.text != element.contentDescription) return false
+
+        // Check if it's a recognized navigation icon (localized)
+        val desc = element.contentDescription.lowercase().trim()
+        val navIcons = getNavigationIcons(locale)
+        if (navIcons.contains(desc)) return true
+
+        // Check size - icons are typically small (< 100dp on each side)
+        val bounds = element.bounds
+        val maxIconSize = 150  // pixels, roughly 100dp
+        if (bounds.width < maxIconSize && bounds.height < maxIconSize) return true
+
+        // Check class name patterns (language-agnostic)
+        val className = element.className.lowercase()
+        if (className.contains("imagebutton") ||
+            className.contains("iconbutton") ||
+            className.contains("actionbutton") ||
+            className.contains("fab")) return true
+
+        return false
+    }
+
+    /**
+     * Get the label for an icon element.
+     * For icons, we use contentDescription directly without minimum word requirements.
+     *
+     * @param element The icon element
+     * @return The icon label or null if not suitable
+     */
+    fun getIconLabel(element: ElementInfo): String? {
+        if (!isIconElement(element)) return null
+
+        val label = element.contentDescription.trim()
+        if (label.isBlank() || isGarbageText(label)) return null
+
+        return cleanLabel(label)
+    }
+
+    /**
+     * Generate commands for navigation/icon elements.
+     * These are toolbar icons, action buttons, etc. that have contentDescription
+     * but no visible text. They get single-word commands like "Meet", "More", "Search".
+     *
+     * Icons without valid contentDescription get numbered commands for consistency.
+     *
+     * @param elements All elements on screen
+     * @param packageName Host application package name
+     * @return Pair of (labeled icon commands, numbered icon commands for unlabeled icons)
+     */
+    fun generateIconCommands(
+        elements: List<ElementInfo>,
+        packageName: String
+    ): Pair<List<QuantizedCommand>, List<QuantizedCommand>> {
+        // Find icon elements
+        val iconElements = elements.filter { isIconElement(it) }
+
+        val labeledCommands = mutableListOf<QuantizedCommand>()
+        val unlabeledIcons = mutableListOf<ElementInfo>()
+
+        iconElements.forEach { element ->
+            val label = getIconLabel(element)
+
+            if (label != null) {
+                // Create labeled command for this icon
+                val avid = generateAvid(element, packageName)
+                labeledCommands.add(
+                    QuantizedCommand(
+                        avid = "",
+                        phrase = label,
+                        actionType = CommandActionType.CLICK,
+                        targetAvid = avid,
+                        confidence = 0.85f,
+                        metadata = mapOf(
+                            "packageName" to packageName,
+                            "elementHash" to deriveElementHash(element),
+                            "isIconCommand" to "true",
+                            "contentDescription" to element.contentDescription,
+                            "resourceId" to element.resourceId,
+                            "className" to element.className,
+                            "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}"
+                        )
+                    )
+                )
+            } else {
+                // Icon without valid label - will get numbered
+                unlabeledIcons.add(element)
+            }
+        }
+
+        // Generate numbered commands for unlabeled icons
+        // Sort by position (left to right, top to bottom for toolbar consistency)
+        val sortedUnlabeled = unlabeledIcons.sortedWith(
+            compareBy({ it.bounds.top / 50 }, { it.bounds.left })  // Group by row
+        )
+
+        val numberedCommands = sortedUnlabeled.mapIndexed { index, element ->
+            val number = index + 1
+            val avid = generateAvid(element, packageName)
+
+            QuantizedCommand(
+                avid = "",
+                phrase = "icon $number",  // "icon 1", "icon 2" for unlabeled icons
+                actionType = CommandActionType.CLICK,
+                targetAvid = avid,
+                confidence = 0.7f,
+                metadata = mapOf(
+                    "packageName" to packageName,
+                    "elementHash" to deriveElementHash(element),
+                    "isUnlabeledIconCommand" to "true",
+                    "iconNumber" to number.toString(),
+                    "resourceId" to element.resourceId,
+                    "className" to element.className,
+                    "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}"
+                )
+            )
+        }
+
+        return Pair(labeledCommands, numberedCommands)
+    }
+
+    /**
+     * Check if text is garbage that should not be a voice command.
+     *
+     * @param text The text to check
+     * @param locale The locale for language-specific garbage detection (default: "en")
+     * @return true if the text is garbage and should be filtered out
+     */
+    fun isGarbageText(text: String, locale: String = "en"): Boolean {
+        val trimmed = text.trim()
+
+        // Empty or very short (single char)
+        if (trimmed.length <= 1) return true
+
+        // Exact matches (language-agnostic programming terms)
+        if (GARBAGE_EXACT.any { it.equals(trimmed, ignoreCase = true) }) return true
+
+        // Pattern matches (language-agnostic patterns)
+        if (GARBAGE_PATTERNS.any { it.matches(trimmed) }) return true
+
+        // Detect repetitive words: "comma comma com", "dot dot"
+        val repetitiveWords = getRepetitiveWords(locale)
+        val words = trimmed.lowercase().split(Regex("[\\s,]+")).filter { it.isNotBlank() }
+        if (words.size >= 2) {
+            val firstWord = words[0]
+            // If most words start with the same prefix (like "comma, comma, com")
+            val samePrefix = words.count { it.startsWith(firstWord.take(3)) }
+            if (samePrefix >= 2 && repetitiveWords.any { firstWord.startsWith(it.take(3)) }) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    /**
+     * Clean and validate label text for voice commands.
+     * Returns null if the text is garbage.
+     *
+     * @param text Raw label text
+     * @param locale The locale for garbage detection (default: "en")
+     * @return Cleaned text or null if garbage
+     */
+    fun cleanLabel(text: String, locale: String = "en"): String? {
+        val trimmed = text.trim()
+
+        // Filter garbage
+        if (isGarbageText(trimmed, locale)) return null
+
+        // Truncate very long text (likely not a button label)
+        val maxLength = 50
+        return if (trimmed.length > maxLength) {
+            trimmed.take(maxLength).substringBeforeLast(" ") + "..."
+        } else {
+            trimmed
+        }
+    }
+
     /**
      * Generate command from element during extraction (single pass).
      * Returns null if element is not actionable or has no useful label.
@@ -270,23 +586,32 @@ object CommandGenerator {
         val text = element.text.ifBlank { element.contentDescription }
         if (text.isBlank()) return null
 
+        // Early garbage check - filter out "comma comma com" etc.
+        if (isGarbageText(text)) return null
+
         // Email pattern: "Unread, , , SenderName, , Subject..."
         if (text.startsWith("Unread,")) {
             val parts = text.split(",").map { it.trim() }
             // Find first non-empty part after "Unread"
             for (i in 1 until parts.size) {
-                if (parts[i].isNotBlank() && parts[i].length in 2..30) {
-                    return parts[i]
+                if (parts[i].isNotBlank() && parts[i].length in 2..30 && !isGarbageText(parts[i])) {
+                    return cleanLabel(parts[i])
                 }
             }
         }
 
         val normalizeRealWearMlScript = normalizeRealWearMlScript(text)
-        return if (SymbolNormalizer.containsSymbols(normalizeRealWearMlScript)) {
+
+        // Check garbage after normalization too
+        if (isGarbageText(normalizeRealWearMlScript)) return null
+
+        val result = if (SymbolNormalizer.containsSymbols(normalizeRealWearMlScript)) {
             SymbolNormalizer.normalize(normalizeRealWearMlScript)
         } else {
             normalizeRealWearMlScript
         }
+
+        return cleanLabel(result)
     }
 
     /**
@@ -440,10 +765,11 @@ object CommandGenerator {
     /**
      * Derive the best label for voice recognition from element properties.
      * Normalizes special characters to speech-friendly equivalents.
+     * Filters out garbage text that shouldn't be voice commands.
      *
      * @param element Source element
      * @param locale Locale for symbol normalization (default: "en")
-     * @return Normalized label suitable for voice recognition
+     * @return Normalized label suitable for voice recognition, empty if garbage
      */
     private fun deriveLabel(element: ElementInfo, locale: String = "en"): String {
         val rawLabel = when {
@@ -459,13 +785,23 @@ object CommandGenerator {
             else -> ""
         }
 
+        // Early garbage check
+        if (isGarbageText(rawLabel)) return ""
+
         val normalizeRealWearMlScript = normalizeRealWearMlScript(rawLabel)
+
+        // Check garbage after normalization
+        if (isGarbageText(normalizeRealWearMlScript)) return ""
+
         // Normalize special characters (e.g., "&" → "and", "#" → "pound")
-        return if (SymbolNormalizer.containsSymbols(normalizeRealWearMlScript)) {
+        val result = if (SymbolNormalizer.containsSymbols(normalizeRealWearMlScript)) {
             SymbolNormalizer.normalize(normalizeRealWearMlScript, locale)
         } else {
             normalizeRealWearMlScript
         }
+
+        // Final cleanup - return empty if still garbage
+        return cleanLabel(result) ?: ""
     }
 
     /**

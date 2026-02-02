@@ -27,6 +27,85 @@ object DOMScraperBridge {
     const MAX_TEXT_LENGTH = 100;
     const MAX_DEPTH = 15;
 
+    // ===== GARBAGE TEXT FILTERS =====
+    // Language-agnostic patterns that indicate non-voice-command content
+
+    const GARBAGE_EXACT = new Set([
+        'undefined', 'null', 'nan', 'NaN', 'NULL',
+        '[object object]', '[Object object]',
+        'function', 'error', 'exception',
+        '...', '---', '___', 'true', 'false', ''
+    ]);
+
+    // Repetitive words (multi-language)
+    const REPETITIVE_WORDS = new Set([
+        // English
+        'comma', 'dot', 'dash', 'space', 'tab', 'enter', 'null', 'undefined', 'nan', 'true', 'false',
+        // German
+        'komma', 'punkt', 'strich', 'leerzeichen', 'eingabe', 'undefiniert', 'wahr', 'falsch',
+        // Spanish
+        'coma', 'punto', 'guion', 'espacio', 'nulo', 'indefinido', 'verdadero',
+        // French
+        'virgule', 'tiret', 'espace', 'entrer', 'nul', 'indéfini', 'vrai', 'faux'
+    ]);
+
+    // Patterns that indicate garbage text
+    const GARBAGE_PATTERNS = [
+        /^[a-z]+(-[a-z]+){2,}$/i,                    // CSS classes: btn-primary-disabled
+        /^[A-Za-z0-9+/=]{20,}$/,                      // Base64/hash strings
+        /^(0x)?[a-f0-9]{8,}$/i,                       // Hex strings
+        /^[\s\p{P}]+$/u,                              // Just punctuation/whitespace
+        /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i, // UUIDs
+        /^\[?object\s*\w*\]?$/i,                      // [object Object]
+        /^\w+@[a-f0-9]+$/i                            // Object@hash
+    ];
+
+    // Check if text is garbage
+    function isGarbageText(text) {
+        if (!text) return true;
+        const trimmed = text.trim();
+
+        // Too short
+        if (trimmed.length <= 1) return true;
+
+        // Exact match
+        if (GARBAGE_EXACT.has(trimmed.toLowerCase())) return true;
+
+        // Pattern match
+        for (const pattern of GARBAGE_PATTERNS) {
+            if (pattern.test(trimmed)) return true;
+        }
+
+        // Detect repetitive words: "comma comma com"
+        const words = trimmed.toLowerCase().split(/[\s,]+/).filter(w => w.length > 0);
+        if (words.length >= 2) {
+            const firstWord = words[0];
+            const prefix = firstWord.substring(0, 3);
+            let samePrefix = 0;
+            for (const word of words) {
+                if (word.startsWith(prefix)) samePrefix++;
+            }
+            if (samePrefix >= 2) {
+                for (const repWord of REPETITIVE_WORDS) {
+                    if (firstWord.startsWith(repWord.substring(0, 3))) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // Clean label text (returns null if garbage)
+    function cleanLabel(text) {
+        if (!text) return '';
+        const trimmed = text.trim();
+        if (isGarbageText(trimmed)) return '';
+        // Truncate very long text
+        return trimmed.length > MAX_TEXT_LENGTH ? trimmed.substring(0, MAX_TEXT_LENGTH) : trimmed;
+    }
+
     // Element types we care about
     const INTERACTIVE_TAGS = new Set([
         'A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'LABEL',
@@ -96,36 +175,55 @@ object DOMScraperBridge {
     }
 
     // Get accessible name (similar to accessibility API)
+    // Filters out garbage text that shouldn't be voice commands
     function getAccessibleName(element) {
         // aria-label takes precedence
         const ariaLabel = element.getAttribute('aria-label');
-        if (ariaLabel) return ariaLabel.trim();
+        if (ariaLabel) {
+            const cleaned = cleanLabel(ariaLabel);
+            if (cleaned) return cleaned;
+        }
 
         // aria-labelledby
         const labelledBy = element.getAttribute('aria-labelledby');
         if (labelledBy) {
             const labelElement = document.getElementById(labelledBy);
-            if (labelElement) return labelElement.textContent.trim();
+            if (labelElement) {
+                const cleaned = cleanLabel(labelElement.textContent);
+                if (cleaned) return cleaned;
+            }
         }
 
         // For inputs, check associated label
         if (element.id) {
             const label = document.querySelector('label[for="' + element.id + '"]');
-            if (label) return label.textContent.trim();
+            if (label) {
+                const cleaned = cleanLabel(label.textContent);
+                if (cleaned) return cleaned;
+            }
         }
 
         // Placeholder for inputs
-        if (element.placeholder) return element.placeholder;
+        if (element.placeholder) {
+            const cleaned = cleanLabel(element.placeholder);
+            if (cleaned) return cleaned;
+        }
 
         // Title attribute
-        if (element.title) return element.title.trim();
+        if (element.title) {
+            const cleaned = cleanLabel(element.title);
+            if (cleaned) return cleaned;
+        }
 
         // alt for images
-        if (element.alt) return element.alt.trim();
+        if (element.alt) {
+            const cleaned = cleanLabel(element.alt);
+            if (cleaned) return cleaned;
+        }
 
-        // Inner text (truncated)
+        // Inner text (truncated and cleaned)
         const text = element.textContent || '';
-        return text.trim().substring(0, MAX_TEXT_LENGTH);
+        return cleanLabel(text) || '';
     }
 
     // Get element type for command generation
