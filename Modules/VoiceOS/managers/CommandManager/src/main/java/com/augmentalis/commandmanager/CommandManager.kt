@@ -15,8 +15,8 @@ import com.augmentalis.commandmanager.loader.CommandLoader
 import com.augmentalis.commandmanager.loader.CommandLocalizer
 import com.augmentalis.commandmanager.routing.IntentDispatcher
 import com.augmentalis.commandmanager.routing.AppIPCRegistry
-import com.augmentalis.voiceos.speech.confidence.ConfidenceScorer
-import com.augmentalis.voiceos.speech.confidence.ConfidenceLevel
+import com.augmentalis.speechrecognition.ConfidenceScorer
+import com.augmentalis.speechrecognition.ConfidenceLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
