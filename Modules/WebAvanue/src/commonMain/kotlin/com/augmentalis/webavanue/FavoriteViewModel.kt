@@ -5,25 +5,17 @@ import com.augmentalis.webavanue.FavoriteFolder
 import com.augmentalis.webavanue.BrowserRepository
 import com.augmentalis.webavanue.BookmarkImportExport
 import com.augmentalis.webavanue.parseHtmlWithData
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.augmentalis.webavanue.util.BaseStatefulViewModel
+import com.augmentalis.webavanue.util.ListState
+import com.augmentalis.webavanue.util.ViewModelState
+import com.augmentalis.webavanue.util.NullableState
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.launch
 
 /**
  * FavoriteViewModel - Manages favorite/bookmark state and operations
  *
- * Responsibilities:
- * - Load and observe favorites
- * - Filter favorites by folder
- * - Search favorites
- * - Add/remove/update favorites
- * - Manage favorite folders
+ * Refactored to use StateFlow utilities for reduced boilerplate.
  *
  * State:
  * - favorites: List<Favorite> - All favorites (or filtered)
@@ -35,33 +27,27 @@ import kotlinx.coroutines.launch
  */
 class FavoriteViewModel(
     private val repository: BrowserRepository
-) {
-    // Coroutine scope
-    private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+) : BaseStatefulViewModel() {
 
     // State: All favorites (or filtered)
-    private val _favorites = MutableStateFlow<List<Favorite>>(emptyList())
-    val favorites: StateFlow<List<Favorite>> = _favorites.asStateFlow()
+    private val _favorites = ListState<Favorite>()
+    val favorites: StateFlow<List<Favorite>> = _favorites.flow
 
     // State: All folders
-    private val _folders = MutableStateFlow<List<FavoriteFolder>>(emptyList())
-    val folders: StateFlow<List<FavoriteFolder>> = _folders.asStateFlow()
+    private val _folders = ListState<FavoriteFolder>()
+    val folders: StateFlow<List<FavoriteFolder>> = _folders.flow
 
-    // State: Selected folder ID (null = all favorites)
-    private val _selectedFolderId = MutableStateFlow<String?>(null)
-    val selectedFolderId: StateFlow<String?> = _selectedFolderId.asStateFlow()
+    // State: Selected folder ID
+    private val _selectedFolderId = NullableState<String>()
+    val selectedFolderId: StateFlow<String?> = _selectedFolderId.flow
 
     // State: Search query
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+    private val _searchQuery = ViewModelState("")
+    val searchQuery: StateFlow<String> = _searchQuery.flow
 
-    // State: Loading
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    // State: Error
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
+    // Expose UiState flows
+    val isLoading: StateFlow<Boolean> = uiState.isLoading.flow
+    val error: StateFlow<String?> = uiState.error.flow
 
     init {
         loadFavorites()
@@ -69,30 +55,27 @@ class FavoriteViewModel(
     }
 
     /**
-     * Load all favorites
-     *
-     * If folder is selected, loads only favorites in that folder
+     * Load all favorites (optionally filtered by folder)
      */
     fun loadFavorites(folderId: String? = null) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
+        launch {
+            uiState.isLoading.value = true
+            uiState.error.clear()
             _selectedFolderId.value = folderId
 
             repository.observeFavorites()
                 .catch { e ->
-                    _error.value = "Failed to load favorites: ${e.message}"
-                    _isLoading.value = false
+                    uiState.error.value = "Failed to load favorites: ${e.message}"
+                    uiState.isLoading.value = false
                 }
                 .collect { favoriteList ->
-                    // Filter by folder if selected
                     val filtered = if (folderId != null) {
                         favoriteList.filter { it.folderId == folderId }
                     } else {
                         favoriteList
                     }
-                    _favorites.value = filtered
-                    _isLoading.value = false
+                    _favorites.replaceAll(filtered)
+                    uiState.isLoading.value = false
                 }
         }
     }
@@ -101,60 +84,32 @@ class FavoriteViewModel(
      * Load all favorite folders
      */
     fun loadFolders() {
-        viewModelScope.launch {
+        launch {
             repository.getAllFolders()
-                .onSuccess { folderList ->
-                    _folders.value = folderList
-                }
-                .onFailure { e ->
-                    _error.value = "Failed to load folders: ${e.message}"
-                }
+                .onSuccess { _folders.replaceAll(it) }
+                .onFailure { e -> uiState.error.value = "Failed to load folders: ${e.message}" }
         }
     }
 
     /**
      * Search favorites by query
-     *
-     * @param query Search query (searches title and URL)
      */
     fun searchFavorites(query: String) {
         _searchQuery.value = query
 
         if (query.isBlank()) {
-            // Empty query, reload all favorites
             loadFavorites(_selectedFolderId.value)
             return
         }
 
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-
+        execute {
             repository.searchFavorites(query)
-                .onSuccess { results ->
-                    _favorites.value = results
-                    _isLoading.value = false
-                }
-                .onFailure { e ->
-                    _error.value = "Search failed: ${e.message}"
-                    _isLoading.value = false
-                }
+                .onSuccess { _favorites.replaceAll(it) }
         }
     }
 
     /**
-     * Add a new favorite
-     *
-     * FIX: Added duplicate prevention - checks if URL already exists before adding
-     * FIX: Added comprehensive try-catch to prevent crashes from unhandled exceptions
-     * FIX: Use currently selected folder when folderId not explicitly provided
-     *
-     * @param url Favorite URL
-     * @param title Favorite title
-     * @param favicon Optional favicon URL or data
-     * @param description Optional description/notes
-     * @param folderId Optional folder ID (null = use selected folder, or root if none selected)
-     * @return Boolean - true if added successfully, false if duplicate detected or error
+     * Add a new favorite with duplicate prevention
      */
     suspend fun addFavorite(
         url: String,
@@ -164,15 +119,15 @@ class FavoriteViewModel(
         folderId: String? = _selectedFolderId.value
     ): Boolean {
         return try {
-            // FIX Issue #2: Check for duplicates before adding
+            // Check for duplicates
             val isDuplicate = repository.isFavorite(url).getOrDefault(false)
             if (isDuplicate) {
-                _error.value = "This page is already in your favorites"
+                uiState.error.value = "This page is already in your favorites"
                 return false
             }
 
-            _isLoading.value = true
-            _error.value = null
+            uiState.isLoading.value = true
+            uiState.error.clear()
 
             val favorite = Favorite.create(
                 url = url,
@@ -185,19 +140,18 @@ class FavoriteViewModel(
             var result = false
             repository.addFavorite(favorite)
                 .onSuccess {
-                    _isLoading.value = false
+                    uiState.isLoading.value = false
                     result = true
-                    // Favorites will update via observeFavorites Flow
                 }
                 .onFailure { e ->
-                    _error.value = "Failed to add favorite: ${e.message}"
-                    _isLoading.value = false
+                    uiState.error.value = "Failed to add favorite: ${e.message}"
+                    uiState.isLoading.value = false
                 }
 
             result
         } catch (e: Exception) {
-            _error.value = "Error adding favorite: ${e.message}"
-            _isLoading.value = false
+            uiState.error.value = "Error adding favorite: ${e.message}"
+            uiState.isLoading.value = false
             println("FavoriteViewModel: Exception in addFavorite: ${e.message}")
             e.printStackTrace()
             false
@@ -206,76 +160,45 @@ class FavoriteViewModel(
 
     /**
      * Remove a favorite
-     *
-     * @param favoriteId Favorite ID to remove
      */
     fun removeFavorite(favoriteId: String) {
-        viewModelScope.launch {
-            _error.value = null
-
+        launch {
+            uiState.error.clear()
             repository.removeFavorite(favoriteId)
-                .onSuccess {
-                    // Favorite removed via Flow observation
-                }
-                .onFailure { e ->
-                    _error.value = "Failed to remove favorite: ${e.message}"
-                }
+                .onFailure { e -> uiState.error.value = "Failed to remove favorite: ${e.message}" }
         }
     }
 
     /**
      * Update a favorite
-     *
-     * @param favorite Updated favorite
      */
     fun updateFavorite(favorite: Favorite) {
-        viewModelScope.launch {
-            _error.value = null
-
+        launch {
+            uiState.error.clear()
             repository.updateFavorite(favorite)
-                .onSuccess {
-                    // Update will be reflected via Flow
-                }
-                .onFailure { e ->
-                    _error.value = "Failed to update favorite: ${e.message}"
-                }
+                .onFailure { e -> uiState.error.value = "Failed to update favorite: ${e.message}" }
         }
     }
 
     /**
      * Move favorite to different folder
-     *
-     * @param favoriteId Favorite ID
-     * @param folderId Target folder ID (null = root)
      */
     fun moveFavoriteToFolder(favoriteId: String, folderId: String?) {
-        viewModelScope.launch {
-            _error.value = null
-
-            // Get the current favorite
+        launch {
+            uiState.error.clear()
             repository.getFavorite(favoriteId)
                 .onSuccess { favorite ->
                     if (favorite != null) {
-                        val updated = favorite.copy(folderId = folderId)
-                        repository.updateFavorite(updated)
-                            .onFailure { e ->
-                                _error.value = "Failed to move favorite: ${e.message}"
-                            }
+                        repository.updateFavorite(favorite.copy(folderId = folderId))
+                            .onFailure { e -> uiState.error.value = "Failed to move favorite: ${e.message}" }
                     }
                 }
-                .onFailure { e ->
-                    _error.value = "Failed to find favorite: ${e.message}"
-                }
+                .onFailure { e -> uiState.error.value = "Failed to find favorite: ${e.message}" }
         }
     }
 
     /**
      * Check if a URL is favorited
-     *
-     * FIX: Added try-catch to prevent crashes from database errors
-     *
-     * @param url URL to check
-     * @return True if favorited, false otherwise (also returns false on error)
      */
     suspend fun isFavorite(url: String): Boolean {
         return try {
@@ -288,93 +211,50 @@ class FavoriteViewModel(
 
     /**
      * Create a new folder
-     *
-     * @param name Folder name
-     * @param parentId Parent folder ID (null = root level)
      */
     fun createFolder(name: String, parentId: String? = null) {
-        viewModelScope.launch {
-            _error.value = null
-
+        launch {
+            uiState.error.clear()
             val folder = FavoriteFolder.create(name = name, parentId = parentId)
             repository.createFolder(folder)
-                .onSuccess {
-                    loadFolders() // Reload folders
-                }
-                .onFailure { e ->
-                    _error.value = "Failed to create folder: ${e.message}"
-                }
+                .onSuccess { loadFolders() }
+                .onFailure { e -> uiState.error.value = "Failed to create folder: ${e.message}" }
         }
     }
 
     /**
      * Delete a folder
-     *
-     * @param folderId Folder ID to delete
-     * @param deleteContents Whether to delete favorites in the folder
      */
     fun deleteFolder(folderId: String, deleteContents: Boolean = false) {
-        viewModelScope.launch {
-            _error.value = null
-
+        launch {
+            uiState.error.clear()
             repository.deleteFolder(folderId, deleteContents)
-                .onSuccess {
-                    loadFolders() // Reload folders
-                }
-                .onFailure { e ->
-                    _error.value = "Failed to delete folder: ${e.message}"
-                }
+                .onSuccess { loadFolders() }
+                .onFailure { e -> uiState.error.value = "Failed to delete folder: ${e.message}" }
         }
     }
 
     /**
      * Select a folder to filter by
-     *
-     * @param folderId Folder ID (null = show all)
      */
     fun selectFolder(folderId: String?) {
         _selectedFolderId.value = folderId
         loadFavorites(folderId)
     }
 
-    /**
-     * Alias for selectFolder - Filter by folder ID
-     *
-     * @param folderId Folder ID (null = show all)
-     */
     fun filterByFolder(folderId: String?) = selectFolder(folderId)
 
-    /**
-     * Clear search query
-     */
     fun clearSearch() {
         _searchQuery.value = ""
         loadFavorites(_selectedFolderId.value)
     }
 
-    /**
-     * Clear error state
-     */
     fun clearError() {
-        _error.value = null
+        uiState.clearError()
     }
 
     // ==================== Import/Export Operations ====================
 
-    /**
-     * Export all bookmarks to Netscape HTML format.
-     *
-     * Generates a standard HTML bookmark file compatible with all major browsers
-     * (Chrome, Firefox, Safari, Edge).
-     *
-     * @return HTML string containing all bookmarks and folders
-     *
-     * @sample
-     * ```kotlin
-     * val html = viewModel.exportBookmarks()
-     * // Save html to file...
-     * ```
-     */
     fun exportBookmarks(): String {
         return BookmarkImportExport.exportToHtml(
             favorites = _favorites.value,
@@ -382,47 +262,26 @@ class FavoriteViewModel(
         )
     }
 
-    /**
-     * Import bookmarks from Netscape HTML format.
-     *
-     * Parses an HTML bookmark file and adds all bookmarks to the database.
-     * Automatically detects and skips duplicate URLs.
-     *
-     * @param html HTML content in Netscape bookmark format
-     * @param skipDuplicates If true (default), skip bookmarks with existing URLs
-     * @return ImportResult containing statistics about the import operation
-     *
-     * @sample
-     * ```kotlin
-     * val html = readBookmarkFile()
-     * val result = viewModel.importBookmarks(html)
-     * println("Imported: ${result.imported}, Skipped: ${result.skipped}")
-     * ```
-     */
     suspend fun importBookmarks(
         html: String,
         skipDuplicates: Boolean = true
     ): BookmarkImportExport.ImportResult {
         return try {
-            _isLoading.value = true
-            _error.value = null
+            uiState.isLoading.value = true
+            uiState.error.clear()
 
-            // Get existing URLs for duplicate detection
             val existingUrls = _favorites.value.map { it.url }.toSet()
 
-            // Parse HTML to extract bookmarks and folders
             val importData = BookmarkImportExport.parseHtmlWithData(
                 html = html,
                 existingUrls = existingUrls,
                 skipDuplicates = skipDuplicates
             )
 
-            // Import folders first (so bookmarks can reference them)
+            // Import folders first
             for (folder in importData.folders) {
                 repository.createFolder(folder)
-                    .onFailure { e ->
-                        println("Failed to import folder ${folder.name}: ${e.message}")
-                    }
+                    .onFailure { e -> println("Failed to import folder ${folder.name}: ${e.message}") }
             }
 
             // Import bookmarks
@@ -430,44 +289,19 @@ class FavoriteViewModel(
             for (favorite in importData.favorites) {
                 repository.addFavorite(favorite)
                     .onSuccess { imported++ }
-                    .onFailure { e ->
-                        println("Failed to import bookmark ${favorite.title}: ${e.message}")
-                    }
+                    .onFailure { e -> println("Failed to import bookmark ${favorite.title}: ${e.message}") }
             }
 
-            _isLoading.value = false
-
-            // Return result with actual imported count
+            uiState.isLoading.value = false
             importData.result.copy(imported = imported)
         } catch (e: Exception) {
-            _error.value = "Import failed: ${e.message}"
-            _isLoading.value = false
-            BookmarkImportExport.ImportResult(
-                imported = 0,
-                skipped = 0,
-                folders = 0,
-                errors = listOf(e.message ?: "Unknown error")
-            )
+            uiState.error.value = "Import failed: ${e.message}"
+            uiState.isLoading.value = false
+            BookmarkImportExport.ImportResult(imported = 0, skipped = 0, folders = 0, errors = listOf(e.message ?: "Unknown error"))
         }
     }
 
-    /**
-     * Generate a timestamped filename for bookmark export.
-     *
-     * Format: `bookmarks_YYYYMMDD_HHMMSS.html`
-     *
-     * @return Filename string
-     */
-    fun generateExportFilename(): String {
-        return BookmarkImportExport.generateExportFilename()
-    }
-
-    /**
-     * Clean up resources
-     */
-    fun onCleared() {
-        viewModelScope.cancel()
-    }
+    fun generateExportFilename(): String = BookmarkImportExport.generateExportFilename()
 }
 
 // Type alias for backward compatibility

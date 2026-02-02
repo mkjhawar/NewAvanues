@@ -4,20 +4,16 @@ import com.augmentalis.webavanue.Logger
 import com.augmentalis.webavanue.Download
 import com.augmentalis.webavanue.DownloadStatus
 import com.augmentalis.webavanue.BrowserRepository
-import kotlinx.coroutines.CoroutineScope
+import com.augmentalis.webavanue.util.BaseStatefulViewModel
+import com.augmentalis.webavanue.util.ListState
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * DownloadViewModel - Manages download state and operations
  *
- * Note: BrowserCoreData has basic Download model support added.
- * Repository methods for downloads may need implementation.
+ * Refactored to use StateFlow utilities for reduced boilerplate.
  *
  * State:
  * - downloads: List<Download> - All downloads
@@ -28,25 +24,22 @@ import kotlinx.coroutines.flow.asStateFlow
 class DownloadViewModel(
     private val repository: BrowserRepository,
     private val downloadQueue: DownloadQueue? = null
-) {
-    // Coroutine scope
-    private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+) : BaseStatefulViewModel() {
 
     // State: All downloads
-    private val _downloads = MutableStateFlow<List<Download>>(emptyList())
-    val downloads: StateFlow<List<Download>> = _downloads.asStateFlow()
+    private val _downloads = ListState<Download>()
+    val downloads: StateFlow<List<Download>> = _downloads.flow
 
     // State: Active downloads
-    private val _activeDownloads = MutableStateFlow<List<Download>>(emptyList())
-    val activeDownloads: StateFlow<List<Download>> = _activeDownloads.asStateFlow()
+    private val _activeDownloads = ListState<Download>()
+    val activeDownloads: StateFlow<List<Download>> = _activeDownloads.flow
 
-    // State: Loading
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    // Expose UiState flows
+    val isLoading: StateFlow<Boolean> = uiState.isLoading.flow
+    val error: StateFlow<String?> = uiState.error.flow
 
-    // State: Error
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
+    // Blocked file extensions for security
+    private val blockedExtensions = setOf("apk", "exe", "sh", "bat", "cmd", "dll", "msi", "scr", "vbs", "js")
 
     init {
         loadDownloads()
@@ -55,18 +48,14 @@ class DownloadViewModel(
 
     /**
      * Setup progress monitoring
-     *
-     * FIX: Now persists status updates to repository so downloads show correct status
-     * after app restart or when viewing download list.
      */
     private fun setupProgressMonitoring() {
         downloadQueue?.let { queue ->
-            viewModelScope.launch {
+            launch {
                 queue.observeAllActive().collect { progressList ->
-                    // Convert list to map for easier lookup
                     val progressMap = progressList.associateBy { it.downloadId }
 
-                    val updatedDownloads = _downloads.value.map { download ->
+                    _downloads.value.forEach { download ->
                         progressMap[download.id]?.let { progress ->
                             val updated = download.copy(
                                 downloadedSize = progress.bytesDownloaded,
@@ -77,130 +66,60 @@ class DownloadViewModel(
                                 lastProgressUpdate = System.currentTimeMillis()
                             )
 
-                            // FIX: Persist status changes to repository
                             if (download.status != progress.status) {
                                 persistDownloadUpdate(updated)
                             }
 
-                            updated
-                        } ?: download
+                            _downloads.updateItem({ it.id == download.id }) { updated }
+                        }
                     }
-                    Logger.info("DownloadViewModel", "Download progress updated: ${updatedDownloads.size} downloads")
-                    _downloads.value = updatedDownloads
+                    Logger.info("DownloadViewModel", "Download progress updated: ${_downloads.size} downloads")
                     updateActiveDownloads()
                 }
             }
         }
     }
 
-    /**
-     * Persist download update to repository
-     *
-     * FIX: Helper method to save download status changes to repository
-     */
     private fun persistDownloadUpdate(download: Download) {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                repository.updateDownload(download)
-                    .onSuccess {
-                        Logger.info("DownloadViewModel", "Download status persisted: ${download.id} -> ${download.status}")
-                    }
-                    .onFailure { e ->
-                        Logger.error("DownloadViewModel", "Failed to persist download status: ${e.message}", e)
-                    }
-            } catch (e: Exception) {
-                Logger.error("DownloadViewModel", "Error persisting download: ${e.message}", e)
-            }
+            repository.updateDownload(download)
+                .onSuccess { Logger.info("DownloadViewModel", "Download status persisted: ${download.id} -> ${download.status}") }
+                .onFailure { e -> Logger.error("DownloadViewModel", "Failed to persist download status: ${e.message}", e) }
         }
     }
 
-    /**
-     * Load all downloads from repository
-     *
-     * FIX: Now actually loads downloads from repository instead of just clearing state.
-     * Downloads status is properly loaded and will be updated by progress monitoring.
-     */
     fun loadDownloads() {
         viewModelScope.launch(Dispatchers.IO) {
-            _isLoading.value = true
-            try {
-                repository.getAllDownloads()
-                    .onSuccess { downloads ->
-                        _downloads.value = downloads
-                        updateActiveDownloads()
-                        Logger.info("DownloadViewModel", "Loaded ${downloads.size} downloads from repository")
-                    }
-                    .onFailure { e ->
-                        Logger.error("DownloadViewModel", "Failed to load downloads: ${e.message}", e)
-                        _error.value = "Failed to load downloads"
-                        // Keep existing downloads on error
-                    }
-            } finally {
-                _isLoading.value = false
-            }
+            uiState.isLoading.value = true
+            repository.getAllDownloads()
+                .onSuccess { downloads ->
+                    _downloads.replaceAll(downloads)
+                    updateActiveDownloads()
+                    Logger.info("DownloadViewModel", "Loaded ${downloads.size} downloads from repository")
+                }
+                .onFailure { e ->
+                    Logger.error("DownloadViewModel", "Failed to load downloads: ${e.message}", e)
+                    uiState.error.value = "Failed to load downloads"
+                }
+            uiState.isLoading.value = false
         }
     }
 
     /**
-     * Add a new download
-     *
-     * FIX P1-P9: Validates URL and filename to prevent path traversal and dangerous files
-     *
-     * @param url URL to download
-     * @param filename Filename for the download
-     * @return true if download was added, false if validation failed
+     * Add a new download with validation
      */
     fun addDownload(url: String, filename: String): Boolean {
-        // FIX P1-P9: Validate URL - only allow HTTP(S)
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-            _error.value = "Only HTTP(S) downloads allowed"
-            Logger.warn("DownloadViewModel", "Download rejected: Invalid URL scheme - ${Logger.sanitizeUrl(url)}")
-            return false
-        }
-
-        // FIX P1-P9: Sanitize filename - prevent path traversal
-        val sanitizedFilename = filename
-            .replace("..", "")      // Remove ..
-            .replace("/", "")       // Remove /
-            .replace("\\", "")      // Remove \
-            .replace("\u0000", "")  // Remove null bytes
-            .trim()
-
-        if (sanitizedFilename.isEmpty() || sanitizedFilename.length > 255) {
-            _error.value = "Invalid filename"
-            Logger.warn("DownloadViewModel", "Download rejected: Invalid filename")
-            return false
-        }
-
-        // FIX P1-P9: Block dangerous file extensions
-        val extension = sanitizedFilename.substringAfterLast(".", "").lowercase()
-        val blockedExtensions = setOf("apk", "exe", "sh", "bat", "cmd", "dll", "msi", "scr", "vbs", "js")
-        if (extension in blockedExtensions) {
-            _error.value = "Dangerous file type blocked: $extension"
-            Logger.warn("DownloadViewModel", "Download rejected: Blocked extension - $extension")
-            return false
-        }
+        val sanitizedFilename = validateAndSanitize(url, filename) ?: return false
 
         Logger.info("DownloadViewModel", "Download accepted: ${Logger.sanitizeFilename(sanitizedFilename)} from ${Logger.sanitizeUrl(url)}")
         val download = Download.create(url = url, filename = sanitizedFilename)
-        val currentDownloads = _downloads.value.toMutableList()
-        currentDownloads.add(0, download)
-        _downloads.value = currentDownloads
+        _downloads.addFirst(download)
         updateActiveDownloads()
         return true
     }
 
     /**
      * Start a download with full metadata
-     *
-     * @param url URL to download
-     * @param filename Filename for the download
-     * @param mimeType MIME type of the file
-     * @param fileSize Expected file size
-     * @param sourcePageUrl URL of the page that initiated the download
-     * @param sourcePageTitle Title of the page that initiated the download
-     * @param customPath Optional custom download path (content:// URI from file picker)
-     * @return Download ID if successful, null if validation failed
      */
     fun startDownload(
         url: String,
@@ -211,35 +130,7 @@ class DownloadViewModel(
         sourcePageTitle: String? = null,
         customPath: String? = null
     ): String? {
-        // FIX P1-P9: Validate URL - only allow HTTP(S)
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-            _error.value = "Only HTTP(S) downloads allowed"
-            Logger.warn("DownloadViewModel", "Download rejected: Invalid URL scheme - ${Logger.sanitizeUrl(url)}")
-            return null
-        }
-
-        // FIX P1-P9: Sanitize filename - prevent path traversal
-        val sanitizedFilename = filename
-            .replace("..", "")      // Remove ..
-            .replace("/", "")       // Remove /
-            .replace("\\", "")      // Remove \
-            .replace("\u0000", "")  // Remove null bytes
-            .trim()
-
-        if (sanitizedFilename.isEmpty() || sanitizedFilename.length > 255) {
-            _error.value = "Invalid filename"
-            Logger.warn("DownloadViewModel", "Download rejected: Invalid filename")
-            return null
-        }
-
-        // FIX P1-P9: Block dangerous file extensions
-        val extension = sanitizedFilename.substringAfterLast(".", "").lowercase()
-        val blockedExtensions = setOf("apk", "exe", "sh", "bat", "cmd", "dll", "msi", "scr", "vbs", "js")
-        if (extension in blockedExtensions) {
-            _error.value = "Dangerous file type blocked: $extension"
-            Logger.warn("DownloadViewModel", "Download rejected: Blocked extension - $extension")
-            return null
-        }
+        val sanitizedFilename = validateAndSanitize(url, filename) ?: return null
 
         Logger.info("DownloadViewModel", "Download started: ${Logger.sanitizeFilename(sanitizedFilename)} from ${Logger.sanitizeUrl(url)}")
 
@@ -252,44 +143,34 @@ class DownloadViewModel(
             sourcePageTitle = sourcePageTitle
         )
 
-        // Add to local state
-        val currentDownloads = _downloads.value.toMutableList()
-        currentDownloads.add(0, download)
-        _downloads.value = currentDownloads
+        _downloads.addFirst(download)
         updateActiveDownloads()
 
-        // Save to repository and enqueue download (async)
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                repository.addDownload(download)
-                Logger.info("DownloadViewModel", "Download saved to repository: ${download.id}")
+            repository.addDownload(download)
+            Logger.info("DownloadViewModel", "Download saved to repository: ${download.id}")
 
-                // Enqueue actual download to platform download queue
-                downloadQueue?.let { queue ->
-                    val request = DownloadRequest(
-                        downloadId = download.id, // ✅ important
-                        url = url,
-                        filename = sanitizedFilename,
-                        mimeType = mimeType,
-                        expectedSize = fileSize,
-                        sourcePageUrl = sourcePageUrl,
-                        sourcePageTitle = sourcePageTitle,
-                        customPath = customPath
-                    )
+            downloadQueue?.let { queue ->
+                val request = DownloadRequest(
+                    downloadId = download.id,
+                    url = url,
+                    filename = sanitizedFilename,
+                    mimeType = mimeType,
+                    expectedSize = fileSize,
+                    sourcePageUrl = sourcePageUrl,
+                    sourcePageTitle = sourcePageTitle,
+                    customPath = customPath
+                )
 
-                    val queueId = queue.enqueue(request)
-                    if (queueId != null) {
-                        Logger.info("DownloadViewModel", "Download enqueued to platform queue: $queueId")
-                        // Progress is monitored via observeAllActive() in setupProgressMonitoring()
-                    } else {
-                        Logger.error("DownloadViewModel", "Failed to enqueue download to platform queue", null)
-                        _error.value = "Failed to start download"
-                    }
-                } ?: run {
-                    Logger.warn("DownloadViewModel", "No download queue available - download will not be executed")
+                val queueId = queue.enqueue(request)
+                if (queueId != null) {
+                    Logger.info("DownloadViewModel", "Download enqueued to platform queue: $queueId")
+                } else {
+                    Logger.error("DownloadViewModel", "Failed to enqueue download to platform queue", null)
+                    uiState.error.value = "Failed to start download"
                 }
-            } catch (e: Exception) {
-                Logger.error("DownloadViewModel", "Failed to save download to repository: ${e.message}", e)
+            } ?: run {
+                Logger.warn("DownloadViewModel", "No download queue available - download will not be executed")
             }
         }
 
@@ -297,102 +178,78 @@ class DownloadViewModel(
     }
 
     /**
-     * Update download progress
-     *
-     * @param downloadId Download ID
-     * @param downloadedBytes Bytes downloaded
-     * @param fileSize Total file size
+     * Validate URL and sanitize filename (security)
      */
+    private fun validateAndSanitize(url: String, filename: String): String? {
+        // FIX P1-P9: Validate URL - only allow HTTP(S)
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            uiState.error.value = "Only HTTP(S) downloads allowed"
+            Logger.warn("DownloadViewModel", "Download rejected: Invalid URL scheme - ${Logger.sanitizeUrl(url)}")
+            return null
+        }
+
+        // FIX P1-P9: Sanitize filename - prevent path traversal
+        val sanitizedFilename = filename
+            .replace("..", "")
+            .replace("/", "")
+            .replace("\\", "")
+            .replace("\u0000", "")
+            .trim()
+
+        if (sanitizedFilename.isEmpty() || sanitizedFilename.length > 255) {
+            uiState.error.value = "Invalid filename"
+            Logger.warn("DownloadViewModel", "Download rejected: Invalid filename")
+            return null
+        }
+
+        // FIX P1-P9: Block dangerous file extensions
+        val extension = sanitizedFilename.substringAfterLast(".", "").lowercase()
+        if (extension in blockedExtensions) {
+            uiState.error.value = "Dangerous file type blocked: $extension"
+            Logger.warn("DownloadViewModel", "Download rejected: Blocked extension - $extension")
+            return null
+        }
+
+        return sanitizedFilename
+    }
+
     fun updateProgress(downloadId: String, downloadedSize: Long, fileSize: Long) {
-        val currentDownloads = _downloads.value.toMutableList()
-        val index = currentDownloads.indexOfFirst { it.id == downloadId }
-        if (index >= 0) {
-            val download = currentDownloads[index]
-            currentDownloads[index] = download.copy(
+        _downloads.updateItem({ it.id == downloadId }) { download ->
+            download.copy(
                 downloadedSize = downloadedSize,
                 fileSize = fileSize,
                 status = DownloadStatus.DOWNLOADING
             )
-            _downloads.value = currentDownloads
-            updateActiveDownloads()
         }
-    }
-
-    /**
-     * Cancel a download
-     *
-     * @param downloadId Download ID
-     */
-    fun cancelDownload(downloadId: String) {
-        val currentDownloads = _downloads.value.toMutableList()
-        val index = currentDownloads.indexOfFirst { it.id == downloadId }
-        if (index >= 0) {
-            val download = currentDownloads[index]
-            currentDownloads[index] = download.copy(status = DownloadStatus.CANCELLED)
-            _downloads.value = currentDownloads
-            updateActiveDownloads()
-        }
-    }
-
-    /**
-     * Retry a failed download
-     *
-     * @param downloadId Download ID
-     */
-    fun retryDownload(downloadId: String) {
-        val currentDownloads = _downloads.value.toMutableList()
-        val index = currentDownloads.indexOfFirst { it.id == downloadId }
-        if (index >= 0) {
-            val download = currentDownloads[index]
-            currentDownloads[index] = download.copy(
-                status = DownloadStatus.PENDING,
-                downloadedSize = 0,
-                errorMessage = null
-            )
-            _downloads.value = currentDownloads
-            updateActiveDownloads()
-        }
-    }
-
-    /**
-     * Delete a download
-     *
-     * @param downloadId Download ID
-     */
-    fun deleteDownload(downloadId: String) {
-        val currentDownloads = _downloads.value.toMutableList()
-        currentDownloads.removeAll { it.id == downloadId }
-        _downloads.value = currentDownloads
         updateActiveDownloads()
     }
 
-    /**
-     * Clear completed downloads
-     */
+    fun cancelDownload(downloadId: String) {
+        _downloads.updateItem({ it.id == downloadId }) { it.copy(status = DownloadStatus.CANCELLED) }
+        updateActiveDownloads()
+    }
+
+    fun retryDownload(downloadId: String) {
+        _downloads.updateItem({ it.id == downloadId }) { download ->
+            download.copy(status = DownloadStatus.PENDING, downloadedSize = 0, errorMessage = null)
+        }
+        updateActiveDownloads()
+    }
+
+    fun deleteDownload(downloadId: String) {
+        _downloads.removeItem { it.id == downloadId }
+        updateActiveDownloads()
+    }
+
     fun clearCompletedDownloads() {
-        val currentDownloads = _downloads.value.toMutableList()
-        currentDownloads.removeAll { it.status == DownloadStatus.COMPLETED }
-        _downloads.value = currentDownloads
+        _downloads.removeAll { it.status == DownloadStatus.COMPLETED }
     }
 
-    /**
-     * Update active downloads list
-     */
     private fun updateActiveDownloads() {
-        _activeDownloads.value = _downloads.value.filter { it.isActive }
+        _activeDownloads.replaceAll(_downloads.filter { it.isActive })
     }
 
-    /**
-     * Clear error state
-     */
     fun clearError() {
-        _error.value = null
-    }
-
-    /**
-     * Clean up resources
-     */
-    fun onCleared() {
-        viewModelScope.cancel()
+        uiState.clearError()
     }
 }
