@@ -235,60 +235,36 @@ Recommendations ranked by combined score:
 ├──────────────────────────────┬────────┬─────────┬─────────┬────────────────┤
 │ Enhancement                  │ Effort │ Benefit │ Battery │ Priority Score │
 ├──────────────────────────────┼────────┼─────────┼─────────┼────────────────┤
-│ Grammar Size Management      │ Low    │ High    │ SAVES   │ ★★★★★ (1st)   │
-│ Event Prioritization         │ Low    │ High    │ SAVES   │ ★★★★★ (2nd)   │
-│ Screen Hash Skip Enhancement │ Low    │ High    │ SAVES   │ ★★★★☆ (3rd)   │
-│ Confidence Feedback          │ Medium │ High    │ Minimal │ ★★★★☆ (4th)   │
-│ Error Recovery/Diagnostics   │ Low    │ Medium  │ Minimal │ ★★★☆☆ (5th)   │
-│ Adaptive Throttling          │ High   │ High    │ Medium  │ ★★★☆☆ (6th)   │
-│ Multi-Gesture Chaining       │ High   │ Medium  │ Low     │ ★★☆☆☆ (7th)   │
-│ Custom Command Definitions   │ High   │ Medium  │ Low     │ ★★☆☆☆ (8th)   │
-│ Command Prediction           │ High   │ Medium  │ HIGH    │ ★☆☆☆☆ (9th)   │
-│ Multi-Language Support       │ V.High │ Regional│ HIGH    │ ★☆☆☆☆ (10th)  │
+│ Event Prioritization         │ Low    │ High    │ SAVES   │ ★★★★★ (1st)   │
+│ Screen Hash Skip Enhancement │ Low    │ High    │ SAVES   │ ★★★★★ (2nd)   │
+│ Confidence Feedback          │ Medium │ High    │ Minimal │ ★★★★☆ (3rd)   │
+│ Error Recovery/Diagnostics   │ Low    │ Medium  │ Minimal │ ★★★☆☆ (4th)   │
+│ Adaptive Throttling          │ High   │ High    │ Medium  │ ★★★☆☆ (5th)   │
+│ Multi-Gesture Chaining       │ High   │ Medium  │ Low     │ ★★☆☆☆ (6th)   │
+│ Custom Command Definitions   │ High   │ Medium  │ Low     │ ★★☆☆☆ (7th)   │
+│ Command Prediction           │ High   │ Medium  │ HIGH    │ ★☆☆☆☆ (8th)   │
+│ Multi-Language Support       │ V.High │ Regional│ HIGH    │ ★☆☆☆☆ (9th)   │
+│ Grammar Size Management      │ Low    │ Low     │ SAVES   │ DROPPED        │
 └──────────────────────────────┴────────┴─────────┴─────────┴────────────────┘
 ```
+
+**Note on Grammar Size Management:** Initially ranked #1, but dropped after analysis:
+- Most screens have < 100 elements (optimization rarely triggers)
+- When triggered, forces users to say numbers instead of labels (bad UX)
+- Android can only execute actions on visible elements anyway
+- Complexity added for rare edge case with UX downside
 
 ---
 
 ### Tier 1: Implement First (Low Effort, High Benefit, Saves Battery)
 
-#### 6.1.1 Grammar Size Management ⭐ HIGHEST PRIORITY
-
-**Effort:** Low | **Benefit:** High | **Battery:** SAVES power
-
-**Current Gap:** All extracted commands added to grammar, causing slow compilation.
-
-**Why Prioritize:** Directly reduces CPU usage and compilation time. Fewer commands = faster recognition = less battery drain.
-
-**Implementation:**
-```kotlin
-// In CommandGenerator or CommandOrchestrator
-private const val MAX_GRAMMAR_SIZE = 100
-
-fun generateCommands(...): List<QuantizedCommand> {
-    val allCommands = /* generate all commands */
-
-    // Sort by relevance: clickable > visible > has label
-    return allCommands
-        .sortedByDescending { it.relevanceScore }
-        .take(MAX_GRAMMAR_SIZE)
-}
-```
-
-**Estimated Impact:**
-- Grammar compilation: 50-70% faster
-- CPU usage: 30-40% reduction during updates
-- Battery: Measurable improvement on continuous-event apps
-
----
-
-#### 6.1.2 Accessibility Event Prioritization ⭐ HIGH PRIORITY
+#### 6.1.1 Accessibility Event Prioritization ⭐ HIGHEST PRIORITY
 
 **Effort:** Low | **Benefit:** High | **Battery:** SAVES power
 
 **Current Gap:** All events processed equally, wasting CPU on irrelevant updates.
 
-**Why Prioritize:** Reduces unnecessary processing. System-generated events (animations, progress bars) don't need command updates.
+**Why Prioritize:** Reduces unnecessary processing. System-generated events (animations, progress bars) don't need command updates. No UX downside - users don't lose any functionality.
 
 **Implementation:**
 ```kotlin
@@ -301,11 +277,6 @@ private fun shouldProcessEvent(event: AccessibilityEvent): Boolean {
     val source = event.source ?: return false
     if (!source.isVisibleToUser) return false
 
-    // Skip if screen hash unchanged (coalescing)
-    val newHash = computeScreenHash(source)
-    if (newHash == lastScreenHash) return false
-    lastScreenHash = newHash
-
     return true
 }
 ```
@@ -315,9 +286,11 @@ private fun shouldProcessEvent(event: AccessibilityEvent): Boolean {
 - CPU usage: 25-35% reduction
 - Battery: Significant improvement on animation-heavy apps
 
+**Status:** ✅ IMPLEMENTED (2026-02-02)
+
 ---
 
-#### 6.1.3 Screen Hash Skip Enhancement ⭐ HIGH PRIORITY
+#### 6.1.2 Screen Hash Skip Enhancement ⭐ HIGH PRIORITY
 
 **Effort:** Very Low | **Benefit:** High | **Battery:** SAVES power
 
@@ -347,6 +320,8 @@ private fun handleContentUpdate(event: AccessibilityEvent) {
 - Duplicate processing: Eliminated
 - CPU usage: 20-30% reduction on static screens
 - Battery: Noticeable improvement
+
+**Status:** ✅ IMPLEMENTED (2026-02-02)
 
 ---
 
@@ -509,18 +484,20 @@ VoiceOS successfully implements its core function of extracting voice commands f
 
 ### Recommended Implementation Order
 
-**Phase 1 (Immediate - Low effort, battery savings):**
-1. Grammar Size Management - Cap commands at ~100, sort by relevance
-2. Event Prioritization - Skip system UI, non-visible elements
-3. Screen Hash Skip Enhancement - Move check before extraction
+**Phase 1 (Immediate - Low effort, battery savings):** ✅ IMPLEMENTED
+1. Event Prioritization - Skip system UI, non-visible elements
+2. Screen Hash Skip Enhancement - Move check before extraction
 
 **Phase 2 (Short-term - User experience):**
-4. Confidence Feedback - Visual indicators for recognition quality
-5. Error Diagnostics - Health metrics for debugging
+3. Confidence Feedback - Visual indicators for recognition quality
+4. Error Diagnostics - Health metrics for debugging
 
 **Phase 3 (If needed - Higher complexity):**
-6. Adaptive Throttling - Only if static throttling insufficient
-7. Multi-Gesture Chaining - Power user feature
+5. Adaptive Throttling - Only if static throttling insufficient
+6. Multi-Gesture Chaining - Power user feature
+
+**Dropped:**
+- Grammar Size Management - Rare benefit, UX cost when triggered (forces number usage)
 
 **Defer (High cost/low ROI):**
 - Command Prediction (battery drain)
@@ -530,12 +507,11 @@ VoiceOS successfully implements its core function of extracting voice commands f
 
 | Metric | Before | After Phase 1 |
 |--------|--------|---------------|
-| Grammar compilation time | 100% | ~40% |
 | Events processed | 100% | ~50% |
-| CPU during continuous events | 100% | ~60% |
+| CPU during continuous events | 100% | ~65% |
 | Battery drain (continuous apps) | High | Moderate |
 
-Phase 1 enhancements provide the best ROI: minimal code changes with measurable performance and battery improvements.
+Phase 1 enhancements provide the best ROI: minimal code changes with measurable performance and battery improvements, with no UX tradeoffs.
 
 ---
 

@@ -571,6 +571,12 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return
 
+        // OPTIMIZATION: Event Prioritization - Skip irrelevant events early
+        // This reduces CPU/battery by not processing system UI or non-visible updates
+        if (!shouldProcessEvent(event)) {
+            return
+        }
+
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
                 // Full screen change - app switch, new activity, navigation
@@ -602,6 +608,49 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 }
             }
         }
+    }
+
+    /**
+     * OPTIMIZATION: Event Prioritization
+     *
+     * Determines if an accessibility event should be processed.
+     * Skips system UI events and non-visible updates to reduce CPU/battery usage.
+     *
+     * This has NO UX downside - users don't lose any functionality because:
+     * - System UI (status bar, nav bar) doesn't need voice commands
+     * - Non-visible elements can't be actioned anyway
+     *
+     * @return true if event should be processed, false to skip
+     */
+    private fun shouldProcessEvent(event: AccessibilityEvent): Boolean {
+        val packageName = event.packageName?.toString()
+
+        // Skip system UI updates (status bar, navigation bar, quick settings)
+        // These don't need voice commands and generate frequent events
+        if (packageName == "com.android.systemui") {
+            Log.v(TAG, "Skipping system UI event")
+            return false
+        }
+
+        // Skip our own overlay events to prevent feedback loops
+        if (packageName == "com.augmentalis.voiceoscoreng") {
+            return false
+        }
+
+        // For content change events, check if source is visible
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            val source = event.source
+            if (source != null) {
+                val isVisible = source.isVisibleToUser
+                source.recycle()
+                if (!isVisible) {
+                    Log.v(TAG, "Skipping non-visible content change")
+                    return false
+                }
+            }
+        }
+
+        return true
     }
 
     /**
@@ -673,6 +722,9 @@ class VoiceOSAccessibilityService : AccessibilityService() {
      *
      * FIX: Added processing guard and throttled speech engine updates to prevent
      * continuous processing that starves voice recognition.
+     *
+     * OPTIMIZATION: Screen Hash Skip Enhancement - computes quick hash BEFORE
+     * expensive element extraction to skip duplicate processing.
      */
     private fun handleContentUpdate(event: AccessibilityEvent) {
         // Get dynamic debounce based on device capability
@@ -696,7 +748,18 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 val rootNode = rootInActiveWindow ?: return@launch
                 val packageName = event.packageName?.toString() ?: rootNode.packageName?.toString() ?: "unknown"
 
-                // Extract current visible elements
+                // OPTIMIZATION: Screen Hash Skip Enhancement
+                // Compute quick hash BEFORE expensive element extraction
+                // This eliminates duplicate processing when screen hasn't actually changed
+                val quickHash = screenCacheManager.generateScreenHash(rootNode)
+                if (quickHash == lastContentUpdateHash) {
+                    Log.v(TAG, "Content update skipped - screen hash unchanged (${quickHash.take(8)})")
+                    rootNode.recycle()
+                    return@launch
+                }
+                lastContentUpdateHash = quickHash
+
+                // Extract current visible elements (expensive operation - only if hash changed)
                 val elements = mutableListOf<com.augmentalis.voiceoscore.ElementInfo>()
                 val hierarchy = mutableListOf<HierarchyNode>()
                 val seenHashes = mutableSetOf<String>()
@@ -740,6 +803,13 @@ class VoiceOSAccessibilityService : AccessibilityService() {
      * Last content update timestamp for debouncing scroll events.
      */
     private var lastContentUpdateTime = 0L
+
+    /**
+     * Last content update screen hash for Screen Hash Skip Enhancement.
+     * Used to skip expensive element extraction when screen hasn't changed.
+     */
+    @Volatile
+    private var lastContentUpdateHash: String? = null
 
     /**
      * Last scroll event timestamp for debouncing direct scroll events.
@@ -912,6 +982,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             commandRegistry.clear()
             OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges
             currentScreenHash = null  // Clear hash when monitoring disabled
+                lastContentUpdateHash = null  // Clear content hash for fresh processing
             Log.d(TAG, "Screen changed to $packageName - manual mode, awaiting user scan")
             return
         }
@@ -926,6 +997,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                         commandRegistry.clear()
                         OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges
                         currentScreenHash = null
+                        lastContentUpdateHash = null
                         return@launch
                     }
 
@@ -977,6 +1049,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     commandRegistry.clear()
                     OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges before new scan
                     currentScreenHash = screenHash
+                    lastContentUpdateHash = null  // Reset for fresh content updates on new screen
 
                     performExplorationWithCache(screenHash, packageName, appVersion)
 
@@ -985,12 +1058,14 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     commandRegistry.clear()
                     OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges on error
                     currentScreenHash = null
+                    lastContentUpdateHash = null
                 }
             }
         } else {
             commandRegistry.clear()
             OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges
             currentScreenHash = null
+            lastContentUpdateHash = null
         }
     }
 
