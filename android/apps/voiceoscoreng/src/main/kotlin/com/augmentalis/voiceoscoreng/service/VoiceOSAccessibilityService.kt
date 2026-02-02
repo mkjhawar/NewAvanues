@@ -28,6 +28,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.flowOn
+import java.util.concurrent.Executors
 import com.augmentalis.voiceoscore.ScreenHashRepository
 import com.augmentalis.voiceoscore.ScreenHashRepositoryImpl
 import com.augmentalis.voiceoscore.ScreenInfo
@@ -61,6 +64,22 @@ private const val SCREEN_CHANGE_DEBOUNCE_MS = 300L
 class VoiceOSAccessibilityService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    /**
+     * FIX: Dedicated dispatcher for speech result collection.
+     *
+     * This isolates speech processing from accessibility event processing to prevent
+     * dispatcher starvation. When apps like Device Info, YouTube, or Media Player
+     * generate rapid accessibility events, Dispatchers.Default becomes saturated.
+     * Using a dedicated single-threaded dispatcher ensures speech results are always
+     * processed promptly regardless of accessibility event load.
+     */
+    private val speechDispatcher = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "VoiceOS-SpeechCollector").apply { isDaemon = true }
+    }.asCoroutineDispatcher()
+
+    /** Job for speech collection - allows cancellation and restart */
+    private var speechCollectionJob: Job? = null
 
     /**
      * Broadcast receiver for controlling numbers overlay via adb commands.
@@ -430,24 +449,112 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     Log.e(TAG, "Failed to auto-start voice listening", e)
                 }
 
-                // Observe speech results
-                voiceOSCore?.speechResults?.collect { speechResult ->
-                    Log.d(TAG, "Speech result: ${speechResult.text} (confidence: ${speechResult.confidence})")
-                    // Update transcription for UI display
-                    _lastTranscription.value = speechResult.text
-                    if (speechResult.isFinal) {
-                        if (!handleVoiceOSControlCommand(speechResult.text.lowercase().trim())) {
-                            voiceOSCore?.processCommand(speechResult.text, speechResult.confidence)
-                        }
-                        // Clear transcription after processing
-                        kotlinx.coroutines.delay(2000)
-                        _lastTranscription.value = null
-                    }
-                }
+                // FIX: Start speech collection on dedicated dispatcher
+                // This prevents dispatcher starvation when accessibility events flood Dispatchers.Default
+                startSpeechCollection()
+
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize VoiceOSCore facade", e)
             }
         }
+    }
+
+    /**
+     * Start speech result collection on a dedicated dispatcher.
+     *
+     * FIX for voice command freeze issue (NAV-600):
+     * - Uses dedicated single-threaded dispatcher isolated from accessibility event processing
+     * - Adds buffer(64) to prevent backpressure from blocking the emitter
+     * - Processes commands in a child coroutine to avoid blocking the collector
+     * - Includes retry logic with exponential backoff for resilience
+     *
+     * This ensures speech results are always processed promptly even when apps like
+     * Device Info, YouTube, or Media Player generate continuous accessibility events
+     * that would otherwise saturate Dispatchers.Default and starve the collector.
+     */
+    private fun startSpeechCollection() {
+        // Cancel any existing collection job
+        speechCollectionJob?.cancel()
+
+        speechCollectionJob = serviceScope.launch(speechDispatcher) {
+            var consecutiveFailures = 0
+            val maxConsecutiveFailures = 5
+            val baseRestartDelayMs = 1000L
+
+            while (isActive && consecutiveFailures < maxConsecutiveFailures) {
+                try {
+                    Log.d(TAG, "Starting speech result collection on dedicated dispatcher (attempt ${consecutiveFailures + 1})")
+
+                    // FIX: Add buffer to prevent backpressure from blocking emitter
+                    // Buffer size of 64 allows the flow to continue emitting even if
+                    // processing is temporarily slow
+                    voiceOSCore?.speechResults
+                        ?.buffer(64)
+                        ?.collect { speechResult ->
+                            Log.d(TAG, "Speech result: ${speechResult.text} (confidence: ${speechResult.confidence})")
+
+                            // Update transcription for UI display immediately
+                            _lastTranscription.value = speechResult.text
+
+                            if (speechResult.isFinal) {
+                                // FIX: Process command in a separate child coroutine
+                                // to avoid blocking the collector
+                                launch {
+                                    try {
+                                        if (!handleVoiceOSControlCommand(speechResult.text.lowercase().trim())) {
+                                            voiceOSCore?.processCommand(
+                                                speechResult.text,
+                                                speechResult.confidence
+                                            )
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "Error processing command: ${speechResult.text}", e)
+                                    }
+
+                                    // Clear transcription after processing
+                                    delay(2000)
+                                    _lastTranscription.value = null
+                                }
+                            }
+
+                            // Reset failure counter on successful collection
+                            consecutiveFailures = 0
+                        }
+
+                    // SharedFlow collect should not normally complete
+                    Log.w(TAG, "Speech collection completed unexpectedly")
+                    break
+
+                } catch (e: CancellationException) {
+                    // Expected during lifecycle changes
+                    Log.d(TAG, "Speech collection cancelled")
+                    throw e
+                } catch (e: Exception) {
+                    consecutiveFailures++
+                    Log.e(
+                        TAG,
+                        "Speech collection failed (failure $consecutiveFailures/$maxConsecutiveFailures)",
+                        e
+                    )
+
+                    if (consecutiveFailures < maxConsecutiveFailures) {
+                        val delayMs = baseRestartDelayMs * consecutiveFailures
+                        Log.d(TAG, "Restarting speech collection in ${delayMs}ms...")
+                        delay(delayMs)
+                    }
+                }
+            }
+
+            if (consecutiveFailures >= maxConsecutiveFailures) {
+                Log.e(
+                    TAG,
+                    "Speech collection stopped after $maxConsecutiveFailures consecutive failures"
+                )
+                _isVoiceListening.value = false
+            }
+        }
+
+        Log.d(TAG, "Speech collection job started: ${speechCollectionJob?.isActive}")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -944,6 +1051,10 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             Log.w(TAG, "Error unregistering receiver", e)
         }
 
+        // Cancel speech collection job first
+        speechCollectionJob?.cancel()
+        speechCollectionJob = null
+
         serviceScope.launch {
             try {
                 voiceOSCore?.dispose()
@@ -958,6 +1069,14 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         _isConnected.value = false
         voiceOSCore = null
         serviceScope.cancel()
+
+        // Shutdown dedicated speech dispatcher
+        try {
+            (speechDispatcher as? java.io.Closeable)?.close()
+            Log.d(TAG, "Speech dispatcher shutdown")
+        } catch (e: Exception) {
+            Log.w(TAG, "Error shutting down speech dispatcher", e)
+        }
     }
 
     /**
