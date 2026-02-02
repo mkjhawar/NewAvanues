@@ -183,6 +183,10 @@ object CommandGenerator {
      * When multiple elements share the same listIndex (e.g., a row and its children),
      * we keep the best representative element (prefer clickable, in dynamic container).
      *
+     * FIX: Only generates commands for ACTIONABLE elements. Elements that are just
+     * labels or text views without click handlers are skipped to prevent generating
+     * useless commands that flood the speech engine grammar.
+     *
      * @param listItems Elements that are list items (have listIndex >= 0)
      * @param packageName Host application package name
      * @return List of index commands (in-memory only, never persisted)
@@ -194,10 +198,11 @@ object CommandGenerator {
         val ordinals = listOf("first", "second", "third", "fourth", "fifth",
             "sixth", "seventh", "eighth", "ninth", "tenth")
 
-        // Group by listIndex and keep only the best element per index
-        // This prevents duplicates when multiple elements share the same listIndex
+        // Group by listIndex and keep only the best ACTIONABLE element per index
+        // FIX: Filter for actionable elements BEFORE grouping to ensure we only
+        // generate commands for elements that can actually be clicked
         val bestElementPerIndex = listItems
-            .filter { it.listIndex >= 0 }
+            .filter { it.listIndex >= 0 && (it.isClickable || it.isLongClickable) }
             .groupBy { it.listIndex }
             .mapValues { (_, elements) ->
                 // Prefer: clickable > has content > in dynamic container > first
@@ -293,6 +298,9 @@ object CommandGenerator {
      * ordinal words ("first", "second"). Numeric commands are what users see
      * in the numbered overlay badges.
      *
+     * FIX: Only generates commands for ACTIONABLE elements. Elements that are just
+     * labels or text views without click handlers are skipped.
+     *
      * @param listItems Elements that are list items (have listIndex >= 0)
      * @param packageName Host application package name
      * @return List of numeric commands (in-memory only, never persisted)
@@ -301,9 +309,10 @@ object CommandGenerator {
         listItems: List<ElementInfo>,
         packageName: String
     ): List<QuantizedCommand> {
-        // Group by listIndex and keep only the best element per index
+        // Group by listIndex and keep only the best ACTIONABLE element per index
+        // FIX: Filter for actionable elements BEFORE grouping
         val bestElementPerIndex = listItems
-            .filter { it.listIndex >= 0 }
+            .filter { it.listIndex >= 0 && (it.isClickable || it.isLongClickable) }
             .groupBy { it.listIndex }
             .mapValues { (_, elements) ->
                 // Prefer: clickable > has content > in dynamic container > first
@@ -363,6 +372,9 @@ object CommandGenerator {
      * Creates commands using the extracted label (sender name, title, etc.)
      * so users can say "Lifemiles" instead of just "first".
      *
+     * FIX: Only generates commands for ACTIONABLE elements. Elements that are just
+     * labels or text views without click handlers are skipped.
+     *
      * @param listItems Elements that are list items (have listIndex >= 0)
      * @param packageName Host application package name
      * @return List of label commands (in-memory only, never persisted)
@@ -373,7 +385,8 @@ object CommandGenerator {
     ): List<QuantizedCommand> {
         val seenLabels = mutableSetOf<String>()
 
-        return listItems.filter { it.listIndex >= 0 }.mapNotNull { element ->
+        // FIX: Filter for actionable elements to prevent generating commands for labels
+        return listItems.filter { it.listIndex >= 0 && (it.isClickable || it.isLongClickable) }.mapNotNull { element ->
             val label = extractShortLabel(element)
 
             // Skip if no label extracted or label already seen (avoid duplicates)

@@ -82,6 +82,17 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     private var speechCollectionJob: Job? = null
 
     /**
+     * FIX: Speech engine update throttling to prevent continuous grammar compilation.
+     *
+     * When apps generate rapid accessibility events, the speech engine gets updated
+     * on every event, causing grammar compilation that blocks voice recognition.
+     * These guards ensure we don't update the speech engine too frequently.
+     */
+    private val lastSpeechEngineUpdateTime = AtomicLong(0L)
+    private val isSpeechEngineUpdating = AtomicBoolean(false)
+    private val isProcessingAccessibilityEvent = AtomicBoolean(false)
+
+    /**
      * Broadcast receiver for controlling numbers overlay via adb commands.
      * Usage: adb shell am broadcast -a com.augmentalis.voiceoscoreng.SET_NUMBERS_MODE --es mode "ON"
      */
@@ -616,8 +627,52 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     }
 
     /**
+     * FIX: Throttled speech engine update to prevent continuous grammar compilation.
+     *
+     * Grammar compilation in Vivoka blocks voice recognition. When apps generate
+     * rapid accessibility events, continuous updates starve the speech collector.
+     * This wrapper ensures we don't update the speech engine more frequently than
+     * the configured minimum interval.
+     *
+     * @param phrases List of command phrases to register
+     * @param forceUpdate If true, bypass throttling (use for screen changes)
+     */
+    private fun throttledSpeechEngineUpdate(phrases: List<String>, forceUpdate: Boolean = false) {
+        val config = DeviceCapabilityManager.getTimingConfig(TimingOperation.SPEECH_ENGINE_UPDATE)
+        val now = System.currentTimeMillis()
+        val lastUpdate = lastSpeechEngineUpdateTime.get()
+
+        // Check if we should skip this update
+        if (!forceUpdate && config.canSkip && (now - lastUpdate < config.minIntervalMs)) {
+            Log.v(TAG, "Speech engine update throttled (${now - lastUpdate}ms < ${config.minIntervalMs}ms)")
+            return
+        }
+
+        // Try to acquire the updating lock
+        if (!isSpeechEngineUpdating.compareAndSet(false, true)) {
+            Log.v(TAG, "Speech engine update skipped - already updating")
+            return
+        }
+
+        serviceScope.launch {
+            try {
+                voiceOSCore?.updateCommands(phrases)
+                lastSpeechEngineUpdateTime.set(System.currentTimeMillis())
+                Log.d(TAG, "Speech engine updated with ${phrases.size} phrases")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update speech engine", e)
+            } finally {
+                isSpeechEngineUpdating.set(false)
+            }
+        }
+    }
+
+    /**
      * Handle incremental content updates from scroll/list changes.
      * Uses dynamic debounce based on device capability.
+     *
+     * FIX: Added processing guard and throttled speech engine updates to prevent
+     * continuous processing that starves voice recognition.
      */
     private fun handleContentUpdate(event: AccessibilityEvent) {
         // Get dynamic debounce based on device capability
@@ -629,6 +684,12 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             return
         }
         lastContentUpdateTime = now
+
+        // FIX: Skip if already processing to prevent queue buildup
+        if (!isProcessingAccessibilityEvent.compareAndSet(false, true)) {
+            Log.v(TAG, "Content update skipped - already processing")
+            return
+        }
 
         serviceScope.launch {
             try {
@@ -653,6 +714,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 val elementLabels = ElementExtractor.deriveElementLabels(elements, hierarchy)
 
                 // Generate/merge commands using incremental generator
+                // FIX: Use throttled speech engine update to prevent continuous grammar compilation
                 val commandResult = dynamicCommandGenerator.generateCommandsIncremental(
                     elements = elements,
                     hierarchy = hierarchy,
@@ -660,13 +722,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     packageName = packageName,
                     existingCommands = commandRegistry.all(),
                     updateSpeechEngine = { phrases ->
-                        serviceScope.launch {
-                            try {
-                                voiceOSCore?.updateCommands(phrases)
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Failed to update speech engine during incremental update", e)
-                            }
-                        }
+                        throttledSpeechEngineUpdate(phrases, forceUpdate = false)
                     }
                 )
 
@@ -674,6 +730,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error in content update", e)
+            } finally {
+                isProcessingAccessibilityEvent.set(false)
             }
         }
     }
