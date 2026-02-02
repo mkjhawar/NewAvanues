@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Refactored - WebAvanue StateFlow Utilities (2026-02-02)
+
+**~1,800 lines of ViewModel boilerplate reduced**
+
+Created reusable StateFlow utility classes to eliminate repetitive patterns across WebAvanue ViewModels.
+
+#### New Utility Classes (`com.augmentalis.webavanue.util`)
+- `ViewModelState<T>` - Eliminates `_state`/`state.asStateFlow()` pattern
+- `NullableState<T>` - Dialog/error states with `clear()`, `ifPresent()` helpers
+- `ListState<T>` - List operations: `add()`, `updateItem()`, `removeItem()`
+- `UiState` - Loading/error/success state management
+- `BaseViewModel` - Common viewModelScope and onCleared()
+- `BaseStatefulViewModel` - BaseViewModel + built-in UiState
+
+#### ViewModels Refactored
+| ViewModel | Before | After | Reduction |
+|-----------|--------|-------|-----------|
+| HistoryViewModel | 257 | 155 | 40% |
+| DownloadViewModel | 398 | 255 | 36% |
+| FavoriteViewModel | 474 | 308 | 35% |
+| SecurityViewModel | 556 | 328 | 41% |
+| SettingsViewModel | 555 | 191 | 66% |
+| TabViewModel | 1355 | 652 | 52% |
+
+#### Documentation
+- [Developer Manual Chapter 75](/Docs/AVA/ideacode/guides/Developer-Manual-Chapter75-StateFlow-Utilities.md)
+- [Quick Reference](/Docs/WebAvanue/Development/StateFlow-Utilities-QuickRef.md)
+- [Technical Debt Closure](/Docs/TechnicalDebt/WebAvanue-StateFlow-Refactoring-260202.md)
+
+---
+
 ### Fixed - TVM v0.22.0 Native Library Crash (2025-12-03)
 
 **Critical Fix: On-device LLM inference now works!**
