@@ -9,6 +9,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Refactored - RPC Module Architecture (2026-02-02)
+
+**Standardized IPC → RPC naming across codebase**
+
+Renamed UniversalRPC module to Rpc and standardized all IPC references to RPC for consistency with cross-platform RPC patterns.
+
+#### Module Changes
+| Before | After |
+|--------|-------|
+| `Modules/UniversalRPC` | `Modules/Rpc` |
+| `com.augmentalis.universalrpc` | `com.augmentalis.rpc` |
+| `AppIPCRegistry` | `AppRpcRegistry` |
+| `UniversalIPCEncoder` | `RpcEncoder` |
+| `*.IPC.COMMAND` | `*.RPC.COMMAND` |
+
+#### Files Changed
+- 225 files updated across Rpc, VoiceOSCore, PluginSystem modules
+- All package imports updated
+- Action strings standardized
+
+#### Documentation
+- [Developer Manual Chapter 76](/Docs/AVA/ideacode/guides/Developer-Manual-Chapter76-RPC-Module-Architecture.md)
+
+---
+
+### Archived - Deprecated /Avanues Directory (2026-02-02)
+
+**Archived 956 files (51MB → 18MB compressed)**
+
+Removed deprecated `/Avanues/Web` directory after migrating all functionality to `/Modules/WebAvanue`.
+
+#### Changes
+- Archived to `Archive/Avanues_deprecated_260202.tar.gz`
+- Fixed broken imports in `BrowserWebView.desktop.kt` and `BrowserWebView.ios.kt`
+- Updated BuildConfig reflection paths in `SentryManager.kt`
+- WebAvanue module is now fully independent
+
+---
+
+### Refactored - GlassmorphismUtils Consolidation (2026-02-02)
+
+**~500 lines of duplication eliminated**
+
+Consolidated 7 duplicate GlassmorphismUtils files to use shared core classes from Common/UI.
+
+#### Files Updated
+- VoiceOSCore/CommandManager
+- VoiceOSCore/LocalizationManager
+- VoiceOSCore/VoiceDataManager
+- AvidCreator
+- DeviceManager
+- LicenseManager
+
+All now use `typealias` re-exports for backward compatibility while importing from `com.avanues.ui`.
+
+---
+
 ### Refactored - WebAvanue StateFlow Utilities (2026-02-02)
 
 **~1,800 lines of ViewModel boilerplate reduced**
