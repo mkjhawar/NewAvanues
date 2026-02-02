@@ -10,11 +10,11 @@ import android.content.Intent
 import android.util.Log
 import com.augmentalis.voiceoscore.*
 import com.augmentalis.voiceoscore.managers.commandmanager.actions.*
-import com.augmentalis.universalrpc.service.UniversalIPCEncoder
+import com.augmentalis.rpc.RpcEncoder
 import com.augmentalis.voiceoscore.managers.commandmanager.loader.CommandLoader
 import com.augmentalis.voiceoscore.managers.commandmanager.loader.CommandLocalizer
 import com.augmentalis.voiceoscore.managers.commandmanager.routing.IntentDispatcher
-import com.augmentalis.voiceoscore.managers.commandmanager.routing.AppIPCRegistry
+import com.augmentalis.voiceoscore.managers.commandmanager.routing.AppRpcRegistry
 import com.augmentalis.speechrecognition.ConfidenceScorer
 import com.augmentalis.speechrecognition.ConfidenceLevel
 import kotlinx.coroutines.CoroutineScope
@@ -71,8 +71,8 @@ class CommandManager(private val context: Context) {
         IntentDispatcher(context)
     }
 
-    // Universal IPC encoder for cross-app communication (object singleton)
-    private val ipcEncoder = UniversalIPCEncoder()
+    // RPC encoder for cross-app communication
+    private val rpcEncoder = RpcEncoder()
 
     // Database command cache (command ID -> CommandMetadata)
     // CommandMetadata contains patterns and category for dynamic action creation
@@ -572,16 +572,16 @@ class CommandManager(private val context: Context) {
     }
 
     /**
-     * Execute command in external app via Universal IPC Protocol
+     * Execute command in external app via Universal RPC Protocol
      *
      * Sends voice commands to external apps (WebAvanue, AVA AI, AvaConnect)
-     * using the Universal IPC Protocol format via Intent broadcast.
+     * using the Universal RPC Protocol format via Intent broadcast.
      *
-     * Uses AppIPCRegistry to determine app-specific IPC action for secure,
-     * isolated communication. Each app listens on its own IPC action:
-     * - WebAvanue: com.augmentalis.avanues.web.IPC.COMMAND
-     * - AVA AI: com.augmentalis.ava.IPC.COMMAND
-     * - AvaConnect: com.augmentalis.avaconnect.IPC.COMMAND
+     * Uses AppRpcRegistry to determine app-specific RPC action for secure,
+     * isolated communication. Each app listens on its own RPC action:
+     * - WebAvanue: com.augmentalis.webavanue.RPC.COMMAND
+     * - AVA AI: com.augmentalis.ava.RPC.COMMAND
+     * - AvaConnect: com.augmentalis.avaconnect.RPC.COMMAND
      *
      * Protocol: VCM:commandId:action:param1:param2
      *
@@ -608,29 +608,29 @@ class CommandManager(private val context: Context) {
         params: Map<String, Any> = emptyMap()
     ) {
         try {
-            // Get app-specific IPC action from registry
-            val ipcAction = AppIPCRegistry.getIPCActionWithFallback(targetApp)
+            // Get app-specific RPC action from registry
+            val rpcAction = AppRpcRegistry.getRpcActionWithFallback(targetApp)
 
-            // Encode command to Universal IPC format
-            val ipcMessage = ipcEncoder.encodeVoiceCommand(
+            // Encode command to Universal RPC format
+            val rpcMessage = rpcEncoder.encodeVoiceCommand(
                 commandId = command.id,
                 action = command.id.uppercase(),  // Convert to action format (e.g., scroll_top -> SCROLL_TOP)
                 params = params
             )
 
             // Create Intent broadcast with app-specific action
-            val intent = Intent(ipcAction).apply {
+            val intent = Intent(rpcAction).apply {
                 setPackage(targetApp)
-                putExtra(UniversalIPCEncoder.EXTRA_SOURCE_APP, context.packageName)
-                putExtra(UniversalIPCEncoder.EXTRA_MESSAGE, ipcMessage)
+                putExtra(RpcEncoder.EXTRA_SOURCE_APP, context.packageName)
+                putExtra(RpcEncoder.EXTRA_MESSAGE, rpcMessage)
             }
 
             // Send broadcast to target app
             context.sendBroadcast(intent)
 
-            Log.d(TAG, "✓ Sent IPC command to $targetApp on $ipcAction: $ipcMessage")
+            Log.d(TAG, "✓ Sent RPC command to $targetApp on $rpcAction: $rpcMessage")
         } catch (e: Exception) {
-            Log.e(TAG, "✗ Failed to send IPC command to $targetApp", e)
+            Log.e(TAG, "✗ Failed to send RPC command to $targetApp", e)
             throw e
         }
     }

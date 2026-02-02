@@ -13,7 +13,7 @@ import com.augmentalis.avucodec.AVUDecoder as BaseDecoder
  * @since 1.0.0
  */
 object IPCEncoder {
-    // Re-export constants from UniversalIPCEncoder
+    // Re-export constants from RpcEncoder/AVUEncoder
     const val IPC_ACTION = BaseEncoder.IPC_ACTION
     const val EXTRA_MESSAGE = BaseEncoder.EXTRA_MESSAGE
     const val EXTRA_SOURCE_APP = BaseEncoder.EXTRA_SOURCE_APP
@@ -41,7 +41,7 @@ object IPCEncoder {
     const val CODE_PONG = BaseEncoder.CODE_PONG
     const val CODE_CAPABILITY = BaseEncoder.CODE_CAPABILITY
 
-    // Delegate all methods to UniversalIPCEncoder
+    // Delegate all methods to AVUEncoder (RpcEncoder compatible)
     fun encodeVoiceCommand(commandId: String, action: String, params: Map<String, Any> = emptyMap()) =
         BaseEncoder.encodeVoiceCommand(commandId, action, params)
 
@@ -76,8 +76,11 @@ object IPCEncoder {
  */
 typealias AVUEncoder = BaseEncoder
 
-@Deprecated("Use AVUEncoder instead", ReplaceWith("AVUEncoder"))
+@Deprecated("Use RpcEncoder or AVUEncoder instead", ReplaceWith("AVUEncoder"))
 typealias UniversalIPCEncoder = BaseEncoder
+
+// Modern name
+typealias RpcEncoder = BaseEncoder
 
 /**
  * Type alias for backward compatibility for decoder.

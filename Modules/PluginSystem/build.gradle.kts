@@ -39,8 +39,8 @@ kotlin {
                 // VoiceOSCore - for QuantizedCommand, ActionResult, QuantizedElement types
                 api(project(":Modules:VoiceOSCore"))
 
-                // UniversalRPC - for RPC service integration
-                api(project(":Modules:UniversalRPC"))
+                // Rpc - for RPC service integration
+                api(project(":Modules:Rpc"))
 
                 // Unified Database - for repository interfaces
                 api(project(":Modules:Database"))

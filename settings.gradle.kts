@@ -121,8 +121,8 @@ include(":Modules:AVUCodec")                             // KMP AVU Protocol enc
 // WebAvanue Module - Unified KMP Browser Library
 include(":Modules:WebAvanue")            // Merged flat structure: data + UI in single module
 
-// UniversalRPC - Cross-platform gRPC module
-include(":Modules:UniversalRPC")         // Root module with KMP + Wire
+// Rpc - Cross-platform RPC module
+include(":Modules:Rpc")                  // Root module with KMP + Wire
 
 // AvaMagic Modules
 include(":Modules:AvaMagic:MagicTools:LanguageServer")  // AVA Language Server (LSP)
