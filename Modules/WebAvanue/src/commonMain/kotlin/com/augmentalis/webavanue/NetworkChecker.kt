@@ -23,7 +23,7 @@ package com.augmentalis.webavanue
  * // Proceed with download
  * ```
  *
- * @see com.augmentalis.Avanues.web.app.download.NetworkHelper (Android implementation)
+ * @see com.augmentalis.webavanue.NetworkChecker (platform implementations)
  */
 expect class NetworkChecker() {
     /**

@@ -594,7 +594,7 @@ class CommandManager(private val context: Context) {
      * )
      * commandManager.executeExternalCommand(
      *     command = command,
-     *     targetApp = "com.augmentalis.Avanues.web"
+     *     targetApp = "com.augmentalis.webavanue"
      * )
      * ```
      *

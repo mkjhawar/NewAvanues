@@ -12,7 +12,7 @@
  * Each app listens on app-specific action: com.augmentalis.{app}.IPC.COMMAND
  *
  * Examples:
- * - WebAvanue: com.augmentalis.avanues.web.IPC.COMMAND
+ * - WebAvanue: com.augmentalis.webavanue.IPC.COMMAND
  * - AVA AI: com.augmentalis.ava.IPC.COMMAND
  * - AvaConnect: com.augmentalis.avaconnect.IPC.COMMAND
  */
@@ -63,8 +63,8 @@ object AppIPCRegistry {
 
         // WebAvanue - Browser module
         register(
-            packageName = "com.augmentalis.Avanues.web",
-            ipcAction = "com.augmentalis.avanues.web.IPC.COMMAND",
+            packageName = "com.augmentalis.webavanue",
+            ipcAction = "com.augmentalis.webavanue.IPC.COMMAND",
             appName = "WebAvanue",
             appType = AppType.BROWSER,
             description = "Web browser with voice control"
