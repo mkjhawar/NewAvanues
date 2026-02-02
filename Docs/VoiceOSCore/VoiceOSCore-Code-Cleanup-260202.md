@@ -43,7 +43,7 @@ This document describes the code cleanup performed on the VoiceOSCore module to 
 
 ---
 
-### 2. FrameworkDetector Redundant Methods (~400 lines reduced)
+### 2. FrameworkDetector Redundant Methods (~340 lines reduced)
 
 **Issue:** 11 nearly identical framework detection methods (790 lines total):
 - `hasFlutterSignatures()`
@@ -111,7 +111,7 @@ private fun hasFrameworkSignatures(node: NodeInfo, packageName: String, config: 
 
 ---
 
-### 3. SystemHandler Repetitive If/Else (~40 lines reduced)
+### 3. SystemHandler Repetitive If/Else (~28 lines reduced)
 
 **Issue:** Each command case followed identical pattern:
 ```kotlin
@@ -138,26 +138,6 @@ private fun hasFrameworkSignatures(node: NodeInfo, packageName: String, config: 
 
 ---
 
-## Remaining Opportunities (Not Addressed)
-
-### YamlThemeParser.kt (1080 lines)
-
-**Issue:** Manual YAML parsing with repetitive map extraction:
-```kotlin
-val colors = parsed["colors"] as? Map<*, *> ?: emptyMap<String, Any>()
-val typography = parsed["typography"] as? Map<*, *> ?: emptyMap<String, Any>()
-// ... 10 more identical lines
-```
-
-**Recommendation:**
-- Extract map extraction to helper function
-- Consider using kotlinx-serialization with YAML format
-- Estimated reduction: ~200 lines
-
-**Reason Deferred:** Requires more extensive testing due to theme parsing complexity.
-
----
-
 ## Summary of Changes
 
 | File | Before | After | Reduction |
@@ -169,15 +149,7 @@ val typography = parsed["typography"] as? Map<*, *> ?: emptyMap<String, Any>()
 
 ---
 
-## Testing Notes
-
-1. **FrameworkDetector:** All framework detection should work identically - same patterns, same priority order
-2. **SystemHandler:** All commands should work identically - same executor calls, same messages
-3. **Time functions:** All usages of `currentTimeMillis()` should work - they all resolve to the same expect/actual
-
----
-
-## Developer Notes
+## Developer Guidelines
 
 ### Using `currentTimeMillis()`
 
